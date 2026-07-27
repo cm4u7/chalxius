@@ -174,7 +174,8 @@ def main() -> int:
             '"semantic_activation": "explicit_programming_grill_or_socratic_intent_only"',
             '"graph_mount_capability": false',
             '"research_authority": false',
-            '"renderer_revision": "chalxius-reader-html-11"',
+            '"renderer_revision": "chalxius-reader-html-12"',
+            '"layout": "deterministic_ranked_barycenter"',
             '"fixed_output": "visualizations/knowledge-map.html"',
             '"network_runtime": "disabled"',
         ),
@@ -407,7 +408,9 @@ def main() -> int:
         or "connect-src 'none'" not in reader_html_first
         or "@@CHALXIUS_" in reader_html_first
         or reader_meta_first.get("renderer_revision")
-        != "chalxius-reader-html-11"
+        != "chalxius-reader-html-12"
+        or reader_meta_first.get("layout")
+        != "deterministic_ranked_barycenter"
         or reader_meta_first.get("packet_sha256") != reader_packet_sha256
         or reader_meta_first.get("reader_finalize") != expected_reader_finalize
         or reader_meta_first.get("truth_effect") != "none"
@@ -675,7 +678,7 @@ def main() -> int:
         if (
             reader_output.read_bytes() != reader_output_before
             or reader_receipt.get("renderer_revision")
-            != "chalxius-reader-html-11"
+            != "chalxius-reader-html-12"
             or reader_receipt.get("reader_finalize") != expected_reader_finalize
         ):
             raise RuntimeError(

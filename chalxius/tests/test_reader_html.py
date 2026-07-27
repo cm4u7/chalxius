@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -205,7 +207,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         second, second_meta = render_reader_html(copy.deepcopy(packet))
         self.assertEqual(first, second)
         self.assertEqual(first_meta, second_meta)
-        self.assertIn("deterministic_preset", first)
+        self.assertIn("deterministic_ranked_barycenter", first)
         self.assertIn("connect-src 'none'", first)
         self.assertIn('id="overview-button"', first)
         self.assertIn('id="all-cards-button"', first)
@@ -303,7 +305,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("target-arrow-shape': 'tee'", first)
         self.assertNotIn("@@CHALXIUS_", first)
         self.assertNotIn('class="header-state"', first)
-        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-11")
+        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-12")
         expected_packet_sha256 = sha256_bytes(canonical_json_bytes(packet))
         self.assertEqual(first_meta["packet_sha256"], expected_packet_sha256)
         self.assertEqual(
@@ -398,7 +400,52 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("cy.on('dbltap'", html)
         self.assertIn("maximizeNodePath(event.target.id())", html)
         self.assertEqual(html.count("maximizeNodePath("), 2)
+        self.assertIn("maximizeThemePath(event.target.data('themeId'))", html)
+        theme_path = javascript_function_source(html, "maximizeThemePath")
+        self.assertIn("theme.target_ids.filter(nodeEligible)", theme_path)
+        self.assertIn("directedClosureNodeIds(targetId, 'upstream')", theme_path)
+        self.assertIn("directedClosureNodeIds(targetId, 'downstream')", theme_path)
+        self.assertEqual(theme_path.count("commitSizing("), 1)
+        self.assertIn("showThemeDetail(themeId)", theme_path)
+        self.assertNotIn("reader-grouping", theme_path)
         self.assertNotIn('id="back-to-overview-button"', html)
+
+        grouping_style_start = html.index('selector: \'edge[kind = "reader-grouping"]\'')
+        grouping_style_end = html.index("selector: 'edge.compact-edge'", grouping_style_start)
+        grouping_style = html[grouping_style_start:grouping_style_end]
+        self.assertIn("'curve-style': 'bezier'", grouping_style)
+        self.assertNotIn("'curve-style': 'taxi'", grouping_style)
+        self.assertNotIn("'taxi-direction'", grouping_style)
+        self.assertNotIn("'taxi-turn'", grouping_style)
+        self.assertIn("'line-style': 'dashed'", grouping_style)
+        self.assertIn("'target-arrow-shape': 'none'", grouping_style)
+
+        crossing_reduction = javascript_function_source(html, "reduceEdgeCrossings")
+        crossing_score = javascript_function_source(html, "layoutCrossingScore")
+        crossing_comparison = javascript_function_source(html, "crossingScoreIsBetter")
+        canonical_positions = javascript_function_source(html, "applyCanonicalPositions")
+        self.assertIn("const CROSSING_REDUCTION_SWEEPS = 8", html)
+        self.assertIn("const CROSSING_REDUCTION_EDGE_LIMIT = 1200", html)
+        self.assertIn("edgeWeight", crossing_reduction)
+        self.assertIn("weightedPosition", crossing_reduction)
+        self.assertIn("towardLowerRanks", crossing_reduction)
+        self.assertIn("packetIndex", crossing_reduction)
+        self.assertIn("properCrossing", crossing_score)
+        self.assertIn("segments.length > CROSSING_REDUCTION_EDGE_LIMIT", crossing_score)
+        self.assertIn("candidate.crossings < incumbent.crossings", crossing_comparison)
+        self.assertIn("restoreGroupOrder(groups, bestOrder)", crossing_reduction)
+        self.assertIn("baselineCrossings", crossing_reduction)
+        self.assertIn("reduceEdgeCrossings(groups, ranks)", canonical_positions)
+        self.assertIn("layoutBaselineCrossings", canonical_positions)
+        self.assertIn("layoutFinalCrossings", canonical_positions)
+        self.assertNotIn("state.minimizedNodeIds", crossing_reduction)
+
+        self.assertIn('.detail-panel mjx-container[jax="SVG"] { font-size: 1.08em; }', html)
+        self.assertIn('.detail-panel mjx-container[jax="SVG"] > svg {', html)
+        self.assertIn("width: auto", html)
+        self.assertIn("height: auto", html)
+        self.assertIn("font: 0.82em/1.55", html)
+        self.assertNotIn("font: 0.73rem/1.5", html)
 
         context = javascript_function_source(html, "runContextCommand")
         self.assertIn("maximizeDirection(nodeId, 'upstream')", context)
@@ -412,6 +459,119 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("document.activeElement.isContentEditable", html)
         self.assertIn("if (event.shiftKey) redoSizing()", html)
         self.assertIn("else undoSizing()", html)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for Reader layout behavior QA")
+    def test_ranked_crossing_reduction_improves_or_preserves_baseline(self) -> None:
+        html, _ = render_reader_html(example_packet())
+        function_names = (
+            "cloneGroupOrder",
+            "restoreGroupOrder",
+            "layoutCrossingScore",
+            "crossingScoreIsBetter",
+            "reduceEdgeCrossings",
+        )
+        functions = "\n".join(
+            javascript_function_source(html, name).strip() for name in function_names
+        )
+        fixtures = [
+            {
+                "name": "simple-crossing",
+                "nodes": ["a", "b", "c", "d"],
+                "ranks": {"a": 0, "b": 0, "c": 1, "d": 1},
+                "groups": [[0, ["a", "b"]], [1, ["c", "d"]]],
+                "edges": [
+                    {"source": "a", "target": "d", "category": "prerequisite"},
+                    {"source": "b", "target": "c", "category": "prerequisite"},
+                ],
+            },
+            {
+                "name": "xy-public-regression-shape",
+                "nodes": [
+                    "research-question",
+                    "legacy-graph",
+                    "verification-pattern",
+                    "revocation-history",
+                    "current-audit-gap",
+                    "author-confirmation",
+                    "target-boundary",
+                    "target-potential",
+                    "prospective-planes",
+                    "prospective-reader",
+                ],
+                "ranks": {
+                    "research-question": 0,
+                    "legacy-graph": 1,
+                    "verification-pattern": 2,
+                    "revocation-history": 0,
+                    "current-audit-gap": 0,
+                    "author-confirmation": 0,
+                    "target-boundary": 1,
+                    "target-potential": 3,
+                    "prospective-planes": 0,
+                    "prospective-reader": 0,
+                },
+                "groups": [
+                    [
+                        0,
+                        [
+                            "research-question",
+                            "revocation-history",
+                            "current-audit-gap",
+                            "author-confirmation",
+                            "prospective-planes",
+                            "prospective-reader",
+                        ],
+                    ],
+                    [1, ["legacy-graph", "target-boundary"]],
+                    [2, ["verification-pattern"]],
+                    [3, ["target-potential"]],
+                ],
+                "edges": [
+                    {"source": "research-question", "target": "legacy-graph", "category": "prerequisite"},
+                    {"source": "legacy-graph", "target": "verification-pattern", "category": "prerequisite"},
+                    {"source": "current-audit-gap", "target": "target-boundary", "category": "prerequisite"},
+                    {"source": "author-confirmation", "target": "target-boundary", "category": "prerequisite"},
+                    {"source": "verification-pattern", "target": "target-potential", "category": "prerequisite"},
+                    {"source": "revocation-history", "target": "target-potential", "category": "prerequisite"},
+                    {"source": "target-boundary", "target": "target-potential", "category": "prerequisite"},
+                    {"source": "current-audit-gap", "target": "legacy-graph", "category": "conflict"},
+                    {"source": "prospective-planes", "target": "target-potential", "category": "repair"},
+                    {"source": "prospective-reader", "target": "target-potential", "category": "support"},
+                ],
+            },
+        ]
+        harness = f"""
+const CROSSING_REDUCTION_SWEEPS = 8;
+const CROSSING_REDUCTION_EDGE_LIMIT = 1200;
+let packet;
+let readerNodeIds;
+let nodeById;
+{functions}
+const fixtures = {json.dumps(fixtures, separators=(",", ":"))};
+const results = fixtures.map((fixture) => {{
+  packet = {{edges: fixture.edges}};
+  readerNodeIds = fixture.nodes;
+  nodeById = new Map(fixture.nodes.map((nodeId, packetIndex) => [nodeId, {{packetIndex}}]));
+  const ranks = new Map(Object.entries(fixture.ranks).map(([nodeId, rank]) => [nodeId, rank]));
+  const groups = new Map(fixture.groups.map(([rank, nodeIds]) => [rank, [...nodeIds]]));
+  return {{name: fixture.name, ...reduceEdgeCrossings(groups, ranks)}};
+}});
+process.stdout.write(JSON.stringify(results));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        results = {item["name"]: item for item in json.loads(completed.stdout)}
+        self.assertEqual(results["simple-crossing"]["baselineCrossings"], 1)
+        self.assertEqual(results["simple-crossing"]["finalCrossings"], 0)
+        self.assertEqual(results["xy-public-regression-shape"]["baselineCrossings"], 1)
+        self.assertEqual(results["xy-public-regression-shape"]["finalCrossings"], 1)
+        for result in results.values():
+            self.assertTrue(result["evaluated"])
+            self.assertLessEqual(result["finalCrossings"], result["baselineCrossings"])
 
     def test_revision_eleven_click_anchor_halo_and_plaque_contract_is_embedded(self) -> None:
         html, _ = render_reader_html(example_packet())
@@ -716,7 +876,7 @@ class ReaderHtmlExportTests(unittest.TestCase):
         )
         self.assertEqual(first["truth_effect"], "none")
         self.assertEqual(first["network_runtime"], "disabled")
-        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-11")
+        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-12")
         self.assertEqual(first["reader_finalize"]["status"], "ready")
         self.assertEqual(first["reader_finalize"]["scope"], "presentation_readiness_only")
         self.assertEqual(

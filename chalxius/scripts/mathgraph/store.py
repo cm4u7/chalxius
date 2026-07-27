@@ -654,7 +654,7 @@ class MathGraphStore:
                     self.reasoning_modes().initialize(
                         reasoning_mode=reasoning_mode,
                         actor="operator",
-                        reason="initialize unified Chalk-native project",
+                        reason="initialize Chalxius project",
                         source_kind="new_unified_project",
                     )
 

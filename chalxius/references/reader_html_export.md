@@ -106,10 +106,16 @@ Unknown or missing fields fail closed. The top-level fields are:
 | `nodes`, `edges` | Strict reader graph |
 
 `theme_order`, `target_order`, and `prerequisite_order` are semantic input, not
-layout suggestions. The preset renderer may alter spacing for the viewport, but
-it never invents or reorders these lists. `prerequisite_order` breaks ties within
-a displayed directed depth and keeps successively earlier layers in their
-declared order. Card sizing never reorders or removes them.
+mutable runtime layout state. The renderer validates and preserves those lists
+verbatim, and `target_order` remains the navigation order. Canonical spatial
+placement is separate: packet node order seeds each prerequisite rank, after
+which a deterministic bounded search may change only the vertical card order
+within that rank. For at most 1,200 cross-rank edges, exact proper-crossing
+scoring retains the best of that packet-order baseline and the barycentric
+candidates, so the selected order cannot contain more proper crossings than
+the baseline. Larger graphs preserve packet order. The search never rewrites
+the semantic lists, topology, or packet bytes, and card sizing does not invoke
+it.
 
 Every node includes:
 
@@ -167,10 +173,11 @@ relations remain hidden by default.
 The first view shows all targets, grouped by `theme_order` and listed in exact
 `target_order`. A one-target theme is rendered as a topic label on its target;
 only a multi-target theme becomes a draggable presentation node with dashed
-grouping links. Those links are synthetic reader structure and never source
-relations. Synthetic presentation nodes remain visible while at least one of
-their targets is eligible, but they are not packet source cards and are
-excluded from card minimization, sizing history, and source-card counts.
+grouping links. Those links are smooth, dashed, arrowless Bezier curves,
+synthetic reader structure, and never source relations. Synthetic presentation
+nodes remain visible while at least one of their targets is eligible, but they
+are not packet source cards and are excluded from card minimization, sizing
+history, and source-card counts.
 
 Every currently eligible real packet node and every currently eligible packet
 edge remains present on one continuing canvas. Minimization changes only a
@@ -218,10 +225,19 @@ directed, includes the chosen anchor, changes sizes only, and records one atomic
 sizing action. Previous and next target buttons continue to follow exact
 `target_order`.
 
+Double-clicking a synthetic multi-target theme performs the analogous group
+operation without making that theme a source card. For every currently eligible
+member target, the renderer takes its complete directed upstream and downstream
+closures, unions those real-card ids, maximizes the union, and minimizes the
+eligible complement. The entire change is one atomic sizing action. It creates
+no theme-specific focus mode, adds no packet edge, and leaves the synthetic
+theme outside card-size state and history.
+
 The reader keeps at most 100 in-memory size deltas for undo and redo. A single-
-card toggle, `All targets`, `All cards`, double-click path maximization, and
-either context-menu command each form at most one history action. A no-op adds
-no entry, and a new sizing action after undo clears the redo stack. Cmd/Ctrl+Z
+card toggle, `All targets`, `All cards`, real-card or theme double-click path
+maximization, and either context-menu command each form at most one history
+action. A no-op adds no entry, and a new sizing action after undo clears the
+redo stack. Cmd/Ctrl+Z
 undoes sizing; Cmd/Ctrl+Shift+Z, and Ctrl+Y where expected, redo it. Editable
 fields retain native undo. Sizing history stores no coordinate snapshots; an
 inverse size recomputes the same pivot compensation. It never restores
@@ -235,8 +251,20 @@ a layer switch returns at its prior size when the layer is enabled again.
 
 Every sizing action preserves the current selection, pan, zoom, graph ordering,
 and normalized 29%/50% control pivot. The exporter computes one deterministic
-canonical position for every packet node; upstream ranks remain left and downstream ranks
-remain right. Compact silhouettes collapse about the control pivot, and
+canonical position for every packet node; upstream prerequisite ranks remain
+left and downstream ranks remain right. Within each rank, packet node order is
+the deterministic seed for eight fixed forward/backward weighted-barycentric
+sweep pairs. Prerequisite, support, repair, and conflict relations have weights
+`4`, `2`, `1`, and `1`, respectively. When the packet has at most 1,200 cross-
+rank edges, the renderer exactly counts proper crossings after every half-sweep
+and retains the best-so-far order. Crossing count is primary; weighted crossing
+penalty and packet-order displacement provide deterministic tie breaks. Since
+packet order is the initial best-so-far, the final order is guaranteed to have
+no more proper crossings than the packet-order baseline. Packets above the edge
+bound skip the quadratic comparison and preserve packet order. This bounded
+search does not claim a global minimum. It runs only for initial canonical
+placement and explicit `Reset layout`, never for card sizing, sizing undo/redo,
+or layer changes. Compact silhouettes collapse about the control pivot, and
 Cytoscape reattaches each visible edge to the changed silhouette. Sizing derives
 one two-axis model-position compensation for every changed card to keep that
 pivot fixed. If the card was manually pinned, the renderer also replaces that
@@ -261,7 +289,8 @@ inactive status. Semantic relations carry an enlarged category-colored marker
 at the rendered midpoint and another at the target, so direction is repeated at
 equal half-edge intervals without filling the line with visual noise. Solid,
 dashed, and dotted patterns remain authoritative for relation styling, and
-synthetic theme-grouping links remain arrowless.
+synthetic theme-grouping links remain dashed and arrowless while following
+smooth Bezier curves rather than orthogonal taxi segments.
 Faceted is the default appearance scheme and Plaques is the
 alternative. The scheme changes node silhouettes only. It does not alter packet
 `theme_order`, plane colors, status borders, edge categories or dash patterns,
@@ -283,15 +312,19 @@ panel opens with intuition, importance,
 prerequisites, and reasoning route. Formal hypotheses, statement, proof,
 relations, exact source, and provenance remain readable in folded sections.
 TeX in `\\(...\\)` and `\\[...\\]` is rendered locally as SVG while the exact
-source string remains copyable.
+source string remains copyable. Detail-panel MathJax containers use a `1.08em`
+baseline, and their direct SVG children explicitly escape the global fixed-size
+icon rule. Exact TeX source uses a `0.82em` monospace measure. Both therefore
+inherit the panel's text scale instead of remaining visually frozen while prose
+grows; oversized display equations scroll inside the panel.
 
 UI controls, navigation, role labels, legends, and provenance labels switch as
 one unit between Chinese and English, with Chinese as the default. The selected
 language lasts for the current page session only. Packet titles and mathematical
 body text remain in their source language. The detail panel's separator can be dragged or adjusted
 with arrow keys between bounded widths; double-click resets its width. A range
-control scales detail text from 90% to 150%. Both settings are session-only and
-`Reset UI` restores their defaults.
+control scales detail prose, rendered MathJax SVG, and exact TeX source from 90%
+to 150%. Both settings are session-only and `Reset UI` restores their defaults.
 
 The full-height graph stays in the center and readable selected-node detail
 stays in a resizable right panel on wide screens. The flat dark forest palette
@@ -308,9 +341,13 @@ The renderer canonicalizes the validated JSON, embeds pinned Cytoscape.js
 3.34.0, MathJax 3.2.2 `tex-svg`, and 15 selected Tabler Icons 3.45.0 SVG assets
 whose generated sprite SHA-256 is
 `2fc9b17bafe11e9866ae515ad9b6b06790c8ceabece75e5b9362d41320093e87`,
-and uses only preset coordinates derived from the three explicit order
-structures. It records no timestamp or random id. The same semantic packet and
-same manifest-bound renderer assets therefore produce identical HTML bytes.
+and derives canonical coordinates from prerequisite ranks, packet-order seeds,
+and, for at most 1,200 cross-rank edges, eight fixed weighted-barycentric
+forward/backward sweep pairs with exact best-so-far proper-crossing scoring.
+That bounded search has deterministic tie breaks and no global-optimum claim;
+larger graphs preserve packet order. It records no timestamp or random id. The
+same semantic packet and same manifest-bound renderer assets therefore produce
+identical HTML bytes.
 Viewport size changes the final fit on screen but not the file or graph order.
 
 The output contains no external script, stylesheet, image, font, or CDN link.

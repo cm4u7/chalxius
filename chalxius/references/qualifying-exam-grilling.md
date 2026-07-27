@@ -102,7 +102,7 @@ abandoned proof branch:
   separate learning overlay. Maintain prerequisite edges and mastery metadata.
   Only source facts already admitted by the external graph may be treated as
   proof premises; a learner node is never called verified. Do not invoke
-  MathGraph, Chalk, or multi-agent proof work from the drill.
+  a Chalxius research work unit or multi-agent proof work from the drill.
 - End the closure with exactly one reconstruction or transfer question. Do not
   advance to a new branch until the user can at least restate the repaired link,
   unless they explicitly choose to defer it.

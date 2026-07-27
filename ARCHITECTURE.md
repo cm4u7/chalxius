@@ -1,7 +1,8 @@
 # Chalxius architecture
 
-This guide assumes no prior knowledge of Chalxius, knowledge graphs, or the
-projects that influenced its development.
+This is the deeper architectural reference. The main README now introduces the
+features and mechanisms from first principles; use this page when you need the
+full authority model, admission sequence, and correction semantics.
 
 ## What Chalxius is
 
@@ -224,3 +225,5 @@ For exact technical contracts, see
 [`reasoning_modes.md`](chalxius/references/reasoning_modes.md), and
 [`reader_html_export.md`](chalxius/references/reader_html_export.md). For origin
 and attribution, see [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
+For concrete, bounded examples with clickable Reader pages, see
+[`USE_CASES.md`](USE_CASES.md).

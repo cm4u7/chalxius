@@ -4,10 +4,10 @@ Copyright 2026 Local MathGraph contributors.
 
 Distributed under the Apache License, Version 2.0. See `LICENSE`.
 
-Chalxius is an independent Chalk-native integration. Its sole embedded
-research kernel descends from `mathgraph-chalk-version` 0.4.0 and preserves the
-Fact Graph truth boundary, workflow-evidence V4, Paper Logic, Audit,
-Blackboard, computation, verification, and admission machinery.
+Chalxius is an independent research system. Its embedded Chalxius research
+engine descends from the pre-Chalxius `mathgraph-chalk-version` 0.4.0 codebase
+and preserves the Fact Graph truth boundary, workflow-evidence V4, Paper Logic,
+Audit, Blackboard, computation, verification, and admission machinery.
 
 The public Danus design informed the local Fact Graph layout and 16-hex logical
 content-id compatibility. In this package, Danus 0.2.12 is only a behavioral

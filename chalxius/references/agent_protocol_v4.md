@@ -1,8 +1,8 @@
 # MathGraph Agent Protocol v4
 
 > **Unified supersession.** This protocol runs only inside
-> `chalxius`'s Chalk V4 kernel. The legacy standalone Danus and
-> Chalk packages are lineage/import sources, not active routers. Truth and
+> the Chalxius research engine. Legacy standalone predecessor packages are
+> lineage/import sources, not active routers. Truth and
 > adoption gates are invariant; panel and pulse requirements come from the
 > frozen `execution_profile` bound to each task card.
 
@@ -11,8 +11,8 @@ workflow-evidence v4 round.
 
 ## Status and boundary
 
-Protocol v4 originated in MathGraph Chalk and is the workflow-evidence protocol
-embedded by this unified package. It
+Protocol v4 originated in the pre-Chalxius `mathgraph-chalk-version` package and
+is the workflow-evidence protocol embedded by this package. It
 strengthens round coordination without changing the truth boundary:
 
 - admitted fact statement interfaces are the only reusable proof premises;
@@ -29,7 +29,7 @@ the capsule's host capability receipt separately. A reported access outside the 
 invalidates the run. This is a cooperative audit boundary, not OS sandbox enforcement.
 
 Installing the skill does not authorize migration or cutover of an active
-project. This package starts neither `$mathgraph-chalk-version` nor
+project. This package starts neither the legacy `$mathgraph-chalk-version` nor
 `$run-multi-agent-mathgraph`; their old writer-exclusivity rule applies only
 when using those standalone rollback packages. Unified work has one active
 kernel and one writable project root.
@@ -258,10 +258,11 @@ scope, source-mismatch, or prior-rejection finding without a new submission and 
 ## Release boundary
 
 The verification-bundle/review/admission path, shared submission/blackboard visibility marker,
-current/history projection, hard caps, and pulse plan/barrier/closure/abort lifecycle are
-originated and were regression-tested in Chalk. Real fresh-context workers exposed and drove
-repairs for envelope-only graph validation, ceremonial cross-edges, and vocabulary drift before
-release. Exact inheritance-lock verification and project audit still govern
+current/history projection, hard caps, and pulse plan/barrier/closure/abort
+lifecycle originated in the pre-Chalxius codebase and were regression-tested
+there. Real fresh-context workers exposed and drove repairs for envelope-only
+graph validation, ceremonial cross-edges, and vocabulary drift before release.
+Exact inheritance-lock verification and project audit still govern
 every use. Installing the unified candidate does not activate either legacy
 runtime, migrate an active project, or authorize cutover.
 Cross-project, cross-machine, and multi-root federation is deliberately disabled.

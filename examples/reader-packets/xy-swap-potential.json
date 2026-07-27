@@ -1,0 +1,648 @@
+{
+  "schema_version": 1,
+  "project_id": "public-xy-swap-potential-case",
+  "language": "en",
+  "title": "Potential application: x-y interchange research",
+  "audience": "Readers with no prior knowledge of Chalxius, topological recursion, or the predecessor archive",
+  "source_snapshot": {
+    "id": "public-xy-swap-potential-v1",
+    "sha256": "5d6ffa73fb45c2e63b9351d94703619498c6c4ae8a8e409b3fd0284e2a04d947",
+    "description": "A sanitized public summary of a read-only predecessor-archive audit."
+  },
+  "presentation": {
+    "subtitle": "Read the blockers first; then inspect why the archive may still be a useful future migration candidate.",
+    "introduction": "Potential application only. This archive is neither a current validated Chalxius project nor an author-confirmed case, and this page does not disclose or certify its mathematical conclusion."
+  },
+  "audit": {
+    "current_ok": false,
+    "summary": "The predecessor graph is internally structured, but the current Chalxius workflow audit is not PASS.",
+    "warnings": [
+      "Thirteen legacy rounds fail newer source-evidence requirements.",
+      "The relevant authors have not confirmed this case framing.",
+      "No current-format Paper, Blackboard, or Reader artifact was found."
+    ],
+    "unresolved": [
+      "Migrate only by an explicit current-format workflow.",
+      "Repair source evidence and obtain fresh review before any new admission claim.",
+      "Keep external author confirmation separate from technical validation."
+    ]
+  },
+  "theme_order": [
+    "theme-xy-swap-potential"
+  ],
+  "target_order": [
+    "target-boundary",
+    "target-potential"
+  ],
+  "prerequisite_order": {
+    "target-boundary": [
+      "current-audit-gap",
+      "author-confirmation"
+    ],
+    "target-potential": [
+      "research-question",
+      "legacy-graph",
+      "verification-pattern",
+      "revocation-history",
+      "current-audit-gap",
+      "author-confirmation",
+      "target-boundary"
+    ]
+  },
+  "themes": [
+    {
+      "id": "theme-xy-swap-potential",
+      "label": "Potential research application",
+      "description": "A guarded view: current blockers followed by a prospective Chalxius workflow.",
+      "target_ids": [
+        "target-boundary",
+        "target-potential"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "research-question",
+      "title": "x-y interchange question",
+      "reader_role": "definition",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "The archive studies what may change when the two coordinate functions of a spectral curve are exchanged.",
+      "intuition": "Treat the coordinate swap as a research question, not as an assumed symmetry.",
+      "importance": "The distinction prevents the demonstration from disclosing or endorsing an unpublished conclusion.",
+      "reasoning": "The public case names only the research domain and withholds the private mathematical result.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The public scope concerns exchanging \\(x\\) and \\(y\\) in a topological-recursion research question.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The public scope concerns exchanging \\(x\\) and \\(y\\) in a topological-recursion research question."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "bounded_research_question",
+        "truth_status": "exploration",
+        "object_id": "public-case:xy-swap-potential:research-question",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node research-question",
+        "object_sha256": "47cdc8f23dac4bc2b9ce4bb8ca56a2365b786f4c58093a2c3c516ffb43b277a5",
+        "original_text_sha256": "41e740f3631a2ed50e0251403dc1957bb7be676fa70ec8bb094f7b2062101082",
+        "replaces": []
+      }
+    },
+    {
+      "id": "legacy-graph",
+      "title": "Predecessor Fact Graph",
+      "reader_role": "result",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "A predecessor workflow recorded 53 active legacy Facts, 95 edges, and a 21-target closure.",
+      "intuition": "The archive is substantial enough to test migration questions, but age alone does not grant current certification.",
+      "importance": "It supplies observed workflow evidence without being relabelled as a Chalxius 0.3.5 project.",
+      "reasoning": "The counts come from a read-only audit; legacy admissions retain only their recorded historical assurance.",
+      "prerequisites": [
+        "research-question"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The predecessor archive contained 53 active legacy Facts, 95 dependency edges, and 21 targets at the audited snapshot.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The predecessor archive contained 53 active legacy Facts, 95 dependency edges, and 21 targets at the audited snapshot."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "legacy_observation",
+        "truth_status": "exploration",
+        "object_id": "public-case:xy-swap-potential:legacy-graph",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node legacy-graph",
+        "object_sha256": "6b649112f3dddf49d451294b7b442a5682102bc3182115a52b46017e4805d621",
+        "original_text_sha256": "384baaed7fb9e4793ac0fb96e972b303be772f501fc301373cb3880caf68f7a6",
+        "replaces": []
+      }
+    },
+    {
+      "id": "verification-pattern",
+      "title": "Packet-bound review pattern",
+      "reader_role": "result",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "The predecessor used frozen submissions, independent review, and replayable computational evidence.",
+      "intuition": "A reviewer should inspect the exact artifact that a later decision cites.",
+      "importance": "This pattern is why the archive is a plausible migration candidate rather than a bare folder of notes.",
+      "reasoning": "Observed receipts bind candidate material and review state, but do not satisfy every newer requirement.",
+      "prerequisites": [
+        "legacy-graph"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The predecessor workflow used packet-bound review and replayable computation without current Chalxius recertification.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The predecessor workflow used packet-bound review and replayable computation without current Chalxius recertification."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "legacy_observation",
+        "truth_status": "exploration",
+        "object_id": "public-case:xy-swap-potential:verification-pattern",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node verification-pattern",
+        "object_sha256": "d820b41aa36f27bac68f05b0ce3a5a234d517376123cb3f1fe4897c69a544099",
+        "original_text_sha256": "7b5c92881812394bd44da981042b7b948f834734b8dbf369e79c691d6ff2c15c",
+        "replaces": []
+      }
+    },
+    {
+      "id": "revocation-history",
+      "title": "Explicit revocation",
+      "reader_role": "explanation",
+      "plane": "audit",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "One legacy Fact was explicitly revoked after later review exposed an overstatement.",
+      "intuition": "Correction preserved the old record while removing its active authority.",
+      "importance": "The archive demonstrates that a graph can remember error without continuing to trust it.",
+      "reasoning": "The public case reports the existence of the revocation but does not disclose the revoked proposition.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The audited predecessor history contains one explicit revocation with preserved provenance.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The audited predecessor history contains one explicit revocation with preserved provenance."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "legacy_audit_observation",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:xy-swap-potential:revocation-history",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node revocation-history",
+        "object_sha256": "96e8d96f139a4ed71c1937867a999913b120dcd3a39bad35266e482a3cf3234b",
+        "original_text_sha256": "46cb4789ee4790c5b82459477f4a79bba08ee822c208053087fba8be8f50ac7f",
+        "replaces": []
+      }
+    },
+    {
+      "id": "current-audit-gap",
+      "title": "Current audit gap",
+      "reader_role": "result",
+      "plane": "audit",
+      "visual_status": "challenged",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "The predecessor does not pass the current Chalxius workflow audit.",
+      "intuition": "A clean dependency shape is not enough when newer source-evidence requirements are missing.",
+      "importance": "This blocks any claim that the archive is already a validated Chalxius deployment.",
+      "reasoning": "Thirteen legacy rounds fail the newer source-evidence contract and inherited warnings remain.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "Current audit status is not PASS; migration and source-evidence repair would be required.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "Current audit status is not PASS; migration and source-evidence repair would be required."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "current_audit_blocker",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:xy-swap-potential:current-audit-gap",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node current-audit-gap",
+        "object_sha256": "dd44e722b5b22f9bd45562da67b972d04abf1865929c3d83615015a5d6465902",
+        "original_text_sha256": "ac1c23765aeea15f4cbb47cd8cd1dac109ec15c12f2f96430bde0a254aaf3f6a",
+        "replaces": []
+      }
+    },
+    {
+      "id": "author-confirmation",
+      "title": "Author confirmation pending",
+      "reader_role": "explanation",
+      "plane": "audit",
+      "visual_status": "challenged",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "The relevant authors have not confirmed this case framing.",
+      "intuition": "A plausible technical application is not the same as external acknowledgement or endorsement.",
+      "importance": "The public description must remain explicitly hypothetical.",
+      "reasoning": "No confirmation artifact or reply was present in the audited archive.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "This potential application has not been confirmed by the relevant authors.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "This potential application has not been confirmed by the relevant authors."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "external_confirmation_absent",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:xy-swap-potential:author-confirmation",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node author-confirmation",
+        "object_sha256": "44a147601f7ec7245cc382b37264123c1bd7c8c6c25820a0f48e26792113791b",
+        "original_text_sha256": "56dcbe62e0eb0d935fb5b692e3ef10ba2d1346bae573f96e2359a88639ba13ac",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-boundary",
+      "title": "Adoption blockers",
+      "reader_role": "target",
+      "plane": "audit",
+      "visual_status": "challenged",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "Current audit failure and absent author confirmation block a demonstrated-case claim.",
+      "intuition": "Before asking what Chalxius could show, first state what has not yet happened.",
+      "importance": "This target keeps every screenshot and link honest even when read out of context.",
+      "reasoning": "Both blockers are independently necessary boundaries for this public example.",
+      "prerequisites": [
+        "current-audit-gap",
+        "author-confirmation"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The x-y archive is not a current validated or author-confirmed Chalxius case.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The x-y archive is not a current validated or author-confirmed Chalxius case."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "public_boundary_audit",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:xy-swap-potential:target-boundary",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node target-boundary",
+        "object_sha256": "e950b5a908e4f198906e3ba0805c1ab11b049e5e9e4fa2098ade1b7bd1bf717f",
+        "original_text_sha256": "b7c7bec08c5a61386396156e2c25793d67648ebe2dcbc4e34b66faae008391ef",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-potential",
+      "title": "Potential Chalxius application",
+      "reader_role": "target",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "knowledge",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "The predecessor suggests a future Chalxius workflow for source, computation, review, correction, and presentation.",
+      "intuition": "The archive is a design candidate: it shows where Chalxius might help, not that the migration has succeeded.",
+      "importance": "It provides a realistic research shape while preserving uncertainty and external-confirmation boundaries.",
+      "reasoning": "Observed graph and review practices support plausibility; the explicit blockers prevent promotion to a demonstrated case.",
+      "prerequisites": [
+        "verification-pattern",
+        "revocation-history",
+        "target-boundary"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The archive is a potential application only and would require a separate current-format migration and review.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The archive is a potential application only and would require a separate current-format migration and review."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "prospective_exploration",
+        "truth_status": "exploration",
+        "object_id": "public-case:xy-swap-potential:target-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node target-potential",
+        "object_sha256": "de5a99f27a9964db35422446c628915814cccb1be800a650169b446fccebe43f",
+        "original_text_sha256": "4b17c2ca8b62514c0c0f64ecb476b9334a7955a18b60a63fd5b44ddfa98aaf9f",
+        "replaces": []
+      }
+    },
+    {
+      "id": "prospective-planes",
+      "title": "Prospective plane separation",
+      "reader_role": "explanation",
+      "plane": "reader",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "A future migration could separate source reconstruction, audit, exploration, Facts, and Reader presentation.",
+      "intuition": "Each artifact would keep the authority of the process that created it.",
+      "importance": "This is the main architectural reason the archive may fit Chalxius.",
+      "reasoning": "No current-format Paper or Blackboard store was found, so this remains a design projection.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "Paper, Audit, Blackboard, and Reader use are prospective for this case.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "Paper, Audit, Blackboard, and Reader use are prospective for this case."
+      },
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:prospective-planes",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node prospective-planes",
+        "object_sha256": "e445f937abb9a013d1f795a136fe2788afe7bebbf1dc29373ba1d0624f042cfb",
+        "original_text_sha256": "7750c8d1575f197234768ce24130b4be99298a4167176516c21f71f0b112fada",
+        "replaces": []
+      }
+    },
+    {
+      "id": "prospective-reader",
+      "title": "Prospective Reader export",
+      "reader_role": "explanation",
+      "plane": "reader",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-xy-swap-potential",
+      "summary": "A future Reader could present a migrated, finalized packet as one offline HTML file.",
+      "intuition": "Presentation would become easier to inspect without becoming a new source of truth.",
+      "importance": "This is useful for communication only after migration and sidebar summaries are prepared.",
+      "reasoning": "The predecessor archive contained no Chalxius Reader packet or generated Reader HTML.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "No Chalxius Reader export was found; this node describes only a future possibility.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "No Chalxius Reader export was found; this node describes only a future possibility."
+      },
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:prospective-reader",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; public summary node prospective-reader",
+        "object_sha256": "98862e07f5f944d35178fdded1f777635fc38e68fcb9dd96a3bbfbb8bb16fca1",
+        "original_text_sha256": "162154eafb321c828ac1f1100b4f30a57658f7f552993894e935513a152d8d8c",
+        "replaces": []
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-question-legacy",
+      "source": "research-question",
+      "target": "legacy-graph",
+      "category": "prerequisite",
+      "relation": "The predecessor graph organizes work on the bounded research question.",
+      "exact_type": "research_scope",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-question-legacy",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-question-legacy",
+        "object_sha256": "688a432bc45c21c017720654e85b09e37be0497a06f91e4394107957ac44c227",
+        "original_text_sha256": "fcfe36178b956c1ef1dc4bd3843503a476a6154e5e364037307dc589bdf7b094",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-legacy-pattern",
+      "source": "legacy-graph",
+      "target": "verification-pattern",
+      "category": "prerequisite",
+      "relation": "The graph was paired with a packet-bound review pattern.",
+      "exact_type": "legacy_workflow",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-legacy-pattern",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-legacy-pattern",
+        "object_sha256": "cb7a3cc1a45e41fd7784e64c604b44810aea8c66126e8a33e6ccdbe8caf62c81",
+        "original_text_sha256": "9e5961adfc7d774a02756fe7f1d0cfb446f3ea68564c469189faf71437b7bbcf",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-audit-boundary",
+      "source": "current-audit-gap",
+      "target": "target-boundary",
+      "category": "prerequisite",
+      "relation": "Current audit failure is an adoption blocker.",
+      "exact_type": "blocks_current_claim",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-audit-boundary",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-audit-boundary",
+        "object_sha256": "71949d36d7b26dc8aa7b50cd3dc913a39ceae341a25b24a5713bb3f0b07ca8e3",
+        "original_text_sha256": "b7b67ab249db93142f3ed2c7b11a42ec5d3fae7c6b001ff280a89b1f003f5481",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-confirmation-boundary",
+      "source": "author-confirmation",
+      "target": "target-boundary",
+      "category": "prerequisite",
+      "relation": "Absent author confirmation is an external-status blocker.",
+      "exact_type": "blocks_confirmation_claim",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-confirmation-boundary",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-confirmation-boundary",
+        "object_sha256": "560e7c59191a8d90c061980d2df92bb74420bf14f8d06143ada7103baf845dc0",
+        "original_text_sha256": "a754eb6c6fd1e543a1f74db566a5a4cd2395fca71cc163cd84e2aa0b16c16b34",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-pattern-potential",
+      "source": "verification-pattern",
+      "target": "target-potential",
+      "category": "prerequisite",
+      "relation": "Observed review structure makes a future application plausible.",
+      "exact_type": "supports_potential_fit",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-pattern-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-pattern-potential",
+        "object_sha256": "df9aa325f2d5b4e89efa6f3f74ac3936c869d488be29db37c467da26919e2fba",
+        "original_text_sha256": "fe4113c34c3aba8c7c6378c889dbb71d7981935b5dd7514f0fd47b2ce8c94609",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-revocation-potential",
+      "source": "revocation-history",
+      "target": "target-potential",
+      "category": "prerequisite",
+      "relation": "Explicit correction history makes a future migration worth evaluating.",
+      "exact_type": "supports_correctable_workflow",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-revocation-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-revocation-potential",
+        "object_sha256": "a3acffdefe202a1fd9a93f099eea73e1fcb01811f83082f8b414347c26daed29",
+        "original_text_sha256": "aa24906ba9eec90f8c16cc861ea579a7278e6c175ac99e5ef3557c474e76c3a2",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-boundary-potential",
+      "source": "target-boundary",
+      "target": "target-potential",
+      "category": "prerequisite",
+      "relation": "The potential claim is valid only with its blockers attached.",
+      "exact_type": "scope_guard",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-boundary-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-boundary-potential",
+        "object_sha256": "05b8ace1e79ee88780fb93cfd4bb57d6e9cb62b8431a0efb464486e3f0707d65",
+        "original_text_sha256": "11a17b4af9853ac87329041c1db9df8f3ed18a3805aed8c169750d3cb082d7c8",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-audit-legacy",
+      "source": "current-audit-gap",
+      "target": "legacy-graph",
+      "category": "conflict",
+      "relation": "Newer source-evidence requirements challenge legacy certification.",
+      "exact_type": "legacy_assurance_gap",
+      "weak": false,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-audit-legacy",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-audit-legacy",
+        "object_sha256": "e1915db18f657abe2c0222c35f576dbae3309ce037e32b6e3cc3d79818ac8361",
+        "original_text_sha256": "83b67f77cf35faf9831b5843c284beaa22f39b6cfc67bdf2c9f809c5d2f14c2b",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-planes-potential",
+      "source": "prospective-planes",
+      "target": "target-potential",
+      "category": "repair",
+      "relation": "A current-format migration could repair authority separation.",
+      "exact_type": "prospective_migration",
+      "weak": true,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-planes-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-planes-potential",
+        "object_sha256": "73d4602dd1da20ee6822aae64bb033e1fc8b8d9d7df0b2f628b6f6778840a922",
+        "original_text_sha256": "941131acdde988c90ac16f23950698188be898ae59e75989aa4f8edc3c5afa14",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-reader-potential",
+      "source": "prospective-reader",
+      "target": "target-potential",
+      "category": "support",
+      "relation": "A finalized offline Reader could later present the migrated graph.",
+      "exact_type": "prospective_presentation",
+      "weak": true,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:xy-swap-potential:edge-reader-potential",
+        "snapshot_id": "public-xy-swap-potential-v1",
+        "locator": "docs/cases/xy-swap-potential.source.md; presentation relation edge-reader-potential",
+        "object_sha256": "0e1ea13a56da7eb4a2aee9be8fe29d8e2e292823ff69552cacba7dadfca01eab",
+        "original_text_sha256": "111fd0de24296abbd37cbcb4b05d7c27ff6897dc33ae636a35ac4f14db97f78f",
+        "replaces": []
+      }
+    }
+  ]
+}

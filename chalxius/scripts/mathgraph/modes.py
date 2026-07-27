@@ -150,6 +150,7 @@ ADMISSION_RELEVANT_ADOPTION_FEATURES = (
 MODE_POLICY: dict[str, Any] = {
     "schema_version": 1,
     "policy_revision": UNIFIED_POLICY_REVISION,
+    # Frozen wire identifier for existing project hashes, not current product wording.
     "policy_id": "chalk-native-reasoning-modes-v1",
     "architectural_base": "mathgraph-chalk-0.4.0",
     "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
@@ -520,7 +521,7 @@ def validate_mode_binding_fields(
 
 
 class ReasoningModeManager:
-    """Append-only Chalk-native reasoning-mode governance for one project."""
+    """Append-only Chalxius reasoning-mode governance for one project."""
 
     def __init__(self, store: Any) -> None:
         self.store = store

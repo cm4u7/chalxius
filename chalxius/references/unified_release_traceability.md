@@ -4,16 +4,16 @@
 
 - Skill: `chalxius`
 - Display name: Chalxius
-- Version: `0.3.4`
+- Version: `0.3.5`
 - Status: deterministic reader-HTML export candidate
-- Architectural base: MathGraph Chalk `0.4.0-chalk`
+- Pre-Chalxius source base: `mathgraph-chalk-version` 0.4.0-chalk
 - Compatibility artifact engine id: `operate-mathgraph-unified`
 
 ## User requirements mapped to implementation
 
 | Requirement | Implementation |
 |---|---|
-| Chalk is the sole advanced router | `scripts/mathgraph/modes.py`, unified CLI |
+| Chalxius is the sole research router | `scripts/mathgraph/modes.py`, unified CLI |
 | fast/auto/deep and free switching | append-only mode governance and future-only bindings |
 | same Fact admission strength | canonical contract hash in every task/round/profile |
 | fast cannot waive evidence | nonnegotiable obligations and explicit candidate/blocker state |
@@ -22,7 +22,7 @@
 | no change to Fact certification | closure has `workflow_readiness_only` and the invariant contract hash is unchanged |
 | no cross-round or cross-subject evidence reuse | exact task-card/return/ingestion/outcome/effect binding plus current-round event checks |
 | honest orchestration assurance | machine, procedural-host, and mixed evidence levels remain distinct |
-| Paper/Audit/Blackboard cooperation | inherited Chalk V4 stores plus mode-bound obligations |
+| Paper/Audit/Blackboard cooperation | Chalxius stores plus mode-bound obligations |
 | stale Paper evidence fails | current/non-superseded snapshot and current Audit-base validation |
 | graph misconstruction repair | append-only challenge/disposition/replacement snapshots |
 | Grill Me compatibility without research overhead | opt-in embedded static nontruth learning plane named `Chalxius Learner` |
@@ -31,7 +31,7 @@
 | academic Grill feature preservation | all math, philosophy, paper, exam, and graph-aware teaching remains in opt-in `Chalxius Learner` |
 | no accidental learner startup | ordinary research does not activate Chalxius Learner; ordinary code does not activate Grill Me Code |
 | ambiguous `grill me` routing | academic learning context selects Chalxius Learner; programming context selects Grill Me Code; unresolved context asks once |
-| legacy Chalk compatibility | read-only recognition plus explicit `mode-init` receipt |
+| pre-Chalxius V4 compatibility | read-only recognition plus explicit `mode-init` receipt |
 | old unified rounds do not gain retroactive closure | missing `profile_obligations` requires replan |
 | V1-V3 mutation isolation | strict read-only public surface plus isolated copy-upgrade/dry-run |
 | Danus compatibility without dual runtime | frozen fact import and behavioral reference only |
@@ -41,7 +41,8 @@
 | deterministic readiness metadata | embedded and stdout `reader_finalize` schema 1 binds source snapshot, packet hash, node count, and complete-sidebar count with no truth effect |
 | no Obsidian, watcher, PDF, or service coupling | fixed project HTML output plus navigation-only reload; no poller, fetch loop, storage, sidecar, or service |
 | human order remains authoritative | strict theme, target, and prerequisite-order validation |
-| deterministic renderer | canonical packet JSON, pinned vendor assets, preset coordinates, no time/random input |
+| deterministic renderer | canonical packet JSON, pinned vendor assets, prerequisite ranks plus fixed weighted-barycentric sweep pairs, and no time/random input |
+| bounded crossing reduction | for at most 1,200 cross-rank edges, exact proper-crossing scoring retains the best of packet order and eight deterministic forward/backward sweep pairs, guaranteeing no more proper crossings than the packet-order baseline; larger graphs preserve packet order; there is no global-optimum claim and the search runs only at initial placement or explicit layout reset |
 | one offline file | embedded Cytoscape.js and MathJax with network-denying CSP |
 | native graph authority remains visible | plane-specific truth labels, exact source text/hash, no promotion |
 | one persistent eligible graph | every eligible real node and edge remains present; minimization changes card size only and synthetic theme nodes are excluded from sizing |
@@ -49,14 +50,15 @@
 | optional process detail | research, teaching/learning, reader-note, and weak-context toggles are off by default and change eligibility without rewriting size state or history |
 | any-node card sizing | a node-local toggle minimizes or maximizes any real card while preserving selection, dragging, hover name, and full detail access |
 | directed path sizing | double-click atomically maximizes the anchor plus its complete directed upstream/downstream union and minimizes the eligible complement |
+| theme path sizing | double-clicking a synthetic multi-target theme performs one atomic size operation over the union of the complete directed upstream/downstream closures of its currently eligible member targets |
 | node-local broad commands | auxiliary-click or Shift+F10 exposes only maximize-all-upstream and maximize-all-downstream, each including the anchor |
 | bounded reversible sizing | at most 100 session-only size deltas, no-op suppression, redo invalidation, standard undo/redo shortcuts, and no restoration of unrelated UI state |
 | stable navigation | every sizing action preserves selection, viewport, graph ordering, and the normalized 29%/50% control pivot through derived two-axis compensation; an existing pin is replaced when present, no pin is created, and fit remains explicit |
 | trackpad-first canvas | two-finger pan, pinch zoom, direct card drag, and no persistent storage or graph writeback |
-| reliable relation styling | Cytoscape reattaches all retained edges to resized silhouettes; enlarged midpoint and target markers repeat direction at equal half-edge intervals while explicit research and grouping dash patterns remain semantic |
+| reliable relation styling | Cytoscape reattaches all retained edges to resized silhouettes; enlarged midpoint and target markers repeat direction at equal half-edge intervals, while synthetic grouping links use smooth dashed arrowless Bezier curves |
 | selectable appearance | Faceted default and Plaques alternative change silhouettes only, independently of packet themes, planes, statuses, edges, size state, and history |
 | switchable human interface | one Chinese/English UI mode at a time, Chinese default; source body text remains unchanged |
-| adaptable detail reading | session-only bounded panel resize and 90%-150% text scale |
+| adaptable detail reading | session-only bounded panel resize and 90%-150% text scale, including MathJax SVG output and relative-size exact TeX source |
 | click-only size controls | the full minus and compact plus respond only to click, tap, or keyboard activation; card-body dragging remains available |
 | proportional internal control pivot | full minus and compact plus share the same 29%-width/50%-height anchor and retain one rendered coordinate through sizing |
 | balanced card labels | stable role-specific measures retain control and silhouette clearance while multiline real-card labels share a left edge |
@@ -88,7 +90,7 @@ warnings and unresolved research issues remain visible but do not block this
 low-stakes export. A successful render has `truth_effect="none"` and is not
 evidence that the source graph or mathematics is reliable.
 
-Release claims require the inherited Chalk test suite, unified-mode regression
+Release claims require the complete Chalxius regression suite, unified-mode
 tests, learning-plane tests, `scripts/self_test.py`, skill validation, a
 code-only Grill scope audit, and an independent forward test. Packaging and
 installation remain separate explicit decisions.
@@ -96,8 +98,8 @@ installation remain separate explicit decisions.
 The preceding 0.1.0-unified candidate passed 401/401 tests, `scripts/self_test.py`,
 skill-creator validation, and an independent Ultra forward validation. That
 validation exercised 51 child-store mutation surfaces and 20 direct store
-mutation surfaces on both V1-V3 and mode-less Chalk V4 roots, requiring every
-attempt to fail before any project byte changed. It also rechecked legal and
+mutation surfaces on both V1-V3 and mode-less pre-Chalxius V4 roots, requiring
+every attempt to fail before any project byte changed. It also rechecked legal and
 blocked ordinary/atomic admission, activation baselines and drift, Fast/Deep
 routing, Paper correction semantics, and the invariant admission-contract
 hash. The archive remains a cold artifact: no installed skill or project was
@@ -402,7 +404,7 @@ installation, and post-cutover checks remain separate external gates, and no
 candidate evidence establishes graph or mathematical correctness. Revision-9
 results above remain historical evidence for the installed 0.3.2 bytes.
 
-Renderer revision 11 is the current 0.3.4 candidate contract and changes only
+Renderer revision 11 is the frozen 0.3.4 contract and changes only
 reader presentation geometry and hover continuity. Paired narrower role-specific
 text widths and margins retain at least 8 model pixels of control clearance and
 bound the control-plus-label envelope to 3% of card center across supported
@@ -423,6 +425,39 @@ two official exports were byte-identical at SHA-256
 Manifest freeze, packaging, installation, and post-cutover verification remain
 separate gates.
 
+Renderer revision 12 is the current 0.3.5 presentation-only candidate. It
+removes the global icon-size constraint from detail-panel MathJax SVG, gives
+rendered mathematics an `em`-relative baseline, and makes exact TeX source use
+panel-relative sizing. The existing 90%-150% detail-text control therefore
+changes both prose and mathematical content rather than enlarging only the
+surrounding container.
+
+Synthetic multi-target theme links now use smooth, dashed, arrowless Bezier
+curves. Double-clicking a theme unions the complete directed upstream and
+downstream closures of every currently eligible member target, maximizes that
+union, and minimizes the eligible complement as one sizing-history action. The
+synthetic theme remains outside real-card size state; the operation creates no
+focus mode and changes no packet edge or graph topology.
+
+Initial canonical placement and explicit layout reset now seed every
+prerequisite rank from packet order. For packets with at most 1,200 cross-rank
+edges, the renderer applies eight fixed forward/backward weighted-barycentric
+sweep pairs within ranks and exactly counts proper crossings after each half-
+sweep. Relation weights are prerequisite `4`, support `2`, repair `1`, and
+conflict `1`; weighted crossing penalty and packet-order displacement break
+equal-crossing ties. The best-so-far search starts from packet order and accepts
+only an improved score, so its final proper-crossing count cannot exceed the
+packet-order baseline. Packets above the bound skip the quadratic scoring and
+preserve packet order. This is a deterministic bounded search, not a global-
+minimum claim. Card minimization/maximization, undo/redo, and layer switches do
+not invoke it, so those local operations preserve the established card order
+and positions apart from the already-specified size-pivot compensation. None
+of revision 12 changes source text, semantic order lists, plane/status
+authority, Fact admission, persistence, or writeback. Focused and full tests,
+browser QA, deterministic export, manifest freeze, packaging, installation,
+and post-cutover verification remain separate release gates; no revision-12
+validation or release PASS is claimed at this documentation checkpoint.
+
 Forward-security coverage includes missing/extra/partial feature evidence,
 machine-unready and unrelated pulse commitments, specialist hash/path escape,
 campaign scope equality, previous-round campaign and novelty events,
@@ -431,5 +466,6 @@ verifier bypass, accepted-idempotent/audit revalidation after tamper, Fast
 no-receipt behavior, and expert-synthesis mixed assurance with exact subject
 scope. Accepted bundle Facts regain provenance only after full bundle and exact
 profile-closure revalidation; invalid explicit acceptance versions never fall
-back to legacy provenance. Official new-project initialization uses `auto`; explicit
-`reasoning_mode=None` is retained only for internal inherited-Chalk fixtures.
+back to legacy provenance. Official new-project initialization uses `auto`;
+explicit `reasoning_mode=None` is retained only for internal pre-Chalxius V4
+fixtures.

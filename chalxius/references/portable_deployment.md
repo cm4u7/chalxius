@@ -1,9 +1,10 @@
 # Chalxius portable deployment
 
-The 0.3.4 candidate contains one self-contained `chalxius` skill,
+The 0.3.5 candidate contains one self-contained `chalxius` skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
-3.11+ is required. Chalk V4 is the only embedded research kernel; the installed
-Danus, Chalk, Grill Me, and coordinator skills are not runtime dependencies.
+3.11+ is required. The Chalxius research engine is the only embedded research
+kernel; retired predecessor, coordinator, and standalone companion skills are
+not runtime dependencies.
 
 ## Verify a received candidate
 
@@ -32,12 +33,12 @@ PROJECT=/absolute/path/outside/the/skill
 "$MGRAPH" --root "$PROJECT" --role main audit
 ```
 
-`fast`, `auto`, and `deep` are Chalk-native execution profiles. They never
-start old skills. The exact task-card `execution_profile` decides whether the
-clean-context panel, durable two-wave pulse, Paper/Audit work, computation lane,
-campaign expansion, novelty search, and expert synthesis are `required`,
-`available`, or `not_applicable`. Truth/adoption gates and the Fact-admission
-contract are invariant in all modes.
+`fast`, `auto`, and `deep` are Chalxius execution profiles. They never start
+retired predecessor skills. The exact task-card `execution_profile` decides
+whether the clean-context panel, durable two-wave pulse, Paper/Audit work,
+computation lane, campaign expansion, novelty search, and expert synthesis are
+`required`, `available`, or `not_applicable`. Truth/adoption gates and the
+Fact-admission contract are invariant in all modes.
 
 For a required panel, use all genuinely distinct currently callable
 clean-context slots. For a required pulse, produce actual plan, ingestion,
@@ -76,10 +77,10 @@ the page has no CDN or service dependency. The packet and page are
 presentation-only with `truth_effect="none"`; they do not modify or certify any
 graph plane. See [reader_html_export.md](reader_html_export.md).
 
-Revision-11 card minimization places the full minus and compact plus at the
-same normalized 29%-width/50%-height internal anchor. Click-/tap-/keyboard-only
-size toggles, card-body dragging, deterministic two-axis pivot compensation with
-existing-pin replacement only, readable minimum
+Revision 12 retains revision 11's card minimization: the full minus and compact
+plus occupy the same normalized 29%-width/50%-height internal anchor. Click-/
+tap-/keyboard-only size toggles, card-body dragging, deterministic two-axis
+pivot compensation with existing-pin replacement only, readable minimum
 zoom, silhouette-following selection halo, lower-brightness Plaques inner
 ornament, bounded 100-delta sizing undo/redo stack, manual positions, and
 appearance choice exist only in the embedded page's current runtime. Full-card
@@ -93,21 +94,34 @@ Reload graph button clear runtime state and load the current fixed file through
 same-document navigation only. They require no watcher, polling, fetch loop,
 service, persistent history, sidecar, local-storage record, packet field, graph
 topology change, or graph writeback.
+
+Revision 12 additionally lets detail-panel MathJax SVG and exact TeX source
+follow the existing 90%-150% text scale. Synthetic multi-target theme links are
+smooth, dashed, arrowless Bezier curves; double-clicking a theme applies one
+atomic size operation to the union of the directed upstream and downstream
+closures of its eligible member targets. Initial placement and explicit layout
+reset use packet order as the baseline. For at most 1,200 cross-rank edges, they
+search eight fixed forward/backward weighted-barycentric sweep pairs, exactly
+count proper crossings after every half-sweep, and retain the best-so-far order.
+The result therefore has no more proper crossings than packet order. Above that
+bound the quadratic comparison is skipped and packet order is preserved. This
+deterministic bounded search does not claim a global optimum, and ordinary card
+sizing, undo/redo, or layer changes do not rerun it or reorder the working view.
 This paragraph states the deployment boundary only; it is not renderer,
 browser, determinism, packaging, or release QA evidence.
 
 ## Historical projects
 
-An existing Chalk 0.4 V4 project is read-only until an operator records
-`mode-init`; audit emits a compatibility warning rather than corruption. This
-is enforced by the public Python API, exposed child-store writers, and CLI—not
-only by command routing. Activation first requires a clean byte-pure current
-audit before creating `.mathgraph.lock`, then repeats audit and inventory under
-the transition lock. The
-schema-2 receipt hashes the frozen round inventory and every exact byte backing
-already-accepted ordinary and atomic admissions. Only that exact accepted set
-is grandfathered for future profile closure; pending candidates are not, and
-any baseline drift or symlink substitution fails closed.
+An existing project in the pre-Chalxius V4 format (`mathgraph-chalk-version`
+0.4.0) is read-only until an operator records `mode-init`; audit emits a
+compatibility warning rather than corruption. This is enforced by the public
+Python API, exposed child-store writers, and CLI—not only by command routing.
+Activation first requires a clean byte-pure current audit before creating
+`.mathgraph.lock`, then repeats audit and inventory under the transition lock.
+The schema-2 receipt hashes the frozen round inventory and every exact byte
+backing already-accepted ordinary and atomic admissions. Only that exact
+accepted set is grandfathered for future profile closure; pending candidates
+are not, and any baseline drift or symlink substitution fails closed.
 
 For a legacy V1-V3 project, all public mutation—including exposed child-store
 methods—is disabled and the active root must never be migrated in place. Use
@@ -119,8 +133,8 @@ unified gate.
 
 An old unified V4 round with no frozen `profile_obligations` must be replanned;
 do not backfill a closure receipt. The internal Python `reasoning_mode=None`
-compatibility seam is for inherited-Chalk fixtures only. Official CLI
-initialization defaults to `auto`.
+compatibility seam is only for internal fixtures representing pre-Chalxius V4
+projects. Official CLI initialization defaults to `auto`.
 
 No public constructor accepts an `allow_legacy_*` write switch. Private
 identity-token fixture and staged-copy seams exist for tests and isolated
@@ -133,9 +147,9 @@ with `materialize=False` without writing; the default materializing form is a
 guarded mutation. Blackboard dry-run reindex and experiment status/resume
 validation do not create the advisory lock or rebuild derived caches.
 
-The old standalone Danus and Chalk writers are rollback tools only and must not
-open the unified writable root. The integrated learning plane, Chalxius Learner,
-is an opt-in static nontruth consumer, not another runtime. Standalone Grill Me
+Retired predecessor writers are rollback tools only and must not open the
+unified writable root. The integrated learning plane, Chalxius Learner, is an
+opt-in static nontruth consumer, not another runtime. Standalone Grill Me
 0.3.2-code, distinguished as Grill Me Code, is a globally injected programming
 companion whose semantic activation still requires explicit programming Grill
 or Socratic intent; it has no graph mount and is not a Chalxius dependency.

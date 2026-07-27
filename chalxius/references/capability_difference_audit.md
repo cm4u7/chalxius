@@ -1,9 +1,10 @@
-# Stable/Chalk capability difference audit
+# Pre-Chalxius capability difference audit
 
 ## Audit question
 
-Could using Chalk 0.4 as the only implementation base silently lose a Danus
-certification or source-reliability capability?
+Could using the pre-Chalxius `mathgraph-chalk-version` 0.4.0 codebase as the
+only implementation base silently lose a Danus certification or
+source-reliability capability?
 
 ## Source comparison result
 
@@ -13,8 +14,9 @@ The installed `run-multi-agent-mathgraph` 0.2.12 and `mathgraph-chalk-version`
 - `scripts/mathgraph/applicability.py`, `elementary.py`, `graph.py`, and
   `search.py` are byte-identical. The core external applicability, elementary
   exemption, graph, and search logic therefore needs no Danus transplant.
-- Chalk V4 adds the higher-assurance capabilities relevant here: Paper Logic and
-  correctable Audit Graphs, source-bound claims and quantifiers, immutable
+- The pre-Chalxius V4 codebase provided the higher-assurance capabilities relevant
+  here: Paper Logic and correctable Audit Graphs, source-bound claims and
+  quantifiers, immutable
   Blackboard snapshots and pulses, experiment replay, atomic fact bundles,
   verifier capsules, expert/interpretation lint, hard caps, and current/history
   audit projections.
@@ -27,8 +29,9 @@ The installed `run-multi-agent-mathgraph` 0.2.12 and `mathgraph-chalk-version`
 
 No Danus runtime or V3 protocol code is copied. Danus remains a behavioral
 latency reference and frozen fact-import source. All new research and all new
-facts use Chalk V4. This avoids two certification paths and makes parity a
-contract invariant rather than a router promise.
+facts use the Chalxius research engine and invariant Fact admission contract.
+This avoids two certification paths and makes parity a contract invariant
+rather than a router promise.
 
 The embedded learning algorithm is copied from Grill Me 0.2.0 only because its
 static hash-bound overlay is the desired teaching data structure. Its academic
@@ -53,12 +56,12 @@ experiment, novelty, projection, and lint validators can establish their own
 machine-checkable properties. Host capacity, true context orthogonality,
 campaign-scope meaning, and expert-synthesis subject linkage remain procedural
 attestations; mixed features say so. This prevents the new router from claiming
-that orchestration facts have Chalk-level mathematical certification.
+that orchestration facts have mathematical certification.
 
 The deterministic reader-HTML export in candidate 0.3.0 is a new communication
 surface, not a recovered Danus certification feature. It consumes an explicit
 nontruth packet and preserves native plane/status labels, exact original text,
-source hashes, and human order. It neither replaces Chalk's expert-lint paths
+source hashes, and human order. It neither replaces Chalxius expert-lint paths
 nor introduces another graph, verifier, writer, admission route, learner, or
 runtime. Renderer revision 2 changes only the reader presentation: a flat
 dark-navy shell, left control rail, fixed right detail panel, responsive
@@ -145,7 +148,7 @@ installation, and post-cutover checks remain separate external gates; revision-
 and all revision-9 evidence above remains historical evidence for its exact
 installed bytes.
 
-Renderer revision 11 is the current 0.3.4 presentation-only candidate. It pairs
+Renderer revision 11 is the frozen 0.3.4 presentation-only contract. It pairs
 narrower role-specific real-card text widths and margins with left-justified
 multiline labels, retaining at least 8 model pixels of control clearance while
 bounding the control-plus-label envelope to 3% of card center across supported
@@ -160,6 +163,37 @@ checks, official Skill Creator validation, bilingual responsive browser QA,
 combined source inspection, and byte-identical double export at SHA-256
 `efa87e99ff184f51eea286acd5305109c3e842d1045c72dac8f41da4bab2a2bb`.
 
+Renderer revision 12 is the current 0.3.5 presentation-only candidate. Detail-
+panel MathJax SVG escapes the global icon-size rule, uses an `em`-relative
+baseline, and therefore grows and shrinks with the existing 90%-150% detail-
+text control; exact TeX source is likewise sized relative to the panel rather
+than frozen at a root-relative value. Synthetic multi-target theme links are
+now smooth, dashed, arrowless Bezier curves. Double-clicking such a theme
+performs one atomic sizing action over the union of the complete directed
+upstream and downstream closures of its currently eligible member targets,
+then minimizes the eligible complement; it does not create a focus mode or
+change topology.
+
+The canonical layout now seeds each prerequisite rank from explicit packet
+order. When the packet has at most 1,200 cross-rank edges, it applies eight
+fixed forward/backward weighted-barycentric sweep pairs within ranks and scores
+the baseline plus every intermediate order by an exact pairwise count of proper
+edge crossings. Prerequisite and support relations receive greater heuristic
+weight than repair or conflict relations; weighted crossing penalty and packet-
+order displacement break equal-crossing ties. Because packet order is the
+initial best-so-far and a candidate replaces it only when the score improves,
+the selected order is guaranteed to have no more proper crossings than that
+baseline. Packets above the 1,200-edge bound skip the quadratic comparison and
+retain packet order. The bounded search is deterministic but does not claim a
+global minimum. It runs only for initial canonical placement and explicit
+layout reset, so card sizing, undo/redo, and layer changes do not silently
+reorder the working view. These changes do not modify packet authority,
+semantic order lists, graph topology, source text, Fact admission, persistence,
+or writeback. Focused tests, the full suite, browser QA, deterministic export,
+manifest freeze, packaging, installation, and post-cutover checks remain
+separate release gates; no revision-12 validation or release PASS is claimed at
+this documentation checkpoint.
+
 ## Residual risks to test
 
 - deterministic auto triggers may need calibration against real workloads;
@@ -170,7 +204,7 @@ combined source inspection, and byte-identical double export at SHA-256
   close current work;
 - accepted-idempotent retries and audits must fail after closure-evidence drift;
 - legacy Danus import must preserve assurance without silently recertifying;
-- old Chalk V4 projects must remain read-only until explicit `mode-init`, and
+- pre-Chalxius V4 projects must remain read-only until explicit `mode-init`, and
   V1-V3 must remain read-only until isolated copy upgrade;
 - learning writes must never appear in research audits or Fact admission.
 - ordinary research must not auto-start Chalxius Learner, and global product

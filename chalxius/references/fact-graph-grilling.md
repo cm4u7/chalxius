@@ -16,7 +16,7 @@ mount a graph unless it materially improves the requested learning session.
 
 Graph-aware teaching uses the unified lightweight nontruth learning plane: a
 static reader plus a small pedagogical overlay. It may read frozen Fact Graph
-files, including legacy Danus-compatible inputs, or immutable Chalk `pls-*`
+files, including legacy-compatible inputs, or immutable Chalxius `pls-*`
 Paper and `bbs-*` Blackboard snapshots, verify their artifact bindings, and
 update only the user's learning evidence. Apply
 [unified_learning_plane.md](unified_learning_plane.md) for mounts. The graph
@@ -58,7 +58,7 @@ source graph's `fact_id` verbatim as an alias. Mastery, hints, errors, and revie
 events are an overlay under that key; they are not part of the mathematical
 fact's content hash. Give every evidence event its own canonical SHA-256.
 
-Key a foreign Chalk anchor by a canonical binding containing source kind,
+Key a foreign snapshot anchor by a canonical binding containing source kind,
 immutable snapshot id, source object id, and exact object SHA-256. Preserve the
 full source object and relation payload for bounded context retrieval, but never
 map its status to admitted. A Blackboard Paper mirror and its authoritative

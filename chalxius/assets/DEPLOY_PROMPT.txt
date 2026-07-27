@@ -2,9 +2,10 @@ Verify the Chalxius candidate as one self-contained chalxius skill. Read
 SKILL.md completely, verify
 INHERITANCE.lock.json, run scripts/self_test.py and the complete unit suite, and
 choose a writable PROJECT outside the skill directory. Do not start the legacy
-Danus, Chalk, Grill Me, or coordinator runtimes; Chalk V4 is the sole embedded
-research kernel. Do not install, package, migrate, or cut over without separate
-explicit authorization.
+Danus or pre-Chalxius research runtimes, standalone Grill Me runtime, or retired
+coordinator; the Chalxius research engine is the sole embedded research
+runtime. Do not install, package, migrate, or cut over without separate explicit
+authorization.
 
 Initialize or explicitly mode-init the project, then bind one of fast, auto, or
 deep. Treat reasoning_mode as separate from plan-round assignment mode. Every
@@ -75,15 +76,15 @@ it is globally injected but starts only for explicit programming Grill or
 Socratic intent, exposes no graph adapter, and has no research authority.
 
 Treat V1-V3 projects as read-only and upgrade only an isolated copy. The
-Python-library reasoning_mode=None path is inherited-Chalk fixture
-compatibility only; official writable CLI initialization defaults to auto.
+Python-library reasoning_mode=None path is only for internal pre-Chalxius V4
+fixture compatibility; official writable CLI initialization defaults to auto.
 
 For an explicitly requested reader visualization, complete Reader Finalize as
 the strengthened validation stage of the existing export-reader-html gate.
 Prepare strict English reader-packet schema v1 from read-only frozen sources,
 preserve native plane/status and exact text hashes, and require nonempty
 summary, intuition, importance, and reasoning fields for every included node.
-Verify the revision-11 contract: the fixed project output is byte-deterministic,
+Verify the revision-12 contract: the fixed project output is byte-deterministic,
 self-contained, offline, and has truth_effect none; all eligible real nodes and
 edges remain present; All targets and All cards change card sizes rather than
 topology; any card can be sized independently; double-click maximizes its
@@ -97,13 +98,25 @@ card receives deterministic two-axis pivot compensation, an existing pin is
 updated when present, and sizing never creates a pin; minimum zoom
 keeps the internal control usable; selection glow follows the role silhouette;
 semantic edges show enlarged category-colored direction markers at midpoint and
-target while synthetic grouping links remain arrowless;
+target; synthetic multi-target topic links are smooth, dashed, arrowless Bezier
+curves; double-clicking such a topic atomically maximizes the union of the
+complete directed upstream and downstream chains of every currently eligible
+member target and minimizes the eligible complement as one sizing-history
+action without changing topology;
 the Plaques inner ornament is dimmer than its outer semantic stroke; and
 paired role-specific text widths and margins keep the control-plus-label
 envelope within 3% of card center and multiline real-card labels are
 left-justified without colliding with the control or silhouette; hovering the
 card body or internal size control produces the same continuous related-edge
-emphasis without a boundary flicker.
+emphasis without a boundary flicker; the 90%-150% detail-text control scales
+sidebar prose, rendered MathJax SVG, and exact TeX source together, with MathJax
+SVG exempt from fixed icon sizing and exact TeX sized relative to the panel;
+initial placement and explicit Reset layout seed packet order and, for at most
+1,200 cross-rank edges, score that baseline plus eight fixed forward/backward
+weighted-barycentric sweep pairs by exact proper-crossing count; the selected
+order is deterministic and has no more proper crossings than packet order;
+larger graphs preserve packet order; this is a bounded search, not a claim of a
+global optimum.
 Verify deterministic `reader_finalize` metadata in both
 embedded build metadata and stdout, bound to the source snapshot and packet
 hash with presentation-readiness-only scope and no truth effect. The bilingual

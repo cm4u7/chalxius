@@ -10,7 +10,7 @@
 
 | Property | fast | auto | deep |
 |---|---|---|---|
-| Chalk V4 engine and audits | full | full | full |
+| Chalxius research engine and audits | full | full | full |
 | Fact admission contract | identical | identical | identical |
 | Expensive exploration | available, not automatic | deterministic workload triggers | every applicable feature required |
 | Inapplicable feature | `not_applicable` | `not_applicable` | `not_applicable` |
@@ -62,8 +62,8 @@ receipt is rejected.
 ## State transitions
 
 Initialize new projects with `init --reasoning-mode MODE`. Activate a historical
-Chalk V4 project with `mode-init --mode MODE`. Query with `mode-status` and append
-a switch with `mode-switch --to MODE`.
+project in the pre-Chalxius V4 format with `mode-init --mode MODE`. Query with
+`mode-status` and append a switch with `mode-switch --to MODE`.
 
 Every mode event states:
 
@@ -83,13 +83,14 @@ or FactBundle stores cannot mint verifier/review/admission evidence without the
 owning `MathGraphStore` authority, so later evidence drift cannot be hidden by
 an earlier acceptance marker or a bypassed wrapper.
 
-Historical mode-less Chalk V4 state is API- and CLI-level read-only. Explicit
-`mode-init` is permitted only after a clean current audit. Its schema-2 receipt
-binds frozen rounds and inventories the exact acceptance event, Fact,
-submission, review, verifier-package, atomic-bundle tree, and acceptance-marker
-bytes for every already-accepted object. That exact set alone is exempt from
-future round-profile requirements; pending candidates are not grandfathered,
-and any bound-byte or symlink drift invalidates governance and blocks writes.
+Historical mode-less state in the pre-Chalxius V4 format is API- and CLI-level
+read-only. Explicit `mode-init` is permitted only after a clean current audit.
+Its schema-2 receipt binds frozen rounds and inventories the exact acceptance
+event, Fact, submission, review, verifier-package, atomic-bundle tree, and
+acceptance-marker bytes for every already-accepted object. That exact set alone
+is exempt from future round-profile requirements; pending candidates are not
+grandfathered, and any bound-byte or symlink drift invalidates governance and
+blocks writes.
 
 ## Switching during work
 

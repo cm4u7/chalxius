@@ -69,8 +69,8 @@ error for compatibility.
 Treat the legacy V3 project as a read-only ancestor and the unified copy as a
 new lineage. The copy becomes eligible for unified work only after its workflow
 declaration is migrated to V4 and an explicit `mode-init` activation receipt is
-recorded. The unified package never starts the old V3 or standalone Chalk
-runtime. Legacy facts keep their recorded V3 assurance; read-time interfaces
+recorded. Chalxius never starts an old V3 or other retired predecessor runtime.
+Legacy facts keep their recorded V3 assurance; read-time interfaces
 and V4 expert exports must label that assurance as inherited and must never
 imply a fresh V4 review.
 

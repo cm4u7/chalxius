@@ -79,12 +79,13 @@ For newly created workflow-v4 memory, prefer the compact profile:
 }
 ```
 
-`semantics.source_ambiguity` is an optional Chalk-native boolean. Its absence
-means `false` for routing, and validation preserves the omission exactly so a
-frozen pre-unified V4 profile and every dependent plan/binding hash remain
-byte- and hash-identical. An explicitly present `false` is a new, distinct
-profile hash; `true` is valid only when `source_claim=true`. This field controls
-exploration routing only. It never replaces or weakens `source_claim_gate`.
+`semantics.source_ambiguity` is an optional Chalxius workload-profile boolean.
+Its absence means `false` for routing, and validation preserves the omission
+exactly so a frozen pre-unified V4 profile and every dependent plan/binding hash
+remain byte- and hash-identical. An explicitly present `false` is a new,
+distinct profile hash; `true` is valid only when `source_claim=true`. This field
+controls exploration routing only. It never replaces or weakens
+`source_claim_gate`.
 
 The four-factor profile is a user-authorized V4 revision of the guide's eight-dimensional proposal.
 Do not mix `decision_profile` with the legacy eight-metric v4 input. The engine derives readiness,
@@ -331,8 +332,9 @@ optional `fact_graph/interfaces/FACT_ID.json` projection and therefore always
 passes through the project mutation guard. `materialize=False` returns the
 stored interface when present or reconstructs the same validated object only in
 memory when absent. Audit, validation, and claim-card readers use this pure
-form. On V1-V3 or a mode-less Chalk V4 root, the default materializing call
-fails before any byte changes; the explicit pure call remains readable.
+form. On a legacy V1-V3 root or a mode-less root in the pre-Chalxius V4 format,
+the default materializing call fails before any byte changes; the explicit pure
+call remains readable.
 
 Likewise `blackboard.reindex(apply=False)` computes and compares the desired
 index without writing, while `apply=True` is guarded. Experiment status and
@@ -521,7 +523,7 @@ unchanged.
 
 ## V4 inheritance, append anchors, and expert assurance
 
-A project-level stable-to-Chalk receipt binds the full source-tree digest, source project semantic
+A project-level legacy migration receipt binds the full source-tree digest, source project semantic
 hash, immutable legacy inventory, byte length and SHA-256 of every inherited append-only prefix,
 mutable projection policy, and the rule that recorded legacy assurance is never relabeled V4.
 
@@ -541,9 +543,10 @@ truncation, and wrong-engine writes without claiming authenticated filesystem se
 
 New Chalxius sidecars retain `writer_engine: "operate-mathgraph-unified"`, the current
 package writer identity. The validator also accepts the frozen historical value
-`"mathgraph-chalk-version"` as Chalk V4 schema-lineage evidence and includes
-that original value when recomputing its anchor id; historical anchors are
-therefore neither rewritten nor rehashed. No other writer identity is accepted.
+`"mathgraph-chalk-version"` as pre-Chalxius V4 schema-lineage evidence and
+includes that original value when recomputing its anchor id; historical anchors
+are therefore neither rewritten nor rehashed. No other writer identity is
+accepted.
 
 An expert claim card contains:
 

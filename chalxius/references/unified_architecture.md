@@ -2,10 +2,12 @@
 
 ## One engine, three execution profiles
 
-This package is a source fork of MathGraph Chalk 0.4.0. Chalk V4 is the only
-research engine, object model, protocol, CLI, audit system, and Fact Graph
-gateway. `fast`, `auto`, and `deep` select exploration intensity within that
-engine. They do not dispatch into the installed Danus or Chalk skills.
+The Chalxius research engine is this package's only research runtime. It
+provides the object model, protocol, CLI, audit system, and Fact Graph gateway.
+`fast`, `auto`, and `deep` are execution profiles that select exploration
+intensity within that same engine; they do not dispatch to retired predecessor
+skills. For provenance, the engine descends from the pre-Chalxius
+`mathgraph-chalk-version` 0.4.0 codebase.
 
 Danus 0.2.12 contributes two bounded inputs: a latency/performance target and a
 frozen legacy-fact import format. No Danus engine module, V3 round protocol,
@@ -104,8 +106,9 @@ writes but preserves read-only inspection and terminal cleanup.
 
 ## Historical compatibility
 
-An unmodified Chalk 0.4 V4 project has no unified governance directory. It is
-recognized and audited with a warning, not called corrupt. The unified engine
+An unmodified project in the pre-Chalxius V4 format (`mathgraph-chalk-version`
+0.4.0) has no unified governance directory. It is recognized and audited with
+a warning, not called corrupt. The Chalxius research engine
 permits read-only API and CLI operations until an operator records `mode-init`;
 every exposed child-store writer shares that guard. Activation requires a clean
 current audit before advisory-lock creation, then repeats audit and inventory
@@ -120,7 +123,7 @@ may be imported with their original assurance and provenance, but no new fact
 uses a Danus admission route. V1-V3 public API and CLI mutation attempts fail
 closed; only read-only inspection and an explicitly isolated copy-upgrade or
 its dry run are supported. `reasoning_mode=None` exists only as an internal
-Python compatibility seam for inherited Chalk fixtures, not as a supported
+Python compatibility seam for pre-Chalxius fixtures, not as a supported
 writable unified initialization mode. Official CLI initialization defaults to
 `auto`.
 

@@ -92,7 +92,7 @@ embedded unified nontruth learning plane. Never admit, refute, replace, or mutat
 a mounted source from `scripts/learn`. If a concern cannot be settled by
 read-only inspection, record it against the exact source anchor; a blocking
 concern stops new teaching from that node. If the user requests resolution,
-open a separate work unit in the same unified Chalk research runtime and route
+open a separate work unit in the same Chalxius research engine and route
 the concern through Paper Audit or ordinary Fact-candidate governance. Mount
 any later replacement snapshot under a new identity and preserve the old
 learning evidence. A concern itself is neither a repair nor a refutation.

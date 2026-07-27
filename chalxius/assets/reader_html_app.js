@@ -49,6 +49,8 @@
   const NODE_SIZE_CONTROL_MAX_PX = 20;
   const NODE_SIZE_CONTROL_MIN_PX = 11;
   const NODE_CONTROL_SAFE_MIN_ZOOM = 0.36;
+  const CROSSING_REDUCTION_SWEEPS = 8;
+  const CROSSING_REDUCTION_EDGE_LIMIT = 1200;
   const COMPACT_NODE_SIZES = Object.freeze({
     target: {width: 78, height: 46},
     definition: {width: 80, height: 44},
@@ -340,9 +342,7 @@
       {
         selector: 'edge[kind = "reader-grouping"]',
         style: {
-          'curve-style': 'taxi',
-          'taxi-direction': 'rightward',
-          'taxi-turn': 34,
+          'curve-style': 'bezier',
           'width': 2,
           'line-color': '#4f7464',
           'line-style': 'dashed',
@@ -682,6 +682,12 @@
     cy.on('dbltap', 'node[kind = "reader-node"]', (event) => {
       closeNodeContextMenu();
       maximizeNodePath(event.target.id());
+    });
+    cy.on('dbltap', 'node[kind = "theme"]', (event) => {
+      closeNodeContextMenu();
+      cy.elements().unselect();
+      event.target.select();
+      maximizeThemePath(event.target.data('themeId'));
     });
     cy.on('mouseover', 'node[kind = "reader-node"]', (event) => {
       state.hoveredCanvasNodeId = event.target.id();
@@ -1033,6 +1039,24 @@
     showNodeDetail(nodeId);
   }
 
+  function maximizeThemePath(themeId) {
+    const theme = themeById.get(themeId);
+    if (!theme) return;
+    const closure = new Set();
+    for (const targetId of theme.target_ids.filter(nodeEligible)) {
+      for (const nodeId of directedClosureNodeIds(targetId, 'upstream')) closure.add(nodeId);
+      for (const nodeId of directedClosureNodeIds(targetId, 'downstream')) closure.add(nodeId);
+    }
+    if (!closure.size) return;
+    const next = new Set(state.minimizedNodeIds);
+    for (const eligibleId of eligibleNodeIds()) {
+      if (closure.has(eligibleId)) next.delete(eligibleId);
+      else next.add(eligibleId);
+    }
+    commitSizing(next, `theme-path:${themeId}`);
+    showThemeDetail(themeId);
+  }
+
   function maximizeDirection(nodeId, direction) {
     if (!nodeEligible(nodeId)) return;
     const next = new Set(state.minimizedNodeIds);
@@ -1129,6 +1153,183 @@
     });
   }
 
+  function cloneGroupOrder(groups) {
+    return new Map([...groups].map(([rank, nodeIds]) => [rank, [...nodeIds]]));
+  }
+
+  function restoreGroupOrder(groups, savedOrder) {
+    for (const [rank, nodeIds] of savedOrder) {
+      groups.set(rank, [...nodeIds]);
+    }
+  }
+
+  function layoutCrossingScore(groups, ranks, baselineIndex) {
+    const position = new Map();
+    for (const [rank, nodeIds] of groups) {
+      nodeIds.forEach((nodeId, index) => position.set(nodeId, {x: rank, y: index}));
+    }
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    const segments = [];
+    for (const edge of packet.edges) {
+      const source = position.get(edge.source);
+      const target = position.get(edge.target);
+      if (!source || !target || source.x === target.x) continue;
+      segments.push({
+        sourceId: edge.source,
+        targetId: edge.target,
+        source,
+        target,
+        weight: edgeWeight[edge.category] || 1
+      });
+    }
+    if (segments.length > CROSSING_REDUCTION_EDGE_LIMIT) return null;
+
+    const orientation = (first, second, third) => (
+      (second.x - first.x) * (third.y - first.y)
+      - (second.y - first.y) * (third.x - first.x)
+    );
+    const properCrossing = (left, right) => {
+      if (
+        left.sourceId === right.sourceId
+        || left.sourceId === right.targetId
+        || left.targetId === right.sourceId
+        || left.targetId === right.targetId
+      ) return false;
+      const first = orientation(left.source, left.target, right.source);
+      const second = orientation(left.source, left.target, right.target);
+      const third = orientation(right.source, right.target, left.source);
+      const fourth = orientation(right.source, right.target, left.target);
+      return (
+        ((first > 0 && second < 0) || (first < 0 && second > 0))
+        && ((third > 0 && fourth < 0) || (third < 0 && fourth > 0))
+      );
+    };
+
+    let crossings = 0;
+    let weightedPenalty = 0;
+    for (let leftIndex = 0; leftIndex < segments.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < segments.length; rightIndex += 1) {
+        const left = segments[leftIndex];
+        const right = segments[rightIndex];
+        if (!properCrossing(left, right)) continue;
+        crossings += 1;
+        weightedPenalty += left.weight * right.weight;
+      }
+    }
+    let packetOrderDisplacement = 0;
+    for (const [nodeId, coordinates] of position) {
+      packetOrderDisplacement += Math.abs(coordinates.y - baselineIndex.get(nodeId));
+    }
+    return {crossings, weightedPenalty, packetOrderDisplacement};
+  }
+
+  function crossingScoreIsBetter(candidate, incumbent) {
+    if (!candidate || !incumbent) return false;
+    return (
+      candidate.crossings < incumbent.crossings
+      || (
+        candidate.crossings === incumbent.crossings
+        && candidate.weightedPenalty < incumbent.weightedPenalty
+      )
+      || (
+        candidate.crossings === incumbent.crossings
+        && candidate.weightedPenalty === incumbent.weightedPenalty
+        && candidate.packetOrderDisplacement < incumbent.packetOrderDisplacement
+      )
+    );
+  }
+
+  function reduceEdgeCrossings(groups, ranks) {
+    const orderedRanks = [...groups.keys()].sort((left, right) => left - right);
+    const neighbors = new Map(readerNodeIds.map((nodeId) => [nodeId, []]));
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    for (const edge of packet.edges) {
+      if (!neighbors.has(edge.source) || !neighbors.has(edge.target)) continue;
+      if (ranks.get(edge.source) === ranks.get(edge.target)) continue;
+      const weight = edgeWeight[edge.category] || 1;
+      neighbors.get(edge.source).push({nodeId: edge.target, weight});
+      neighbors.get(edge.target).push({nodeId: edge.source, weight});
+    }
+
+    const sweep = (rankOrder, towardLowerRanks) => {
+      const orderIndex = new Map();
+      for (const [neighborRank, neighborIds] of groups) {
+        neighborIds.forEach((nodeId, index) => {
+          orderIndex.set(nodeId, {
+            rank: neighborRank,
+            normalized: (index + 0.5) / neighborIds.length
+          });
+        });
+      }
+      for (const rank of rankOrder) {
+        const ids = groups.get(rank);
+        if (!ids || ids.length < 2) continue;
+        const previousIndex = new Map(ids.map((nodeId, index) => [nodeId, index]));
+        const score = new Map();
+        for (const nodeId of ids) {
+          let weightedPosition = 0;
+          let totalWeight = 0;
+          for (const neighbor of neighbors.get(nodeId)) {
+            const position = orderIndex.get(neighbor.nodeId);
+            if (!position) continue;
+            const usable = towardLowerRanks ? position.rank < rank : position.rank > rank;
+            if (!usable) continue;
+            weightedPosition += position.normalized * neighbor.weight;
+            totalWeight += neighbor.weight;
+          }
+          score.set(
+            nodeId,
+            totalWeight
+              ? weightedPosition / totalWeight
+              : (previousIndex.get(nodeId) + 0.5) / ids.length
+          );
+        }
+        ids.sort((left, right) => (
+          score.get(left) - score.get(right)
+          || previousIndex.get(left) - previousIndex.get(right)
+          || nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+        ));
+        ids.forEach((nodeId, index) => {
+          orderIndex.set(nodeId, {
+            rank,
+            normalized: (index + 0.5) / ids.length
+          });
+        });
+      }
+    };
+
+    const baselineOrder = cloneGroupOrder(groups);
+    const baselineIndex = new Map();
+    for (const nodeIds of baselineOrder.values()) {
+      nodeIds.forEach((nodeId, index) => baselineIndex.set(nodeId, index));
+    }
+    let bestOrder = cloneGroupOrder(groups);
+    let bestScore = layoutCrossingScore(groups, ranks, baselineIndex);
+    if (!bestScore) {
+      return {evaluated: false, baselineCrossings: null, finalCrossings: null};
+    }
+    const considerCurrentOrder = () => {
+      const candidateScore = layoutCrossingScore(groups, ranks, baselineIndex);
+      if (!crossingScoreIsBetter(candidateScore, bestScore)) return;
+      bestScore = candidateScore;
+      bestOrder = cloneGroupOrder(groups);
+    };
+
+    for (let iteration = 0; iteration < CROSSING_REDUCTION_SWEEPS; iteration += 1) {
+      sweep(orderedRanks.slice(1), true);
+      considerCurrentOrder();
+      sweep([...orderedRanks].reverse().slice(1), false);
+      considerCurrentOrder();
+    }
+    restoreGroupOrder(groups, bestOrder);
+    const baselineScore = layoutCrossingScore(baselineOrder, ranks, baselineIndex);
+    return {
+      evaluated: true,
+      baselineCrossings: baselineScore.crossings,
+      finalCrossings: bestScore.crossings
+    };
+  }
+
   function applyCanonicalPositions() {
     const nodeIds = packet.nodes.map((node) => node.id);
     cy.batch(() => {
@@ -1163,8 +1364,18 @@
       if (!groups.has(rank)) groups.set(rank, []);
       groups.get(rank).push(nodeId);
     }
-    for (const [rank, ids] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+    for (const ids of groups.values()) {
       ids.sort((left, right) => nodeById.get(left).packetIndex - nodeById.get(right).packetIndex);
+    }
+    const crossingDiagnostics = reduceEdgeCrossings(groups, ranks);
+    dom.cy.dataset.layoutCrossingEvaluation = crossingDiagnostics.evaluated ? 'bounded' : 'skipped-large-graph';
+    dom.cy.dataset.layoutBaselineCrossings = crossingDiagnostics.baselineCrossings === null
+      ? 'not-evaluated'
+      : String(crossingDiagnostics.baselineCrossings);
+    dom.cy.dataset.layoutFinalCrossings = crossingDiagnostics.finalCrossings === null
+      ? 'not-evaluated'
+      : String(crossingDiagnostics.finalCrossings);
+    for (const [rank, ids] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
       ids.forEach((nodeId, index) => setPosition(nodeId, {x: 285 + rank * CANONICAL_COLUMN_SPACING, y: 115 + index * 132}));
     }
     for (const themeId of groupedThemeIds) {

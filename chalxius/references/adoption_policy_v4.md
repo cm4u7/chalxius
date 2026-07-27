@@ -2,7 +2,7 @@
 
 > **Unified supersession.** This copy governs `chalxius`. The historical
 > `operate-mathgraph-unified` string remains only an artifact compatibility id.
-> Chalk V4 truth and adoption gates remain mandatory in every reasoning mode,
+> Chalxius truth and adoption gates remain mandatory in every reasoning mode,
 > but live panel and pulse activation is controlled by the hash-bound
 > `execution_profile`: deep requires every applicable feature, auto requires a
 > feature when its deterministic workload trigger fires, and fast leaves an

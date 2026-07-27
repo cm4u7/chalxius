@@ -7,7 +7,7 @@ testing functions inherited from Grill Me
 0.2.0: mathematical and philosophical tutoring, paper-reading modes,
 qualifying-exam drilling, graph-aware question selection, mastery evidence, and
 spaced review. It does not invoke a Grill Me or Danus runtime and does not
-participate in Chalk research orchestration.
+participate in Chalxius research orchestration.
 
 Chalxius Learner is off by default. Activate it only for explicit academic
 teaching, questioning, testing, paper-learning, exam-training, mastery-tracking,
@@ -29,9 +29,9 @@ learning artifacts. Ordinary coding does not activate it.
 ## What it may mount
 
 - a frozen Fact Graph, including legacy Danus-compatible facts and certificates;
-- an immutable Chalk `pls-*` Paper snapshot, with source, reconstruction, and
+- an immutable Chalxius `pls-*` Paper snapshot, with source, reconstruction, and
   audit authority preserved;
-- an immutable Chalk `bbs-*` Blackboard snapshot, including omission receipts
+- an immutable Chalxius `bbs-*` Blackboard snapshot, including omission receipts
   and nonlearnable boundary stubs.
 
 Mounting verifies local bytes, manifests, ids, edges, and drift. This is artifact
@@ -43,10 +43,10 @@ to a mounted source.
 Only a separately user-authorized learning graph may receive mastery attempts, hint depth,
 error classes, review schedule, teaching coverage, pedagogical explanations,
 misconceptions, and source concerns. These records use separate content hashes.
-They are excluded from Chalk Fact, Paper, Audit, Blackboard, round, verification,
-and admission stores.
+They are excluded from Chalxius Fact, Paper, Audit, Blackboard, round,
+verification, and admission stores.
 
-Teaching does not need Chalk-level multi-agent research audit. This is a
+Teaching does not require a Chalxius multi-agent research audit. This is a
 performance and pedagogical boundary, not a weaker truth gate: teaching evidence
 has no truth effect. A suspected source defect is recorded as a concern. If the
 user wants it resolved, open a normal unified research work unit and build the

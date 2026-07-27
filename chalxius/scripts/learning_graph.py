@@ -2,8 +2,8 @@
 """Build and validate the unified lightweight nontruth learning plane.
 
 The tool is a standard-library, static local-file consumer. It can mount frozen
-Fact Graph artifacts, including legacy Danus-compatible inputs, and immutable
-Chalk Paper or Blackboard snapshots. It never invokes a research runtime,
+Fact Graph artifacts, including legacy-compatible inputs, and immutable
+Chalxius Paper or Blackboard snapshots. It never invokes a research runtime,
 builds a research graph, audits a proof, admits a fact, or writes back to a
 mounted source.
 """
@@ -1994,7 +1994,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser.set_defaults(func=cmd_import)
 
     paper_parser = subparsers.add_parser(
-        "mount-paper", help="read-only mount of an immutable Chalk pls snapshot"
+        "mount-paper", help="read-only mount of an immutable Chalxius pls snapshot"
     )
     paper_parser.add_argument("--source-root", required=True)
     paper_parser.add_argument("--snapshot-id", required=True)
@@ -2011,7 +2011,7 @@ def build_parser() -> argparse.ArgumentParser:
     paper_parser.set_defaults(func=cmd_mount_paper)
 
     blackboard_parser = subparsers.add_parser(
-        "mount-blackboard", help="read-only mount of an immutable Chalk bbs snapshot"
+        "mount-blackboard", help="read-only mount of an immutable Chalxius bbs snapshot"
     )
     blackboard_parser.add_argument("--source-root", required=True)
     blackboard_parser.add_argument("--snapshot-id", required=True)

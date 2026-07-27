@@ -1,0 +1,608 @@
+{
+  "schema_version": 1,
+  "project_id": "public-philosophy-case",
+  "language": "en",
+  "title": "Philosophy workflow: reconstruction without authority leakage",
+  "audience": "Readers with no prior knowledge of Chalxius or knowledge graphs",
+  "source_snapshot": {
+    "id": "public-philosophy-workflow-v1",
+    "sha256": "78adc9c87dae3cbf2d0ca4c0fff3f8bd12a6a6a5ef2b4c57ce4f9ec91421b977",
+    "description": "An anonymized public summary bound to a read-only audit of a private philosophy workflow."
+  },
+  "presentation": {
+    "subtitle": "Two workflow conclusions, with research and learning context available as optional layers.",
+    "introduction": "This interactive map demonstrates separation of source, interpretation, audit, exploration, and learning authority. It does not prove a philosophical conclusion and admits no Fact."
+  },
+  "audit": {
+    "current_ok": true,
+    "summary": "The audited artifact passed current read-only structural and workflow checks; that result is workflow evidence only.",
+    "warnings": [
+      "The underlying artifact predates current unified-write activation and remains read-only."
+    ],
+    "unresolved": []
+  },
+  "theme_order": [
+    "theme-philosophy-workflow"
+  ],
+  "target_order": [
+    "target-reconstruction",
+    "target-authority"
+  ],
+  "prerequisite_order": {
+    "target-reconstruction": [
+      "paper-source",
+      "paper-reconstruction",
+      "audit-review",
+      "audit-history"
+    ],
+    "target-authority": [
+      "paper-source",
+      "paper-reconstruction",
+      "audit-review",
+      "audit-history",
+      "target-reconstruction",
+      "fact-boundary"
+    ]
+  },
+  "themes": [
+    {
+      "id": "theme-philosophy-workflow",
+      "label": "Philosophy workflow",
+      "description": "A source-bound reconstruction followed by an authority-separation result.",
+      "target_ids": [
+        "target-reconstruction",
+        "target-authority"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "paper-source",
+      "title": "Frozen source anchors",
+      "reader_role": "definition",
+      "plane": "paper",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "Exact source passages remain separate from every interpretation.",
+      "intuition": "The system first preserves what the publication says before asking what it means.",
+      "importance": "A later criticism can then point to a stable source instead of a moving paraphrase.",
+      "reasoning": "Source authority is evidence of wording and context, not automatic proof of the paper's conclusion.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The audited workflow preserved 17 frozen source nodes as source authority.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The audited workflow preserved 17 frozen source nodes as source authority."
+      },
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "current_source_summary",
+        "truth_status": "source_authority",
+        "object_id": "public-case:philosophy:paper-source",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node paper-source",
+        "object_sha256": "289b4569bc2bf5659379591811ec49f43c7cf2a02cefdf330754951d414423fe",
+        "original_text_sha256": "b96e0ec745452bd1766bfbe6a303cfd8ee9db71df1b77e082cee37bc36788df0",
+        "replaces": []
+      }
+    },
+    {
+      "id": "paper-reconstruction",
+      "title": "Bounded argument map",
+      "reader_role": "result",
+      "plane": "paper",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "A reconstruction makes claims and inferential links explicit while remaining interpretation.",
+      "intuition": "It is a transparent reading of the paper, not a silent replacement for the paper.",
+      "importance": "Typed reconstruction makes omissions, ambiguities, and disagreements inspectable.",
+      "reasoning": "The audited snapshot contained 40 reconstruction nodes and retained rejected revisions as history.",
+      "prerequisites": [
+        "paper-source"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The public case records a bounded reconstruction, not a uniquely correct interpretation.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The public case records a bounded reconstruction, not a uniquely correct interpretation."
+      },
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "current_reconstruction_summary",
+        "truth_status": "interpretation",
+        "object_id": "public-case:philosophy:paper-reconstruction",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node paper-reconstruction",
+        "object_sha256": "1dd08532ab0ff5ae4ca3247bd992175985838b32a5969572691eb02869acd10f",
+        "original_text_sha256": "befbfa0be0c5bf17da8d57f4311d2bc17a1e53439ad7cb103736aabc636d94fa",
+        "replaces": []
+      }
+    },
+    {
+      "id": "audit-review",
+      "title": "Independent dual review",
+      "reader_role": "result",
+      "plane": "audit",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "The accepted revision required separate source-fidelity and graph-structure review.",
+      "intuition": "One reviewer checks faithfulness to the source; another checks whether the map itself is coherent.",
+      "importance": "A polished reconstruction cannot approve itself.",
+      "reasoning": "The two reviews bind different failure modes and preserve their decisions independently.",
+      "prerequisites": [
+        "paper-reconstruction"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The current reconstruction revision was accepted only after both designated reviews passed.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The current reconstruction revision was accepted only after both designated reviews passed."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "reviewed_audit_summary",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:philosophy:audit-review",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node audit-review",
+        "object_sha256": "a2928aa72a6a2eed250585d0e2825d169d65d4e0ef7b1305c09158395427d7c4",
+        "original_text_sha256": "5ea14bc70fcfecf17f3d2cae9e557b1bc0de0c6e6dfa454cb69135b91b51f1a1",
+        "replaces": []
+      }
+    },
+    {
+      "id": "audit-history",
+      "title": "Correctable audit history",
+      "reader_role": "explanation",
+      "plane": "audit",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "Rejected, superseded, and repaired audit states remain inspectable.",
+      "intuition": "Correction adds a traceable next state instead of erasing the earlier mistake.",
+      "importance": "Readers can distinguish the current view from the path that produced it.",
+      "reasoning": "Append-only replacement prevents a later repair from rewriting the historical record.",
+      "prerequisites": [
+        "paper-reconstruction"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The audited artifact retained 16 historical audit nodes and explicit replacement relations.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The audited artifact retained 16 historical audit nodes and explicit replacement relations."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "historical_audit_summary",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:philosophy:audit-history",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node audit-history",
+        "object_sha256": "555d497708221bfe44197c9ce1e113bd20f47c9f4da1a7b6f5499429abe559cd",
+        "original_text_sha256": "b5d357d1094e7ead1da5b73f23a9dffa6a8542627d3804c2722aa4df734f9b66",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-reconstruction",
+      "title": "Source-bound reconstruction",
+      "reader_role": "target",
+      "plane": "paper",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "Chalxius can make a philosophical argument readable without merging source and interpretation.",
+      "intuition": "A reader can inspect the argument and still see which parts came from the publication and which parts were reconstructed.",
+      "importance": "This supports rigorous reading without pretending that a graph settles the philosophy.",
+      "reasoning": "Frozen source anchors, explicit reconstruction, and independent review jointly support this workflow claim.",
+      "prerequisites": [
+        "audit-review",
+        "audit-history"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "This case demonstrates source-bound reconstruction workflow, not philosophical truth.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "This case demonstrates source-bound reconstruction workflow, not philosophical truth."
+      },
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "public_case_reconstruction",
+        "truth_status": "interpretation",
+        "object_id": "public-case:philosophy:target-reconstruction",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node target-reconstruction",
+        "object_sha256": "785793a5586e2842b27f2111ab62f7274fa5162ba3d1748bdae678cca4e50caf",
+        "original_text_sha256": "c63b587fd11bad63f116d982992f5ba770d7cb461ab16a150c2f6b1f0ea14c8c",
+        "replaces": []
+      }
+    },
+    {
+      "id": "fact-boundary",
+      "title": "Zero admitted Facts",
+      "reader_role": "definition",
+      "plane": "audit",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "The audited Fact Graph contained zero admitted Facts and zero candidates.",
+      "intuition": "Useful analysis can remain useful without being promoted into trusted premises.",
+      "importance": "This is positive evidence that authority did not leak between planes.",
+      "reasoning": "A clean workflow audit checks structure and policy; it does not certify a philosophical proposition.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "No philosophical claim from this case was admitted as a Chalxius Fact.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "No philosophical claim from this case was admitted as a Chalxius Fact."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "fact_boundary_audit",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:philosophy:fact-boundary",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node fact-boundary",
+        "object_sha256": "3dce3557cfebd997540f1f882cb2446a1251b4349c4e853980663f1830035611",
+        "original_text_sha256": "81519fff6bf2aa2ca37b14a5ac7314c7a55e1b74fcf91efd9ae64eec11da99e7",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-authority",
+      "title": "Authority-safe exploration",
+      "reader_role": "target",
+      "plane": "audit",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "Audit, exploration, teaching, and presentation remain nontruth activities unless a separate admission succeeds.",
+      "intuition": "The system can help people think without granting every useful note the power of a premise.",
+      "importance": "That boundary is the central safety property of the philosophy workflow.",
+      "reasoning": "The read-only audit passed while the Fact Graph remained empty and the learning mount prohibited writeback.",
+      "prerequisites": [
+        "target-reconstruction",
+        "fact-boundary"
+      ],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The demonstrated capability is authority separation across the audited workflow.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The demonstrated capability is authority separation across the audited workflow."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "reviewed_audit_conclusion",
+        "truth_status": "audit_evidence",
+        "object_id": "public-case:philosophy:target-authority",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node target-authority",
+        "object_sha256": "ba47fd5be25e5e7d9223ff109e568acef5bb6a6f96ed86bd724333870d0d3565",
+        "original_text_sha256": "912016bfeb90244826a7526fdc2e151fba4d6905498248a80d18f81b771b976d",
+        "replaces": []
+      }
+    },
+    {
+      "id": "blackboard-exploration",
+      "title": "Frozen Blackboard",
+      "reader_role": "explanation",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "Exploratory questions and challenges live in a separate frozen workspace.",
+      "intuition": "Researchers can try objections without editing the source or declaring victory.",
+      "importance": "Speculation stays useful and reversible.",
+      "reasoning": "Mirror nodes retain bindings to their source snapshots while agent notes remain exploration only.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "Blackboard projection preserved endpoints without acquiring Paper or Fact authority.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "Blackboard projection preserved endpoints without acquiring Paper or Fact authority."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "frozen_exploration_summary",
+        "truth_status": "exploration",
+        "object_id": "public-case:philosophy:blackboard-exploration",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node blackboard-exploration",
+        "object_sha256": "2cea81adc375aff284aff03c232036b3d7d6a4fcae1de499a17984d7cba3d0d4",
+        "original_text_sha256": "3bdc4e2d980737026d45fcd115a66bc7d5179159fac9eb0df5d344039233c6bd",
+        "replaces": []
+      }
+    },
+    {
+      "id": "learner-overlay",
+      "title": "Read-only learning overlay",
+      "reader_role": "explanation",
+      "plane": "learning",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-philosophy-workflow",
+      "summary": "A learning overlay can teach from frozen research snapshots without writing back.",
+      "intuition": "Teaching state is about what a learner has practiced, not what research has proved.",
+      "importance": "Pedagogical usefulness does not weaken provenance or admission boundaries.",
+      "reasoning": "The verified mount prohibited research-runtime invocation, truth inheritance, and source writeback.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [
+          "Read this node only within the stated public case boundary."
+        ],
+        "statement": "The learning overlay retained nontruth status and began with zero mastery evidence.",
+        "proof": "This is a hash-bound public case summary, not a proof or a new authority object.",
+        "relations": [
+          "Its plane and truth-status labels determine its authority."
+        ],
+        "original_text": "The learning overlay retained nontruth status and began with zero mastery evidence."
+      },
+      "provenance": {
+        "source_plane": "learning",
+        "source_status": "frozen_learning_summary",
+        "truth_status": "learning",
+        "object_id": "public-case:philosophy:learner-overlay",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; public summary node learner-overlay",
+        "object_sha256": "5074bdb20f136af6e62743c07052b6708ac84418b8612b8edbe0f0a15f040cb7",
+        "original_text_sha256": "1ebabdd5eb063465307b310e22062d7d0199e77c2c807018d5f2fc92ad9e3eed",
+        "replaces": []
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-source-reconstruction",
+      "source": "paper-source",
+      "target": "paper-reconstruction",
+      "category": "prerequisite",
+      "relation": "The reconstruction is bound to frozen source anchors.",
+      "exact_type": "source_bounds_interpretation",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-source-reconstruction",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-source-reconstruction",
+        "object_sha256": "a4587cc305248898643ab733243908c8e769802a9f73606d2fbb98c45ff7d44b",
+        "original_text_sha256": "848e45ce7c8b58317fb2095f5c061187e08e42ec2ede50b0aa5daf89266b883f",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-reconstruction-review",
+      "source": "paper-reconstruction",
+      "target": "audit-review",
+      "category": "prerequisite",
+      "relation": "Independent review evaluates the bounded reconstruction.",
+      "exact_type": "requires_independent_review",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-reconstruction-review",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-reconstruction-review",
+        "object_sha256": "34d19e508b67a40580c458880d58b95579ea6dd8c9a298c005e28b1683bda56e",
+        "original_text_sha256": "fc178babf04f8784a7425347964f06f3b6de152580b4c813623af6ec7bc4d308",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-reconstruction-history",
+      "source": "paper-reconstruction",
+      "target": "audit-history",
+      "category": "prerequisite",
+      "relation": "Correction history records revisions of the reconstruction.",
+      "exact_type": "records_revision_history",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-reconstruction-history",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-reconstruction-history",
+        "object_sha256": "6bf591dfc7084b04e1f358be34e2785529fc3098e39591e9203bdc635ee75626",
+        "original_text_sha256": "2ab0dca90f42f0e0a5015434781c0b65c48d6f35b3afca422afacc2f8d7b8bf9",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-review-target",
+      "source": "audit-review",
+      "target": "target-reconstruction",
+      "category": "prerequisite",
+      "relation": "Dual review supports the bounded workflow claim.",
+      "exact_type": "review_supports_workflow",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-review-target",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-review-target",
+        "object_sha256": "0331b084e7772df2fea65a5071ac6944206459e353b920755a190f99d9b02058",
+        "original_text_sha256": "93ba47a691b0f91af81b6675ae0aa51d05a8e776a431fbdbb0e69b903dc96cfc",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-history-target",
+      "source": "audit-history",
+      "target": "target-reconstruction",
+      "category": "prerequisite",
+      "relation": "Traceable correction history supports the workflow claim.",
+      "exact_type": "history_supports_workflow",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-history-target",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-history-target",
+        "object_sha256": "181800e54dbf5bb15a23ad0940e9a3e877dfff77510e88fe2655b7f8c7a0e528",
+        "original_text_sha256": "475aeffa49659a31e6063119f9dd674499b4f25716033b81d7235f19a63564d6",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-reconstruction-authority",
+      "source": "target-reconstruction",
+      "target": "target-authority",
+      "category": "prerequisite",
+      "relation": "Authority-safe exploration builds on source-bound reconstruction.",
+      "exact_type": "workflow_precedes_boundary",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-reconstruction-authority",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-reconstruction-authority",
+        "object_sha256": "85b914bb76d7e7bb985e95cd91dd5754d9f2443a809ad47681910ece64032eaf",
+        "original_text_sha256": "0c0008650cd0cd0801f138d2637f64642dfd272eef265f1618e44433fd461706",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-fact-authority",
+      "source": "fact-boundary",
+      "target": "target-authority",
+      "category": "prerequisite",
+      "relation": "The empty Fact Graph establishes the tested non-leakage boundary.",
+      "exact_type": "audit_boundary",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-fact-authority",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-fact-authority",
+        "object_sha256": "7b71f53f7180bd558436fda73e58820fba374b7f3dc5ab337ad3dd56a4cc84de",
+        "original_text_sha256": "fcb56d8b11181d22a1811e829e8e3841eef8fcc6451252133bc840a42746e043",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-history-repair",
+      "source": "audit-history",
+      "target": "paper-reconstruction",
+      "category": "repair",
+      "relation": "Accepted corrections replace rather than erase prior reconstruction states.",
+      "exact_type": "append_only_repair",
+      "weak": false,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-history-repair",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-history-repair",
+        "object_sha256": "8590c67723cbe07c8e16f711e53e77175c8a994aa3f4a10151ca7f770d917402",
+        "original_text_sha256": "5805286c3fc7af5c5fa9739c9d7b5815b9f83cd31fc57c38b43fa1eab1084321",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-blackboard-authority",
+      "source": "blackboard-exploration",
+      "target": "target-authority",
+      "category": "support",
+      "relation": "Frozen exploration illustrates nontruth reasoning without source mutation.",
+      "exact_type": "exploration_support",
+      "weak": true,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-blackboard-authority",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-blackboard-authority",
+        "object_sha256": "ab2ad63115f0332638a38a00124cef9e4ba7acedc06d5eb7738c7fc42b8430ff",
+        "original_text_sha256": "d01581749e0bec00323c34751a89859e984e74cf2f0cebe9262dbf5c9b1bfa88",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-learning-authority",
+      "source": "learner-overlay",
+      "target": "target-authority",
+      "category": "support",
+      "relation": "The read-only learning mount illustrates nontruth teaching.",
+      "exact_type": "learning_support",
+      "weak": true,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only_relation",
+        "truth_status": "reader_note",
+        "object_id": "public-case:philosophy:edge-learning-authority",
+        "snapshot_id": "public-philosophy-workflow-v1",
+        "locator": "docs/cases/philosophy.source.md; presentation relation edge-learning-authority",
+        "object_sha256": "f53c0644ec17cdf94ceed52ad2e96be8dc72786571673d85b30a02c4416e4c88",
+        "original_text_sha256": "3e03f5862b0a070590cf124c091b6423fddbe2c63c3fb0d1f0f6ef83ef536532",
+        "replaces": []
+      }
+    }
+  ]
+}

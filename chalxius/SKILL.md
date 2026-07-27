@@ -1,11 +1,13 @@
 ---
 name: chalxius
-description: Operate Chalxius, the Chalk-native integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; run Blackboard exploration and replayable verification; admit facts through one invariant gate; import legacy Danus facts; explicitly export a human-readable offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
+description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; run Blackboard exploration and replayable verification; admit facts through one invariant gate; import legacy Danus facts; explicitly export a human-readable offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
 # Chalxius
 
-Use the bundled Chalk V4 engine as the only research runtime. Fast, auto, and deep are execution profiles of that one engine, not aliases for three old skills. The Fact Graph admission contract is identical in every profile.
+Use the bundled Chalxius research engine as the only research runtime. Fast,
+auto, and deep are execution profiles of that one engine. The Fact Graph
+admission contract is identical in every profile.
 
 `chalxius` is the public skill name. The earlier
 `operate-mathgraph-unified` label survives only as an archived candidate name
@@ -16,7 +18,7 @@ it is not a second runtime or user-facing route.
 
 Before any project write, read [references/unified_architecture.md](references/unified_architecture.md), [references/reasoning_modes.md](references/reasoning_modes.md), and [references/admission_contract.md](references/admission_contract.md).
 
-Read the directly applicable Chalk reference before acting:
+Read the directly applicable Chalxius reference before acting:
 
 - Paper reconstruction, audit, correction, mirroring, or paper-led planning: [references/paper_logic_graph_v1.md](references/paper_logic_graph_v1.md).
 - V4 memory, routing, or adoption decisions: [references/adoption_policy_v4.md](references/adoption_policy_v4.md).
@@ -44,7 +46,7 @@ A full-fidelity Paper mirror on the Blackboard remains an exploration projection
 
 Use one of the following project-level profiles:
 
-- `fast`: Chalk V4 with low orchestration. High-cost exploration is opt-in. All hashes, snapshots, source checks, verifier separation, review binding, audit, and admission gates remain active.
+- `fast`: low-orchestration Chalxius research. High-cost exploration is opt-in. All hashes, snapshots, source checks, verifier separation, review binding, audit, and admission gates remain active.
 - `auto`: deterministic workload routing. Paper, explicit source ambiguity, computation, multi-candidate, novelty, and external-output signals activate only the applicable expensive features. `source_ambiguity=true` requires `source_claim=true`; its absence is legacy-compatible `false` and never weakens the independent source-claim admission gate.
 - `deep`: every applicable expensive research feature is required. A genuinely irrelevant feature is recorded `not_applicable`; it is never faked merely to fill a checklist.
 
@@ -84,12 +86,14 @@ python3 -B "$SKILL_ROOT/scripts/self_test.py"
 "$MGRAPH" --root "$PROJECT" --role main audit
 ```
 
-New writes use workflow-evidence V4 only. The engine still recognizes older Chalk 0.4 V4 projects without unified governance as read-only historical state. Do not call them corrupt. Explicitly activate future unified writes:
+New writes use workflow-evidence V4 only. The engine still recognizes older
+pre-Chalxius V4 projects without unified governance as read-only historical
+state. Do not call them corrupt. Explicitly activate future unified writes:
 
 ```bash
-"$MGRAPH" --root "$LEGACY_CHALK_PROJECT" --role operator mode-init \
+"$MGRAPH" --root "$LEGACY_PROJECT" --role operator mode-init \
   --mode auto --actor operator \
-  --reason "Activate unified routing; preserve all frozen Chalk evidence."
+  --reason "Activate Chalxius routing; preserve all frozen predecessor evidence."
 ```
 
 `mode-init` first runs a byte-pure current audit before creating the advisory
@@ -107,12 +111,12 @@ before `profile_obligations` existed must be replanned; closure evidence must
 not be synthesized retroactively. V1-V3 state is strictly read-only at both API
 and CLI layers and must use the documented isolated copy-upgrade flow before
 `mode-init`. The Python-only `reasoning_mode=None` escape is reserved for the
-internal inherited-Chalk fixture seam; it is not an official writable
+internal inherited-project fixture seam; it is not an official writable
 unified-project path, and the CLI initializes new projects in `auto` unless
 another profile is explicit.
 
 Public constructors expose no `allow_legacy_*` writer switches. The underscored
-inherited-Chalk and V1-V3 fixture/copy-migration constructors use module-private
+legacy-format and V1-V3 fixture/copy-migration constructors use module-private
 identity tokens and are only internal compatibility seams. This is cooperative
 in-process integrity, not an authentication, ACL, sandbox, or hostile Python
 reflection boundary; direct filesystem access or deliberate invocation of
@@ -196,9 +200,12 @@ Fact communication uses claim cards and expert lint receipts. Exploration commun
 
 ## Import legacy Danus facts
 
-Danus 0.2.12 is a legacy import source and behavioral performance reference, not a runtime dependency. Import only exact frozen facts, certificates, targets, and hashes. Preserve their inherited assurance and provenance. Never reinterpret or silently recertify an imported admitted fact. Every fact created after import goes through this unified Chalk admission contract.
+Danus 0.2.12 is a legacy import source and behavioral performance reference, not a runtime dependency. Import only exact frozen facts, certificates, targets, and hashes. Preserve their inherited assurance and provenance. Never reinterpret or silently recertify an imported admitted fact. Every fact created after import goes through the Chalxius admission contract.
 
-The old Danus and Chalk packages remain mutually exclusive rollback writers. This skill does not start either old runtime, does not combine two mutable project roots, and does not transplant the Danus V3 protocol. The old coordinator is rollback lineage only.
+Retired predecessor packages remain mutually exclusive rollback writers. This
+skill does not start an old runtime, combine two mutable project roots, or
+transplant a predecessor protocol. The retired coordinator is rollback lineage
+only.
 
 ## Activate Chalxius Learner only on demand
 
@@ -252,7 +259,11 @@ requests persistent learning evidence:
   --graph /absolute/path/to/learning-graph.json
 ```
 
-Teaching nodes, mastery scores, objections, and source concerns do not enter Chalk-level research audit and can never be submitted as facts. A blocking source concern pauses teaching from that anchor but does not mutate its source. Escalate a suspected mathematical or philosophical defect into a separate research work unit if the user wants it audited.
+Teaching nodes, mastery scores, objections, and source concerns do not enter
+Chalxius research audit and can never be submitted as facts. A blocking source
+concern pauses teaching from that anchor but does not mutate its source.
+Escalate a suspected mathematical or philosophical defect into a separate
+research work unit if the user wants it audited.
 
 ## Export a reader HTML only on request
 

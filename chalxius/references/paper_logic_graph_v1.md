@@ -216,7 +216,7 @@ directory into the unified nontruth learning plane. It verifies the manifest and
 every canonical node and edge hash, preserves all three planes and
 current/inactive Audit state, and assigns only nontruth learning statuses. This
 static read does not start a second runtime, create a projection receipt, or
-authorize any legacy writer to inspect the project. The historical
+authorize any legacy writer to inspect the project. The historical pre-Chalxius
 `danus-chalk-readonly-snapshot-mount-v1` and external Grill Me identity are
 accepted only as read-only import metadata and are normalized on load; they are
 not current routing protocols.
@@ -224,7 +224,7 @@ not current routing protocols.
 If teaching exposes a possible misread or misconstructed Audit node, the
 learning plane records only a source concern against the snapshot-bound
 identity. If the user requests resolution, a separate work unit in the same
-unified Chalk research runtime must append the challenge/disposition/repair,
+Chalxius research engine must append the challenge/disposition/repair,
 obtain the normal independent reviews, and freeze a superseding snapshot. The
 learning graph may then bind the old concern to a node in that new snapshot;
 old learning evidence stays on the old immutable identity. A proposed repair

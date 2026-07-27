@@ -1,106 +1,100 @@
-# Chalxius v0.3.4 — Balanced reader cards and reliable graph refresh
+# Chalxius v0.3.5 — Readable math, topic paths, and safer graph layout
 
-Chalxius 0.3.4 advances the reader from renderer revision 9 to revision 11.
-It includes the revision-10 export improvements and the final revision-11
-visual-balance and hover-continuity fixes. Installing 0.3.3 first is not
-required.
+Chalxius 0.3.5 advances the offline Reader to renderer revision 12. It improves
+dense-map reading and public onboarding while preserving the same research
+authority and Fact-admission boundaries.
 
-## Features
+## Reader improvements
 
-- Added Reader Finalize to `export-reader-html`.
-  - Every included node must contain nonempty `summary`, `intuition`,
-    `importance`, and `reasoning` content before the fixed HTML is replaced.
-  - Deterministic presentation-readiness metadata is embedded in the page and
-    returned by the command.
-- Added a bilingual Reload graph control.
-  - It reloads the latest atomically replaced HTML through same-document
-    navigation.
-  - It clears session-only layout, sizing, appearance, and history state.
-- Unified full and compact size controls at the same 29% × 50% internal anchor,
-  with zero-jump two-axis compensation.
+- Mathematical detail now scales visibly with the existing 90%-150% text-size
+  control. MathJax SVG output is no longer constrained by the global icon size,
+  and exact TeX source uses the panel-relative scale.
+- Multi-target topics use smooth, dashed, arrowless bezier links instead of
+  orthogonal routes.
+- Double-clicking a topic performs one undoable sizing action over the union of
+  every eligible member target's complete upstream and downstream chains.
+- Initial placement and explicit Reset layout now run a deterministic,
+  fixed-sweep weighted-barycentric search for graphs with at most 1,200 cross-
+  rank edges.
+  - Packet order is the baseline.
+  - Exact proper-crossing count is the primary score.
+  - A candidate is retained only when its score is strictly better.
+  - The final layout therefore never has more scored crossings than the packet-
+    order baseline; larger graphs keep packet order.
+  - This is a bounded readability heuristic, not a global-optimum claim.
+- Card sizing, topic sizing, undo/redo, and layer filtering still do not rerun
+  layout, so the reader's working positions remain stable.
 
-## Fixes
+## Clearer public introduction
 
-- Rebalanced full-card content with narrower role-specific text measures and
-  left-justified wrapped lines.
-  - Control-plus-label bias is bounded to 3% across supported zoom.
-  - Every role retains at least 8 model pixels of control clearance.
-- Fixed edge-emphasis flicker when moving between a card body and its internal
-  size button. Edge emphasis now follows the whole card hover region.
-- Kept synthetic theme labels centered and preserved both Faceted and Plaques
-  appearance schemes.
+- The README now explains Chalxius's features, authority classes, Fact-
+  admission flow, correction model, Learner, Reader, and installation without
+  assuming prior knowledge.
+- `fast`, `auto`, and `deep` are introduced directly, including when to choose
+  `fast` or `deep` and the invariant admission standard they share.
+- Current-facing wording consistently names the Chalxius research engine;
+  predecessor terminology is confined to exact compatibility identifiers where
+  changing it would invalidate frozen project hashes.
+- Two public, self-contained Reader demonstrations and screenshots are now
+  included through [`USE_CASES.md`](USE_CASES.md) and the GitHub Pages gallery.
 
 ## Validation
 
-- 24/24 focused reader tests passed.
-- 425/425 complete inherited tests passed.
-- Self-test, Python AST, JavaScript syntax, JSON parsing, manifest verification,
-  and the official Skill Creator validator passed.
-- Faceted and Plaques browser QA passed in Chinese and English.
-- Responsive checks passed at 820 × 900 and 560 × 900.
-- Full ↔ compact control movement remained exactly `(0, 0)` rendered pixels.
-- Browser diagnostics contained no warnings or errors.
-- Two installed exports were byte-identical:
-  `efa87e99ff184f51eea286acd5305109c3e842d1045c72dac8f41da4bab2a2bb`.
+- Focused Reader suite: 25/25 PASS.
+- Complete suite: 426/426 PASS, both before packaging and from cold public and
+  local-install archives.
+- Self-test, official Skill Creator validation, Python AST, JSON parsing,
+  JavaScript syntax, exact-tree manifests, deterministic archive rebuilding,
+  and cold extraction: PASS.
+- A synthetic layout fixture improved from one crossing to zero. The guarded
+  x-y public case stayed at one crossing rather than accepting a seven-crossing
+  candidate; the philosophy case stayed at three.
+- Topic double-click changed the guarded case from 2 full / 6 minimized cards
+  to 8 full / 0 minimized cards and selected the topic detail.
+- At 100% -> 150%, the measured detail font changed 15 -> 22.5 px, exact TeX
+  12.3 -> 18.45 px, and MathJax 16.2 -> 24.3 px.
+- Browser warnings and errors: none.
+- Local transactional upgrade from 0.3.4: PASS, with the prior version preserved
+  as a recoverable rollback.
+
+See [`VALIDATION.md`](VALIDATION.md) for hashes and bounded evidence.
 
 ## Scope boundary
 
-This is a presentation-only reader release. It does not change:
+This release does not change:
 
-- reader-packet schema version 1;
-- Fact admission, reasoning modes, or graph authority;
-- graph topology, source text, source order, or provenance;
-- Chalxius Learner activation;
-- project persistence or research-engine behavior.
+- Reader packet schema version 1;
+- the Fact-admission contract or its hash;
+- the reasoning-mode policy object or its hash;
+- graph topology, source authority, source order, or provenance;
+- Chalxius Learner activation rules; or
+- any research project or Fact Graph.
 
-The reader remains offline and self-contained. It adds no watcher, polling,
+The Reader remains offline and self-contained. It adds no watcher, polling,
 fetch loop, model runtime, local storage, sidecar, graph writeback, or PDF
-management.
+management. Its metadata continues to report `truth_effect="none"`.
+
+The x-y interchange page is explicitly a **potential application only**. Its
+predecessor archive does not pass the current workflow audit, was not created by
+0.3.5, and has not been confirmed by the relevant authors.
 
 ## Upgrade notes
 
-- Direct upgrade from 0.3.2 is supported; no intermediate 0.3.3 installation or
-  project migration is required.
-- Export validation is stricter: packets with incomplete sidebar fields now
-  fail before replacing the existing HTML.
 - Existing generated pages remain unchanged until `export-reader-html` is run
-  again with a complete packet.
-- Reload the browser page after export to load the new deterministic file.
-- Verify the distributed artifact with `SHA256SUMS`, then verify the extracted
-  skill with `chalxius/MANIFEST.sha256` before installation.
-
-## Public-source boundary
-
-The public distribution omits local visual-QA paths, a user-specific learning
-profile, and private historical forward-test evidence. Those exclusions are
-non-runtime documentation only. Research-engine and reader runtime files match
-the installed 0.3.4 release.
-
-## Post-release documentation
-
-- Added
-  [`ARCHITECTURE.md`](https://github.com/cm4u7/chalxius/blob/main/ARCHITECTURE.md),
-  a zero-background explanation of the current Chalxius system, its six
-  authority classes, Fact admission, reasoning profiles, correction history,
-  Chalxius Learner, and the offline Reader.
-- Expanded public acknowledgements for Matt Pocock's `/grill-me` skill.
-
-These documentation updates are published on `main` and in this GitHub Release
-description. They do not rewrite the `v0.3.4` tag or replace its verified
-assets.
+  again with a complete Reader packet.
+- After export, use Reload graph or reload the browser page to load the newly
+  replaced fixed HTML file.
+- Verify the public archive with `SHA256SUMS`, then verify the extracted skill
+  with `chalxius/MANIFEST.sha256` before installation.
 
 ## Acknowledgements
 
-This release acknowledges Liu et al., **Danus: Orchestrating Mathematical
-Reasoning Agents with Fact-Graph Memory**, arXiv:2607.06447v2, a separate
-published mathematical-reasoning system. Its public design informed the
-fact-graph layout and compatibility surface; it is not a runtime dependency and
-no Danus source code is inherited.
+Chalxius acknowledges Liu et al., **Danus: Orchestrating Mathematical
+Reasoning Agents with Fact-Graph Memory**, arXiv:2607.06447v2, as a separate
+published system whose public design informed the fact-graph layout. It is not
+a runtime dependency and no Danus source code is inherited.
 
-It also thanks **Matt Pocock** for the public
+Chalxius also thanks **Matt Pocock** for the public
 [`/grill-me`](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
-skill. Its one-question-at-a-time decision-tree interview inspired the
-requirements-discovery method used while shaping the Chalxius Reader. This is
-design attribution, not a runtime dependency. See
-[`ACKNOWLEDGEMENTS.md`](https://github.com/cm4u7/chalxius/blob/main/ACKNOWLEDGEMENTS.md)
-for full citations and scope statements.
+requirements-interview design. This is design attribution, not a runtime
+dependency. See [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
