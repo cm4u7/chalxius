@@ -4,45 +4,216 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Chalxius interactive cases</title>
+  <meta name="description" content="Interactive Chalxius research-graph cases for working mathematicians.">
+  <title>Chalxius · Interactive research maps</title>
   <style>
-    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #07111c; color: #edf2f8; }
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #07111c;
+      color: #edf2f8;
+      --panel: rgba(11, 25, 32, .9);
+      --panel-strong: rgba(16, 35, 39, .96);
+      --line: #355847;
+      --green: #8be59a;
+      --green-strong: #5bcf78;
+      --muted: #aebaca;
+      --dim: #718095;
+      --gold: #e1c56f;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 20% 10%, #123026 0, transparent 36rem), #07111c; }
-    main { width: min(68rem, calc(100% - 2rem)); margin: 0 auto; padding: 5rem 0; }
-    .kicker { color: #7fdd89; font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { max-width: 14ch; margin: .6rem 0 1rem; font-size: clamp(2.4rem, 7vw, 5rem); line-height: .96; font-weight: 610; }
-    .intro { max-width: 48rem; color: #aebaca; font-size: 1.05rem; line-height: 1.7; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr)); gap: 1rem; margin-top: 2.5rem; }
-    article { display: grid; gap: .8rem; padding: 1.35rem; border: 1px solid #355847; border-radius: .8rem; background: rgba(11, 25, 32, .88); box-shadow: 0 1.2rem 3rem rgba(0,0,0,.26); }
-    article.potential { border-color: #826f42; }
-    h2 { margin: 0; font-size: 1.2rem; }
-    p { margin: 0; color: #aebaca; line-height: 1.6; }
-    a { justify-self: start; padding: .62rem .82rem; border: 1px solid #4c8b68; border-radius: .42rem; color: #9be9a3; text-decoration: none; }
-    a:hover { background: #173024; }
-    .status { color: #d8c17f; font-size: .86rem; font-weight: 650; }
-    footer { margin-top: 2rem; color: #718095; font-size: .82rem; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 14% 6%, rgba(27, 91, 61, .42) 0, transparent 31rem),
+        radial-gradient(circle at 92% 32%, rgba(32, 69, 91, .28) 0, transparent 27rem),
+        #07111c;
+    }
+    a { color: inherit; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(76rem, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.15rem 0;
+      border-bottom: 1px solid rgba(105, 135, 148, .22);
+    }
+    .brand { font-weight: 760; text-decoration: none; letter-spacing: -.01em; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+    nav a { color: var(--muted); font-size: .88rem; text-decoration: none; }
+    nav a:hover { color: var(--green); }
+    main { width: min(76rem, calc(100% - 2rem)); margin: 0 auto; padding: 4.5rem 0 3rem; }
+    .hero { max-width: 58rem; }
+    .kicker {
+      margin: 0;
+      color: var(--green);
+      font-size: .8rem;
+      font-weight: 780;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 13ch;
+      margin: .75rem 0 1.15rem;
+      font-size: clamp(2.75rem, 7vw, 5.8rem);
+      line-height: .96;
+      letter-spacing: -.055em;
+      font-weight: 640;
+    }
+    .intro { max-width: 51rem; margin: 0; color: var(--muted); font-size: clamp(1rem, 2vw, 1.16rem); line-height: 1.72; }
+    .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.65rem; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+      padding: .72rem 1rem;
+      border: 1px solid #4c8b68;
+      border-radius: .6rem;
+      color: #b9f2c1;
+      background: rgba(19, 55, 38, .65);
+      font-weight: 720;
+      text-decoration: none;
+    }
+    .button:hover { background: #1a4731; border-color: var(--green-strong); }
+    .button.secondary { color: #c7d1df; background: rgba(18, 31, 43, .72); border-color: #415365; }
+    .capabilities {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      gap: .7rem;
+      margin: 3rem 0 4.5rem;
+    }
+    .capability {
+      padding: .9rem 1rem;
+      border: 1px solid rgba(76, 139, 104, .42);
+      border-radius: .65rem;
+      color: #ced8e5;
+      background: rgba(9, 25, 30, .62);
+      font-size: .92rem;
+    }
+    .section-heading { margin-bottom: 1.35rem; }
+    h2 { margin: 0 0 .45rem; font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: -.025em; }
+    .section-heading p { margin: 0; color: var(--muted); line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr)); gap: 1.25rem; }
+    article {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      border: 1px solid var(--line);
+      border-radius: .9rem;
+      background: var(--panel);
+      box-shadow: 0 1.4rem 3.6rem rgba(0, 0, 0, .28);
+    }
+    article.potential { border-color: #76673e; }
+    .preview { display: block; border-bottom: 1px solid rgba(99, 130, 116, .35); background: #08131f; }
+    .preview img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+    .card-body { display: flex; flex: 1; flex-direction: column; gap: .8rem; padding: 1.3rem; }
+    .eyebrow { margin: 0; color: var(--green); font-size: .8rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .potential .eyebrow { color: var(--gold); }
+    h3 { margin: 0; font-size: 1.34rem; }
+    .card-body p { margin: 0; color: var(--muted); line-height: 1.62; }
+    .tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .15rem; }
+    .tag { padding: .3rem .5rem; border-radius: 999px; color: #a9bac9; background: rgba(69, 91, 99, .28); font-size: .76rem; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: auto; padding-top: .35rem; }
+    .card-actions a { color: var(--green); font-weight: 700; text-decoration: none; }
+    .potential .card-actions a { color: #e4cf8b; }
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: .7rem 1.5rem;
+      margin-top: 3rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(105, 135, 148, .22);
+      color: var(--dim);
+      font-size: .82rem;
+      line-height: 1.55;
+    }
+    footer a { color: #9aabbc; }
+    @media (max-width: 42rem) {
+      .topbar { align-items: flex-start; flex-direction: column; }
+      main { padding-top: 3.2rem; }
+    }
   </style>
 </head>
 <body>
+  <header class="topbar">
+    <a class="brand" href="https://github.com/cm4u7/chalxius">🧭 Chalxius</a>
+    <nav aria-label="Project links">
+      <a href="https://github.com/cm4u7/chalxius#readme">🛠️ What it does</a>
+      <a href="https://github.com/cm4u7/chalxius/blob/main/USE_CASES.md">📚 Use cases</a>
+      <a href="https://github.com/cm4u7/chalxius/releases/tag/v0.3.5">📦 Download</a>
+    </nav>
+  </header>
   <main>
-    <p class="kicker">Chalxius · interactive Reader cases</p>
-    <h1>Readable graphs, explicit boundaries.</h1>
-    <p class="intro">Each link opens one self-contained knowledge-map HTML. The pages are presentation-only, work offline after download, and cannot change research authority or admit a Fact.</p>
-    <section class="grid" aria-label="Interactive cases">
-      <article>
-        <h2>Philosophy workflow</h2>
-        <p>An anonymized demonstration of source-bound reconstruction, correctable audit, and authority-safe exploration.</p>
-        <a href="cases/philosophy.html">Open interactive map</a>
-      </article>
-      <article class="potential">
-        <p class="status">Potential application · not author-confirmed</p>
-        <h2>x-y interchange research</h2>
-        <p>A guarded visualization of a predecessor archive, beginning with the current audit and confirmation blockers.</p>
-        <a href="cases/xy-swap-potential.html">Open guarded map</a>
-      </article>
+    <section class="hero">
+      <p class="kicker">For working mathematicians</p>
+      <h1>Explore a real research graph.</h1>
+      <p class="intro">Open a live case, select a conclusion, inspect its mathematical context, and expand the complete prerequisite path. Chalxius connects paper reading, proof development, computation, learning, and presentation in one traceable workspace.</p>
+      <div class="actions">
+        <a class="button" href="cases/philosophy.html">▶️ Open a live map</a>
+        <a class="button secondary" href="https://github.com/cm4u7/chalxius#-what-you-can-do-with-chalxius">🧰 Explore the toolkit</a>
+      </div>
     </section>
-    <footer>Reader output has truth_effect="none". See the public repository for source snapshots, packets, and validation.</footer>
+
+    <section class="capabilities" aria-label="Chalxius capabilities">
+      <div class="capability">📚 Paper reconstruction</div>
+      <div class="capability">🧩 Proof dependency maps</div>
+      <div class="capability">🧮 Computation replay</div>
+      <div class="capability">🔎 Source &amp; novelty checks</div>
+      <div class="capability">🎓 Graph-aware learning</div>
+      <div class="capability">🗺️ Offline interactive Reader</div>
+    </section>
+
+    <section aria-labelledby="case-heading">
+      <div class="section-heading">
+        <h2 id="case-heading">🚀 Choose a case</h2>
+        <p>Both pages are self-contained HTML files with draggable cards, mathematical detail, layer controls, and complete-path expansion.</p>
+      </div>
+      <div class="grid">
+        <article>
+          <a class="preview" href="cases/philosophy.html" aria-label="Open the philosophy workflow Reader">
+            <img src="assets/philosophy-case.png" alt="Dark green Chalxius Reader showing a philosophy argument graph">
+          </a>
+          <div class="card-body">
+            <p class="eyebrow">📚 Demonstrated workflow</p>
+            <h3>Philosophy argument research</h3>
+            <p>See how exact passages, interpretive reconstruction, objections, and dependency paths can be organized without flattening them into one linear note.</p>
+            <div class="tags">
+              <span class="tag">Source-bound reading</span>
+              <span class="tag">Argument graph</span>
+              <span class="tag">Reader export</span>
+            </div>
+            <div class="card-actions"><a href="cases/philosophy.html">Open interactive map →</a></div>
+          </div>
+        </article>
+
+        <article class="potential">
+          <a class="preview" href="cases/xy-swap-potential.html" aria-label="Open the potential x-y interchange Reader">
+            <img src="assets/xy-swap-potential-case.png" alt="Dark green Chalxius Reader showing a mathematical dependency graph">
+          </a>
+          <div class="card-body">
+            <p class="eyebrow">🧮 Potential application · not author-confirmed</p>
+            <h3>x-y interchange research</h3>
+            <p>Navigate a larger dependency graph with computational evidence, target closure, and an explicit revocation. The page begins with its current audit and confirmation limits.</p>
+            <div class="tags">
+              <span class="tag">53 active legacy Facts</span>
+              <span class="tag">95 dependency edges</span>
+              <span class="tag">Potential only</span>
+            </div>
+            <div class="card-actions"><a href="cases/xy-swap-potential.html">Open guarded map →</a></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      <span>🛡️ Reader interaction changes presentation only and has <code>truth_effect="none"</code>.</span>
+      <span><a href="https://github.com/cm4u7/chalxius/blob/main/VALIDATION.md">✅ Validation evidence</a></span>
+    </footer>
   </main>
 </body>
 </html>
