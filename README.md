@@ -1,9 +1,15 @@
 # Chalxius
 
-Chalxius is a Chalk-native research and learning skill for Codex. It keeps
-Paper, Audit, Blackboard, Fact, and Learning authority separate, uses one
-invariant Fact-admission contract across fast, auto, and deep reasoning modes,
-and can explicitly export a deterministic offline knowledge-map reader.
+Chalxius is a research and learning skill for Codex. It keeps source,
+interpretation, audit, exploration, admitted Fact, and learning authority
+separate; uses one invariant Fact-admission contract across fast, auto, and deep
+reasoning modes; and can explicitly export a deterministic offline
+knowledge-map reader.
+
+New to these terms? Start with
+[`ARCHITECTURE.md`](ARCHITECTURE.md). It explains from first principles what
+Chalxius does, how a candidate becomes a Fact, why its authority classes remain
+separate, and why Learner and Reader output cannot change research truth.
 
 The installable skill is in [`chalxius/`](chalxius/). Verify its
 `MANIFEST.sha256` before copying it into a Codex skills directory.
@@ -41,11 +47,19 @@ omitted from the public source distribution.
 
 ## Acknowledgements
 
-Chalxius gratefully acknowledges **Danus: Orchestrating Mathematical Reasoning
-Agents with Fact-Graph Memory** (Liu et al., arXiv:2607.06447v2). Danus informed
-the public fact-graph design, but is not a runtime dependency and no Danus source
-code is inherited here. See [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md) for the
-full citation and scope statement.
+Chalxius gratefully acknowledges the authors of **Danus: Orchestrating
+Mathematical Reasoning Agents with Fact-Graph Memory** (Liu et al.,
+arXiv:2607.06447v2), a separate published mathematical-reasoning system. Its
+public design informed the fact-graph layout, but it is not a runtime dependency
+and no Danus source code is inherited here.
+
+Chalxius also thanks **Matt Pocock** for the public
+[`/grill-me`](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
+skill. Its one-question-at-a-time decision-tree interview inspired the
+requirements-discovery method used while shaping the Reader. This is design
+attribution, not a runtime dependency. See
+[`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md) for full citations and scope
+statements.
 
 Licensed under Apache-2.0. Third-party notices and vendored component licenses
 are included in the skill directory.

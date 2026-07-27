@@ -50,7 +50,7 @@ This is a presentation-only reader release. It does not change:
 - reader-packet schema version 1;
 - Fact admission, reasoning modes, or graph authority;
 - graph topology, source text, source order, or provenance;
-- Chalxius Learner or Grill Me Code activation;
+- Chalxius Learner activation;
 - project persistence or research-engine behavior.
 
 The reader remains offline and self-contained. It adds no watcher, polling,
@@ -76,10 +76,31 @@ profile, and private historical forward-test evidence. Those exclusions are
 non-runtime documentation only. Research-engine and reader runtime files match
 the installed 0.3.4 release.
 
+## Post-release documentation
+
+- Added
+  [`ARCHITECTURE.md`](https://github.com/cm4u7/chalxius/blob/main/ARCHITECTURE.md),
+  a zero-background explanation of the current Chalxius system, its six
+  authority classes, Fact admission, reasoning profiles, correction history,
+  Chalxius Learner, and the offline Reader.
+- Expanded public acknowledgements for Matt Pocock's `/grill-me` skill.
+
+These documentation updates are published on `main` and in this GitHub Release
+description. They do not rewrite the `v0.3.4` tag or replace its verified
+assets.
+
 ## Acknowledgements
 
 This release acknowledges Liu et al., **Danus: Orchestrating Mathematical
-Reasoning Agents with Fact-Graph Memory**, arXiv:2607.06447v2. Danus informed
-the public fact-graph design and compatibility surface; it is not a runtime
-dependency and no Danus source code is inherited. See
-[`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md) for the full citation.
+Reasoning Agents with Fact-Graph Memory**, arXiv:2607.06447v2, a separate
+published mathematical-reasoning system. Its public design informed the
+fact-graph layout and compatibility surface; it is not a runtime dependency and
+no Danus source code is inherited.
+
+It also thanks **Matt Pocock** for the public
+[`/grill-me`](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
+skill. Its one-question-at-a-time decision-tree interview inspired the
+requirements-discovery method used while shaping the Chalxius Reader. This is
+design attribution, not a runtime dependency. See
+[`ACKNOWLEDGEMENTS.md`](https://github.com/cm4u7/chalxius/blob/main/ACKNOWLEDGEMENTS.md)
+for full citations and scope statements.
