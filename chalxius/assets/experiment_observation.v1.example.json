@@ -1,0 +1,22 @@
+{
+  "active_intervals": [
+    {
+      "clock_epoch": "host-monotonic-boot-id",
+      "end_ns": 1200000000001,
+      "lease_id": "root-task",
+      "start_ns": 0
+    }
+  ],
+  "actual_resources": {
+    "cpu_seconds": 418.2,
+    "peak_rss_bytes": 536870912
+  },
+  "experimental_nature": "Exploratory mathematical computation; no result is admitted truth.",
+  "importance_and_continuation_value": "The current stage directly tests the load-bearing obstruction and another checkpoint is likely to resolve it.",
+  "latest_checkpoint": "rounds/ROUND_ID/work/ASSIGNMENT_ID/experiments/EXPERIMENT_ID/checkpoints/stage-2.json",
+  "measurement_method": "host_monotonic_active_intervals_union",
+  "observation_id": "host-observation-0001",
+  "progress": "Stage 1 completed; stage 2 has checked 73 of 100 cases.",
+  "schema_version": 1,
+  "stopping_impact": "Stopping preserves the stage-1 checkpoint but leaves the obstruction test unresolved."
+}

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN" data-locale="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; connect-src 'none'; font-src data:; form-action 'none'; frame-src 'none'; img-src data: blob:; media-src 'none'; object-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; worker-src 'none'">
+  <title>Chalxius Knowledge Map</title>
+  <style>
+@@CHALXIUS_READER_STYLE@@
+  </style>
+  <script>
+    window.MathJax = {
+      startup: { typeset: false },
+      options: { enableMenu: false },
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        packages: {'[-]': ['autoload', 'require']}
+      },
+      svg: { fontCache: 'local' }
+    };
+  </script>
+  <script id="mathjax-offline-bundle">
+@@CHALXIUS_MATHJAX_JS@@
+  </script>
+  <script id="cytoscape-offline-bundle">
+@@CHALXIUS_CYTOSCAPE_JS@@
+  </script>
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+@@CHALXIUS_TABLER_SPRITE@@
+  </svg>
+
+  <a class="skip-link" href="#map-detail" data-zh="跳到节点详情" data-en="Skip to node details">跳到节点详情</a>
+
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-name">Chalxius</span>
+      <h1 id="map-title">Knowledge map</h1>
+    </div>
+    <label class="header-search" for="map-search">
+      <svg aria-hidden="true"><use href="#reader-icon-search"></use></svg>
+      <span class="visually-hidden" data-zh="搜索节点" data-en="Find a node">搜索节点</span>
+      <input id="map-search" type="search" autocomplete="off" placeholder="搜索标题或正文" data-placeholder-zh="搜索标题或正文" data-placeholder-en="Search title or content">
+      <span id="search-status" class="search-status" aria-live="polite"></span>
+    </label>
+    <div class="header-navigation" aria-label="目标导航" data-aria-label-zh="目标导航" data-aria-label-en="Target navigation">
+      <button id="header-overview-button" class="header-nav-button overview-link" type="button" aria-pressed="true">
+        <span data-zh="突出所有目标" data-en="Emphasize targets">突出所有目标</span>
+      </button>
+      <button id="previous-target-button" class="header-nav-button" type="button">
+        <span data-zh="上一个" data-en="Previous">上一个</span>
+      </button>
+      <span id="target-position" class="target-position" aria-live="polite">全部目标</span>
+      <button id="next-target-button" class="header-nav-button" type="button">
+        <span data-zh="下一个" data-en="Next">下一个</span>
+      </button>
+    </div>
+    <div class="locale-switcher" role="group" aria-label="界面语言" data-aria-label-zh="界面语言" data-aria-label-en="Interface language">
+      <button type="button" data-locale-choice="zh" aria-pressed="true">中文</button>
+      <button type="button" data-locale-choice="en" aria-pressed="false">EN</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <nav class="tool-rail" aria-label="全局图谱控制" data-aria-label-zh="全局图谱控制" data-aria-label-en="Global map controls">
+      <div class="tool-group view-controls" role="group" aria-label="卡片尺寸" data-aria-label-zh="卡片尺寸" data-aria-label-en="Card size">
+        <button id="overview-button" class="tool-button" type="button" aria-pressed="true" data-tooltip-zh="突出所有目标" data-tooltip-en="Emphasize all targets" data-aria-label-zh="突出所有目标" data-aria-label-en="Emphasize all targets">
+          <svg aria-hidden="true"><use href="#reader-icon-overview"></use></svg>
+          <span class="tool-label" data-zh="所有目标" data-en="All targets">所有目标</span>
+        </button>
+        <button id="all-cards-button" class="tool-button" type="button" aria-pressed="false" data-tooltip-zh="最大化所有卡片" data-tooltip-en="Maximize all cards" data-aria-label-zh="最大化所有卡片" data-aria-label-en="Maximize all cards">
+          <svg aria-hidden="true"><use href="#reader-icon-path"></use></svg>
+          <span class="tool-label" data-zh="所有卡片" data-en="All cards">所有卡片</span>
+        </button>
+        <button id="layer-menu-button" class="tool-button" type="button" aria-expanded="false" aria-controls="layer-popover" data-tooltip-zh="图层" data-tooltip-en="Layers" data-aria-label-zh="图层" data-aria-label-en="Layers">
+          <svg aria-hidden="true"><use href="#reader-icon-context"></use></svg>
+          <span class="tool-label" data-zh="图层" data-en="Layers">图层</span>
+        </button>
+      </div>
+
+      <div id="layer-popover" class="layer-popover" hidden>
+        <p class="popover-kicker" data-zh="显示图层" data-en="Visible layers">显示图层</p>
+        <label>
+          <svg aria-hidden="true"><use href="#reader-icon-file"></use></svg>
+          <span data-zh="研究过程" data-en="Research process">研究过程</span>
+          <input id="research-toggle" type="checkbox">
+        </label>
+        <label>
+          <svg aria-hidden="true"><use href="#reader-icon-overview"></use></svg>
+          <span data-zh="教学 / 学习" data-en="Teaching / learning">教学 / 学习</span>
+          <input id="learning-toggle" type="checkbox">
+        </label>
+        <label>
+          <svg aria-hidden="true"><use href="#reader-icon-info"></use></svg>
+          <span data-zh="读者说明" data-en="Reader notes">读者说明</span>
+          <input id="reader-toggle" type="checkbox">
+        </label>
+        <label>
+          <svg aria-hidden="true"><use href="#reader-icon-context"></use></svg>
+          <span data-zh="上下文连接" data-en="Contextual links">上下文连接</span>
+          <input id="weak-toggle" type="checkbox">
+        </label>
+      </div>
+
+      <span class="rail-spacer"></span>
+      <div class="tool-group utility-controls" role="group" aria-label="画布工具" data-aria-label-zh="画布工具" data-aria-label-en="Canvas tools">
+        <button id="undo-sizing-button" class="tool-button" type="button" disabled aria-keyshortcuts="Control+Z Meta+Z" data-tooltip-zh="撤销尺寸操作" data-tooltip-en="Undo sizing" data-aria-label-zh="撤销尺寸操作" data-aria-label-en="Undo sizing">
+          <svg aria-hidden="true"><use href="#reader-icon-undo"></use></svg>
+          <span class="tool-label" data-zh="撤销" data-en="Undo">撤销</span>
+        </button>
+        <button id="redo-sizing-button" class="tool-button" type="button" disabled aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" data-tooltip-zh="重做尺寸操作" data-tooltip-en="Redo sizing" data-aria-label-zh="重做尺寸操作" data-aria-label-en="Redo sizing">
+          <svg aria-hidden="true"><use href="#reader-icon-redo"></use></svg>
+          <span class="tool-label" data-zh="重做" data-en="Redo">重做</span>
+        </button>
+        <button id="fit-view-button" class="tool-button" type="button" data-tooltip-zh="适应视图" data-tooltip-en="Fit view" data-aria-label-zh="适应视图" data-aria-label-en="Fit view">
+          <svg aria-hidden="true"><use href="#reader-icon-focus"></use></svg>
+          <span class="tool-label" data-zh="适应视图" data-en="Fit view">适应视图</span>
+        </button>
+        <button id="reset-layout-button" class="tool-button" type="button" data-tooltip-zh="重置布局" data-tooltip-en="Reset layout" data-aria-label-zh="重置布局" data-aria-label-en="Reset layout">
+          <svg aria-hidden="true"><use href="#reader-icon-reset"></use></svg>
+          <span class="tool-label" data-zh="重置布局" data-en="Reset layout">重置布局</span>
+        </button>
+        <button id="reload-graph-button" class="tool-button" type="button" data-tooltip-zh="刷新图谱" data-tooltip-en="Reload graph" data-aria-label-zh="刷新图谱" data-aria-label-en="Reload graph">
+          <svg aria-hidden="true"><use href="#reader-icon-refresh"></use></svg>
+          <span class="tool-label" data-zh="刷新图谱" data-en="Reload graph">刷新图谱</span>
+        </button>
+      </div>
+    </nav>
+
+    <section class="graph-panel" aria-label="交互式知识图谱" data-aria-label-zh="交互式知识图谱" data-aria-label-en="Interactive knowledge map">
+      <div class="map-strip">
+        <p id="view-description">全部目标，按阅读顺序排列。</p>
+        <div class="appearance-switcher" role="group" aria-label="节点外观" data-aria-label-zh="节点外观" data-aria-label-en="Node appearance">
+          <span class="appearance-label" data-zh="外观" data-en="Appearance">外观</span>
+          <button type="button" data-appearance-scheme="faceted" aria-pressed="true" data-zh="柔和切面" data-en="Faceted">柔和切面</button>
+          <button type="button" data-appearance-scheme="plaques" aria-pressed="false" data-zh="建筑铭牌" data-en="Plaques">建筑铭牌</button>
+        </div>
+      </div>
+      <div class="canvas-stage">
+        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-zh="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-en="Draggable knowledge graph. Select a card to read, use its internal button to change size, double-click to emphasize its complete upstream and downstream chain, or secondary-click for directional commands."></div>
+        <div id="selected-node-halo" class="selected-node-halo" aria-hidden="true" hidden></div>
+        <div id="node-control-layer" class="node-control-layer"></div>
+        <div id="node-name-tooltip" class="node-name-tooltip" role="tooltip" hidden></div>
+        <div id="node-context-menu" class="node-context-menu" role="menu" hidden aria-labelledby="node-context-menu-title">
+          <div class="context-menu-header" role="presentation">
+            <span data-zh="节点路径" data-en="Node path">节点路径</span>
+            <strong id="node-context-menu-title"></strong>
+          </div>
+          <button type="button" role="menuitem" data-context-command="maximize-upstream">
+            <span data-zh="最大化全部上游" data-en="Maximize all upstream">最大化全部上游</span>
+          </button>
+          <button type="button" role="menuitem" data-context-command="maximize-downstream">
+            <span data-zh="最大化全部下游" data-en="Maximize all downstream">最大化全部下游</span>
+          </button>
+        </div>
+      </div>
+      <p class="interaction-note">
+        <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
+        <span data-zh="双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销" data-en="Two-finger pan · Pinch to zoom · Drag cards · Internal ± changes size · Double-click emphasizes the complete chain · ⌘Z undo">双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销</span>
+      </p>
+    </section>
+
+    <div id="detail-resizer" class="detail-resizer" role="separator" aria-orientation="vertical" aria-label="调整详情栏宽度" data-aria-label-zh="调整详情栏宽度" data-aria-label-en="Resize detail panel" aria-valuemin="320" aria-valuemax="680" aria-valuenow="384" tabindex="0"></div>
+
+    <aside id="map-detail" class="detail-panel" tabindex="-1" aria-live="polite">
+      <div class="detail-toolbar" aria-label="详情栏显示设置" data-aria-label-zh="详情栏显示设置" data-aria-label-en="Detail display settings">
+        <label for="detail-text-size">
+          <span data-zh="正文字号" data-en="Text size">正文字号</span>
+          <input id="detail-text-size" type="range" min="90" max="150" step="10" value="100">
+          <output id="detail-text-size-value" for="detail-text-size">100%</output>
+        </label>
+        <button id="reset-ui-button" class="quiet-button" type="button" data-zh="重置界面" data-en="Reset UI">重置界面</button>
+      </div>
+
+      <section id="audit-banner" class="audit-banner" aria-live="polite"></section>
+
+      <div class="detail-heading">
+        <div class="detail-kicker-row">
+          <svg aria-hidden="true"><use href="#reader-icon-focus"></use></svg>
+          <p class="detail-kicker" data-zh="所选节点" data-en="Selected node">所选节点</p>
+        </div>
+        <h2 id="detail-title">选择目标</h2>
+        <p id="detail-badges" class="badges"></p>
+      </div>
+
+      <div id="detail-readable" class="readable-detail">
+        <p data-zh="选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。" data-en="Select a card to read it; use the minus or plus inside it to change size while every currently enabled relation remains available.">选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。</p>
+      </div>
+
+      <details id="formal-details" class="formal-details">
+        <summary data-zh="形式化来源与溯源" data-en="Formal source and provenance">形式化来源与溯源</summary>
+        <div id="detail-formal"></div>
+      </details>
+
+      <details class="source-context">
+        <summary><svg aria-hidden="true"><use href="#reader-icon-info"></use></svg> <span data-zh="关于本图" data-en="About this map">关于本图</span></summary>
+        <p id="map-subtitle" class="subtitle"></p>
+        <p id="map-introduction" class="introduction"></p>
+        <dl class="source-summary" aria-label="来源摘要" data-aria-label-zh="来源摘要" data-aria-label-en="Source summary">
+          <div><dt data-zh="读者" data-en="Audience">读者</dt><dd id="map-audience"></dd></div>
+          <div><dt data-zh="来源快照" data-en="Source snapshot">来源快照</dt><dd id="map-snapshot"></dd></div>
+        </dl>
+      </details>
+
+      <details class="legend">
+        <summary data-zh="如何阅读本图" data-en="How to read the map">如何阅读本图</summary>
+        <div class="legend-grid">
+          <section>
+            <h3 data-zh="节点角色" data-en="Node role">节点角色</h3>
+            <p data-zh="目标、定义、结果和解释使用不同轮廓。" data-en="Target, definition, result, and explanation use different silhouettes.">目标、定义、结果和解释使用不同轮廓。</p>
+          </section>
+          <section>
+            <h3 data-zh="来源平面" data-en="Source plane">来源平面</h3>
+            <p><span class="swatch fact"></span> <span data-zh="事实" data-en="Fact">事实</span> <span class="swatch paper"></span> <span data-zh="论文" data-en="Paper">论文</span> <span class="swatch audit"></span> <span data-zh="审计" data-en="Audit">审计</span> <span class="swatch blackboard"></span> <span data-zh="黑板" data-en="Blackboard">黑板</span> <span class="swatch learning"></span> <span data-zh="学习/读者注" data-en="Learning/reader note">学习/读者注</span></p>
+          </section>
+          <section>
+            <h3 data-zh="关系" data-en="Relation">关系</h3>
+            <p><span class="edge-key prerequisite"></span> <span data-zh="前置" data-en="Prerequisite">前置</span> <span class="edge-key support"></span> <span data-zh="支持" data-en="Support">支持</span> <span class="edge-key repair"></span> <span data-zh="修复" data-en="Repair">修复</span> <span class="edge-key conflict"></span> <span data-zh="冲突" data-en="Conflict">冲突</span> <span class="edge-key grouping"></span> <span data-zh="阅读分组" data-en="Reader grouping">阅读分组</span></p>
+          </section>
+          <section>
+            <h3 data-zh="状态" data-en="Status">状态</h3>
+            <p data-zh="实线为当前；虚线为研究；强调色为受质疑；淡化为停用。" data-en="Solid is current; dashed is research; accented is challenged; faded is inactive.">实线为当前；虚线为研究；强调色为受质疑；淡化为停用。</p>
+          </section>
+          <section>
+            <h3 data-zh="卡片尺寸" data-en="Card sizing">卡片尺寸</h3>
+            <p data-zh="完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。" data-en="A full card has only a minus; a minimized card has only a plus. Sizing preserves its center and never hides currently enabled relations.">完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。</p>
+          </section>
+        </div>
+      </details>
+
+      <footer>
+        <span data-zh="离线只读可视化 · 来源图谱始终具有权威性" data-en="Offline read-only view · Source graph remains authoritative">离线只读可视化 · 来源图谱始终具有权威性</span>
+        <button id="copy-build-button" type="button" class="quiet-button">
+          <svg aria-hidden="true"><use href="#reader-icon-copy"></use></svg>
+          <span data-zh="复制导出元数据" data-en="Copy export metadata">复制导出元数据</span>
+        </button>
+      </footer>
+    </aside>
+  </main>
+
+  <noscript>此阅读器需要 JavaScript，但不需要网络连接。</noscript>
+  <script id="chalxius-reader-packet" type="application/json">@@CHALXIUS_READER_PACKET@@</script>
+  <script id="chalxius-build-meta" type="application/json">@@CHALXIUS_BUILD_META@@</script>
+  <script id="chalxius-reader-app">
+@@CHALXIUS_READER_APP@@
+  </script>
+</body>
+</html>

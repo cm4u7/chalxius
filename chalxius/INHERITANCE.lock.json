@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "skill_name": "chalxius",
+  "version": "0.3.4",
+  "public_display_name": "Chalxius",
+  "legacy_public_alias": "operate-mathgraph-unified",
+  "artifact_writer_engine_id": "operate-mathgraph-unified",
+  "architectural_rule": "chalk_0_4_is_the_only_research_engine",
+  "components": {
+    "chalk": {
+      "skill_name": "mathgraph-chalk-version",
+      "version": "0.4.0-chalk",
+      "manifest_file_sha256": "2c60a862978aec9cedd628e37bf2fa405b29b8ff5dec1ce650ae21871906c613",
+      "role": "architectural_base",
+      "runtime_dependency": false,
+      "source_inherited": true
+    },
+    "danus": {
+      "skill_name": "run-multi-agent-mathgraph",
+      "version": "0.2.12",
+      "manifest_file_sha256": "bd7899e587c82092468c388a04dce6c9c46fc0da2020203564937c0cac4bb33e",
+      "role": "behavioral_reference/legacy_import_source",
+      "runtime_dependency": false,
+      "source_inherited": false
+    },
+    "grill_me": {
+      "skill_name": "grill-me",
+      "version": "0.2.0",
+      "manifest_file_sha256": "debcad385f1e919cec85683f126ead07f0357ec0557234753cb36cfe12bc2bfc",
+      "role": "historical_nontruth_learning_plane_source",
+      "runtime_dependency": false,
+      "source_inherited": "learning_graph_algorithm_tests_and_academic_pedagogy_only"
+    },
+    "legacy_coordinator": {
+      "skill_name": "coordinate-mathgraph-suite",
+      "version": "0.1.0",
+      "manifest_file_sha256": "804843afb361191c7ce0ed929f5ae1ee88869c5d8793f9cc2444e892d249d94a",
+      "role": "rollback_lineage_only",
+      "runtime_dependency": false,
+      "source_inherited": false
+    }
+  },
+  "companion_release": {
+    "skill_name": "grill-me",
+    "version": "0.3.2-code",
+    "manifest_file_sha256": "09d65d000435727bbb1ccad4728bfd04a2ab256a07428b8a4afdf19cebdd77f1",
+    "role": "standalone_programming_assistance_only",
+    "runtime_dependency": false,
+    "product_availability": "globally_injected",
+    "semantic_activation": "explicit_programming_grill_or_socratic_intent_only",
+    "graph_mount_capability": false,
+    "research_authority": false
+  },
+  "learning_surface": {
+    "public_name": "Chalxius Learner",
+    "legacy_description": "internal Grill learner",
+    "activation": "explicit_academic_teaching_or_testing_intent_only",
+    "default_state": "inactive",
+    "persistent_graph_writes": "separate_user_authorization_required",
+    "truth_effect": "none"
+  },
+  "reader_export_surface": {
+    "schema_version": 1,
+    "renderer_revision": "chalxius-reader-html-11",
+    "activation": "explicit_visualization_request_only",
+    "fixed_output": "visualizations/knowledge-map.html",
+    "overwrite_policy": "fixed_replace",
+    "network_runtime": "disabled",
+    "model_runtime": "disabled",
+    "layout": "deterministic_preset",
+    "truth_effect": "none",
+    "reload_policy": "same_document_navigation_only",
+    "reader_finalize": {
+      "schema_version": 1,
+      "status": "ready",
+      "scope": "presentation_readiness_only",
+      "metadata_fields": [
+        "schema_version",
+        "status",
+        "scope",
+        "source_snapshot_id",
+        "source_snapshot_sha256",
+        "sidebar_complete_count",
+        "node_count",
+        "packet_sha256",
+        "truth_effect"
+      ],
+      "required_sidebar_fields": [
+        "summary",
+        "intuition",
+        "importance",
+        "reasoning"
+      ],
+      "embedded_in_build_metadata": true,
+      "included_in_export_stdout": true,
+      "persistent_receipt": false,
+      "truth_effect": "none"
+    },
+    "vendored_components": {
+      "cytoscape": {
+        "version": "3.34.0",
+        "license": "MIT",
+        "asset_sha256": "9c2a3bf2592e0b14a1f7bec07c03a54f16dedf32af9cd0af155c716aa6c87bc3"
+      },
+      "mathjax": {
+        "version": "3.2.2",
+        "bundle": "tex-svg",
+        "license": "Apache-2.0",
+        "asset_sha256": "d4295dc33744836935c1399feece5159577b34c5c8ffb9f1c6324cd82e03a882"
+      },
+      "tabler_icons": {
+        "version": "3.45.0",
+        "license": "MIT",
+        "asset_count": 15,
+        "sprite_sha256": "2fc9b17bafe11e9866ae515ad9b6b06790c8ceabece75e5b9362d41320093e87",
+        "license_sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"
+      }
+    }
+  },
+  "forbidden_compositions": [
+    "danus_runtime_inside_unified_research",
+    "parallel_mutable_danus_and_chalk_roots",
+    "danus_v3_protocol_as_a_second_engine",
+    "learning_evidence_as_fact_or_research_audit_evidence",
+    "standalone_grill_me_as_academic_learning_runtime",
+    "standalone_grill_me_graph_mount"
+  ],
+  "fact_admission_rule": "one_identical_hash_bound_chalk_v4_contract_across_fast_auto_deep"
+}

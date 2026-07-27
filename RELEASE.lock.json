@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "package": "chalxius",
+  "version": "0.3.4",
+  "release_date": "2026-07-27",
+  "renderer_revision": "chalxius-reader-html-11",
+  "truth_effect": "none",
+  "public_archive": {
+    "name": "chalxius-0.3.4-public.tar.gz",
+    "bytes": 1428010,
+    "sha256": "8a91161e50bacb6c45e7072ef3cfb1a800822f968095a69b3cfac54defd73cd1",
+    "normalized_owner": "0:0",
+    "fixed_member_timestamp": "2026-07-27T00:00:00Z",
+    "gzip_timestamp": "disabled"
+  },
+  "skill_manifest": {
+    "entry_count": 138,
+    "file_sha256": "7a52b8142d30bffbb711bfc75c1e29453f9c1b3385cbf7c921adda34978e44df"
+  },
+  "validation": {
+    "official_skill_validator": "pass",
+    "self_test": "pass",
+    "full_suite": "425/425 pass",
+    "focused_reader_suite": "24/24 pass",
+    "cold_archive": "pass",
+    "privacy_scan": "pass",
+    "deterministic_archive_build": "pass"
+  },
+  "public_source_exclusions": [
+    "local visual-QA paths",
+    "user-specific learning profile",
+    "private historical forward-test evidence"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "conjecture",
+  "status": "open",
+  "claim": "State one precise conjecture here.",
+  "rationale": "Explain the expected mechanism and the most likely obstruction.",
+  "dependencies": [],
+  "priority": 0.8,
+  "novelty": 0.7,
+  "testability": 0.8,
+  "risk": 0.5,
+  "suggested_actions": [
+    "prove directly",
+    "seek a counterexample",
+    "compute a toy case"
+  ],
+  "tags": [
+    "example"
+  ]
+}
+

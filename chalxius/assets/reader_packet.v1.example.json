@@ -1,0 +1,585 @@
+{
+  "schema_version": 1,
+  "project_id": "reader-demo",
+  "language": "en",
+  "title": "A Small Deterministic Knowledge Map",
+  "audience": "A mathematically mature graduate student encountering the project for the first time",
+  "source_snapshot": {
+    "id": "snapshot-reader-demo-v1",
+    "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "description": "A frozen demonstration snapshot spanning Fact, Paper, Audit, Blackboard, and reader-note material."
+  },
+  "presentation": {
+    "subtitle": "Start from either target, then unfold only the prerequisites you need.",
+    "introduction": "This file is a reading aid, not a new source of mathematical authority. Node colors identify the source plane; shapes identify the reader role."
+  },
+  "audit": {
+    "current_ok": false,
+    "summary": "The admitted knowledge path is readable, while one reconstruction issue remains visible in the optional research-process layer.",
+    "warnings": [
+      "One Paper reconstruction is under active challenge."
+    ],
+    "unresolved": [
+      "Confirm whether compatibility hypothesis K is explicit in the cited source passage."
+    ]
+  },
+  "theme_order": [
+    "theme-foundations",
+    "theme-applications"
+  ],
+  "target_order": [
+    "target-main",
+    "target-application"
+  ],
+  "prerequisite_order": {
+    "target-main": [
+      "def-surface",
+      "result-local"
+    ],
+    "target-application": [
+      "def-surface",
+      "result-local",
+      "target-main",
+      "def-invariant"
+    ]
+  },
+  "themes": [
+    {
+      "id": "theme-foundations",
+      "label": "Foundational conclusion",
+      "description": "The core result and its minimal local prerequisites.",
+      "target_ids": [
+        "target-main"
+      ]
+    },
+    {
+      "id": "theme-applications",
+      "label": "First application",
+      "description": "A downstream use of the core result together with one invariant.",
+      "target_ids": [
+        "target-application"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "def-surface",
+      "title": "Compact surface",
+      "reader_role": "definition",
+      "plane": "paper",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-foundations",
+      "summary": "The ambient object is a compact complex surface.",
+      "intuition": "Think of a two-complex-dimensional space with no boundary or points escaping to infinity.",
+      "importance": "Every later hypothesis and invariant is interpreted on this fixed kind of object.",
+      "reasoning": "Keep compactness and complex dimension explicit whenever a later theorem is applied.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [],
+        "statement": "A compact surface is a two-dimensional complex manifold that is compact.",
+        "proof": "Definition from the frozen source snapshot.",
+        "relations": [],
+        "original_text": "A compact surface is a two-dimensional complex manifold that is compact."
+      },
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "current_source",
+        "truth_status": "source_authority",
+        "object_id": "psn-demo-surface",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Demo manuscript, Definition 1",
+        "object_sha256": "b033147427b08a3cff1e69a69f633b943401a66557aac8981648b644c97d2367",
+        "original_text_sha256": "b033147427b08a3cff1e69a69f633b943401a66557aac8981648b644c97d2367",
+        "replaces": []
+      }
+    },
+    {
+      "id": "def-invariant",
+      "title": "Chosen invariant",
+      "reader_role": "definition",
+      "plane": "fact",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-applications",
+      "summary": "The symbol \\(I(S)\\) denotes the invariant used in the application.",
+      "intuition": "It packages the geometric information that the application needs into one quantity.",
+      "importance": "The application depends on the invariant's compatibility with the main conclusion.",
+      "reasoning": "Fix the convention for \\(I(S)\\) before using any vanishing or compatibility statement.",
+      "prerequisites": [
+        "def-surface"
+      ],
+      "formal": {
+        "hypotheses": [
+          "\\(S\\) is a compact surface."
+        ],
+        "statement": "For a compact surface \\(S\\), let \\(I(S)\\) denote its chosen invariant.",
+        "proof": "This notation is fixed by the admitted definition node.",
+        "relations": [
+          "Introduces the symbol \\(I(S)\\)."
+        ],
+        "original_text": "For a compact surface \\(S\\), let \\(I(S)\\) denote its chosen invariant."
+      },
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted",
+        "truth_status": "admitted_fact",
+        "object_id": "1111111111111111",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "fact_graph/facts/1111111111111111.md",
+        "object_sha256": "6fbf453979e597dfb1f01dbf8fb231550c407448af6974a9be55cce893cccfc6",
+        "original_text_sha256": "6fbf453979e597dfb1f01dbf8fb231550c407448af6974a9be55cce893cccfc6",
+        "replaces": []
+      }
+    },
+    {
+      "id": "result-local",
+      "title": "Local vanishing",
+      "reader_role": "result",
+      "plane": "fact",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-foundations",
+      "summary": "Hypothesis \\(H\\) forces the chosen invariant to vanish.",
+      "intuition": "The difficult local contribution disappears before the global argument begins.",
+      "importance": "This is the only direct mathematical input needed by the main conclusion.",
+      "reasoning": "Verify \\(H\\), apply the admitted vanishing statement, and retain the exact value \\(I(S)=0\\).",
+      "prerequisites": [
+        "def-surface"
+      ],
+      "formal": {
+        "hypotheses": [
+          "\\(S\\) is a compact surface.",
+          "\\(S\\) satisfies \\(H\\)."
+        ],
+        "statement": "If \\(S\\) satisfies hypothesis \\(H\\), then \\(I(S)=0\\).",
+        "proof": "Admitted local computation and independent review in the source graph.",
+        "relations": [
+          "Depends on the ambient surface definition."
+        ],
+        "original_text": "If \\(S\\) satisfies hypothesis \\(H\\), then \\(I(S)=0\\)."
+      },
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted",
+        "truth_status": "admitted_fact",
+        "object_id": "2222222222222222",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "fact_graph/facts/2222222222222222.md",
+        "object_sha256": "605697169b89609577ab661822b3de9f5ddd50bdd008bf21687497792fc16355",
+        "original_text_sha256": "605697169b89609577ab661822b3de9f5ddd50bdd008bf21687497792fc16355",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-main",
+      "title": "Main conclusion",
+      "reader_role": "target",
+      "plane": "fact",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-foundations",
+      "summary": "The project proves the main conclusion once hypotheses \\(H\\) and \\(K\\) are in place.",
+      "intuition": "The local vanishing removes the obstruction, while \\(K\\) supplies the compatibility needed to globalize.",
+      "importance": "This is the first headline target and the prerequisite for the downstream application.",
+      "reasoning": "First establish local vanishing. Then use compatibility \\(K\\) to transport that vanishing into the global conclusion.",
+      "prerequisites": [
+        "result-local"
+      ],
+      "formal": {
+        "hypotheses": [
+          "\\(S\\) satisfies \\(H\\).",
+          "Compatibility hypothesis \\(K\\) holds."
+        ],
+        "statement": "Under hypotheses \\(H\\) and \\(K\\), the main conclusion \\(C(S)\\) holds.",
+        "proof": "Apply local vanishing and then the compatibility transport encoded by \\(K\\).",
+        "relations": [
+          "The local vanishing result is a direct prerequisite."
+        ],
+        "original_text": "Under hypotheses \\(H\\) and \\(K\\), the main conclusion \\(C(S)\\) holds."
+      },
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted",
+        "truth_status": "admitted_fact",
+        "object_id": "3333333333333333",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "fact_graph/facts/3333333333333333.md",
+        "object_sha256": "e3b81796f6e87cbb2f6acd3cf80ff30d35fbd28d53f5d468b1c0cc0c83a1f046",
+        "original_text_sha256": "e3b81796f6e87cbb2f6acd3cf80ff30d35fbd28d53f5d468b1c0cc0c83a1f046",
+        "replaces": []
+      }
+    },
+    {
+      "id": "target-application",
+      "title": "Application",
+      "reader_role": "target",
+      "plane": "fact",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-applications",
+      "summary": "The main conclusion and compatibility \\(J\\) imply the advertised application.",
+      "intuition": "No new core mechanism is needed: the application reads the proved conclusion through one compatibility rule.",
+      "importance": "This target shows what the foundational result buys downstream.",
+      "reasoning": "Open the main conclusion first, fix the invariant convention, and then apply compatibility \\(J\\).",
+      "prerequisites": [
+        "target-main",
+        "def-invariant"
+      ],
+      "formal": {
+        "hypotheses": [
+          "The main conclusion \\(C(S)\\) holds.",
+          "Compatibility \\(J\\) holds."
+        ],
+        "statement": "Assuming the main conclusion and compatibility \\(J\\), application \\(A(S)\\) follows.",
+        "proof": "Substitute \\(C(S)\\) into the compatibility implication \\(J\\).",
+        "relations": [
+          "Depends on the main conclusion and the invariant convention."
+        ],
+        "original_text": "Assuming the main conclusion and compatibility \\(J\\), application \\(A(S)\\) follows."
+      },
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted",
+        "truth_status": "admitted_fact",
+        "object_id": "4444444444444444",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "fact_graph/facts/4444444444444444.md",
+        "object_sha256": "5366fadda4faa28c839476455ca0829582605f0dabdeb598fa70dc71f55d91a1",
+        "original_text_sha256": "5366fadda4faa28c839476455ca0829582605f0dabdeb598fa70dc71f55d91a1",
+        "replaces": []
+      }
+    },
+    {
+      "id": "reader-route",
+      "title": "Suggested reading route",
+      "reader_role": "explanation",
+      "plane": "reader",
+      "visual_status": "current",
+      "layer": "knowledge",
+      "theme_id": "theme-foundations",
+      "summary": "Read the local vanishing statement before opening the main conclusion.",
+      "intuition": "This avoids carrying the whole graph in working memory.",
+      "importance": "It is a presentation aid only and has no truth effect.",
+      "reasoning": "Follow the blue prerequisite arrows from left to right.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [],
+        "statement": "",
+        "proof": "",
+        "relations": [
+          "Weak explanatory support for the main target."
+        ],
+        "original_text": "Read the local vanishing result before the main conclusion."
+      },
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only",
+        "truth_status": "reader_note",
+        "object_id": "reader-note-route",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "reader packet, node reader-route",
+        "object_sha256": "3d006f0bb248e03a974fd650122f56970943dcad331eb56b2796d9e16f01d1ae",
+        "original_text_sha256": "3d006f0bb248e03a974fd650122f56970943dcad331eb56b2796d9e16f01d1ae",
+        "replaces": []
+      }
+    },
+    {
+      "id": "paper-claim",
+      "title": "Direct source inference",
+      "reader_role": "result",
+      "plane": "paper",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-foundations",
+      "summary": "The source appears to move directly from Lemma 2 to the main conclusion.",
+      "intuition": "This is the point at which a missing compatibility hypothesis could be hidden.",
+      "importance": "It explains why the optional audit and repair nodes exist.",
+      "reasoning": "Compare the exact source sentence with the reconstructed implication and inspect every hypothesis.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [],
+        "statement": "The source manuscript asserts \\(C(S)\\) directly after Lemma 2.",
+        "proof": "Researcher reconstruction only; not an admitted Fact.",
+        "relations": [
+          "Supports the presentation of the main target but remains under audit."
+        ],
+        "original_text": "The source manuscript asserts \\(C(S)\\) directly after Lemma 2."
+      },
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "current_reconstruction",
+        "truth_status": "interpretation",
+        "object_id": "prn-demo-direct-inference",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Demo manuscript, immediately after Lemma 2",
+        "object_sha256": "7be36ceb99f3b7fa0ae15f9b8b9f5589c3a085c2d948bf3faa49f3b120e0ca95",
+        "original_text_sha256": "7be36ceb99f3b7fa0ae15f9b8b9f5589c3a085c2d948bf3faa49f3b120e0ca95",
+        "replaces": []
+      }
+    },
+    {
+      "id": "audit-challenge",
+      "title": "Compatibility challenge",
+      "reader_role": "explanation",
+      "plane": "audit",
+      "visual_status": "challenged",
+      "layer": "research",
+      "theme_id": "theme-foundations",
+      "summary": "The reconstruction may have omitted hypothesis \\(K\\).",
+      "intuition": "A true conclusion can still be unsupported if the bridge hypothesis was silently dropped.",
+      "importance": "The challenge prevents the reconstruction from being mistaken for admitted truth.",
+      "reasoning": "Locate \\(K\\) in the source, or replace the direct inference with an explicit two-step route.",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [],
+        "statement": "The reconstruction may omit compatibility hypothesis \\(K\\).",
+        "proof": "Open audit objection; no Fact effect.",
+        "relations": [
+          "Challenges the direct source inference."
+        ],
+        "original_text": "The reconstruction may omit compatibility hypothesis \\(K\\)."
+      },
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "open_challenge",
+        "truth_status": "audit_evidence",
+        "object_id": "pan-demo-compatibility-challenge",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Paper Audit, challenge 1",
+        "object_sha256": "1c66b0ed8ebc63f3191cd12c97de8547d2d45194bac44d73858c68b6687a3800",
+        "original_text_sha256": "1c66b0ed8ebc63f3191cd12c97de8547d2d45194bac44d73858c68b6687a3800",
+        "replaces": []
+      }
+    },
+    {
+      "id": "blackboard-repair",
+      "title": "Two-step repair candidate",
+      "reader_role": "explanation",
+      "plane": "blackboard",
+      "visual_status": "research",
+      "layer": "research",
+      "theme_id": "theme-foundations",
+      "summary": "A candidate repair restores \\(K\\) as a separate step.",
+      "intuition": "The repair makes the hidden bridge visible instead of strengthening the source silently.",
+      "importance": "It may replace the challenged reconstruction after independent review, but it is not yet a Fact.",
+      "reasoning": "Prove the local result, verify \\(K\\), and only then derive \\(C(S)\\).",
+      "prerequisites": [],
+      "formal": {
+        "hypotheses": [],
+        "statement": "Replace the direct inference by a two-step argument that restores \\(K\\).",
+        "proof": "Blackboard repair proposal awaiting source confirmation and review.",
+        "relations": [
+          "Proposed replacement for the challenged reconstruction."
+        ],
+        "original_text": "Replace the direct inference by a two-step argument that restores \\(K\\)."
+      },
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "open_candidate",
+        "truth_status": "exploration",
+        "object_id": "bbn-demo-repair",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Blackboard snapshot, repair lane",
+        "object_sha256": "d4cd1c4b72cbe4d7f5f4d46036367b0ac920c9044e1108d4c7eec9f24e2de0f2",
+        "original_text_sha256": "d4cd1c4b72cbe4d7f5f4d46036367b0ac920c9044e1108d4c7eec9f24e2de0f2",
+        "replaces": [
+          "prn-demo-direct-inference"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-surface-local",
+      "source": "def-surface",
+      "target": "result-local",
+      "category": "prerequisite",
+      "relation": "The local result is stated for compact surfaces.",
+      "exact_type": "requires_definition",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted_relation",
+        "truth_status": "admitted_fact",
+        "object_id": "edge-source-local",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Fact predecessor relation",
+        "object_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "original_text_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-local-main",
+      "source": "result-local",
+      "target": "target-main",
+      "category": "prerequisite",
+      "relation": "Local vanishing is the direct mathematical prerequisite for the main conclusion.",
+      "exact_type": "predecessor",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted_relation",
+        "truth_status": "admitted_fact",
+        "object_id": "edge-local-main",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Fact predecessor relation",
+        "object_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "original_text_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-surface-invariant",
+      "source": "def-surface",
+      "target": "def-invariant",
+      "category": "prerequisite",
+      "relation": "The invariant is defined on the ambient surface.",
+      "exact_type": "requires_definition",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted_relation",
+        "truth_status": "admitted_fact",
+        "object_id": "edge-surface-invariant",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Fact predecessor relation",
+        "object_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "original_text_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-main-application",
+      "source": "target-main",
+      "target": "target-application",
+      "category": "prerequisite",
+      "relation": "The application consumes the main conclusion.",
+      "exact_type": "predecessor",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted_relation",
+        "truth_status": "admitted_fact",
+        "object_id": "edge-main-application",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Fact predecessor relation",
+        "object_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "original_text_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-invariant-application",
+      "source": "def-invariant",
+      "target": "target-application",
+      "category": "prerequisite",
+      "relation": "The application uses the chosen invariant convention.",
+      "exact_type": "predecessor",
+      "weak": false,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "fact",
+        "source_status": "admitted_relation",
+        "truth_status": "admitted_fact",
+        "object_id": "edge-invariant-application",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Fact predecessor relation",
+        "object_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "original_text_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-reader-main",
+      "source": "reader-route",
+      "target": "target-main",
+      "category": "support",
+      "relation": "Suggested reading order only.",
+      "exact_type": "reader_explanation",
+      "weak": true,
+      "layer": "knowledge",
+      "provenance": {
+        "source_plane": "reader",
+        "source_status": "presentation_only",
+        "truth_status": "reader_note",
+        "object_id": "edge-reader-main-note",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "reader packet, explanatory edge",
+        "object_sha256": "3d006f0bb248e03a974fd650122f56970943dcad331eb56b2796d9e16f01d1ae",
+        "original_text_sha256": "3d006f0bb248e03a974fd650122f56970943dcad331eb56b2796d9e16f01d1ae",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-paper-main",
+      "source": "paper-claim",
+      "target": "target-main",
+      "category": "support",
+      "relation": "The Paper reconstruction is relevant background for the main conclusion.",
+      "exact_type": "reconstructs_support",
+      "weak": false,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "paper",
+        "source_status": "current_reconstruction",
+        "truth_status": "interpretation",
+        "object_id": "pre-demo-paper-main",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Paper reconstruction edge",
+        "object_sha256": "7be36ceb99f3b7fa0ae15f9b8b9f5589c3a085c2d948bf3faa49f3b120e0ca95",
+        "original_text_sha256": "7be36ceb99f3b7fa0ae15f9b8b9f5589c3a085c2d948bf3faa49f3b120e0ca95",
+        "replaces": []
+      }
+    },
+    {
+      "id": "edge-repair-paper",
+      "source": "blackboard-repair",
+      "target": "paper-claim",
+      "category": "repair",
+      "relation": "The two-step route is a proposed replacement for the direct inference.",
+      "exact_type": "replaces",
+      "weak": false,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "blackboard",
+        "source_status": "open_candidate",
+        "truth_status": "exploration",
+        "object_id": "bbe-demo-repair",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Blackboard repair edge",
+        "object_sha256": "d4cd1c4b72cbe4d7f5f4d46036367b0ac920c9044e1108d4c7eec9f24e2de0f2",
+        "original_text_sha256": "d4cd1c4b72cbe4d7f5f4d46036367b0ac920c9044e1108d4c7eec9f24e2de0f2",
+        "replaces": [
+          "pre-demo-paper-main"
+        ]
+      }
+    },
+    {
+      "id": "edge-audit-paper",
+      "source": "audit-challenge",
+      "target": "paper-claim",
+      "category": "conflict",
+      "relation": "The audit challenges the reconstruction's missing compatibility hypothesis.",
+      "exact_type": "challenges",
+      "weak": false,
+      "layer": "research",
+      "provenance": {
+        "source_plane": "audit",
+        "source_status": "open_challenge",
+        "truth_status": "audit_evidence",
+        "object_id": "pae-demo-challenge",
+        "snapshot_id": "snapshot-reader-demo-v1",
+        "locator": "Paper Audit challenge edge",
+        "object_sha256": "1c66b0ed8ebc63f3191cd12c97de8547d2d45194bac44d73858c68b6687a3800",
+        "original_text_sha256": "1c66b0ed8ebc63f3191cd12c97de8547d2d45194bac44d73858c68b6687a3800",
+        "replaces": []
+      }
+    }
+  ]
+}

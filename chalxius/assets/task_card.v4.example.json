@@ -1,0 +1,129 @@
+{
+  "artifact_dir_relpath": "rounds/round-20260724T124125Z-42bf8ce3/artifacts/a01-7b6f355f3d29-compute",
+  "assignment_id": "a01-7b6f355f3d29-compute",
+  "assignment_sha256": "aa4bc3605ba8e499d7ad63e31cc0d058e107baf2e97c64cdf05241e9bd988c0d",
+  "adoption_plan": {
+    "binding_sha256": "175ec883499e05139ca613a2aae7d2279630837bd01f7fa6c3dfc4427f9c296a",
+    "communication_protocol": {
+      "control_plane": "required_compact_nontruth",
+      "mathematical_state_plane": "required_typed_truth_boundary",
+      "narrative_plane": "required_nontruth",
+      "same_round_visibility": "frozen_snapshot_only"
+    },
+    "feature_statuses": {
+      "artifact_replay": "available",
+      "atomic_fact_bundle": "available",
+      "convention_gate": "available",
+      "experiment_checkpoint": "available",
+      "quantifier_gate": "available",
+      "source_claim_gate": "available",
+      "terminology_export_lint": "available"
+    },
+    "plan_sha256": "e51bfdae9d2c788aa7a7a438873ab2ccb509290b43b072a79c48233b58ef3fe5",
+    "policy_revision": "mathgraph-0.3.0",
+    "replan_triggers": [
+      "computation_scope_change",
+      "fact_output_shape_change",
+      "audience_or_semantics_change"
+    ],
+    "schema_version": 1,
+    "workload_profile": {
+      "activity": "computation",
+      "audience": "internal",
+      "computation": {
+        "estimated_wall_seconds": 120,
+        "resume_required": false,
+        "role": "corroborative",
+        "stage_count": 1
+      },
+      "fact_output": {
+        "atomic_visibility_required": false,
+        "candidate_count": 1,
+        "internal_dependency_count": 0
+      },
+      "policy_revision": "mathgraph-0.3.0",
+      "schema_version": 1,
+      "semantics": {
+        "convention_sensitive": false,
+        "quantifier_sensitive": false,
+        "source_claim": false,
+        "terminology_sensitive": false
+      }
+    },
+    "workload_profile_sha256": "9dd5e582da11cb6e06dc87a1d51e17240891f6d7b5115f9992b137dbda5f89a7"
+  },
+  "blackboard_snapshot_sha256": "5650e0c68a732dd343abacd358167eb09593a711bb71f4228fd3a257e9a062d7",
+  "blackboard_view": {
+    "allow_create_space": false,
+    "cross_space_endpoint_node_ids": [],
+    "query_sha256": "8c6a696eab9d365fe62685c639f407e5388a442725ecc1d892e82542c65d51fa",
+    "read_space_ids": [
+      "bbn-0771c48c063fe3a7b02795ea9deef32a1116959bd2298d5b327297aeb7cb61fe"
+    ],
+    "seed_node_ids": [
+      "bbn-0771c48c063fe3a7b02795ea9deef32a1116959bd2298d5b327297aeb7cb61fe"
+    ],
+    "snapshot_id": "bbs-3baa4ec330bcc87a5220781e4c490599bc604edd942c92bcd21461f7d6ed1136",
+    "write_space_ids": [
+      "bbn-0771c48c063fe3a7b02795ea9deef32a1116959bd2298d5b327297aeb7cb61fe"
+    ]
+  },
+  "budgets": {
+    "max_artifact_bytes_each": 16777216,
+    "max_artifact_bytes_total": 67108864,
+    "max_artifact_files": 256,
+    "max_blackboard_delta_bytes_total": 8388608,
+    "max_blackboard_edges_added": 512,
+    "max_blackboard_nodes_added": 256,
+    "max_blackboard_object_bytes_each": 1048576,
+    "max_wall_seconds": 0
+  },
+  "hard_caps": {
+    "max_checkpoint_bytes_each": 67108864,
+    "max_checkpoint_bytes_total": 268435456,
+    "max_checkpoint_files": 64,
+    "max_experiment_event_bytes_each": 65536,
+    "max_experiment_event_bytes_total": 67108864,
+    "max_experiment_event_count_total": 131072,
+    "max_experiment_worker_event_count": 131040,
+    "max_governance_event_bytes_each": 65536,
+    "max_governance_event_bytes_total": 16777216,
+    "max_governance_event_count": 4096,
+    "max_pulse_control_bytes_each": 262144,
+    "max_pulse_control_bytes_total": 16777216,
+    "max_pulse_control_records": 4096
+  },
+  "campaign_id": "campaign-c59dc5b8ccd6",
+  "host_task_scope_id": "hosttask-0123456789abcdef0123456789abcdef",
+  "campaign_snapshot_relpath": "rounds/round-20260724T124125Z-42bf8ce3/campaign.snapshot.json",
+  "campaign_snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "convention_profile_ids": [],
+  "goal_relation": "proves",
+  "goal_statement": "Test whether the candidate identity holds.",
+  "inputs": [],
+  "memory_id": "7b6f355f3d29",
+  "mode": "compute",
+  "obligations": [],
+  "policy_revision": "mathgraph-0.3.0",
+  "project_id": "v4-example",
+  "protocol": "mathgraph-agent-v4",
+  "rationale_summary": "Small schema example.",
+  "return_relpath": "rounds/round-20260724T124125Z-42bf8ce3/returns/a01-7b6f355f3d29-compute.json",
+  "round_id": "round-20260724T124125Z-42bf8ce3",
+  "schema_version": 4,
+  "source_claim_id": null,
+  "stop_conditions": [
+    "Stop after one exact counterexample or a complete symbolic proof."
+  ],
+  "verification_plan": {
+    "authorized_artifact_roles": [],
+    "mode": "closed_packet",
+    "required_checks": [
+      "mathematical",
+      "scope",
+      "typing"
+    ]
+  },
+  "work_dir_relpath": "rounds/round-20260724T124125Z-42bf8ce3/work/a01-7b6f355f3d29-compute",
+  "worker_id": "a01-7b6f355f3d29-compute"
+}

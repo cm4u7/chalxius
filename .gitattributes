@@ -1,0 +1,7 @@
+# Preserve inherited fixture/code bytes while marking intentional whitespace.
+chalxius/assets/direction.example.json whitespace=-blank-at-eof
+chalxius/scripts/mathgraph/__init__.py whitespace=-blank-at-eof
+chalxius/scripts/mathgraph/__main__.py whitespace=-blank-at-eof
+chalxius/scripts/mathgraph/graph.py whitespace=-blank-at-eof
+chalxius/scripts/mathgraph/search.py whitespace=-blank-at-eof
+chalxius/scripts/mathgraph/orchestrator.py whitespace=-blank-at-eol

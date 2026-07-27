@@ -1,0 +1,9 @@
+{
+  "authority_kind": "user",
+  "authority_reference": "host-ui-decision-receipt-0001",
+  "decision": "continue",
+  "decision_id": "continuation-decision-0001",
+  "notice_id": "notice-replace-with-experiment-observe-output",
+  "reason": "Continue from the latest checkpoint because the unresolved stage is mathematically decisive.",
+  "schema_version": 1
+}

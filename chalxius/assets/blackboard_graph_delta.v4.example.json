@@ -1,0 +1,34 @@
+{
+  "add_edges": [
+    {
+      "created_by_assignment_id": "a01-7b6f355f3d29-compute",
+      "edge_id": "bbe-7c0692f5919382f5725e607167040391777f226cf5f55999c63ca319d7a18660",
+      "edge_type": "placed_in",
+      "payload": {},
+      "policy_revision": "mathgraph-0.3.0",
+      "schema_version": 4,
+      "source_node_id": "bbn-60a867b53b7549a855505458d10e21124d3da7b465fba8f3390a2d8008ef9e3d",
+      "target_node_id": "bbn-0771c48c063fe3a7b02795ea9deef32a1116959bd2298d5b327297aeb7cb61fe",
+      "type_version": 1
+    }
+  ],
+  "add_nodes": [
+    {
+      "convention_profile_ids": [],
+      "created_by_assignment_id": "a01-7b6f355f3d29-compute",
+      "logical_key": "toy-case-n2",
+      "node_id": "bbn-60a867b53b7549a855505458d10e21124d3da7b465fba8f3390a2d8008ef9e3d",
+      "node_type": "computation_result",
+      "payload": {
+        "claim": "The candidate identity fails at n=2.",
+        "value": "-1/240"
+      },
+      "policy_revision": "mathgraph-0.3.0",
+      "schema_version": 4,
+      "source_refs": [],
+      "truth_status": "exploration",
+      "type_version": 1
+    }
+  ],
+  "base_snapshot_id": "bbs-3baa4ec330bcc87a5220781e4c490599bc604edd942c92bcd21461f7d6ed1136"
+}

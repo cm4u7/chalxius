@@ -1,0 +1,58 @@
+{
+  "artifacts": [],
+  "assignment_id": "a01-7b6f355f3d29-compute",
+  "assignment_sha256": "aa4bc3605ba8e499d7ad63e31cc0d058e107baf2e97c64cdf05241e9bd988c0d",
+  "blackboard_graph_delta": {
+    "add_edges": [
+      {
+        "created_by_assignment_id": "a01-7b6f355f3d29-compute",
+        "edge_id": "bbe-7c0692f5919382f5725e607167040391777f226cf5f55999c63ca319d7a18660",
+        "edge_type": "placed_in",
+        "payload": {},
+        "policy_revision": "mathgraph-0.3.0",
+        "schema_version": 4,
+        "source_node_id": "bbn-60a867b53b7549a855505458d10e21124d3da7b465fba8f3390a2d8008ef9e3d",
+        "target_node_id": "bbn-0771c48c063fe3a7b02795ea9deef32a1116959bd2298d5b327297aeb7cb61fe",
+        "type_version": 1
+      }
+    ],
+    "add_nodes": [
+      {
+        "convention_profile_ids": [],
+        "created_by_assignment_id": "a01-7b6f355f3d29-compute",
+        "logical_key": "toy-case-n2",
+        "node_id": "bbn-60a867b53b7549a855505458d10e21124d3da7b465fba8f3390a2d8008ef9e3d",
+        "node_type": "computation_result",
+        "payload": {
+          "claim": "The candidate identity fails at n=2.",
+          "value": "-1/240"
+        },
+        "policy_revision": "mathgraph-0.3.0",
+        "schema_version": 4,
+        "source_refs": [],
+        "truth_status": "exploration",
+        "type_version": 1
+      }
+    ],
+    "base_snapshot_id": "bbs-3baa4ec330bcc87a5220781e4c490599bc604edd942c92bcd21461f7d6ed1136"
+  },
+  "blackboard_snapshot_sha256": "5650e0c68a732dd343abacd358167eb09593a711bb71f4228fd3a257e9a062d7",
+  "claim": "The proposed identity holds for every n.",
+  "limitations": [
+    "A single toy case refutes the universal identity but does not determine the corrected formula."
+  ],
+  "memory_id": "7b6f355f3d29",
+  "method": "Exact symbolic evaluation at n=2.",
+  "mode": "compute",
+  "narrative_summary": "One exact toy value challenges the candidate identity but is not a proof of a replacement theorem.",
+  "obligation_ledger": [],
+  "outcome": "evidence",
+  "policy_revision": "mathgraph-0.3.0",
+  "project_id": "v4-example",
+  "protocol": "mathgraph-agent-v4",
+  "result": "The value is -1/240 rather than 0.",
+  "round_id": "round-20260724T124125Z-42bf8ce3",
+  "schema_version": 4,
+  "task_card_sha256": "4e825159b2e83c45c3f8bcb108255be7d834c514ed5027ae9d12a47cf94660df",
+  "worker": "a01-7b6f355f3d29-compute"
+}

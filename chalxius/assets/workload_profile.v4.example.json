@@ -1,0 +1,24 @@
+{
+  "activity": "computation",
+  "audience": "internal",
+  "computation": {
+    "estimated_wall_seconds": 120,
+    "resume_required": false,
+    "role": "corroborative",
+    "stage_count": 1
+  },
+  "fact_output": {
+    "atomic_visibility_required": false,
+    "candidate_count": 1,
+    "internal_dependency_count": 0
+  },
+  "policy_revision": "mathgraph-0.3.0",
+  "schema_version": 1,
+  "semantics": {
+    "convention_sensitive": false,
+    "quantifier_sensitive": false,
+    "source_ambiguity": false,
+    "source_claim": false,
+    "terminology_sensitive": false
+  }
+}
