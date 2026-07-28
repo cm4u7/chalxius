@@ -1,5 +1,12 @@
 # Campaigns, Frontier, Audit, and Migration v4
 
+> **V5 boundary.** Campaign and target mechanics remain available in a V5
+> project, but the V3-to-V4 migration procedure preserved later in this file is
+> rollback history only. V5 never upgrades or inherits authority from a V1-V4
+> root. Keep historical roots read-only and start V5 in a separate root with an
+> empty Fact Graph. Generate `PROJECT_BACKGROUND.md` only on explicit user
+> instruction; once present, read it by default as nontruth context.
+
 Read this reference before changing campaigns, targets, frontier policy, audit behavior, or
 upgrading a v1-v3 project copy.
 
@@ -64,7 +71,12 @@ Default audit fails on current graph/workflow errors, not merely on known histor
 `audit --strict-history` additionally requires clean history. Never suppress a genuine new v4
 error for compatibility.
 
-## Legacy V3 to unified project inheritance
+## Historical V3-to-V4 inheritance procedure (not a V5 path)
+
+The remainder of this section documents the retired V4 workflow so old
+artifacts can be interpreted. Do not execute it to initialize, migrate, or
+authorize a V5 project; `mode-init`, copy-upgrade, import, and cutover receipts
+from this section grant no V5 authority.
 
 Treat the legacy V3 project as a read-only ancestor and the unified copy as a
 new lineage. The copy becomes eligible for unified work only after its workflow

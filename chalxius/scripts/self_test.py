@@ -135,10 +135,12 @@ def main() -> int:
         skill_root / "references" / "unified_architecture.md",
         skill_root / "references" / "reasoning_modes.md",
         skill_root / "references" / "admission_contract.md",
+        skill_root / "references" / "capability_difference_audit.md",
         skill_root / "references" / "unified_learning_plane.md",
         skill_root / "references" / "reader_html_export.md",
         skill_root / "references" / "architecture-grilling.md",
         skill_root / "references" / "unified_release_traceability.md",
+        skill_root / "references" / "v5_release_traceability.md",
         skill_root / "assets" / "DEPLOY_PROMPT.txt",
         skill_root / "assets" / "AGENTS.routing.md",
         skill_root / "agents" / "openai.yaml",
@@ -169,15 +171,20 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
+            '"version": "0.4.0"',
+            '"default_evidence_version": 5',
+            '"v4_authority_inheritance": false',
             '"version": "0.3.2-code"',
             '"product_availability": "globally_injected"',
             '"semantic_activation": "explicit_programming_grill_or_socratic_intent_only"',
             '"graph_mount_capability": false',
             '"research_authority": false',
-            '"renderer_revision": "chalxius-reader-html-12"',
-            '"layout": "deterministic_ranked_barycenter"',
+            '"renderer_revision": "chalxius-reader-html-15"',
+            '"layout": "deterministic_compact_radial_core_layers"',
             '"fixed_output": "visualizations/knowledge-map.html"',
             '"network_runtime": "disabled"',
+            '"project_background_read_policy": "default_if_present_never_generate"',
+            '"aggressive_bug_audit": "release_time_only"',
         ),
         "references/reader_html_export.md": (
             "truth_effect=\"none\"",
@@ -195,6 +202,43 @@ def main() -> int:
             "globally available to routing",
             "cannot mount Fact, Paper, Audit, Blackboard, or",
             "`$chalxius`, not through standalone `$grill-me`",
+        ),
+        "references/v5_release_traceability.md": (
+            "Candidate version: `0.4.0`",
+            "Research -> Candidate Release -> Certification Decision -> Fact",
+            "four durable states and three happy-path truth transitions",
+            "default and binds its complete UTF-8 body",
+            "8/8",
+            "validated candidate, not an installed release",
+        ),
+        "references/portable_deployment.md": (
+            "second truth or admission gate",
+            "Neither command is required before constructing a verifier capsule",
+            "V5 never activates a V1-V4 root",
+            "Candidate Release/Certification/Fact boundary",
+        ),
+        "references/adoption_policy_v4.md": (
+            "have no Fact-admission authority",
+            "Each valid return enters cumulative Research independently",
+            "closure never blocks a V5 verifier capsule",
+        ),
+        "references/agent_protocol_v4.md": (
+            "semantically invalid peer receives an immutable local quarantine receipt",
+            "Round profile repair advice",
+            "truth_effect=\"none\"",
+        ),
+        "references/campaigns_and_migration_v4.md": (
+            "V5 never upgrades or inherits authority from a V1-V4",
+            "not a V5 path",
+            "grant no V5 authority",
+        ),
+        "references/data_contracts.md": (
+            "V5 authority boundary",
+            "review, acceptance marker, profile closure, import, or migration receipt is",
+        ),
+        "references/architecture.md": (
+            "Historical V4 storage reference",
+            "It is not the V5",
         ),
         "references/architecture-grilling.md": (
             "compatibility-only routing note",
@@ -244,6 +288,34 @@ def main() -> int:
         raise RuntimeError(
             "paper-reading modes still auto-activate the learner"
         )
+    forbidden_v5_architecture_claims = {
+        "references/portable_deployment.md": (
+            "record exact typed evidence with `profile-closure-record` before constructing a verifier task",
+            "is read-only until an operator records `mode-init`",
+            "Imported facts retain inherited assurance",
+        ),
+        "references/adoption_policy_v4.md": (
+            "Missing or drifted closure blocks both single-Fact and atomic-bundle verifier tasks",
+        ),
+        "references/agent_protocol_v4.md": (
+            "writes a `pulse-abort` receipt bound to that evidence",
+            "Verifier-task creation and admission require closure",
+        ),
+        "references/capability_difference_audit.md": (
+            "before verification/admission",
+        ),
+    }
+    stale_v5_architecture_claims = [
+        f"{relative}: {marker}"
+        for relative, markers in forbidden_v5_architecture_claims.items()
+        for marker in markers
+        if marker in policy_texts[relative]
+    ]
+    if stale_v5_architecture_claims:
+        raise RuntimeError(
+            "stale V4 authority claim in active V5 guidance: "
+            + ", ".join(stale_v5_architecture_claims)
+        )
     stale_public_names = [
         f"{relative}: {marker}"
         for relative, text in policy_texts.items()
@@ -256,10 +328,10 @@ def main() -> int:
         )
     collaboration_policy = "\n".join(policy_texts.values())
     required_collaboration_markers = (
-        "all currently callable clean-context worker slots",
+        "three communication planes",
         'score_role="priority_ordering_only"',
         "priority/load ordering",
-        "barriered Blackboard pulse",
+        "optional two-wave coordination layer",
         "durable two-wave pulse",
         "independently repeated check",
         "active-interval union",
@@ -276,8 +348,8 @@ def main() -> int:
         "frozen legacy adoption binding",
         "cooperative evidence layer",
         "execution_profile",
-        "future_work_units_only",
-        "candidate_only_until_gate_satisfied",
+        "default-if-present",
+        "explicit blocker",
         "mode-init",
         "legacy standalone",
         "nontruth learning plane",
@@ -408,9 +480,9 @@ def main() -> int:
         or "connect-src 'none'" not in reader_html_first
         or "@@CHALXIUS_" in reader_html_first
         or reader_meta_first.get("renderer_revision")
-        != "chalxius-reader-html-12"
+        != "chalxius-reader-html-15"
         or reader_meta_first.get("layout")
-        != "deterministic_ranked_barycenter"
+        != "deterministic_compact_radial_core_layers"
         or reader_meta_first.get("packet_sha256") != reader_packet_sha256
         or reader_meta_first.get("reader_finalize") != expected_reader_finalize
         or reader_meta_first.get("truth_effect") != "none"
@@ -463,6 +535,31 @@ def main() -> int:
                 'data-appearance-scheme="faceted"',
                 'data-appearance-scheme="plaques"',
                 "selectedId",
+                "selectedNodeIds",
+                "showBatchSelectionDetail",
+                "boxSelectionEnabled: false",
+                "box-selection-marquee",
+                "selectedNodesInRectangle",
+                "groupDrag",
+                "lastMovedSelectionCount",
+                "userPanningEnabled: false",
+                "selectionType: 'additive'",
+                "coreDistanceRanks",
+                "radialRingRadii",
+                "radialLayoutCoordinates",
+                "layoutNodeBoundaryGap",
+                "RADIAL_VISIBLE_EDGE_GAP",
+                "applyDynamicForces",
+                "scheduleDynamicForces",
+                "scheduleSizingConvergence",
+                "dynamicForceExecutedPasses",
+                "lastSizingConvergencePasses",
+                "DYNAMIC_ATTRACTION_TARGET_GAP",
+                "dynamicAttractionEdges",
+                "RADIAL_RING_PHASE",
+                "CROSSING_REFINEMENT_CANDIDATE_LIMIT",
+                "layoutRefinementCandidates",
+                "compact-radial-core-layers",
             )
         )
         or reader_html_first.count('data-context-command="') != 2
@@ -678,12 +775,64 @@ def main() -> int:
         if (
             reader_output.read_bytes() != reader_output_before
             or reader_receipt.get("renderer_revision")
-            != "chalxius-reader-html-12"
+            != "chalxius-reader-html-15"
             or reader_receipt.get("reader_finalize") != expected_reader_finalize
         ):
             raise RuntimeError(
                 "invalid reader replacement changed the fixed output or readiness receipt"
             )
+
+    with tempfile.TemporaryDirectory(prefix="chalxius-v5-self-test-") as temporary:
+        v5_root = Path(temporary) / "project"
+        v5_store = MathGraphStore(v5_root)
+        v5_store.initialize(
+            project_id="v5-self-test",
+            title="V5 authority and background smoke test",
+            workflow_evidence_version=5,
+        )
+        if (
+            v5_store.workflow_evidence_version() != 5
+            or v5_store.fact_ids()
+        ):
+            raise RuntimeError("V5 project did not start with empty authority")
+        v5_lifecycle = v5_store.v5_lifecycle()
+        v5_research = v5_lifecycle.add_research(
+            {
+                "kind": "conjecture",
+                "claim": "Exercise the V5 background binding boundary.",
+            },
+            actor="self-test-main",
+        )
+        first_round = v5_lifecycle.create_round(
+            workers=1,
+            research_ids=[v5_research["research_id"]],
+        )
+        first_card = v5_store._read_json(
+            Path(first_round["assignments"][0]["task_card_path"])
+        )
+        background_path = v5_root / "PROJECT_BACKGROUND.md"
+        if (
+            background_path.exists()
+            or first_card["mathematical_state"]["project_background"] is not None
+        ):
+            raise RuntimeError("V5 generated or bound a missing project background")
+        background_body = "# Background\n\nUser-directed summary fixture.\n"
+        background_path.write_text(background_body, encoding="utf-8")
+        second_round = v5_lifecycle.create_round(
+            workers=1,
+            research_ids=[v5_research["research_id"]],
+        )
+        second_card = v5_store._read_json(
+            Path(second_round["assignments"][0]["task_card_path"])
+        )
+        background = second_card["mathematical_state"]["project_background"]
+        if (
+            background.get("read_policy") != "default_if_present"
+            or background.get("body") != background_body
+            or background.get("sha256")
+            != sha256_bytes(background_body.encode("utf-8"))
+        ):
+            raise RuntimeError("V5 did not bind an existing project background by default")
     for legacy_trace in ("references/v0_4_release_traceability.md",):
         if "Legacy package history, not current routing" not in policy_texts[
             legacy_trace
@@ -693,30 +842,24 @@ def main() -> int:
             )
     surface_requirements = {
         "SKILL.md": (
-            "all currently callable clean-context worker slots",
-            "priority/load ordering",
-            "strictly greater than",
+            "three communication planes",
             "host_task_scope_id",
-            "mode-init",
-            "candidate_only_until_gate_satisfied",
+            "future work units only",
             "expert lint receipts",
             "interpret-lint-receipts",
-            "mutually exclusive",
-            "pulse-abort",
-            "machine_verified_ready",
-            "federation is deliberately disabled",
-            "pulse-dispatch",
-            "--host-config",
-            "preflight-return",
+            "work-unit-abort",
+            "quarantined locally",
+            "optional two-wave Pulse",
             "prepare_verifier_capsule.py",
-            "profile_obligations",
             "profile-closure-status",
             "profile-closure-record",
-            "mixed_procedural_and_machine_verified",
-            "workflow_readiness_only",
+            "different fresh verifier",
+            "PROJECT_BACKGROUND.md",
+            "reads it by default",
+            "does not create",
         ),
         "references/adoption_policy_v4.md": (
-            "Unified supersession",
+            "V5 adaptation",
             "execution_profile",
             "status is `available`",
             "priority/load",
@@ -729,7 +872,7 @@ def main() -> int:
             "workflow_readiness_only",
         ),
         "references/agent_protocol_v4.md": (
-            "Unified supersession",
+            "V5 adaptation",
             "execution_profile",
             "every callable clean-context slot",
             "opt-in",
@@ -779,25 +922,40 @@ def main() -> int:
             "paper_logic_mirror",
         ),
         "assets/DEPLOY_PROMPT.txt": (
-            "preflight-return",
-            "execution_profile",
-            "candidate_only_until_gate_satisfied",
-            "profile_obligations",
-            "profile-closure-record",
+            "workflow-evidence V5",
+            "starts with an empty",
+            "three communication planes",
+            "quarantine a malformed return locally",
+            "optional two-wave Pulse",
+            "Research -> Candidate Release -> Certification Decision",
+            "Do not add a second adverse-review layer",
+            "factor valuations",
+            "release-time only",
+            "PROJECT_BACKGROUND.md",
+            "only after an explicit user",
+            "reads and binds its complete body",
+            "profile-closure-status",
+            "repair advice",
         ),
         "references/reasoning_modes.md": (
-            "future_work_units_only",
-            "candidate_only_until_gate_satisfied",
+            "future-only switch",
             "fast",
             "auto",
             "deep",
-            "profile_obligations",
-            "not_required",
-            "workflow_readiness_only",
+            "explicit blocker",
+            "process-readiness compatibility commands",
+            "work-unit-abort",
+            "never cancels work",
+            "certification change",
         ),
         "references/admission_contract.md": (
-            "hash is independent of reasoning mode",
-            "different fresh verifier",
+            "identical in `fast`, `auto`, and `deep`",
+            "a fresh independent verifier",
+            "automatic inclusion and explicit disposition",
+            "machine-derived valuation",
+            "atomic internal",
+            "not Fact premises",
+            "submitted and certified as a new V5 Candidate Release",
         ),
         "references/unified_learning_plane.md": (
             "nontruth",
@@ -1648,7 +1806,8 @@ def main() -> int:
             raise RuntimeError(json.dumps(v4_report.as_dict(), sort_keys=True))
 
     print(
-        "SELF_TEST=PASS schema_v3=PASS schema_v4_round=PASS "
+        "SELF_TEST=PASS schema_v3=PASS schema_v4_round=PASS schema_v5=PASS "
+        "v5_empty_authority=PASS v5_background_default_read=PASS "
         "v4_blackboard=PASS admission_gate=PASS review_binding=PASS "
         "round_binding=PASS validate_return=PASS artifact_manifest=PASS "
         "applicability_gate=PASS critical_source_gate=PASS tiered_source_gate=PASS "

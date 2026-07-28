@@ -1,34 +1,35 @@
-# Invariant Fact Graph admission contract
+# Invariant V5 Fact admission contract
 
-The canonical contract is defined once in `scripts/mathgraph/modes.py`, hashed
-with canonical JSON, written into unified project governance, and bound into
-every new V4 round, assignment contract, task card, and execution profile. Its
-hash is independent of reasoning mode.
+The Fact admission contract is identical in `fast`, `auto`, and `deep`. Only
+the V5 lifecycle may expose new Fact bytes.
 
 Admission requires all of the following:
 
-1. exact content addressing of statement, proof, direct predecessors, source
-   evidence, task card, and submission or bundle;
-2. active admitted statement-only predecessors, never proof-only dependencies
-   or candidate-on-candidate chains;
-3. source and applicability fidelity, including hypotheses, witness mapping,
-   formula glyphs, status, conventions, quantifiers, and transports;
-4. authorized immutable artifacts and independent replay for load-bearing
-   computation;
-5. one atomic internal mini-DAG and all-or-none visibility for dependent facts;
-6. a different fresh verifier with only the frozen packet or bundle capability;
-7. exact binding among review, candidate bytes, verification package, gateway
-   acceptance, and stored fact;
-8. cascade revocation plus clean current graph and workflow audit.
+1. an exact sealed Candidate Release containing one Fact or an atomic internal
+   mini-DAG, with all external predecessors already active V5 Facts;
+2. exact statement interfaces, predecessor uses, quantifiers, conventions,
+   external-source fidelity, applicability witnesses, and controlled elementary
+   uses;
+3. exact artifact hashes and independent replay for load-bearing computation;
+4. for series-product coefficient computations, a machine-derived valuation
+   order budget plus a bound deeper truncation replay;
+5. exact Paper Logic/Audit snapshot and nodewise coverage bindings when the
+   validation subject is a paper;
+6. automatic inclusion and explicit disposition of every existing adverse
+   Research item linked to the selected Research branch;
+7. a fresh independent verifier restricted to the frozen capsule, with exact
+   candidate and edge panels and every requested check covered once;
+8. one immutable Certification Decision bound to the release and capsule;
+9. gateway revalidation of the accepted decision followed by all-or-none Fact
+   visibility; and
+10. cascade revocation plus a clean current graph and workflow audit.
 
-Execution profiles may add exploration. They cannot remove, relabel, or satisfy
-an admission gate. `fast` therefore means low-cost exploration, not low-assurance
-truth. Unsatisfied gates yield a candidate or explicit blocker.
+Research, Candidate Release, Certification Decision, Paper/Audit,
+Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,
+novelty records, project background, Reader packets/HTML, expert prose, and
+Learning records are not Fact premises.
 
-Imported Danus facts preserve their prior admitted status and exact provenance
-as historical inputs. Modifying one creates a new candidate. Every new fact,
-including one derived from an imported fact, uses this contract.
-
-Learning nodes, Paper/Audit nodes, Blackboard nodes, pulse readiness,
-interpretation lint, expert prose, reader packets, and generated reader HTML
-are never direct Fact premises.
+V4 and original Danus Facts are readable historical artifacts but are not
+active V5 predecessors. If their mathematics is needed in V5, it must be
+submitted and certified as a new V5 Candidate Release; V5 never silently
+inherits or relabels their authority.

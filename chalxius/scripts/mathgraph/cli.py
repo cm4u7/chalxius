@@ -31,6 +31,7 @@ from .orchestrator import (
 )
 from .contracts import (
     CLAIM_RELATIONS,
+    POLICY_REVISION_V4,
     contained_path,
     require_exact_keys,
     require_string,
@@ -48,7 +49,15 @@ from .roles import (
 )
 from .store import MathGraphStore
 from .modes import REASONING_MODES
-from .reader_html import export_reader_html
+from .reader_html import export_reader_html, export_reader_payload
+from .v5_reader import build_v5_reader_packet
+
+
+V5_COMPATIBILITY_MUTATION_COMMANDS = {
+    "fact-bundle-submit": "candidate-release",
+    "fact-bundle-record-review": "certification-record",
+    "fact-bundle-admit": "fact-admit",
+}
 
 
 def _json_file(path: str) -> dict[str, Any]:
@@ -60,6 +69,110 @@ def _json_file(path: str) -> dict[str, Any]:
 
 def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def _v5_fact_bundle_release(
+    store: MathGraphStore,
+    payload: dict[str, Any],
+    *,
+    worker: str,
+) -> dict[str, Any]:
+    """Map the V4 FactBundle convenience surface to one V5 release."""
+
+    require_exact_keys(
+        payload,
+        required={
+            "schema_version",
+            "policy_revision",
+            "project_id",
+            "facts",
+            "bundle_claim",
+        },
+        optional={"fact_bundle_id"},
+        label="V5 FactBundle compatibility input",
+    )
+    if (
+        payload.get("schema_version") != 4
+        or payload.get("policy_revision") != POLICY_REVISION_V4
+        or payload.get("project_id") != store.project_id()
+    ):
+        raise ValueError("V5 FactBundle compatibility input has wrong schema/project")
+    bundle_claim = require_string(payload, "bundle_claim")
+    fact_payloads = payload.get("facts")
+    if (
+        not isinstance(fact_payloads, list)
+        or len(fact_payloads) < 2
+        or any(not isinstance(item, dict) for item in fact_payloads)
+    ):
+        raise ValueError("V5 FactBundle compatibility requires at least two Facts")
+    facts = [Fact.from_dict(item) for item in fact_payloads]
+    fact_ids = {fact.fact_id for fact in facts}
+    internal_edges = [
+        [predecessor, fact.fact_id]
+        for fact in facts
+        for predecessor in fact.predecessors
+        if predecessor in fact_ids
+    ]
+    if not internal_edges:
+        raise ValueError(
+            "V5 atomic FactBundle requires an internal predecessor edge; "
+            "release independent Facts separately"
+        )
+    if any(fact.computational_evidence for fact in facts):
+        raise ValueError(
+            "FactBundle compatibility input cannot bind computation artifacts; "
+            "use candidate-release for load-bearing computation"
+        )
+    lifecycle = store.v5_lifecycle()
+    research = lifecycle.add_research(
+        {
+            "kind": "proof_attempt",
+            "claim": bundle_claim,
+            "content": "Atomic FactBundle compatibility submission: "
+            + ", ".join(sorted(fact_ids)),
+            "bundle_input_schema": 4,
+            "legacy_fact_bundle_id": payload.get("fact_bundle_id"),
+        },
+        actor=worker,
+    )
+    return lifecycle.candidate_release(
+        {
+            "schema_version": 5,
+            "bundle_claim": bundle_claim,
+            "candidates": [fact.as_submission_dict() for fact in facts],
+            "research_entry_ids": [research["research_id"]],
+            "claim_relation": "proves",
+            "artifacts": [],
+            "verification_plan": {
+                "mode": "closed_capsule",
+                "authorized_artifact_roles": [],
+                "required_checks": [
+                    "mathematical",
+                    "typing",
+                    "scope",
+                    "source_and_applicability",
+                    "predecessor_interfaces",
+                    "computation_replay",
+                    "challenge_dispositions",
+                    "assurance_scope",
+                ],
+            },
+            "requested_assurance": {
+                "validation_subject": {
+                    "kind": "theorem",
+                    "subject_id": facts[-1].fact_id,
+                    "artifact_sha256": None,
+                    "load_bearing_node_ids": [],
+                },
+                "validation_granularity": "atomic_fact_dag",
+                "coverage": [],
+            },
+            "challenge_dispositions": [],
+            "paper_evidence_refs": [],
+            "adverse_actor_ids": [],
+        },
+        producer=worker,
+    )
 
 
 def _strict_frozen_worker_task_card(
@@ -80,6 +193,46 @@ def _strict_frozen_worker_task_card(
         raise ValueError("bound worker task card is not valid UTF-8 JSON") from exc
     if not isinstance(task_card, dict):
         raise ValueError("bound worker task card must be one JSON object")
+
+    if task_card.get("schema_version") == 5:
+        store.v5_lifecycle().validate_task_card(
+            task_card,
+            expected_path=supplied_path,
+        )
+        round_path = (
+            store.rounds_dir
+            / task_card["round_id"]
+            / "round.json"
+        )
+        manifest = _json_file(str(round_path))
+        matches = [
+            assignment
+            for assignment in manifest.get("assignments", [])
+            if isinstance(assignment, dict)
+            and assignment.get("assignment_id")
+            == task_card["assignment_id"]
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                "bound V5 worker task card assignment is not uniquely frozen"
+            )
+        assignment = matches[0]
+        frozen_path = contained_path(
+            store.root,
+            require_string(assignment, "task_card_relpath"),
+            "bound V5 worker frozen task card path",
+        )
+        if (
+            frozen_path.is_symlink()
+            or not frozen_path.is_file()
+            or frozen_path.read_bytes() != supplied_bytes
+            or sha256_bytes(supplied_bytes)
+            != assignment.get("task_card_sha256")
+        ):
+            raise ValueError(
+                "bound V5 worker task card bytes differ from the frozen card"
+            )
+        return task_card
 
     # Reuse the experiment layer's full project/round/assignment/hash binding.
     # The additional raw-byte comparison below is stricter than object equality:
@@ -221,6 +374,9 @@ READ_ONLY_COMMANDS = {
     "paper-logic-show",
     "paper-logic-query",
     "paper-logic-audit",
+    "verifier-capsule",
+    "make-bundle-verifier-task",
+    "fact-bundle-verifier-task",
     "mode-status",
 }
 
@@ -310,8 +466,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--workflow-version",
         type=int,
-        default=4,
-        choices=(4,),
+        default=5,
+        choices=(4, 5),
     )
     p.add_argument(
         "--reasoning-mode",
@@ -403,6 +559,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--reason", required=True)
     p.add_argument("--actor", required=True)
 
+    p = sub.add_parser("candidate-release")
+    p.add_argument("--input", required=True)
+    p.add_argument("--producer", required=True)
+
+    p = sub.add_parser("verifier-capsule")
+    p.add_argument("release_id")
+
+    p = sub.add_parser("certification-record")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("fact-admit")
+    p.add_argument("release_id")
+    p.add_argument("--decision-id", required=True)
+    p.add_argument("--gateway", required=True)
+
     p = sub.add_parser("memory-add")
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
@@ -437,7 +608,6 @@ def build_parser() -> argparse.ArgumentParser:
             "MATHGRAPH_HOST_TASK_SCOPE_ID or CODEX_THREAD_ID"
         ),
     )
-
     p = sub.add_parser("round-status")
     p.add_argument("round_id")
 
@@ -481,7 +651,6 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("plan-repair-round")
     p.add_argument("memory_id")
     p.add_argument("--trigger-memory-id")
-
     p = sub.add_parser("novelty-record")
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
@@ -501,12 +670,16 @@ def build_parser() -> argparse.ArgumentParser:
             "nontruth reader packet"
         ),
     )
-    p.add_argument(
+    reader_source = p.add_mutually_exclusive_group(required=True)
+    reader_source.add_argument(
         "--packet",
-        required=True,
         help="UTF-8 reader-packet JSON prepared by the Chalxius host step",
     )
-
+    reader_source.add_argument(
+        "--v5-projection",
+        action="store_true",
+        help="deterministically project the current V5 project into packet v1",
+    )
     p = sub.add_parser("import-danus")
     p.add_argument("archive")
 
@@ -857,7 +1030,19 @@ def main(argv: list[str] | None = None) -> int:
                 "--confirm-isolated-copy; prefer upgrade-project-copy"
             )
         if _command_requires_mutation_lock(args):
-            stack.enter_context(store.mutation_lock())
+            if (
+                store.project_path.exists()
+                and store.workflow_evidence_version() == 5
+            ):
+                stack.enter_context(
+                    store.v5_mutation_lock(
+                        command=V5_COMPATIBILITY_MUTATION_COMMANDS.get(
+                            args.command, args.command
+                        )
+                    )
+                )
+            else:
+                stack.enter_context(store.mutation_lock())
         if args.command == "init":
             store.initialize(
                 project_id=args.project_id,
@@ -866,12 +1051,13 @@ def main(argv: list[str] | None = None) -> int:
                 workflow_evidence_version=args.workflow_version,
                 reasoning_mode=args.reasoning_mode,
             )
-            _print_json(
-                {
-                    "project": store.project(),
-                    "reasoning_mode": store.reasoning_modes().status(),
-                }
-            )
+            result = {
+                "project": store.project(),
+                "reasoning_mode": store.reasoning_modes().status(),
+            }
+            if store.workflow_evidence_version() == 5:
+                result["lifecycle"] = store.v5_lifecycle().status()
+            _print_json(result)
         elif args.command == "mode-init":
             _print_json(
                 store.reasoning_modes().initialize(
@@ -900,15 +1086,21 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "status":
-            _print_json(
-                {
-                    "project": store.project(),
-                    "reasoning_mode": store.reasoning_modes().status(),
-                    "audit": store.audit().as_dict(),
-                    "targets": store.targets(),
-                    "frontier": store.frontier(limit=5),
-                }
-            )
+            workflow_version = store.workflow_evidence_version()
+            result = {
+                "project": store.project(),
+                "reasoning_mode": store.reasoning_modes().status(),
+                "audit": store.audit().as_dict(),
+                "targets": store.targets(),
+                "frontier": (
+                    store.v5_lifecycle().frontier(limit=5)
+                    if workflow_version == 5
+                    else store.frontier(limit=5)
+                ),
+            }
+            if workflow_version == 5:
+                result["lifecycle"] = store.v5_lifecycle().status()
+            _print_json(result)
         elif args.command == "audit":
             report = store.audit()
             _print_json(report.as_dict())
@@ -956,155 +1148,445 @@ def main(argv: list[str] | None = None) -> int:
             _print_json({"targets": store.targets()})
         elif args.command == "submit":
             fact = Fact.from_dict(_json_file(args.input))
-            fact_id = store.submit(
-                fact,
-                worker=args.worker,
-                task_id=args.task_id,
-                claim_relation=args.claim_relation,
-            )
-            _print_json({"submission_id": fact_id, "status": "pending_review"})
+            if store.workflow_evidence_version() == 5:
+                lifecycle = store.v5_lifecycle()
+                if args.task_id:
+                    research_id = args.task_id
+                    lifecycle._research_record(research_id)
+                else:
+                    research = lifecycle.add_research(
+                        {
+                            "kind": "proof_attempt",
+                            "claim": fact.statement,
+                            "content": fact.proof,
+                            "dependencies": fact.predecessors,
+                        },
+                        actor=args.worker,
+                    )
+                    research_id = research["research_id"]
+                release = lifecycle.candidate_release(
+                    {
+                        "schema_version": 5,
+                        "bundle_claim": fact.statement,
+                        "candidates": [fact.as_submission_dict()],
+                        "research_entry_ids": [research_id],
+                        "claim_relation": args.claim_relation,
+                        "artifacts": [],
+                        "verification_plan": {
+                            "mode": "closed_capsule",
+                            "authorized_artifact_roles": [],
+                            "required_checks": [
+                                "mathematical",
+                                "typing",
+                                "scope",
+                                "source_and_applicability",
+                                "predecessor_interfaces",
+                                "computation_replay",
+                                "challenge_dispositions",
+                                "assurance_scope",
+                            ],
+                        },
+                        "requested_assurance": {
+                            "validation_subject": {
+                                "kind": "theorem",
+                                "subject_id": fact.fact_id,
+                                "artifact_sha256": None,
+                                "load_bearing_node_ids": [],
+                            },
+                            "validation_granularity": "monolithic_theorem",
+                            "coverage": [],
+                        },
+                        "challenge_dispositions": [],
+                        "paper_evidence_refs": [],
+                        "adverse_actor_ids": [],
+                    },
+                    producer=args.worker,
+                )
+                _print_json(
+                    {
+                        "submission_id": fact.fact_id,
+                        "release_id": release["release_id"],
+                        "status": "candidate_released",
+                    }
+                )
+            else:
+                fact_id = store.submit(
+                    fact,
+                    worker=args.worker,
+                    task_id=args.task_id,
+                    claim_relation=args.claim_relation,
+                )
+                _print_json(
+                    {"submission_id": fact_id, "status": "pending_review"}
+                )
         elif args.command == "packet":
-            packet = store.verification_packet(args.fact_id)
-            print(packet, end="")
+            if store.workflow_evidence_version() == 5:
+                release = store.v5_lifecycle().release_for_fact(args.fact_id)
+                _print_json(
+                    store.v5_lifecycle().verifier_capsule(
+                        release["release_id"]
+                    )
+                )
+            else:
+                packet = store.verification_packet(args.fact_id)
+                print(packet, end="")
         elif args.command == "record-review":
-            path = store.record_review(_json_file(args.input))
-            recorded = store.review(path.stem)
-            clean = recorded["verdict"] == "correct" and (
-                not recorded.get("findings", [])
-                if recorded.get("schema_version") == 4
-                else not recorded["critical_errors"] and not recorded["gaps"]
+            if store.workflow_evidence_version() == 5:
+                decision = store.v5_lifecycle().certification_record(
+                    _json_file(args.input)
+                )
+                _print_json(
+                    {
+                        "review_id": decision["decision_id"],
+                        "decision_id": decision["decision_id"],
+                        "release_id": decision["release_id"],
+                        "verdict": decision["verdict"],
+                        "clean": decision["verdict"] == "correct",
+                        "status": "recorded",
+                    }
+                )
+            else:
+                path = store.record_review(_json_file(args.input))
+                recorded = store.review(path.stem)
+                clean = recorded["verdict"] == "correct" and (
+                    not recorded.get("findings", [])
+                    if recorded.get("schema_version") == 4
+                    else not recorded["critical_errors"] and not recorded["gaps"]
+                )
+                _print_json(
+                    {
+                        "review_id": path.stem,
+                        "review": str(path),
+                        "fact_id": recorded["fact_id"],
+                        "verdict": recorded["verdict"],
+                        "clean": clean,
+                        "status": "recorded",
+                    }
+                )
+        elif args.command == "admit":
+            if store.workflow_evidence_version() == 5:
+                release = store.v5_lifecycle().release_for_fact(args.fact_id)
+                marker = store.v5_lifecycle().fact_admit(
+                    release_id=release["release_id"],
+                    decision_id=args.review_id,
+                    gateway=args.gateway,
+                )
+                _print_json(
+                    {
+                        "fact_id": args.fact_id,
+                        "fact_ids": marker["fact_ids"],
+                        "acceptance_id": marker["acceptance_id"],
+                        "status": "accepted",
+                    }
+                )
+            else:
+                fact_id = store.admit(
+                    args.fact_id,
+                    review_id=args.review_id,
+                    gateway=args.gateway,
+                )
+                _print_json({"fact_id": fact_id, "status": "accepted"})
+        elif args.command == "revoke":
+            if store.workflow_evidence_version() == 5:
+                revoked = store.v5_lifecycle().revoke(
+                    args.fact_id, reason=args.reason, actor=args.actor
+                )
+            else:
+                revoked = store.revoke(
+                    args.fact_id, reason=args.reason, actor=args.actor
+                )
+            _print_json({"revoked": revoked})
+        elif args.command == "candidate-release":
+            release = store.v5_lifecycle().candidate_release(
+                _json_file(args.input), producer=args.producer
             )
             _print_json(
                 {
-                    "review_id": path.stem,
-                    "review": str(path),
-                    "fact_id": recorded["fact_id"],
-                    "verdict": recorded["verdict"],
-                    "clean": clean,
+                    "release_id": release["release_id"],
+                    "release_sha256": release["release_sha256"],
+                    "fact_ids": release["fact_ids"],
+                    "status": "sealed_nontruth",
+                }
+            )
+        elif args.command == "verifier-capsule":
+            _print_json(store.v5_lifecycle().verifier_capsule(args.release_id))
+        elif args.command == "certification-record":
+            decision = store.v5_lifecycle().certification_record(
+                _json_file(args.input)
+            )
+            _print_json(
+                {
+                    "decision_id": decision["decision_id"],
+                    "release_id": decision["release_id"],
+                    "verdict": decision["verdict"],
                     "status": "recorded",
                 }
             )
-        elif args.command == "admit":
-            fact_id = store.admit(
-                args.fact_id,
-                review_id=args.review_id,
+        elif args.command == "fact-admit":
+            marker = store.v5_lifecycle().fact_admit(
+                release_id=args.release_id,
+                decision_id=args.decision_id,
                 gateway=args.gateway,
             )
-            _print_json({"fact_id": fact_id, "status": "accepted"})
-        elif args.command == "revoke":
-            revoked = store.revoke(args.fact_id, reason=args.reason, actor=args.actor)
-            _print_json({"revoked": revoked})
-        elif args.command == "memory-add":
-            entry_id = store.memory_add(_json_file(args.input), actor=args.actor)
-            _print_json({"memory_id": entry_id})
-        elif args.command == "memory-update":
-            store.memory_update(
-                args.entry_id,
-                status=args.status,
-                actor=args.actor,
-                note=args.note,
-                resolution_fact_id=args.resolution_fact_id,
-                claim_relation=args.claim_relation,
-                related_fact_id=args.related_fact_id,
-            )
-            _print_json({"memory_id": args.entry_id, "status": args.status})
-        elif args.command == "frontier":
             _print_json(
-                store.frontier(
-                    limit=args.limit,
-                    campaign_id=args.campaign,
-                    actionable=not args.all_active,
-                    collapse_repairs=not args.no_collapse_repairs,
-                    include_history=args.history,
-                )
+                {
+                    "acceptance_id": marker["acceptance_id"],
+                    "fact_ids": marker["fact_ids"],
+                    "status": "accepted",
+                }
             )
+        elif args.command == "memory-add":
+            if store.workflow_evidence_version() == 5:
+                record = store.v5_lifecycle().add_research(
+                    _json_file(args.input), actor=args.actor
+                )
+                _print_json(
+                    {
+                        "memory_id": record["research_id"],
+                        "research_id": record["research_id"],
+                        "status": record["status"],
+                    }
+                )
+            else:
+                entry_id = store.memory_add(
+                    _json_file(args.input), actor=args.actor
+                )
+                _print_json({"memory_id": entry_id})
+        elif args.command == "memory-update":
+            if store.workflow_evidence_version() == 5:
+                disposition = store.v5_lifecycle().update_research(
+                    args.entry_id,
+                    status=args.status,
+                    actor=args.actor,
+                    note=args.note,
+                    resolution_fact_id=args.resolution_fact_id,
+                    claim_relation=args.claim_relation,
+                    related_fact_id=args.related_fact_id,
+                )
+                _print_json(
+                    {
+                        "memory_id": args.entry_id,
+                        "research_id": args.entry_id,
+                        "status": args.status,
+                        "disposition_id": disposition["research_id"],
+                    }
+                )
+            else:
+                store.memory_update(
+                    args.entry_id,
+                    status=args.status,
+                    actor=args.actor,
+                    note=args.note,
+                    resolution_fact_id=args.resolution_fact_id,
+                    claim_relation=args.claim_relation,
+                    related_fact_id=args.related_fact_id,
+                )
+                _print_json(
+                    {"memory_id": args.entry_id, "status": args.status}
+                )
+        elif args.command == "frontier":
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().frontier(
+                        limit=args.limit,
+                        include_history=args.history,
+                    )
+                )
+            else:
+                _print_json(
+                    store.frontier(
+                        limit=args.limit,
+                        campaign_id=args.campaign,
+                        actionable=not args.all_active,
+                        collapse_repairs=not args.no_collapse_repairs,
+                        include_history=args.history,
+                    )
+                )
         elif args.command == "adoption-plan":
             _print_json(build_adoption_plan(_json_file(args.input)))
         elif args.command == "plan-round":
-            _print_json(
-                create_round(
-                    store,
-                    workers=args.workers,
-                    mode=args.mode,
-                    memory_ids=args.memory_ids,
-                    host_task_scope_id=args.host_task_scope_id,
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().create_round(
+                        workers=args.workers,
+                        mode=args.mode,
+                        research_ids=args.memory_ids,
+                        host_task_scope_id=args.host_task_scope_id,
+                    )
                 )
-            )
+            else:
+                _print_json(
+                    create_round(
+                        store,
+                        workers=args.workers,
+                        mode=args.mode,
+                        memory_ids=args.memory_ids,
+                        host_task_scope_id=args.host_task_scope_id,
+                    )
+                )
         elif args.command == "round-status":
-            _print_json(round_status(store, args.round_id))
+            if store.workflow_evidence_version() == 5:
+                _print_json(store.v5_lifecycle().round_status(args.round_id))
+            else:
+                _print_json(round_status(store, args.round_id))
         elif args.command == "profile-closure-status":
-            _print_json(store.profile_closures().status(args.round_id))
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().process_readiness_status(
+                        args.round_id
+                    )
+                )
+            else:
+                _print_json(store.profile_closures().status(args.round_id))
         elif args.command == "profile-closure-record":
-            _print_json(
-                store.profile_closures().record(
-                    args.round_id,
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().record_process_readiness(
+                        args.round_id,
+                        _json_file(args.input),
+                        actor=args.actor,
+                    )
+                )
+            else:
+                _print_json(
+                    store.profile_closures().record(
+                        args.round_id,
+                        _json_file(args.input),
+                        actor=args.actor,
+                    )
+                )
+        elif args.command == "preflight-return":
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().preflight_return(
+                        round_id=args.round_id,
+                        assignment_id=args.assignment_id,
+                        input_path=Path(args.input),
+                    )
+                )
+            else:
+                _print_json(
+                    preflight_return(
+                        store,
+                        args.round_id,
+                        args.assignment_id,
+                        input_path=args.input,
+                    )
+                )
+        elif args.command == "validate-return":
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().preflight_return(
+                        round_id=args.round_id,
+                        assignment_id=args.assignment_id,
+                    )
+                )
+            else:
+                _print_json(
+                    validate_return(store, args.round_id, args.assignment_id)
+                )
+        elif args.command == "ingest-return":
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().ingest_return(
+                        round_id=args.round_id,
+                        assignment_id=args.assignment_id,
+                        worker_final_sha256=args.worker_final_sha256,
+                    )
+                )
+            else:
+                _print_json(
+                    ingest_return(
+                        store,
+                        args.round_id,
+                        args.assignment_id,
+                        worker_final_sha256=args.worker_final_sha256,
+                    )
+                )
+        elif args.command == "make-verifier-task":
+            if store.workflow_evidence_version() == 5:
+                release = store.v5_lifecycle().release_for_fact(args.fact_id)
+                capsule = store.v5_lifecycle().verifier_capsule(
+                    release["release_id"]
+                )
+                if args.authorized_artifact is not None:
+                    requested_roles = {
+                        item.split(":", 1)[1]
+                        for item in args.authorized_artifact
+                        if ":" in item and item.split(":", 1)[1]
+                    }
+                    actual_roles = {
+                        item["role"] for item in capsule["authorized_artifacts"]
+                    }
+                    if requested_roles != actual_roles:
+                        raise ValueError(
+                            "V5 verifier artifact roles are sealed by Candidate Release"
+                        )
+                _print_json(capsule)
+            else:
+                authorized_artifacts = None
+                if args.authorized_artifact is not None:
+                    authorized_artifacts = []
+                    for item in args.authorized_artifact:
+                        if ":" not in item:
+                            raise ValueError(
+                                "--authorized-artifact must be KEY:ROLE"
+                            )
+                        key, role = item.split(":", 1)
+                        if not key or not role:
+                            raise ValueError(
+                                "--authorized-artifact must be KEY:ROLE"
+                            )
+                        authorized_artifacts.append(
+                            {"key": key, "role": role}
+                        )
+                _print_json(
+                    create_verifier_assignment(
+                        store,
+                        args.fact_id,
+                        authorized_artifacts=authorized_artifacts,
+                        supersedes_bundle_id=args.supersedes_bundle_id,
+                        prior_review_id=args.prior_review_id,
+                    )
+                )
+        elif args.command == "plan-repair-round":
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().create_repair_round(
+                        args.memory_id,
+                        trigger_research_id=args.trigger_memory_id,
+                    )
+                )
+            else:
+                _print_json(
+                    create_repair_round(
+                        store,
+                        args.memory_id,
+                        trigger_memory_id=args.trigger_memory_id,
+                    )
+                )
+        elif args.command == "novelty-record":
+            if store.workflow_evidence_version() == 5:
+                event_id = store.v5_lifecycle().novelty_record(
                     _json_file(args.input),
                     actor=args.actor,
                 )
-            )
-        elif args.command == "preflight-return":
-            _print_json(
-                preflight_return(
-                    store,
-                    args.round_id,
-                    args.assignment_id,
-                    input_path=args.input,
+            else:
+                event_id = store.novelty_record(
+                    _json_file(args.input),
+                    actor=args.actor,
                 )
-            )
-        elif args.command == "validate-return":
-            _print_json(validate_return(store, args.round_id, args.assignment_id))
-        elif args.command == "ingest-return":
-            _print_json(
-                ingest_return(
-                    store,
-                    args.round_id,
-                    args.assignment_id,
-                    worker_final_sha256=args.worker_final_sha256,
-                )
-            )
-        elif args.command == "make-verifier-task":
-            authorized_artifacts = None
-            if args.authorized_artifact is not None:
-                authorized_artifacts = []
-                for item in args.authorized_artifact:
-                    if ":" not in item:
-                        raise ValueError(
-                            "--authorized-artifact must be KEY:ROLE"
-                        )
-                    key, role = item.split(":", 1)
-                    if not key or not role:
-                        raise ValueError(
-                            "--authorized-artifact must be KEY:ROLE"
-                        )
-                    authorized_artifacts.append({"key": key, "role": role})
-            _print_json(
-                create_verifier_assignment(
-                    store,
-                    args.fact_id,
-                    authorized_artifacts=authorized_artifacts,
-                    supersedes_bundle_id=args.supersedes_bundle_id,
-                    prior_review_id=args.prior_review_id,
-                )
-            )
-        elif args.command == "plan-repair-round":
-            _print_json(
-                create_repair_round(
-                    store,
-                    args.memory_id,
-                    trigger_memory_id=args.trigger_memory_id,
-                )
-            )
-        elif args.command == "novelty-record":
-            event_id = store.novelty_record(
-                _json_file(args.input),
-                actor=args.actor,
-            )
             _print_json({"event_id": event_id, "status": "recorded"})
         elif args.command == "novelty-status":
+            records = (
+                store.v5_lifecycle().novelty_status(args.subject_id)
+                if store.workflow_evidence_version() == 5
+                else store.novelty_status(args.subject_id)
+            )
             _print_json(
                 {
                     "subject_id": args.subject_id,
-                    "records": store.novelty_status(args.subject_id),
+                    "records": records,
                 }
             )
         elif args.command == "export-mermaid":
@@ -1113,7 +1595,17 @@ def main(argv: list[str] | None = None) -> int:
             output.write_text(_mermaid(store, target=args.target), encoding="utf-8")
             _print_json({"output": str(output)})
         elif args.command == "export-reader-html":
-            _print_json(export_reader_html(store, args.packet))
+            if args.v5_projection:
+                _print_json(
+                    export_reader_payload(
+                        store,
+                        build_v5_reader_packet(
+                        store,
+                        ),
+                    )
+                )
+            else:
+                _print_json(export_reader_html(store, args.packet))
         elif args.command == "import-danus":
             _print_json(store.import_danus_zip(args.archive))
         elif args.command == "claim-add":
@@ -1317,16 +1809,29 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "blackboard-promote-node":
+            workflow_version = store.workflow_evidence_version()
+
+            def add_promoted_research(
+                payload: dict[str, Any],
+                actor: str,
+            ) -> str:
+                if workflow_version == 5:
+                    return store.v5_lifecycle().add_research(
+                        payload,
+                        actor=actor,
+                    )["research_id"]
+                return store.memory_add(payload, actor=actor)
+
             memory_id = store.campaigns().promote_blackboard_node(
                 args.node_id,
                 _json_file(args.input),
                 actor=args.actor,
-                memory_add=lambda payload, actor: store.memory_add(
-                    payload,
-                    actor=actor,
-                ),
+                memory_add=add_promoted_research,
             )
-            _print_json({"memory_id": memory_id, "status": "promoted"})
+            result = {"memory_id": memory_id, "status": "promoted"}
+            if workflow_version == 5:
+                result["research_id"] = memory_id
+            _print_json(result)
         elif args.command == "paper-logic-init":
             _print_json(
                 store.paper_logic().initialize(actor=args.actor)
@@ -1612,39 +2117,69 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "fact-bundle-submit":
-            fact_bundle_id = store.fact_bundles().submit(
-                _json_file(args.input),
-                worker=args.worker,
-                external_fact_exists=lambda fact_id: (
-                    fact_id in set(store.fact_ids())
-                ),
-            )
-            _print_json(
-                {
-                    "fact_bundle_id": fact_bundle_id,
-                    "status": "pending_review",
-                }
-            )
+            if store.workflow_evidence_version() == 5:
+                release = _v5_fact_bundle_release(
+                    store, _json_file(args.input), worker=args.worker
+                )
+                fact_bundle_id = release["release_id"]
+                status = "sealed_nontruth"
+            else:
+                fact_bundle_id = store.fact_bundles().submit(
+                    _json_file(args.input),
+                    worker=args.worker,
+                    external_fact_exists=lambda fact_id: (
+                        fact_id in set(store.fact_ids())
+                    ),
+                )
+                status = "pending_review"
+            result = {"fact_bundle_id": fact_bundle_id, "status": status}
+            if store.workflow_evidence_version() == 5:
+                result["release_id"] = fact_bundle_id
+            _print_json(result)
         elif args.command in {
             "make-bundle-verifier-task",
             "fact-bundle-verifier-task",
         }:
-            _print_json(
-                store.fact_bundle_verifier_task(args.fact_bundle_id)
-            )
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().verifier_capsule(args.fact_bundle_id)
+                )
+            else:
+                _print_json(
+                    store.fact_bundle_verifier_task(args.fact_bundle_id)
+                )
         elif args.command == "fact-bundle-record-review":
-            review_id = store.record_fact_bundle_review(
-                args.fact_bundle_id,
-                _json_file(args.input),
-            )
+            if store.workflow_evidence_version() == 5:
+                decision = store.v5_lifecycle().certification_record(
+                    _json_file(args.input)
+                )
+                if decision["release_id"] != args.fact_bundle_id:
+                    raise ValueError(
+                        "FactBundle compatibility decision targets another release"
+                    )
+                review_id = decision["decision_id"]
+            else:
+                review_id = store.record_fact_bundle_review(
+                    args.fact_bundle_id,
+                    _json_file(args.input),
+                )
             _print_json({"review_id": review_id, "status": "recorded"})
         elif args.command == "fact-bundle-admit":
-            _print_json(
-                store.admit_fact_bundle(
-                    args.fact_bundle_id,
-                    review_id=args.review_id,
+            if store.workflow_evidence_version() == 5:
+                _print_json(
+                    store.v5_lifecycle().fact_admit(
+                        release_id=args.fact_bundle_id,
+                        decision_id=args.review_id,
+                        gateway=args.role,
+                    )
                 )
-            )
+            else:
+                _print_json(
+                    store.admit_fact_bundle(
+                        args.fact_bundle_id,
+                        review_id=args.review_id,
+                    )
+                )
         elif args.command == "export-claim-card":
             card = store.claim_card(args.fact_id, audience=args.audience)
             relative_output = args.output

@@ -420,6 +420,16 @@ h1 {
   touch-action: none;
 }
 
+.box-selection-marquee {
+  position: absolute;
+  z-index: 16;
+  border: 1px solid rgba(255, 229, 138, 0.86);
+  border-radius: 0.24rem;
+  background: rgba(255, 229, 138, 0.075);
+  box-shadow: 0 0 1rem rgba(255, 229, 138, 0.12);
+  pointer-events: none;
+}
+
 .node-control-layer {
   position: absolute;
   z-index: 18;
@@ -428,53 +438,99 @@ h1 {
   pointer-events: none;
 }
 
-.selected-node-halo {
+.box-selection-halo-layer {
   position: absolute;
   z-index: 17;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.selected-node-halo,
+.box-selection-halo {
+  position: absolute;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  will-change: left, top, width, height;
+}
+
+.selected-node-halo {
+  z-index: 17;
   filter:
     drop-shadow(0 0 0.34rem rgba(255, 229, 138, 0.62))
     drop-shadow(0 0 1.18rem rgba(255, 229, 138, 0.3));
   opacity: 0.96;
-  will-change: left, top, width, height;
 }
 
-.selected-node-halo::before {
+.box-selection-halo {
+  filter:
+    drop-shadow(0 0 0.32rem rgba(127, 221, 137, 0.58))
+    drop-shadow(0 0 1.08rem rgba(127, 221, 137, 0.28));
+  opacity: 0.9;
+}
+
+.selected-node-halo::before,
+.box-selection-halo::before {
   content: "";
   position: absolute;
   inset: 0;
+}
+
+.selected-node-halo::before {
   background: rgba(255, 229, 138, 0.055);
 }
 
-.selected-node-halo[data-appearance="faceted"][data-role="target"]::before {
+.box-selection-halo::before {
+  background: rgba(127, 221, 137, 0.052);
+}
+
+.selected-node-halo[data-appearance="faceted"][data-role="target"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="target"]::before {
   clip-path: polygon(12% 0%, 88% 0%, 100% 22%, 100% 78%, 88% 100%, 12% 100%, 0% 78%, 0% 22%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="definition"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="definition"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="definition"]::before {
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="result"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="result"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="result"]::before {
   clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="explanation"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="explanation"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="explanation"]::before {
   clip-path: polygon(9% 0%, 91% 0%, 100% 21%, 100% 79%, 91% 100%, 9% 100%, 0% 79%, 0% 21%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="target"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="target"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="target"]::before {
   clip-path: polygon(9% 0%, 91% 0%, 91% 5%, 97% 5%, 97% 14%, 100% 14%, 100% 86%, 97% 86%, 97% 95%, 91% 95%, 91% 100%, 9% 100%, 9% 95%, 3% 95%, 3% 86%, 0% 86%, 0% 14%, 3% 14%, 3% 5%, 9% 5%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="definition"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="definition"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="definition"]::before {
   clip-path: inset(0 round 0.82rem);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="result"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="result"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="result"]::before {
   clip-path: polygon(6% 0%, 94% 0%, 94% 9%, 100% 9%, 100% 91%, 94% 91%, 94% 100%, 6% 100%, 6% 91%, 0% 91%, 0% 9%, 6% 9%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="explanation"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="explanation"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="explanation"]::before {
   clip-path: polygon(0% 0%, 86% 0%, 100% 27%, 100% 100%, 0% 100%);
 }
-.selected-node-halo[data-minimized="yes"] {
+.box-selection-halo[data-kind="theme"]::before {
+  border-radius: 0.58rem;
+}
+
+.selected-node-halo[data-minimized="yes"],
+.box-selection-halo[data-minimized="yes"] {
   filter:
     drop-shadow(0 0 0.28rem rgba(255, 229, 138, 0.68))
     drop-shadow(0 0 0.82rem rgba(255, 229, 138, 0.34));
+}
+
+.box-selection-halo[data-minimized="yes"] {
+  filter:
+    drop-shadow(0 0 0.26rem rgba(127, 221, 137, 0.64))
+    drop-shadow(0 0 0.76rem rgba(127, 221, 137, 0.3));
 }
 
 .node-size-toggle {
@@ -513,6 +569,12 @@ h1 {
   box-shadow:
     0 0 0 2px var(--canvas),
     0 0 1rem var(--moonlight-glow);
+}
+.node-size-toggle[data-box-selected="yes"] {
+  outline-color: var(--moss);
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 1rem rgba(127, 221, 137, 0.32);
 }
 
 .node-name-tooltip {

@@ -1,130 +1,88 @@
-Verify the Chalxius candidate as one self-contained chalxius skill. Read
-SKILL.md completely, verify
-INHERITANCE.lock.json, run scripts/self_test.py and the complete unit suite, and
-choose a writable PROJECT outside the skill directory. Do not start the legacy
-Danus or pre-Chalxius research runtimes, standalone Grill Me runtime, or retired
-coordinator; the Chalxius research engine is the sole embedded research
-runtime. Do not install, package, migrate, or cut over without separate explicit
-authorization.
+Verify the Chalxius 0.4.0 candidate as one self-contained skill. Read SKILL.md
+and its directly applicable references completely, validate
+INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
+unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
+is release-time only and must not be added to normal Research, Pulse,
+computation, or Reader execution.
 
-Initialize or explicitly mode-init the project, then bind one of fast, auto, or
-deep. Treat reasoning_mode as separate from plan-round assignment mode. Every
-task card must bind the append-only mode event, deterministic execution_profile,
-policy hash, and the same Fact-admission contract hash.
+Do not install, package, migrate, or cut over without separate explicit user
+authorization. Never start original Danus, pre-Chalxius Chalk, or the retired
+coordinator as a parallel runtime. Original Danus 0.2.9 and later versions are
+behavioral and performance references only; no source module, writer, receipt,
+review, runtime, or Fact authority is inherited.
 
-Follow execution_profile feature statuses exactly. Deep requires every
-applicable high-cost feature. Auto requires each deterministic workload-triggered
-feature. Fast leaves high-cost exploration available rather than automatic.
-When parallel_clean_context_panel is required, use all genuinely distinct
-currently callable clean-context slots. When barriered_blackboard_pulse is
-required, persist a real plan before returns, ingest Wave 1, freeze the barrier
-snapshot, record host dispatch after each native Wave-2 spawn and before its
-return, ingest meaningful cross-review edges, and derive closure or explicit
-whole-pulse abort. Available is opt-in; not_applicable must not be manufactured.
-Score, cost, budget, duration, and burden are priority/load ordering only.
+Initialize new work as workflow-evidence V5. A V5 root starts with an empty
+Fact Graph. V4 projects and predecessor artifacts remain readable but have no
+V5 authority and must not be migrated in place or silently recertified.
 
-Every new unified round must freeze profile_obligations. After exact canonical
-ingestion, run profile-closure-status. If features are required, create exactly
-one typed entry for every required feature and no extras, then run
-profile-closure-record before any single-Fact or atomic-bundle verifier task.
-The receipt must bind each exact assignment task card, return, ingestion,
-outcome, and effect. A no-required-feature Fast round is recomputably
-not_required and must not receive a ceremonial receipt. A historical unified
-round lacking profile_obligations must be replanned.
+Use auto unless the user explicitly chooses fast or deep. Mode switches affect
+future work units only and never change certification strength. In V5,
+profile-closure-status and profile-closure-record provide repair advice and
+append nontruth Research only; they are not a universal checklist, closure
+receipt, or admission authority. Activate Paper, novelty, campaigns,
+experiments, Pulse, or other optional capabilities only when useful to the
+bounded task.
 
-Keep evidence levels honest: native validation may be machine_verified, while
-host capacity, specialist identity, campaign scope, and synthesis subject scope
-are procedural_host_attestation. Use mixed_procedural_and_machine_verified for
-their composites. Novelty and campaign events must be no earlier than the
-governed round. Reused Paper snapshots must remain current and non-superseded;
-an Audit whose Logic base was superseded is stale. Closure is
-workflow_readiness_only, outside the invariant Fact-admission contract, and
-cannot change its hash or strength. Accepted retries and audit must revalidate
-the closure bytes.
+Every worker task card must retain three communication planes: compact control,
+one frozen mathematical-state view, and bounded narrative. Bind exact Research,
+predecessor interfaces, Blackboard snapshot, capabilities, artifact limits,
+return path, and final-hash contract. Preflight a repairable draft, ingest only
+the exact worker-final SHA-256, and quarantine a malformed return locally.
+Explicit work-unit abort stops future managed return, experiment, Pulse
+commitment, and dispatch for that round while preserving accumulated evidence.
 
-Truth and adoption gates never vary by mode. Missing replay, source,
-convention, quantifier, atomic-bundle, or fresh-verifier evidence leaves the
-claim candidate_only_until_gate_satisfied or explicitly blocked. Use
-preflight-return for mutable drafts, exact worker-final SHA-256 for ingestion,
-and a packet-only different fresh verifier. Keep all Paper, Audit, Blackboard,
-learning, draft, computation, and narrative objects outside Fact premises until
-the invariant admission path succeeds.
+Use optional two-wave Pulse when peer exchange is useful. Wave 1 shares one
+snapshot; Wave 2 receives exact peer Research through a later frozen snapshot.
+Each valid contribution enters cumulative Research independently. One malformed
+peer never deletes or invalidates valid peer Research. Pulse closure is
+coordination advice only and cannot certify a Fact. Host dispatch must fail
+closed unless a trusted issuer and the exact fresh-context contract are bound.
 
-For paper-led work, preserve exact source, researcher reconstruction, Paper
-Audit, Blackboard exploration, Fact, and Learning planes. Require distinct
-fresh source_fidelity and graph_structure reviewers before a logic snapshot;
-require distinct fresh target_binding and audit_reasoning reviewers before an
-Audit snapshot. Challenge and supersede errors append-only. A governed
-full-fidelity Blackboard mirror is a projection, never Paper authority or a
-Fact. Philosophy audits must distinguish local repair from literal refutation
-and exact logical effect from broader dialectical effect.
+The only truth path is Research -> Candidate Release -> Certification Decision
+-> Fact. A Candidate Release automatically binds all existing challenge,
+counterexample, and obstacle Research linked to its selected branch and must
+dispose each one. Do not add a second adverse-review layer. Seal exact candidate
+bytes, source and computation artifacts, predecessor uses, Paper/Audit refs,
+and requested checks. Give a different fresh verifier only the frozen capsule.
+Gateway admission must revalidate the exact accepted decision; missing evidence
+leaves an explicit candidate or blocker in every reasoning mode.
 
-Observe only the host-visible active-interval union. Exactly 1200 seconds does
-not trigger; the first observation strictly greater than 1200 seconds creates
-one complete notice while managed work remains runnable. Never send SIGKILL.
-Keep one host_task_scope_id across one host task. Treat artifact, graph, event,
-checkpoint, governance, and pulse caps as safety/integrity limits.
+For paper-led work, preserve source, reconstruction, Audit, Blackboard,
+Research, Fact, Reader, and Learning labels. Bind current nonsuperseded Paper
+Logic and Audit snapshots and nodewise target coverage. Correct graph mistakes
+append-only through challenge, disposition, replacement, and a new independently
+reviewed snapshot.
 
-The integrated learning plane is publicly named Chalxius Learner. Activate it
-only for explicit academic teaching/testing intent; ordinary research does not
-start it. It may mount frozen Fact, pls-*, and bbs-* snapshots only when useful
-to that learning request and may write only separately user-authorized
-mastery/pedagogy evidence. It invokes no standalone Grill Me runtime, receives
-no truth from non-Fact anchors, and never writes back. If the optional Grill Me
-0.3.2-code companion is present, distinguish it as Grill Me Code and verify that
-it is globally injected but starts only for explicit programming Grill or
-Socratic intent, exposes no graph adapter, and has no research authority.
+For load-bearing computation, retain immutable commands, implementations,
+versions, checkpoints, artifacts, exact output hashes, and independent replay.
+For a series product coefficient [t^p] product_i f_i, derive each factor's
+minimum retained order from p minus the other factor valuations and require a
+strictly deeper bound replay. A prose-only truncation certificate is
+insufficient.
 
-Treat V1-V3 projects as read-only and upgrade only an isolated copy. The
-Python-library reasoning_mode=None path is only for internal pre-Chalxius V4
-fixture compatibility; official writable CLI initialization defaults to auto.
+Generate or refresh PROJECT_BACKGROUND.md only after an explicit user
+instruction. Once that single Markdown summary exists, every substantive V5
+work unit and V5 Reader projection reads and binds its complete body and hash by
+default. If it is absent, continue without it and never synthesize one. Treat it
+as nontruth context; every load-bearing use must return to the exact cited
+source.
 
-For an explicitly requested reader visualization, complete Reader Finalize as
-the strengthened validation stage of the existing export-reader-html gate.
-Prepare strict English reader-packet schema v1 from read-only frozen sources,
-preserve native plane/status and exact text hashes, and require nonempty
-summary, intuition, importance, and reasoning fields for every included node.
-Verify the revision-12 contract: the fixed project output is byte-deterministic,
-self-contained, offline, and has truth_effect none; all eligible real nodes and
-edges remain present; All targets and All cards change card sizes rather than
-topology; any card can be sized independently; double-click maximizes its
-complete directed upstream/downstream path; sizing-only undo/redo is bounded to
-100 session deltas; the Faceted/Plaques appearance choice is session-only; the
-full minus and compact plus share the same normalized internal anchor at 29% of
-rendered width and 50% of rendered height, with no screen-coordinate jump; the
-size button is click-, tap-, and
-keyboard-only while either card body remains directly draggable; every resized
-card receives deterministic two-axis pivot compensation, an existing pin is
-updated when present, and sizing never creates a pin; minimum zoom
-keeps the internal control usable; selection glow follows the role silhouette;
-semantic edges show enlarged category-colored direction markers at midpoint and
-target; synthetic multi-target topic links are smooth, dashed, arrowless Bezier
-curves; double-clicking such a topic atomically maximizes the union of the
-complete directed upstream and downstream chains of every currently eligible
-member target and minimizes the eligible complement as one sizing-history
-action without changing topology;
-the Plaques inner ornament is dimmer than its outer semantic stroke; and
-paired role-specific text widths and margins keep the control-plus-label
-envelope within 3% of card center and multiline real-card labels are
-left-justified without colliding with the control or silhouette; hovering the
-card body or internal size control produces the same continuous related-edge
-emphasis without a boundary flicker; the 90%-150% detail-text control scales
-sidebar prose, rendered MathJax SVG, and exact TeX source together, with MathJax
-SVG exempt from fixed icon sizing and exact TeX sized relative to the panel;
-initial placement and explicit Reset layout seed packet order and, for at most
-1,200 cross-rank edges, score that baseline plus eight fixed forward/backward
-weighted-barycentric sweep pairs by exact proper-crossing count; the selected
-order is deterministic and has no more proper crossings than packet order;
-larger graphs preserve packet order; this is a bounded search, not a claim of a
-global optimum.
-Verify deterministic `reader_finalize` metadata in both
-embedded build metadata and stdout, bound to the source snapshot and packet
-hash with presentation-readiness-only scope and no truth effect. The bilingual
-Reload graph control must call same-document navigation only. Do not create a
-watcher, polling or fetch loop, persistent visualization history, sidecar,
-local-storage state, PDF workflow, learner record, or graph writeback.
+Preserve Reader packet schema v1 and renderer revision 15. The deterministic V5
+projection may show Fact, Research, Certification, current and superseded
+Paper/Audit, Blackboard, and project-background objects with exact native
+authority labels. Only admitted Fact-plane nodes are premises. Export remains
+one fixed, offline, self-contained HTML file with no persistence, network,
+model call, watcher, sidecar, or graph writeback.
 
-Run project audit and mode-status before reporting. State the current mode event,
-required-feature closure, Paper/Audit/Blackboard/Fact/Learning boundaries,
-candidate versus admitted claims, computation replay status, warnings, and
-residual uncertainty.
+Activate Chalxius Learner only for explicit academic teaching or testing. It
+may read frozen Fact, Paper/Audit, and Blackboard snapshots but writes nontruth
+learning state only. Grill Me Code remains a separate explicit programming
+assistant with no research or graph authority.
+
+Before delivery, run project audit and mode-status on any exercised project,
+run the complete candidate validation set, refresh the final manifest only
+after all candidate bytes are frozen, and report candidate versus Fact-admitted
+claims precisely. Deliver the append-only architecture issue ledger alongside
+the candidate. Do not mark an architecture issue resolved without a
+reproducible regression; do not add ordinary host or mathematical mistakes that
+the architecture neither caused nor materially amplified.

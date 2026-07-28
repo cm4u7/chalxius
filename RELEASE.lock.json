@@ -1,65 +1,59 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "package": "chalxius",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "status": "frozen_validated_installed",
-  "release_date": "2026-07-27",
-  "renderer_revision": "chalxius-reader-html-12",
+  "release_date": "2026-07-28",
+  "workflow_authority": "V5",
+  "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
+  "renderer_revision": "chalxius-reader-html-15",
   "reader_packet_schema_version": 1,
-  "layout": "deterministic_ranked_barycenter",
+  "layout": "deterministic_compact_radial_core_layers",
   "public_distribution": {
-    "archive_name": "chalxius-0.3.5-public.tar.gz",
-    "archive_bytes": 1425506,
-    "archive_sha256": "7ed57b0e54b6e504affa0a25e1d70504fb06d328db9d21a76fc45785df92f43e",
-    "archive_members": 139,
-    "manifest_entry_count": 138,
-    "manifest_sha256": "017d0f0a5c1ce81145af23bd7fe4f886eb2a39c83bdc28c7869df0ed7a900fc9",
+    "archive_name": "chalxius-0.4.0-public.tar.gz",
+    "archive_bytes": 1518813,
+    "archive_sha256": "8e19dc4fdfaa6f65bf95f62dde57b5f0bf7f517926dbeec15b593152276ae56f",
+    "archive_members": 150,
+    "manifest_entry_count": 149,
+    "manifest_sha256": "ca6882ab1f4a73661c101da626cdba2e7a001f85c023a8208a076e08fadc0211",
     "deterministic_archive_build": "pass",
     "privacy_scan": "pass"
   },
   "local_installation": {
-    "from_version": "0.3.4",
-    "to_version": "0.3.5",
+    "from_version": "0.3.6",
+    "to_version": "0.4.0",
     "status": "pass",
-    "manifest_entry_count": 141,
-    "manifest_sha256": "0eb3bd13d32ea2b83bc3c45ff71a25d016456ade96a739bca8d5efcef925fa4f",
-    "rollback_preserved": true
+    "manifest_entry_count": 149,
+    "manifest_sha256": "ca6882ab1f4a73661c101da626cdba2e7a001f85c023a8208a076e08fadc0211",
+    "rollback_preserved": true,
+    "active_project_migration": false
   },
   "validation": {
     "official_skill_validator": "pass",
     "self_test": "pass",
-    "full_suite": "426/426 pass",
-    "focused_reader_suite": "25/25 pass",
-    "python_ast_files": 67,
-    "javascript_and_json": "pass",
+    "full_suite": "450/450 pass",
+    "aggressive_bug_audit": "8/8 mutants killed",
     "cold_public_archive": "pass",
-    "cold_local_archive": "pass",
-    "browser_qa": "pass",
-    "exact_tree": "pass"
+    "installed_tree": "pass",
+    "exact_tree": "pass",
+    "privacy_scan": "pass"
   },
-  "reader_export": {
-    "packet_sha256": "c9e7c4350c241c34088f4ab0dc0b4e92c7f592ab4e8b3c7d8545270c6feff912",
-    "html_sha256": "3f946a225cbc100e61de027db420ed28fd3a3e4116e361e66a626ce6dac6d6eb",
-    "deterministic_runs": 2,
-    "reader_finalize": "9/9 ready",
-    "network_runtime": "disabled",
-    "truth_effect": "none"
+  "authority_boundaries": {
+    "v5_initial_fact_authority": "empty",
+    "v4_authority_inheritance": false,
+    "profile_closure_authority": "repair_advice_only",
+    "pulse_failure_policy": "local_quarantine_existing_contributions_survive",
+    "project_background": "generate_only_on_explicit_request_read_default_if_present_nontruth"
   },
-  "public_cases": {
-    "philosophy_html_sha256": "8163154eab3af5a77186d875c0dce415a5e52658da0d3a9e3fe92162c2b2f186",
-    "xy_swap_potential_html_sha256": "250eff7d5533b7bfbbd72d01ace0d6a833ab1d7b8e766a7f1cc27e99cc71b91c",
-    "xy_swap_status": "potential_only_not_current_audit_pass_not_author_confirmed"
-  },
-  "unchanged_contracts": {
+  "contract_hashes": {
     "contracts_py_sha256": "5bd04ce9dc5fea159805e50b921a225875124946ec26e3e119af4236d03d75e1",
     "fact_admission_contract_sha256": "68c4785a8c36558ee7effb79be755405d2be785ee00f81795328c6cc5a211289",
     "reasoning_mode_policy_sha256": "0e1939213c834c3f326a20bea5953e387e8fb5ec30ad39386e71a0f7693af1af",
-    "grill_me_manifest_sha256": "09d65d000435727bbb1ccad4728bfd04a2ab256a07428b8a4afdf19cebdd77f1",
-    "host_agents_sha256": "cad3fb2b6093ec4e651fa86e876685897819424983566ae21d14f4bd097d591b"
+    "inheritance_lock_sha256": "08cc0972cf11340c6fb15d50acc67ff0542497744af40c704c211b2115425ac8"
   },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius",
-    "tag": "v0.3.5",
-    "state_at_lock_freeze": "prepared_after_local_cutover"
+    "tag": "v0.4.0",
+    "state_at_lock_freeze": "prepared_after_local_installation"
   }
 }

@@ -52,6 +52,22 @@ INDEPENDENCE_VALUES = {
     "formally_derived",
 }
 COMPUTATION_ROLES = {"load_bearing", "corroborative"}
+V5_LOAD_BEARING_TRUNCATION_KINDS = {
+    "finite_exhaustive",
+    "symbolic_exact",
+    "series_product_coefficient",
+}
+V5_SERIES_REPLAY_CHECKS = {
+    "inspect_algorithm",
+    "execute",
+    "verify_order_budget",
+    "extend_truncation_depth",
+}
+V5_STRONG_TRUNCATION_METHODS = {
+    "cross_checked",
+    "independent_reimplementation",
+    "formally_derived",
+}
 EXPERIMENT_EVENTS = {
     "started",
     "stage_started",
@@ -244,12 +260,159 @@ def _require_string_list(payload: dict[str, Any], key: str) -> list[str]:
     return list(value)
 
 
+def _require_integer(value: Any, *, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{label} must be an integer")
+    return value
+
+
+def _validate_v5_series_product_certificate(
+    certificate: dict[str, Any],
+    *,
+    artifact_roles: set[str],
+    label: str,
+) -> str:
+    """Validate a valuation-derived order budget for one product coefficient.
+
+    If ``[t^p] prod_i f_i`` is requested and ``v_i`` is the lowest power of
+    ``f_i``, factor ``i`` must be retained through at least
+    ``p - sum_{j != i} v_j``.  A ``None`` retained bound means that the factor
+    is exact rather than truncated.  This catches the common error of
+    truncating factors independently before multiplying them.
+    """
+
+    require_exact_keys(
+        certificate,
+        required={
+            "kind",
+            "statement",
+            "checked_orders",
+            "limitations",
+            "target_power",
+            "factors",
+            "depth_extension",
+        },
+        label=f"{label}.truncation_certificate",
+    )
+    target_power = _require_integer(
+        certificate.get("target_power"),
+        label=f"{label}.truncation_certificate.target_power",
+    )
+    factors = certificate.get("factors")
+    if (
+        not isinstance(factors, list)
+        or len(factors) < 2
+        or any(not isinstance(item, dict) for item in factors)
+    ):
+        raise ValueError(
+            f"{label}.truncation_certificate.factors must contain at least two objects"
+        )
+    normalized: dict[str, tuple[int, int | None]] = {}
+    for index, factor in enumerate(factors, 1):
+        factor_label = f"{label}.truncation_certificate.factors[{index}]"
+        require_exact_keys(
+            factor,
+            required={"factor_id", "lowest_power", "retained_through"},
+            label=factor_label,
+        )
+        factor_id = require_string(factor, "factor_id")
+        if factor_id in normalized:
+            raise ValueError(f"{label} has duplicate truncation factor ids")
+        lowest_power = _require_integer(
+            factor.get("lowest_power"), label=f"{factor_label}.lowest_power"
+        )
+        retained = factor.get("retained_through")
+        if retained is not None:
+            retained = _require_integer(
+                retained, label=f"{factor_label}.retained_through"
+            )
+            if retained < lowest_power:
+                raise ValueError(
+                    f"{factor_label}.retained_through precedes its lowest power"
+                )
+        normalized[factor_id] = (lowest_power, retained)
+    truncated = {
+        factor_id: values
+        for factor_id, values in normalized.items()
+        if values[1] is not None
+    }
+    if not truncated:
+        raise ValueError(
+            f"{label} series_product_coefficient must identify a truncated factor"
+        )
+
+    valuation_sum = sum(lowest for lowest, _ in normalized.values())
+    required_through: dict[str, int] = {}
+    for factor_id, (lowest, retained) in truncated.items():
+        required = target_power - (valuation_sum - lowest)
+        required_through[factor_id] = required
+        assert retained is not None
+        if retained < required:
+            raise ValueError(
+                f"{label} truncates {factor_id} through t^{retained}, "
+                f"but coefficient t^{target_power} requires it through t^{required}"
+            )
+
+    extension = certificate.get("depth_extension")
+    if not isinstance(extension, dict):
+        raise ValueError(
+            f"{label}.truncation_certificate.depth_extension must be an object"
+        )
+    require_exact_keys(
+        extension,
+        required={"artifact_role", "factor_orders"},
+        label=f"{label}.truncation_certificate.depth_extension",
+    )
+    extension_role = require_string(extension, "artifact_role")
+    if extension_role not in artifact_roles:
+        raise ValueError(f"{label} depth-extension artifact role is not declared")
+    factor_orders = extension.get("factor_orders")
+    if not isinstance(factor_orders, list) or any(
+        not isinstance(item, dict) for item in factor_orders
+    ):
+        raise ValueError(f"{label} depth-extension factor_orders must be objects")
+    extension_by_factor: dict[str, int] = {}
+    for index, item in enumerate(factor_orders, 1):
+        order_label = (
+            f"{label}.truncation_certificate.depth_extension.factor_orders[{index}]"
+        )
+        require_exact_keys(
+            item,
+            required={"factor_id", "retained_through"},
+            label=order_label,
+        )
+        factor_id = require_string(item, "factor_id")
+        if factor_id in extension_by_factor:
+            raise ValueError(f"{label} has duplicate depth-extension factor ids")
+        extension_by_factor[factor_id] = _require_integer(
+            item.get("retained_through"),
+            label=f"{order_label}.retained_through",
+        )
+    if set(extension_by_factor) != set(truncated):
+        raise ValueError(
+            f"{label} depth extension must exactly cover every truncated factor"
+        )
+    for factor_id, (_, retained) in truncated.items():
+        assert retained is not None
+        extension_order = extension_by_factor[factor_id]
+        if extension_order <= retained:
+            raise ValueError(
+                f"{label} depth extension does not extend {factor_id} beyond t^{retained}"
+            )
+        if extension_order < required_through[factor_id]:
+            raise ValueError(
+                f"{label} depth extension for {factor_id} remains below the required order"
+            )
+    return extension_role
+
+
 def validate_computational_evidence(
     entries: Any,
     *,
     proof: str,
     artifacts: list[dict[str, str]],
     verification_plan: dict[str, Any],
+    workflow_evidence_version: int = 4,
 ) -> list[dict[str, Any]]:
     if not isinstance(entries, list) or any(not isinstance(item, dict) for item in entries):
         raise ValueError("computational_evidence must be a list of objects")
@@ -344,12 +507,23 @@ def validate_computational_evidence(
         certificate = entry.get("truncation_certificate")
         if not isinstance(certificate, dict):
             raise ValueError(f"{label}.truncation_certificate must be an object")
-        require_exact_keys(
-            certificate,
-            required={"kind", "statement", "checked_orders", "limitations"},
-            label=f"{label}.truncation_certificate",
-        )
         certificate_kind = require_string(certificate, "kind")
+        extension_artifact_role: str | None = None
+        if (
+            workflow_evidence_version >= 5
+            and certificate_kind == "series_product_coefficient"
+        ):
+            extension_artifact_role = _validate_v5_series_product_certificate(
+                certificate,
+                artifact_roles=roles,
+                label=label,
+            )
+        else:
+            require_exact_keys(
+                certificate,
+                required={"kind", "statement", "checked_orders", "limitations"},
+                label=f"{label}.truncation_certificate",
+            )
         require_string(certificate, "statement")
         checked_orders = certificate.get("checked_orders")
         if not isinstance(checked_orders, list) or any(
@@ -362,12 +536,22 @@ def validate_computational_evidence(
             raise ValueError(
                 "two-depth agreement alone is corroborative, not a truncation proof"
             )
+        if (
+            workflow_evidence_version >= 5
+            and role == "load_bearing"
+            and certificate_kind not in V5_LOAD_BEARING_TRUNCATION_KINDS
+        ):
+            raise ValueError(
+                f"{label} load-bearing V5 computation must classify truncation as "
+                "finite_exhaustive, symbolic_exact, or series_product_coefficient"
+            )
         expected_outputs = entry.get("expected_outputs")
         if not isinstance(expected_outputs, list) or not expected_outputs or any(
             not isinstance(item, dict) for item in expected_outputs
         ):
             raise ValueError(f"{label}.expected_outputs must be nonempty")
         ref_by_role = {ref["role"]: ref for ref in refs}
+        expected_output_roles: set[str] = set()
         for output_index, output in enumerate(expected_outputs, 1):
             require_exact_keys(
                 output,
@@ -376,11 +560,21 @@ def validate_computational_evidence(
             )
             output_role = require_string(output, "role")
             output_hash = require_string(output, "sha256")
+            if output_role in expected_output_roles:
+                raise ValueError(f"{label} has duplicate expected output roles")
+            expected_output_roles.add(output_role)
             if (
                 output_role not in ref_by_role
                 or ref_by_role[output_role]["sha256"] != output_hash
             ):
                 raise ValueError(f"{label} expected output is not artifact-bound")
+        if (
+            extension_artifact_role is not None
+            and extension_artifact_role not in expected_output_roles
+        ):
+            raise ValueError(
+                f"{label} depth-extension artifact must be an expected output"
+            )
         replay_checks = _require_string_list(entry, "replay_checks")
         if role == "load_bearing" and not {
             "inspect_algorithm",
@@ -389,11 +583,36 @@ def validate_computational_evidence(
             raise ValueError(
                 f"{label} load-bearing evidence lacks algorithm inspection/replay"
             )
-        validate_independence_matrix(entry["independence_matrix"])
+        if (
+            workflow_evidence_version >= 5
+            and role == "load_bearing"
+            and certificate_kind == "series_product_coefficient"
+            and not V5_SERIES_REPLAY_CHECKS.issubset(replay_checks)
+        ):
+            raise ValueError(
+                f"{label} series evidence lacks order-budget/depth-extension replay"
+            )
+        independence = validate_independence_matrix(entry["independence_matrix"])
+        if (
+            workflow_evidence_version >= 5
+            and role == "load_bearing"
+            and certificate_kind == "series_product_coefficient"
+            and independence["truncation_method"]
+            not in V5_STRONG_TRUNCATION_METHODS
+        ):
+            raise ValueError(
+                f"{label} series truncation method lacks an independent or formal check"
+            )
         if role == "load_bearing":
-            if verification_plan.get("mode") != "artifact_replay":
+            required_mode = (
+                "closed_capsule"
+                if workflow_evidence_version >= 5
+                else "artifact_replay"
+            )
+            if verification_plan.get("mode") != required_mode:
                 raise ValueError(
-                    "load-bearing computation requires artifact_replay verification"
+                    "load-bearing computation requires "
+                    f"{required_mode} verification"
                 )
             authorized = set(
                 verification_plan.get("authorized_artifact_roles", [])

@@ -258,6 +258,15 @@ from .protocol import validate_ingestion_receipt_v4, validate_task_card
 from .paper_logic import PaperLogicStore
 from .profile_closure import ProfileClosureManager
 from .modes import ReasoningModeManager
+from .v5_lifecycle import (
+    V5_LEGACY_TRUTH_WRITER_COMMANDS,
+    V5_POLICY_REVISION,
+    V5_WORKFLOW_EVIDENCE_VERSION,
+    V5AuditReport,
+    V5LifecycleManager,
+)
+from .v5_collaboration import V5PulseStore
+from .v5_experiments import V5ExperimentManager
 
 
 def utc_now() -> str:
@@ -385,6 +394,7 @@ class MathGraphStore:
             is _LEGACY_WORKFLOW_FIXTURE_AUTHORITY
         )
         self._uninitialized_v4_mutation_depth = 0
+        self._v5_mutation_depth = 0
         self._fact_bundle_admission_authority = object()
         self._verification_bundle_creation_authority = object()
         if host_config_path is None:
@@ -479,6 +489,13 @@ class MathGraphStore:
         if not self.project_path.exists():
             return
         workflow_version = self.workflow_evidence_version()
+        if workflow_version == V5_WORKFLOW_EVIDENCE_VERSION:
+            if self._v5_mutation_depth > 0:
+                return
+            raise ValueError(
+                "V5 writes require an explicit lifecycle or capability adapter; "
+                "legacy V4 writers are read-only on a V5 project"
+            )
         if workflow_version < 4:
             if not self._legacy_workflow_fixture:
                 raise ValueError(
@@ -514,6 +531,36 @@ class MathGraphStore:
                 yield
         finally:
             self._uninitialized_v4_mutation_depth -= 1
+
+    @contextmanager
+    def _uninitialized_v5_transition_lock(self) -> Iterator[None]:
+        """Narrow authority for creating a new empty V5 authority root."""
+
+        self._v5_mutation_depth += 1
+        try:
+            with self.mutation_lock():
+                yield
+        finally:
+            self._v5_mutation_depth -= 1
+
+    @contextmanager
+    def v5_mutation_lock(self, *, command: str) -> Iterator[None]:
+        """Authorize one named V5 adapter while blocking legacy truth writers."""
+
+        self.require_initialized()
+        if self.workflow_evidence_version() != V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError("V5 mutation authority requires a V5 project")
+        if command in V5_LEGACY_TRUTH_WRITER_COMMANDS:
+            raise ValueError(
+                f"{command} is a legacy V4 truth/migration writer and cannot "
+                "mutate V5; use the corresponding V5 lifecycle command"
+            )
+        self._v5_mutation_depth += 1
+        try:
+            with self.mutation_lock():
+                yield
+        finally:
+            self._v5_mutation_depth -= 1
 
     @contextmanager
     def mutation_lock(self) -> Iterator[None]:
@@ -565,8 +612,8 @@ class MathGraphStore:
             raise ValueError("title must be a nonempty string")
         if not isinstance(description, str):
             raise ValueError("description must be a string")
-        if workflow_evidence_version not in {3, 4}:
-            raise ValueError("workflow_evidence_version must be 3 or 4")
+        if workflow_evidence_version not in {3, 4, 5}:
+            raise ValueError("workflow_evidence_version must be 3, 4, or 5")
         if (
             workflow_evidence_version < 4
             and not self._legacy_workflow_fixture
@@ -598,7 +645,11 @@ class MathGraphStore:
         lock = (
             self._uninitialized_v4_transition_lock()
             if workflow_evidence_version == 4 and not project_preexists
-            else self.mutation_lock()
+            else (
+                self._uninitialized_v5_transition_lock()
+                if workflow_evidence_version == 5 and not project_preexists
+                else self.mutation_lock()
+            )
         )
         with lock:
             for path in (
@@ -639,6 +690,12 @@ class MathGraphStore:
                 }
                 if workflow_evidence_version == 4:
                     project_payload["policy_revision"] = POLICY_REVISION_V4
+                elif workflow_evidence_version == 5:
+                    project_payload["schema_version"] = 3
+                    project_payload["policy_revision"] = V5_POLICY_REVISION
+                    project_payload["workflow_policy"] = (
+                        "research-release-decision-admission"
+                    )
                 self._write_json_atomic(
                     self.project_path,
                     project_payload,
@@ -657,6 +714,21 @@ class MathGraphStore:
                         reason="initialize Chalxius project",
                         source_kind="new_unified_project",
                     )
+            elif workflow_evidence_version == 5:
+                self.v5_lifecycle().initialize()
+                # Preserve the mature optional stores without activating a
+                # campaign or adding campaign closure to the V5 truth path.
+                self._initialize_v4_state(
+                    actor="operator",
+                    create_default_campaign=False,
+                )
+                if reasoning_mode is not None:
+                    self.reasoning_modes().initialize(
+                        reasoning_mode=reasoning_mode,
+                        actor="operator",
+                        reason="initialize Chalxius V5 project",
+                        source_kind="new_v5_project",
+                    )
 
     def require_initialized(self) -> None:
         if not self.project_path.exists():
@@ -667,6 +739,9 @@ class MathGraphStore:
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError("project workflow_evidence_version must be an integer")
         return value
+
+    def v5_lifecycle(self) -> V5LifecycleManager:
+        return V5LifecycleManager(self)
 
     def blackboard(self) -> BlackboardStore:
         return self._guard_child(
@@ -750,7 +825,19 @@ class MathGraphStore:
             )
         return tuple(sorted(issuers))
 
-    def collaboration(self) -> PulseStore:
+    def collaboration(self) -> PulseStore | V5PulseStore:
+        if (
+            self.project_path.exists()
+            and self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION
+        ):
+            return self._guard_child(
+                V5PulseStore(
+                    self,
+                    mutation_lock=self.mutation_lock,
+                    trusted_host_issuers=self.trusted_host_issuers(),
+                ),
+                _PULSE_MUTATORS,
+            )
         return self._guard_child(
             PulseStore(
                 self.root,
@@ -772,7 +859,19 @@ class MathGraphStore:
             _CAMPAIGN_MUTATORS,
         )
 
-    def experiments(self) -> ExperimentManager:
+    def experiments(self) -> ExperimentManager | V5ExperimentManager:
+        if (
+            self.project_path.exists()
+            and self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION
+        ):
+            return self._guard_child(
+                V5ExperimentManager(
+                    self,
+                    mutation_lock=self.mutation_lock,
+                    read_lock=self.read_lock,
+                ),
+                _EXPERIMENT_MUTATORS,
+            )
         return self._guard_child(
             ExperimentManager(
                 self.root,
@@ -1799,6 +1898,18 @@ class MathGraphStore:
         return result
 
     def _active_fact_paths(self) -> dict[str, Path]:
+        if (
+            self.project_path.exists()
+            and self.workflow_evidence_version()
+            == V5_WORKFLOW_EVIDENCE_VERSION
+        ):
+            ordinary = sorted(self.facts_dir.glob("*.md"))
+            if ordinary:
+                raise ValueError(
+                    "V5 Fact visibility forbids legacy ordinary Fact files; "
+                    "only V5 admission markers may expose Facts"
+                )
+            return self.v5_lifecycle().active_fact_paths()
         revoked = self._revoked_fact_ids()
         ordinary = {
             path.stem: path
@@ -2038,6 +2149,10 @@ class MathGraphStore:
         verification_plan: dict[str, Any] | None = None,
     ) -> str:
         self.require_initialized()
+        if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError(
+                "legacy submit cannot write V5; use Candidate Release"
+            )
         with self.mutation_lock():
             workflow_version = self.workflow_evidence_version()
             is_v4 = workflow_version >= 4
@@ -2797,6 +2912,10 @@ class MathGraphStore:
         return path
 
     def record_review(self, payload: dict[str, Any]) -> Path:
+        if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError(
+                "legacy record-review cannot write V5; use Certification Decision"
+            )
         with self.mutation_lock():
             if payload.get("schema_version") == 4:
                 return self._record_review_v4(payload)
@@ -3066,6 +3185,10 @@ class MathGraphStore:
         validate_fact_id(fact_id)
         validate_review_id(review_id)
         gateway = self._validate_actor(gateway, "gateway")
+        if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError(
+                "legacy admit cannot write V5; use the V5 admission gateway"
+            )
         with self.mutation_lock():
             submission = self.submission(fact_id)
             if submission.get("evidence_version") == 4:
@@ -3197,6 +3320,10 @@ class MathGraphStore:
         validate_fact_id(fact_id)
         reason = self._validate_actor(reason, "revocation reason")
         actor = self._validate_actor(actor, "revocation actor")
+        if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError(
+                "legacy revoke cannot write V5; use the V5 revocation adapter"
+            )
         with self.mutation_lock():
             facts = self.facts()
             if fact_id not in facts:
@@ -4892,7 +5019,18 @@ class MathGraphStore:
                     f"{round_path.parent.name}: invalid v4 round workflow: {exc}"
                 )
 
-    def audit(self) -> AuditReport:
+    def audit(self) -> AuditReport | V5AuditReport:
+        if self.project_path.exists():
+            try:
+                if (
+                    self.workflow_evidence_version()
+                    == V5_WORKFLOW_EVIDENCE_VERSION
+                ):
+                    return self.v5_lifecycle().audit()
+            except Exception:
+                # The legacy audit below produces the structured project.json
+                # diagnostic for malformed or partially written roots.
+                pass
         report = AuditReport()
 
         def graph_error(message: str) -> None:

@@ -254,9 +254,9 @@ class PaperLogicStore:
         if path.is_symlink() or not path.is_file():
             raise ValueError("paper-logic project.json is missing or unsafe")
         payload = self._read_json(path)
-        if payload.get("workflow_evidence_version") != 4:
+        if payload.get("workflow_evidence_version") not in {4, 5}:
             raise ValueError(
-                "Paper Logic Graph requires a workflow-evidence V4 project"
+                "Paper Logic Graph requires a workflow-evidence V4 or V5 project"
             )
         return payload
 

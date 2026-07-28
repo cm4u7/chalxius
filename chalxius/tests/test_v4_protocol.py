@@ -1188,7 +1188,7 @@ class V4ProtocolTests(unittest.TestCase):
 
 
 class SkillCollaborationPolicyTests(unittest.TestCase):
-    def test_unified_execution_profile_routes_parallel_blackboard_exchange(self) -> None:
+    def test_v5_routes_constructive_pulse_without_universal_closure(self) -> None:
         skill_root = Path(__file__).resolve().parents[1]
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
         adoption = (
@@ -1199,10 +1199,16 @@ class SkillCollaborationPolicyTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            "Satisfy every required exploration feature",
+            "Every worker task card retains three communication planes",
             skill,
         )
-        self.assertIn("barriered Blackboard pulse", skill)
+        self.assertIn("optional two-wave Pulse", skill)
+        self.assertIn(
+            "Each valid Wave-1 and\n   Wave-2 contribution enters Research independently",
+            skill,
+        )
+        self.assertIn("Pulse closure is advice", skill)
+        self.assertIn("A malformed peer is quarantined locally", skill)
         self.assertIn(
             "When its status is `required`",
             adoption,

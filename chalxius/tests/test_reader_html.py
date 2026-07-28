@@ -207,7 +207,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         second, second_meta = render_reader_html(copy.deepcopy(packet))
         self.assertEqual(first, second)
         self.assertEqual(first_meta, second_meta)
-        self.assertIn("deterministic_ranked_barycenter", first)
+        self.assertIn("deterministic_compact_radial_core_layers", first)
         self.assertIn("connect-src 'none'", first)
         self.assertIn('id="overview-button"', first)
         self.assertIn('id="all-cards-button"', first)
@@ -305,7 +305,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("target-arrow-shape': 'tee'", first)
         self.assertNotIn("@@CHALXIUS_", first)
         self.assertNotIn('class="header-state"', first)
-        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-12")
+        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-15")
         expected_packet_sha256 = sha256_bytes(canonical_json_bytes(packet))
         self.assertEqual(first_meta["packet_sha256"], expected_packet_sha256)
         self.assertEqual(
@@ -422,22 +422,86 @@ class ReaderHtmlRenderTests(unittest.TestCase):
 
         crossing_reduction = javascript_function_source(html, "reduceEdgeCrossings")
         crossing_score = javascript_function_source(html, "layoutCrossingScore")
+        geometry_score = javascript_function_source(html, "layoutGeometryScore")
         crossing_comparison = javascript_function_source(html, "crossingScoreIsBetter")
+        compact_coordinates = javascript_function_source(html, "compactRadialCoordinates")
         canonical_positions = javascript_function_source(html, "applyCanonicalPositions")
+        core_ranks = javascript_function_source(html, "coreDistanceRanks")
+        radial_radii = javascript_function_source(html, "radialRingRadii")
+        radial_coordinates = javascript_function_source(html, "radialLayoutCoordinates")
+        layout_footprint = javascript_function_source(html, "layoutNodeFootprint")
         self.assertIn("const CROSSING_REDUCTION_SWEEPS = 8", html)
         self.assertIn("const CROSSING_REDUCTION_EDGE_LIMIT = 1200", html)
+        self.assertIn("const CROSSING_REFINEMENT_PASSES = 2", html)
+        self.assertIn("const CROSSING_REFINEMENT_CANDIDATE_LIMIT = 48", html)
         self.assertIn("edgeWeight", crossing_reduction)
-        self.assertIn("weightedPosition", crossing_reduction)
+        self.assertIn("weightedVectorX", crossing_reduction)
+        self.assertIn("weightedVectorY", crossing_reduction)
+        self.assertIn("circularPosition", crossing_reduction)
         self.assertIn("towardLowerRanks", crossing_reduction)
         self.assertIn("packetIndex", crossing_reduction)
-        self.assertIn("properCrossing", crossing_score)
-        self.assertIn("segments.length > CROSSING_REDUCTION_EDGE_LIMIT", crossing_score)
-        self.assertIn("candidate.crossings < incumbent.crossings", crossing_comparison)
+        self.assertIn("layoutGeometryScore", crossing_score)
+        self.assertIn("radialLayoutCoordinates(groups)", crossing_score)
+        self.assertIn("properCrossing", geometry_score)
+        self.assertIn("segments.length > CROSSING_REDUCTION_EDGE_LIMIT", geometry_score)
+        self.assertIn("maximumEdgeLength", geometry_score)
+        self.assertIn("totalEdgeLength", geometry_score)
+        self.assertIn("collisionCount", geometry_score)
+        self.assertIn("minimumEdgeClearance", geometry_score)
+        self.assertIn("edgeClearanceViolationCount", geometry_score)
+        self.assertIn("RADIAL_VISIBLE_EDGE_GAP", geometry_score)
+        self.assertIn("'crossings'", crossing_comparison)
+        self.assertIn("'collisionCount'", crossing_comparison)
+        self.assertIn("'maximumEdgeLength'", crossing_comparison)
+        self.assertIn("'weightedEdgeLength'", crossing_comparison)
         self.assertIn("restoreGroupOrder(groups, bestOrder)", crossing_reduction)
+        self.assertIn("refinementCandidates < CROSSING_REFINEMENT_CANDIDATE_LIMIT", crossing_reduction)
+        self.assertIn("const nextIndex = (index + 1) % ids.length", crossing_reduction)
+        self.assertIn("if (considerCurrentOrder())", crossing_reduction)
         self.assertIn("baselineCrossings", crossing_reduction)
         self.assertIn("reduceEdgeCrossings(groups, ranks)", canonical_positions)
         self.assertIn("layoutBaselineCrossings", canonical_positions)
         self.assertIn("layoutFinalCrossings", canonical_positions)
+        self.assertIn("const ranks = coreDistanceRanks()", canonical_positions)
+        self.assertIn("const compactLayout = compactRadialCoordinates(groups, ranks)", canonical_positions)
+        self.assertIn("layoutFinalMaximumEdgeLength", canonical_positions)
+        self.assertIn("layoutFinalTotalEdgeLength", canonical_positions)
+        self.assertIn("layoutMinimumEdgeClearance", canonical_positions)
+        self.assertIn("layoutEdgeClearanceViolations", canonical_positions)
+        self.assertIn("RADIAL_THEME_MIN_RADIUS", canonical_positions)
+        self.assertIn("packet.target_order", core_ranks)
+        self.assertIn("ranks.set(targetId, 0)", core_ranks)
+        self.assertIn("neighbors.get(edge.source).push(edge.target)", core_ranks)
+        self.assertIn("RADIAL_TARGET_MIN_RADIUS", radial_radii)
+        self.assertIn("RADIAL_FIRST_RING_SPACING", radial_radii)
+        self.assertIn("RADIAL_OUTER_RING_SPACING", radial_radii)
+        self.assertIn("RADIAL_NODE_ARC_SPACING", radial_radii)
+        self.assertIn("layoutNodeFootprint", radial_radii)
+        self.assertIn("previousMaximumHalfWidth", radial_radii)
+        self.assertIn("currentMaximumHalfWidth", radial_radii)
+        self.assertIn("maximumHeight + RADIAL_VISIBLE_EDGE_GAP + RADIAL_LAYOUT_SPACING_MARGIN", radial_radii)
+        self.assertIn("state.minimizedNodeIds.has(nodeId)", layout_footprint)
+        self.assertIn("COMPACT_LAYOUT_NODE_FOOTPRINTS", layout_footprint)
+        self.assertIn("FULL_LAYOUT_NODE_FOOTPRINTS", layout_footprint)
+        self.assertIn("const RADIAL_VISIBLE_EDGE_GAP = 72", html)
+        self.assertIn("const RADIAL_LAYOUT_SPACING_MARGIN = 12", html)
+        self.assertIn("definition: {width: 246, height: 110}", html)
+        self.assertIn("result: {width: 238, height: 106}", html)
+        self.assertIn("explanation: {width: 226, height: 102}", html)
+        self.assertIn("RADIAL_RING_PHASE", radial_coordinates)
+        self.assertIn("rank * RADIAL_RING_PHASE", radial_coordinates)
+        self.assertIn("phaseVectorX", radial_coordinates)
+        self.assertIn("desiredBaseAngle", radial_coordinates)
+        self.assertIn("Math.cos(angle) * radius", radial_coordinates)
+        self.assertIn("Math.sin(angle) * radius", radial_coordinates)
+        self.assertIn("RADIAL_RELAXATION_ITERATIONS", compact_coordinates)
+        self.assertIn("RADIAL_RING_REPULSION", compact_coordinates)
+        self.assertIn("RADIAL_REFINEMENT_BLEND_FACTORS", compact_coordinates)
+        self.assertIn("candidateScore.crossings > baselineScore.crossings", compact_coordinates)
+        self.assertIn("candidateScore.collisionCount > baselineScore.collisionCount", compact_coordinates)
+        self.assertIn("candidateScore.edgeClearanceViolationCount", compact_coordinates)
+        self.assertIn("candidateScore.minimumEdgeClearance", compact_coordinates)
+        self.assertIn("candidateScore.totalEdgeLength > baselineScore.totalEdgeLength", compact_coordinates)
         self.assertNotIn("state.minimizedNodeIds", crossing_reduction)
 
         self.assertIn('.detail-panel mjx-container[jax="SVG"] { font-size: 1.08em; }', html)
@@ -461,14 +525,23 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("else undoSizing()", html)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for Reader layout behavior QA")
-    def test_ranked_crossing_reduction_improves_or_preserves_baseline(self) -> None:
+    def test_compact_radial_layout_preserves_crossings_and_shortens_edges(self) -> None:
         html, _ = render_reader_html(example_packet())
         function_names = (
             "cloneGroupOrder",
             "restoreGroupOrder",
+            "layoutNodeFootprint",
+            "radialRingRadii",
+            "wrapLayoutAngle",
+            "radialLayoutCoordinates",
+            "layoutCollisionRadius",
+            "layoutNodeBoundaryExtent",
+            "layoutNodeBoundaryGap",
+            "layoutGeometryScore",
             "layoutCrossingScore",
             "crossingScoreIsBetter",
             "reduceEdgeCrossings",
+            "compactRadialCoordinates",
         )
         functions = "\n".join(
             javascript_function_source(html, name).strip() for name in function_names
@@ -476,12 +549,13 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         fixtures = [
             {
                 "name": "simple-crossing",
-                "nodes": ["a", "b", "c", "d"],
-                "ranks": {"a": 0, "b": 0, "c": 1, "d": 1},
-                "groups": [[0, ["a", "b"]], [1, ["c", "d"]]],
+                "nodes": ["a", "b", "c", "x", "y", "z"],
+                "ranks": {"a": 0, "b": 0, "c": 0, "x": 1, "y": 1, "z": 1},
+                "groups": [[0, ["a", "b", "c"]], [1, ["x", "y", "z"]]],
                 "edges": [
-                    {"source": "a", "target": "d", "category": "prerequisite"},
-                    {"source": "b", "target": "c", "category": "prerequisite"},
+                    {"source": "x", "target": "c", "category": "prerequisite"},
+                    {"source": "y", "target": "a", "category": "prerequisite"},
+                    {"source": "z", "target": "b", "category": "prerequisite"},
                 ],
             },
             {
@@ -543,18 +617,72 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         harness = f"""
 const CROSSING_REDUCTION_SWEEPS = 8;
 const CROSSING_REDUCTION_EDGE_LIMIT = 1200;
+const CROSSING_REFINEMENT_PASSES = 2;
+const CROSSING_REFINEMENT_CANDIDATE_LIMIT = 48;
+const RADIAL_START_ANGLE = Math.PI;
+const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
+const RADIAL_TARGET_MIN_RADIUS = 170;
+const RADIAL_FIRST_RING_SPACING = 236;
+const RADIAL_OUTER_RING_SPACING = 158;
+const RADIAL_TARGET_ARC_SPACING = 330;
+const RADIAL_NODE_ARC_SPACING = 176;
+const RADIAL_VISIBLE_EDGE_GAP = 72;
+const RADIAL_LAYOUT_SPACING_MARGIN = 12;
+const RADIAL_RELAXATION_ITERATIONS = 72;
+const RADIAL_RELAXATION_NODE_LIMIT = 320;
+const RADIAL_RELAXATION_START_STEP = 0.14;
+const RADIAL_RELAXATION_END_STEP = 0.025;
+const RADIAL_SEED_TETHER = 0.032;
+const RADIAL_RING_REPULSION = 1.7;
+const RADIAL_REFINEMENT_BLEND_FACTORS = Object.freeze([1, 0.8, 0.6, 0.4, 0.2]);
+const FULL_LAYOUT_NODE_FOOTPRINTS = Object.freeze({{
+  target: {{width: 254, height: 118}},
+  definition: {{width: 246, height: 110}},
+  result: {{width: 238, height: 106}},
+  explanation: {{width: 226, height: 102}}
+}});
+const COMPACT_LAYOUT_NODE_FOOTPRINTS = Object.freeze({{
+  target: {{width: 78, height: 46}},
+  definition: {{width: 80, height: 44}},
+  result: {{width: 76, height: 44}},
+  explanation: {{width: 74, height: 44}}
+}});
 let packet;
 let readerNodeIds;
 let nodeById;
+let state;
 {functions}
 const fixtures = {json.dumps(fixtures, separators=(",", ":"))};
 const results = fixtures.map((fixture) => {{
   packet = {{edges: fixture.edges}};
   readerNodeIds = fixture.nodes;
-  nodeById = new Map(fixture.nodes.map((nodeId, packetIndex) => [nodeId, {{packetIndex}}]));
+  nodeById = new Map(fixture.nodes.map((nodeId, packetIndex) => [nodeId, {{
+    packetIndex,
+    reader_role: fixture.ranks[nodeId] === 0 ? 'target' : 'definition'
+  }}]));
+  state = {{minimizedNodeIds: new Set()}};
   const ranks = new Map(Object.entries(fixture.ranks).map(([nodeId, rank]) => [nodeId, rank]));
   const groups = new Map(fixture.groups.map(([rank, nodeIds]) => [rank, [...nodeIds]]));
-  return {{name: fixture.name, ...reduceEdgeCrossings(groups, ranks)}};
+  const crossing = reduceEdgeCrossings(groups, ranks);
+  const compact = compactRadialCoordinates(groups, ranks);
+  return {{
+    name: fixture.name,
+    ...crossing,
+    compactionEvaluated: compact.evaluated,
+    compactionBlend: compact.acceptedBlend,
+    compactBaselineCrossings: compact.baselineScore.crossings,
+    compactFinalCrossings: compact.finalScore.crossings,
+    baselineCollisionCount: compact.baselineScore.collisionCount,
+    finalCollisionCount: compact.finalScore.collisionCount,
+    baselineMinimumEdgeClearance: compact.baselineScore.minimumEdgeClearance,
+    finalMinimumEdgeClearance: compact.finalScore.minimumEdgeClearance,
+    baselineEdgeClearanceViolationCount: compact.baselineScore.edgeClearanceViolationCount,
+    finalEdgeClearanceViolationCount: compact.finalScore.edgeClearanceViolationCount,
+    baselineMaximumEdgeLength: compact.baselineScore.maximumEdgeLength,
+    finalMaximumEdgeLength: compact.finalScore.maximumEdgeLength,
+    baselineTotalEdgeLength: compact.baselineScore.totalEdgeLength,
+    finalTotalEdgeLength: compact.finalScore.totalEdgeLength
+  }};
 }});
 process.stdout.write(JSON.stringify(results));
 """
@@ -565,13 +693,314 @@ process.stdout.write(JSON.stringify(results));
             text=True,
         )
         results = {item["name"]: item for item in json.loads(completed.stdout)}
-        self.assertEqual(results["simple-crossing"]["baselineCrossings"], 1)
-        self.assertEqual(results["simple-crossing"]["finalCrossings"], 0)
-        self.assertEqual(results["xy-public-regression-shape"]["baselineCrossings"], 1)
-        self.assertEqual(results["xy-public-regression-shape"]["finalCrossings"], 1)
         for result in results.values():
             self.assertTrue(result["evaluated"])
             self.assertLessEqual(result["finalCrossings"], result["baselineCrossings"])
+            self.assertLessEqual(result["refinementCandidates"], 48)
+            self.assertTrue(result["compactionEvaluated"])
+            self.assertLessEqual(
+                result["compactFinalCrossings"], result["compactBaselineCrossings"]
+            )
+            self.assertLessEqual(
+                result["finalCollisionCount"], result["baselineCollisionCount"]
+            )
+            self.assertLessEqual(
+                result["finalEdgeClearanceViolationCount"],
+                result["baselineEdgeClearanceViolationCount"],
+            )
+            self.assertGreaterEqual(result["finalMinimumEdgeClearance"], 72 - 1e-6)
+            self.assertLessEqual(
+                result["finalMaximumEdgeLength"], result["baselineMaximumEdgeLength"]
+            )
+            self.assertLessEqual(
+                result["finalTotalEdgeLength"], result["baselineTotalEdgeLength"]
+            )
+        self.assertTrue(
+            any(
+                result["compactionBlend"] > 0
+                and (
+                    result["finalMaximumEdgeLength"]
+                    < result["baselineMaximumEdgeLength"] - 1e-6
+                    or result["finalTotalEdgeLength"]
+                    < result["baselineTotalEdgeLength"] - 1e-6
+                )
+                for result in results.values()
+            )
+        )
+
+    def test_revision_thirteen_box_selection_and_group_movement_contract_is_embedded(self) -> None:
+        html, _ = render_reader_html(example_packet())
+        pointer_intent = javascript_function_source(html, "bindPointerIntent")
+        batch_detail = javascript_function_source(html, "showBatchSelectionDetail")
+        selection_restore = javascript_function_source(html, "restoreCanvasSelection")
+        dynamic_forces = javascript_function_source(html, "applyDynamicForces")
+        dynamic_schedule = javascript_function_source(html, "scheduleDynamicForces")
+        dynamic_cancel = javascript_function_source(html, "cancelScheduledDynamicForces")
+        trackpad_navigation = javascript_function_source(html, "bindTrackpadNavigation")
+
+        self.assertIn("userPanningEnabled: false", html)
+        self.assertIn("boxSelectionEnabled: false", html)
+        self.assertIn("selectionType: 'additive'", html)
+        self.assertIn("'selection-box-color': '#ffe58a'", html)
+        self.assertIn("'selection-box-opacity': 0.12", html)
+        self.assertIn("'box-selection': 'overlap'", html)
+        self.assertIn('id="box-selection-marquee"', html)
+        self.assertIn('id="box-selection-halo-layer"', html)
+        self.assertIn("const selectedNodesInRectangle", pointer_intent)
+        self.assertIn("node.renderedBoundingBox", pointer_intent)
+        self.assertIn("const overlaps = box.x2 >= selection.x1", pointer_intent)
+        self.assertIn("commitSelection(", pointer_intent)
+        self.assertIn("showBatchSelectionDetail(combinedIds)", pointer_intent)
+        self.assertIn("state.boxSelectedNodeIds = new Set(combinedIds)", pointer_intent)
+        self.assertIn("state.selectedNodeIds = new Set(selectedIds)", batch_detail)
+        self.assertIn("restoreCanvasSelection()", batch_detail)
+        self.assertIn("批量移动", batch_detail)
+        self.assertIn("Group move", batch_detail)
+        self.assertIn("state.selectedNodeIds", selection_restore)
+        self.assertIn("element.select()", selection_restore)
+        self.assertIn("element.addClass('box-selected')", selection_restore)
+        self.assertIn("function syncBoxSelectionHalos()", html)
+        self.assertIn("rgba(127, 221, 137, 0.58)", html)
+        self.assertIn("data-box-selected", html)
+        self.assertIn("event.pointerType === 'mouse'", pointer_intent)
+        self.assertIn("event.shiftKey || event.altKey || event.ctrlKey || event.metaKey", pointer_intent)
+        self.assertIn("cy.boxSelectionEnabled(false)", pointer_intent)
+        self.assertIn("cy.userPanningEnabled(true)", pointer_intent)
+        self.assertIn("cy.userPanningEnabled(false)", pointer_intent)
+        self.assertNotIn("cy.boxSelectionEnabled(true)", pointer_intent)
+        self.assertIn("window.addEventListener('pointermove'", pointer_intent)
+        self.assertNotIn("event.stopImmediatePropagation()", pointer_intent)
+        self.assertIn("if (!selectionGesture.moved) return", pointer_intent)
+        self.assertIn("if (completedGesture.moved && event.type === 'pointerup')", pointer_intent)
+        self.assertIn("state.boxSelectionAdditive", pointer_intent)
+        self.assertIn("cy.on('grab', 'node'", html)
+        self.assertIn("cy.on('drag', 'node'", html)
+        self.assertIn("cy.on('dragfree', 'node'", html)
+        self.assertIn("state.groupDrag", html)
+        self.assertIn("state.pinned.set(nodeId, {...movedNode.position()})", html)
+        self.assertIn("lastMovedSelectionCount", html)
+        self.assertIn("DYNAMIC_FORCE_NODE_LIMIT = 240", html)
+        self.assertIn("DYNAMIC_FORCE_SETTLE_PASSES = 14", html)
+        self.assertIn("DYNAMIC_ATTRACTION_TARGET_GAP = 116", html)
+        self.assertIn("PINCH_ZOOM_SENSITIVITY = 0.008", html)
+        self.assertIn("if (event.ctrlKey)", trackpad_navigation)
+        self.assertIn("event.preventDefault()", trackpad_navigation)
+        self.assertIn("event.stopPropagation()", trackpad_navigation)
+        self.assertIn("cy.minZoom()", trackpad_navigation)
+        self.assertIn("cy.maxZoom()", trackpad_navigation)
+        self.assertIn("cy.zoom({level, renderedPosition})", trackpad_navigation)
+        self.assertIn("lastZoomInput = 'trackpad-pinch'", trackpad_navigation)
+        self.assertNotIn("if (event.ctrlKey) return", trackpad_navigation)
+        self.assertIn("RADIAL_VISIBLE_EDGE_GAP", dynamic_forces)
+        self.assertIn("dynamicBoundaryExtent", dynamic_forces)
+        self.assertIn("DYNAMIC_REPULSION_STRENGTH", dynamic_forces)
+        self.assertIn("DYNAMIC_ATTRACTION_STRENGTH", dynamic_forces)
+        self.assertIn("state.pinned.set(nodeId, next)", dynamic_forces)
+        self.assertIn("requestAnimationFrame", dynamic_schedule)
+        self.assertIn("cancelAnimationFrame", dynamic_cancel)
+        self.assertIn("cancelScheduledDynamicForces()", html)
+        self.assertIn(
+            "scheduleDynamicForces(fixedIds, DYNAMIC_FORCE_DRAG_PASSES)", html
+        )
+        self.assertIn(
+            "scheduleDynamicForces(movedIds, DYNAMIC_FORCE_SETTLE_PASSES)", html
+        )
+        self.assertIn("左键框选", html)
+        self.assertIn("Drag selected nodes as a group", html)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for trackpad input QA")
+    def test_revision_fourteen_trackpad_pinch_zooms_around_pointer(self) -> None:
+        html, _ = render_reader_html(example_packet())
+        trackpad_navigation = javascript_function_source(html, "bindTrackpadNavigation")
+        harness = f"""
+const PINCH_ZOOM_SENSITIVITY = 0.008;
+let wheelHandler = null;
+let currentZoom = 1;
+let zoomCommand = null;
+let panCommand = null;
+const graph = {{
+  clientWidth: 800,
+  clientHeight: 600,
+  contains: () => true,
+  getBoundingClientRect: () => ({{left: 100, top: 50}})
+}};
+const dom = {{
+  canvasStage: {{
+    addEventListener: (name, handler) => {{
+      if (name === 'wheel') wheelHandler = handler;
+    }}
+  }},
+  cy: {{dataset: {{}}}}
+}};
+const cy = {{
+  container: () => graph,
+  minZoom: () => 0.36,
+  maxZoom: () => 3.2,
+  zoom: (value) => {{
+    if (value === undefined) return currentZoom;
+    zoomCommand = value;
+    currentZoom = value.level;
+  }},
+  panBy: (value) => {{ panCommand = value; }}
+}};
+const closeNodeContextMenu = () => {{}};
+const window = {{requestAnimationFrame: (callback) => {{ callback(); return 1; }}}};
+{trackpad_navigation}
+bindTrackpadNavigation();
+const pinch = {{
+  target: graph,
+  ctrlKey: true,
+  clientX: 500,
+  clientY: 360,
+  deltaX: 0,
+  deltaY: -40,
+  deltaMode: 0,
+  prevented: false,
+  stopped: false,
+  preventDefault() {{ this.prevented = true; }},
+  stopPropagation() {{ this.stopped = true; }}
+}};
+wheelHandler(pinch);
+const pinchResult = {{
+  prevented: pinch.prevented,
+  stopped: pinch.stopped,
+  level: currentZoom,
+  renderedPosition: zoomCommand.renderedPosition,
+  source: dom.cy.dataset.lastZoomInput,
+  panCommand
+}};
+panCommand = null;
+const pan = {{
+  target: graph,
+  ctrlKey: false,
+  deltaX: 7,
+  deltaY: 11,
+  deltaMode: 0,
+  preventDefault() {{}},
+  stopPropagation() {{}}
+}};
+wheelHandler(pan);
+process.stdout.write(JSON.stringify({{pinchResult, panCommand}}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+        self.assertTrue(result["pinchResult"]["prevented"])
+        self.assertTrue(result["pinchResult"]["stopped"])
+        self.assertGreater(result["pinchResult"]["level"], 1)
+        self.assertEqual(
+            result["pinchResult"]["renderedPosition"], {"x": 400, "y": 310}
+        )
+        self.assertEqual(result["pinchResult"]["source"], "trackpad-pinch")
+        self.assertIsNone(result["pinchResult"]["panCommand"])
+        self.assertEqual(result["panCommand"], {"x": -7, "y": -11})
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for sizing convergence QA")
+    def test_revision_fifteen_card_sizing_runs_anchored_fourteen_pass_convergence(self) -> None:
+        html, _ = render_reader_html(example_packet())
+        sizing_convergence = javascript_function_source(html, "scheduleSizingConvergence")
+        commit = javascript_function_source(html, "commitSizing")
+        apply_delta = javascript_function_source(html, "applySizingDelta")
+        toggle = javascript_function_source(html, "toggleNodeMinimized")
+        node_path = javascript_function_source(html, "maximizeNodePath")
+        theme_path = javascript_function_source(html, "maximizeThemePath")
+        direction = javascript_function_source(html, "maximizeDirection")
+        boundary_extent = javascript_function_source(html, "dynamicBoundaryExtent")
+        dynamic_forces = javascript_function_source(html, "applyDynamicForces")
+
+        self.assertIn("const changedNodeIds = new Set([...delta.added, ...delta.removed])", sizing_convergence)
+        self.assertIn("delta.anchorNodeIds || []", sizing_convergence)
+        self.assertIn("DYNAMIC_FORCE_SETTLE_PASSES", sizing_convergence)
+        self.assertIn("changedNodeIds", sizing_convergence)
+        self.assertIn("'sizing'", sizing_convergence)
+        self.assertIn("anchorNodeIds: [...new Set(anchorNodeIds || [])]", commit)
+        self.assertIn("scheduleSizingConvergence(delta)", commit)
+        self.assertIn("scheduleSizingConvergence(delta)", apply_delta)
+        self.assertIn("commitSizing(next, `toggle:${nodeId}`, [nodeId])", toggle)
+        self.assertIn("commitSizing(next, `complete-path:${nodeId}`, [nodeId])", node_path)
+        self.assertIn("[`reader-theme:${themeId}`]", theme_path)
+        self.assertIn("commitSizing(next, `${direction}:${nodeId}`, [nodeId])", direction)
+        self.assertIn("const remainingPasses = passes - pass", dynamic_forces)
+        self.assertIn("clearanceDeficit / remainingPasses", dynamic_forces)
+        self.assertIn("if (!applied) continue", dynamic_forces)
+        self.assertIn("dynamicForceExecutedPasses", dynamic_forces)
+        self.assertIn("dynamicForceReason", dynamic_forces)
+
+        harness = f"""
+const RADIAL_VISIBLE_EDGE_GAP = 72;
+const DYNAMIC_FORCE_SETTLE_PASSES = 14;
+const DYNAMIC_FORCE_NODE_LIMIT = 240;
+const DYNAMIC_FORCE_MAX_STEP = 14;
+const DYNAMIC_REPULSION_STRENGTH = 0.42;
+const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
+const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+let controlSyncCount = 0;
+const scheduleNodeControlSync = () => {{ controlSyncCount += 1; }};
+function makeNode(id, x, width, height) {{
+  let current = {{x, y: 0}};
+  return {{
+    id: () => id,
+    hasClass: () => false,
+    position(next) {{
+      if (next === undefined) return {{...current}};
+      current = {{...next}};
+      return this;
+    }},
+    boundingBox: () => ({{w: width, h: height}})
+  }};
+}}
+const anchor = makeNode('anchor', 0, 254, 118);
+const neighbor = makeNode('neighbor', 230, 246, 110);
+const nodes = [anchor, neighbor];
+const cy = {{
+  nodes: () => nodes,
+  edges: () => [],
+  batch: (callback) => callback()
+}};
+const state = {{pinned: new Map()}};
+const dom = {{cy: {{dataset: {{}}}}}};
+{boundary_extent}
+{dynamic_forces}
+const beforeAnchor = anchor.position();
+const beforeNeighbor = neighbor.position();
+const moved = applyDynamicForces(['anchor'], 14, ['anchor'], 'sizing');
+const afterAnchor = anchor.position();
+const afterNeighbor = neighbor.position();
+const finalGap = afterNeighbor.x - afterAnchor.x - 254 / 2 - 246 / 2;
+process.stdout.write(JSON.stringify({{
+  beforeAnchor,
+  afterAnchor,
+  beforeNeighbor,
+  afterNeighbor,
+  finalGap,
+  moved,
+  controlSyncCount,
+  pinnedNeighbor: state.pinned.get('neighbor'),
+  dataset: dom.cy.dataset
+}}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["beforeAnchor"], result["afterAnchor"])
+        self.assertGreater(result["afterNeighbor"]["x"], result["beforeNeighbor"]["x"])
+        self.assertGreaterEqual(result["finalGap"], 72 - 1e-6)
+        self.assertEqual(result["moved"], 1)
+        self.assertEqual(result["controlSyncCount"], 1)
+        self.assertEqual(result["pinnedNeighbor"], result["afterNeighbor"])
+        self.assertEqual(result["dataset"]["dynamicForceFixedCount"], "1")
+        self.assertEqual(result["dataset"]["dynamicForceSeedCount"], "1")
+        self.assertEqual(result["dataset"]["dynamicForceRequestedPasses"], "14")
+        self.assertEqual(result["dataset"]["dynamicForceExecutedPasses"], "14")
+        self.assertEqual(result["dataset"]["dynamicForceReason"], "sizing")
 
     def test_revision_eleven_click_anchor_halo_and_plaque_contract_is_embedded(self) -> None:
         html, _ = render_reader_html(example_packet())
@@ -641,7 +1070,7 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("transition.node.position(compensated)", sizing)
         self.assertNotIn("animate(", sizing)
         self.assertIn("cy.on('dragfree', 'node'", html)
-        self.assertIn("state.pinned.set(node.id(), {...node.position()})", html)
+        self.assertIn("state.pinned.set(nodeId, {...movedNode.position()})", html)
         self.assertIn("nodeSizeControlSize(node)", controls)
         self.assertIn("nodeSizeControlAnchor(node)", controls)
         self.assertIn("minZoom: NODE_CONTROL_SAFE_MIN_ZOOM", html)
@@ -876,7 +1305,7 @@ class ReaderHtmlExportTests(unittest.TestCase):
         )
         self.assertEqual(first["truth_effect"], "none")
         self.assertEqual(first["network_runtime"], "disabled")
-        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-12")
+        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-15")
         self.assertEqual(first["reader_finalize"]["status"], "ready")
         self.assertEqual(first["reader_finalize"]["scope"], "presentation_readiness_only")
         self.assertEqual(

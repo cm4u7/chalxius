@@ -1,12 +1,13 @@
 # V4 Adoption Policy and Preflight
 
-> **Unified supersession.** This copy governs `chalxius`. The historical
-> `operate-mathgraph-unified` string remains only an artifact compatibility id.
-> Chalxius truth and adoption gates remain mandatory in every reasoning mode,
-> but live panel and pulse activation is controlled by the hash-bound
-> `execution_profile`: deep requires every applicable feature, auto requires a
-> feature when its deterministic workload trigger fires, and fast leaves an
-> applicable high-cost feature available. A mode never waives a truth gate.
+> **V5 adaptation.** This reference preserves the V4 task-profile vocabulary
+> used by `chalxius`. The historical `operate-mathgraph-unified` string remains
+> only an artifact compatibility id. In V5, the hash-bound
+> `execution_profile` plans exploration: deep requests every applicable
+> feature, auto follows deterministic workload triggers, and fast leaves
+> applicable high-cost work available. Profile completion and adoption advice
+> have no Fact-admission authority. Every mode uses the same V5 Candidate
+> Release, Certification Decision, and Fact gateway.
 
 Read this reference before creating v4 memory, planning a round, deciding whether to use an
 experiment/checkpoint, preparing several candidate facts, or producing external expert
@@ -46,11 +47,13 @@ host dispatch, then require at least one worker to challenge, refine,
 deduplicate, or otherwise connect to a peer's typed node. The cross-edge payload
 must name the inspected peer node, the independently repeated check, and the
 resulting correction or explicit no-correction boundary. A content-free edge is
-not communication. Only after committed cross-reviews and closure may main
-satisfy the required pulse obligation. A failed core return uses a whole-pulse
-abort, never an optional void. When pulse status is `available`, this mechanism
-is opt-in; when `not_applicable`, frozen-snapshot separation still applies but a
-pulse is not required.
+not communication. Only committed cross-reviews contribute to Pulse closure
+advice. Each valid return enters cumulative Research independently. A failed or
+malformed peer is quarantined locally and does not destroy already valid
+contributions; a whole-pulse abort is reserved for an explicit stop of future
+dispatch. When pulse status is `available`, this mechanism is opt-in; when
+`not_applicable`, frozen-snapshot separation still applies but a pulse is not
+required.
 
 For a required panel, launch every eligible, genuinely distinct channel up to
 currently callable host capacity. For an available panel, explicit opt-in may
@@ -94,26 +97,23 @@ changing a feature-bearing workload property requires replanning rather than sil
 newly required feature.
 
 `plan-round` also freezes `profile_obligations`, recomputed from every
-assignment's bound execution profile. It lists the exact assignments requiring
-each exploration feature and a canonical obligation hash. This is not an
-operator checklist: a unified round lacking this field is a historical
-pre-closure round and must be replanned rather than given retroactive evidence.
+assignment's bound execution profile. It lists the exact assignments suggested
+for each exploration feature and a canonical obligation hash. It is repair
+guidance, not an operator completion checklist or a truth gate.
 
-After every governed return is canonically ingested, run
-`profile-closure-status ROUND_ID`. A round with no required exploration feature
-is `not_required` and has no receipt. Otherwise
-`profile-closure-record ROUND_ID --input ... --actor ...` accepts exactly one
-evidence entry for every required feature and no extras. Its immutable receipt
-binds all task-card, return, ingestion, outcome, and effect hashes. Missing or
-drifted closure blocks both single-Fact and atomic-bundle verifier tasks and
-admission; accepted-idempotent retry and current audit revalidate it.
+After governed returns are canonically ingested,
+`profile-closure-status ROUND_ID` may report incomplete planned work.
+`profile-closure-record ROUND_ID --input ... --actor ...` may append exact
+evidence-bound advice to cumulative Research. Missing or drifted profile
+closure never blocks a V5 verifier capsule, Candidate Release, Certification
+Decision, or Fact admission. Those transitions enforce their own exact source,
+replay, adverse-disposition, atomic-DAG, and fresh-verifier gates.
 
-The closure is `workflow_readiness_only` and remains outside the invariant Fact
-admission contract. Thus the admission-contract hash remains identical in
-fast/auto/deep. Do not call host claims machine-verified: callable panel width,
-specialist identity, campaign scope, and synthesis subject linkage are
-procedural host attestations. Native validation combined with such a scope is
-`mixed_procedural_and_machine_verified`.
+Profile closure remains `workflow_readiness_only` and outside the invariant
+Fact-admission contract. Do not call host claims machine-verified: callable
+panel width, specialist identity, campaign scope, and synthesis subject linkage
+are procedural host attestations. Native validation combined with such a scope
+is `mixed_procedural_and_machine_verified`.
 
 The trigger boundary is deliberate. `source_claim=true` always requires the unchanged
 `source_claim_gate`; ambiguity can never satisfy or relax that gate. For Auto paper-led literature,

@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.3.5 candidate contains one self-contained `chalxius` skill,
+The 0.4.0 release artifact contains one self-contained `chalxius` skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The Chalxius research engine is the only embedded research
 kernel; retired predecessor, coordinator, and standalone companion skills are
@@ -34,27 +34,31 @@ PROJECT=/absolute/path/outside/the/skill
 ```
 
 `fast`, `auto`, and `deep` are Chalxius execution profiles. They never start
-retired predecessor skills. The exact task-card `execution_profile` decides
+retired predecessor skills. The exact task-card `execution_profile` advises
 whether the clean-context panel, durable two-wave pulse, Paper/Audit work,
 computation lane, campaign expansion, novelty search, and expert synthesis are
-`required`, `available`, or `not_applicable`. Truth/adoption gates and the
-Fact-admission contract are invariant in all modes.
+`required`, `available`, or `not_applicable` for that research plan. The V5
+Fact-admission contract is invariant in all modes; profile completion is not a
+second truth or admission gate.
 
 For a required panel, use all genuinely distinct currently callable
-clean-context slots. For a required pulse, produce actual plan, ingestion,
-barrier, trusted dispatch, cross-review, and closure evidence. An available
-feature is opt-in; an inapplicable feature is not manufactured. Estimated cost,
-duration, burden, and score are priority/load ordering only and never weaken a
-required feature or truth gate.
+clean-context slots when carrying out that plan. For a required pulse, produce
+actual plan, ingestion, barrier, trusted dispatch, cross-review, and closure
+evidence. Each valid Pulse contribution enters cumulative Research
+independently; a malformed peer is quarantined locally, and a whole-pulse abort
+is reserved for an explicit stop of future dispatch. An available feature is
+opt-in; an inapplicable feature is not manufactured. Estimated cost, duration,
+burden, and score are priority/load ordering only and never weaken a V5
+Candidate Release or Certification requirement.
 
-Every new round freezes `profile_obligations`. After canonical ingestion, run
-`profile-closure-status`; if required, record exact typed evidence with
-`profile-closure-record` before constructing a verifier task. The receipt binds
-each task card, return, ingestion, outcome, and effect. It is
-`workflow_readiness_only`, outside the invariant Fact contract, and cannot
-change that contract's hash. A Fast round with no required feature is
-`not_required` without a receipt. Machine-native and procedural host evidence
-must retain their distinct labels.
+Every new round freezes `profile_obligations` as repair guidance. After
+canonical ingestion, `profile-closure-status` may identify incomplete planned
+work, and `profile-closure-record` may append exact typed advice to cumulative
+Research. Neither command is required before constructing a verifier capsule,
+sealing a Candidate Release, recording a Certification Decision, or admitting
+a Fact. Missing source, replay, adverse-disposition, atomic-DAG, convention,
+quantifier, or fresh-verifier evidence still fails at its exact V5 gate.
+Machine-native and procedural host evidence retain their distinct labels.
 
 ## Optional offline reader page
 
@@ -110,31 +114,67 @@ sizing, undo/redo, or layer changes do not rerun it or reorder the working view.
 This paragraph states the deployment boundary only; it is not renderer,
 browser, determinism, packaging, or release QA evidence.
 
+Revision 13 replaces ranked columns with deterministic target-distance radial
+core layers: synthetic multi-target themes occupy the innermost core, targets
+occupy the next central ring, and other nodes move outward by undirected graph
+distance from the target set. Packet order seeds each ring; eight circular
+neighbor sweeps and at most 48 adjacent ring-swap candidates across two
+refinement passes keep a candidate only when its exact scored radial crossing
+tuple improves. Exact chord-based radii plus bounded deterministic weighted-link
+attraction, same-ring repulsion, and seed tethering shorten maximum and total
+edge length only if crossings, card collisions, and the protected 44-model-
+pixel connected-card boundary gap do not worsen. Primary-button dragging on empty canvas draws a visible
+selection rectangle, modifier-drag adds nodes, and dragging any selected card
+moves the whole set by one equal offset. Box-selected nodes receive a soft green
+silhouette glow. For at most 240 visible nodes, direct drag runs bounded local
+card repulsion and relation-only attraction, then stops after at most fourteen
+release-settling passes. These
+positions are session pins only.
+Two-finger gestures still pan programmatically, while touch and pen pan directly.
+No selection, movement, or layout state enters the packet, Fact graph, source,
+sidecar, storage, or writeback path.
+
+Revision 14 repairs two presentation regressions without changing that boundary.
+Canonical reset geometry now chooses role-specific full or minimized card
+footprints from the current sizing state; `All cards` therefore cannot be laid
+out using compact-card assumptions. The protected connected-card boundary gap
+is 72 model pixels, with a fixed ring-spacing safety margin. Pinch input is
+handled explicitly as pointer-centered zoom, while ordinary two-finger input
+continues to pan. These changes remain inside the generated page and create no
+packet, graph, source, storage, sidecar, service, or writeback state.
+
+Revision 15 adds post-size convergence without changing the canonical-layout
+contract. Every effective local, path, topic, global, undo, or redo size delta
+runs exactly fourteen deterministic force passes against the new rendered
+silhouettes. Directly operated cards or topics remain fixed at their compensated
+control pivot; bulk actions use all changed real cards as seeds. Nearby visible
+cards repel below the 72-model-pixel gap and visible relation neighbors attract
+only above the 116-model-pixel comfortable gap. The viewport is preserved, fit
+remains explicit, motion stops after the bounded call, and graphs above 240
+visible nodes retain the size action without automatic settling. This creates
+only page-session presentation pins and no packet, graph, source, storage,
+sidecar, service, or writeback state.
+
 ## Historical projects
 
-An existing project in the pre-Chalxius V4 format (`mathgraph-chalk-version`
-0.4.0) is read-only until an operator records `mode-init`; audit emits a
-compatibility warning rather than corruption. This is enforced by the public
-Python API, exposed child-store writers, and CLI—not only by command routing.
-Activation first requires a clean byte-pure current audit before creating
-`.mathgraph.lock`, then repeats audit and inventory under the transition lock.
-The schema-2 receipt hashes the frozen round inventory and every exact byte
-backing already-accepted ordinary and atomic admissions. Only that exact
-accepted set is grandfathered for future profile closure; pending candidates
-are not, and any baseline drift or symlink substitution fails closed.
+V5 never activates a V1-V4 root or upgrades its authority through `mode-init`.
+Keep every historical project unchanged and readable as nontruth background.
+Start substantive V5 work in a separate nonnested root; it begins with an empty
+V5 Fact Graph and accepts no predecessor Fact, review, receipt, closure, or
+admission marker as V5 authority.
 
-For a legacy V1-V3 project, all public mutation—including exposed child-store
-methods—is disabled and the active root must never be migrated in place. Use
-`upgrade-project-copy --source LEGACY_ROOT` with a nonexistent destination,
-inspect audit and trust debt, then run `mode-init` on the copy. Keep
-`cutover_status=not_performed` until the user explicitly selects the unified
-copy. Imported facts retain inherited assurance; new facts use the invariant
-unified gate.
+Historical inspection and copy-upgrade commands remain rollback-lineage tools
+for reading old bytes. They must not be presented as a path that turns a V1-V4
+root into a V5 project. If the user explicitly requests background generation,
+read the relevant historical project files broadly and write one
+`PROJECT_BACKGROUND.md` in the new V5 root. Once that file exists, substantive
+V5 work reads its complete body and hash by default; absence never generates
+it, and no summary has truth effect.
 
-An old unified V4 round with no frozen `profile_obligations` must be replanned;
-do not backfill a closure receipt. The internal Python `reasoning_mode=None`
-compatibility seam is only for internal fixtures representing pre-Chalxius V4
-projects. Official CLI initialization defaults to `auto`.
+Old rounds and `profile_obligations` remain audit-readable but are not V5 work
+units. Do not backfill a closure receipt or import their assurance. The internal
+Python `reasoning_mode=None` seam exists only for frozen compatibility tests;
+official V5 initialization defaults to `auto`.
 
 No public constructor accepts an `allow_legacy_*` write switch. Private
 identity-token fixture and staged-copy seams exist for tests and isolated
@@ -159,7 +199,7 @@ multi-root federation remains disabled.
 ## Host handoff
 
 Tell the receiving host to read `SKILL.md`, verify the candidate, choose an
-external project root, select a reasoning mode, and report mode event, required
-feature closure, audit state, and candidate/admitted boundary. Installation,
+external project root, select a reasoning mode, and report mode event, repair
+advice, audit state, and Candidate Release/Certification/Fact boundary. Installation,
 global replacement, packaging, migration, and cutover each require separate
 explicit authorization.

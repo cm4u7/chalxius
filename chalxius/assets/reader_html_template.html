@@ -140,7 +140,9 @@
         </div>
       </div>
       <div class="canvas-stage">
-        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-zh="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-en="Draggable knowledge graph. Select a card to read, use its internal button to change size, double-click to emphasize its complete upstream and downstream chain, or secondary-click for directional commands."></div>
+        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-zh="可拖动知识图谱。鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-en="Draggable knowledge graph. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. Use two-finger gestures to pan, select a card to read, or double-click to emphasize its complete chain."></div>
+        <div id="box-selection-marquee" class="box-selection-marquee" aria-hidden="true" hidden></div>
+        <div id="box-selection-halo-layer" class="box-selection-halo-layer" aria-hidden="true"></div>
         <div id="selected-node-halo" class="selected-node-halo" aria-hidden="true" hidden></div>
         <div id="node-control-layer" class="node-control-layer"></div>
         <div id="node-name-tooltip" class="node-name-tooltip" role="tooltip" hidden></div>
@@ -159,7 +161,7 @@
       </div>
       <p class="interaction-note">
         <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
-        <span data-zh="双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销" data-en="Two-finger pan · Pinch to zoom · Drag cards · Internal ± changes size · Double-click emphasizes the complete chain · ⌘Z undo">双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销</span>
+        <span data-zh="左键框选 · 拖动已选节点批量移动 · 拖动时局部避让/回拉 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸并自动避让 · 双击突出完整链" data-en="Box-select with primary drag · Drag selected nodes as a group · Local repel/pull while dragging · Two-finger pan · Pinch to zoom · Internal ± resizes and settles cards · Double-click emphasizes the complete chain">左键框选 · 拖动已选节点批量移动 · 拖动时局部避让/回拉 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸并自动避让 · 双击突出完整链</span>
       </p>
     </section>
 
@@ -187,7 +189,7 @@
       </div>
 
       <div id="detail-readable" class="readable-detail">
-        <p data-zh="选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。" data-en="Select a card to read it; use the minus or plus inside it to change size while every currently enabled relation remains available.">选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。</p>
+        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动或切换卡片尺寸后，附近卡片会自动避让，过长的真实关系会轻微回拉，并立即稳定。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. After dragging or resizing a card, nearby cards repel automatically, overly long real relations pull gently, and the layout settles immediately. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动或切换卡片尺寸后，附近卡片会自动避让，过长的真实关系会轻微回拉，并立即稳定。所有当前启用的关系都会保留。</p>
       </div>
 
       <details id="formal-details" class="formal-details">
@@ -227,6 +229,10 @@
           <section>
             <h3 data-zh="卡片尺寸" data-en="Card sizing">卡片尺寸</h3>
             <p data-zh="完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。" data-en="A full card has only a minus; a minimized card has only a plus. Sizing preserves its center and never hides currently enabled relations.">完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。</p>
+          </section>
+          <section>
+            <h3 data-zh="批量移动" data-en="Group movement">批量移动</h3>
+            <p data-zh="鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。按住修饰键再次框选可追加节点。" data-en="Primary-drag on empty space to draw a selection box. Drag any selected node to move the selection while preserving relative positions; hold a modifier while box-selecting to add nodes.">鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。按住修饰键再次框选可追加节点。</p>
           </section>
         </div>
       </details>

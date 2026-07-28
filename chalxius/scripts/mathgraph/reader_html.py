@@ -14,7 +14,7 @@ from .contracts import (
 
 
 READER_PACKET_SCHEMA_VERSION = 1
-RENDERER_REVISION = "chalxius-reader-html-12"
+RENDERER_REVISION = "chalxius-reader-html-15"
 FIXED_OUTPUT_RELPATH = "visualizations/knowledge-map.html"
 MAX_PACKET_BYTES = 16 * 1024 * 1024
 MAX_NODES = 5_000
@@ -708,7 +708,7 @@ def render_reader_html(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         "renderer_revision": RENDERER_REVISION,
         "packet_sha256": packet_sha256,
         "truth_effect": "none",
-        "layout": "deterministic_ranked_barycenter",
+        "layout": "deterministic_compact_radial_core_layers",
         "network_runtime": "disabled",
         "reader_finalize": reader_finalize,
         "assets": {
@@ -760,8 +760,8 @@ def _fixed_output_path(root: Path) -> Path:
     return contained_path(root, FIXED_OUTPUT_RELPATH, "reader visualization output")
 
 
-def export_reader_html(store: Any, packet_path: Path | str) -> dict[str, Any]:
-    packet = load_reader_packet(packet_path, project_id=store.project_id())
+def export_reader_payload(store: Any, payload: dict[str, Any]) -> dict[str, Any]:
+    packet = validate_reader_packet(payload, project_id=store.project_id())
     html, build_meta = render_reader_html(packet)
     output = _fixed_output_path(store.root)
     with store.mutation_lock():
@@ -783,3 +783,8 @@ def export_reader_html(store: Any, packet_path: Path | str) -> dict[str, Any]:
         "network_runtime": "disabled",
         "reader_finalize": build_meta["reader_finalize"],
     }
+
+
+def export_reader_html(store: Any, packet_path: Path | str) -> dict[str, Any]:
+    packet = load_reader_packet(packet_path, project_id=store.project_id())
+    return export_reader_payload(store, packet)

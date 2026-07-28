@@ -29,6 +29,11 @@
     includeWeak: false,
     pinned: new Map(),
     selectedId: null,
+    selectedNodeIds: new Set(),
+    boxSelectedNodeIds: new Set(),
+    boxSelectionAdditive: false,
+    boxSelectionEndedAt: 0,
+    groupDrag: null,
     searchMatches: [],
     contextNodeId: null,
     hoveredCanvasNodeId: null,
@@ -42,7 +47,37 @@
   let windowResizeTimer = null;
   let nodeControlFrame = 0;
   let nodeHoverFrame = 0;
-  const CANONICAL_COLUMN_SPACING = 340;
+  let dynamicForcesFrame = 0;
+  let pendingDynamicFixedIds = new Set();
+  let pendingDynamicSeedIds = new Set();
+  let pendingDynamicPasses = 0;
+  let pendingDynamicReason = 'direct-manipulation';
+  const boxSelectionHaloByNodeId = new Map();
+  const RADIAL_START_ANGLE = Math.PI;
+  const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
+  const RADIAL_TARGET_MIN_RADIUS = 170;
+  const RADIAL_THEME_MIN_RADIUS = 124;
+  const RADIAL_FIRST_RING_SPACING = 236;
+  const RADIAL_OUTER_RING_SPACING = 158;
+  const RADIAL_TARGET_ARC_SPACING = 330;
+  const RADIAL_NODE_ARC_SPACING = 176;
+  const RADIAL_VISIBLE_EDGE_GAP = 72;
+  const RADIAL_LAYOUT_SPACING_MARGIN = 12;
+  const RADIAL_RELAXATION_ITERATIONS = 72;
+  const RADIAL_RELAXATION_NODE_LIMIT = 320;
+  const RADIAL_RELAXATION_START_STEP = 0.14;
+  const RADIAL_RELAXATION_END_STEP = 0.025;
+  const RADIAL_SEED_TETHER = 0.032;
+  const RADIAL_RING_REPULSION = 1.7;
+  const RADIAL_REFINEMENT_BLEND_FACTORS = Object.freeze([1, 0.8, 0.6, 0.4, 0.2]);
+  const DYNAMIC_FORCE_NODE_LIMIT = 240;
+  const DYNAMIC_FORCE_DRAG_PASSES = 2;
+  const DYNAMIC_FORCE_SETTLE_PASSES = 14;
+  const DYNAMIC_FORCE_MAX_STEP = 14;
+  const DYNAMIC_REPULSION_STRENGTH = 0.42;
+  const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
+  const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+  const PINCH_ZOOM_SENSITIVITY = 0.008;
   const NODE_SIZE_CONTROL_X_RATIO = 0.29;
   const NODE_SIZE_CONTROL_Y_RATIO = 0.5;
   const NODE_SIZE_CONTROL_CARD_HEIGHT_RATIO = 0.45;
@@ -51,7 +86,21 @@
   const NODE_CONTROL_SAFE_MIN_ZOOM = 0.36;
   const CROSSING_REDUCTION_SWEEPS = 8;
   const CROSSING_REDUCTION_EDGE_LIMIT = 1200;
+  const CROSSING_REFINEMENT_PASSES = 2;
+  const CROSSING_REFINEMENT_CANDIDATE_LIMIT = 48;
   const COMPACT_NODE_SIZES = Object.freeze({
+    target: {width: 78, height: 46},
+    definition: {width: 80, height: 44},
+    result: {width: 76, height: 44},
+    explanation: {width: 74, height: 44}
+  });
+  const FULL_LAYOUT_NODE_FOOTPRINTS = Object.freeze({
+    target: {width: 254, height: 118},
+    definition: {width: 246, height: 110},
+    result: {width: 238, height: 106},
+    explanation: {width: 226, height: 102}
+  });
+  const COMPACT_LAYOUT_NODE_FOOTPRINTS = Object.freeze({
     target: {width: 78, height: 46},
     definition: {width: 80, height: 44},
     result: {width: 76, height: 44},
@@ -131,9 +180,22 @@
     layout: {name: 'preset', fit: false},
     minZoom: NODE_CONTROL_SAFE_MIN_ZOOM,
     maxZoom: 3.2,
+    userPanningEnabled: false,
     boxSelectionEnabled: false,
-    selectionType: 'single',
+    selectionType: 'additive',
     style: [
+      {
+        selector: 'core',
+        style: {
+          'selection-box-color': '#ffe58a',
+          'selection-box-opacity': 0.12,
+          'selection-box-border-color': '#ffe58a',
+          'selection-box-border-width': 1.5,
+          'active-bg-color': '#7fdd89',
+          'active-bg-opacity': 0.045,
+          'active-bg-size': 18
+        }
+      },
       {
         selector: 'node[kind = "reader-node"]',
         style: {
@@ -154,6 +216,7 @@
           'text-valign': 'center',
           'text-halign': 'center',
           'text-justification': 'left',
+          'box-selection': 'overlap',
           'overlay-padding': 9,
           'overlay-opacity': 0,
           'transition-property': 'border-color, border-width, opacity',
@@ -275,7 +338,8 @@
           'label': 'data(label)',
           'text-wrap': 'wrap',
           'text-max-width': 158,
-          'text-valign': 'center'
+          'text-valign': 'center',
+          'box-selection': 'overlap'
         }
       },
       {
@@ -376,7 +440,19 @@
           'z-index': 999
         }
       },
-      { selector: 'node.minimized:selected', style: {'outline-width': 2.4, 'outline-offset': 1.6} }
+      { selector: 'node.minimized:selected', style: {'outline-width': 2.4, 'outline-offset': 1.6} },
+      {
+        selector: 'node.box-selected',
+        style: {
+          'outline-color': '#7fdd89',
+          'outline-style': 'solid',
+          'outline-width': 2.6,
+          'outline-offset': 2.4,
+          'outline-opacity': 0.92,
+          'z-index': 998
+        }
+      },
+      { selector: 'node.minimized.box-selected', style: {'outline-width': 2.2, 'outline-offset': 1.5} }
     ]
   });
 
@@ -409,6 +485,8 @@
     targetPosition: document.getElementById('target-position'),
     canvasStage: document.querySelector('.canvas-stage'),
     cy: document.getElementById('cy'),
+    boxSelectionMarquee: document.getElementById('box-selection-marquee'),
+    boxSelectionHaloLayer: document.getElementById('box-selection-halo-layer'),
     selectedNodeHalo: document.getElementById('selected-node-halo'),
     nodeControlLayer: document.getElementById('node-control-layer'),
     nodeNameTooltip: document.getElementById('node-name-tooltip'),
@@ -564,11 +642,17 @@
 
   function refreshLocalizedDetail() {
     if (typeof state.selectedId === 'string' && state.selectedId.startsWith('reader-theme:')) {
-      showThemeDetail(state.selectedId.slice('reader-theme:'.length));
+      showThemeDetail(state.selectedId.slice('reader-theme:'.length), {
+        preserveSelection: state.boxSelectedNodeIds.has(state.selectedId)
+      });
     } else if (edgeById.has(state.selectedId)) {
       showEdgeDetail(state.selectedId);
     } else if (nodeById.has(state.selectedId)) {
-      showNodeDetail(state.selectedId);
+      showNodeDetail(state.selectedId, {
+        preserveSelection: state.boxSelectedNodeIds.has(state.selectedId)
+      });
+    } else if (state.selectedNodeIds.size) {
+      showBatchSelectionDetail([...state.selectedNodeIds]);
     } else {
       showOverviewDetail();
     }
@@ -626,6 +710,7 @@
     });
     dom.fit.addEventListener('click', fitVisible);
     dom.reset.addEventListener('click', () => {
+      cancelScheduledDynamicForces();
       state.pinned.clear();
       resetCurrentLayout();
     });
@@ -670,8 +755,6 @@
       closeNodeContextMenu();
       const id = event.target.id();
       if (id.startsWith('reader-theme:')) {
-        cy.elements().unselect();
-        event.target.select();
         showThemeDetail(event.target.data('themeId'));
         return;
       }
@@ -685,8 +768,6 @@
     });
     cy.on('dbltap', 'node[kind = "theme"]', (event) => {
       closeNodeContextMenu();
-      cy.elements().unselect();
-      event.target.select();
       maximizeThemePath(event.target.data('themeId'));
     });
     cy.on('mouseover', 'node[kind = "reader-node"]', (event) => {
@@ -701,6 +782,7 @@
     });
     cy.on('tap', (event) => {
       if (event.target !== cy) return;
+      if (Date.now() - state.boxSelectionEndedAt < 160) return;
       closeNodeContextMenu();
       hideNodeNameTooltip();
       showOverviewDetail();
@@ -716,9 +798,55 @@
       if (event.target.data('kind') === 'reader-grouping') return;
       showEdgeDetail(event.target.id());
     });
+    cy.on('grab', 'node', (event) => {
+      const anchor = event.target;
+      if (state.selectedNodeIds.size < 2 || !state.selectedNodeIds.has(anchor.id())) {
+        state.groupDrag = null;
+        return;
+      }
+      const origins = new Map();
+      for (const nodeId of state.selectedNodeIds) {
+        const node = cy.getElementById(nodeId);
+        if (!node.length || node.hasClass('hidden')) continue;
+        origins.set(nodeId, {...node.position()});
+      }
+      state.groupDrag = {
+        anchorId: anchor.id(),
+        anchorStart: {...anchor.position()},
+        origins
+      };
+    });
+    cy.on('drag', 'node', (event) => {
+      const groupDrag = state.groupDrag;
+      if (groupDrag && groupDrag.anchorId === event.target.id()) {
+        const current = event.target.position();
+        const dx = current.x - groupDrag.anchorStart.x;
+        const dy = current.y - groupDrag.anchorStart.y;
+        cy.batch(() => {
+          for (const [nodeId, origin] of groupDrag.origins) {
+            if (nodeId === groupDrag.anchorId) continue;
+            cy.getElementById(nodeId).position({x: origin.x + dx, y: origin.y + dy});
+          }
+        });
+      }
+      const fixedIds = groupDrag && groupDrag.anchorId === event.target.id()
+        ? [...groupDrag.origins.keys()]
+        : [event.target.id()];
+      scheduleDynamicForces(fixedIds, DYNAMIC_FORCE_DRAG_PASSES);
+    });
     cy.on('dragfree', 'node', (event) => {
       const node = event.target;
-      state.pinned.set(node.id(), {...node.position()});
+      const groupDrag = state.groupDrag && state.groupDrag.anchorId === node.id()
+        ? state.groupDrag
+        : null;
+      const movedIds = groupDrag ? [...groupDrag.origins.keys()] : [node.id()];
+      for (const nodeId of movedIds) {
+        const movedNode = cy.getElementById(nodeId);
+        if (movedNode.length) state.pinned.set(nodeId, {...movedNode.position()});
+      }
+      dom.cy.dataset.lastMovedSelectionCount = String(movedIds.length);
+      scheduleDynamicForces(movedIds, DYNAMIC_FORCE_SETTLE_PASSES);
+      state.groupDrag = null;
       scheduleNodeControlSync();
     });
     cy.on('pan zoom position render resize', scheduleNodeControlSync);
@@ -727,6 +855,7 @@
       hideNodeNameTooltip();
     });
     dom.cy.addEventListener('contextmenu', (event) => event.preventDefault());
+    bindPointerIntent();
     bindTrackpadNavigation();
     for (const button of dom.contextCommands) {
       button.addEventListener('click', () => runContextCommand(button.dataset.contextCommand));
@@ -917,15 +1046,41 @@
     return eligibleNodeIds();
   }
 
+  function setCanvasNodeSelection(nodeIds, activeId) {
+    state.boxSelectedNodeIds.clear();
+    state.selectedNodeIds = new Set(nodeIds.filter((nodeId) => {
+      const element = cy.getElementById(nodeId);
+      return element.length && element.isNode();
+    }));
+    state.selectedId = activeId || null;
+    restoreCanvasSelection();
+  }
+
+  function restoreCanvasSelection() {
+    cy.elements().unselect();
+    cy.nodes().removeClass('box-selected');
+    let visibleSelectedCount = 0;
+    for (const nodeId of state.selectedNodeIds) {
+      const element = cy.getElementById(nodeId);
+      if (!element.length || element.hasClass('hidden')) continue;
+      element.select();
+      if (state.boxSelectedNodeIds.has(nodeId)) element.addClass('box-selected');
+      visibleSelectedCount += 1;
+    }
+    if (edgeById.has(state.selectedId)) {
+      const edge = cy.getElementById(state.selectedId);
+      if (edge.length && !edge.hasClass('hidden')) edge.select();
+    }
+    dom.cy.dataset.selectedNodeCount = String(visibleSelectedCount);
+  }
+
   function refreshSurface(options) {
     const preserveViewport = !options || options.preserveViewport !== false;
     const viewport = preserveViewport ? {zoom: cy.zoom(), pan: {...cy.pan()}} : null;
     const visibleIds = currentVisibleIds();
     setVisibility(visibleIds);
     applyNodeSizingClasses();
-    cy.elements().unselect();
-    const selected = cy.getElementById(state.selectedId || '');
-    if (selected.length && !selected.hasClass('hidden')) selected.select();
+    restoreCanvasSelection();
     updateViewDescription();
     updateButtons();
     updateNavigation();
@@ -959,13 +1114,27 @@
     return left.size === right.size && [...left].every((value) => right.has(value));
   }
 
-  function commitSizing(nextMinimizedNodeIds, label) {
+  function scheduleSizingConvergence(delta) {
+    const changedNodeIds = new Set([...delta.added, ...delta.removed]);
+    if (!changedNodeIds.size) return;
+    scheduleDynamicForces(
+      delta.anchorNodeIds || [],
+      DYNAMIC_FORCE_SETTLE_PASSES,
+      changedNodeIds,
+      'sizing'
+    );
+    dom.cy.dataset.lastSizingConvergenceNodeCount = String(changedNodeIds.size);
+    dom.cy.dataset.lastSizingConvergencePasses = String(DYNAMIC_FORCE_SETTLE_PASSES);
+  }
+
+  function commitSizing(nextMinimizedNodeIds, label, anchorNodeIds) {
     const next = new Set([...nextMinimizedNodeIds].filter((nodeId) => nodeById.has(nodeId)));
     if (sameSet(state.minimizedNodeIds, next)) return false;
     const delta = {
       added: [...next].filter((nodeId) => !state.minimizedNodeIds.has(nodeId)),
       removed: [...state.minimizedNodeIds].filter((nodeId) => !next.has(nodeId)),
-      label
+      label,
+      anchorNodeIds: [...new Set(anchorNodeIds || [])]
     };
     state.sizingUndoStack.push(delta);
     if (state.sizingUndoStack.length > SIZE_HISTORY_LIMIT) state.sizingUndoStack.shift();
@@ -973,6 +1142,7 @@
     state.minimizedNodeIds = next;
     closeNodeContextMenu();
     refreshSurface({preserveViewport: true});
+    scheduleSizingConvergence(delta);
     return true;
   }
 
@@ -984,6 +1154,7 @@
     for (const nodeId of add) next.add(nodeId);
     state.minimizedNodeIds = next;
     refreshSurface({preserveViewport: true});
+    scheduleSizingConvergence(delta);
   }
 
   function undoSizing() {
@@ -1005,7 +1176,7 @@
     const next = new Set(state.minimizedNodeIds);
     if (next.has(nodeId)) next.delete(nodeId);
     else next.add(nodeId);
-    commitSizing(next, `toggle:${nodeId}`);
+    commitSizing(next, `toggle:${nodeId}`, [nodeId]);
   }
 
   function maximizeAllCards() {
@@ -1035,7 +1206,7 @@
       if (closure.has(eligibleId)) next.delete(eligibleId);
       else next.add(eligibleId);
     }
-    commitSizing(next, `complete-path:${nodeId}`);
+    commitSizing(next, `complete-path:${nodeId}`, [nodeId]);
     showNodeDetail(nodeId);
   }
 
@@ -1053,7 +1224,7 @@
       if (closure.has(eligibleId)) next.delete(eligibleId);
       else next.add(eligibleId);
     }
-    commitSizing(next, `theme-path:${themeId}`);
+    commitSizing(next, `theme-path:${themeId}`, [`reader-theme:${themeId}`]);
     showThemeDetail(themeId);
   }
 
@@ -1061,7 +1232,7 @@
     if (!nodeEligible(nodeId)) return;
     const next = new Set(state.minimizedNodeIds);
     for (const closureId of directedClosureNodeIds(nodeId, direction)) next.delete(closureId);
-    commitSizing(next, `${direction}:${nodeId}`);
+    commitSizing(next, `${direction}:${nodeId}`, [nodeId]);
     showNodeDetail(nodeId);
   }
 
@@ -1163,23 +1334,429 @@
     }
   }
 
-  function layoutCrossingScore(groups, ranks, baselineIndex) {
-    const position = new Map();
+  function coreDistanceRanks() {
+    const neighbors = new Map(readerNodeIds.map((nodeId) => [nodeId, []]));
+    for (const edge of packet.edges) {
+      if (!neighbors.has(edge.source) || !neighbors.has(edge.target)) continue;
+      neighbors.get(edge.source).push(edge.target);
+      neighbors.get(edge.target).push(edge.source);
+    }
+    for (const adjacent of neighbors.values()) {
+      adjacent.sort((left, right) => (
+        nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
+    }
+    const ranks = new Map();
+    const queue = [];
+    for (const targetId of packet.target_order) {
+      if (!nodeById.has(targetId) || ranks.has(targetId)) continue;
+      ranks.set(targetId, 0);
+      queue.push(targetId);
+    }
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const current = queue[cursor];
+      const nextRank = ranks.get(current) + 1;
+      for (const neighborId of neighbors.get(current)) {
+        if (ranks.has(neighborId)) continue;
+        ranks.set(neighborId, nextRank);
+        queue.push(neighborId);
+      }
+    }
+    const outerRank = Math.max(0, ...ranks.values()) + 1;
+    for (const nodeId of readerNodeIds) {
+      if (!ranks.has(nodeId)) ranks.set(nodeId, outerRank);
+    }
+    return ranks;
+  }
+
+  function radialRingRadii(groups) {
+    const radii = new Map();
+    const orderedRanks = [...groups.keys()].sort((left, right) => left - right);
+    const targetCount = (groups.get(0) || []).length;
+    const radiusForChordSpacing = (count, spacing) => (
+      count <= 1 ? 0 : spacing / (2 * Math.sin(Math.PI / count))
+    );
+    let previousRadius = targetCount <= 1
+      ? 0
+      : Math.max(
+        RADIAL_TARGET_MIN_RADIUS,
+        radiusForChordSpacing(targetCount, RADIAL_TARGET_ARC_SPACING)
+      );
+    radii.set(0, previousRadius);
+    let previousMaximumHalfWidth = Math.max(
+      0,
+      ...(groups.get(0) || []).map((nodeId) => layoutNodeFootprint(nodeId).width / 2)
+    );
+    for (const rank of orderedRanks) {
+      if (rank === 0) continue;
+      const nodeIds = groups.get(rank);
+      const nodeCount = nodeIds.length;
+      const maximumHeight = Math.max(
+        0,
+        ...nodeIds.map((nodeId) => layoutNodeFootprint(nodeId).height)
+      );
+      const currentMaximumHalfWidth = Math.max(
+        0,
+        ...nodeIds.map((nodeId) => layoutNodeFootprint(nodeId).width / 2)
+      );
+      const densityRadius = radiusForChordSpacing(
+        nodeCount,
+        Math.max(
+          RADIAL_NODE_ARC_SPACING,
+          maximumHeight + RADIAL_VISIBLE_EDGE_GAP + RADIAL_LAYOUT_SPACING_MARGIN
+        )
+      );
+      const baseRingSpacing = rank === 1
+        ? RADIAL_FIRST_RING_SPACING
+        : RADIAL_OUTER_RING_SPACING;
+      const ringSpacing = Math.max(
+        baseRingSpacing,
+        previousMaximumHalfWidth
+          + currentMaximumHalfWidth
+          + RADIAL_VISIBLE_EDGE_GAP
+          + RADIAL_LAYOUT_SPACING_MARGIN
+      );
+      previousRadius = Math.max(previousRadius + ringSpacing, densityRadius);
+      radii.set(rank, previousRadius);
+      previousMaximumHalfWidth = currentMaximumHalfWidth;
+    }
+    return radii;
+  }
+
+  function wrapLayoutAngle(angle) {
+    return Math.atan2(Math.sin(angle), Math.cos(angle));
+  }
+
+  function radialLayoutCoordinates(groups) {
+    const positions = new Map();
+    const radii = radialRingRadii(groups);
+    const rankByNode = new Map();
     for (const [rank, nodeIds] of groups) {
-      nodeIds.forEach((nodeId, index) => position.set(nodeId, {x: rank, y: index}));
+      for (const nodeId of nodeIds) rankByNode.set(nodeId, rank);
     }
     const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    for (const [rank, nodeIds] of [...groups.entries()].sort((left, right) => left[0] - right[0])) {
+      const radius = radii.get(rank) || 0;
+      const count = nodeIds.length;
+      const ringPhase = rank === 0 ? 0 : rank * RADIAL_RING_PHASE;
+      const stagger = rank > 0 && rank % 2 === 1 && count > 1 ? Math.PI / count : 0;
+      let baseAngle = RADIAL_START_ANGLE + ringPhase + stagger;
+      if (rank > 0 && count) {
+        const indexByNode = new Map(nodeIds.map((nodeId, index) => [nodeId, index]));
+        let phaseVectorX = 0;
+        let phaseVectorY = 0;
+        let phaseWeight = 0;
+        for (const edge of packet.edges) {
+          const currentId = indexByNode.has(edge.source)
+            ? edge.source
+            : indexByNode.has(edge.target)
+              ? edge.target
+              : null;
+          if (!currentId) continue;
+          const neighborId = currentId === edge.source ? edge.target : edge.source;
+          if ((rankByNode.get(neighborId) ?? rank) >= rank) continue;
+          const neighborPosition = positions.get(neighborId);
+          if (!neighborPosition || Math.hypot(neighborPosition.x, neighborPosition.y) < 0.001) continue;
+          const desiredNodeAngle = Math.atan2(neighborPosition.y, neighborPosition.x);
+          const desiredBaseAngle = desiredNodeAngle
+            - (2 * Math.PI * indexByNode.get(currentId)) / count;
+          const weight = edgeWeight[edge.category] || 1;
+          phaseVectorX += Math.cos(desiredBaseAngle) * weight;
+          phaseVectorY += Math.sin(desiredBaseAngle) * weight;
+          phaseWeight += weight;
+        }
+        if (phaseWeight && Math.hypot(phaseVectorX, phaseVectorY) > 0.001) {
+          baseAngle = Math.atan2(phaseVectorY, phaseVectorX);
+        }
+      }
+      nodeIds.forEach((nodeId, index) => {
+        if (radius === 0) {
+          positions.set(nodeId, {x: 0, y: 0});
+          return;
+        }
+        const angle = baseAngle + (2 * Math.PI * index) / count;
+        positions.set(nodeId, {
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius
+        });
+      });
+    }
+    return positions;
+  }
+
+  function layoutNodeFootprint(nodeId) {
+    const node = nodeById.get(nodeId);
+    const role = node ? node.reader_role : 'explanation';
+    const footprints = state.minimizedNodeIds.has(nodeId)
+      ? COMPACT_LAYOUT_NODE_FOOTPRINTS
+      : FULL_LAYOUT_NODE_FOOTPRINTS;
+    return footprints[role] || footprints.explanation;
+  }
+
+  function layoutCollisionRadius(nodeId) {
+    const footprint = layoutNodeFootprint(nodeId);
+    return Math.hypot(footprint.width, footprint.height) / 2;
+  }
+
+  function layoutNodeBoundaryExtent(nodeId, directionX, directionY) {
+    const footprint = layoutNodeFootprint(nodeId);
+    const length = Math.hypot(directionX, directionY);
+    if (length < 0.000001) return layoutCollisionRadius(nodeId);
+    const unitX = Math.abs(directionX / length);
+    const unitY = Math.abs(directionY / length);
+    const horizontal = unitX < 0.000001 ? Number.POSITIVE_INFINITY : footprint.width / (2 * unitX);
+    const vertical = unitY < 0.000001 ? Number.POSITIVE_INFINITY : footprint.height / (2 * unitY);
+    return Math.min(horizontal, vertical);
+  }
+
+  function layoutNodeBoundaryGap(leftId, rightId, left, right) {
+    const deltaX = right.x - left.x;
+    const deltaY = right.y - left.y;
+    const distance = Math.hypot(deltaX, deltaY);
+    return distance
+      - layoutNodeBoundaryExtent(leftId, deltaX, deltaY)
+      - layoutNodeBoundaryExtent(rightId, -deltaX, -deltaY);
+  }
+
+  function dynamicBoundaryExtent(extent, directionX, directionY) {
+    const length = Math.hypot(directionX, directionY);
+    if (length < 0.000001) return Math.hypot(extent.halfWidth, extent.halfHeight);
+    const unitX = Math.abs(directionX / length);
+    const unitY = Math.abs(directionY / length);
+    const horizontal = unitX < 0.000001
+      ? Number.POSITIVE_INFINITY
+      : extent.halfWidth / unitX;
+    const vertical = unitY < 0.000001
+      ? Number.POSITIVE_INFINITY
+      : extent.halfHeight / unitY;
+    return Math.min(horizontal, vertical);
+  }
+
+  function applyDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
+    const visibleNodes = [...cy.nodes().filter((node) => !node.hasClass('hidden'))]
+      .sort((left, right) => left.id().localeCompare(right.id()));
+    if (!visibleNodes.length || visibleNodes.length > DYNAMIC_FORCE_NODE_LIMIT) return 0;
+    const visibleNodeIds = new Set(visibleNodes.map((node) => node.id()));
+    const fixed = new Set([...fixedNodeIds].filter((nodeId) => visibleNodeIds.has(nodeId)));
+    const seeds = new Set([...(seedNodeIds || fixed)].filter((nodeId) => visibleNodeIds.has(nodeId)));
+    const positions = new Map(visibleNodes.map((node) => [node.id(), {...node.position()}]));
+    const extents = new Map(visibleNodes.map((node) => {
+      const box = node.boundingBox({includeLabels: true, includeOverlays: false});
+      return [node.id(), {
+        halfWidth: Math.max(20, box.w / 2),
+        halfHeight: Math.max(20, box.h / 2)
+      }];
+    }));
+    const relationWeight = {prerequisite: 1, support: 0.78, repair: 0.5, conflict: 0.36};
+    const visibleEdges = [...cy.edges().filter((edge) => !edge.hasClass('hidden'))]
+      .map((edge) => ({
+        sourceId: edge.source().id(),
+        targetId: edge.target().id(),
+        weight: edge.data('kind') === 'reader-grouping'
+          ? 0.72
+          : relationWeight[edge.data('category')] || 0.5
+      }))
+      .filter((edge) => visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId));
+    const attractionNeighborhood = new Set(seeds);
+    for (let depth = 0; depth < 2; depth += 1) {
+      const current = new Set(attractionNeighborhood);
+      const next = new Set(attractionNeighborhood);
+      for (const edge of visibleEdges) {
+        if (!current.has(edge.sourceId) && !current.has(edge.targetId)) continue;
+        next.add(edge.sourceId);
+        next.add(edge.targetId);
+      }
+      for (const nodeId of next) attractionNeighborhood.add(nodeId);
+    }
+    const boundaryGap = (leftId, rightId) => {
+      const left = positions.get(leftId);
+      const right = positions.get(rightId);
+      const deltaX = right.x - left.x;
+      const deltaY = right.y - left.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      return {
+        deltaX,
+        deltaY,
+        distance,
+        gap: distance
+          - dynamicBoundaryExtent(extents.get(leftId), deltaX, deltaY)
+          - dynamicBoundaryExtent(extents.get(rightId), -deltaX, -deltaY)
+      };
+    };
+    const moved = new Set();
+    let repulsionPairs = 0;
+    let attractionEdges = 0;
+    const passes = Math.max(1, Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1));
+    let executedPasses = 0;
+    for (let pass = 0; pass < passes; pass += 1) {
+      executedPasses += 1;
+      const displacement = new Map(visibleNodes.map((node) => [node.id(), {x: 0, y: 0}]));
+      let applied = false;
+      for (let leftIndex = 0; leftIndex < visibleNodes.length; leftIndex += 1) {
+        const leftId = visibleNodes[leftIndex].id();
+        const leftFixed = fixed.has(leftId);
+        for (let rightIndex = leftIndex + 1; rightIndex < visibleNodes.length; rightIndex += 1) {
+          const rightId = visibleNodes[rightIndex].id();
+          const rightFixed = fixed.has(rightId);
+          if (leftFixed && rightFixed) continue;
+          if (!attractionNeighborhood.has(leftId) && !attractionNeighborhood.has(rightId)) continue;
+          let measure = boundaryGap(leftId, rightId);
+          if (measure.gap >= RADIAL_VISIBLE_EDGE_GAP) continue;
+          if (measure.distance < 0.000001) {
+            const angle = ((leftIndex + 1) * RADIAL_RING_PHASE) % (2 * Math.PI);
+            measure = {...measure, deltaX: Math.cos(angle), deltaY: Math.sin(angle), distance: 1};
+          }
+          const unitX = measure.deltaX / measure.distance;
+          const unitY = measure.deltaY / measure.distance;
+          const clearanceDeficit = RADIAL_VISIBLE_EDGE_GAP - measure.gap;
+          const remainingPasses = passes - pass;
+          const push = Math.min(
+            DYNAMIC_FORCE_MAX_STEP,
+            Math.max(
+              clearanceDeficit * DYNAMIC_REPULSION_STRENGTH,
+              clearanceDeficit / remainingPasses
+            )
+          );
+          if (!leftFixed) {
+            const share = rightFixed ? push : push / 2;
+            displacement.get(leftId).x -= unitX * share;
+            displacement.get(leftId).y -= unitY * share;
+          }
+          if (!rightFixed) {
+            const share = leftFixed ? push : push / 2;
+            displacement.get(rightId).x += unitX * share;
+            displacement.get(rightId).y += unitY * share;
+          }
+          repulsionPairs += 1;
+          applied = true;
+        }
+      }
+      for (const edge of visibleEdges) {
+        if (!attractionNeighborhood.has(edge.sourceId) && !attractionNeighborhood.has(edge.targetId)) continue;
+        const sourceFixed = fixed.has(edge.sourceId);
+        const targetFixed = fixed.has(edge.targetId);
+        if (sourceFixed && targetFixed) continue;
+        const measure = boundaryGap(edge.sourceId, edge.targetId);
+        if (measure.distance < 0.000001 || measure.gap <= DYNAMIC_ATTRACTION_TARGET_GAP) continue;
+        const unitX = measure.deltaX / measure.distance;
+        const unitY = measure.deltaY / measure.distance;
+        const pull = Math.min(
+          DYNAMIC_FORCE_MAX_STEP / 2,
+          (measure.gap - DYNAMIC_ATTRACTION_TARGET_GAP)
+            * DYNAMIC_ATTRACTION_STRENGTH
+            * edge.weight
+        );
+        if (!sourceFixed) {
+          const share = targetFixed ? pull : pull / 2;
+          displacement.get(edge.sourceId).x += unitX * share;
+          displacement.get(edge.sourceId).y += unitY * share;
+        }
+        if (!targetFixed) {
+          const share = sourceFixed ? pull : pull / 2;
+          displacement.get(edge.targetId).x -= unitX * share;
+          displacement.get(edge.targetId).y -= unitY * share;
+        }
+        attractionEdges += 1;
+        applied = true;
+      }
+      if (!applied) continue;
+      cy.batch(() => {
+        for (const node of visibleNodes) {
+          const nodeId = node.id();
+          if (fixed.has(nodeId)) continue;
+          const delta = displacement.get(nodeId);
+          const magnitude = Math.hypot(delta.x, delta.y);
+          if (magnitude < 0.01) continue;
+          const scale = Math.min(1, DYNAMIC_FORCE_MAX_STEP / magnitude);
+          const previous = positions.get(nodeId);
+          const next = {
+            x: previous.x + delta.x * scale,
+            y: previous.y + delta.y * scale
+          };
+          positions.set(nodeId, next);
+          node.position(next);
+          state.pinned.set(nodeId, next);
+          attractionNeighborhood.add(nodeId);
+          moved.add(nodeId);
+        }
+      });
+    }
+    dom.cy.dataset.dynamicForceMovedCount = String(moved.size);
+    dom.cy.dataset.dynamicForceFixedCount = String(fixed.size);
+    dom.cy.dataset.dynamicForceSeedCount = String(seeds.size);
+    dom.cy.dataset.dynamicForceRequestedPasses = String(passes);
+    dom.cy.dataset.dynamicForceExecutedPasses = String(executedPasses);
+    dom.cy.dataset.dynamicForceReason = reason || 'direct-manipulation';
+    dom.cy.dataset.dynamicRepulsionPairs = String(repulsionPairs);
+    dom.cy.dataset.dynamicAttractionEdges = String(attractionEdges);
+    if (moved.size) scheduleNodeControlSync();
+    return moved.size;
+  }
+
+  function scheduleDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
+    pendingDynamicFixedIds = new Set(fixedNodeIds);
+    pendingDynamicSeedIds = new Set(seedNodeIds || fixedNodeIds);
+    pendingDynamicPasses = Math.max(pendingDynamicPasses, passLimit || 1);
+    pendingDynamicReason = reason || 'direct-manipulation';
+    if (dynamicForcesFrame) return;
+    dynamicForcesFrame = window.requestAnimationFrame(() => {
+      dynamicForcesFrame = 0;
+      const fixed = pendingDynamicFixedIds;
+      const seeds = pendingDynamicSeedIds;
+      const passes = pendingDynamicPasses;
+      const forceReason = pendingDynamicReason;
+      pendingDynamicFixedIds = new Set();
+      pendingDynamicSeedIds = new Set();
+      pendingDynamicPasses = 0;
+      pendingDynamicReason = 'direct-manipulation';
+      applyDynamicForces(fixed, passes, seeds, forceReason);
+    });
+  }
+
+  function cancelScheduledDynamicForces() {
+    if (dynamicForcesFrame) window.cancelAnimationFrame(dynamicForcesFrame);
+    dynamicForcesFrame = 0;
+    pendingDynamicFixedIds = new Set();
+    pendingDynamicSeedIds = new Set();
+    pendingDynamicPasses = 0;
+    pendingDynamicReason = 'direct-manipulation';
+  }
+
+  function layoutGeometryScore(position, groups, baselineIndex) {
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
     const segments = [];
+    let maximumEdgeLength = 0;
+    let totalEdgeLength = 0;
+    let weightedEdgeLength = 0;
+    let minimumEdgeClearance = Number.POSITIVE_INFINITY;
+    let edgeClearanceViolationCount = 0;
+    let edgeClearancePenalty = 0;
     for (const edge of packet.edges) {
       const source = position.get(edge.source);
       const target = position.get(edge.target);
-      if (!source || !target || source.x === target.x) continue;
+      if (!source || !target) continue;
+      const weight = edgeWeight[edge.category] || 1;
+      const length = Math.hypot(target.x - source.x, target.y - source.y);
+      maximumEdgeLength = Math.max(maximumEdgeLength, length);
+      totalEdgeLength += length;
+      weightedEdgeLength += length * weight;
+      const edgeClearance = layoutNodeBoundaryGap(
+        edge.source,
+        edge.target,
+        source,
+        target
+      );
+      minimumEdgeClearance = Math.min(minimumEdgeClearance, edgeClearance);
+      if (edgeClearance < RADIAL_VISIBLE_EDGE_GAP) {
+        edgeClearanceViolationCount += 1;
+        edgeClearancePenalty += (RADIAL_VISIBLE_EDGE_GAP - edgeClearance) ** 2;
+      }
       segments.push({
         sourceId: edge.source,
         targetId: edge.target,
         source,
         target,
-        weight: edgeWeight[edge.category] || 1
+        weight
       });
     }
     if (segments.length > CROSSING_REDUCTION_EDGE_LIMIT) return null;
@@ -1216,27 +1793,209 @@
         weightedPenalty += left.weight * right.weight;
       }
     }
-    let packetOrderDisplacement = 0;
-    for (const [nodeId, coordinates] of position) {
-      packetOrderDisplacement += Math.abs(coordinates.y - baselineIndex.get(nodeId));
+    const positionedNodeIds = [...groups.values()].flat().filter((nodeId) => position.has(nodeId));
+    let collisionCount = 0;
+    let collisionPenalty = 0;
+    for (let leftIndex = 0; leftIndex < positionedNodeIds.length; leftIndex += 1) {
+      const leftId = positionedNodeIds[leftIndex];
+      const left = position.get(leftId);
+      for (let rightIndex = leftIndex + 1; rightIndex < positionedNodeIds.length; rightIndex += 1) {
+        const rightId = positionedNodeIds[rightIndex];
+        const right = position.get(rightId);
+        const boundaryGap = layoutNodeBoundaryGap(leftId, rightId, left, right);
+        if (boundaryGap >= RADIAL_VISIBLE_EDGE_GAP) continue;
+        collisionCount += 1;
+        collisionPenalty += (RADIAL_VISIBLE_EDGE_GAP - boundaryGap) ** 2;
+      }
     }
-    return {crossings, weightedPenalty, packetOrderDisplacement};
+    let packetOrderDisplacement = 0;
+    for (const nodeIds of groups.values()) {
+      nodeIds.forEach((nodeId, index) => {
+        packetOrderDisplacement += Math.abs(index - baselineIndex.get(nodeId));
+      });
+    }
+    return {
+      crossings,
+      collisionCount,
+      collisionPenalty,
+      minimumEdgeClearance: Number.isFinite(minimumEdgeClearance) ? minimumEdgeClearance : 0,
+      edgeClearanceViolationCount,
+      edgeClearancePenalty,
+      maximumEdgeLength,
+      totalEdgeLength,
+      weightedEdgeLength,
+      weightedPenalty,
+      packetOrderDisplacement
+    };
+  }
+
+  function layoutCrossingScore(groups, ranks, baselineIndex) {
+    return layoutGeometryScore(radialLayoutCoordinates(groups), groups, baselineIndex);
   }
 
   function crossingScoreIsBetter(candidate, incumbent) {
     if (!candidate || !incumbent) return false;
-    return (
-      candidate.crossings < incumbent.crossings
-      || (
-        candidate.crossings === incumbent.crossings
-        && candidate.weightedPenalty < incumbent.weightedPenalty
-      )
-      || (
-        candidate.crossings === incumbent.crossings
-        && candidate.weightedPenalty === incumbent.weightedPenalty
-        && candidate.packetOrderDisplacement < incumbent.packetOrderDisplacement
-      )
-    );
+    const numericOrder = [
+      'crossings',
+      'collisionCount',
+      'collisionPenalty',
+      'edgeClearanceViolationCount',
+      'edgeClearancePenalty',
+      'maximumEdgeLength',
+      'weightedEdgeLength',
+      'weightedPenalty',
+      'packetOrderDisplacement'
+    ];
+    for (const key of numericOrder) {
+      if (candidate[key] < incumbent[key] - 0.000001) return true;
+      if (candidate[key] > incumbent[key] + 0.000001) return false;
+    }
+    return false;
+  }
+
+  function compactRadialCoordinates(groups, ranks) {
+    const seedPositions = radialLayoutCoordinates(groups);
+    const baselineIndex = new Map();
+    for (const nodeIds of groups.values()) {
+      nodeIds.forEach((nodeId, index) => baselineIndex.set(nodeId, index));
+    }
+    const baselineScore = layoutGeometryScore(seedPositions, groups, baselineIndex);
+    if (
+      !baselineScore
+      || readerNodeIds.length > RADIAL_RELAXATION_NODE_LIMIT
+      || packet.edges.length > CROSSING_REDUCTION_EDGE_LIMIT
+    ) {
+      return {
+        positions: seedPositions,
+        evaluated: false,
+        baselineScore,
+        finalScore: baselineScore,
+        acceptedBlend: 0
+      };
+    }
+
+    const radii = radialRingRadii(groups);
+    const angles = new Map();
+    const seedAngles = new Map();
+    for (const [nodeId, position] of seedPositions) {
+      const angle = Math.atan2(position.y, position.x);
+      angles.set(nodeId, angle);
+      seedAngles.set(nodeId, angle);
+    }
+    const layoutEdges = packet.edges.filter((edge) => (
+      angles.has(edge.source) && angles.has(edge.target)
+    ));
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    const rankZero = new Set(groups.get(0) || []);
+
+    for (let iteration = 0; iteration < RADIAL_RELAXATION_ITERATIONS; iteration += 1) {
+      const force = new Map(readerNodeIds.map((nodeId) => [nodeId, 0]));
+      const incidentWeight = new Map(readerNodeIds.map((nodeId) => [nodeId, 0]));
+      for (const edge of layoutEdges) {
+        const sourceRadius = radii.get(ranks.get(edge.source)) || 0;
+        const targetRadius = radii.get(ranks.get(edge.target)) || 0;
+        if (sourceRadius === 0 || targetRadius === 0) continue;
+        const weight = edgeWeight[edge.category] || 1;
+        const delta = wrapLayoutAngle(angles.get(edge.target) - angles.get(edge.source));
+        const angularPull = Math.sin(delta) * weight;
+        if (!rankZero.has(edge.source)) {
+          force.set(edge.source, force.get(edge.source) + angularPull);
+          incidentWeight.set(edge.source, incidentWeight.get(edge.source) + weight);
+        }
+        if (!rankZero.has(edge.target)) {
+          force.set(edge.target, force.get(edge.target) - angularPull);
+          incidentWeight.set(edge.target, incidentWeight.get(edge.target) + weight);
+        }
+      }
+
+      for (const [rank, nodeIds] of groups) {
+        if (rank === 0 || nodeIds.length < 2) continue;
+        const radius = radii.get(rank) || 0;
+        if (!radius) continue;
+        for (let leftIndex = 0; leftIndex < nodeIds.length; leftIndex += 1) {
+          const leftId = nodeIds[leftIndex];
+          for (let rightIndex = leftIndex + 1; rightIndex < nodeIds.length; rightIndex += 1) {
+            const rightId = nodeIds[rightIndex];
+            const minimumChord = Math.max(
+              148,
+              layoutCollisionRadius(leftId)
+                + layoutCollisionRadius(rightId)
+                + RADIAL_VISIBLE_EDGE_GAP
+            );
+            const minimumAngle = 2 * Math.asin(Math.min(1, minimumChord / (2 * radius)));
+            const delta = wrapLayoutAngle(angles.get(rightId) - angles.get(leftId));
+            const separation = Math.abs(delta);
+            if (separation >= minimumAngle) continue;
+            const direction = delta >= 0 ? 1 : -1;
+            const push = RADIAL_RING_REPULSION
+              * (minimumAngle - separation)
+              / Math.max(minimumAngle, 0.000001);
+            force.set(leftId, force.get(leftId) - direction * push);
+            force.set(rightId, force.get(rightId) + direction * push);
+          }
+        }
+      }
+
+      const progress = iteration / Math.max(1, RADIAL_RELAXATION_ITERATIONS - 1);
+      const step = RADIAL_RELAXATION_START_STEP
+        + (RADIAL_RELAXATION_END_STEP - RADIAL_RELAXATION_START_STEP) * progress;
+      for (const [rank, nodeIds] of groups) {
+        if (rank === 0) continue;
+        for (const nodeId of nodeIds) {
+          const normalizedPull = force.get(nodeId) / Math.max(1, incidentWeight.get(nodeId));
+          const tether = wrapLayoutAngle(seedAngles.get(nodeId) - angles.get(nodeId))
+            * RADIAL_SEED_TETHER;
+          const delta = Math.max(-step, Math.min(step, normalizedPull + tether));
+          angles.set(nodeId, wrapLayoutAngle(angles.get(nodeId) + delta));
+        }
+      }
+    }
+
+    let bestPositions = seedPositions;
+    let bestScore = baselineScore;
+    let acceptedBlend = 0;
+    for (const blend of RADIAL_REFINEMENT_BLEND_FACTORS) {
+      const candidatePositions = new Map();
+      for (const [rank, nodeIds] of groups) {
+        const radius = radii.get(rank) || 0;
+        for (const nodeId of nodeIds) {
+          if (!radius) {
+            candidatePositions.set(nodeId, {x: 0, y: 0});
+            continue;
+          }
+          const angle = seedAngles.get(nodeId)
+            + wrapLayoutAngle(angles.get(nodeId) - seedAngles.get(nodeId)) * blend;
+          candidatePositions.set(nodeId, {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius
+          });
+        }
+      }
+      const candidateScore = layoutGeometryScore(candidatePositions, groups, baselineIndex);
+      if (
+        !candidateScore
+        || candidateScore.crossings > baselineScore.crossings
+        || candidateScore.collisionCount > baselineScore.collisionCount
+        || candidateScore.collisionPenalty > baselineScore.collisionPenalty + 0.000001
+        || candidateScore.edgeClearanceViolationCount > baselineScore.edgeClearanceViolationCount
+        || candidateScore.edgeClearancePenalty > baselineScore.edgeClearancePenalty + 0.000001
+        || candidateScore.minimumEdgeClearance + 0.000001
+          < Math.min(RADIAL_VISIBLE_EDGE_GAP, baselineScore.minimumEdgeClearance)
+        || candidateScore.maximumEdgeLength > baselineScore.maximumEdgeLength + 0.000001
+        || candidateScore.totalEdgeLength > baselineScore.totalEdgeLength + 0.000001
+      ) continue;
+      if (!crossingScoreIsBetter(candidateScore, bestScore)) continue;
+      bestPositions = candidatePositions;
+      bestScore = candidateScore;
+      acceptedBlend = blend;
+    }
+    return {
+      positions: bestPositions,
+      evaluated: true,
+      baselineScore,
+      finalScore: bestScore,
+      acceptedBlend
+    };
   }
 
   function reduceEdgeCrossings(groups, ranks) {
@@ -1267,21 +2026,25 @@
         const previousIndex = new Map(ids.map((nodeId, index) => [nodeId, index]));
         const score = new Map();
         for (const nodeId of ids) {
-          let weightedPosition = 0;
+          let weightedVectorX = 0;
+          let weightedVectorY = 0;
           let totalWeight = 0;
           for (const neighbor of neighbors.get(nodeId)) {
             const position = orderIndex.get(neighbor.nodeId);
             if (!position) continue;
             const usable = towardLowerRanks ? position.rank < rank : position.rank > rank;
             if (!usable) continue;
-            weightedPosition += position.normalized * neighbor.weight;
+            const angle = position.normalized * 2 * Math.PI;
+            weightedVectorX += Math.cos(angle) * neighbor.weight;
+            weightedVectorY += Math.sin(angle) * neighbor.weight;
             totalWeight += neighbor.weight;
           }
+          const circularPosition = totalWeight
+            ? ((Math.atan2(weightedVectorY, weightedVectorX) / (2 * Math.PI)) + 1) % 1
+            : (previousIndex.get(nodeId) + 0.5) / ids.length;
           score.set(
             nodeId,
-            totalWeight
-              ? weightedPosition / totalWeight
-              : (previousIndex.get(nodeId) + 0.5) / ids.length
+            circularPosition
           );
         }
         ids.sort((left, right) => (
@@ -1306,13 +2069,19 @@
     let bestOrder = cloneGroupOrder(groups);
     let bestScore = layoutCrossingScore(groups, ranks, baselineIndex);
     if (!bestScore) {
-      return {evaluated: false, baselineCrossings: null, finalCrossings: null};
+      return {
+        evaluated: false,
+        baselineCrossings: null,
+        finalCrossings: null,
+        refinementCandidates: 0
+      };
     }
     const considerCurrentOrder = () => {
       const candidateScore = layoutCrossingScore(groups, ranks, baselineIndex);
-      if (!crossingScoreIsBetter(candidateScore, bestScore)) return;
+      if (!crossingScoreIsBetter(candidateScore, bestScore)) return false;
       bestScore = candidateScore;
       bestOrder = cloneGroupOrder(groups);
+      return true;
     };
 
     for (let iteration = 0; iteration < CROSSING_REDUCTION_SWEEPS; iteration += 1) {
@@ -1322,11 +2091,42 @@
       considerCurrentOrder();
     }
     restoreGroupOrder(groups, bestOrder);
+    let refinementCandidates = 0;
+    for (
+      let pass = 0;
+      pass < CROSSING_REFINEMENT_PASSES
+        && refinementCandidates < CROSSING_REFINEMENT_CANDIDATE_LIMIT;
+      pass += 1
+    ) {
+      let improved = false;
+      for (const rank of orderedRanks) {
+        const ids = groups.get(rank);
+        if (!ids || ids.length < 2) continue;
+        const swapCount = ids.length === 2 ? 1 : ids.length;
+        for (
+          let index = 0;
+          index < swapCount && refinementCandidates < CROSSING_REFINEMENT_CANDIDATE_LIMIT;
+          index += 1
+        ) {
+          const nextIndex = (index + 1) % ids.length;
+          [ids[index], ids[nextIndex]] = [ids[nextIndex], ids[index]];
+          refinementCandidates += 1;
+          if (considerCurrentOrder()) {
+            improved = true;
+          } else {
+            [ids[index], ids[nextIndex]] = [ids[nextIndex], ids[index]];
+          }
+        }
+      }
+      if (!improved) break;
+    }
+    restoreGroupOrder(groups, bestOrder);
     const baselineScore = layoutCrossingScore(baselineOrder, ranks, baselineIndex);
     return {
       evaluated: true,
       baselineCrossings: baselineScore.crossings,
-      finalCrossings: bestScore.crossings
+      finalCrossings: bestScore.crossings,
+      refinementCandidates
     };
   }
 
@@ -1339,33 +2139,19 @@
         node.data('minimized', 'no');
       }
     });
-    const ranks = new Map(nodeIds.map((id) => [id, 0]));
-    const indegree = new Map(nodeIds.map((id) => [id, 0]));
-    const outgoing = new Map(nodeIds.map((id) => [id, []]));
-    for (const edge of packet.edges) {
-      if (edge.category !== 'prerequisite') continue;
-      outgoing.get(edge.source).push(edge.target);
-      indegree.set(edge.target, indegree.get(edge.target) + 1);
-    }
-    const queue = [...nodeIds]
-      .filter((id) => indegree.get(id) === 0)
-      .sort((left, right) => nodeById.get(left).packetIndex - nodeById.get(right).packetIndex);
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const current = queue[cursor];
-      for (const target of outgoing.get(current)) {
-        ranks.set(target, Math.max(ranks.get(target), ranks.get(current) + 1));
-        indegree.set(target, indegree.get(target) - 1);
-        if (indegree.get(target) === 0) queue.push(target);
-      }
-    }
+    const ranks = coreDistanceRanks();
     const groups = new Map();
     for (const nodeId of nodeIds) {
       const rank = ranks.get(nodeId) || 0;
       if (!groups.has(rank)) groups.set(rank, []);
       groups.get(rank).push(nodeId);
     }
-    for (const ids of groups.values()) {
-      ids.sort((left, right) => nodeById.get(left).packetIndex - nodeById.get(right).packetIndex);
+    for (const [rank, ids] of groups) {
+      ids.sort((left, right) => (
+        rank === 0
+          ? targetOrderIndex.get(left) - targetOrderIndex.get(right)
+          : nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
     }
     const crossingDiagnostics = reduceEdgeCrossings(groups, ranks);
     dom.cy.dataset.layoutCrossingEvaluation = crossingDiagnostics.evaluated ? 'bounded' : 'skipped-large-graph';
@@ -1375,19 +2161,68 @@
     dom.cy.dataset.layoutFinalCrossings = crossingDiagnostics.finalCrossings === null
       ? 'not-evaluated'
       : String(crossingDiagnostics.finalCrossings);
-    for (const [rank, ids] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
-      ids.forEach((nodeId, index) => setPosition(nodeId, {x: 285 + rank * CANONICAL_COLUMN_SPACING, y: 115 + index * 132}));
+    dom.cy.dataset.layoutRefinementCandidates = String(crossingDiagnostics.refinementCandidates);
+    const compactLayout = compactRadialCoordinates(groups, ranks);
+    const positions = compactLayout.positions;
+    dom.cy.dataset.layoutCompactionEvaluation = compactLayout.evaluated ? 'bounded' : 'skipped-large-graph';
+    dom.cy.dataset.layoutCompactionBlend = String(compactLayout.acceptedBlend);
+    dom.cy.dataset.layoutBaselineMaximumEdgeLength = compactLayout.baselineScore
+      ? compactLayout.baselineScore.maximumEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutFinalMaximumEdgeLength = compactLayout.finalScore
+      ? compactLayout.finalScore.maximumEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutBaselineTotalEdgeLength = compactLayout.baselineScore
+      ? compactLayout.baselineScore.totalEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutFinalTotalEdgeLength = compactLayout.finalScore
+      ? compactLayout.finalScore.totalEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutCollisionCount = compactLayout.finalScore
+      ? String(compactLayout.finalScore.collisionCount)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutMinimumEdgeClearance = compactLayout.finalScore
+      ? compactLayout.finalScore.minimumEdgeClearance.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutEdgeClearanceViolations = compactLayout.finalScore
+      ? String(compactLayout.finalScore.edgeClearanceViolationCount)
+      : 'not-evaluated';
+    for (const [nodeId, position] of positions) {
+      setPosition(nodeId, position);
     }
-    for (const themeId of groupedThemeIds) {
+    const themeRadius = groupedThemeIds.length
+      ? Math.max(
+        RADIAL_THEME_MIN_RADIUS,
+        groupedThemeIds.length * 132 / (2 * Math.PI)
+      )
+      : 0;
+    groupedThemeIds.forEach((themeId, themeIndex) => {
       const targetPositions = themeById.get(themeId).target_ids
         .map((targetId) => cy.getElementById(targetId))
         .filter((node) => node.length)
         .map((node) => node.position());
-      if (!targetPositions.length) continue;
-      const minimumX = Math.min(...targetPositions.map((position) => position.x));
-      const averageY = targetPositions.reduce((sum, position) => sum + position.y, 0) / targetPositions.length;
-      setPosition(`reader-theme:${themeId}`, {x: minimumX - 280, y: averageY});
-    }
+      if (!targetPositions.length) return;
+      let angle = groupedThemeIds.length === 1
+        ? -Math.PI / 2
+        : RADIAL_START_ANGLE + (2 * Math.PI * themeIndex) / groupedThemeIds.length;
+      if (groupedThemeIds.length > 1) {
+        const vector = targetPositions.reduce((sum, position) => {
+          const targetAngle = Math.atan2(position.y, position.x);
+          return {
+            x: sum.x + Math.cos(targetAngle),
+            y: sum.y + Math.sin(targetAngle)
+          };
+        }, {x: 0, y: 0});
+        if (Math.hypot(vector.x, vector.y) > 0.001) angle = Math.atan2(vector.y, vector.x);
+      }
+      setPosition(`reader-theme:${themeId}`, {
+        x: Math.cos(angle) * themeRadius,
+        y: Math.sin(angle) * themeRadius
+      });
+    });
+    dom.cy.dataset.layoutModel = 'compact-radial-core-layers';
+    dom.cy.dataset.layoutRingCount = String(groups.size);
+    dom.cy.dataset.layoutCoreTargetCount = String((groups.get(0) || []).length);
   }
 
   function setPosition(nodeId, position) {
@@ -1526,7 +2361,8 @@
       button.dataset.nodeId = node.id;
       button.dataset.minimized = minimized ? 'yes' : 'no';
       button.dataset.plane = node.plane;
-      button.dataset.selected = node.id === state.selectedId ? 'yes' : 'no';
+      button.dataset.selected = state.selectedNodeIds.has(node.id) ? 'yes' : 'no';
+      button.dataset.boxSelected = state.boxSelectedNodeIds.has(node.id) ? 'yes' : 'no';
       const action = minimized ? bi('最大化卡片', 'Maximize card') : bi('最小化卡片', 'Minimize card');
       button.setAttribute('aria-label', `${action}: ${node.title}`);
       button.setAttribute('aria-pressed', minimized ? 'true' : 'false');
@@ -1628,13 +2464,19 @@
       button.style.top = `${y}px`;
     }
     syncSelectedNodeHalo();
+    syncBoxSelectionHalos();
     syncNodeNameTooltip();
   }
 
   function syncSelectedNodeHalo() {
     const nodeData = nodeById.get(state.selectedId);
     const node = cy.getElementById(state.selectedId || '');
-    if (!nodeData || !node.length || node.hasClass('hidden')) {
+    if (
+      !nodeData
+      || !node.length
+      || node.hasClass('hidden')
+      || state.boxSelectedNodeIds.has(state.selectedId)
+    ) {
       dom.selectedNodeHalo.hidden = true;
       return;
     }
@@ -1653,6 +2495,41 @@
     dom.selectedNodeHalo.style.width = `${bounds.x2 - bounds.x1 + padding * 2}px`;
     dom.selectedNodeHalo.style.height = `${bounds.y2 - bounds.y1 + padding * 2}px`;
     dom.selectedNodeHalo.hidden = false;
+  }
+
+  function syncBoxSelectionHalos() {
+    const activeIds = new Set();
+    for (const nodeId of state.boxSelectedNodeIds) {
+      const node = cy.getElementById(nodeId);
+      if (!node.length || node.hasClass('hidden')) continue;
+      const bounds = renderedNodeBox(node);
+      if (!bounds) continue;
+      activeIds.add(nodeId);
+      let halo = boxSelectionHaloByNodeId.get(nodeId);
+      if (!halo) {
+        halo = document.createElement('div');
+        halo.className = 'box-selection-halo';
+        halo.dataset.nodeId = nodeId;
+        dom.boxSelectionHaloLayer.append(halo);
+        boxSelectionHaloByNodeId.set(nodeId, halo);
+      }
+      const nodeData = nodeById.get(nodeId);
+      const minimized = Boolean(nodeData && state.minimizedNodeIds.has(nodeId));
+      const padding = minimized ? 4 : 6;
+      halo.dataset.appearance = state.appearanceScheme;
+      halo.dataset.kind = nodeData ? 'reader-node' : 'theme';
+      halo.dataset.role = nodeData ? nodeData.reader_role : 'theme';
+      halo.dataset.minimized = minimized ? 'yes' : 'no';
+      halo.style.left = `${(bounds.x1 + bounds.x2) / 2}px`;
+      halo.style.top = `${(bounds.y1 + bounds.y2) / 2}px`;
+      halo.style.width = `${bounds.x2 - bounds.x1 + padding * 2}px`;
+      halo.style.height = `${bounds.y2 - bounds.y1 + padding * 2}px`;
+    }
+    for (const [nodeId, halo] of boxSelectionHaloByNodeId) {
+      if (activeIds.has(nodeId)) continue;
+      halo.remove();
+      boxSelectionHaloByNodeId.delete(nodeId);
+    }
   }
 
   function showNodeNameTooltip(nodeId) {
@@ -1727,6 +2604,149 @@
     });
   }
 
+  function bindPointerIntent() {
+    const activeDirectManipulationPointers = new Set();
+    let selectionGesture = null;
+    const restoreMouseSelectionMode = () => {
+      if (activeDirectManipulationPointers.size) return;
+      cy.userPanningEnabled(false);
+      cy.boxSelectionEnabled(false);
+      dom.cy.dataset.pointerMode = 'mouse-box-selection';
+    };
+    const canvasPoint = (event) => {
+      const bounds = dom.cy.getBoundingClientRect();
+      return {x: event.clientX - bounds.left, y: event.clientY - bounds.top};
+    };
+    const pointTouchesNode = (point) => {
+      for (const node of cy.nodes()) {
+        if (node.hasClass('hidden')) continue;
+        const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
+        if (point.x >= box.x1 && point.x <= box.x2 && point.y >= box.y1 && point.y <= box.y2) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const paintSelectionMarquee = () => {
+      if (!selectionGesture) return;
+      const left = Math.min(selectionGesture.start.x, selectionGesture.end.x);
+      const top = Math.min(selectionGesture.start.y, selectionGesture.end.y);
+      const width = Math.abs(selectionGesture.end.x - selectionGesture.start.x);
+      const height = Math.abs(selectionGesture.end.y - selectionGesture.start.y);
+      dom.boxSelectionMarquee.style.left = `${left}px`;
+      dom.boxSelectionMarquee.style.top = `${top}px`;
+      dom.boxSelectionMarquee.style.width = `${width}px`;
+      dom.boxSelectionMarquee.style.height = `${height}px`;
+      dom.boxSelectionMarquee.hidden = !selectionGesture.moved;
+    };
+    const selectedNodesInRectangle = (start, end) => {
+      const selection = {
+        x1: Math.min(start.x, end.x),
+        y1: Math.min(start.y, end.y),
+        x2: Math.max(start.x, end.x),
+        y2: Math.max(start.y, end.y)
+      };
+      const selectedIds = [];
+      for (const node of cy.nodes()) {
+        if (node.hasClass('hidden')) continue;
+        const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
+        const overlaps = box.x2 >= selection.x1 && box.x1 <= selection.x2
+          && box.y2 >= selection.y1 && box.y1 <= selection.y2;
+        if (overlaps) selectedIds.push(node.id());
+      }
+      return selectedIds;
+    };
+    const commitSelection = (selectedIds, additive) => {
+      const combinedIds = additive
+        ? [...new Set([...state.selectedNodeIds, ...selectedIds])]
+        : selectedIds;
+      state.boxSelectedNodeIds = new Set(combinedIds);
+      state.boxSelectionEndedAt = Date.now();
+      dom.cy.dataset.boxSelectionEndCount = String(
+        Number(dom.cy.dataset.boxSelectionEndCount || 0) + 1
+      );
+      dom.cy.dataset.boxSelectionCandidateCount = String(selectedIds.length);
+      if (combinedIds.length === 1) {
+        const onlyId = combinedIds[0];
+        state.selectedNodeIds = new Set(combinedIds);
+        if (onlyId.startsWith('reader-theme:')) {
+          showThemeDetail(onlyId.slice('reader-theme:'.length), {preserveSelection: true});
+        } else {
+          showNodeDetail(onlyId, {preserveSelection: true});
+        }
+      } else if (combinedIds.length > 1) {
+        showBatchSelectionDetail(combinedIds);
+      } else {
+        showOverviewDetail();
+      }
+      state.boxSelectionAdditive = false;
+    };
+    dom.cy.dataset.pointerMode = 'mouse-box-selection';
+    dom.cy.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') {
+        state.boxSelectionAdditive = Boolean(
+          event.shiftKey || event.altKey || event.ctrlKey || event.metaKey
+        );
+        restoreMouseSelectionMode();
+        if (event.button !== 0) return;
+        const point = canvasPoint(event);
+        if (pointTouchesNode(point)) return;
+        selectionGesture = {
+          pointerId: event.pointerId,
+          start: point,
+          end: point,
+          moved: false,
+          additive: state.boxSelectionAdditive
+        };
+        dom.cy.dataset.boxSelectionStartCount = String(
+          Number(dom.cy.dataset.boxSelectionStartCount || 0) + 1
+        );
+        closeNodeContextMenu();
+        hideNodeNameTooltip();
+        return;
+      }
+      activeDirectManipulationPointers.add(event.pointerId);
+      cy.boxSelectionEnabled(false);
+      cy.userPanningEnabled(true);
+      dom.cy.dataset.pointerMode = 'direct-touch-pan';
+    }, {capture: true});
+    window.addEventListener('pointermove', (event) => {
+      if (!selectionGesture || event.pointerId !== selectionGesture.pointerId) return;
+      selectionGesture.end = canvasPoint(event);
+      selectionGesture.moved = selectionGesture.moved || Math.hypot(
+        selectionGesture.end.x - selectionGesture.start.x,
+        selectionGesture.end.y - selectionGesture.start.y
+      ) >= 5;
+      paintSelectionMarquee();
+      if (!selectionGesture.moved) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, {capture: true});
+    const endDirectManipulation = (event) => {
+      if (selectionGesture && event.pointerId === selectionGesture.pointerId) {
+        const completedGesture = selectionGesture;
+        selectionGesture = null;
+        dom.boxSelectionMarquee.hidden = true;
+        if (completedGesture.moved && event.type === 'pointerup') {
+          commitSelection(
+            selectedNodesInRectangle(completedGesture.start, completedGesture.end),
+            completedGesture.additive
+          );
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+      activeDirectManipulationPointers.delete(event.pointerId);
+      restoreMouseSelectionMode();
+    };
+    window.addEventListener('pointerup', endDirectManipulation, {capture: true});
+    window.addEventListener('pointercancel', endDirectManipulation, {capture: true});
+    window.addEventListener('blur', () => {
+      activeDirectManipulationPointers.clear();
+      restoreMouseSelectionMode();
+    });
+  }
+
   function bindTrackpadNavigation() {
     const graph = cy.container();
     const captureSurface = dom.canvasStage;
@@ -1735,10 +2755,24 @@
     let frame = 0;
     captureSurface.addEventListener('wheel', (event) => {
       if (!graph.contains(event.target)) return;
-      if (event.ctrlKey) return;
       event.preventDefault();
       event.stopPropagation();
       closeNodeContextMenu();
+      if (event.ctrlKey) {
+        const bounds = graph.getBoundingClientRect();
+        const renderedPosition = {
+          x: Number.isFinite(event.clientX) ? event.clientX - bounds.left : graph.clientWidth / 2,
+          y: Number.isFinite(event.clientY) ? event.clientY - bounds.top : graph.clientHeight / 2
+        };
+        const boundedDelta = Math.max(-80, Math.min(80, event.deltaY));
+        const level = Math.max(
+          cy.minZoom(),
+          Math.min(cy.maxZoom(), cy.zoom() * Math.exp(-boundedDelta * PINCH_ZOOM_SENSITIVITY))
+        );
+        cy.zoom({level, renderedPosition});
+        dom.cy.dataset.lastZoomInput = 'trackpad-pinch';
+        return;
+      }
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? graph.clientHeight : 1;
       pendingX += event.deltaX * unit;
       pendingY += event.deltaY * unit;
@@ -1839,7 +2873,9 @@
 
   function showOverviewDetail() {
     state.selectedId = null;
-    cy.elements().unselect();
+    state.selectedNodeIds.clear();
+    state.boxSelectedNodeIds.clear();
+    restoreCanvasSelection();
     allReaderNodes().removeClass('theme-member');
     dom.detail.scrollTop = 0;
     const eligible = eligibleNodeIds();
@@ -1857,8 +2893,8 @@
     heading.textContent = bi('如何开始', 'How to begin');
     const introduction = document.createElement('p');
     introduction.textContent = bi(
-      '所有已启用的节点和关系都保留在同一画布上。单击阅读；卡片内的减号或加号切换该卡片尺寸；双击任意节点会最大化它的完整上下游链，并最小化无关节点。',
-      'Every eligible node and relation remains on one canvas. Select to read, use the minus or plus inside a card to change only its size, or double-click any node to maximize its complete upstream and downstream chain while minimizing unrelated nodes.'
+      '所有已启用的节点和关系都保留在同一画布上。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；拖动或切换卡片尺寸后，附近卡片会柔和避让，过长的真实关系会轻微回拉，并立即稳定。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
+      'Every eligible node and relation remains on one canvas. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. After dragging or resizing a card, nearby cards repel gently, overly long real relations pull lightly, and the layout settles immediately. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
     );
     section.append(heading, introduction);
     dom.detailReadable.append(section);
@@ -1913,9 +2949,68 @@
     renderNodeControls();
   }
 
-  function showThemeDetail(themeId) {
+  function showBatchSelectionDetail(nodeIds) {
+    const selectedIds = nodeIds.filter((nodeId) => {
+      const element = cy.getElementById(nodeId);
+      return element.length && element.isNode() && !element.hasClass('hidden');
+    });
+    state.selectedId = null;
+    state.selectedNodeIds = new Set(selectedIds);
+    restoreCanvasSelection();
+    allReaderNodes().removeClass('theme-member');
+    dom.detail.scrollTop = 0;
+    dom.detailTitle.textContent = bi(
+      `已选择 ${selectedIds.length} 个节点`,
+      `${selectedIds.length} nodes selected`
+    );
+    replaceBadges([
+      bi('批量移动', 'Group move'),
+      bi('仅当前页面会话', 'Current page session only'),
+      bi('不改变图谱结构', 'Graph structure unchanged')
+    ]);
+    dom.detailReadable.replaceChildren();
+    appendSection(
+      dom.detailReadable,
+      bi('如何移动', 'How to move'),
+      bi(
+        '拖动任一已选节点，整组选中节点会保持相对位置一起移动。单击空白处可清除选择；按住 Shift、Option、Control 或 Command 再框选可追加节点。',
+        'Drag any selected node to move the whole selection while preserving relative positions. Select empty space to clear it; hold Shift, Alt, Control, or Command while box-selecting to add nodes.'
+      )
+    );
+    const section = document.createElement('section');
+    const heading = document.createElement('h3');
+    heading.textContent = bi('已选节点', 'Selected nodes');
+    const list = document.createElement('ul');
+    for (const nodeId of selectedIds) {
+      const item = document.createElement('li');
+      if (nodeId.startsWith('reader-theme:')) {
+        const theme = themeById.get(nodeId.slice('reader-theme:'.length));
+        item.textContent = theme ? `${bi('主题', 'Topic')}: ${theme.label}` : nodeId;
+      } else {
+        const node = nodeById.get(nodeId);
+        item.textContent = node ? node.title : nodeId;
+      }
+      list.append(item);
+    }
+    section.append(heading, list);
+    dom.detailReadable.append(section);
+    dom.detailFormal.replaceChildren();
+    dom.formalDetails.open = false;
+    updateNavigation();
+    updateEdgeDensity();
+    renderNodeControls();
+  }
+
+  function showThemeDetail(themeId, options) {
     const theme = themeById.get(themeId);
-    state.selectedId = `reader-theme:${themeId}`;
+    const canvasId = `reader-theme:${themeId}`;
+    if (options && options.preserveSelection) {
+      state.selectedId = canvasId;
+      state.selectedNodeIds.add(canvasId);
+      restoreCanvasSelection();
+    } else {
+      setCanvasNodeSelection([canvasId], canvasId);
+    }
     dom.detail.scrollTop = 0;
     dom.detailTitle.textContent = theme.label;
     replaceBadges([
@@ -1954,14 +3049,18 @@
     renderNodeControls();
   }
 
-  function showNodeDetail(nodeId) {
+  function showNodeDetail(nodeId, options) {
     const node = nodeById.get(nodeId);
     if (!node) return;
-    state.selectedId = nodeId;
+    if (options && options.preserveSelection) {
+      state.selectedId = nodeId;
+      state.selectedNodeIds.add(nodeId);
+      restoreCanvasSelection();
+    } else {
+      setCanvasNodeSelection([nodeId], nodeId);
+    }
     allReaderNodes().removeClass('theme-member');
     dom.detail.scrollTop = 0;
-    cy.elements().unselect();
-    cy.getElementById(nodeId).select();
     dom.detailTitle.textContent = node.title;
     const topic = themeById.get(node.theme_id);
     replaceBadges([
@@ -2071,6 +3170,9 @@
     const edge = edgeById.get(edgeId);
     if (!edge) return;
     state.selectedId = edgeId;
+    state.selectedNodeIds.clear();
+    state.boxSelectedNodeIds.clear();
+    restoreCanvasSelection();
     dom.detail.scrollTop = 0;
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);

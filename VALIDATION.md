@@ -4,92 +4,84 @@ Result: PASS.
 
 ## Public package
 
-- Version: `0.3.5`.
-- Renderer: `chalxius-reader-html-12`.
-- Layout contract: `deterministic_ranked_barycenter`.
-- Manifest entries: 138, excluding `MANIFEST.sha256` itself.
+- Version: `0.4.0`.
+- Workflow authority: V5.
+- Truth path: `Research -> Candidate Release -> Certification Decision -> Fact`.
+- Renderer: `chalxius-reader-html-15`.
+- Layout: `deterministic_compact_radial_core_layers`.
+- Manifest entries: 149, excluding `MANIFEST.sha256` itself.
 - Manifest-file SHA-256:
-  `017d0f0a5c1ce81145af23bd7fe4f886eb2a39c83bdc28c7869df0ed7a900fc9`.
-- Public archive: `chalxius-0.3.5-public.tar.gz`.
-- Public archive size: 1,425,506 bytes.
+  `ca6882ab1f4a73661c101da626cdba2e7a001f85c023a8208a076e08fadc0211`.
+- Public archive: `chalxius-0.4.0-public.tar.gz`.
+- Public archive size: 1,518,813 bytes.
 - Public archive SHA-256:
-  `7ed57b0e54b6e504affa0a25e1d70504fb06d328db9d21a76fc45785df92f43e`.
+  `8e19dc4fdfaa6f65bf95f62dde57b5f0bf7f517926dbeec15b593152276ae56f`.
+- Archive members: 150 regular files.
 - Two independent public builds were byte-identical.
 
-The archive contains only regular files in sorted order. Its USTAR headers use
-numeric UID/GID 0, empty owner/group names, fixed member time
-`2026-07-27T00:00:00Z`, safe relative paths, and gzip timestamp 0. It has no
-duplicate member, directory member, symlink, absolute path, or traversal path.
+The archive is built from the manifest allowlist in sorted order. Its USTAR
+headers use numeric UID/GID 0, empty owner/group names, fixed member time
+`2026-07-28T00:00:00Z`, safe relative paths, and gzip timestamp 0. It has no
+duplicate, directory, symlink, absolute, traversal, cache, bytecode, or
+unlisted member.
 
 ## Automated checks
 
-- Complete unittest suite: 426/426 PASS.
-- Focused Reader suite: 25/25 PASS.
-- Chalxius self-test: PASS.
+- Complete unittest suite: 450/450 PASS on the candidate, cold public archive,
+  and final installed tree.
+- Chalxius self-test: PASS, including empty V5 authority, default-if-present
+  project background, local Pulse quarantine, and active-policy V5 markers.
 - Official Skill Creator validation: PASS.
-- Python AST: 67 files PASS.
-- JavaScript syntax and JSON parsing: PASS.
-- Exact-tree manifest verification: PASS before and after tests.
-- Cold public archive: manifest, validator, self-test, full suite, and two
-  byte-identical official Reader exports PASS.
-- Cold local-install archive: manifest, validator, self-test, and full suite
-  PASS.
+- Release-time aggressive audit: 8/8 truncation, off-by-one, exact-set,
+  certification-panel, Paper-binding, and series-order mutants killed;
+  `candidate_unchanged=true`.
+- Exact-tree manifest verification: 149/149 PASS before packaging, after cold
+  extraction, and after installation.
+- Public privacy scan: PASS; no local absolute user path, username, credential
+  marker, cache, bytecode, or `.DS_Store` is distributed.
+- Git diff whitespace check and JSON/skill validation: PASS.
 
-## Reader behavior and browser evidence
+## Architecture regression evidence
 
-- Proper-crossing regression fixture: baseline 1, rejected candidate 7, final 1.
-- Synthetic improvement fixture: baseline 1, final 0.
-- Philosophy case: baseline 3, final 3.
-- Topic double-click: 2 full / 6 minimized -> 8 full / 0 minimized; the topic
-  became the selected detail and the action remained undoable.
-- Detail scaling at 100% -> 150%:
-  - panel font: 15 -> 22.5 px;
-  - exact TeX: 12.3 -> 18.45 px;
-  - MathJax container: 16.2 -> 24.3 px;
-  - measured sample SVG: 11.02 x 8.73 -> 16.05 x 12.72 px.
-- Topic links rendered as smooth dashed bezier grouping links.
-- Browser warnings and errors: none.
+- New V5 projects begin with zero inherited Facts.
+- V4 artifacts remain readable but cannot serve as V5 predecessors, reviews,
+  closures, or admission evidence.
+- Every valid Pulse return survives a malformed peer; malformed returns receive
+  local quarantine receipts.
+- `profile-closure-*` produces Research repair advice and is absent from the V5
+  admission-authority path.
+- Candidate Release automatically binds existing linked adverse Research and
+  requires exact dispositions.
+- A fresh verifier capsule, immutable Certification Decision, and exact gateway
+  binding are required before Fact exposure.
+- The x-y swap canary rejects `omega11` retained only through `t^0` when
+  valuation analysis requires `t^2`, and accepts only with exact deeper replay
+  evidence.
 
-The layout search is evaluated only for at most 1,200 cross-rank Reader edges.
-Above that bound packet order is preserved. The result is deterministic and no
-worse than its scored baseline; it is not claimed to be globally optimal.
+## Reader and performance boundary
 
-## Deterministic Reader artifacts
+Reader packet schema 1 is unchanged. Renderer revision 15 remains offline,
+deterministic, presentation-only, and non-writing. The full suite includes its
+deterministic projection and interaction regressions. No release mutation audit
+is imported by normal runtime modules.
 
-- Cold example packet SHA-256:
-  `c9e7c4350c241c34088f4ab0dc0b4e92c7f592ab4e8b3c7d8545270c6feff912`.
-- Cold example HTML SHA-256:
-  `3f946a225cbc100e61de027db420ed28fd3a3e4116e361e66a626ce6dac6d6eb`.
-- Reader Finalize: 9/9 sidebar-complete, `status="ready"`,
-  `scope="presentation_readiness_only"`, `truth_effect="none"`.
-- Philosophy case HTML:
-  `8163154eab3af5a77186d875c0dce415a5e52658da0d3a9e3fe92162c2b2f186`.
-- Guarded x-y case HTML:
-  `250eff7d5533b7bfbbd72d01ace0d6a833ab1d7b8e766a7f1cc27e99cc71b91c`.
-
-## Privacy and claim boundaries
-
-- Public-tree scans found no absolute local path, username, temporary local
-  path, private-key marker, GitHub token pattern, or AWS access-key pattern.
-- No cache directory, bytecode, `.DS_Store`, or symlink is present.
-- The philosophy case is anonymized and demonstrates workflow structure, not a
-  philosophical conclusion.
-- The x-y case says potential application, current audit not PASS, and no author
-  confirmation in its page, packet, source snapshot, screenshot context, and
-  use-case documentation.
+Local latency canaries recorded in the package traceability report medians of
+0.109132 s for original Danus 0.2.9, 0.127687 s for Chalxius 0.3.6, and
+0.141953 s for the stronger V5 small flow. A three-worker background-binding
+canary remained below 17 ms median at the 256 KiB summary cap. These are
+machine-local canaries, not universal throughput claims.
 
 ## Local transactional installation
 
-- Upgrade: 0.3.4 -> 0.3.5 PASS.
-- Installed manifest SHA-256:
-  `0eb3bd13d32ea2b83bc3c45ff71a25d016456ade96a739bca8d5efcef925fa4f`.
-- Previous 0.3.4 tree: preserved in a separate recoverable rollback directory.
-- Staged and post-cutover validation each passed 25/25 focused tests and 426/426
-  complete tests.
-- The `scripts/mathgraph/contracts.py` file SHA-256 remained
-  `5bd04ce9dc5fea159805e50b921a225875124946ec26e3e119af4236d03d75e1`.
-- The runtime Fact-admission contract SHA-256 remained
-  `68c4785a8c36558ee7effb79be755405d2be785ee00f81795328c6cc5a211289`.
-- Reasoning-mode policy SHA-256 remained
-  `0e1939213c834c3f326a20bea5953e387e8fb5ec30ad39386e71a0f7693af1af`.
-- Grill Me Code manifest and host routing file remained unchanged.
+- Upgrade: 0.3.6 -> 0.4.0 PASS.
+- Installed manifest entries and SHA-256 match the public package exactly.
+- The final installed tree is byte-identical to the released `chalxius/` tree.
+- The prior 0.3.6 tree is preserved in a recoverable rollback directory outside
+  skill discovery.
+- No active V4 project was migrated or cut over.
+
+## Claim boundary
+
+These checks establish software, packaging, and stated workflow properties.
+They do not prove a mathematical theorem and do not Fact-admit any mathematical
+claim.

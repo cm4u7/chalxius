@@ -43,13 +43,13 @@ natural-language routing but semantically limited to explicitly requested
 programming Grill or Socratic assistance and contains no
 graph adapter, teaching ledger, or MathGraph protocol.
 
-The integration adds a closure layer that neither legacy package had. A round
-freezes exact `profile_obligations`; required high-cost features then need a
-content-addressed `profile-closure` receipt bound to every assignment's exact
-task, return, ingestion, outcome, and effect before verification/admission. The
-receipt is explicitly `workflow_readiness_only` and outside the invariant Fact
-contract, so it closes the execution-routing gap without creating a second
-certification path or changing the common Fact-contract hash.
+The 0.3.x integration added a closure layer that neither legacy package had.
+V5 retains its exact `profile_obligations`, `profile-closure-status`, and
+`profile-closure-record` surfaces only for reproducible repair advice. A record
+is appended to cumulative Research with `truth_effect="none"`; it is not
+required before a verifier capsule, Candidate Release, Certification Decision,
+or Fact admission. This preserves useful execution diagnostics without a
+second certification path or a second Fact-contract hash.
 
 Evidence assurance is intentionally heterogeneous. Native graph, pulse,
 experiment, novelty, projection, and lint validators can establish their own
@@ -163,7 +163,7 @@ checks, official Skill Creator validation, bilingual responsive browser QA,
 combined source inspection, and byte-identical double export at SHA-256
 `efa87e99ff184f51eea286acd5305109c3e842d1045c72dac8f41da4bab2a2bb`.
 
-Renderer revision 12 is the current 0.3.5 presentation-only candidate. Detail-
+Renderer revision 12 is the frozen 0.3.5 presentation-only release. Detail-
 panel MathJax SVG escapes the global icon-size rule, uses an `em`-relative
 baseline, and therefore grows and shrinks with the existing 90%-150% detail-
 text control; exact TeX source is likewise sized relative to the panel rather
@@ -194,6 +194,58 @@ manifest freeze, packaging, installation, and post-cutover checks remain
 separate release gates; no revision-12 validation or release PASS is claimed at
 this documentation checkpoint.
 
+Renderer revision 13 introduced the 0.3.6 presentation-only candidate. It
+replaces directional ranked columns with deterministic target-distance radial
+core layers: synthetic multi-target themes occupy the innermost core, targets
+occupy the next central ring, and other nodes move outward by undirected graph
+distance from the target set. Packet order seeds every ring, and the bounded
+crossing search evaluates eight circular neighbor sweeps and at most 48
+adjacent ring swaps across two refinement passes, accepting a candidate only
+when its exact scored radial crossing tuple improves on the best-so-far order.
+Exact chord-based radii and a second bounded deterministic relaxation then
+shorten maximum and total link length while refusing any increase in crossings,
+card collisions, or protected 44-model-pixel boundary-clearance violations.
+It also adds a visible custom
+primary-drag selection rectangle and session-only group movement: dragging one
+selected card applies the same offset to every selected node and preserves
+their relative coordinates. Every box-selected node receives a soft green
+silhouette glow while the active node remains moonlight yellow. For at most 240
+visible nodes, direct drag also runs bounded local repulsion below the protected card gap and weak
+relation-only attraction above a comfortable visible-link gap; release settles
+for at most fourteen passes and leaves no idle simulation. Programmatic
+two-finger panning and direct
+touch/pen panning remain separate from mouse box selection. These changes do
+not modify packet bytes, semantic orders, topology, sources, plane/status
+authority, Fact admission, persistence, or writeback. Validation, packaging,
+installation, and publication remain separate gates, so this checkpoint does
+not claim a 0.3.6 release PASS.
+
+Renderer revision 14 remains presentation-only and corrects reset-layout
+geometry plus trackpad pinch handling. Reset now scores and spaces the actual
+current full/minimized silhouette of each role instead of assuming that every
+non-target is compact. The canonical connected-card boundary floor rises from
+44 to 72 model pixels and ring construction carries a fixed safety margin, so
+fully expanded cards do not compress and short relations remain visibly
+directional. Control-wheel pinch input now performs explicit pointer-centered
+zoom; ordinary wheel input keeps two-axis pan. These changes do not alter
+packet bytes, graph topology, semantic order, sources, authority, admission,
+persistence, or writeback. Release and installation evidence remain separate
+gates.
+
+Renderer revision 15 remains presentation-only and closes the live sizing gap
+left by revision 14. After any effective card-size delta—including local,
+directional, complete-path, topic-path, global, undo, and redo actions—the
+renderer evaluates exactly fourteen deterministic spacing passes using the new
+rendered silhouettes. The direct anchor remains fixed at its normalized control
+pivot; global changes seed the whole changed set without choosing an arbitrary
+focus. Repulsion clears local compression below the protected boundary gap and
+relation-only attraction limits unnecessary separation. Browser QA verified
+zero control-center displacement through repeated maximize/minimize, fourteen
+executed passes for direct, bulk, undo, and redo actions, and an empty
+warning/error log. This does not alter packet bytes, graph topology, semantic
+order, sources, authority, admission, persistence, or writeback. Release and
+installation evidence remain separate gates.
+
 ## Residual risks to test
 
 - deterministic auto triggers may need calibration against real workloads;
@@ -204,8 +256,8 @@ this documentation checkpoint.
   close current work;
 - accepted-idempotent retries and audits must fail after closure-evidence drift;
 - legacy Danus import must preserve assurance without silently recertifying;
-- pre-Chalxius V4 projects must remain read-only until explicit `mode-init`, and
-  V1-V3 must remain read-only until isolated copy upgrade;
+- every pre-V5 project must remain readable and read-only as nontruth lineage;
+  neither `mode-init` nor copy-upgrade grants V5 authority;
 - learning writes must never appear in research audits or Fact admission.
 - ordinary research must not auto-start Chalxius Learner, and global product
   availability must not cause ordinary coding to auto-start Grill Me Code.

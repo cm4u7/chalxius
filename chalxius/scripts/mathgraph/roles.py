@@ -20,6 +20,10 @@ ALL_COMMANDS = {
     "record-review",
     "admit",
     "revoke",
+    "candidate-release",
+    "verifier-capsule",
+    "certification-record",
+    "fact-admit",
     "memory-add",
     "memory-update",
     "frontier",
@@ -133,6 +137,8 @@ ROLE_COMMANDS = {
         "targets",
         "set-targets",
         "revoke",
+        "candidate-release",
+        "verifier-capsule",
         "memory-add",
         "memory-update",
         "frontier",
@@ -220,6 +226,8 @@ ROLE_COMMANDS = {
         "novelty-status",
         "fact-bundle-record-review",
         "fact-bundle-admit",
+        "certification-record",
+        "fact-admit",
     },
     # Paper auditors can inspect exact frozen/staged paper evidence and append
     # one independent review. They receive no blackboard, memory, fact, or

@@ -1,10 +1,16 @@
 # Chalxius candidate release traceability
 
+> **0.3.6 baseline history.** The detailed reader and unified-mode evidence
+> below is retained as the preservation baseline for Chalxius 0.4.0. Current
+> V5 release claims and validation evidence are recorded in
+> `v5_release_traceability.md`; this historical section does not grant V4
+> authority inside a V5 project.
+
 ## Candidate identity
 
 - Skill: `chalxius`
 - Display name: Chalxius
-- Version: `0.3.5`
+- Version: `0.3.6`
 - Status: deterministic reader-HTML export candidate
 - Pre-Chalxius source base: `mathgraph-chalk-version` 0.4.0-chalk
 - Compatibility artifact engine id: `operate-mathgraph-unified`
@@ -41,8 +47,9 @@
 | deterministic readiness metadata | embedded and stdout `reader_finalize` schema 1 binds source snapshot, packet hash, node count, and complete-sidebar count with no truth effect |
 | no Obsidian, watcher, PDF, or service coupling | fixed project HTML output plus navigation-only reload; no poller, fetch loop, storage, sidecar, or service |
 | human order remains authoritative | strict theme, target, and prerequisite-order validation |
-| deterministic renderer | canonical packet JSON, pinned vendor assets, prerequisite ranks plus fixed weighted-barycentric sweep pairs, and no time/random input |
-| bounded crossing reduction | for at most 1,200 cross-rank edges, exact proper-crossing scoring retains the best of packet order and eight deterministic forward/backward sweep pairs, guaranteeing no more proper crossings than the packet-order baseline; larger graphs preserve packet order; there is no global-optimum claim and the search runs only at initial placement or explicit layout reset |
+| deterministic renderer | canonical packet JSON, pinned vendor assets, target-distance compact-radial core layers, fixed circular weighted-neighbor sweeps, bounded constrained angular relaxation, and no time/random input |
+| bounded crossing reduction | for at most 1,200 scored edges, exact radial proper-crossing scoring retains the best of packet order, eight deterministic circular sweep pairs, and at most 48 adjacent ring swaps over two refinement passes, guaranteeing no more scored crossings than the packet-order baseline; larger graphs preserve packet order; there is no global-optimum claim and the search runs only at initial placement or explicit layout reset |
+| bounded compactness | for at most 320 nodes and 1,200 edges, current full/minimized card footprints and fixed deterministic relaxation blends shorten maximum and total relation length only when crossings, card collisions, and the protected 72-model-pixel connected-card boundary gap do not worsen; larger graphs keep the radial seed |
 | one offline file | embedded Cytoscape.js and MathJax with network-denying CSP |
 | native graph authority remains visible | plane-specific truth labels, exact source text/hash, no promotion |
 | one persistent eligible graph | every eligible real node and edge remains present; minimization changes card size only and synthetic theme nodes are excluded from sizing |
@@ -54,7 +61,9 @@
 | node-local broad commands | auxiliary-click or Shift+F10 exposes only maximize-all-upstream and maximize-all-downstream, each including the anchor |
 | bounded reversible sizing | at most 100 session-only size deltas, no-op suppression, redo invalidation, standard undo/redo shortcuts, and no restoration of unrelated UI state |
 | stable navigation | every sizing action preserves selection, viewport, graph ordering, and the normalized 29%/50% control pivot through derived two-axis compensation; an existing pin is replaced when present, no pin is created, and fit remains explicit |
-| trackpad-first canvas | two-finger pan, pinch zoom, direct card drag, and no persistent storage or graph writeback |
+| trackpad-first canvas | two-finger pan, explicit pointer-centered pinch zoom, primary-drag box selection on empty canvas, direct single-card or selected-group drag, and no persistent storage or graph writeback |
+| session-only group movement | a visible selection rectangle overlaps rendered node bounds; every member receives a soft green silhouette glow, modifier-drag adds to the set, and dragging one selected card applies one equal offset to the whole set while preserving relative positions |
+| controlled dynamic forces | for at most 240 visible nodes, direct card/group drag fixes the manipulated set, repels locally below the protected card gap, attracts only visible relation neighbors above the comfortable link gap, settles for at most fourteen release passes, and has no random or idle simulation |
 | reliable relation styling | Cytoscape reattaches all retained edges to resized silhouettes; enlarged midpoint and target markers repeat direction at equal half-edge intervals, while synthetic grouping links use smooth dashed arrowless Bezier curves |
 | selectable appearance | Faceted default and Plaques alternative change silhouettes only, independently of packet themes, planes, statuses, edges, size state, and history |
 | switchable human interface | one Chinese/English UI mode at a time, Chinese default; source body text remains unchanged |
@@ -425,7 +434,7 @@ two official exports were byte-identical at SHA-256
 Manifest freeze, packaging, installation, and post-cutover verification remain
 separate gates.
 
-Renderer revision 12 is the current 0.3.5 presentation-only candidate. It
+Renderer revision 12 is the frozen 0.3.5 presentation-only release. It
 removes the global icon-size constraint from detail-panel MathJax SVG, gives
 rendered mathematics an `em`-relative baseline, and makes exact TeX source use
 panel-relative sizing. The existing 90%-150% detail-text control therefore
@@ -457,6 +466,67 @@ authority, Fact admission, persistence, or writeback. Focused and full tests,
 browser QA, deterministic export, manifest freeze, packaging, installation,
 and post-cutover verification remain separate release gates; no revision-12
 validation or release PASS is claimed at this documentation checkpoint.
+
+Renderer revision 13 introduced the 0.3.6 presentation-only candidate. Its
+canonical layout replaces directional columns with target-distance radial core
+layers: synthetic multi-target themes occupy the innermost core, target cards
+occupy the next central ring, and other cards move outward by undirected graph
+distance from the target set. Packet order seeds every ring. Eight fixed
+circular weighted-neighbor sweep pairs followed by at most 48 adjacent ring-
+swap candidates across two refinement passes are scored against the packet-
+order baseline with exact radial proper-crossing counts for at most 1,200
+edges; a candidate is retained only when the deterministic score improves.
+Chord-based ring radii and a subsequent deterministic constrained angular
+relaxation, bounded to 320 nodes and 1,200 edges, shorten maximum and total
+relation length. A candidate is rejected if crossings, card collisions,
+protected 44-model-pixel connected-card clearance, maximum edge length, or
+total edge length worsens. Theme and target placement therefore remain visually
+central without changing
+`theme_order`, `target_order`, edge direction, or packet bytes.
+
+Primary-button dragging on empty canvas now draws a moonlight selection
+rectangle. Overlapping visible nodes form a page-session selection and receive
+a soft pale-green silhouette glow; the active read node retains its separate
+moonlight-yellow cue. Modifier-
+drag adds to it. Dragging any selected card applies one common model-space
+offset to every selected node, preserving relative positions and pinning only
+those presentation coordinates for the current page session. For at most 240
+visible nodes, direct drag also runs bounded local repulsion below the protected card gap and weak attraction
+along overly long visible relations; release settles at most fourteen passes and
+then stops. Two-finger wheel
+gestures continue to pan programmatically, while touch and pen contact pan
+directly instead of entering box selection. Background click clears the set.
+This introduces no topology edit, storage, sidecar, history file, writeback, or
+truth effect. Focused and full tests, deterministic export, manifest freeze,
+packaging, installation, and publication remain separate gates until recorded
+below; no release or global cutover is implied by this candidate contract.
+
+Renderer revision 14 preserves revision 13's radial model and corrects the two
+places where implementation geometry could diverge from the visible canvas.
+Canonical reset now derives each footprint from the card's current full or
+minimized state, so `All cards` and local sizing states are not compacted using
+target-only full-size assumptions. The protected connected-card boundary floor
+is 72 model pixels and ring construction adds a fixed safety margin; final
+compaction still must be no worse than its radial seed on crossings,
+collisions, clearance violations, maximum edge length, and total edge length.
+Pinch input now uses explicit pointer-centered zoom bounded by Cytoscape's
+minimum and maximum zoom, while ordinary two-finger wheel input remains a
+two-axis pan. All changes are session-only Reader presentation and leave packet
+schema, source text, semantic order, topology, authority, Fact admission,
+persistence, services, and writeback unchanged.
+
+Renderer revision 15 preserves revision 14's canonical radial reset and adds a
+bounded post-size solver. Every successful card-size delta runs exactly
+fourteen deterministic passes after the new silhouettes have been applied.
+Local, directional, complete-path, and topic-path actions fix their explicit
+anchor; `All targets`, `All cards`, and their undo/redo inverses seed all
+changed cards without creating a focus mode. Physical neighbors repel below
+the protected 72-model-pixel boundary gap, while visible relation neighbors
+attract only above the 116-model-pixel comfortable gap. The solver preserves
+pan and zoom, never auto-fits, has no randomness or idle animation, and is
+bounded to 240 visible nodes. Its positions are page-session presentation pins
+only. Packet schema, source text, semantic order, topology, authority, Fact
+admission, services, persistence, and writeback remain unchanged.
 
 Forward-security coverage includes missing/extra/partial feature evidence,
 machine-unready and unrelated pulse commitments, specialist hash/path escape,

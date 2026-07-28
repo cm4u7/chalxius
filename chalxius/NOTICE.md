@@ -6,13 +6,17 @@ Distributed under the Apache License, Version 2.0. See `LICENSE`.
 
 Chalxius is an independent research system. Its embedded Chalxius research
 engine descends from the pre-Chalxius `mathgraph-chalk-version` 0.4.0 codebase
-and preserves the Fact Graph truth boundary, workflow-evidence V4, Paper Logic,
-Audit, Blackboard, computation, verification, and admission machinery.
+and preserves Paper Logic, Audit, Blackboard, computation, verification, and
+the Fact Graph truth boundary. Chalxius 0.4.0 introduces an isolated
+workflow-evidence V5 authority root. Historical V4 projects remain readable but
+their achievements and Facts are not inherited as V5 authority.
 
 The public Danus design informed the local Fact Graph layout and 16-hex logical
-content-id compatibility. In this package, Danus 0.2.12 is only a behavioral
-performance reference and frozen legacy-fact import source; it is not a runtime
-dependency. Primary design reference: Jihao Liu et al., *Danus: Orchestrating
+content-id compatibility. Original Danus 0.2.9 and later versions are only
+behavioral and performance references in this package; no Danus runtime,
+writer, review, receipt, or Fact authority is inherited. The exact audited
+reference artifact recorded in `INHERITANCE.lock.json` is Danus 0.2.12. Primary
+design reference: Jihao Liu et al., *Danus: Orchestrating
 Mathematical Reasoning Agents with Fact-Graph Memory*, arXiv:2607.06447,
 version 2, 8 July 2026.
 
@@ -28,6 +32,11 @@ Exact component versions and manifest-file hashes are recorded in
 `INHERITANCE.lock.json`. The old `coordinate-mathgraph-suite` is rollback
 lineage only. Installation of this candidate does not migrate, select, or
 modify a research project.
+
+When a user-directed `PROJECT_BACKGROUND.md` exists, substantive V5 work and
+the V5 Reader bind its full body and hash by default as nontruth context. Its
+creation, rebuilding, or refresh still requires an explicit user instruction;
+absence never triggers automatic generation.
 
 The optional deterministic reader export vendors Cytoscape.js 3.34.0 and 15
 selected Tabler Icons 3.45.0 SVG assets under the MIT License, plus MathJax

@@ -1,5 +1,12 @@
 # Architecture and trust model
 
+> **Historical V4 storage reference.** This file preserves the detailed V4
+> object layout and audit vocabulary for read compatibility. It is not the V5
+> authority model. V5 starts with an empty Fact Graph, treats every V1-V4 root
+> as readable nontruth lineage, and uses only `Research -> Candidate Release ->
+> Certification Decision -> Fact`. See `unified_architecture.md` and
+> `admission_contract.md` for current rules.
+
 ```text
 hash-bound execution profile -> required: full-width distinct clean-context dispatch
                              -> available: opt-in dispatch; not_applicable: omit

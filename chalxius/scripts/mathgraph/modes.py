@@ -1097,11 +1097,16 @@ class ReasoningModeManager:
         source_kind: str,
     ) -> dict[str, Any]:
         reasoning_mode = _require_reasoning_mode(reasoning_mode)
-        if self.store.workflow_evidence_version() != 4:
+        workflow_version = self.store.workflow_evidence_version()
+        if workflow_version not in {4, 5}:
             raise ValueError(
-                "unified reasoning-mode governance requires workflow evidence v4"
+                "unified reasoning-mode governance requires workflow evidence v4 or v5"
             )
-        if source_kind not in {"new_unified_project", "legacy_chalk_v4_upgrade"}:
+        if source_kind not in {
+            "new_unified_project",
+            "legacy_chalk_v4_upgrade",
+            "new_v5_project",
+        }:
             raise ValueError("mode initialization source_kind is invalid")
         if not isinstance(actor, str) or not actor.strip():
             raise ValueError("mode initialization actor must be nonempty")
@@ -1118,7 +1123,12 @@ class ReasoningModeManager:
                     "mode-init requires a clean pre-activation audit: "
                     + "; ".join(preflight_audit.errors)
                 )
-        with self.store._uninitialized_v4_transition_lock():
+        transition_lock = (
+            self.store._uninitialized_v5_transition_lock()
+            if workflow_version == 5
+            else self.store._uninitialized_v4_transition_lock()
+        )
+        with transition_lock:
             if self.has_any_state():
                 if not self.is_initialized():
                     raise ValueError(
@@ -1255,6 +1265,7 @@ class ReasoningModeManager:
         if receipt.get("source_kind") not in {
             "new_unified_project",
             "legacy_chalk_v4_upgrade",
+            "new_v5_project",
         }:
             raise ValueError("mode activation receipt source kind is invalid")
         _require_reasoning_mode(receipt.get("initial_reasoning_mode"))

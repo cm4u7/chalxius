@@ -1,229 +1,161 @@
-# Chalxius architecture
+# Chalxius V5 architecture
 
-This is the deeper architectural reference. The main README now introduces the
-features and mechanisms from first principles; use this page when you need the
-full authority model, admission sequence, and correction semantics.
+Chalxius is one integrated system for source reconstruction, mathematical
+exploration, replayable computation, certification, teaching, and offline
+presentation. It has one research engine and one Fact-admission path.
 
-## What Chalxius is
+Software checks establish whether recorded evidence satisfies Chalxius's
+contract. They do not make a mathematical statement infallible.
 
-Chalxius is one integrated system for four related jobs:
+## The four durable states
 
-1. reconstructing and auditing research sources;
-2. exploring claims, proofs, computations, and objections;
-3. admitting verified claims into a reusable Fact Graph; and
-4. teaching from frozen research material or presenting it in an offline
-   Reader.
-
-Chalxius contains one research engine. The engine records evidence and enforces
-whether a candidate satisfies the system's admission rules. It does not declare
-that a mathematical statement is infallible or absolutely true.
-
-The teaching system and the Reader can consume research material, but they
-cannot approve, repair, revoke, or write back a Fact.
-
-## A small vocabulary
-
-- A **node** is one recorded object, such as a source passage, interpretation,
-  question, candidate claim, admitted Fact, or learning note.
-- An **edge** records a named relation between two nodes, such as “depends on,”
-  “replaces,” or “refutes.”
-- **Authority** says what kind of evidence a node provides. A quotation, an
-  experiment, an audit objection, and an admitted Fact have different
-  authority even when their text looks similar.
-- **Provenance** is the traceable origin of an object: its source, creator,
-  exact content, and relevant prior objects.
-- **Content-addressed** means identified by a fingerprint of exact bytes. If
-  those bytes change, the fingerprint changes.
-- A **snapshot** is an immutable, content-addressed view of a stored graph
-  boundary at one moment. One snapshot may contain several authority classes.
-- A **candidate** is a claim under consideration. A new capitalized **Fact** is
-  a candidate that passed Chalxius's complete admission contract. An imported
-  historical Fact keeps its earlier admission identity, recorded
-  verification/admission level, and provenance rather than being silently
-  recertified under the current contract.
-- A **frozen verification package** is the exact, unchangeable material given
-  to a verifier. A **fresh verifier** is a different review context that did
-  not create the candidate.
-- `truth_effect="none"` means an object can inform a person without changing
-  the system's admitted research premises.
-
-## Six authority classes
-
-The central rule is simple: information keeps the authority of the process
-that produced it.
-
-| Authority class | Plain-language purpose | What its contents mean |
-|---|---|---|
-| Paper source | Preserve exact author text and source relations | Evidence of what the source says |
-| Paper reconstruction | Record the researcher's explicit interpretation of the source | Candidate interpretation, not source text |
-| Paper audit | Record independent objections, counterexamples, challenge decisions, and repairs | Audit evidence, not an admitted premise |
-| Blackboard | Hold questions, plans, experiments, computations, obstacles, and candidate synthesis | Exploration only |
-| Fact Graph | Hold admitted Facts and their active prerequisite relations | The only objects that may serve as trusted research premises |
-| Learning | Hold teaching coverage, hints, misconceptions, practice, and mastery evidence | Learning evidence only; no truth effect |
-
-The Reader uses one Paper label for Paper source and Paper reconstruction, then
-keeps them distinct through their status labels. Paper audit remains a separate
-Audit category. Display grouping does not merge their authority.
-
-A Paper object copied to the Blackboard is still an exploratory mirror. An
-Audit objection is still audit evidence. A correct answer in a lesson is still
-learning evidence. None of these becomes a Fact merely because it looks
-convincing.
-
-## How the parts relate
-
-Evidence and exploration can support an admission decision, but they do not
-flow automatically into the Fact Graph. Only a candidate passes through the
-admission gateway.
-
-```mermaid
-flowchart LR
-    PS["Paper source<br/>exact source material"]
-    PR["Paper reconstruction<br/>explicit interpretation"]
-    A["Paper audit<br/>challenge and independent decision"]
-    B["Blackboard<br/>exploration and computation"]
-    P["Existing active Facts<br/>allowed prerequisites"]
-    C["Candidate claim<br/>not yet a Fact"]
-    G{"Admission gateway<br/>all required checks pass?"}
-    F["New admitted Fact<br/>reusable premise"]
-    X["Candidate or explicit blocker"]
-
-    PS -. source evidence .-> G
-    PR -. interpretation context .-> G
-    A -. audit and review evidence .-> G
-    B -. replayable artifacts .-> G
-    P -. active prerequisites .-> G
-    C --> G
-    G -- Yes --> F
-    G -- No --> X
-
-    PS -. frozen, read-only .-> L["Chalxius Learner<br/>learning only"]
-    PR -. frozen, read-only .-> L
-    A -. frozen, read-only .-> L
-    B -. frozen, read-only .-> L
-    P -. frozen, read-only .-> L
-    F -. frozen, read-only .-> L
-
-    PS -. presentation packet .-> R["Reader HTML<br/>display only"]
-    PR -. presentation packet .-> R
-    A -. presentation packet .-> R
-    B -. presentation packet .-> R
-    P -. presentation packet .-> R
-    F -. presentation packet .-> R
-    L -. presentation packet .-> R
+```text
+Research -> Candidate Release -> Certification Decision -> Fact
 ```
 
-## How a candidate becomes a Fact
+1. **Research** is cumulative nontruth. It contains attempts, insights,
+   challenges, counterexamples, obstacles, computations, repairs, and
+   dispositions without treating any of them as premises.
+2. **Candidate Release** freezes the exact claim or atomic internal mini-DAG,
+   proof, direct predecessors, source evidence, computation evidence,
+   Paper/Audit references, and linked adverse work proposed for certification.
+3. **Certification Decision** is one immutable decision by a different fresh
+   verifier who receives only a frozen capsule.
+4. **Fact** is the exact accepted release exposed by the gateway after all
+   bindings are revalidated. Only current Fact nodes may be reused as trusted
+   premises.
 
-Chalxius does not approve a claim because an automated research worker sounds
-confident. Admission requires all of the following:
+There are three happy-path authority transitions. Advice, votes, profile
+closure, Reader output, teaching success, and prose confidence do not create a
+fourth path.
 
-1. The exact statement, proof, direct prerequisites, source evidence, task
-   record, and submission are content-addressed.
-2. Every direct prerequisite is an active admitted Fact rather than another
-   unverified candidate.
-3. The source is checked for its actual hypotheses, conventions, quantifiers,
-   formulas, and applicability to the present claim.
-4. Any load-bearing computation uses authorized immutable artifacts and can be
-   independently replayed.
-5. Jointly submitted dependent claims have no circular internal dependencies
-   and become visible together or not at all.
-6. A different fresh verifier checks only the frozen verification package.
-7. The review, candidate bytes, verification package, gateway decision, and
-   stored Fact are bound to one another exactly.
-8. Revocation can cascade through dependents, and the current graph and
-   workflow audits are clean.
+## Authority and storage planes
 
-If one requirement is missing, the result remains a candidate or an explicit
-blocker. The system does not quietly lower the standard. “Fact” is therefore an
-operational admission status inside Chalxius, not a claim of absolute
-infallibility.
-
-## What `fast`, `auto`, and `deep` change
-
-| Profile | Exploration behavior | Fact-admission strength |
+| Plane | Purpose | Truth effect |
 |---|---|---|
-| `fast` | Expensive exploration is available but usually not automatic | Full and unchanged |
-| `auto` | Deterministic workload signals activate the applicable tools; this is the default | Full and unchanged |
-| `deep` | Every applicable expensive research feature must be completed | Full and unchanged |
+| Paper source | Preserve exact source bytes and relations | Evidence of what a source says |
+| Paper reconstruction | Record an explicit interpretation of the source | Nontruth interpretation |
+| Paper audit | Hold objections, corrections, decisions, and replacement history | Audit evidence only |
+| Research | Accumulate exploration and adverse work | Nontruth |
+| Blackboard | Hold typed exploratory nodes, edges, snapshots, and Pulse projections | Nontruth |
+| Candidate Release | Freeze one exact certification proposal | Candidate only |
+| Certification | Store the verifier capsule and immutable decision | Evidence, not a premise by itself |
+| Fact Graph | Store gateway-admitted active Facts and dependencies | Sole trusted premise store |
+| Learning | Hold teaching, attempts, misconceptions, and mastery evidence | Nontruth |
+| Reader | Present frozen projections in one offline page | Presentation only |
 
-`deep` explores more; it does not create a stronger kind of Fact. `fast` costs
-less by default; it does not create a weaker kind of Fact. A mode switch affects
-only work started after the switch. Work already frozen for execution keeps the
-profile and content fingerprints with which it started.
+Authority labels are boundaries, not decoration. Copying a Paper node to the
+Blackboard does not turn it into a source or Fact. A correct Learner answer
+does not enter Research. A positive Certification Decision does not expose a
+Fact until the gateway admits the exact same bytes.
 
-## How corrections and historical nodes work
+## Certification contract
 
-Chalxius preserves history rather than silently overwriting it. A mistaken
-Paper reconstruction or Audit object is corrected by appending:
+A V5 Candidate Release can become a Fact only when all applicable checks pass:
 
-1. a typed challenge against the exact old object;
-2. an independent decision that upholds, rejects, or repairs the challenge;
-3. a replacement or repair object; and
-4. an explicit relation such as `replaces`, `repairs`, or `refutes`.
+1. exact statement, proof, direct predecessors, source evidence, candidate
+   artifacts, and release bytes are content-addressed;
+2. every external predecessor is an active V5 Fact statement interface;
+3. source version, hypotheses, notation, glyphs, conventions, quantifiers,
+   witnesses, and applicability are checked exactly;
+4. load-bearing computation is replayable and binds commands, versions,
+   checkpoints, artifacts, outputs, and independent checks;
+5. truncated series computations derive retained-order budgets from the
+   requested coefficient and factor valuations and include a deeper replay;
+6. dependent candidates form one acyclic all-or-none internal mini-DAG;
+7. every linked challenge, counterexample, or obstacle is included and has an
+   exact disposition;
+8. the verifier is fresh and receives only the frozen capsule;
+9. decision, release, capsule, gateway marker, and stored Fact match exactly;
+   and
+10. revocation cascades through dependents and the current audit remains clean.
 
-A new reviewed snapshot becomes current while the old snapshot remains
-available as historical evidence. A blocking unresolved challenge prevents
-downstream reliance but does not erase the record.
+If any gate is missing, Chalxius reports the exact blocker. It does not lower
+the standard because a task uses `fast` mode or because an exploration profile
+is incomplete.
 
-Fact revocation is also explicit and can cascade to dependent Facts. Imported
-historical Facts keep their original provenance and recorded
-verification/admission level; changing one creates a new candidate that must
-pass the current Chalxius contract.
+## Research collaboration
 
-## Chalxius Learner
+Every worker receives an immutable task card with three communication planes:
 
-Chalxius Learner is an optional academic teaching and testing surface inside
-Chalxius. It starts only when the user explicitly asks to learn, be questioned,
-study a paper, train for an exam, or record mastery.
+- compact control and final handoff;
+- one frozen bounded mathematical-state view; and
+- bounded narrative rationale, summary, intuition, limitations, and open
+  boundary.
 
-It may read exact frozen Fact, Paper, and Blackboard snapshots. These mounts are
-read-only and keep every source object's original authority, status, and
-content hash. Learner notes cannot modify a research source and cannot enter
-Fact admission. Persistent learning records require separate authorization.
-Their `truth_effect` is always `none`.
+Pulse is an optional two-wave adapter. Valid returns enter Research
+independently. A malformed peer receives an immutable local quarantine receipt
+and cannot destroy valid contributions. An explicit `pulse-abort` stops future
+dispatch and writes while preserving accumulated Research.
 
-## The offline Reader
+Adverse work uses the same Research plane. Candidate Release automatically
+binds existing linked challenges, counterexamples, and obstacles, so Chalxius
+does not add a second adverse-review bureaucracy.
 
-The Reader turns a prepared packet into one self-contained HTML file. The
-packet may include material from several authority classes, but it must preserve
-each node's original class, status, exact mathematical text, edge direction,
-provenance, and explicit reading order: theme order, target order, and each
-target's prerequisite tie-break order.
+`profile-closure-status` and `profile-closure-record` are compatibility
+surfaces for repair advice. They can identify missing planned work and append
+evidence-bound guidance to Research. They cannot complete, certify, or admit a
+claim.
 
-Before export, Reader Finalize requires human-readable sidebar material for
-every included node: summary, intuition, importance, and reasoning. This is a
-presentation-readiness check, not a mathematical verification.
+## Reasoning profiles
 
-The renderer:
+`fast`, `auto`, and `deep` allocate future exploration:
 
-- makes no network request or model call;
-- creates no second graph database;
-- persists no research or interface state in browser local storage;
-- writes nothing back to Paper, Audit, Blackboard, Fact, or Learning data; and
-- always reports `truth_effect="none"`.
+- `fast` keeps costly exploration opt-in;
+- `auto` follows deterministic task signals and is the default;
+- `deep` requests every costly feature that is genuinely applicable.
 
-Export replaces only the fixed `visualizations/knowledge-map.html` file. The
-Reader's Reload graph control navigates to that same file again, so the browser
-loads the latest complete export and resets temporary interface state. File
-replacement is atomic: the browser can see the complete old file or the
-complete new file, never a half-written file. This is not a watcher or live
-synchronization service.
+A mode switch affects future work units only. All modes share the same
+Candidate Release, Certification, and Fact contract.
 
-## The invariants to remember
+## Paper, Audit, and correction
 
-1. Chalxius contains one research engine and one Fact-admission contract.
-2. Authority labels are safety boundaries, not decorative categories.
-3. Only admitted Fact Graph nodes may serve as trusted research premises.
-4. `fast`, `auto`, and `deep` change exploration cost, not truth standards.
-5. Corrections and revocations preserve traceable history.
-6. Learner and Reader outputs never flow back into Fact admission.
+Paper source, reconstruction, and audit remain separate. A current reviewed
+Paper Logic snapshot and its Audit snapshot can be bound node-by-node into a
+Candidate Release. Corrections append a challenge, disposition, replacement
+object, and new snapshot; historical bytes are never rewritten.
 
-For exact technical contracts, see
+Research may mirror Paper material onto the Blackboard for exploration, but the
+mirror preserves its nontruth authority and exact receipt.
+
+## Historical projects and project background
+
+A new V5 root starts with an empty Fact Graph. V1-V4 and Danus roots remain
+unchanged and readable, but their Facts, reviews, profile closures, migration
+receipts, and acceptance markers are not V5 authority. Chalxius does not
+perform an in-place authority migration.
+
+`PROJECT_BACKGROUND.md` is one bounded nontruth summary. Creating, rebuilding,
+or refreshing it requires an explicit user instruction. Once it exists, every
+substantive V5 work unit and V5 Reader projection reads and binds its complete
+body and hash by default. If it is absent, Chalxius proceeds without generating
+it. Load-bearing use always returns to the exact cited source.
+
+## Learner and Reader
+
+Chalxius Learner starts only after an explicit academic teaching or testing
+request. It may read frozen snapshots and write only nontruth learning state.
+Grill Me Code is a separate programming assistant and cannot mount research
+graphs.
+
+The Reader exports one deterministic offline HTML file. It preserves native
+authority, status, source text, hashes, relation direction, and reading order.
+Its runtime interaction state never writes back to Paper, Audit, Research,
+Certification, Fact, Blackboard, or Learning data.
+
+## Invariants to remember
+
+1. V5 has one engine and one truth path.
+2. Research is cumulative; malformed peers are isolated locally.
+3. Only gateway-admitted V5 Facts are reusable premises.
+4. V4 remains readable but supplies no V5 authority.
+5. Profile closure is repair advice, not certification.
+6. Modes change exploration cost, not Fact strength.
+7. Paper/Audit corrections and Fact revocations preserve history.
+8. Learner and Reader have no truth effect.
+
+For exact contracts, see
 [`unified_architecture.md`](chalxius/references/unified_architecture.md),
 [`admission_contract.md`](chalxius/references/admission_contract.md),
 [`reasoning_modes.md`](chalxius/references/reasoning_modes.md), and
-[`reader_html_export.md`](chalxius/references/reader_html_export.md). For origin
-and attribution, see [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
-For concrete, bounded examples with clickable Reader pages, see
-[`USE_CASES.md`](USE_CASES.md).
+[`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).

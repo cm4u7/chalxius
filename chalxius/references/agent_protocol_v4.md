@@ -1,10 +1,12 @@
 # MathGraph Agent Protocol v4
 
-> **Unified supersession.** This protocol runs only inside
-> the Chalxius research engine. Legacy standalone predecessor packages are
-> lineage/import sources, not active routers. Truth and
-> adoption gates are invariant; panel and pulse requirements come from the
-> frozen `execution_profile` bound to each task card.
+> **V5 adaptation.** This protocol's three-plane task-card format runs only
+> inside the Chalxius research engine. Legacy standalone predecessor packages
+> are read-only lineage, not active routers or V5 authority sources. Panel and
+> pulse requirements come from the frozen `execution_profile` bound to each
+> task card, but their completion is repair guidance rather than Fact-admission
+> authority. Every mode uses the same V5 Candidate Release, Certification
+> Decision, and Fact gateway.
 
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
@@ -12,15 +14,16 @@ workflow-evidence v4 round.
 ## Status and boundary
 
 Protocol v4 originated in the pre-Chalxius `mathgraph-chalk-version` package and
-is the workflow-evidence protocol embedded by this package. It
-strengthens round coordination without changing the truth boundary:
+supplies the retained communication and task-card protocol embedded by this
+package. V5 changes the durable truth lifecycle without weakening those
+coordination boundaries:
 
 - admitted fact statement interfaces are the only reusable proof premises;
 - memory, blackboard objects, worker returns, computations, and votes remain exploration;
-- a fact submission is only a candidate until a separate verification and admission path accepts
-  it;
-- a V4 single fact reaches truth only through a content-addressed verification bundle, a structured
-  clean review by a different fresh verifier, and explicit gateway admission.
+- a Research entry or compatibility submission is only nontruth input until it
+  is sealed into one exact V5 Candidate Release; and
+- only a fresh verifier's immutable Certification Decision followed by exact
+  gateway admission creates a V5 Fact.
 
 Before that fresh dispatch, the host should run `scripts/prepare_verifier_capsule.py`. It
 revalidates the exact bundle file set and copies only those bytes to a neutral path outside project
@@ -77,16 +80,14 @@ is `required`, communication is one durable two-wave pulse:
    names the peer node, the independently
    repeated check, and the concrete correction or explicit no-correction boundary.
 
-A mutable draft may fail `preflight-return` without changing the pulse. After main supplies the
-matching worker-final hash to ingest a canonical core return, any complete return, graph, or
-pulse-semantic validation failure writes immutable evidence binding the commitment, assignment,
-return SHA-256, worker-final SHA-256, error class, and original error text; the same transaction
-writes a `pulse-abort` receipt bound to that evidence. Core commitments can never be reclassified
-as optional voids, while an optional failure does not abort the whole pulse. Aborted pulses reject
-later ingest, barrier, dispatch, closure, and void operations. Barrier and closure also reject a
-canonical core return with no ingestion receipt and require ingest or abort. A locally complete closure reports
-`procedural_ready`; `machine_verified_ready` additionally requires trusted host clean-context
-dispatch receipts. Missing host receipts remain explicit blockers.
+A mutable draft may fail `preflight-return` without changing the pulse. After
+main supplies the matching worker-final hash, each complete return is handled
+independently: a valid return enters cumulative Research and a malformed or
+semantically invalid peer receives an immutable local quarantine receipt. It
+does not erase or invalidate earlier valid contributions. A whole-pulse abort
+(`pulse-abort`) is an explicit operation that stops future dispatch and writes
+while retaining all existing Research and receipts. Pulse closure reports
+collaboration repair status only; it never certifies or admits a Fact.
 
 The host supplies one explicit cooperative configuration through `--host-config` or
 `PROJECT/host_adapter.json`; `pulse-plan` freezes its trusted issuers. After a real native Wave-2
@@ -125,16 +126,15 @@ Never use a worker vote to resolve a truth-bearing dispute. A surviving load-bea
 requires an orthogonal specialist or an explicit open/blocked boundary. Stop panel expansion after
 two consecutive barriered cross-review waves add no new typed information.
 
-## Round profile closure
+## Round profile repair advice
 
-Every new unified round manifest freezes `profile_obligations`. Treat it as the
-authoritative feature-by-assignment matrix; never infer a weaker set at the end
-of the round. Once all governed assignments have exactly one canonical
-ingestion receipt, main inspects `profile-closure-status`. If required features
-remain, main submits one exact `profile-closure-record` input. The resulting
-write-once receipt binds the manifest, reasoning-mode event, execution profiles,
-each task card, each exact return and ingestion receipt, and each assignment's
-outcome/effect subject.
+Every new round manifest freezes `profile_obligations` as a reproducible
+feature-by-assignment plan. Once governed assignments have canonical outcomes,
+main may inspect `profile-closure-status` and may append one exact
+`profile-closure-record` to cumulative Research. The record binds the manifest,
+reasoning-mode event, execution profiles, task cards, exact returns, ingestion
+or quarantine receipts, and outcome/effect subjects so its advice can be
+replayed.
 
 Evidence must cover exactly the required features and exact required
 assignments. Pulse commitments from another round or unrelated assignments do
@@ -154,12 +154,12 @@ machine-verified; the semantic assignment linkage is a procedural host
 attestation, so the composite level is
 `mixed_procedural_and_machine_verified`.
 
-If no feature is required, status is recomputably `not_required` and no closure
-receipt may be manufactured. If `profile_obligations` is absent from an old
-unified round, replan. Verifier-task creation and admission require closure when
-the matrix is nonempty; accepted-idempotent retries and audit revalidate the
-same evidence. This is a `workflow_readiness_only` gate outside the invariant
-Fact-admission contract and never changes its hash.
+If no feature is required, status is recomputably `not_required`. If
+`profile_obligations` is absent from an old round, retain that history rather
+than manufacturing evidence. Missing, incomplete, or drifted profile advice
+never blocks a V5 verifier capsule, Candidate Release, Certification Decision,
+or Fact admission. It has `truth_effect="none"`; the exact V5 transition gates
+remain authoritative.
 
 ## Task card
 

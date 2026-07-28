@@ -1,100 +1,88 @@
-# Chalxius v0.3.5 — Readable math, topic paths, and safer graph layout
+# Chalxius v0.4.0 — Cumulative V5 research and explicit certification
 
-Chalxius 0.3.5 advances the offline Reader to renderer revision 12. It improves
-dense-map reading and public onboarding while preserving the same research
-authority and Fact-admission boundaries.
+Chalxius 0.4.0 replaces the truth-bearing workflow while preserving the
+unrelated research, paper, computation, learning, and Reader capabilities of
+0.3.6.
 
-## Reader improvements
+## One V5 truth path
 
-- Mathematical detail now scales visibly with the existing 90%-150% text-size
-  control. MathJax SVG output is no longer constrained by the global icon size,
-  and exact TeX source uses the panel-relative scale.
-- Multi-target topics use smooth, dashed, arrowless bezier links instead of
-  orthogonal routes.
-- Double-clicking a topic performs one undoable sizing action over the union of
-  every eligible member target's complete upstream and downstream chains.
-- Initial placement and explicit Reset layout now run a deterministic,
-  fixed-sweep weighted-barycentric search for graphs with at most 1,200 cross-
-  rank edges.
-  - Packet order is the baseline.
-  - Exact proper-crossing count is the primary score.
-  - A candidate is retained only when its score is strictly better.
-  - The final layout therefore never has more scored crossings than the packet-
-    order baseline; larger graphs keep packet order.
-  - This is a bounded readability heuristic, not a global-optimum claim.
-- Card sizing, topic sizing, undo/redo, and layer filtering still do not rerun
-  layout, so the reader's working positions remain stable.
+The only V5 authority path is:
 
-## Clearer public introduction
+```text
+Research -> Candidate Release -> Certification Decision -> Fact
+```
 
-- The README now explains Chalxius's features, authority classes, Fact-
-  admission flow, correction model, Learner, Reader, and installation without
-  assuming prior knowledge.
-- `fast`, `auto`, and `deep` are introduced directly, including when to choose
-  `fast` or `deep` and the invariant admission standard they share.
-- Current-facing wording consistently names the Chalxius research engine;
-  predecessor terminology is confined to exact compatibility identifiers where
-  changing it would invalidate frozen project hashes.
-- Two public, self-contained Reader demonstrations and screenshots are now
-  included through [`USE_CASES.md`](USE_CASES.md) and the GitHub Pages gallery.
+- Research is cumulative nontruth: attempts, insights, challenges,
+  counterexamples, obstacles, repairs, and dispositions remain separately
+  traceable.
+- A Candidate Release seals exact claim, proof, predecessor, source,
+  computation, Paper/Audit, and adverse-disposition bytes.
+- A fresh verifier receives only a frozen capsule and records one immutable
+  Certification Decision.
+- The gateway revalidates that exact accepted decision before exposing a Fact.
+
+A new V5 project starts with an empty Fact Graph. V1-V4 and Danus material
+remains readable lineage, but no predecessor Fact, review, closure receipt,
+migration receipt, or acceptance marker is V5 authority.
+
+## Constructive collaboration
+
+- Three-plane task cards remain: compact control, one frozen mathematical-state
+  view, and bounded narrative.
+- Pulse remains an optional two-wave collaboration adapter. Every valid return
+  enters Research independently; a malformed peer is quarantined locally.
+- Existing linked challenges, counterexamples, and obstacles are automatically
+  included in a Candidate Release and require exact dispositions.
+- `profile-closure-status` and `profile-closure-record` remain as repair-advice
+  compatibility commands only. They append nontruth guidance and never certify
+  or admit a Fact.
+
+## Program–mathematics checks
+
+For load-bearing truncated series products, Chalxius now derives every
+factor's minimum retained order from the requested coefficient and the other
+factor valuations. The release contains the x-y swap under-truncation canary:
+retaining `omega11` only through `t^0` is rejected when `t^2` is required.
+A deeper bound replay and exact factor coverage are required.
+
+The aggressive truncation/exact-set mutation audit runs only at release time;
+it is not imported into ordinary research, Pulse, Reader, or computation paths.
+
+## Historical background and retained capabilities
+
+- Creating or refreshing `PROJECT_BACKGROUND.md` requires an explicit user
+  instruction. If the file already exists, substantive V5 work and the V5
+  Reader read and bind its complete body and hash by default.
+- Paper Logic and correctable Audit Graphs, Blackboard, replayable experiments,
+  novelty, campaigns, claims and conventions, atomic mini-DAG releases,
+  verifier capsules, expert/interpretation lint, Chalxius Learner, and the
+  offline Reader remain available.
+- Reader packet schema 1 is preserved. Renderer revision 15 adds deterministic
+  radial core placement and bounded post-size convergence without changing
+  graph authority or writing back to source data.
 
 ## Validation
 
-- Focused Reader suite: 25/25 PASS.
-- Complete suite: 426/426 PASS, both before packaging and from cold public and
-  local-install archives.
-- Self-test, official Skill Creator validation, Python AST, JSON parsing,
-  JavaScript syntax, exact-tree manifests, deterministic archive rebuilding,
-  and cold extraction: PASS.
-- A synthetic layout fixture improved from one crossing to zero. The guarded
-  x-y public case stayed at one crossing rather than accepting a seven-crossing
-  candidate; the philosophy case stayed at three.
-- Topic double-click changed the guarded case from 2 full / 6 minimized cards
-  to 8 full / 0 minimized cards and selected the topic detail.
-- At 100% -> 150%, the measured detail font changed 15 -> 22.5 px, exact TeX
-  12.3 -> 18.45 px, and MathJax 16.2 -> 24.3 px.
-- Browser warnings and errors: none.
-- Local transactional upgrade from 0.3.4: PASS, with the prior version preserved
-  as a recoverable rollback.
+- Complete suite: 450/450 PASS.
+- Self-test and official Skill Creator validation: PASS.
+- Release-time aggressive audit: 8/8 mutants killed.
+- Deterministic public archive: 150 regular members; byte-identical double
+  build; fixed USTAR metadata and gzip timestamp 0.
+- Cold archive and post-install validation: manifest, full suite, self-test,
+  validator, privacy scan, and exact-tree comparison PASS.
+- Transactional local upgrade from 0.3.6 to 0.4.0: PASS, with a recoverable
+  0.3.6 rollback preserved outside skill discovery.
 
-See [`VALIDATION.md`](VALIDATION.md) for hashes and bounded evidence.
+See [`VALIDATION.md`](VALIDATION.md) for exact hashes and bounded evidence.
 
 ## Scope boundary
 
-This release does not change:
-
-- Reader packet schema version 1;
-- the Fact-admission contract or its hash;
-- the reasoning-mode policy object or its hash;
-- graph topology, source authority, source order, or provenance;
-- Chalxius Learner activation rules; or
-- any research project or Fact Graph.
-
-The Reader remains offline and self-contained. It adds no watcher, polling,
-fetch loop, model runtime, local storage, sidecar, graph writeback, or PDF
-management. Its metadata continues to report `truth_effect="none"`.
-
-The x-y interchange page is explicitly a **potential application only**. Its
-predecessor archive does not pass the current workflow audit, was not created by
-0.3.5, and has not been confirmed by the relevant authors.
+No active V4 project was migrated, rewritten, or accepted into V5. Software
+validation establishes the stated workflow and package contracts; it does not
+prove any mathematical theorem or Fact-admit any research claim.
 
 ## Upgrade notes
 
-- Existing generated pages remain unchanged until `export-reader-html` is run
-  again with a complete Reader packet.
-- After export, use Reload graph or reload the browser page to load the newly
-  replaced fixed HTML file.
-- Verify the public archive with `SHA256SUMS`, then verify the extracted skill
-  with `chalxius/MANIFEST.sha256` before installation.
-
-## Acknowledgements
-
-Chalxius acknowledges Liu et al., **Danus: Orchestrating Mathematical
-Reasoning Agents with Fact-Graph Memory**, arXiv:2607.06447v2, as a separate
-published system whose public design informed the fact-graph layout. It is not
-a runtime dependency and no Danus source code is inherited.
-
-Chalxius also thanks **Matt Pocock** for the public
-[`/grill-me`](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
-requirements-interview design. This is design attribution, not a runtime
-dependency. See [`ACKNOWLEDGEMENTS.md`](ACKNOWLEDGEMENTS.md).
+Verify the release archive with `SHA256SUMS`, then verify the extracted skill
+with `chalxius/MANIFEST.sha256`. Start a new task or app session after replacing
+an installed skill so the host reloads the 0.4.0 instructions.

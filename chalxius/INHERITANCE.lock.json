@@ -1,17 +1,29 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
-  "architectural_rule": "chalk_0_4_is_the_only_research_engine",
+  "architectural_rule": "v5_is_the_only_fact_authority_v4_and_predecessors_are_readable_nontruth",
+  "workflow": {
+    "default_evidence_version": 5,
+    "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
+    "v5_initial_fact_authority": "empty",
+    "v4_authority_inheritance": false,
+    "v4_readability": "preserved",
+    "task_card_planes": [
+      "control",
+      "mathematical_state",
+      "narrative"
+    ]
+  },
   "components": {
     "chalk": {
       "skill_name": "mathgraph-chalk-version",
       "version": "0.4.0-chalk",
       "manifest_file_sha256": "2c60a862978aec9cedd628e37bf2fa405b29b8ff5dec1ce650ae21871906c613",
-      "role": "architectural_base",
+      "role": "source_lineage_with_v4_readability_only",
       "runtime_dependency": false,
       "source_inherited": true
     },
@@ -19,9 +31,12 @@
       "skill_name": "run-multi-agent-mathgraph",
       "version": "0.2.12",
       "manifest_file_sha256": "bd7899e587c82092468c388a04dce6c9c46fc0da2020203564937c0cac4bb33e",
-      "role": "behavioral_reference/legacy_import_source",
+      "reference_lineage": "original_danus_0.2.9_and_later",
+      "role": "behavioral_and_performance_reference_only",
       "runtime_dependency": false,
-      "source_inherited": false
+      "source_inherited": false,
+      "writer_inherited": false,
+      "fact_authority_inherited": false
     },
     "grill_me": {
       "skill_name": "grill-me",
@@ -61,14 +76,16 @@
   },
   "reader_export_surface": {
     "schema_version": 1,
-    "renderer_revision": "chalxius-reader-html-12",
+    "renderer_revision": "chalxius-reader-html-15",
     "activation": "explicit_visualization_request_only",
     "fixed_output": "visualizations/knowledge-map.html",
     "overwrite_policy": "fixed_replace",
     "network_runtime": "disabled",
     "model_runtime": "disabled",
-    "layout": "deterministic_ranked_barycenter",
+    "layout": "deterministic_compact_radial_core_layers",
     "truth_effect": "none",
+    "v5_projection": "deterministic_fact_and_nontruth_plane_adapter",
+    "project_background_read_policy": "default_if_present_never_generate",
     "reload_policy": "same_document_navigation_only",
     "reader_finalize": {
       "schema_version": 1,
@@ -117,13 +134,28 @@
       }
     }
   },
+  "project_background": {
+    "filename": "PROJECT_BACKGROUND.md",
+    "generation_or_refresh": "explicit_user_instruction_required",
+    "reading": "default_if_present_for_substantive_v5_work_and_reader",
+    "missing_file": "continue_without_generation",
+    "maximum_bytes": 262144,
+    "truth_effect": "none"
+  },
+  "release_audit": {
+    "aggressive_bug_audit": "release_time_only",
+    "normal_runtime_hook": false,
+    "series_product_order_rule": "valuation_derived_with_deeper_replay"
+  },
   "forbidden_compositions": [
     "danus_runtime_inside_unified_research",
     "parallel_mutable_danus_and_chalk_roots",
-    "danus_v3_protocol_as_a_second_engine",
+    "danus_protocol_as_a_second_engine",
+    "v4_fact_authority_inside_v5",
+    "project_background_auto_generation",
     "learning_evidence_as_fact_or_research_audit_evidence",
     "standalone_grill_me_as_academic_learning_runtime",
     "standalone_grill_me_graph_mount"
   ],
-  "fact_admission_rule": "one_identical_hash_bound_chalk_v4_contract_across_fast_auto_deep"
+  "fact_admission_rule": "one_identical_v5_candidate_certification_gateway_contract_across_fast_auto_deep"
 }

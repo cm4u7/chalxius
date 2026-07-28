@@ -1,5 +1,12 @@
 # Workflow data contracts: V3 compatibility and V4 additions
 
+> **V5 authority boundary.** The V3/V4 schemas below remain readable
+> compatibility contracts. They do not define V5 truth transitions and no V4
+> review, acceptance marker, profile closure, import, or migration receipt is
+> V5 authority. Current truth-bearing data follows `Research -> Candidate
+> Release -> Certification Decision -> Fact` under `admission_contract.md`.
+> Compatibility commands that submit new work map into that V5 lifecycle.
+
 All ids are lowercase hexadecimal: fact ids are 16 characters, memory ids 12, and review,
 submission, packet, and return hashes full 64-character SHA-256 values. Unknown fields fail in review
 and worker-return contracts. Schema-v1 through v3 evidence remains readable; an explicitly selected

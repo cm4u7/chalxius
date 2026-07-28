@@ -6,7 +6,7 @@ test, and present.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.3.5](https://github.com/cm4u7/chalxius/releases/tag/v0.3.5) ·
+[📦 Download v0.4.0](https://github.com/cm4u7/chalxius/releases/tag/v0.4.0) ·
 [✅ See validation evidence](VALIDATION.md)
 
 ## 🚀 Start with the interactive cases
@@ -80,9 +80,10 @@ The normal working loop is:
 1. 🎯 Choose an exact target.
 2. 📚 Freeze the relevant sources and current graph state.
 3. 🧪 Explore proof routes, computations, objections, and missing prerequisites.
-4. 🔍 Verify a frozen candidate from a fresh context.
-5. ✅ Admit a reusable Fact, or record the exact blocker.
-6. 🗺️ Export a Reader when you want to study or present the graph.
+4. 📦 Seal exact Research into a Candidate Release, including linked adverse work.
+5. 🔍 Obtain a fresh verifier's immutable Certification Decision.
+6. ✅ Admit the exact accepted release as a reusable Fact, or record the blocker.
+7. 🗺️ Export a Reader when you want to study or present the graph.
 
 ## 🎛️ Choose the reasoning profile
 
@@ -93,11 +94,11 @@ change the Fact-admission standard.
 |---|---|---|
 | ⚡ `fast` | A narrow task with clear sources and prerequisites | Keeps expensive exploratory machinery opt-in while retaining source checks, replay requirements, verifier separation, and the full Fact gate |
 | 🧭 `auto` | Most day-to-day mathematical work | Uses deterministic workload signals to activate the advanced features that the task calls for; this is the default |
-| 🔬 `deep` | Ambiguous sources, competing proof routes, literature/novelty work, substantial computation, or high-impact conclusions | Requires every advanced research feature that is genuinely applicable and binds its completion before verification |
+| 🔬 `deep` | Ambiguous sources, competing proof routes, literature/novelty work, substantial computation, or high-impact conclusions | Plans every advanced research feature that is genuinely applicable and exposes incomplete work as repair advice without changing the Fact gate |
 
 ### 🔬 What `deep` can activate
 
-`deep` evaluates the task against ten advanced capabilities and requires each
+`deep` evaluates the task against ten advanced capabilities and requests each
 one that applies:
 
 - 🧠 **Parallel clean-context panel** — independent reasoning channels attack
@@ -124,6 +125,8 @@ one that applies:
 An irrelevant capability is marked `not_applicable`; `deep` does not create
 ceremonial work. Switching profiles affects future work units only, so a frozen
 round keeps the profile and evidence contract with which it began.
+`profile-closure-status` and `profile-closure-record` expose repair advice for
+that plan; they do not certify a round and are not Fact-admission gates.
 
 ## 🗂️ How the workspace stays usable
 
@@ -131,10 +134,13 @@ Chalxius separates material by what it is useful for:
 
 | Workspace | Practical role |
 |---|---|
-| 📚 Source & reconstruction | Preserve exact paper material and your explicit reading of it |
-| 🕵️ Audit | Hold objections, corrections, review decisions, and replacement history |
-| 🧠 Blackboard | Develop questions, proof attempts, computations, and candidate synthesis |
-| ✅ Fact Graph | Store the admitted premises that later work may reuse |
+| 📚 Paper & reconstruction | Preserve exact paper material and your explicit reading of it |
+| 🕵️ Audit | Hold source objections, corrections, decisions, and replacement history |
+| 🧪 Research | Accumulate attempts, insights, challenges, counterexamples, obstacles, repairs, and dispositions as nontruth |
+| 🧠 Blackboard | Develop typed exploratory questions, proof routes, and computations |
+| 📦 Candidate Release | Freeze the exact claim and evidence proposed for certification |
+| 🧾 Certification | Store the fresh verifier's immutable decision without making it a premise by itself |
+| ✅ Fact Graph | Store only the exact gateway-admitted premises that later work may reuse |
 | 🎓 Learning | Store explanations, attempts, misconceptions, and mastery evidence |
 
 This prevents a promising draft, copied theorem, numerical experiment, or
@@ -156,20 +162,20 @@ exporter then writes one self-contained
 - 🧭 multi-target topic expansion;
 - 🧱 optional research, learning, Reader-note, and contextual layers;
 - 📐 a resizable detail panel with scalable mathematical text; and
-- 🧹 deterministic initial placement with bounded crossing reduction.
+- 🧹 deterministic target-distance radial placement and bounded post-size spacing.
 
 Reader interaction changes presentation only. It does not edit graph topology,
 source text, provenance, or Fact status.
 
 ## 📦 Install and verify
 
-Download `chalxius-0.3.5-public.tar.gz` and `SHA256SUMS` from the
-[matching GitHub Release](https://github.com/cm4u7/chalxius/releases/tag/v0.3.5),
+Download `chalxius-0.4.0-public.tar.gz` and `SHA256SUMS` from the
+[matching GitHub Release](https://github.com/cm4u7/chalxius/releases/tag/v0.4.0),
 keep them in the same directory, and run:
 
 ```sh
 shasum -a 256 -c SHA256SUMS
-tar -xzf chalxius-0.3.5-public.tar.gz
+tar -xzf chalxius-0.4.0-public.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -178,19 +184,25 @@ The unpacked [`chalxius/`](chalxius/) directory is the installable skill.
 
 ## 🆕 Current release
 
-Version 0.3.5 improves dense-map reading: mathematical detail follows the
-sidebar text scale, topic links use smooth dashed curves, topic double-click
-opens all member-target chains, and deterministic placement never accepts more
-proper crossings than packet order within its bounded search.
+Version 0.4.0 introduces the cumulative V5 lifecycle: Research, exact Candidate
+Release, immutable Certification Decision, and gateway-admitted Fact. Pulse
+keeps valid work when a peer fails, profile closure becomes repair advice only,
+V4 remains readable without authority inheritance, and load-bearing series
+computations receive valuation-derived truncation checks. Reader packet schema
+1 remains compatible and ships with renderer revision 15.
 
 See [RELEASE.md](RELEASE.md) for release notes and
-[VALIDATION.md](VALIDATION.md) for frozen test, package, and browser evidence.
+[VALIDATION.md](VALIDATION.md) for frozen test, package, and installation evidence.
 
 ## 🛡️ Scope and evidence
 
 - The Reader has `truth_effect="none"` and performs no graph writeback.
 - A workflow PASS establishes the stated workflow property, not mathematical
   truth by itself.
+- A V1-V4 Fact, review, closure, or migration receipt is readable history, not
+  V5 authority.
+- `PROJECT_BACKGROUND.md` is generated only on explicit request; when present,
+  substantive V5 work reads it by default as nontruth context.
 - The philosophy example demonstrates a research workflow, not a philosophical
   conclusion.
 - The x-y interchange example is a **potential application only**. It is not
