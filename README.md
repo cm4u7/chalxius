@@ -6,8 +6,8 @@ test, and present.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.4.0](https://github.com/cm4u7/chalxius/releases/tag/v0.4.0) ·
-[✅ See validation evidence](VALIDATION.md)
+[📦 Download v0.4.4](https://github.com/cm4u7/chalxius/releases/tag/v0.4.4) ·
+[✅ See v0.4.4 evidence](chalxius/references/v5_release_traceability.md)
 
 ## 🚀 Start with the interactive cases
 
@@ -41,6 +41,10 @@ dependency paths.
   satisfy one stable admission contract.
 - ♻️ **Correct without losing history.** Challenge, replace, refute, or revoke
   a node while retaining the old state and exposing downstream consequences.
+- 🧾 **Separate architecture and attack feedback.** Every new run keeps a
+  task-scoped CHX architecture ledger. Projects that explicitly enable adverse
+  route evolution also receive a separate task-end Attack report, with route
+  changes remaining user-governed and future-only.
 - 🎓 **Teach from the research graph.** Chalxius Learner can question, explain,
   test, and schedule review from frozen research snapshots without changing
   research state.
@@ -162,20 +166,25 @@ exporter then writes one self-contained
 - 🧭 multi-target topic expansion;
 - 🧱 optional research, learning, Reader-note, and contextual layers;
 - 📐 a resizable detail panel with scalable mathematical text; and
-- 🧹 deterministic target-distance radial placement and bounded post-size spacing.
+- 🧹 deterministic target-distance radial placement plus localized
+  radial-memory equilibrium after resizing or dragging.
 
 Reader interaction changes presentation only. It does not edit graph topology,
-source text, provenance, or Fact status.
+source text, provenance, or Fact status. Renderer revision 17 uses compact
+hash-based canvas labels, MathJax-ready readable projections for historical
+ASCII mathematics, and bounded two-hop attraction/repulsion while radial and
+angular springs retain the canonical layered circular layout.
 
 ## 📦 Install and verify
 
-Download `chalxius-0.4.0-public.tar.gz` and `SHA256SUMS` from the
-[matching GitHub Release](https://github.com/cm4u7/chalxius/releases/tag/v0.4.0),
+Download `chalxius-0.4.4-back-to-the-future.tar.gz` and its adjacent
+`.sha256` file from the
+[matching GitHub Release](https://github.com/cm4u7/chalxius/releases/tag/v0.4.4),
 keep them in the same directory, and run:
 
 ```sh
-shasum -a 256 -c SHA256SUMS
-tar -xzf chalxius-0.4.0-public.tar.gz
+shasum -a 256 -c chalxius-0.4.4-back-to-the-future.tar.gz.sha256
+tar -xzf chalxius-0.4.4-back-to-the-future.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -184,15 +193,21 @@ The unpacked [`chalxius/`](chalxius/) directory is the installable skill.
 
 ## 🆕 Current release
 
-Version 0.4.0 introduces the cumulative V5 lifecycle: Research, exact Candidate
-Release, immutable Certification Decision, and gateway-admitted Fact. Pulse
-keeps valid work when a peer fails, profile closure becomes repair advice only,
-V4 remains readable without authority inheritance, and load-bearing series
-computations receive valuation-derived truncation checks. Reader packet schema
-1 remains compatible and ships with renderer revision 15.
+Version 0.4.4, **Back to the Future**, preserves the V5 truth path while
+restoring bounded L1 promoted-query seeding, typed L2 mode hints, and the
+four-factor Research frontier for new work. Project background is frozen as a
+complete hash-bound chunk index rather than occupying active context. The
+release also adds the CHX architecture ledger, optional user-governed adverse
+route evolution, computation-gated program–mathematics review, strict aborted
+round projection, and Reader renderer revision 17.
 
-See [RELEASE.md](RELEASE.md) for release notes and
-[VALIDATION.md](VALIDATION.md) for frozen test, package, and installation evidence.
+The upgrade is prospective: it performs no migration, backfill,
+reclassification, or forced redo of frozen v0.4.0 work. See the
+[v0.4.4 release notes](https://github.com/cm4u7/chalxius/releases/tag/v0.4.4)
+and the packaged
+[`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md)
+for current evidence. The root [RELEASE.md](RELEASE.md) and
+[VALIDATION.md](VALIDATION.md) retain the public v0.4.0 baseline record.
 
 ## 🛡️ Scope and evidence
 
@@ -201,8 +216,9 @@ See [RELEASE.md](RELEASE.md) for release notes and
   truth by itself.
 - A V1-V4 Fact, review, closure, or migration receipt is readable history, not
   V5 authority.
-- `PROJECT_BACKGROUND.md` is generated only on explicit request; when present,
-  substantive V5 work reads it by default as nontruth context.
+- `PROJECT_BACKGROUND.md` is generated only on explicit request. New v0.4.4
+  task cards freeze a complete retrievable index and exact selected chunks as
+  nontruth context; machine authority always overrides stale background prose.
 - The philosophy example demonstrates a research workflow, not a philosophical
   conclusion.
 - The x-y interchange example is a **potential application only**. It is not
