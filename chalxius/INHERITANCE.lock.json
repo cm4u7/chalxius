@@ -1,7 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.4.0",
+  "version": "0.4.4",
+  "release_codename": "Back to the Future",
+  "release_display_name": "Chalxius 0.4.4 — Back to the Future",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -76,7 +78,7 @@
   },
   "reader_export_surface": {
     "schema_version": 1,
-    "renderer_revision": "chalxius-reader-html-15",
+    "renderer_revision": "chalxius-reader-html-17",
     "activation": "explicit_visualization_request_only",
     "fixed_output": "visualizations/knowledge-map.html",
     "overwrite_policy": "fixed_replace",
@@ -85,6 +87,13 @@
     "layout": "deterministic_compact_radial_core_layers",
     "truth_effect": "none",
     "v5_projection": "deterministic_fact_and_nontruth_plane_adapter",
+    "v5_title_policy": "bounded_content_free_object_kind_plus_sha256_prefix",
+    "canvas_identity": "object_sha256_first_6_plus_localized_role_and_plane",
+    "hover_identity": "same_compact_canvas_identity_single_line",
+    "detail_math": "title_readable_and_formal_with_paren_bracket_dollar_and_environment_tex",
+    "readable_fact_summary": "native_tex_preserved_machine_anchors_humanized_and_bounded_historical_ascii_math_delimited_exact_formal_text_unchanged",
+    "direct_drag_policy": "selected_set_pinned_then_bounded_two_hop_plus_collision_halo_radial_memory_settlement",
+    "post_size_convergence": "bounded_14_pass_local_collision_edge_attraction_radial_and_tangential_memory",
     "project_background_read_policy": "default_if_present_never_generate",
     "reload_policy": "same_document_navigation_only",
     "reader_finalize": {
@@ -137,10 +146,166 @@
   "project_background": {
     "filename": "PROJECT_BACKGROUND.md",
     "generation_or_refresh": "explicit_user_instruction_required",
-    "reading": "default_if_present_for_substantive_v5_work_and_reader",
+    "reading": "indexed_in_new_0.4.4_task_cards_full_reader_compatibility",
     "missing_file": "continue_without_generation",
     "maximum_bytes": 262144,
+    "new_card_binding_revision": "chalxius-v5-project-background-binding-2",
+    "index_revision": "chalxius-v5-project-background-index-1",
+    "chunk_maximum_bytes": 8192,
+    "selection": "explicit_main_planner_ids_or_index_only_exact_chunks_on_demand",
+    "rehydration": "reread_frozen_index_and_chunks_after_context_compaction",
+    "legacy_card_reading": "full_body_and_sha256_unchanged",
     "truth_effect": "none"
+  },
+  "chx_runtime_ledger_surface": {
+    "contract_revision": "chalxius-chx-run-ledger-2",
+    "read_compatibility": [
+      "chalxius-chx-run-ledger-1",
+      "chalxius-chx-run-ledger-2"
+    ],
+    "activation": "prospective_for_runs_started_after_0.4.1_activation_only",
+    "scope": "one_task_scoped_ledger_per_new_chalxius_run",
+    "storage": "project_chx_ledgers_or_external_projectless_host_state",
+    "issue_filter": "architecture_caused_or_materially_amplified_only",
+    "final_feedback": "report_only_when_report_required_true",
+    "older_run_policy": "no_backfill_reclassification_invalidation_or_redo",
+    "worker_runtime_binding": "new_task_card_exact_candidate_root_version_and_manifest_file_hash_fail_closed_at_start",
+    "truth_effect": "none",
+    "project_effect": "none"
+  },
+  "adverse_routing_surface": {
+    "contract_revision": "chalxius-adverse-routing-evolution-1",
+    "activation": "explicit_operator_project_opt_in_only",
+    "storage": "project_governance_adverse_routing",
+    "ordinary_baseline_attack_rule_count": 8,
+    "program_math_scoped_additional_rule_count": 1,
+    "program_math_activation": "generated_research_review_with_typed_computation_source_and_output_only",
+    "research_stage_intervention": "future_nontruth_refute_research_after_source_ingestion",
+    "architecture_issue_import": "forbidden",
+    "proposal_activation": "user_decision_only",
+    "decision_actions": [
+      "approve",
+      "approve_modified",
+      "reject"
+    ],
+    "disablement": "future_task_cards_only",
+    "maximum_matching_approved_rules_per_card": 24,
+    "attack_report": "required_at_enabled_host_task_completion_and_separate_from_chx",
+    "legacy_and_frozen_work_policy": "no_backfill_schema_change_warning_or_redo",
+    "adverse_assignment_provenance": "exact_refute_task_card_worker_and_assignment_independent_of_outcome_kind",
+    "no_counterexample_policy": "mandatory_release_disposition_and_verifier_exclusion_without_attack_learning",
+    "truth_effect": "none",
+    "fact_admission_change": false
+  },
+  "v5_assurance_surface": {
+    "contract_revision": "chalxius-v5-assurance-0.4.3-1",
+    "legacy_contract_revision": "chalxius-v5-assurance-0.4.2-legacy",
+    "activation": "prospective_new_task_cards_only",
+    "legacy_and_frozen_work_policy": "read_exact_original_contract_no_backfill_warning_or_redo",
+    "source_evidence_current": 4,
+    "source_evidence_legacy_readability": 3,
+    "research_return_fields": [
+      "obligation_dispositions",
+      "computation_manifest",
+      "research_assurance"
+    ],
+    "verifier_materialization": "neutral_exact_allowlist_with_decision_template_and_standalone_preflight",
+    "proof_lineage": "interface_only_exact_proof_bytes_or_complete_rewrite_conservation_map",
+    "legacy_named_premise_reuse": "resolve_one_exact_predecessor_clause_and_require_full_statement_hash_witness_or_fail_closed",
+    "public_source_capability": "memory_add_current_assurance_project_relative_path_sha256_role",
+    "source_dependent_planning": "fail_without_exact_artifact_or_machine_authority_snapshot",
+    "frontier_ordering": "compact_four_factor_with_legacy_eight_metric_read_projection_no_cutoff",
+    "truth_effect": "candidate_and_certification_gate_only"
+  },
+  "v5_task_context_surface": {
+    "contract_revision": "chalxius-v5-task-context-0.4.4-1",
+    "legacy_contract_revisions": [
+      "chalxius-v5-task-context-0.4.3-2"
+    ],
+    "activation": "prospective_new_task_cards_only",
+    "source_research_dossier": "complete_exact_validated_record_with_256_kib_fail_closed_limit",
+    "authority_scope": "task_referenced_facts_and_explicit_attack_target_only",
+    "attack_target_capabilities": "exact_release_decision_optional_admission_admitted_facts_and_sealed_artifacts",
+    "background_precedence": "machine_validated_v5_authority_over_nontruth_status_prose",
+    "partial_or_inconsistent_target": "fail_before_round_directory_creation",
+    "runtime_binding": "canonical_candidate_skill_root_version_version_file_hash_and_manifest_file_hash",
+    "legacy_and_frozen_work_policy": "read_exact_original_card_no_backfill_warning_or_redo",
+    "truth_effect": "none",
+    "fact_admission_change": false
+  },
+  "v5_context_selection_surface": {
+    "contract_revision": "chalxius-v5-context-selection-0.4.4-1",
+    "activation": "prospective_new_task_cards_only",
+    "compiler_role": "v5_main_planner",
+    "inspection_roles": "main_and_operator_only_host_dispatch_role_unchanged",
+    "l1": "one_exact_promoted_query_task_with_origin_node_snapshot_query_and_hash_lineage",
+    "l2": "exact_work_mode_enum_hints_with_explicit_mode_precedence",
+    "background": "complete_exact_byte_index_and_round_snapshot_with_on_demand_rehydration",
+    "host_output_boundary": "mathematical_findings_must_enter_research_or_worker_return",
+    "legacy_and_frozen_work_policy": "no_backfill_reordering_warning_or_redo",
+    "truth_effect": "none",
+    "fact_admission_change": false
+  },
+  "fact_graph_inventory_surface": {
+    "activation": "explicit_operator_read_only_command_only",
+    "commands": [
+      "fact-graph-inventory",
+      "fact-graph-append-target"
+    ],
+    "inventory": "active_interfaces_release_decision_gateway_acceptance_and_audit_provenance",
+    "append_target": "route_future_commands_to_exact_selected_project_root",
+    "different_project_ids": "no_fact_authority_transfer",
+    "automatic_inheritance": false,
+    "federation": false,
+    "current_root_write": false,
+    "truth_effect": "none",
+    "project_effect": "none"
+  },
+  "bttf_field_repair": {
+    "activation": "prospective_except_exact_idempotent_completion_of_existing_partial_admission",
+    "admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection",
+    "admission_visibility_switch": "accepted_marker_unchanged",
+    "post_marker_completion": "exact_idempotent_event_and_interface_projection",
+    "admission_contract_hash_change": false,
+    "admission_implementation_change": true,
+    "legacy_interface_rewrite": false,
+    "frozen_work_backfill_warning_invalidation_reorder_or_redo": false
+  },
+  "runtime_compatibility": {
+    "baseline": "chalxius-0.4.3",
+    "protected_paths": [
+      "scripts/mathgraph/**",
+      "scripts/mgraph",
+      "scripts/mgraph_cli.py",
+      "scripts/chx_ledger.py",
+      "scripts/notation_inventory.py",
+      "scripts/prepare_verifier_capsule.py",
+      "scripts/learning_graph.py",
+      "scripts/learn",
+      "assets/reader_html_template.html",
+      "assets/reader_html_app.js",
+      "assets/reader_html.css",
+      "assets/vendor/**"
+    ],
+    "protected_file_count": 71,
+    "protected_tree_sha256": "ae03a3b33e7cb8ee8cda1151b09b690f3402cd6b6bb4c233a1e03760bfba75fe",
+    "changed_from_0.4.3_runtime_paths": [
+      "assets/reader_html_app.js",
+      "assets/reader_html_template.html",
+      "scripts/chx_ledger.py",
+      "scripts/mathgraph/cli.py",
+      "scripts/mathgraph/interfaces.py",
+      "scripts/mathgraph/modes.py",
+      "scripts/mathgraph/project_background.py",
+      "scripts/mathgraph/reader_html.py",
+      "scripts/mathgraph/roles.py",
+      "scripts/mathgraph/v5_lifecycle.py",
+      "scripts/mathgraph/v5_reader.py"
+    ],
+    "project_schema_change": "prospective_v5_context_selection_indexed_background_runtime_binding_source_capability_and_adverse_provenance_only",
+    "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
+    "fact_admission_change": false,
+    "fact_admission_change_scope": "contract_unchanged_implementation_hardened_for_nonrecursive_recovery_and_future_legacy_premise_validation"
   },
   "release_audit": {
     "aggressive_bug_audit": "release_time_only",
@@ -155,7 +320,11 @@
     "project_background_auto_generation",
     "learning_evidence_as_fact_or_research_audit_evidence",
     "standalone_grill_me_as_academic_learning_runtime",
-    "standalone_grill_me_graph_mount"
+    "standalone_grill_me_graph_mount",
+    "worker_self_activation_of_route_rules",
+    "attack_report_as_chx_or_fact_evidence",
+    "chx_architecture_issue_as_adverse_route_rule",
+    "automatic_cross_project_fact_inheritance_or_federation"
   ],
   "fact_admission_rule": "one_identical_v5_candidate_certification_gateway_contract_across_fast_auto_deep"
 }

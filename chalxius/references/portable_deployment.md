@@ -1,6 +1,7 @@
 # Chalxius portable deployment
 
-The 0.4.0 release artifact contains one self-contained `chalxius` skill,
+The 0.4.4 `Back to the Future` candidate or release artifact contains one self-contained `chalxius`
+skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The Chalxius research engine is the only embedded research
 kernel; retired predecessor, coordinator, and standalone companion skills are
@@ -22,6 +23,55 @@ If a separately authorized release archive contains `MANIFEST.sha256`, run
 `INHERITANCE.lock.json` against the named source manifests. A workspace
 candidate without a release manifest must not be represented as packaged.
 
+## Start and finish the CHX ledger
+
+For every run begun after the 0.4.1 activation boundary, start exactly one
+task-scoped CHX ledger before substantive work, using
+`scripts/chx_ledger.py start`. For project-bound work, store it at
+`PROJECT/chx-ledgers/`; for projectless work, use private host task state outside
+the skill. This operational file has no project-audit or truth effect. Close it
+after applicable audits and immediately before final reporting. Report it only when close returns
+`report_required=true`; when false, emit no ledger message at all. See
+`chx_runtime_ledger.md` for the exact commands and causal schema.
+
+This requirement is prospective. A task already running under 0.4.0 keeps its
+original status even if the installed skill changes or it loads some 0.4.1-or-later
+bytes. Do not backfill its ledger, recertify it, mark it noncompliant, invalidate
+its work, or request a redo.
+
+## Enable Attack reports prospectively
+
+Global installation makes the adverse-routing commands available but does not
+write to or activate any project. When the user has given an explicit
+host-wide prospective authorization, the operator may consume that
+authorization at the start of each future V5 work unit by enabling the
+project-local extension before planning a new round:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
+  --actor USER --reason "Enable prospective user-governed Attack reports."
+"$MGRAPH" --root "$PROJECT" --role main attack-route-status
+```
+
+Do not enable it in V1-V4 roots, in the middle of a frozen work unit, or merely
+to modernize an old project. Never backfill attack cases, change an old return
+schema, invalidate prior work, or request a redo. A V5 project already in use
+may consume the authorization only when its next new work unit begins; every
+previously frozen task card remains byte-for-byte under its original contract.
+
+For every enabled host task, produce the separate report even when it has zero
+cases:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main attack-report \
+  --host-task-scope-id HOST_TASK_SCOPE_ID
+```
+
+The report contains worker-reported nontruth attack cases and pending route
+proposals. Only the operator may approve, approve after supplying a modified
+rule, reject, or disable. Decisions affect future task cards only. Attack
+reports never become CHX architecture reports or Fact evidence.
+
 ## Initialize and route
 
 ```bash
@@ -33,32 +83,79 @@ PROJECT=/absolute/path/outside/the/skill
 "$MGRAPH" --root "$PROJECT" --role main audit
 ```
 
-`fast`, `auto`, and `deep` are Chalxius execution profiles. They never start
-retired predecessor skills. The exact task-card `execution_profile` advises
-whether the clean-context panel, durable two-wave pulse, Paper/Audit work,
-computation lane, campaign expansion, novelty search, and expert synthesis are
-`required`, `available`, or `not_applicable` for that research plan. The V5
-Fact-admission contract is invariant in all modes; profile completion is not a
-second truth or admission gate.
+`fast`, `auto`, and `deep` are Chalxius reasoning profiles. They never start
+retired predecessor skills. A current V5 task card freezes the exact mode-event
+binding and its prospective `assurance_contract`; it does not contain the V4
+`execution_profile` or `profile_obligations` fields. The standalone
+`adoption-plan` command can still advise whether a clean-context panel, Pulse,
+Paper/Audit work, computation, campaigns, novelty search, or expert synthesis
+would be useful. Automatic attachment of that legacy plan to V5 rounds is not
+enabled. The Fact-admission contract is invariant in all modes.
 
-For a required panel, use all genuinely distinct currently callable
-clean-context slots when carrying out that plan. For a required pulse, produce
-actual plan, ingestion, barrier, trusted dispatch, cross-review, and closure
-evidence. Each valid Pulse contribution enters cumulative Research
-independently; a malformed peer is quarantined locally, and a whole-pulse abort
-is reserved for an explicit stop of future dispatch. An available feature is
-opt-in; an inapplicable feature is not manufactured. Estimated cost, duration,
-burden, and score are priority/load ordering only and never weaken a V5
-Candidate Release or Certification requirement.
+When the operator adopts that advice, use genuinely distinct callable contexts
+for a panel and produce actual plan, ingestion, barrier, trusted dispatch,
+cross-review, and closure evidence for a Pulse. Each valid Pulse contribution
+enters cumulative Research independently; a malformed peer is quarantined
+locally. Estimated cost, duration, burden, and score remain priority/load
+ordering only and never weaken a V5 Candidate Release or Certification
+requirement.
 
-Every new round freezes `profile_obligations` as repair guidance. After
-canonical ingestion, `profile-closure-status` may identify incomplete planned
-work, and `profile-closure-record` may append exact typed advice to cumulative
-Research. Neither command is required before constructing a verifier capsule,
-sealing a Candidate Release, recording a Certification Decision, or admitting
-a Fact. Missing source, replay, adverse-disposition, atomic-DAG, convention,
-quantifier, or fresh-verifier evidence still fails at its exact V5 gate.
-Machine-native and procedural host evidence retain their distinct labels.
+After canonical ingestion, V5 `profile-closure-status` computes local process
+repair advice from current round, release, decision, and admission state;
+`profile-closure-record` may append that advice to cumulative Research. It does
+not reconstruct or pretend to freeze the V4 profile fields. Neither command is
+required before constructing a verifier capsule, sealing a Candidate Release,
+recording a Certification Decision, or admitting a Fact. Missing source,
+replay, adverse-disposition, atomic-DAG, convention, quantifier, or fresh-
+verifier evidence still fails at its exact V5 gate.
+
+The automatic V5 frontier uses the compact four-factor score and projects
+legacy eight-metric Research without rewriting it. It is an ordering aid only,
+has no cutoff, and does not prevent explicit scheduling of a low-scored item.
+
+For new 0.4.4 work, Main compiles task context and Operator retains governance;
+the technical Host role remains the unchanged trusted dispatch adapter. One
+origin-bound promoted Blackboard item may seed its exact bounded query as one
+task. Exact enum mode hints apply only across an equal assurance/adverse
+signature; explicit `--mode` remains the user override.
+
+When an explicitly maintained `PROJECT_BACKGROUND.md` exists, inspect its
+complete index and optionally commit exact chunks into a new card:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main project-background-index
+"$MGRAPH" --root "$PROJECT" --role main plan-round --workers 1 \
+  --memory-id RESEARCH_ID --background-chunk-id BGC_ID
+"$MGRAPH" --root "$PROJECT" --role worker project-background-read BGC_ID \
+  --task-card rounds/ROUND/task-cards/ASSIGNMENT.json
+```
+
+The card freezes the complete index and exact round-local source snapshot; it
+does not embed the background body. After context compaction, reread the card
+and retrieve required chunks again. Never refresh the source automatically.
+
+For a current computation-bearing task card, each stage must bind formula,
+domain, representation, approximation or truncation budget, output meaning,
+and independent checks. In an adverse-routing-enabled project, successful
+ingestion queues a nontruth future refutation review only when exact executable
+source and output artifacts are present. Ordinary challenges keep the eight
+baseline rules; the program-math rule is scoped to that generated review.
+
+Materialize a V5 verifier capsule into an absent directory or an existing empty
+directory with mode `0700`:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/prepare_verifier_capsule.py" \
+  --project-root "$PROJECT" --release-id RELEASE_ID \
+  --capsule-root /absolute/external/verifier-capsule
+```
+
+The materializer recomputes the release and capsule from the project, rejects
+an explicit capsule that differs from those bytes, copies only authorized
+artifacts, and writes a decision template and standalone validator. Run the
+validator inside the neutral capsule before returning `output/review.json`.
+The verifier never records a decision or admits a Fact; those remain gateway
+operations.
 
 ## Optional offline reader page
 
@@ -155,6 +252,17 @@ visible nodes retain the size action without automatic settling. This creates
 only page-session presentation pins and no packet, graph, source, storage,
 sidecar, service, or writeback state.
 
+Revision 16 repairs the Reader identity/projection boundary and direct-drag
+stability. New V5 projection titles are bounded content-free object identities;
+all canvas labels and hover text derive from the first six object-hash digits
+plus localized role and plane, including legacy packets. Complete claims and
+TeX remain in the right panel, whose title/readable/formal containers recognize
+parenthesis, bracket, dollar, double-dollar, and supported environment syntax.
+Direct drag cancels queued convergence, moves and pins only the dragged set, and
+never launches neighbor forces; the bounded revision-15 solver remains scoped
+to actual card-size changes. Packet v1, authority, and old project bytes remain
+unchanged.
+
 ## Historical projects
 
 V5 never activates a V1-V4 root or upgrades its authority through `mode-init`.
@@ -199,7 +307,10 @@ multi-root federation remains disabled.
 ## Host handoff
 
 Tell the receiving host to read `SKILL.md`, verify the candidate, choose an
-external project root, select a reasoning mode, and report mode event, repair
-advice, audit state, and Candidate Release/Certification/Fact boundary. Installation,
+external project root, start the prospective CHX ledger in that project's
+`chx-ledgers/` directory, select a reasoning
+mode, and report mode event, repair advice, audit state, and
+Candidate Release/Certification/Fact boundary. Close the ledger and apply conditional
+feedback without changing any project status. Installation,
 global replacement, packaging, migration, and cutover each require separate
 explicit authorization.

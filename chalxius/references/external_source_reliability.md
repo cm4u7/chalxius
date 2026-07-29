@@ -1,10 +1,12 @@
 # Tiered external-source traceability and critical audit
 
 Use this gate together with
-[external_theorem_applicability.md](external_theorem_applicability.md) for every new external
-theorem, lemma, proposition, definition, or formula. Applicability asks whether the source result
-implies the desired target conclusion. This gate asks whether the exact statement was recovered
-faithfully and whether cheap internal checks or known issue signals make it unsafe to use.
+[external_theorem_applicability.md](external_theorem_applicability.md) for every
+new external theorem, lemma, proposition, definition, or formula under the
+exact frozen task-card revision. Applicability asks whether the source result
+implies the desired target conclusion. This gate asks whether the exact
+statement was recovered faithfully and whether cheap internal checks or known
+issue signals make it unsafe to use.
 
 This is a bounded critical audit, not a proof that the external theorem is true. Require expert human
 review for publication-grade mathematics.
@@ -16,7 +18,7 @@ review for publication-grade mathematics.
 3. Select baseline or strict theorem review
 4. Run theorem-level sanity checks
 5. Classify defects and corrections
-6. Record source-evidence v3
+6. Record the exact source-evidence revision
 7. Verify independently without duplicate work
 8. Preserve historical evidence
 
@@ -32,13 +34,16 @@ Record in `source_trace`:
 - SHA-256 of the exact inspected artifact bytes;
 - an absolute versioned artifact locator;
 - retrieval date in `YYYY-MM-DD`;
-- exact theorem/lemma/proposition/definition/equation locator;
+- exact theorem/lemma/proposition/definition/equation locator or v4 coverage
+  spans;
 - the complete load-bearing statement transcription and its UTF-8 SHA-256;
 - whether source TeX or the rendered primary artifact was inspected.
 
 Include inherited qualifiers that can change the logical interface: quantifiers, object types,
 parameter ranges, exclusions, locality, uniformity, topology, normalization, and the exact
-conclusion. Set `statement_locator` equal to `applicability.source_locator`.
+conclusion. In compatibility source-evidence v3, set `statement_locator` equal
+to `applicability.source_locator`. Current source-evidence v4 replaces that
+duplicated locator with complete-statement coverage records.
 
 Use PDF text extraction or OCR only to find the passage. Compare the transcription against source
 TeX or the rendered page before hashing it. A formula additionally needs `source_fidelity`, and its
@@ -190,9 +195,10 @@ Record that route in exploration memory. Then prove the statement locally, cite 
 source through a new certificate, or submit a corrected atomic lemma through the ordinary independent
 review gate. Never attribute a locally repaired theorem to the uncorrected source.
 
-## 6. Record source-evidence v3
+## 6. Record the exact source-evidence revision
 
-Every new `external_refs` item contains:
+A frozen 0.4.2 or compatibility source-evidence-v3 item has the following
+shape and remains valid under its recorded task-card contract:
 
 ```json
 {
@@ -272,10 +278,35 @@ Strict items use all five sanity-check kinds and a nonempty `risk_triggers` list
 `official_erratum_applied`, use `kind="official_erratum"` and include `correction_locator` and
 `correction_sha256`.
 
+A prospective 0.4.3 V5 assurance contract requires source-evidence v4 for each
+new external source use. V4 strengthens, rather than rewrites, v3:
+
+- `source_trace.transcription_kind` is exactly
+  `complete_statement_transcription`; a conclusion excerpt is insufficient;
+- `source_trace.statement_coverage` binds every applicability hypothesis plus
+  the literal source and used conclusions to exact statement spans and hashes;
+- each `hypothesis_map` row carries a unique `source_coverage_id`;
+- `conclusion_map` binds literal source-conclusion spans, source and target
+  object types, one target proof anchor, and a typed transport id when either
+  object type or conclusion language changes;
+- `convention_map` declares only notation, sign, normalization, orientation, or
+  branch conversion; it cannot hide a mathematical transport;
+- each status search carries endpoint, query timestamp, polarity, response
+  status, freshness policy, and either an authorized frozen-response artifact
+  hash or one exact narrow live-query capability;
+- `critical_audit.status_summary` is mechanically derived over `pass`,
+  `issue`, `fail`, and `not_applicable`; a contradictory all-pass narrative is
+  rejected, and any structured `fail` cannot support a Candidate Release.
+
+The current verifier capsule transports the frozen response bytes or exact
+narrow query capabilities. A URL string without reproducible response evidence
+does not establish current source status.
+
 ## 7. Verify independently without duplicate work
 
-Give the fresh verifier the frozen packet. It may open only the exact source and source-audit
-locators, plus the prescribed narrow current status queries.
+Give the fresh verifier the neutral frozen capsule. It may open only its exact
+source artifacts and frozen status responses, plus the narrow live queries
+listed in the capability.
 
 For every source item, require the verifier to:
 
@@ -303,6 +334,8 @@ risk justifies it.
 
 ## 8. Preserve historical evidence
 
-Applicability-only and source-evidence-v2 certificates remain readable historical trust. Do not
-rewrite admitted evidence or claim that it passed v3 tiering. Any new source use or corrected
-citation must create a new source-evidence-v3 submission.
+Applicability-only, source-evidence-v2, and frozen source-evidence-v3
+certificates remain readable historical trust. Do not rewrite admitted
+evidence or claim that it passed v4. A source use under a newly frozen 0.4.3 V5
+assurance contract must create source-evidence v4; old task cards keep their
+original requirement and never need backfill or redo.

@@ -4,6 +4,7 @@ import json
 import hashlib
 import math
 import os
+import re
 from contextlib import nullcontext
 from functools import wraps
 from pathlib import Path, PurePosixPath
@@ -31,6 +32,10 @@ from .contracts import (
 from .event_ledger import ExperimentEventLedger
 from .modes import require_unaborted_work_unit
 from .protocol import validate_task_card
+from .v5_assurance import (
+    V5_ASSURANCE_CONTRACT_REVISION,
+    V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+)
 
 
 INDEPENDENCE_AXES = {
@@ -68,6 +73,17 @@ V5_STRONG_TRUNCATION_METHODS = {
     "independent_reimplementation",
     "formally_derived",
 }
+V5_STRUCTURE_KINDS = {"bijection", "involution", "matching", "pairing"}
+V5_STRUCTURE_REPLAY_CHECKS = {
+    "verify_claimed_structure",
+    "verify_occurrence_multiplicity",
+    "run_equal_total_negative_control",
+}
+_STRUCTURE_CLAIM_RE = re.compile(
+    r"\b(?:bijection|involution|matching|pairing|pairwise\s+cancellation|"
+    r"inverse\s+(?:map|join)|cut[-/ ]join)\b",
+    re.IGNORECASE,
+)
 EXPERIMENT_EVENTS = {
     "started",
     "stage_started",
@@ -413,6 +429,7 @@ def validate_computational_evidence(
     artifacts: list[dict[str, str]],
     verification_plan: dict[str, Any],
     workflow_evidence_version: int = 4,
+    assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
 ) -> list[dict[str, Any]]:
     if not isinstance(entries, list) or any(not isinstance(item, dict) for item in entries):
         raise ValueError("computational_evidence must be a list of objects")
@@ -420,6 +437,14 @@ def validate_computational_evidence(
     artifact_hashes = {item["sha256"] for item in artifacts}
     keys: set[str] = set()
     normalized: list[dict[str, Any]] = []
+    current_assurance = (
+        assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION
+    )
+    if assurance_contract_revision not in {
+        V5_ASSURANCE_CONTRACT_REVISION,
+        V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+    }:
+        raise ValueError("computational evidence assurance contract is unsupported")
     for index, entry in enumerate(entries, 1):
         label = f"computational_evidence[{index}]"
         require_exact_keys(
@@ -439,6 +464,7 @@ def validate_computational_evidence(
                 "replay_checks",
                 "independence_matrix",
             },
+            optional={"claimed_structure"} if current_assurance else set(),
             label=label,
         )
         key = require_string(entry, "key")
@@ -503,7 +529,7 @@ def validate_computational_evidence(
         require_string(interpreter, "implementation")
         require_string(interpreter, "version")
         require_string(entry, "arithmetic")
-        require_string(entry, "algorithm_spec")
+        algorithm_spec = require_string(entry, "algorithm_spec")
         certificate = entry.get("truncation_certificate")
         if not isinstance(certificate, dict):
             raise ValueError(f"{label}.truncation_certificate must be an object")
@@ -592,6 +618,82 @@ def validate_computational_evidence(
             raise ValueError(
                 f"{label} series evidence lacks order-budget/depth-extension replay"
             )
+        claimed_structure = entry.get("claimed_structure")
+        structure_claimed = current_assurance and bool(
+            _STRUCTURE_CLAIM_RE.search(algorithm_spec)
+            or _STRUCTURE_CLAIM_RE.search(proof)
+        )
+        if structure_claimed and claimed_structure is None:
+            raise ValueError(
+                f"{label} claims a bijection/involution/matching structure but lacks claimed_structure"
+            )
+        if claimed_structure is not None:
+            if not current_assurance:
+                raise ValueError(
+                    f"{label}.claimed_structure is available only under the 0.4.3 assurance contract"
+                )
+            if not isinstance(claimed_structure, dict):
+                raise ValueError(f"{label}.claimed_structure must be an object")
+            require_exact_keys(
+                claimed_structure,
+                required={
+                    "kind",
+                    "domain_role",
+                    "forward_map_role",
+                    "inverse_map_role",
+                    "multiplicity_role",
+                    "negative_control_role",
+                    "typed_record_fields",
+                    "automorphism_controls",
+                    "value_free",
+                },
+                label=f"{label}.claimed_structure",
+            )
+            if claimed_structure.get("kind") not in V5_STRUCTURE_KINDS:
+                raise ValueError(f"{label}.claimed_structure.kind is invalid")
+            structure_roles = {
+                require_string(claimed_structure, field)
+                for field in (
+                    "domain_role",
+                    "forward_map_role",
+                    "inverse_map_role",
+                    "multiplicity_role",
+                    "negative_control_role",
+                )
+            }
+            if len(structure_roles) != 5 or not structure_roles.issubset(roles):
+                raise ValueError(
+                    f"{label}.claimed_structure requires five distinct declared artifact roles"
+                )
+            typed_fields = set(
+                _require_string_list(claimed_structure, "typed_record_fields")
+            )
+            if not {"occurrence_identity", "multiplicity"}.issubset(typed_fields):
+                raise ValueError(
+                    f"{label}.claimed_structure must retain occurrence_identity and multiplicity"
+                )
+            if not _require_string_list(
+                claimed_structure,
+                "automorphism_controls",
+            ):
+                raise ValueError(
+                    f"{label}.claimed_structure automorphism_controls must be nonempty"
+                )
+            if claimed_structure.get("value_free") is not True:
+                raise ValueError(
+                    f"{label}.claimed_structure must be validated value-free"
+                )
+            if not V5_STRUCTURE_REPLAY_CHECKS.issubset(replay_checks):
+                raise ValueError(
+                    f"{label}.claimed_structure lacks constructor, multiplicity, or equal-total negative-control replay"
+                )
+            output_structure_roles = structure_roles.difference(
+                {claimed_structure["domain_role"]}
+            )
+            if not output_structure_roles.issubset(expected_output_roles):
+                raise ValueError(
+                    f"{label}.claimed_structure outputs are not all frozen expected outputs"
+                )
         independence = validate_independence_matrix(entry["independence_matrix"])
         if (
             workflow_evidence_version >= 5

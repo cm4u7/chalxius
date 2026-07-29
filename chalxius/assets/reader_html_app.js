@@ -52,6 +52,7 @@
   let pendingDynamicSeedIds = new Set();
   let pendingDynamicPasses = 0;
   let pendingDynamicReason = 'direct-manipulation';
+  const canonicalPositionByNodeId = new Map();
   const boxSelectionHaloByNodeId = new Map();
   const RADIAL_START_ANGLE = Math.PI;
   const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
@@ -71,12 +72,14 @@
   const RADIAL_RING_REPULSION = 1.7;
   const RADIAL_REFINEMENT_BLEND_FACTORS = Object.freeze([1, 0.8, 0.6, 0.4, 0.2]);
   const DYNAMIC_FORCE_NODE_LIMIT = 240;
-  const DYNAMIC_FORCE_DRAG_PASSES = 2;
   const DYNAMIC_FORCE_SETTLE_PASSES = 14;
   const DYNAMIC_FORCE_MAX_STEP = 14;
   const DYNAMIC_REPULSION_STRENGTH = 0.42;
   const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
   const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+  const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.085;
+  const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.055;
+  const DYNAMIC_TETHER_MAX_STEP = 4;
   const PINCH_ZOOM_SENSITIVITY = 0.008;
   const NODE_SIZE_CONTROL_X_RATIO = 0.29;
   const NODE_SIZE_CONTROL_Y_RATIO = 0.5;
@@ -546,15 +549,20 @@
     return `${bi('主题', 'Topic')}\n${theme.label}`;
   }
 
-  function nodeDisplayLabel(node) {
-    const topic = themeById.get(node.theme_id);
+  function nodeIdentityLabel(node) {
     const orderPrefix = node.reader_role === 'target'
       ? `${targetOrderIndex.get(node.id) + 1}. `
       : '';
-    const topicLine = node.reader_role === 'target' && topic && topic.target_ids.length === 1
-      ? `\n${bi('主题', 'Topic')} · ${topic.label}`
-      : '';
-    return `${orderPrefix}${node.title}${topicLine}\n${roleLabel(node.reader_role)} · ${planeLabel(node.plane)}`;
+    const hashPrefix = node.provenance.object_sha256.slice(0, 6);
+    return `${orderPrefix}${hashPrefix}\n${roleLabel(node.reader_role)} · ${planeLabel(node.plane)}`;
+  }
+
+  function nodeIdentityText(node) {
+    return nodeIdentityLabel(node).replace(/\n/g, ' · ');
+  }
+
+  function nodeDisplayLabel(node) {
+    return nodeIdentityLabel(node);
   }
 
   function populatePageHeader() {
@@ -799,6 +807,7 @@
       showEdgeDetail(event.target.id());
     });
     cy.on('grab', 'node', (event) => {
+      cancelScheduledDynamicForces();
       const anchor = event.target;
       if (state.selectedNodeIds.size < 2 || !state.selectedNodeIds.has(anchor.id())) {
         state.groupDrag = null;
@@ -829,10 +838,6 @@
           }
         });
       }
-      const fixedIds = groupDrag && groupDrag.anchorId === event.target.id()
-        ? [...groupDrag.origins.keys()]
-        : [event.target.id()];
-      scheduleDynamicForces(fixedIds, DYNAMIC_FORCE_DRAG_PASSES);
     });
     cy.on('dragfree', 'node', (event) => {
       const node = event.target;
@@ -845,8 +850,13 @@
         if (movedNode.length) state.pinned.set(nodeId, {...movedNode.position()});
       }
       dom.cy.dataset.lastMovedSelectionCount = String(movedIds.length);
-      scheduleDynamicForces(movedIds, DYNAMIC_FORCE_SETTLE_PASSES);
       state.groupDrag = null;
+      scheduleDynamicForces(
+        movedIds,
+        DYNAMIC_FORCE_SETTLE_PASSES,
+        movedIds,
+        'drag-release'
+      );
       scheduleNodeControlSync();
     });
     cy.on('pan zoom position render resize', scheduleNodeControlSync);
@@ -1532,12 +1542,57 @@
     return Math.min(horizontal, vertical);
   }
 
+  function dynamicRadialMemoryDisplacement(nodeId, position) {
+    const canonical = canonicalPositionByNodeId.get(nodeId);
+    if (!canonical) return null;
+    const desiredRadius = Math.hypot(canonical.x, canonical.y);
+    const currentRadius = Math.hypot(position.x, position.y);
+    if (desiredRadius < 0.000001) {
+      return {
+        x: Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+          DYNAMIC_TETHER_MAX_STEP,
+          (canonical.x - position.x) * DYNAMIC_RADIAL_TETHER_STRENGTH
+        )),
+        y: Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+          DYNAMIC_TETHER_MAX_STEP,
+          (canonical.y - position.y) * DYNAMIC_RADIAL_TETHER_STRENGTH
+        ))
+      };
+    }
+    const radialX = currentRadius > 0.000001
+      ? position.x / currentRadius
+      : canonical.x / desiredRadius;
+    const radialY = currentRadius > 0.000001
+      ? position.y / currentRadius
+      : canonical.y / desiredRadius;
+    const radialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+      DYNAMIC_TETHER_MAX_STEP,
+      (desiredRadius - currentRadius) * DYNAMIC_RADIAL_TETHER_STRENGTH
+    ));
+    const currentAngle = currentRadius > 0.000001
+      ? Math.atan2(position.y, position.x)
+      : Math.atan2(canonical.y, canonical.x);
+    const desiredAngle = Math.atan2(canonical.y, canonical.x);
+    const angularError = wrapLayoutAngle(desiredAngle - currentAngle);
+    const tangentialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+      DYNAMIC_TETHER_MAX_STEP,
+      angularError * Math.max(80, currentRadius) * DYNAMIC_TANGENTIAL_TETHER_STRENGTH
+    ));
+    return {
+      x: radialX * radialPull - radialY * tangentialPull,
+      y: radialY * radialPull + radialX * tangentialPull
+    };
+  }
+
   function applyDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
     const visibleNodes = [...cy.nodes().filter((node) => !node.hasClass('hidden'))]
       .sort((left, right) => left.id().localeCompare(right.id()));
     if (!visibleNodes.length || visibleNodes.length > DYNAMIC_FORCE_NODE_LIMIT) return 0;
     const visibleNodeIds = new Set(visibleNodes.map((node) => node.id()));
-    const fixed = new Set([...fixedNodeIds].filter((nodeId) => visibleNodeIds.has(nodeId)));
+    const fixed = new Set(
+      [...fixedNodeIds, ...state.pinned.keys()]
+        .filter((nodeId) => visibleNodeIds.has(nodeId))
+    );
     const seeds = new Set([...(seedNodeIds || fixed)].filter((nodeId) => visibleNodeIds.has(nodeId)));
     const positions = new Map(visibleNodes.map((node) => [node.id(), {...node.position()}]));
     const extents = new Map(visibleNodes.map((node) => {
@@ -1557,16 +1612,16 @@
           : relationWeight[edge.data('category')] || 0.5
       }))
       .filter((edge) => visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId));
-    const attractionNeighborhood = new Set(seeds);
+    const forceNeighborhood = new Set(seeds);
     for (let depth = 0; depth < 2; depth += 1) {
-      const current = new Set(attractionNeighborhood);
-      const next = new Set(attractionNeighborhood);
+      const current = new Set(forceNeighborhood);
+      const next = new Set(forceNeighborhood);
       for (const edge of visibleEdges) {
         if (!current.has(edge.sourceId) && !current.has(edge.targetId)) continue;
         next.add(edge.sourceId);
         next.add(edge.targetId);
       }
-      for (const nodeId of next) attractionNeighborhood.add(nodeId);
+      for (const nodeId of next) forceNeighborhood.add(nodeId);
     }
     const boundaryGap = (leftId, rightId) => {
       const left = positions.get(leftId);
@@ -1583,7 +1638,18 @@
           - dynamicBoundaryExtent(extents.get(rightId), -deltaX, -deltaY)
       };
     };
+    const graphNeighborhood = new Set(forceNeighborhood);
+    for (const activeId of graphNeighborhood) {
+      for (const node of visibleNodes) {
+        const candidateId = node.id();
+        if (forceNeighborhood.has(candidateId)) continue;
+        if (boundaryGap(activeId, candidateId).gap < RADIAL_VISIBLE_EDGE_GAP) {
+          forceNeighborhood.add(candidateId);
+        }
+      }
+    }
     const moved = new Set();
+    const tethered = new Set();
     let repulsionPairs = 0;
     let attractionEdges = 0;
     const passes = Math.max(1, Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1));
@@ -1591,15 +1657,18 @@
     for (let pass = 0; pass < passes; pass += 1) {
       executedPasses += 1;
       const displacement = new Map(visibleNodes.map((node) => [node.id(), {x: 0, y: 0}]));
+      const clearanceConstrained = new Set();
       let applied = false;
       for (let leftIndex = 0; leftIndex < visibleNodes.length; leftIndex += 1) {
         const leftId = visibleNodes[leftIndex].id();
-        const leftFixed = fixed.has(leftId);
+        const leftActive = forceNeighborhood.has(leftId);
         for (let rightIndex = leftIndex + 1; rightIndex < visibleNodes.length; rightIndex += 1) {
           const rightId = visibleNodes[rightIndex].id();
-          const rightFixed = fixed.has(rightId);
+          const rightActive = forceNeighborhood.has(rightId);
+          if (!leftActive && !rightActive) continue;
+          const leftFixed = fixed.has(leftId) || !leftActive;
+          const rightFixed = fixed.has(rightId) || !rightActive;
           if (leftFixed && rightFixed) continue;
-          if (!attractionNeighborhood.has(leftId) && !attractionNeighborhood.has(rightId)) continue;
           let measure = boundaryGap(leftId, rightId);
           if (measure.gap >= RADIAL_VISIBLE_EDGE_GAP) continue;
           if (measure.distance < 0.000001) {
@@ -1618,11 +1687,13 @@
             )
           );
           if (!leftFixed) {
+            clearanceConstrained.add(leftId);
             const share = rightFixed ? push : push / 2;
             displacement.get(leftId).x -= unitX * share;
             displacement.get(leftId).y -= unitY * share;
           }
           if (!rightFixed) {
+            clearanceConstrained.add(rightId);
             const share = leftFixed ? push : push / 2;
             displacement.get(rightId).x += unitX * share;
             displacement.get(rightId).y += unitY * share;
@@ -1632,9 +1703,11 @@
         }
       }
       for (const edge of visibleEdges) {
-        if (!attractionNeighborhood.has(edge.sourceId) && !attractionNeighborhood.has(edge.targetId)) continue;
-        const sourceFixed = fixed.has(edge.sourceId);
-        const targetFixed = fixed.has(edge.targetId);
+        const sourceActive = forceNeighborhood.has(edge.sourceId);
+        const targetActive = forceNeighborhood.has(edge.targetId);
+        if (!sourceActive && !targetActive) continue;
+        const sourceFixed = fixed.has(edge.sourceId) || !sourceActive;
+        const targetFixed = fixed.has(edge.targetId) || !targetActive;
         if (sourceFixed && targetFixed) continue;
         const measure = boundaryGap(edge.sourceId, edge.targetId);
         if (measure.distance < 0.000001 || measure.gap <= DYNAMIC_ATTRACTION_TARGET_GAP) continue;
@@ -1659,6 +1732,20 @@
         attractionEdges += 1;
         applied = true;
       }
+      for (const node of visibleNodes) {
+        const nodeId = node.id();
+        if (
+          fixed.has(nodeId)
+          || !forceNeighborhood.has(nodeId)
+          || clearanceConstrained.has(nodeId)
+        ) continue;
+        const memory = dynamicRadialMemoryDisplacement(nodeId, positions.get(nodeId));
+        if (!memory || Math.hypot(memory.x, memory.y) < 0.01) continue;
+        displacement.get(nodeId).x += memory.x;
+        displacement.get(nodeId).y += memory.y;
+        tethered.add(nodeId);
+        applied = true;
+      }
       if (!applied) continue;
       cy.batch(() => {
         for (const node of visibleNodes) {
@@ -1675,8 +1762,6 @@
           };
           positions.set(nodeId, next);
           node.position(next);
-          state.pinned.set(nodeId, next);
-          attractionNeighborhood.add(nodeId);
           moved.add(nodeId);
         }
       });
@@ -1684,6 +1769,9 @@
     dom.cy.dataset.dynamicForceMovedCount = String(moved.size);
     dom.cy.dataset.dynamicForceFixedCount = String(fixed.size);
     dom.cy.dataset.dynamicForceSeedCount = String(seeds.size);
+    dom.cy.dataset.dynamicForceNeighborhoodCount = String(forceNeighborhood.size);
+    dom.cy.dataset.dynamicRadialTetheredCount = String(tethered.size);
+    dom.cy.dataset.dynamicLayoutModel = 'localized-radial-memory-equilibrium';
     dom.cy.dataset.dynamicForceRequestedPasses = String(passes);
     dom.cy.dataset.dynamicForceExecutedPasses = String(executedPasses);
     dom.cy.dataset.dynamicForceReason = reason || 'direct-manipulation';
@@ -2131,6 +2219,7 @@
   }
 
   function applyCanonicalPositions() {
+    canonicalPositionByNodeId.clear();
     const nodeIds = packet.nodes.map((node) => node.id);
     cy.batch(() => {
       for (const nodeId of nodeIds) {
@@ -2188,6 +2277,7 @@
       ? String(compactLayout.finalScore.edgeClearanceViolationCount)
       : 'not-evaluated';
     for (const [nodeId, position] of positions) {
+      canonicalPositionByNodeId.set(nodeId, {...position});
       setPosition(nodeId, position);
     }
     const themeRadius = groupedThemeIds.length
@@ -2215,10 +2305,13 @@
         }, {x: 0, y: 0});
         if (Math.hypot(vector.x, vector.y) > 0.001) angle = Math.atan2(vector.y, vector.x);
       }
-      setPosition(`reader-theme:${themeId}`, {
+      const themeNodeId = `reader-theme:${themeId}`;
+      const themePosition = {
         x: Math.cos(angle) * themeRadius,
         y: Math.sin(angle) * themeRadius
-      });
+      };
+      canonicalPositionByNodeId.set(themeNodeId, {...themePosition});
+      setPosition(themeNodeId, themePosition);
     });
     dom.cy.dataset.layoutModel = 'compact-radial-core-layers';
     dom.cy.dataset.layoutRingCount = String(groups.size);
@@ -2364,9 +2457,10 @@
       button.dataset.selected = state.selectedNodeIds.has(node.id) ? 'yes' : 'no';
       button.dataset.boxSelected = state.boxSelectedNodeIds.has(node.id) ? 'yes' : 'no';
       const action = minimized ? bi('最大化卡片', 'Maximize card') : bi('最小化卡片', 'Minimize card');
-      button.setAttribute('aria-label', `${action}: ${node.title}`);
+      const identity = nodeIdentityText(node);
+      button.setAttribute('aria-label', `${action}: ${identity}`);
       button.setAttribute('aria-pressed', minimized ? 'true' : 'false');
-      if (!minimized) button.title = `${action}: ${node.title}`;
+      if (!minimized) button.title = `${action}: ${identity}`;
       button.append(svgIcon(minimized ? 'expand' : 'collapse'));
       const enterControl = () => {
         state.hoveredControlNodeId = node.id;
@@ -2537,7 +2631,7 @@
     const node = nodeById.get(nodeId);
     if (!node) return;
     state.tooltipNodeId = nodeId;
-    dom.nodeNameTooltip.textContent = node.title;
+    dom.nodeNameTooltip.textContent = nodeIdentityText(node);
     dom.nodeNameTooltip.hidden = false;
     syncNodeNameTooltip();
   }
@@ -2893,8 +2987,8 @@
     heading.textContent = bi('如何开始', 'How to begin');
     const introduction = document.createElement('p');
     introduction.textContent = bi(
-      '所有已启用的节点和关系都保留在同一画布上。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；拖动或切换卡片尺寸后，附近卡片会柔和避让，过长的真实关系会轻微回拉，并立即稳定。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
-      'Every eligible node and relation remains on one canvas. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. After dragging or resizing a card, nearby cards repel gently, overly long real relations pull lightly, and the layout settles immediately. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
+      '所有已启用的节点和关系都保留在同一画布上。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；松开后，所选卡片保持为锚点，至多两跳的邻域会在环形记忆约束下做一次有限的引力、斥力均衡，其余布局保持固定。切换卡片尺寸使用同一收敛机制。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
+      'Every eligible node and relation remains on one canvas. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. On release, the selected cards remain anchors while at most their two-hop neighborhood performs one bounded attraction/repulsion settlement under radial-memory constraints; the rest of the layout stays fixed. Resizing uses the same convergence. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
     );
     section.append(heading, introduction);
     dom.detailReadable.append(section);
@@ -2945,6 +3039,7 @@
     dom.detailReadable.append(orderHeading);
     dom.detailFormal.replaceChildren();
     dom.formalDetails.open = false;
+    typesetDetail();
     updateEdgeDensity();
     renderNodeControls();
   }
@@ -2996,6 +3091,7 @@
     dom.detailReadable.append(section);
     dom.detailFormal.replaceChildren();
     dom.formalDetails.open = false;
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3044,6 +3140,7 @@
     dom.detailReadable.append(section);
     dom.detailFormal.replaceChildren();
     dom.formalDetails.open = false;
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3078,7 +3175,7 @@
     appendSection(dom.detailReadable, bi('推理路线', 'Reasoning route'), node.reasoning);
     renderFormalNode(node);
     dom.formalDetails.open = false;
-    typeset([dom.detailReadable, dom.detailFormal]);
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3206,7 +3303,7 @@
     provenanceBlock.append(copy);
     dom.detailFormal.append(provenanceBlock);
     dom.formalDetails.open = false;
-    typeset([dom.detailReadable, dom.detailFormal]);
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3406,6 +3503,10 @@
     } catch (error) {
       console.warn('Math typesetting unavailable; exact TeX remains readable.', error);
     }
+  }
+
+  function typesetDetail() {
+    return typeset([dom.detailTitle, dom.detailReadable, dom.detailFormal]);
   }
 
   async function copyText(text, button) {

@@ -1,9 +1,9 @@
 ---
 name: chalxius
-description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; run cumulative Research and replayable verification; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
+description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius
+# Chalxius 0.4.4 — Back to the Future
 
 Use the bundled Chalxius research engine as the only research runtime. Fast,
 auto, and deep are execution profiles of that one engine. The Fact Graph
@@ -16,7 +16,7 @@ it is not a second runtime or user-facing route.
 
 ## Read the governing references
 
-Before any project write, read [references/unified_architecture.md](references/unified_architecture.md), [references/reasoning_modes.md](references/reasoning_modes.md), and [references/admission_contract.md](references/admission_contract.md).
+Before substantive work or any project write, read [references/unified_architecture.md](references/unified_architecture.md), [references/reasoning_modes.md](references/reasoning_modes.md), [references/admission_contract.md](references/admission_contract.md), and the mandatory nontruth runtime [references/chx_runtime_ledger.md](references/chx_runtime_ledger.md).
 
 Read the directly applicable Chalxius reference before acting:
 
@@ -24,6 +24,7 @@ Read the directly applicable Chalxius reference before acting:
 - V5 Research, lifecycle, retained capabilities, or release work: [references/v5_capability_matrix.md](references/v5_capability_matrix.md).
 - Historical V4 memory, routing, or adoption behavior: [references/adoption_policy_v4.md](references/adoption_policy_v4.md).
 - Round creation, worker execution, return validation, or ingestion: [references/agent_protocol_v4.md](references/agent_protocol_v4.md).
+- Adverse-worker counterexample learning, attack reports, or route decisions: [references/adverse_routing_evolution.md](references/adverse_routing_evolution.md).
 - Blackboard graph types, query, snapshots, merge, or pulses: [references/blackboard_graph_v4.md](references/blackboard_graph_v4.md).
 - Computation, checkpoints, artifact replay, or numerical evidence: [references/computational_verification_v4.md](references/computational_verification_v4.md).
 - Campaigns, targets, historical projects, and migration: [references/campaigns_and_migration_v4.md](references/campaigns_and_migration_v4.md).
@@ -40,15 +41,29 @@ evidence; the V5 Fact Graph is the only premise store. Paper/Audit and
 Blackboard remain separate nontruth/source subsystems, and the Reader is only a
 derived presentation.
 
-Every worker task card retains three communication planes: compact control,
-one frozen mathematical-state view, and bounded narrative. The card is the
-immutable capability boundary. Never replace it with prompt prose or infer
-capabilities from filesystem visibility.
+Every worker task card retains three communication planes: compact control, one frozen
+mathematical-state view, and bounded narrative. The card is the immutable capability boundary. A
+new current-contract card also binds the complete source Research dossier and a task-referenced V5
+authority snapshot. Its current status overrides conflicting nontruth project-background prose;
+never replace the card with prompt prose or infer filesystem capabilities.
 
 A full-fidelity Paper mirror on the Blackboard remains an exploration
 projection with an exact receipt. If an Audit Graph is wrong, append a
 challenge, disposition, replacement object, and new snapshot; never rewrite
 historical audit bytes.
+
+For every Chalxius run started after the 0.4.1 activation boundary, start one
+task-scoped CHX runtime ledger before substantive analysis or tool execution.
+Project-bound runs store their ledger at `PROJECT/chx-ledgers/`. Projectless
+runs use private host task state outside the skill. The directory is an
+operational container only: `truth_effect=none` and `project_effect=none` mean
+that its bytes never enter project audit, Research, Certification, or Fact
+admission. Record only problems that the Chalxius architecture caused or
+materially amplified, with an exact causal mechanism and audit anchors. Runs
+already underway under 0.4.0 must not be backfilled, reclassified, or reopened,
+and their missing ledger is never an audit warning, certification blocker, or
+reason to redo work. Mixed 0.4.0 and 0.4.1-or-later bytes do not alter an older run's
+original status.
 
 ## Choose a reasoning mode
 
@@ -99,7 +114,11 @@ explicit and guarded.
   --to deep --actor main --reason "Paper ambiguity requires full audit."
 ```
 
-Every switch appends a content-addressed event. It applies to future work units only. A frozen round retains its original mode event, deterministic execution profile, and admission-contract hash until completion. To discontinue it explicitly:
+Every switch appends a content-addressed event. It applies to future work units
+only. A frozen V5 round retains its original mode event, assurance contract,
+and admission-contract hash until completion. Historical V4 cards retain their
+original execution profiles without backfill. To discontinue a work unit
+explicitly:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role main work-unit-abort ROUND_ID \
@@ -108,19 +127,17 @@ Every switch appends a content-addressed event. It applies to future work units 
 
 The abort blocks future managed returns, experiment writes, and new Pulse
 commitments or dispatch for that round. It preserves existing Research,
-receipts, and read-only audit. Use whole-pulse abort only to stop future Pulse
+receipts, and read-only audit. `round-status` projects unfinished assignments as
+`frozen_aborted` with no live awaiting count, and audit checks that projection
+against the exact abort id. Use whole-pulse abort only to stop future Pulse
 dispatch while retaining accumulated contributions.
 
 ## Run research work
 
-1. Add or select cumulative Research. Challenges, counterexamples, obstacles,
-   insights, repairs, and dispositions remain separate immutable entries.
+1. Add or select cumulative Research. Challenges, counterexamples, obstacles, insights, repairs, and dispositions remain separate immutable entries. Source-dependent work uses `memory-add --current-assurance` with exact project-relative path/hash/role artifacts; path-only prose cannot be planned.
 2. For paper-led work, freeze exact Paper Logic and Audit snapshots with their
    independent reviews.
-3. Plan a round. The card binds the current mode, one Blackboard snapshot,
-   exact admitted predecessor interfaces, related Research context, and the
-   three communication planes. Bind the actual host task/thread through
-   `host_task_scope_id` when that identifier is available.
+3. Plan a round. The card binds the candidate skill root/version, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; the dedicated Host role remains dispatch-only. Bind the task/thread through `host_task_scope_id` when available; worker CHX startup passes the exact task card and fails on runtime drift.
 4. Execute only from the frozen card. Preflight a repairable draft, then ingest
    only the exact worker-final hash. A malformed peer is quarantined locally.
 5. For collaborative work, use optional two-wave Pulse. Each valid Wave-1 and
@@ -134,6 +151,37 @@ dispatch while retaining accumulated contributions.
 8. Send only the frozen verifier capsule to a fresh verifier, record one
    immutable decision, then let the gateway admit an accepted release.
 
+The automatic V5 frontier uses the compact four-factor ordering: impact,
+information value, feasibility, and burden/economy. Historical eight-metric
+Research is projected at read time without rewriting. This score orders active
+work only: it has no cutoff, no truth effect, and never makes a low-scored
+Research id ineligible for explicit scheduling. Frozen task cards never change
+when the frontier is rescored.
+
+For new 0.4.4 cards, one promoted Blackboard Research item may seed its exact
+bounded query and lineage. Exact enum mode suggestions apply only when their
+cross-component assurance/adverse signature equals the kind-derived default;
+an explicit user `--mode` wins. Neither mechanism changes Fact admission.
+
+The source-dossier/authority contract is prospective. A frozen card without `task_context_revision` remains
+valid without backfill or repeated work. Do not refresh `PROJECT_BACKGROUND.md`; plan a new future card.
+
+If adverse routing was explicitly enabled for the project, an ingested
+`counterexample` also creates one immutable nontruth attack case and one route
+proposal. The worker may abstract a proposed rule but cannot activate it.
+Only the user, through the `operator` role, may approve, modify-and-approve,
+reject, or later disable the rule. Every decision affects future task cards
+only; frozen cards and old returns remain unchanged.
+
+When an enabled V5 Research return contains one or more actual computation
+stages with exact source and output artifacts, successful ingestion also queues
+one typed future `refute` Research review of the formula-domain-
+representation-approximation-output chain. That review receives the scoped
+program-math baseline attack in addition to the ordinary eight rules. Mere
+prose about code, an ordinary challenge, or a task with no executable stage
+must not activate this route. The queued review is nontruth, does not interrupt
+the producer, and never imports a CHX issue into attack routing.
+
 ```bash
 "$MGRAPH" --root "$PROJECT" --role main profile-closure-status ROUND_ID
 "$MGRAPH" --root "$PROJECT" --role main profile-closure-record ROUND_ID \
@@ -144,7 +192,40 @@ dispatch while retaining accumulated contributions.
 recorded suggestion never marks the work complete. Paper evidence may reuse an
 earlier reviewed snapshot only while it remains current and nonsuperseded.
 
-For load-bearing computation, record immutable commands, implementation and version, staged checkpoints, replay artifacts, independent checks, and exact output hashes. Prepare a frozen verifier capability with `scripts/prepare_verifier_capsule.py`; a verifier receives only that capability and never the research workspace.
+Enable and inspect this project-local extension only on explicit request:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
+  --actor USER --reason "Enable user-governed adverse routing evolution."
+"$MGRAPH" --root "$PROJECT" --role main attack-route-status
+```
+
+A host-wide explicit user authorization may be consumed prospectively at the
+start of each future V5 work unit by issuing the same operator enable command
+for its exact project. Global installation alone never activates or writes a
+project. Do not consume that authorization in the middle of an already-frozen
+unit, on a V1-V4 root, or as a reason to backfill, reclassify, invalidate, or
+redo earlier work.
+
+At task completion, if enabled, run `attack-report --host-task-scope-id ID`
+and report it separately from CHX even when it contains zero attacks. Present
+every pending proposal and let the user choose `approve`, `approve_modified`,
+or `reject`; never infer approval from silence or from a successful return.
+Attack reporting and route approval have no Fact authority.
+
+For every actual V5 computation stage, bind the displayed formula to one exact
+code anchor, mathematical and iteration domains, object representations and
+multiplicity, approximation or truncation budget, output interpretation, and
+independent checks. A truncated computation must derive the required order and
+show `implemented_order >= required_order`; matching two depths alone is not a
+proof. A load-bearing stage needs at least two distinct checks, including an
+independent implementation, symbolic oracle, or metamorphic relation.
+
+Prepare a neutral frozen verifier capability with
+`scripts/prepare_verifier_capsule.py`. It accepts one V5 release id, capsule id,
+or exact capsule JSON, copies only authorized bytes outside both the project
+field-level preflight validator. The verifier writes and preflights only the
+review; the gateway remains the sole recorder/admitter.
 
 ## Admit V5 facts through one contract
 
@@ -165,24 +246,23 @@ Fact communication uses claim cards and expert lint receipts. Exploration commun
 
 ## Generate historical project background only on explicit request
 
-V5 does not accept V4 or Danus Facts as authority. Preserve historical roots
-unchanged and readable. When the user explicitly asks to generate or refresh a
-project background, read the relevant project files broadly and write exactly
-one `PROJECT_BACKGROUND.md` summary. Do not generate, refresh, or incrementally
-update it from mere file presence.
+V5 does not accept V4 or Danus Facts as authority. Preserve historical roots unchanged and readable. Before reducing a prior V5 project to prose, Operator may explicitly run `fact-graph-inventory --source-root OLD`; `fact-graph-append-target --source-root OLD --expected-project-id ID` selects that exact old project for future commands without importing Facts, federation, or current-project writes. When the user explicitly asks to generate or refresh a project background, read the relevant project files broadly and write exactly one `PROJECT_BACKGROUND.md` summary. Do not generate, refresh, or incrementally update it from mere file presence.
 
-Once the summary exists, every substantive V5 work unit and V5 Reader
-projection reads it by default and binds the full body and hash:
+Once the summary exists, V5 Reader keeps its historical projection, while a
+new task card freezes a complete exact-byte index plus a round-local source
+snapshot instead of consuming the full body in active context:
 
 ```bash
+"$MGRAPH" --root "$PROJECT" --role main project-background-index
 "$MGRAPH" --root "$PROJECT" --role main plan-round --workers 1 \
-  --memory-id RESEARCH_ID
+  --memory-id RESEARCH_ID --background-chunk-id BGC_ID
 ```
 
 If the file is absent, Chalxius proceeds without background and does not create
-one. Treat the summary as nontruth context; return to the exact cited source
-for every load-bearing use. Retired predecessor packages remain rollback
-lineage only and are never started beside V5.
+one. Main/Operator may inspect current chunks; a worker must supply its frozen
+task card and reread the index/chunks after compaction. Treat the summary as
+nontruth context and return to exact cited sources for load-bearing use.
+Retired predecessor packages remain rollback lineage only.
 
 ## Activate Chalxius Learner only on demand
 
@@ -263,10 +343,11 @@ and body text are never machine-translated. Presentation-only explanations remai
 ```
 
 For a V5 project with at least one admitted Fact, use `--v5-projection` instead
-of `--packet` to project the current Fact, Research, Certification,
-Paper/Audit, Blackboard, and default-if-present project-background views into
-the same packet-v1 renderer. Non-Fact planes remain visibly nontruth, and an
-oversized projection fails rather than truncating silently.
+of `--packet` to project current Fact, Research, Certification, Paper/Audit,
+Blackboard, and default-if-present project-background views into packet v1.
+The adapter gives each node a bounded content-free title (object kind plus the
+first six object-hash digits); full claims and TeX stay in readable/formal
+fields. Non-Fact planes remain visibly nontruth, and oversized projections fail.
 
 Successful Reader Finalize deterministically binds the frozen source snapshot,
 canonical packet SHA-256, node count, and complete-sidebar count into
@@ -275,15 +356,12 @@ metadata and returned in command stdout with
 `scope="presentation_readiness_only"` and `truth_effect="none"`; it creates no
 receipt file or new authority object.
 
-The deterministic renderer overwrites only
-`PROJECT/visualizations/knowledge-map.html`. It embeds all graph, interaction,
-and math-rendering code, performs no network request or model call, and writes
-nothing back to the source graphs. Its bilingual Reload graph control performs
-only same-document navigation, so a browser reload reads the latest atomically
-replaced file and resets runtime UI state. It is not a watcher, poller, fetch
-loop, or hot-reload service. Every currently eligible packet node and
-edge remains on one continuing canvas; card minimization changes only visual
-size and never graph topology or edge eligibility. The initial `All targets`
+The deterministic renderer overwrites only `PROJECT/visualizations/knowledge-map.html`.
+It embeds all graph, interaction, and math-rendering code, makes no network or
+model call, and writes nothing back. Reload uses same-document navigation and
+resets runtime UI state; it is not a watcher, poller, fetch loop, or hot reload.
+Every eligible node and edge remains on one canvas; minimization changes only
+visual size, never topology or eligibility. The initial `All targets`
 size action leaves eligible targets full-size and minimizes eligible non-target
 cards. `All cards` maximizes every eligible real card. These are reversible
 sizing actions, not navigation modes, and they preserve selection, viewport,
@@ -293,9 +371,13 @@ on both rendered axes. After the new silhouette is applied, the renderer runs
 exactly fourteen deterministic spacing passes. A direct card, directional path,
 complete path, or topic-path anchor remains fixed; global actions use every
 changed card as a seed without inventing a special view. Undo and redo run the
-same convergence. Nearby silhouettes repel below the protected gap and visible
-relation neighbors attract only above the comfortable link gap. Pan and zoom
-are preserved and fitting remains explicit.
+same convergence. The seed plus at most two graph hops and one collision halo
+form the only movable neighborhood; everything outside is a fixed boundary.
+Nearby silhouettes repel, visible relation neighbors attract, and radial plus
+tangential springs retain the canonical ring and angular order. Drag release
+uses the same bounded settlement while the selected cards remain anchors.
+Automatic force movement never creates a manual pin; pan and zoom are preserved
+and fitting remains explicit.
 Synthetic multi-target theme nodes stay
 readable while their targets are eligible but are excluded from card sizing and
 sizing history.
@@ -311,13 +393,16 @@ if crossings, card collisions, and a protected 72-model-pixel connected-card
 boundary gap do not worsen. A fixed ring-spacing margin keeps reset layouts
 clear of that exact acceptance floor.
 This placement is presentation-only and runs only on initial load or explicit
-layout reset.
+layout reset; bounded settlement runs only after sizing or drag release, never
+while idle.
 
-Any real card can be minimized or maximized independently. A minimized card
-remains selectable and draggable from its card body, exposes its readable title
-on hover, and opens the same complete right-panel detail. In both full and
-compact silhouettes, the size-control center occupies the same normalized
-internal point: 29% of rendered width and 50% of rendered height. Resizing
+Any real card can be minimized or maximized independently. Canvas labels and
+hover use only the first six object-hash digits plus localized role and plane;
+the full record stays in the right panel. V5 Fact summaries humanize machine
+anchors and delimit a bounded historical ASCII-math grammar for MathJax while
+formal/original text and hashes remain exact. A minimized card remains selectable
+and draggable. In both silhouettes, the size-control center occupies the same
+normalized point: 29% of rendered width and 50% of rendered height. Resizing
 compensates the node position so the replacement plus or minus stays at the same
 screen coordinate. Full-card text widths and margins are paired by role to keep
 the control-plus-label envelope within 3% of the card center across supported
@@ -357,22 +442,14 @@ scheme changes node silhouettes only; it does not change plane colors, status
 borders, relation styling, positions, size state, or history. Appearance is
 session-only and is distinct from packet `theme_order`.
 
-Treat the canvas as trackpad-first: two-finger gestures pan, while pinch input
-is handled explicitly as pointer-centered zoom rather than delegated to an
-environment-dependent browser default. Primary-button dragging on empty canvas
-draws a selection rectangle and
-gives every selected node a soft green silhouette glow;
-dragging any selected card body then moves the entire selected set by the same
-offset, preserving relative positions. For at most 240 visible nodes during
-direct drag, nearby cards repel below the protected gap and relation neighbors
-weakly attract above a
-comfortable link gap; release settles for at most fourteen passes, then motion
-stops. Every effective card-size change runs a separate fixed fourteen-pass
-convergence after sizing; idle reading never runs the force. Shift, Option,
-Control, or Command adds
-the next rectangle to the selection. Direct touch/pen contact pans instead of
-starting a box selection. Single-card and group movement create session pins
-only and never change graph topology. Sizing preserves the current
+Treat the canvas as trackpad-first: two-finger gestures pan and pinch zooms
+around the pointer. Primary-button dragging on empty canvas box-selects with a
+soft green silhouette; dragging a selected card moves only that selected set by
+one common offset. It cancels pending convergence and pins only the moved set,
+so the canonical neighborhood stays stable. Card-size changes alone run the
+fixed fourteen-pass convergence; idle reading never runs it. Modifiers add the
+next rectangle. Touch/pen contact pans. Movement remains session-only and never
+changes topology. Sizing preserves the current
 viewport and graph ordering by recomputing deterministic compensation from the
 old and new 29%/50% rendered anchors. When a changed card already has a session
 pin, the renderer replaces that existing pin. Neighbor coordinates produced by
@@ -405,5 +482,17 @@ Report separately:
 - candidate claims versus admitted facts;
 - computation replay status;
 - audit errors, warnings, and residual uncertainty.
+
+For an adverse-routing-enabled project, produce the host-task attack report
+before closing CHX. Keep its worker-reported counterexamples, proposed route
+changes, and pending user decisions under a separate **Attack report** label;
+never classify them as CHX architecture issues or as admitted Facts.
+
+After those checks, close the task's CHX runtime ledger immediately before the
+final response. If `report_required=true`, report each included CHX issue with
+its causal mechanism, effect, disposition, and ledger path.
+If `report_required=false`, say nothing about the CHX ledger. If ledger startup,
+validation, or close failed, disclose that host-procedure failure instead of
+claiming a compliant post-0.4.1 run.
 
 Do not deploy, replace installed skills, package an archive, or migrate an active project merely because this candidate exists. Installation and cutover require separate explicit authorization.

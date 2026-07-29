@@ -41,7 +41,12 @@ class V5CollaborationTests(unittest.TestCase):
         outcome: str,
         claim: str,
     ) -> dict[str, object]:
-        return {
+        card = json.loads(
+            (store.root / str(assignment["task_card_relpath"])).read_text(
+                encoding="utf-8"
+            )
+        )
+        payload: dict[str, object] = {
             "schema_version": 5,
             "project_id": store.project_id(),
             "round_id": round_id,
@@ -62,6 +67,23 @@ class V5CollaborationTests(unittest.TestCase):
             },
             "artifacts": [],
         }
+        if "assurance_contract" in card:
+            payload.update(
+                {
+                    "obligation_dispositions": [],
+                    "computation_manifest": None,
+                    "research_assurance": {
+                        "source_uses": [],
+                        "route_invalidations": [],
+                        "extremal_cases": [],
+                        "claim_strength": [],
+                        "contour_substitutions": [],
+                        "claimed_structures": [],
+                        "program_math_alignments": [],
+                    },
+                }
+            )
+        return payload
 
     def test_two_wave_pulse_keeps_good_work_when_one_peer_is_quarantined(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

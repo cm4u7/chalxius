@@ -265,6 +265,7 @@ from .v5_lifecycle import (
     V5AuditReport,
     V5LifecycleManager,
 )
+from .adverse_routing import AdverseRoutingManager
 from .v5_collaboration import V5PulseStore
 from .v5_experiments import V5ExperimentManager
 
@@ -742,6 +743,9 @@ class MathGraphStore:
 
     def v5_lifecycle(self) -> V5LifecycleManager:
         return V5LifecycleManager(self)
+
+    def adverse_routes(self) -> AdverseRoutingManager:
+        return AdverseRoutingManager(self)
 
     def blackboard(self) -> BlackboardStore:
         return self._guard_child(

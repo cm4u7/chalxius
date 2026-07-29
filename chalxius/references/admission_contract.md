@@ -9,20 +9,38 @@ Admission requires all of the following:
    mini-DAG, with all external predecessors already active V5 Facts;
 2. exact statement interfaces, predecessor uses, quantifiers, conventions,
    external-source fidelity, applicability witnesses, and controlled elementary
-   uses;
-3. exact artifact hashes and independent replay for load-bearing computation;
-4. for series-product coefficient computations, a machine-derived valuation
+   uses; a current-assurance use of a legacy conditional clause with no exported
+   premises must resolve one exact named premise clause on an exact predecessor
+   and witness its full statement hash, or fail closed;
+3. for a newly frozen 0.4.3 card, exact per-obligation dispositions and the
+   risk-specific Research assurance required by that card; frozen older cards
+   retain their original contract;
+4. current source-evidence v4 for new external uses, including complete
+   hypothesis/conclusion coverage, reproducible status-query evidence, and
+   typed conclusion transports;
+5. exact artifact hashes, formula-to-code semantic alignment, and independent
+   replay for load-bearing computation;
+6. for series-product coefficient computations, a machine-derived valuation
    order budget plus a bound deeper truncation replay;
-5. exact Paper Logic/Audit snapshot and nodewise coverage bindings when the
+7. exact Paper Logic/Audit snapshot and nodewise coverage bindings when the
    validation subject is a paper;
-6. automatic inclusion and explicit disposition of every existing adverse
-   Research item linked to the selected Research branch;
-7. a fresh independent verifier restricted to the frozen capsule, with exact
+8. automatic inclusion and explicit disposition of every existing adverse
+   Research item linked to the selected Research branch, including a completed
+   refute assignment whose outcome was evidence or insight rather than a
+   counterexample; adverse assignment provenance, not outcome kind alone,
+   controls binding and verifier exclusion;
+9. proof-lineage conservation for copy-on-write successors, with statement and
+   proof changes reviewed separately;
+10. a fresh independent verifier restricted to the neutral frozen capsule,
+   using the complete decision template and standalone preflight, with exact
    candidate and edge panels and every requested check covered once;
-8. one immutable Certification Decision bound to the release and capsule;
-9. gateway revalidation of the accepted decision followed by all-or-none Fact
-   visibility; and
-10. cascade revocation plus a clean current graph and workflow audit.
+11. one immutable Certification Decision bound to the release and capsule;
+12. gateway revalidation of the accepted decision followed by all-or-none Fact
+   visibility; active lineage validation uses a two-phase immutable snapshot so
+   release validation never recursively asks the Fact projection to validate
+   itself, while the admission marker remains the sole visibility switch and
+   post-marker event/interface completion is exact and idempotent; and
+13. cascade revocation plus a clean current graph and workflow audit.
 
 Research, Candidate Release, Certification Decision, Paper/Audit,
 Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,

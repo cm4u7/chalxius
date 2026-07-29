@@ -9,6 +9,28 @@ from .graph import DependencyGraph
 from .reader_html import MAX_EDGES, MAX_NODES, validate_reader_packet
 
 
+V5_PROJECTION_TITLE_MAX_CHARS = 64
+
+_READER_INTERFACE_ANCHOR_RE = re.compile(
+    r"\[(CLAIM|HYP|Q):([A-Za-z0-9][A-Za-z0-9_-]{0,63})\]"
+)
+_READER_TEX_REGION_RE = re.compile(
+    r"(\\\(.*?\\\)|\\\[.*?\\\]|\$\$.*?\$\$|(?<!\$)\$(?!\$).*?(?<!\$)\$(?!\$))",
+    re.DOTALL,
+)
+_READER_ASCII_FORMULA_RE = re.compile(
+    r"(?<![A-Za-z0-9_\\])"
+    r"(?P<formula>"
+    r"(?=[A-Za-z0-9_^{},()+\-*/=<>]*?(?:>=|<=|!=|=|\^|_))"
+    r"[A-Za-z0-9][A-Za-z0-9_^{},()+\-*/=<>]*"
+    r")"
+    r"(?![A-Za-z0-9_])"
+)
+_READER_PLAIN_MATH_SYMBOL_RE = re.compile(
+    r"(?<![A-Za-z0-9_\\])(?:Sigma|B|dx|dy|h)(?![A-Za-z0-9_])"
+)
+
+
 def _one_line(value: Any, fallback: str) -> str:
     if isinstance(value, str) and value.strip():
         return re.sub(r"\s+", " ", value).strip()
@@ -27,6 +49,75 @@ def _exact_text(value: Any) -> str:
 
 def _reader_id(prefix: str, *parts: Any) -> str:
     return f"{prefix}-{sha256_json(list(parts))[:24]}"
+
+
+def _projection_title(kind: str, object_sha256: str) -> str:
+    """Return a compact, content-free V5 Reader identity.
+
+    A Reader title is navigation metadata, not a second copy of the mathematical
+    object.  Full claims and exact TeX stay in the readable/formal fields.
+    """
+
+    title = f"{_one_line(kind, 'Object')} · {object_sha256[:6]}"
+    if len(title) > V5_PROJECTION_TITLE_MAX_CHARS:
+        raise ValueError("V5 Reader projection title kind is too long")
+    return title
+
+
+def _reader_formula_tex(value: str) -> str:
+    """Translate the bounded historical ASCII formula grammar to TeX.
+
+    This is a presentation-only compatibility layer, not a mathematical parser.
+    It changes only unspaced symbolic tokens that already carry an explicit
+    subscript, superscript, or relation operator.  Exact Fact text remains in
+    the formal/original fields and retains its original hash.
+    """
+
+    tex = re.sub(r"\bSigma\b", r"\\Sigma", value)
+    tex = re.sub(r"\^vee\b", r"^{\\vee}", tex)
+    tex = tex.replace(">=", r"\ge ")
+    tex = tex.replace("<=", r"\le ")
+    tex = tex.replace("!=", r"\ne ")
+    return tex.rstrip()
+
+
+def _reader_plain_math_segment(value: str) -> str:
+    def formula(match: re.Match[str]) -> str:
+        return rf"\({_reader_formula_tex(match.group('formula'))}\)"
+
+    converted = _READER_ASCII_FORMULA_RE.sub(formula, value)
+
+    def symbol(match: re.Match[str]) -> str:
+        return rf"\({_reader_formula_tex(match.group(0))}\)"
+
+    regions = _READER_TEX_REGION_RE.split(converted)
+    return "".join(
+        region
+        if index % 2
+        else _READER_PLAIN_MATH_SYMBOL_RE.sub(symbol, region)
+        for index, region in enumerate(regions)
+    )
+
+
+def _readable_fact_summary(statement: str) -> str:
+    """Return a MathJax-ready readable projection without changing authority.
+
+    Native TeX regions pass through byte-for-byte.  Historical interface
+    anchors become readable labels, and only the conservative ASCII grammar
+    above receives delimiters.  The exact admitted statement is still exposed
+    separately in ``formal.statement`` and ``formal.original_text``.
+    """
+
+    labels = {"CLAIM": "Claim", "HYP": "Hypothesis", "Q": "Quantifier"}
+    readable = _READER_INTERFACE_ANCHOR_RE.sub(
+        lambda match: f"{labels[match.group(1)]} {match.group(2)}.",
+        statement,
+    )
+    regions = _READER_TEX_REGION_RE.split(readable)
+    return "".join(
+        region if index % 2 else _reader_plain_math_segment(region)
+        for index, region in enumerate(regions)
+    )
 
 
 def _provenance(
@@ -196,13 +287,13 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id=node_id,
-                title=statement,
+                title=_projection_title("Fact", object_sha),
                 reader_role="target" if fact_id in targets else "result",
                 plane="fact",
                 visual_status="current",
                 layer="knowledge",
                 theme_id=theme_id,
-                summary=statement,
+                summary=_readable_fact_summary(statement),
                 intuition=fact.intuition,
                 importance=(
                     "Admitted V5 Fact and selected Reader target."
@@ -270,7 +361,7 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id=research_node_ids[research_id],
-                title=record["claim"],
+                title=_projection_title("Research", record["record_sha256"]),
                 reader_role="explanation",
                 plane="reader",
                 visual_status=_research_visual_status(record),
@@ -362,7 +453,9 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id=release_node_ids[release_id],
-                title=f"Candidate Release: {release['bundle_claim']}",
+                title=_projection_title(
+                    "Candidate Release", release["record_sha256"]
+                ),
                 reader_role="result",
                 plane="reader",
                 visual_status=visual_status,
@@ -429,7 +522,9 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id=node_id,
-                title=f"Certification Decision: {decision['verdict']}",
+                title=_projection_title(
+                    "Certification Decision", decision["record_sha256"]
+                ),
                 reader_role="explanation",
                 plane="reader",
                 visual_status=(
@@ -515,6 +610,7 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         }
         for object_id, paper_node in sorted(paper_nodes.items()):
             original_text = _exact_text(paper_node)
+            paper_node_sha = sha256_json(paper_node)
             object_type = paper_node["object_type"]
             payload = paper_node["payload"]
             statement = _one_line(
@@ -524,7 +620,9 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
             nodes.append(
                 _node(
                     node_id=mapped[object_id],
-                    title=statement,
+                    title=_projection_title(
+                        f"{graph_kind} {object_type}", paper_node_sha
+                    ),
                     reader_role=(
                         "definition"
                         if object_type in {"source_unit", "definition"}
@@ -554,7 +652,7 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
                         object_id=object_id,
                         snapshot_id=paper_snapshot_id,
                         locator=f"paper_logic/snapshots/{paper_snapshot_id}/nodes.jsonl",
-                        object_sha256=sha256_json(paper_node),
+                        object_sha256=paper_node_sha,
                         original_text=original_text,
                         replaces=(
                             [manifest["supersedes_snapshot_id"]]
@@ -605,8 +703,9 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
     }
     for object_id, bb_node in sorted(board_nodes.items()):
         original_text = _exact_text(bb_node)
+        bb_node_sha = sha256_json(bb_node)
         inventory["blackboard"]["nodes"].append(
-            [object_id, sha256_json(bb_node)]
+            [object_id, bb_node_sha]
         )
         title = _one_line(
             bb_node.get("logical_key"), f"Blackboard {bb_node['node_type']}"
@@ -615,7 +714,9 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id=bb_mapped[object_id],
-                title=title,
+                title=_projection_title(
+                    f"Blackboard {bb_node['node_type']}", bb_node_sha
+                ),
                 reader_role=(
                     "definition" if bb_node["node_type"] == "definition" else "explanation"
                 ),
@@ -642,7 +743,7 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
                     object_id=object_id,
                     snapshot_id="pending-v5-snapshot",
                     locator=f"blackboard/nodes/by-id/{object_id}.json",
-                    object_sha256=sha256_json(bb_node),
+                    object_sha256=bb_node_sha,
                     original_text=original_text,
                 ),
             )
@@ -689,7 +790,7 @@ def build_v5_reader_packet(store: Any) -> dict[str, Any]:
         nodes.append(
             _node(
                 node_id="project-background",
-                title="Project background",
+                title=_projection_title("Project background", background["sha256"]),
                 reader_role="explanation",
                 plane="reader",
                 visual_status="research",

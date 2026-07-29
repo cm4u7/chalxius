@@ -528,6 +528,30 @@ bounded to 240 visible nodes. Its positions are page-session presentation pins
 only. Packet schema, source text, semantic order, topology, authority, Fact
 admission, services, persistence, and writeback remain unchanged.
 
+Renderer revision 16 preserves that post-size solver but removes it from direct
+drag and release. A drag cancels queued convergence, moves and pins only the
+dragged card or selected set, and therefore leaves the canonical neighborhood
+stable. The canvas and hover derive a compact identity from the first six
+object-hash digits plus localized role and plane; new V5 projection titles are
+bounded content-free identities, while complete claims and TeX remain in the
+right panel. MathJax now processes the detail title as well as readable/formal
+content and accepts parenthesis, bracket, dollar, double-dollar, and supported
+environment syntax. Packet v1 remains backward-compatible and no truth,
+topology, source, project-state, persistence, service, or writeback boundary
+changes.
+
+Renderer revision 17 retains bounded direct manipulation without returning to a
+free-running force graph. Dragged cards remain fixed anchors; only a two-hop
+visible relation neighborhood plus one immediate-collision halo may move, and
+outside nodes act as fixed boundaries. Edge attraction and silhouette
+repulsion are combined with radial and tangential springs to the canonical
+compact-ring coordinates for at most fourteen deterministic passes, with no
+idle simulation and no automatic manual pins. The V5 projection also converts
+machine Fact anchors to readable labels and adds MathJax delimiters only for a
+bounded historical ASCII formula grammar. Native TeX, formal/original Fact
+text, hashes, packet schema, topology, authority, admission, persistence,
+services, and writeback remain unchanged.
+
 Forward-security coverage includes missing/extra/partial feature evidence,
 machine-unready and unrelated pulse commitments, specialist hash/path escape,
 campaign scope equality, previous-round campaign and novelty events,

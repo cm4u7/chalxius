@@ -21,20 +21,31 @@ ALL_COMMANDS = {
     "admit",
     "revoke",
     "candidate-release",
+    "candidate-release-check",
     "verifier-capsule",
     "certification-record",
+    "certification-decision-check",
     "fact-admit",
     "memory-add",
     "memory-update",
     "frontier",
     "adoption-plan",
     "plan-round",
+    "project-background-index",
+    "project-background-read",
+    "fact-graph-inventory",
+    "fact-graph-append-target",
     "round-status",
     "profile-closure-status",
     "profile-closure-record",
     "preflight-return",
     "validate-return",
     "ingest-return",
+    "attack-route-enable",
+    "attack-route-status",
+    "attack-report",
+    "attack-route-decide",
+    "attack-route-disable",
     "plan-repair-round",
     "make-verifier-task",
     "novelty-record",
@@ -117,6 +128,7 @@ ROLE_COMMANDS = {
         "frontier",
         "preflight-return",
         "validate-return",
+        "project-background-read",
         "novelty-status",
         "experiment-start",
         "experiment-event",
@@ -138,17 +150,23 @@ ROLE_COMMANDS = {
         "set-targets",
         "revoke",
         "candidate-release",
+        "candidate-release-check",
         "verifier-capsule",
+        "certification-decision-check",
         "memory-add",
         "memory-update",
         "frontier",
         "adoption-plan",
         "plan-round",
+        "project-background-index",
+        "project-background-read",
         "round-status",
         "profile-closure-status",
         "profile-closure-record",
         "validate-return",
         "ingest-return",
+        "attack-route-status",
+        "attack-report",
         "plan-repair-round",
         "make-verifier-task",
         "novelty-record",
@@ -227,6 +245,7 @@ ROLE_COMMANDS = {
         "fact-bundle-record-review",
         "fact-bundle-admit",
         "certification-record",
+        "certification-decision-check",
         "fact-admit",
     },
     # Paper auditors can inspect exact frozen/staged paper evidence and append
@@ -252,6 +271,7 @@ V4_WORKER_COMMANDS = {
     "experiment-status",
     "experiment-finalize",
 }
+V5_WORKER_COMMANDS = V4_WORKER_COMMANDS | {"project-background-read"}
 V4_BOUND_WORKER_QUERY_COMMANDS = {
     "claim-show",
     "convention-show",
@@ -271,7 +291,9 @@ def allowed_commands_for_workflow(
     workflow_evidence_version: int,
 ) -> set[str]:
     commands = allowed_commands(role)
-    if role == "worker" and workflow_evidence_version >= 4:
+    if role == "worker" and workflow_evidence_version >= 5:
+        return commands.intersection(V5_WORKER_COMMANDS)
+    if role == "worker" and workflow_evidence_version == 4:
         return commands.intersection(V4_WORKER_COMMANDS)
     return commands
 

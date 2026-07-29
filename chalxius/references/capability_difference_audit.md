@@ -43,13 +43,15 @@ natural-language routing but semantically limited to explicitly requested
 programming Grill or Socratic assistance and contains no
 graph adapter, teaching ledger, or MathGraph protocol.
 
-The 0.3.x integration added a closure layer that neither legacy package had.
-V5 retains its exact `profile_obligations`, `profile-closure-status`, and
-`profile-closure-record` surfaces only for reproducible repair advice. A record
-is appended to cumulative Research with `truth_effect="none"`; it is not
-required before a verifier capsule, Candidate Release, Certification Decision,
-or Fact admission. This preserves useful execution diagnostics without a
-second certification path or a second Fact-contract hash.
+The 0.3.x integration added a V4 closure layer that neither legacy package had.
+Historical cards and rounds retain exact `execution_profile` and
+`profile_obligations` bytes. Current V5 cards do not freeze those V4 fields.
+Instead, `profile-closure-status` and `profile-closure-record` are adapters for
+local process repair advice. A record is appended to cumulative Research with
+`truth_effect="none"`; it is not required before a verifier capsule, Candidate
+Release, Certification Decision, or Fact admission. The standalone
+`adoption-plan` remains callable, while automatic V5 attachment of all its
+recommendations is a dormant legacy coupling pending an explicit decision.
 
 Evidence assurance is intentionally heterogeneous. Native graph, pulse,
 experiment, novelty, projection, and lint validators can establish their own
@@ -245,6 +247,108 @@ executed passes for direct, bulk, undo, and redo actions, and an empty
 warning/error log. This does not alter packet bytes, graph topology, semantic
 order, sources, authority, admission, persistence, or writeback. Release and
 installation evidence remain separate gates.
+
+Renderer revision 16 remains presentation-only and closes the identity and
+stability gaps exposed by a 109-node V5 export. Direct dragging no longer runs
+the bounded size solver: it cancels queued work and moves/pins only the dragged
+set. Canvas and hover text use hash6 plus localized role/plane, new V5 titles are
+bounded and content-free, and complete mathematical content remains in the
+right panel. That panel now typesets its title and recognizes parenthesis,
+bracket, dollar, double-dollar, and supported environment TeX. Packet v1 stays
+read-compatible; no source, topology, authority, admission, persistence,
+service, or writeback capability changes.
+
+Renderer revision 17 remains presentation-only and joins the two previously
+separate stability strategies without restoring an unconstrained force graph.
+On drag release, selected cards remain fixed session anchors; graph distance
+expands one force neighborhood to at most two hops, immediate collisions join
+one bounded halo, and every outside node is a fixed boundary. Participating
+nodes combine visible-edge attraction and silhouette repulsion with separate
+radial and tangential springs to their canonical compact-ring coordinates.
+The same fourteen-pass ceiling applies and there is no idle simulation.
+Revision 17 also gives V5 Fact summaries a conservative compatibility
+projection: machine interface anchors become readable labels, native TeX stays
+unchanged, and delimiter-free historical tokens carrying explicit relation,
+subscript, or superscript syntax become MathJax input. Exact formal/original
+Fact text and hashes are untouched. Packet bytes, topology, semantic ordering,
+truth authority, admission, persistence, services, and writeback remain
+unchanged.
+
+Chalxius 0.4.1 adds only a CHX runtime ledger and its mandatory
+start/close reporting procedure. CHX-057 identified that 0.4.0 could finish a
+run without a task-scoped causal architecture account or a silent-zero rule.
+Project-bound ledgers now live in the isolated `PROJECT/chx-ledgers/`
+operational directory; projectless ledgers remain in external host state. This
+directory is outside all truth/nontruth authority planes and ignored by project
+audit. The protected mathematical runtime and Reader dependencies remain
+byte-identical to 0.4.0; project schemas and Fact admission are unchanged. The
+activation boundary is prospective, so no already-running 0.4.0 task is
+backfilled, reclassified, invalidated, or made to repeat work.
+
+The 0.4.2 adverse-routing candidate is deliberately not folded into the
+0.4.1 protected-runtime claim. It adds a new optional project-local
+orchestration capability and therefore uses a new candidate version. The
+extension is absent until an operator explicitly enables it. An old project,
+round, task card, or return that lacks the activation contract follows the
+0.4.0/0.4.1 code path and schema unchanged.
+
+The worker may autonomously abstract a counterexample into a route proposal,
+but that proposal has no activation authority. The user-facing outcome is
+preserved through a separate attack report and three operator decisions:
+approve, approve after supplying a complete modified rule, or reject. Approved
+rules are content-addressed, project-local, limited to future refutation task
+cards, and independently disableable. This design avoids a mutable self-prompt,
+unreviewed global learning, a second verifier, and any route from exploration
+to Fact authority.
+
+The extension does not auto-start Chalxius Learner, does not use Grill Me Code,
+does not change `fast`/`auto`/`deep`, and does not alter Candidate Release,
+Certification Decision, gateway admission, Reader, Paper/Audit, Blackboard,
+computation, or CHX-ledger semantics. Attack reports and CHX reports remain
+separate nontruth surfaces.
+
+The prospective 0.4.3 candidate repairs CHX-058 through CHX-075 without
+rewriting frozen work. It adds a complete verifier-decision template,
+standalone field-level decision preflight, neutral V5 capsule materialization,
+artifact-bound Research obligations, current source-evidence v4, typed
+formula/topology/contour/structure assurance, conditional and geometric-stage
+interfaces, and proof-lineage conservation. Historical 0.4.2 cards, returns,
+releases, decisions, and source-evidence v3 remain readable under their exact
+recorded contracts.
+
+The V5 automatic frontier is reconnected prospectively to the compact
+four-factor ordering and read-time projection of historical eight-metric
+Research. Scores remain ordering-only with no eligibility cutoff. In an
+adverse-routing-enabled project, actual computation stages may queue one
+future nontruth program-math review with an additional scoped attack rule;
+ordinary refutation cards still receive exactly the original eight rules.
+Architecture issues are expressly forbidden from that route and remain CHX
+ledger material only.
+
+The prospective 0.4.4 successor restores only the user-approved L1 and L2
+connections. L1 turns one promoted Blackboard item's exact bounded query into
+one new snapshot-bound task with complete origin lineage. L2 accepts only exact
+mode enum tokens and automatically applies one only when its assurance,
+adverse-task capability, and later program-math review signature equals the
+kind-derived default. Main compiles the receipt, Operator governs and may
+explicitly override, and the technical Host retains its exact 0.4.3 dispatch
+capability set.
+
+The same successor turns `PROJECT_BACKGROUND.md` into a low-priority indexed
+context source for new task cards. The full source remains an immutable
+round-local byte snapshot and every chunk is retrievable, but the body no
+longer occupies active task-card context. Historical full-body cards remain
+unchanged, and neither background nor context selection receives truth or
+admission authority.
+
+The later field report
+`run-20260729T081913970946Z-2f0a9e345447/CHX-001` exposed a control-plane
+projection gap rather than an abort-authority failure: a valid work-unit abort
+still blocked continuation, while status showed unfinished assignments as
+awaiting and audit remained silent. The successor now reads the same immutable
+abort authority into status, uses `frozen_aborted`, reports zero live awaiting
+returns and the exact abort id, and makes strict audit reject any mismatch. It
+does not rewrite the abort, task cards, returns, Research, or Facts.
 
 ## Residual risks to test
 

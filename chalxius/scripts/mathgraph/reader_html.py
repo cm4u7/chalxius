@@ -14,7 +14,7 @@ from .contracts import (
 
 
 READER_PACKET_SCHEMA_VERSION = 1
-RENDERER_REVISION = "chalxius-reader-html-15"
+RENDERER_REVISION = "chalxius-reader-html-17"
 FIXED_OUTPUT_RELPATH = "visualizations/knowledge-map.html"
 MAX_PACKET_BYTES = 16 * 1024 * 1024
 MAX_NODES = 5_000

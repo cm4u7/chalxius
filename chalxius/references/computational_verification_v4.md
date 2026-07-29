@@ -30,6 +30,40 @@ every artifact role, and both algorithm inspection and execution.
 
 Agreement at two truncation depths is corroborative evidence, not a load-bearing truncation proof.
 
+## Current V5 program-mathematics alignment
+
+A prospective 0.4.3 V5 task card declares an exact computation-stage count.
+The return must cover every stage once with:
+
+- a literal mathematical formula and hash, its source locator, the exact
+  executable-source artifact, one code anchor occurring exactly once, and an
+  explicit sign/convention map;
+- mathematical and code iteration domains, including boundary cases and a
+  bound witness artifact;
+- mathematical objects, code types, and a policy preserving occurrence
+  identity and multiplicity;
+- an approximation mode and derivation artifact; `truncated` and `mixed`
+  stages must show nonnegative integer orders with
+  `implemented_order >= required_order`;
+- the exact output artifact, claimed quantity, units, and conventions;
+- at least one independent check for supporting computation, or at least two
+  distinct checks for load-bearing computation, including one independent
+  reimplementation, symbolic oracle, or metamorphic relation.
+
+This is semantic assurance, not merely replay. It is designed to catch a
+correctly executed program that implements the wrong formula, loop domain,
+representation, truncation order, or output interpretation. Exact replay and
+the older eight-axis independence matrix remain applicable where their frozen
+contracts require them.
+
+If adverse routing is explicitly enabled, successful ingestion of an actual
+computation-bearing Research return queues one future nontruth `refute` review.
+The review is capability-bound to exact source/output artifacts and may attack
+the full formula-code-output chain during Research. It does not interrupt the
+producer or change the ingested return. Ordinary prose mentioning code does
+not activate the route, and any reusable attack proposal still requires a user
+decision before future activation.
+
 ## Independence matrix
 
 Record each axis separately:

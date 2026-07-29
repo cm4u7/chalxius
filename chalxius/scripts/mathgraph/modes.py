@@ -1470,6 +1470,33 @@ class ReasoningModeManager:
     def require_work_unit_active(self, round_id: str) -> None:
         require_unaborted_work_unit(self.store.root, round_id)
 
+    def work_unit_abort(self, round_id: str) -> dict[str, Any] | None:
+        """Return one validated abort authority without mutating its projection."""
+
+        if ROUND_ID_RE.fullmatch(round_id) is None:
+            raise ValueError("invalid round id")
+        path = self.abort_dir / f"{round_id}.json"
+        if not path.exists() and not path.is_symlink():
+            return None
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("work-unit abort record is missing or unsafe")
+        return self._validate_abort(self.store._read_json(path), path=path)
+
+    def work_unit_aborts(self) -> list[dict[str, Any]]:
+        """Return every validated abort authority in deterministic round order."""
+
+        if not self.abort_dir.exists() and not self.abort_dir.is_symlink():
+            return []
+        if self.abort_dir.is_symlink() or not self.abort_dir.is_dir():
+            raise ValueError("work-unit abort directory is missing or unsafe")
+        records: list[dict[str, Any]] = []
+        for path in sorted(self.abort_dir.glob("*.json")):
+            record = self.work_unit_abort(path.stem)
+            if record is None:
+                raise ValueError("work-unit abort record disappeared during inspection")
+            records.append(record)
+        return records
+
     def _validate_abort(self, payload: Any, *, path: Path) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("work-unit abort must be one object")

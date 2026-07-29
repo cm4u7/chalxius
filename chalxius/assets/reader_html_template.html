@@ -14,8 +14,10 @@
       startup: { typeset: false },
       options: { enableMenu: false },
       tex: {
-        inlineMath: [['\\(', '\\)']],
-        displayMath: [['\\[', '\\]']],
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: true,
         packages: {'[-]': ['autoload', 'require']}
       },
       svg: { fontCache: 'local' }
@@ -161,7 +163,7 @@
       </div>
       <p class="interaction-note">
         <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
-        <span data-zh="左键框选 · 拖动已选节点批量移动 · 拖动时局部避让/回拉 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸并自动避让 · 双击突出完整链" data-en="Box-select with primary drag · Drag selected nodes as a group · Local repel/pull while dragging · Two-finger pan · Pinch to zoom · Internal ± resizes and settles cards · Double-click emphasizes the complete chain">左键框选 · 拖动已选节点批量移动 · 拖动时局部避让/回拉 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸并自动避让 · 双击突出完整链</span>
+        <span data-zh="左键框选 · 已选节点作为锚点 · 邻域在环形记忆下有限均衡 · 其余布局固定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链" data-en="Box-select with primary drag · Selected nodes remain anchors · Neighborhood settles under radial memory · Remaining layout stays fixed · Two-finger pan · Pinch to zoom · Internal ± resizes · Double-click emphasizes the complete chain">左键框选 · 已选节点作为锚点 · 邻域在环形记忆下有限均衡 · 其余布局固定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链</span>
       </p>
     </section>
 
@@ -189,7 +191,7 @@
       </div>
 
       <div id="detail-readable" class="readable-detail">
-        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动或切换卡片尺寸后，附近卡片会自动避让，过长的真实关系会轻微回拉，并立即稳定。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. After dragging or resizing a card, nearby cards repel automatically, overly long real relations pull gently, and the layout settles immediately. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动或切换卡片尺寸后，附近卡片会自动避让，过长的真实关系会轻微回拉，并立即稳定。所有当前启用的关系都会保留。</p>
+        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。直接拖动只移动并固定所选节点；其余布局保持不变。只有卡片尺寸变化会触发一次有限的防碰撞收敛。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. Direct dragging moves and pins only the selected nodes; the rest of the layout stays unchanged. Only card-size changes trigger one bounded collision-avoidance convergence. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。直接拖动只移动并固定所选节点；其余布局保持不变。只有卡片尺寸变化会触发一次有限的防碰撞收敛。所有当前启用的关系都会保留。</p>
       </div>
 
       <details id="formal-details" class="formal-details">

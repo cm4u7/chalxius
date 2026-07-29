@@ -159,6 +159,13 @@ snapshot SHA-256 retain upstream identity; the renderer checks their syntax but
 does not pretend to re-audit the upstream object. Full ids and hashes are folded
 by default in the page but remain viewable and copyable.
 
+Packet v1 remains read-compatible with historical free-text titles. New V5
+projections use `object kind · hash-prefix` titles bounded to 64 characters and
+never copy a claim or TeX environment into that navigation field. On every
+packet, the canvas and hover identity is derived from the first six lowercase
+digits of `provenance.object_sha256` plus localized reader role and source
+plane. Full statements, proofs, and exact TeX remain in the right panel.
+
 Truth-status vocabulary is plane-specific:
 
 | Plane | Permitted truth-status labels |
@@ -244,8 +251,9 @@ position; an unpinned card does not acquire a pin. The canvas
 minimum zoom is bounded so the smallest compact role still contains its minimum
 readable control and internal padding; users pan rather than losing the control
 at an unreadable overview scale.
-Hover exposes the readable title, selecting opens the same full right-panel
-detail, and the selected card retains a vivid moonlight-yellow outline plus a
+Hover exposes the same compact hash/role/plane identity used by the canvas;
+selecting opens the complete right-panel detail. The selected card retains a
+vivid moonlight-yellow outline plus a
 soft role-silhouette halo rather than a rectangular aura. Its smaller
 silhouette therefore saves space without discarding identity, provenance, or
 access to the complete readable record.
@@ -322,36 +330,44 @@ the new silhouettes exist. This includes a local toggle, the directional and
 complete-path actions, a multi-target topic path, `All targets`, `All cards`,
 undo, and redo. A direct card or path/topic anchor is fixed at the compensated
 29%/50% pivot; bulk actions have no arbitrary fixed card and seed the force with
-the complete changed set. All visible pairs near those seeds may repel below
-the 72-model-pixel gap, and visible relation neighbors may attract only above
-the 116-model-pixel comfortable gap. The current pan and zoom are preserved,
-the pass count is fixed rather than animated to idle, and graphs above 240
-visible nodes keep the size change without automatic convergence.
+the complete changed set. The force neighborhood is the seed set plus at most
+two visible graph hops and one immediate collision halo; every node outside it
+is a fixed boundary. Nearby silhouettes repel below the 72-model-pixel gap,
+visible relation neighbors attract only above the 116-model-pixel comfortable
+gap, and separate radial and tangential springs retain the canonical ring and
+angular order. The current pan and zoom are preserved, the pass count is fixed
+rather than animated to idle, and graphs above 240 visible nodes keep the size
+change without automatic convergence.
 
 The canvas follows trackpad conventions: two-finger scrolling pans in both
 axes and pinch input performs explicit pointer-centered zoom. Primary-button
-dragging on empty canvas performs
-box selection; every member receives a soft pale-green silhouette glow while
-the single active/read node retains its moonlight-yellow cue. Dragging a
-selected card body moves the entire selection by one common offset. On canvases
-of at most 240 visible nodes, while a card or group is directly dragged, a
-deterministic local force pass repels
-nearby card silhouettes below the 72-model-pixel gap and weakly attracts
-relation neighbors whose visible link gap exceeds 116 model pixels. The
-dragged set is fixed, release performs at most fourteen settling passes, and then
-motion stops. Card sizing uses the separate fixed fourteen-pass path described
-above. Layer changes and idle frames do not run either path. Direct
-dragging of an unselected card moves that card alone. The size toggle itself
-never initiates a card drag. Touch and pen contact
+dragging on empty canvas box-selects; every member receives a soft pale-green
+silhouette while the active/read node retains its moonlight cue. Dragging a
+selected card moves only that selection by one common offset. Starting a drag
+cancels any queued convergence. On release, the selected set remains fixed and
+seeds the same bounded radial-memory force described above; only its two-hop
+plus immediate-collision neighborhood may settle, outside nodes remain fixed,
+and force-moved neighbors do not acquire manual pins. Layer changes and idle
+frames do not run it. Direct dragging of an unselected card makes that card the
+sole anchor. The size toggle itself never initiates a card drag. Touch and pen contact
 pan rather than box-select. A manually moved card or group is pinned only in the
 current page session; later sizing actions may replace an existing anchor pin
-for pivot compensation and may pin only neighbors actually moved by the
-post-size convergence. `Reset layout` clears all session pins. The Reload graph
+for pivot compensation; automatic convergence never creates a pin. `Reset
+layout` clears all session pins. The Reload graph
 button or ordinary browser refresh clears every runtime
 size, history, selection, pin, and appearance choice while loading the latest
 atomically replaced file.
 There is no watcher, local storage, or graph writeback. There is also no
 persistent visualization history or sidecar.
+
+For V5 Fact nodes only, the readable summary is a deterministic presentation
+projection rather than a second authority record. Native delimited TeX passes
+through unchanged. Historical machine anchors become readable Claim,
+Hypothesis, or Quantifier labels, and a bounded compatibility grammar adds TeX
+delimiters only to unspaced ASCII tokens already carrying an explicit relation,
+subscript, or superscript, plus a small legacy symbol set. The exact admitted
+statement remains byte-for-byte in the formal/original fields and its hashes do
+not change; the converter does not infer mathematics or rewrite a Fact.
 
 Node shape communicates reader role; pale fill plus a text badge communicates
 the source plane; border style communicates current, research, challenged, or
@@ -381,8 +397,10 @@ cue to moonlight while preserving the underlying semantic treatment. The right
 panel opens with intuition, importance,
 prerequisites, and reasoning route. Formal hypotheses, statement, proof,
 relations, exact source, and provenance remain readable in folded sections.
-TeX in `\\(...\\)` and `\\[...\\]` is rendered locally as SVG while the exact
-source string remains copyable. Detail-panel MathJax containers use a `1.08em`
+TeX in `\\(...\\)`, `\\[...\\]`, `$...$`, `$$...$$`, and supported
+`\\begin{...}` environments is rendered locally as SVG in the detail title,
+readable sections, and formal sections while exact source remains copyable.
+Escaped dollars remain literal. Detail-panel MathJax containers use a `1.08em`
 baseline, and their direct SVG children explicitly escape the global fixed-size
 icon rule. Exact TeX source uses a `0.82em` monospace measure. Both therefore
 inherit the panel's text scale instead of remaining visually frozen while prose

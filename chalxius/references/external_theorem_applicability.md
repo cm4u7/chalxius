@@ -29,10 +29,13 @@ definitions immediately governing the result, its proof when scope is ambiguous,
 exceptions, errata, and counterexamples. Never reconstruct a theorem from an abstract, introduction,
 search snippet, secondary paper, or another model's summary.
 
-Freeze the exact artifact and theorem statement under tiered external-source evidence v3 before
-mapping hypotheses. Hash the source bytes and exact UTF-8 transcription, run the three baseline
-sanity checks for every item, and reuse one hash-bound version/erratum/status audit per exact source
-artifact. Escalate formulas, bridge/transport, degeneration, target-critical uses, corrections,
+Freeze the exact artifact and theorem statement under the source-evidence
+revision required by the task card before mapping hypotheses. A prospective
+0.4.3 V5 card requires v4; frozen compatibility cards may require v3. Hash the
+source bytes and exact UTF-8 transcription, run the three baseline sanity checks
+for every item, and reuse one hash-bound version/erratum/status audit per exact
+source artifact. Escalate formulas, bridge/transport, degeneration, target-
+critical uses, corrections,
 conflicts, and suspicious checks to the five-check strict profile. Do not silently repair source
 text.
 
@@ -140,13 +143,12 @@ The only admissible applicability verdicts are:
 
 ## 4. Required certificate for new submissions
 
-Every item of a nonempty `external_refs` list must have this shape. Use one certificate for one exact
-labeled result, definition, or formula and one delta conclusion. If one paper supplies several
-logically distinct items, split them into separate keys such as `HMO26-T5.1` and `HMO26-R2.3` rather
-than hiding several applications in one broad locator. Bibliographic fields not shown are allowed,
-but the applicability object has an exact schema. The excerpt below shows that applicability
-component; every new item must also contain `source_evidence_version: 3` and the exact
-`source_trace` and `critical_audit` siblings defined in
+Use one certificate for one exact labeled result, definition, or formula and
+one delta conclusion. If one paper supplies several logically distinct items,
+split them into separate keys such as `HMO26-T5.1` and `HMO26-R2.3` rather than
+hiding several applications in one broad locator. The excerpt below is the
+source-evidence-v3 compatibility shape retained for frozen cards. Its
+`source_trace` and `critical_audit` siblings are defined in
 [external_source_reliability.md](external_source_reliability.md).
 
 ```json
@@ -200,11 +202,29 @@ item should receive an explicit ambient `H0` entry. Write an explicit no-materia
 convention entry when appropriate. Use a stable primary-source identifier in
 one of `doi`, `arxiv`, `url`, `isbn`, `mr`, or `zbmath`.
 
-External-source evidence v3 binds source bytes, the exact statement transcription, three mandatory
-baseline checks, strict escalation triggers, one hash-bound source-level status audit with bounded
-reuse, the source-reliability disposition, and unique `[CRIT:...]` proof anchors. Applicability-only
-and source-evidence-v2 certificates remain historical evidence; never describe them as having passed
-the current tiered gate.
+External-source evidence v3 binds source bytes, a statement transcription,
+three mandatory baseline checks, strict escalation triggers, one hash-bound
+source-level status audit with bounded reuse, the source-reliability
+disposition, and unique `[CRIT:...]` proof anchors. Applicability-only and
+source-evidence-v2 certificates remain historical evidence.
+
+For a newly frozen 0.4.3 V5 assurance contract, use source-evidence v4. Its
+applicability rows add:
+
+- one `source_coverage_id` on every hypothesis row;
+- typed convention `conversion_kind` values;
+- typed transport records with stable `transport_id`, source and target object
+  types, and an optional validated contour-substitution object;
+- a nonempty `conclusion_map` linking literal source-conclusion spans and target
+  proof anchors to those transports.
+
+The complete source transcription separately binds exact coverage rows for all
+hypotheses, the source conclusion, and the used conclusion. Different
+conclusion language or object type requires a referenced transport; prose in a
+convention row cannot supply it. Current source-status searches must transport
+their frozen response artifacts or an exact narrow live-query capability, and
+their mechanically derived status summary must agree with the narrative. See
+the reliability reference for the full exact schema.
 
 For a bridged use, set both `strength_comparison` and `verdict` to `bridged`, and add:
 
@@ -222,9 +242,12 @@ scope-bearing applicability claims from living only in mutable bibliography meta
 For `use_kind="formula"`, add the `source_fidelity` sibling shown above. Its `[SRC:...]` anchor is
 separate from the certificate's `[APP:...]` anchors: applicability checks whether the formula may be
 used, while source fidelity checks what symbols the primary artifact actually contains.
-For every new schema-v3 round, `source_fidelity.artifact_sha256` must also match one declared
-assignment artifact whose bytes pass the engine's hash check. Formula-bearing direct submissions are
-rejected; use the bound round workflow.
+For every bound round, `source_fidelity.artifact_sha256` must also match one
+declared assignment artifact whose bytes pass the engine's hash check. Formula-
+bearing direct submissions are rejected; use the frozen round workflow. Under
+the current assurance contract, Research formula use additionally requires an
+artifact-bound toy check and any fixed-object-to-family strengthening requires
+an explicit bridge artifact.
 
 ## 5. Independent verifier procedure
 

@@ -1,11 +1,10 @@
 # MathGraph Agent Protocol v4
 
-> **V5 adaptation.** This protocol's three-plane task-card format runs only
-> inside the Chalxius research engine. Legacy standalone predecessor packages
-> are read-only lineage, not active routers or V5 authority sources. Panel and
-> pulse requirements come from the frozen `execution_profile` bound to each
-> task card, but their completion is repair guidance rather than Fact-admission
-> authority. Every mode uses the same V5 Candidate Release, Certification
+> **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
+> Historical V4 cards retain their frozen `execution_profile` and
+> `profile_obligations`. Current V5 cards instead bind the mode event and a
+> prospective assurance contract; the legacy execution profile is not attached
+> automatically. Every mode uses the same V5 Candidate Release, Certification
 > Decision, and Fact gateway.
 
 Read this reference before planning, executing, validating, or ingesting a
@@ -25,11 +24,14 @@ coordination boundaries:
 - only a fresh verifier's immutable Certification Decision followed by exact
   gateway admission creates a V5 Fact.
 
-Before that fresh dispatch, the host should run `scripts/prepare_verifier_capsule.py`. It
-revalidates the exact bundle file set and copies only those bytes to a neutral path outside project
-and skill discovery. Give the verifier only the returned input paths and review output path; retain
-the capsule's host capability receipt separately. A reported access outside the allowlist
-invalidates the run. This is a cooperative audit boundary, not OS sandbox enforcement.
+Before that fresh dispatch, the host should run
+`scripts/prepare_verifier_capsule.py`. For V4 it materializes the exact frozen
+bundle. For V5 it recomputes the release/capsule, copies only authorized bytes,
+and supplies a complete decision template and standalone preflight validator.
+Give the verifier only the returned input paths and review output path; retain
+the host capability receipt separately. A reported access outside the allowlist
+invalidates the run. This is a cooperative audit boundary, not OS sandbox
+enforcement.
 
 Installing the skill does not authorize migration or cutover of an active
 project. This package starts neither the legacy `$mathgraph-chalk-version` nor
@@ -126,9 +128,9 @@ Never use a worker vote to resolve a truth-bearing dispute. A surviving load-bea
 requires an orthogonal specialist or an explicit open/blocked boundary. Stop panel expansion after
 two consecutive barriered cross-review waves add no new typed information.
 
-## Round profile repair advice
+## Historical V4 round profile repair advice
 
-Every new round manifest freezes `profile_obligations` as a reproducible
+Every new workflow-evidence-v4 round manifest freezes `profile_obligations` as a reproducible
 feature-by-assignment plan. Once governed assignments have canonical outcomes,
 main may inspect `profile-closure-status` and may append one exact
 `profile-closure-record` to cumulative Research. The record binds the manifest,
@@ -163,7 +165,8 @@ remain authoritative.
 
 ## Task card
 
-Treat the generated task card as immutable capability data. It binds:
+For workflow evidence v4, treat the generated task card as immutable capability
+data. It binds:
 
 - project, round, assignment, worker, campaign, host-task scope, memory, work mode, and assigned
   relation;
@@ -177,6 +180,59 @@ Treat the generated task card as immutable capability data. It binds:
 - object/file budgets;
 - fixed release-profile hard safety and integrity caps;
 - the frozen blackboard snapshot hash and read/write spaces.
+
+A current V5 card preserves the three planes, exact paths, snapshot, Research,
+predecessor interfaces, mode event, and capabilities, but does not contain the
+V4 execution-profile fields. It adds the prospective assurance contract with
+typed obligations, computation-stage count, risk signals, and related-artifact
+roles. A frozen card with
+`task_context_revision="chalxius-v5-task-context-0.4.3-2"` contains the
+complete immutable source Research dossier and a task-referenced current V5
+authority snapshot. The latter, not nontruth project-background prose,
+determines current Fact, Release, Decision, and admission status. An explicitly
+named attack target grants only its exact path/hash-bound Release, Decision,
+optional admission marker, admitted Facts, and sealed artifacts. Use the
+generated card rather than merging the schemas by hand.
+
+A newly planned 0.4.4 card uses
+`task_context_revision="chalxius-v5-task-context-0.4.4-1"` and adds one exact
+Main-planner context-selection receipt plus an exact candidate-root/version
+runtime binding. Start the worker CHX ledger with that candidate's script and
+`--task-card CARD`; a mismatched older global runtime fails before creating the
+ledger. An origin-bound promoted Blackboard
+query may seed only one task and retains its node/snapshot/query/hash lineage.
+Exact enum mode hints are advisory and may apply automatically only when the
+recorded cross-component signature is unchanged; explicit user mode wins. The
+technical Host remains the trusted dispatch adapter and gains no planner or
+background capability.
+
+`PROJECT_BACKGROUND.md` is still generated or refreshed only after explicit
+user instruction. A new card freezes its complete exact-byte index and one
+round-local immutable copy, not its body in active context. A worker must use
+`project-background-read CHUNK_ID --task-card CARD`, and after compaction must
+reread the frozen card/index and retrieve the exact chunks again. Every chunk
+remains retrievable, the background has no truth effect, and historical cards
+keep their original full-body binding.
+
+A frozen V5 card without `task_context_revision` keeps its original contract.
+Do not add the field, copy new state into it, warn that it is noncompliant, or
+ask its worker to repeat completed work. Authority drift after a new current
+card was planned is handled by planning a future successor card; the frozen
+card bytes remain unchanged.
+
+Source-dependent Research added for a new card must use
+`memory-add --current-assurance` and exact project-relative path/SHA-256/role
+artifacts. A legacy entry containing only an absolute source path remains
+historical nontruth, but future planning fails until a current-assurance
+successor supplies the capability. Source mutation after card freeze is a
+visible drift error; it never rewrites the card.
+
+When and only when an operator has enabled adverse-routing evolution for the
+project, a new card additionally binds the fixed baseline attack vocabulary,
+the exact matching user-approved future-only rules, their hashes, and the
+counterexample learning contract. Approval or disablement after planning never
+changes the frozen card. A legacy card without this field keeps its original
+return schema even if later commands enable the extension.
 
 Unknown fields fail. A worker must not infer extra capability from filesystem visibility.
 For lane-separated collaboration, a V4 memory entry may bind
@@ -196,7 +252,8 @@ every execution path rejects it and requires a newly planned current-policy roun
 
 ## Worker return
 
-Return exactly one strict schema-v4 JSON object. Supported outcomes are:
+For a workflow-evidence-v4 card, return exactly one strict schema-v4 JSON
+object. Supported outcomes are:
 
 - `fact_submission`: an atomic candidate statement and proof;
 - `counterexample`: a checked construction that challenges a claim;
@@ -206,6 +263,23 @@ Return exactly one strict schema-v4 JSON object. Supported outcomes are:
 Every return binds the task-card hash and frozen snapshot hash. It includes an obligation ledger,
 one typed blackboard delta, a bounded narrative summary, and only declared artifacts. The
 outcome-specific fields are exact: do not add commentary keys.
+
+For a current V5 assurance-bound card, the return contains exact
+`obligation_dispositions`, `computation_manifest`, and `research_assurance`
+fields. For an adverse-routing-bound V5 card it additionally contains exactly
+one `attack_learning` field. It is `null` unless the outcome is
+`counterexample`.
+A completed `refute` assignment remains adverse provenance even when its
+outcome is `evidence` or `insight`: ingestion records the exact card, worker,
+mode, and assignment independently of Research kind. A later Candidate Release
+must bind and dispose it and exclude that worker from verification, while the
+null learning field creates no attack case or route proposal.
+A counterexample supplies a typed family, target pattern, failure mechanism,
+premise and conclusion-failure witnesses, reproduction steps, exact success
+boundary, and one proposed route with trigger, instruction, false-positive
+guards, and scope. Ingestion may record the case and proposal, but only a later
+operator decision can affect future routing. See
+`adverse_routing_evolution.md` for the exact schema and attack-report procedure.
 
 The delta may add only content-addressed nodes and edges allowed by the task card. Validation must
 finish before merge. A validation error has zero ingestion effect.

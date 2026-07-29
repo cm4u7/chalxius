@@ -1,9 +1,20 @@
-Verify the Chalxius 0.4.0 candidate as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.4.4 — Back to the Future as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
 is release-time only and must not be added to normal Research, Pulse,
 computation, or Reader execution.
+
+For every Chalxius run started after the 0.4.1 activation boundary, start one
+task-scoped CHX architecture ledger before substantive work and close it
+immediately before final reporting. Store project-bound ledgers at
+PROJECT/chx-ledgers/ and projectless ledgers in private host state outside the
+skill. The project-local directory has no audit, certification, or truth
+authority. Record only problems caused or materially amplified by Chalxius
+architecture. Report qualifying entries when `report_required=true`; when it
+is false, say nothing about the ledger. Do not backfill, reclassify, invalidate,
+or request rework from a task already underway under 0.4.0, even if that task
+later loads some 0.4.1-or-later bytes.
 
 Do not install, package, migrate, or cut over without separate explicit user
 authorization. Never start original Danus, pre-Chalxius Chalk, or the retired
@@ -23,11 +34,23 @@ receipt, or admission authority. Activate Paper, novelty, campaigns,
 experiments, Pulse, or other optional capabilities only when useful to the
 bounded task.
 
+Order the automatic V5 frontier with the compact four-factor model and project
+historical eight-metric Research without rewriting it. Scores are priority
+only, have no cutoff, and never make an explicit Research id unschedulable.
+Do not silently reconnect campaign filtering, repair-leaf collapse, or V4
+execution-profile feature activation without the user's separate decision.
+The user-approved 0.4.4 L1 connection may seed one exact task from a promoted
+Blackboard query with complete origin lineage. L2 accepts exact mode enums only
+and may apply a hint automatically only when its assurance/adverse signature
+equals the kind-derived default; explicit user mode wins.
+
 Every worker task card must retain three communication planes: compact control,
 one frozen mathematical-state view, and bounded narrative. Bind exact Research,
 predecessor interfaces, Blackboard snapshot, capabilities, artifact limits,
 return path, and final-hash contract. Preflight a repairable draft, ingest only
 the exact worker-final SHA-256, and quarantine a malformed return locally.
+Main compiles task context, Operator governs and may explicitly override, and
+the dedicated Host role retains only its trusted dispatch/status/audit surface.
 Explicit work-unit abort stops future managed return, experiment, Pulse
 commitment, and dispatch for that round while preserving accumulated evidence.
 
@@ -41,11 +64,13 @@ closed unless a trusted issuer and the exact fresh-context contract are bound.
 The only truth path is Research -> Candidate Release -> Certification Decision
 -> Fact. A Candidate Release automatically binds all existing challenge,
 counterexample, and obstacle Research linked to its selected branch and must
-dispose each one. Do not add a second adverse-review layer. Seal exact candidate
-bytes, source and computation artifacts, predecessor uses, Paper/Audit refs,
-and requested checks. Give a different fresh verifier only the frozen capsule.
-Gateway admission must revalidate the exact accepted decision; missing evidence
-leaves an explicit candidate or blocker in every reasoning mode.
+dispose each one. Do not add a second adverse-review layer to the truth path. Seal
+exact candidate bytes, source and computation artifacts, predecessor uses,
+Paper/Audit refs, proof-lineage contracts, and requested checks. Use the neutral
+V5 materializer and give a different fresh verifier only its allowlisted inputs,
+complete decision template, and standalone preflight. Gateway admission must
+revalidate the exact accepted decision; missing evidence leaves an explicit
+candidate or blocker in every reasoning mode.
 
 For paper-led work, preserve source, reconstruction, Audit, Blackboard,
 Research, Fact, Reader, and Learning labels. Bind current nonsuperseded Paper
@@ -60,19 +85,33 @@ minimum retained order from p minus the other factor valuations and require a
 strictly deeper bound replay. A prose-only truncation certificate is
 insufficient.
 
-Generate or refresh PROJECT_BACKGROUND.md only after an explicit user
-instruction. Once that single Markdown summary exists, every substantive V5
-work unit and V5 Reader projection reads and binds its complete body and hash by
-default. If it is absent, continue without it and never synthesize one. Treat it
-as nontruth context; every load-bearing use must return to the exact cited
-source.
+For every actual current computation stage, also bind formula-to-code anchor,
+mathematical and iteration domains, object representation and multiplicity,
+approximation budget, output interpretation, and independent semantic checks.
+If adverse routing is enabled, queue the scoped future program-math refutation
+review only after successful ingestion with exact source/output artifacts.
+Ordinary challenges retain eight baseline rules. Never import CHX architecture
+issues into attack routing, and never activate a proposed route without the
+user's decision.
 
-Preserve Reader packet schema v1 and renderer revision 15. The deterministic V5
+Generate or refresh PROJECT_BACKGROUND.md only after an explicit user
+instruction. Once that single Markdown summary exists, Reader retains its
+projection while a new task card freezes a complete exact-byte index and an
+immutable round-local source snapshot without embedding the body. Main/Operator
+may inspect current chunks; a worker needs its exact frozen task card. After
+context compaction, reread the card/index and retrieve exact chunks again. If
+the file is absent, continue without synthesizing it. It remains nontruth; every
+load-bearing use returns to the exact cited source.
+
+Preserve Reader packet schema v1 and renderer revision 17. The deterministic V5
 projection may show Fact, Research, Certification, current and superseded
 Paper/Audit, Blackboard, and project-background objects with exact native
 authority labels. Only admitted Fact-plane nodes are premises. Export remains
 one fixed, offline, self-contained HTML file with no persistence, network,
-model call, watcher, sidecar, or graph writeback.
+model call, watcher, sidecar, or graph writeback. V5 readable Fact summaries
+may humanize interface anchors and delimit only the bounded historical ASCII
+math grammar; formal/original text and hashes remain exact. Dragged cards remain
+anchors while only their bounded radial-memory neighborhood settles.
 
 Activate Chalxius Learner only for explicit academic teaching or testing. It
 may read frozen Fact, Paper/Audit, and Blackboard snapshots but writes nontruth

@@ -51,6 +51,10 @@ from .store import MathGraphStore
 from .modes import REASONING_MODES
 from .reader_html import export_reader_html, export_reader_payload
 from .v5_reader import build_v5_reader_packet
+from .v5_assurance import (
+    V5_ASSURANCE_CONTRACT_REVISION,
+    V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+)
 
 
 V5_COMPATIBILITY_MUTATION_COMMANDS = {
@@ -375,9 +379,15 @@ READ_ONLY_COMMANDS = {
     "paper-logic-query",
     "paper-logic-audit",
     "verifier-capsule",
+    "candidate-release-check",
+    "certification-decision-check",
     "make-bundle-verifier-task",
     "fact-bundle-verifier-task",
     "mode-status",
+    "attack-route-status",
+    "attack-report",
+    "fact-graph-inventory",
+    "fact-graph-append-target",
 }
 
 
@@ -425,6 +435,124 @@ def _mermaid(store: MathGraphStore, target: str = "") -> str:
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def _authorized_fact_graph_inventory(
+    current_store: MathGraphStore,
+    source_root_value: str,
+) -> dict[str, Any]:
+    source_root = Path(source_root_value).expanduser()
+    if source_root.is_symlink():
+        raise ValueError("Fact Graph inventory source root must not be a symlink")
+    source_root = source_root.resolve()
+    if not source_root.is_dir():
+        raise ValueError("Fact Graph inventory source root is not a directory")
+    source_store = MathGraphStore(source_root)
+    if source_store.workflow_evidence_version() != 5:
+        raise ValueError("Fact Graph inventory currently requires a V5 source project")
+    lifecycle = source_store.v5_lifecycle()
+    active_paths = lifecycle.active_fact_paths()
+    active_facts: list[dict[str, Any]] = []
+    for fact_id, path in sorted(active_paths.items()):
+        release_id = path.parent.parent.name
+        marker, admitted_paths = lifecycle._validated_admission(release_id)
+        if fact_id not in admitted_paths:
+            raise ValueError("Fact Graph inventory admission/path binding drifted")
+        release = lifecycle.release(release_id)
+        decision = lifecycle.decision(marker["decision_id"])
+        interface = source_store.statement_interface(fact_id, materialize=False)
+        active_facts.append(
+            {
+                "fact_id": fact_id,
+                "fact_sha256": sha256_bytes(path.read_bytes()),
+                "interface_sha256": interface["interface_sha256"],
+                "interface_schema_version": interface["schema_version"],
+                "release_id": release_id,
+                "release_sha256": release["release_sha256"],
+                "decision_id": decision["decision_id"],
+                "decision_sha256": decision["decision_sha256"],
+                "gateway": marker["gateway"],
+                "acceptance_id": marker["acceptance_id"],
+            }
+        )
+    source_project_id = source_store.project_id()
+    current_project_id = current_store.project_id()
+    audit = lifecycle.audit().as_dict()
+    admitted_release_ids = sorted(
+        {item["release_id"] for item in active_facts}
+    )
+    all_release_ids = sorted(
+        path.stem
+        for path in lifecycle.candidate_releases_dir.glob("release-*.json")
+        if path.is_file() and not path.is_symlink()
+    )
+    return {
+        "schema_version": 1,
+        "authorization": "explicit_user_cli_read_only",
+        "source_root": str(source_root),
+        "source_project_id": source_project_id,
+        "current_project_id": current_project_id,
+        "project_id_compatibility": (
+            "same_project_append_compatible"
+            if source_project_id == current_project_id
+            else "different_project_no_fact_authority_transfer"
+        ),
+        "active_fact_count": len(active_facts),
+        "active_facts": active_facts,
+        "revoked_fact_ids": sorted(lifecycle.revoked_fact_ids()),
+        "unadmitted_or_inactive_release_ids": sorted(
+            set(all_release_ids).difference(admitted_release_ids)
+        ),
+        "source_audit": {
+            key: audit[key]
+            for key in (
+                "current_ok",
+                "history_clean",
+                "facts",
+                "edges",
+                "errors",
+                "trust_debt",
+            )
+        },
+        "available_actions": [
+            "read_only_lineage_reference_no_authority",
+            "select_this_exact_project_as_future_append_target",
+        ],
+        "automatic_inheritance": False,
+        "federation": False,
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
+
+
+def _authorized_fact_graph_append_target(
+    current_store: MathGraphStore,
+    *,
+    source_root: str,
+    expected_project_id: str,
+) -> dict[str, Any]:
+    inventory = _authorized_fact_graph_inventory(current_store, source_root)
+    if inventory["source_project_id"] != expected_project_id:
+        raise ValueError("append-target expected project id does not match source")
+    audit = inventory["source_audit"]
+    if not audit["current_ok"] or not audit["history_clean"]:
+        raise ValueError("append target must have a clean current and historical audit")
+    return {
+        "schema_version": 1,
+        "authorization": "explicit_user_cli_append_target_selection",
+        "append_target_root": inventory["source_root"],
+        "append_target_project_id": inventory["source_project_id"],
+        "active_fact_ids": [
+            item["fact_id"] for item in inventory["active_facts"]
+        ],
+        "current_root_unchanged": True,
+        "cross_project_fact_import": False,
+        "automatic_inheritance": False,
+        "federation": False,
+        "next_step": "run future lifecycle commands with --root append_target_root",
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -563,10 +691,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", required=True)
     p.add_argument("--producer", required=True)
 
+    p = sub.add_parser("candidate-release-check")
+    p.add_argument("--input", required=True)
+    p.add_argument("--producer", required=True)
+
     p = sub.add_parser("verifier-capsule")
     p.add_argument("release_id")
 
     p = sub.add_parser("certification-record")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("certification-decision-check")
     p.add_argument("--input", required=True)
 
     p = sub.add_parser("fact-admit")
@@ -577,6 +712,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("memory-add")
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
+    p.add_argument(
+        "--current-assurance",
+        action="store_true",
+        help=(
+            "require project-relative path/SHA-256/role source capabilities; "
+            "legacy remains the compatibility default"
+        ),
+    )
 
     p = sub.add_parser("memory-update")
     p.add_argument("entry_id")
@@ -608,6 +751,26 @@ def build_parser() -> argparse.ArgumentParser:
             "MATHGRAPH_HOST_TASK_SCOPE_ID or CODEX_THREAD_ID"
         ),
     )
+    p.add_argument(
+        "--background-chunk-id",
+        action="append",
+        dest="background_chunk_ids",
+        help=(
+            "exact chunk id from project-background-index; repeat to bind an "
+            "explicit Main-planner selection into new V5 cards"
+        ),
+    )
+    sub.add_parser("project-background-index")
+    p = sub.add_parser("project-background-read")
+    p.add_argument("chunk_id")
+    p.add_argument("--task-card")
+
+    p = sub.add_parser("fact-graph-inventory")
+    p.add_argument("--source-root", required=True)
+
+    p = sub.add_parser("fact-graph-append-target")
+    p.add_argument("--source-root", required=True)
+    p.add_argument("--expected-project-id", required=True)
     p = sub.add_parser("round-status")
     p.add_argument("round_id")
 
@@ -636,6 +799,25 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="SHA-256 reported in the worker's explicit final handoff",
     )
+
+    p = sub.add_parser("attack-route-enable")
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+
+    sub.add_parser("attack-route-status")
+
+    p = sub.add_parser("attack-report")
+    p.add_argument("--host-task-scope-id", required=True)
+
+    p = sub.add_parser("attack-route-decide")
+    p.add_argument("proposal_id")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("attack-route-disable")
+    p.add_argument("rule_id")
+    p.add_argument("--reason", required=True)
+    p.add_argument("--actor", required=True)
 
     p = sub.add_parser("make-verifier-task")
     p.add_argument("fact_id")
@@ -1308,6 +1490,14 @@ def main(argv: list[str] | None = None) -> int:
                     "status": "sealed_nontruth",
                 }
             )
+        elif args.command == "candidate-release-check":
+            _print_json(
+                store.v5_lifecycle().candidate_release(
+                    _json_file(args.input),
+                    producer=args.producer,
+                    preflight_only=True,
+                )
+            )
         elif args.command == "verifier-capsule":
             _print_json(store.v5_lifecycle().verifier_capsule(args.release_id))
         elif args.command == "certification-record":
@@ -1321,6 +1511,13 @@ def main(argv: list[str] | None = None) -> int:
                     "verdict": decision["verdict"],
                     "status": "recorded",
                 }
+            )
+        elif args.command == "certification-decision-check":
+            _print_json(
+                store.v5_lifecycle().certification_record(
+                    _json_file(args.input),
+                    preflight_only=True,
+                )
             )
         elif args.command == "fact-admit":
             marker = store.v5_lifecycle().fact_admit(
@@ -1338,7 +1535,13 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "memory-add":
             if store.workflow_evidence_version() == 5:
                 record = store.v5_lifecycle().add_research(
-                    _json_file(args.input), actor=args.actor
+                    _json_file(args.input),
+                    actor=args.actor,
+                    assurance_contract_revision=(
+                        V5_ASSURANCE_CONTRACT_REVISION
+                        if args.current_assurance
+                        else V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+                    ),
                 )
                 _print_json(
                     {
@@ -1412,9 +1615,14 @@ def main(argv: list[str] | None = None) -> int:
                         mode=args.mode,
                         research_ids=args.memory_ids,
                         host_task_scope_id=args.host_task_scope_id,
+                        background_chunk_ids=args.background_chunk_ids,
                     )
                 )
             else:
+                if args.background_chunk_ids:
+                    raise ValueError(
+                        "background chunk selection is available only for V5 planning"
+                    )
                 _print_json(
                     create_round(
                         store,
@@ -1424,6 +1632,49 @@ def main(argv: list[str] | None = None) -> int:
                         host_task_scope_id=args.host_task_scope_id,
                     )
                 )
+        elif args.command == "project-background-index":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("project-background-index requires a V5 project")
+            if args.role not in {"main", "operator"}:
+                raise ValueError(
+                    "project-background-index requires main or operator role"
+                )
+            _print_json(store.v5_lifecycle().project_background_index())
+        elif args.command == "project-background-read":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("project-background-read requires a V5 project")
+            if args.task_card is None:
+                if args.role not in {"main", "operator"}:
+                    raise ValueError(
+                        "a worker project-background-read requires --task-card"
+                    )
+                _print_json(
+                    store.v5_lifecycle().current_project_background_chunk(
+                        args.chunk_id
+                    )
+                )
+            else:
+                if args.role not in {"worker", "main", "operator"}:
+                    raise ValueError("role may not read a frozen background chunk")
+                card = _strict_frozen_worker_task_card(store, args.task_card)
+                _print_json(
+                    store.v5_lifecycle().project_background_chunk(
+                        card=card,
+                        chunk_id=args.chunk_id,
+                    )
+                )
+        elif args.command == "fact-graph-inventory":
+            _print_json(
+                _authorized_fact_graph_inventory(store, args.source_root)
+            )
+        elif args.command == "fact-graph-append-target":
+            _print_json(
+                _authorized_fact_graph_append_target(
+                    store,
+                    source_root=args.source_root,
+                    expected_project_id=args.expected_project_id,
+                )
+            )
         elif args.command == "round-status":
             if store.workflow_evidence_version() == 5:
                 _print_json(store.v5_lifecycle().round_status(args.round_id))
@@ -1503,6 +1754,37 @@ def main(argv: list[str] | None = None) -> int:
                         worker_final_sha256=args.worker_final_sha256,
                     )
                 )
+        elif args.command == "attack-route-enable":
+            _print_json(
+                store.adverse_routes().initialize(
+                    actor=args.actor,
+                    reason=args.reason,
+                )
+            )
+        elif args.command == "attack-route-status":
+            _print_json(store.adverse_routes().status())
+        elif args.command == "attack-report":
+            _print_json(
+                store.adverse_routes().report(
+                    host_task_scope_id=args.host_task_scope_id
+                )
+            )
+        elif args.command == "attack-route-decide":
+            _print_json(
+                store.adverse_routes().decide(
+                    args.proposal_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "attack-route-disable":
+            _print_json(
+                store.adverse_routes().disable(
+                    args.rule_id,
+                    reason=args.reason,
+                    actor=args.actor,
+                )
+            )
         elif args.command == "make-verifier-task":
             if store.workflow_evidence_version() == 5:
                 release = store.v5_lifecycle().release_for_fact(args.fact_id)

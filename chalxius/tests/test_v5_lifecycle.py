@@ -12,7 +12,7 @@ from pathlib import Path
 from mathgraph.cli import main as cli_main
 from mathgraph.blackboard import make_node
 from mathgraph.computations import INDEPENDENCE_AXES
-from mathgraph.contracts import sha256_bytes
+from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.model import Fact
 from mathgraph.paper_logic import PaperLogicStore
 from mathgraph.paper_logic_contracts import (
@@ -25,6 +25,7 @@ from mathgraph.store import MathGraphStore
 from mathgraph.v5_lifecycle import (
     V5_LIFECYCLE_CONTRACT_SHA256,
     V5_POLICY_REVISION,
+    V5_TASK_CONTEXT_REVISION,
 )
 from mathgraph.v5_reader import build_v5_reader_packet
 
@@ -687,6 +688,278 @@ class V5LifecycleTests(unittest.TestCase):
                 self.assertIsNone(card["campaign_id"])
             self.assertFalse(round_status["round_closure_required"])
 
+    def test_post_admission_refute_card_binds_complete_dossier_and_current_authority(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-post-admission-refute")
+            lifecycle = store.v5_lifecycle()
+            proof_research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Prove the target theorem.",
+                    "content": "The proof uses the sealed calculation packet.",
+                },
+                actor="candidate-producer",
+            )
+            artifact = root / "inputs" / "proof-calculation.txt"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_text("sealed proof calculation\n", encoding="utf-8")
+            fact = Fact(
+                problem_id=store.project_id(),
+                author="candidate-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The target theorem holds for every h >= 2.",
+                proof="The complete proof is checked against the sealed calculation.",
+            )
+            release_payload = self._release_payload(
+                facts=[fact],
+                research_ids=[proof_research["research_id"]],
+            )
+            release_payload["artifacts"] = [
+                {
+                    "path": "inputs/proof-calculation.txt",
+                    "sha256": sha256_bytes(artifact.read_bytes()),
+                    "role": "proof_calculation",
+                }
+            ]
+            release_payload["verification_plan"][
+                "authorized_artifact_roles"
+            ] = ["proof_calculation"]
+            release = lifecycle.candidate_release(
+                release_payload,
+                producer="candidate-producer",
+            )
+            decision = lifecycle.certification_record(
+                self._correct_decision_payload(lifecycle, release)
+            )
+            marker = lifecycle.fact_admit(
+                release_id=release["release_id"],
+                decision_id=decision["decision_id"],
+                gateway="independent-gateway",
+            )
+
+            stale_background = (
+                "# Project background\n\n"
+                "The project starts with an empty Fact Graph and the target is open.\n"
+            )
+            background_path = root / "PROJECT_BACKGROUND.md"
+            background_path.write_text(stale_background, encoding="utf-8")
+            release_path = lifecycle._release_path(release["release_id"])
+            challenge = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Attack the admitted theorem at every quantifier boundary.",
+                    "content": (
+                        "Check quantifiers, signs, common-pole regularity, cancellation, "
+                        "and computational independence."
+                    ),
+                    "rationale": "A clean adverse worker needs the complete dossier.",
+                    "source": str(release_path),
+                    "related_fact_id": fact.fact_id,
+                    "attack_target_release_id": release["release_id"],
+                    "attack_target_decision_id": decision["decision_id"],
+                    "logic_signals": ["quantifier", "domain", "computation"],
+                },
+                actor="adverse-worker",
+            )
+            planned = lifecycle.create_round(
+                workers=1,
+                research_ids=[challenge["research_id"]],
+            )
+            task_card_path = Path(planned["assignments"][0]["task_card_path"])
+            card_bytes_before = task_card_path.read_bytes()
+            card = json.loads(card_bytes_before)
+            state = card["mathematical_state"]
+
+            self.assertEqual(
+                card["task_context_revision"],
+                V5_TASK_CONTEXT_REVISION,
+            )
+            self.assertEqual(state["source_research_dossier"], challenge)
+            self.assertEqual(
+                state["source_research_dossier"]["content"],
+                challenge["content"],
+            )
+            self.assertEqual(
+                state["source_research_dossier"]["source"],
+                str(release_path),
+            )
+            self.assertEqual(
+                state["source_research_dossier"]["metadata"],
+                challenge["metadata"],
+            )
+            authority = state["authority_snapshot"]
+            self.assertEqual(
+                authority["precedence_rule"],
+                "machine_validated_v5_authority_overrides_nontruth_"
+                "project_background_status_claims",
+            )
+            self.assertEqual(authority["attack_target"]["admission_status"], "active")
+            self.assertEqual(
+                authority["attack_target"]["acceptance_id"],
+                marker["acceptance_id"],
+            )
+            self.assertEqual(
+                authority["attack_target"]["release_id"],
+                release["release_id"],
+            )
+            self.assertEqual(
+                authority["attack_target"]["decision_id"],
+                decision["decision_id"],
+            )
+            target_binding = next(
+                item
+                for item in authority["fact_bindings"]
+                if item["fact_id"] == fact.fact_id
+            )
+            self.assertEqual(target_binding["status"], "active")
+            self.assertIsNotNone(target_binding["statement_interface"])
+            capability_roles = {
+                item["role"] for item in authority["capabilities"]
+            }
+            self.assertTrue(
+                {
+                    "attack_target_candidate_release",
+                    "attack_target_certification_decision",
+                    "attack_target_admission_marker",
+                    f"attack_target_admitted_fact:{fact.fact_id}",
+                    "attack_target_artifact:proof_calculation",
+                }.issubset(capability_roles)
+            )
+            for capability in authority["capabilities"]:
+                capability_path = root / capability["path"]
+                self.assertEqual(
+                    sha256_bytes(capability_path.read_bytes()),
+                    capability["sha256"],
+                )
+            background = state["project_background"]
+            self.assertNotIn("body", background)
+            self.assertEqual(
+                background["source_sha256"],
+                sha256_bytes(stale_background.encode("utf-8")),
+            )
+            self.assertEqual(
+                background["index"]["coverage_receipt"]["omitted_byte_count"],
+                0,
+            )
+            self.assertEqual(
+                (root / background["snapshot_relpath"]).read_text(encoding="utf-8"),
+                stale_background,
+            )
+            self.assertEqual(background_path.read_text(encoding="utf-8"), stale_background)
+            prompt = Path(planned["assignments"][0]["prompt_path"]).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("source_research_dossier", prompt)
+            self.assertIn("authority_snapshot controls", prompt)
+            lifecycle.validate_task_card(card, expected_path=task_card_path)
+
+            tampered_dossier = copy.deepcopy(card)
+            tampered_dossier["mathematical_state"]["source_research_dossier"][
+                "content"
+            ] = "truncated"
+            with self.assertRaisesRegex(ValueError, "dossier drifted or is incomplete"):
+                lifecycle.validate_task_card(tampered_dossier)
+
+            legacy_projection = copy.deepcopy(card)
+            legacy_projection.pop("task_context_revision")
+            legacy_projection.pop("context_selection")
+            legacy_projection["mathematical_state"].pop("source_research_dossier")
+            legacy_projection["mathematical_state"].pop("authority_snapshot")
+            legacy_projection["mathematical_state"]["project_background"] = {
+                "read_policy": "default_if_present",
+                "relpath": "PROJECT_BACKGROUND.md",
+                "sha256": sha256_bytes(stale_background.encode("utf-8")),
+                "body": stale_background,
+                "truth_effect": "nontruth_background_only",
+                "load_bearing_rule": "return_to_exact_cited_source",
+            }
+            legacy_semantic = {
+                key: value
+                for key, value in legacy_projection.items()
+                if key != "task_card_semantic_sha256"
+            }
+            legacy_projection["task_card_semantic_sha256"] = sha256_json(
+                legacy_semantic
+            )
+            lifecycle.validate_task_card(legacy_projection)
+
+            related_only = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Check only the admitted statement interface.",
+                    "related_fact_id": fact.fact_id,
+                },
+                actor="adverse-worker",
+            )
+            related_only_round = lifecycle.create_round(
+                workers=1,
+                research_ids=[related_only["research_id"]],
+            )
+            related_only_card = json.loads(
+                Path(
+                    related_only_round["assignments"][0]["task_card_path"]
+                ).read_text(encoding="utf-8")
+            )
+            related_only_authority = related_only_card["mathematical_state"][
+                "authority_snapshot"
+            ]
+            self.assertIsNone(related_only_authority["attack_target"])
+            self.assertEqual(related_only_authority["capabilities"], [])
+            self.assertEqual(
+                related_only_authority["fact_bindings"][0]["status"],
+                "active",
+            )
+
+            lifecycle.revoke(
+                fact.fact_id,
+                reason="Exercise authority drift handling.",
+                actor="gateway",
+            )
+            with self.assertRaisesRegex(ValueError, "authority snapshot is stale"):
+                lifecycle.validate_task_card(card)
+            self.assertEqual(task_card_path.read_bytes(), card_bytes_before)
+            replanned = lifecycle.create_round(
+                workers=1,
+                research_ids=[challenge["research_id"]],
+            )
+            replanned_card = json.loads(
+                Path(replanned["assignments"][0]["task_card_path"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                replanned_card["mathematical_state"]["authority_snapshot"]
+                ["attack_target"]["admission_status"],
+                "revoked",
+            )
+            self.assertEqual(background_path.read_text(encoding="utf-8"), stale_background)
+
+    def test_partial_attack_target_is_rejected_before_round_directory_creation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-partial-attack-target")
+            lifecycle = store.v5_lifecycle()
+            partial = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Attack a partially named authority target.",
+                    "attack_target_release_id": "release-" + "a" * 64,
+                },
+                actor="adverse-worker",
+            )
+            before = sorted(store.rounds_dir.iterdir())
+            with self.assertRaisesRegex(ValueError, "must bind both"):
+                lifecycle.create_round(
+                    workers=1,
+                    research_ids=[partial["research_id"]],
+                )
+            self.assertEqual(sorted(store.rounds_dir.iterdir()), before)
+
     def test_profile_closure_commands_are_nontruth_repair_advice_in_v5(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "v5", "v5-readiness")
@@ -772,7 +1045,12 @@ class V5LifecycleTests(unittest.TestCase):
             assignments = round_status["assignments"]
 
             def return_payload(assignment: dict[str, object]) -> dict[str, object]:
-                return {
+                card = json.loads(
+                    Path(str(assignment["task_card_path"])).read_text(
+                        encoding="utf-8"
+                    )
+                )
+                payload: dict[str, object] = {
                     "schema_version": 5,
                     "project_id": store.project_id(),
                     "round_id": round_status["round_id"],
@@ -793,6 +1071,23 @@ class V5LifecycleTests(unittest.TestCase):
                     },
                     "artifacts": [],
                 }
+                if "assurance_contract" in card:
+                    payload.update(
+                        {
+                            "obligation_dispositions": [],
+                            "computation_manifest": None,
+                            "research_assurance": {
+                                "source_uses": [],
+                                "route_invalidations": [],
+                                "extremal_cases": [],
+                                "claim_strength": [],
+                                "contour_substitutions": [],
+                                "claimed_structures": [],
+                                "program_math_alignments": [],
+                            },
+                        }
+                    )
+                return payload
 
             valid_payload = return_payload(assignments[0])
             valid_path = Path(assignments[0]["return_path"])
@@ -887,10 +1182,16 @@ class V5LifecycleTests(unittest.TestCase):
             contextual_card = store._read_json(
                 Path(contextual["assignments"][0]["task_card_path"])
             )
+            background = contextual_card["mathematical_state"][
+                "project_background"
+            ]
+            self.assertNotIn("body", background)
             self.assertEqual(
-                contextual_card["mathematical_state"]["project_background"][
-                    "body"
-                ],
+                background["source_sha256"],
+                sha256_bytes(background_body.encode("utf-8")),
+            )
+            self.assertEqual(
+                (root / background["snapshot_relpath"]).read_text(encoding="utf-8"),
                 background_body,
             )
 
@@ -1299,6 +1600,11 @@ class V5LifecycleTests(unittest.TestCase):
             )
             self.assertEqual(set(store.fact_ids()), {lemma.fact_id, root_fact.fact_id})
             packet = build_v5_reader_packet(store)
+            for fact_node in (
+                node for node in packet["nodes"] if node["plane"] == "fact"
+            ):
+                self.assertNotIn("[CLAIM:", fact_node["summary"])
+                self.assertIn("[CLAIM:", fact_node["formal"]["statement"])
             self.assertNotIn(
                 "project-background",
                 {node["id"] for node in packet["nodes"]},
@@ -1319,11 +1625,22 @@ class V5LifecycleTests(unittest.TestCase):
                 )
             )
             rendered, build_meta = render_reader_html(packet)
-            self.assertIn("chalxius-reader-html-15", rendered)
+            self.assertIn("chalxius-reader-html-17", rendered)
             self.assertEqual(
                 build_meta["renderer_revision"],
-                "chalxius-reader-html-15",
+                "chalxius-reader-html-17",
             )
+            for node in packet["nodes"]:
+                self.assertLessEqual(len(node["title"]), 64)
+                self.assertTrue(
+                    node["title"].endswith(
+                        node["provenance"]["object_sha256"][:6]
+                    )
+                )
+                self.assertNotIn(r"\(", node["title"])
+                self.assertNotIn(r"\[", node["title"])
+                self.assertNotIn("$$", node["title"])
+                self.assertNotIn(r"\begin{", node["title"])
             (root / "PROJECT_BACKGROUND.md").write_text(
                 "# Background\n\nUser-generated summary body.\n",
                 encoding="utf-8",

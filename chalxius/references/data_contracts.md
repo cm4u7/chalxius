@@ -349,7 +349,7 @@ resume validation read canonical JSONL directly: they do not create
 `.mathgraph.lock`, materialize a missing log, or rebuild the derived SQLite
 cache. Cache recovery occurs only in mutation paths.
 
-For every new submission with nonempty `external_refs`, each source object must contain `key`,
+For every submission with nonempty `external_refs`, each source object must contain `key`,
 `title`, `use_kind`, `cited_for`, a stable primary-source identifier, and the exact applicability
 certificate specified in
 [external_theorem_applicability.md](external_theorem_applicability.md). The engine rejects a bare
@@ -357,16 +357,19 @@ citation, duplicate source key, missing hypothesis/convention map, inconsistent 
 certificate anchor that does not occur exactly once in the hashed proof. A `use_kind="formula"`
 source additionally requires `source_fidelity`, including the exact primary artifact SHA-256,
 source-TeX or rendered-primary inspection, a nonempty load-bearing token list, a finding, and one
-exactly-once `[SRC:SOURCE_KEY:LABEL]` proof anchor. In a new v3 round that artifact SHA-256 must occur
+exactly-once `[SRC:SOURCE_KEY:LABEL]` proof anchor. In a bound round that artifact SHA-256 must occur
 in the return's declared, byte-verified artifact list; formula-bearing direct submissions are
 rejected. Historical admitted facts remain readable.
 
-Every new external source object also uses `source_evidence_version: 3` and the exact
-`source_trace` and `critical_audit` schemas in
-[external_source_reliability.md](external_source_reliability.md). `source_trace` binds the exact
-primary artifact SHA-256, versioned artifact locator, retrieval date, exact result locator, exact
-UTF-8 statement transcription and its SHA-256, and a source-TeX or rendered-primary inspection
-method. For formula use, its artifact hash equals `source_fidelity.artifact_sha256`.
+The frozen task-card contract selects the exact source-evidence revision and
+the `source_trace` and `critical_audit` schemas in
+[external_source_reliability.md](external_source_reliability.md). A prospective
+0.4.3 V5 card requires source-evidence v4; frozen compatibility cards may use
+v3. Both bind exact primary bytes, retrieval, statement transcription and hash,
+and a source-TeX or rendered-primary inspection. V4 additionally binds complete
+hypothesis/conclusion coverage, reproducible status-query evidence, a derived
+four-state status summary, and typed conclusion transports. For formula use,
+the source hash equals `source_fidelity.artifact_sha256`.
 
 `critical_audit` declares `profile`, `risk_triggers`, theorem-level `sanity_checks`, a canonical
 `source_audit`, and bounded `source_audit_reuse`. Baseline profile contains notation/binding,
@@ -377,8 +380,39 @@ Reuse is limited to 30 days; repeated exact artifacts in one submission must reu
 key. The only admissible assessments are `as_stated`, `minor_typo_corrected`, and
 `official_erratum_applied`. A minor typo must be non-semantic; an official erratum carries its own
 locator and SHA-256. Ambiguous, material-unofficial, contradicted, retracted, unresolved, or
-misclassified results remain exploration memory. Applicability-only and source-evidence-v2
-certificates remain readable as historical source trust and are never silently upgraded.
+misclassified results remain exploration memory. Applicability-only,
+source-evidence-v2, and frozen source-evidence-v3 certificates remain readable
+as historical source trust and are never silently upgraded.
+
+### V5 source Research dossier and current-authority snapshot
+
+A newly planned task card carrying
+`task_context_revision="chalxius-v5-task-context-0.4.3-2"` binds two additional
+objects in `mathematical_state`:
+
+- `source_research_dossier` is the complete validated immutable source Research
+  record, including its content, source locator, dependencies, relations,
+  metadata, actor, timestamps, and semantic/record hashes. It is capped at 256
+  KiB; overflow fails rather than silently truncating.
+- `authority_snapshot` covers only Fact ids referenced by the task and any
+  exact attack target declared in Research metadata. It binds current
+  active/revoked/candidate-only/missing status, active statement interfaces,
+  and exact target capabilities. Its canonical `snapshot_sha256` covers the
+  entire projection.
+
+`attack_target_release_id` and `attack_target_decision_id` are an all-or-none
+pair and require `related_fact_id`. The Decision must bind the Release and the
+Fact must belong to it. If an admission marker exists, it must bind that same
+Decision. Exact target capabilities are project-relative path/SHA-256/role
+objects for the Release, Decision, optional admission marker, admitted Fact
+bytes, and sealed Release artifacts; no other project bytes are authorized.
+Current machine-validated authority overrides conflicting status prose in
+`PROJECT_BACKGROUND.md`, whose truth effect remains none.
+
+Validation recomputes both objects. Incomplete dossiers, authority drift,
+unsafe or changed capability bytes, and inconsistent target ids fail closed.
+Cards without the revision keep their original schema and are never backfilled
+or treated as requiring repeated work.
 
 `elementary_uses` follows the exact schema and closed whitelist in
 [elementary_result_exemption.md](elementary_result_exemption.md). Each entry binds a result,

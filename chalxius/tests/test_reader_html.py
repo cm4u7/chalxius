@@ -305,7 +305,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("target-arrow-shape': 'tee'", first)
         self.assertNotIn("@@CHALXIUS_", first)
         self.assertNotIn('class="header-state"', first)
-        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-15")
+        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-17")
         expected_packet_sha256 = sha256_bytes(canonical_json_bytes(packet))
         self.assertEqual(first_meta["packet_sha256"], expected_packet_sha256)
         self.assertEqual(
@@ -780,6 +780,7 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("state.pinned.set(nodeId, {...movedNode.position()})", html)
         self.assertIn("lastMovedSelectionCount", html)
         self.assertIn("DYNAMIC_FORCE_NODE_LIMIT = 240", html)
+        self.assertNotIn("DYNAMIC_FORCE_DRAG_PASSES", html)
         self.assertIn("DYNAMIC_FORCE_SETTLE_PASSES = 14", html)
         self.assertIn("DYNAMIC_ATTRACTION_TARGET_GAP = 116", html)
         self.assertIn("PINCH_ZOOM_SENSITIVITY = 0.008", html)
@@ -795,18 +796,53 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("dynamicBoundaryExtent", dynamic_forces)
         self.assertIn("DYNAMIC_REPULSION_STRENGTH", dynamic_forces)
         self.assertIn("DYNAMIC_ATTRACTION_STRENGTH", dynamic_forces)
-        self.assertIn("state.pinned.set(nodeId, next)", dynamic_forces)
+        self.assertNotIn("state.pinned.set(nodeId, next)", dynamic_forces)
+        self.assertIn("forceNeighborhood", dynamic_forces)
+        self.assertIn("dynamicRadialMemoryDisplacement", dynamic_forces)
+        self.assertIn("dynamicLayoutModel", dynamic_forces)
         self.assertIn("requestAnimationFrame", dynamic_schedule)
         self.assertIn("cancelAnimationFrame", dynamic_cancel)
         self.assertIn("cancelScheduledDynamicForces()", html)
-        self.assertIn(
-            "scheduleDynamicForces(fixedIds, DYNAMIC_FORCE_DRAG_PASSES)", html
-        )
-        self.assertIn(
-            "scheduleDynamicForces(movedIds, DYNAMIC_FORCE_SETTLE_PASSES)", html
-        )
+        self.assertNotIn("scheduleDynamicForces(fixedIds", html)
+        self.assertIn("'drag-release'", html)
+        self.assertIn("cancelScheduledDynamicForces();\n      const anchor", html)
+        self.assertIn("scheduleDynamicForces(\n      delta.anchorNodeIds", html)
         self.assertIn("左键框选", html)
-        self.assertIn("Drag selected nodes as a group", html)
+        self.assertIn("radial-memory constraints", html)
+
+    def test_revision_seventeen_uses_compact_identity_and_complete_math_typesetting(self) -> None:
+        packet = example_packet()
+        packet["nodes"][0]["title"] = (
+            r"\[\sum_{n=0}^{\infty} a_n\] " + "very-long-title " * 300
+        ).strip()
+        html, metadata = render_reader_html(packet)
+        identity_label = javascript_function_source(html, "nodeIdentityLabel")
+        identity_text = javascript_function_source(html, "nodeIdentityText")
+        display_label = javascript_function_source(html, "nodeDisplayLabel")
+        tooltip = javascript_function_source(html, "showNodeNameTooltip")
+        detail_typeset = javascript_function_source(html, "typesetDetail")
+
+        self.assertEqual(metadata["renderer_revision"], "chalxius-reader-html-17")
+        self.assertIn("object_sha256.slice(0, 6)", identity_label)
+        self.assertIn("roleLabel(node.reader_role)", identity_label)
+        self.assertIn("planeLabel(node.plane)", identity_label)
+        self.assertNotIn("node.title", identity_label)
+        self.assertIn("nodeIdentityLabel(node)", identity_text)
+        self.assertIn("nodeIdentityLabel(node)", display_label)
+        self.assertIn("nodeIdentityText(node)", tooltip)
+        self.assertNotIn("node.title", tooltip)
+        self.assertIn("dom.detailTitle", detail_typeset)
+        self.assertIn("dom.detailReadable", detail_typeset)
+        self.assertIn("dom.detailFormal", detail_typeset)
+        self.assertIn("inlineMath: [['\\\\(', '\\\\)'], ['$', '$']]", html)
+        self.assertIn("displayMath: [['\\\\[', '\\\\]'], ['$$', '$$']]", html)
+        self.assertIn("processEscapes: true", html)
+        self.assertIn("processEnvironments: true", html)
+        self.assertIn("white-space: nowrap", html)
+        self.assertIn("text-overflow: ellipsis", html)
+        self.assertIn("selected cards remain anchors", html)
+        self.assertIn("the rest of the layout stays fixed", html)
+        self.assertNotIn("Local repel/pull while dragging", html)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for trackpad input QA")
     def test_revision_fourteen_trackpad_pinch_zooms_around_pointer(self) -> None:
@@ -910,6 +946,7 @@ process.stdout.write(JSON.stringify({{pinchResult, panCommand}}));
         theme_path = javascript_function_source(html, "maximizeThemePath")
         direction = javascript_function_source(html, "maximizeDirection")
         boundary_extent = javascript_function_source(html, "dynamicBoundaryExtent")
+        radial_memory = javascript_function_source(html, "dynamicRadialMemoryDisplacement")
         dynamic_forces = javascript_function_source(html, "applyDynamicForces")
 
         self.assertIn("const changedNodeIds = new Set([...delta.added, ...delta.removed])", sizing_convergence)
@@ -929,17 +966,25 @@ process.stdout.write(JSON.stringify({{pinchResult, panCommand}}));
         self.assertIn("if (!applied) continue", dynamic_forces)
         self.assertIn("dynamicForceExecutedPasses", dynamic_forces)
         self.assertIn("dynamicForceReason", dynamic_forces)
+        self.assertIn("forceNeighborhood", dynamic_forces)
+        self.assertIn("clearanceConstrained", dynamic_forces)
+        self.assertIn("dynamicRadialMemoryDisplacement", dynamic_forces)
 
         harness = f"""
 const RADIAL_VISIBLE_EDGE_GAP = 72;
+const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
 const DYNAMIC_FORCE_SETTLE_PASSES = 14;
 const DYNAMIC_FORCE_NODE_LIMIT = 240;
 const DYNAMIC_FORCE_MAX_STEP = 14;
 const DYNAMIC_REPULSION_STRENGTH = 0.42;
 const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
 const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.085;
+const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.055;
+const DYNAMIC_TETHER_MAX_STEP = 4;
 let controlSyncCount = 0;
 const scheduleNodeControlSync = () => {{ controlSyncCount += 1; }};
+const wrapLayoutAngle = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
 function makeNode(id, x, width, height) {{
   let current = {{x, y: 0}};
   return {{
@@ -956,6 +1001,10 @@ function makeNode(id, x, width, height) {{
 const anchor = makeNode('anchor', 0, 254, 118);
 const neighbor = makeNode('neighbor', 230, 246, 110);
 const nodes = [anchor, neighbor];
+const canonicalPositionByNodeId = new Map([
+  ['anchor', {{x: 0, y: 0}}],
+  ['neighbor', {{x: 322, y: 0}}]
+]);
 const cy = {{
   nodes: () => nodes,
   edges: () => [],
@@ -964,6 +1013,7 @@ const cy = {{
 const state = {{pinned: new Map()}};
 const dom = {{cy: {{dataset: {{}}}}}};
 {boundary_extent}
+{radial_memory}
 {dynamic_forces}
 const beforeAnchor = anchor.position();
 const beforeNeighbor = neighbor.position();
@@ -979,7 +1029,7 @@ process.stdout.write(JSON.stringify({{
   finalGap,
   moved,
   controlSyncCount,
-  pinnedNeighbor: state.pinned.get('neighbor'),
+  pinnedNeighbor: state.pinned.get('neighbor') || null,
   dataset: dom.cy.dataset
 }}));
 """
@@ -995,12 +1045,16 @@ process.stdout.write(JSON.stringify({{
         self.assertGreaterEqual(result["finalGap"], 72 - 1e-6)
         self.assertEqual(result["moved"], 1)
         self.assertEqual(result["controlSyncCount"], 1)
-        self.assertEqual(result["pinnedNeighbor"], result["afterNeighbor"])
+        self.assertIsNone(result["pinnedNeighbor"])
         self.assertEqual(result["dataset"]["dynamicForceFixedCount"], "1")
         self.assertEqual(result["dataset"]["dynamicForceSeedCount"], "1")
         self.assertEqual(result["dataset"]["dynamicForceRequestedPasses"], "14")
         self.assertEqual(result["dataset"]["dynamicForceExecutedPasses"], "14")
         self.assertEqual(result["dataset"]["dynamicForceReason"], "sizing")
+        self.assertEqual(
+            result["dataset"]["dynamicLayoutModel"],
+            "localized-radial-memory-equilibrium",
+        )
 
     def test_revision_eleven_click_anchor_halo_and_plaque_contract_is_embedded(self) -> None:
         html, _ = render_reader_html(example_packet())
@@ -1305,7 +1359,7 @@ class ReaderHtmlExportTests(unittest.TestCase):
         )
         self.assertEqual(first["truth_effect"], "none")
         self.assertEqual(first["network_runtime"], "disabled")
-        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-15")
+        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-17")
         self.assertEqual(first["reader_finalize"]["status"], "ready")
         self.assertEqual(first["reader_finalize"]["scope"], "presentation_readiness_only")
         self.assertEqual(

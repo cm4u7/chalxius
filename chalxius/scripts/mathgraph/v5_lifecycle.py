@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -26,20 +28,56 @@ from .contracts import (
     validate_round_id,
 )
 from .applicability import validate_external_refs_for_submission
+from .adoption import validate_workload_profile, workload_profile_for_entry
+from .campaigns import (
+    COMPACT_SCORE_MODEL,
+    COMPACT_SCORE_ROLE,
+    LEGACY_V4_SCORE_FIELDS,
+    actionable_score,
+    decision_factors,
+    project_legacy_decision_profile,
+    validate_decision_profile,
+)
 from .computations import validate_computational_evidence
 from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
 from .graph import DependencyGraph
+from .proof_lineage import validate_successor_contracts
+from .project_background import (
+    BACKGROUND_BINDING_REVISION,
+    BACKGROUND_CHUNK_MAX_BYTES,
+    BACKGROUND_INDEX_REVISION,
+    MAX_PROJECT_BACKGROUND_BYTES,
+    PROJECT_BACKGROUND_FILENAME,
+    background_chunk_from_binding,
+    build_background_index,
+    build_frozen_background_binding,
+    current_background_index,
+    read_project_background,
+    validate_frozen_background_binding,
+)
 from .interfaces import (
     build_statement_interface,
+    clause_is_stage_sensitive,
+    extract_geometric_objects,
     extract_statement_clauses,
+    referenced_premise_clause_tokens,
     validate_predecessor_uses,
     validate_quantifier_ledger,
+    validate_statement_interface,
     write_interface_once,
 )
 from .markdown import parse_fact_markdown, validate_fact_round_trip
 from .model import Fact
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
+from .adverse_routing import validate_attack_learning
+from .v5_assurance import (
+    V5_ASSURANCE_CONTRACT_REVISION,
+    V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+    build_assurance_contract,
+    validate_assurance_contract,
+    validate_return_assurance,
+)
 
 
 V5_WORKFLOW_EVIDENCE_VERSION = 5
@@ -95,6 +133,9 @@ V5_RESEARCH_KINDS = frozenset(
 V5_RETURN_OUTCOMES = frozenset(
     {"proof", "counterexample", "evidence", "dead_end", "insight", "challenge"}
 )
+_LOCAL_SOURCE_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_])/(?:Users|Volumes|private|tmp)/[^\s`'\"<>]+"
+)
 V5_VALIDATION_GRANULARITIES = frozenset(
     {"monolithic_theorem", "atomic_fact_dag", "nodewise_proof_dag"}
 )
@@ -115,8 +156,50 @@ V5_COVERAGE_DISPOSITIONS = frozenset(
         "excluded_with_reason",
     }
 )
-V5_PROJECT_BACKGROUND_FILENAME = "PROJECT_BACKGROUND.md"
-V5_MAX_PROJECT_BACKGROUND_BYTES = 256 * 1024
+V5_PROJECT_BACKGROUND_FILENAME = PROJECT_BACKGROUND_FILENAME
+V5_MAX_PROJECT_BACKGROUND_BYTES = MAX_PROJECT_BACKGROUND_BYTES
+V5_LEGACY_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.3-2"
+V5_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.4-1"
+V5_CONTEXT_SELECTION_REVISION = "chalxius-v5-context-selection-0.4.4-1"
+V5_MAX_CONTEXT_SNAPSHOT_NODES = 256
+V5_MAX_CONTEXT_SNAPSHOT_EDGES = 512
+V5_MAX_SOURCE_RESEARCH_DOSSIER_BYTES = 256 * 1024
+V5_SOURCE_RESEARCH_DOSSIER_FIELDS = (
+    "schema_version",
+    "policy_revision",
+    "project_id",
+    "research_id",
+    "kind",
+    "status",
+    "claim",
+    "content",
+    "rationale",
+    "dependencies",
+    "source",
+    "relation",
+    "related_research_ids",
+    "metadata",
+    "actor",
+    "created_at",
+    "semantic_sha256",
+    "record_sha256",
+)
+V5_ATTACK_TARGET_METADATA_FIELDS = (
+    "attack_target_release_id",
+    "attack_target_decision_id",
+)
+V5_NEUTRAL_DECISION_PROFILE = {
+    "impact": 0.5,
+    "information_value": 0.5,
+    "tractability": 0.5,
+    "burden": 0.5,
+}
+V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE = {
+    "impact": 0.95,
+    "information_value": 0.95,
+    "tractability": 0.8,
+    "burden": 0.35,
+}
 
 
 def _utc_now() -> str:
@@ -129,12 +212,61 @@ def _require_nonempty_text(value: Any, label: str) -> str:
     return value.strip()
 
 
+def _require_exact_object_fields(
+    payload: Any,
+    required: set[str],
+    *,
+    label: str,
+    pointer: str,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} at {pointer or '/'} must be an object")
+    missing = sorted(required.difference(payload))
+    unexpected = sorted(set(payload).difference(required))
+    if missing or unexpected:
+        diagnostics = [
+            *[f"missing={pointer}/{key}" for key in missing],
+            *[f"unexpected={pointer}/{key}" for key in unexpected],
+        ]
+        raise ValueError(f"{label} fields are not exact: " + "; ".join(diagnostics))
+    return payload
+
+
 def _require_string_list(value: Any, label: str) -> list[str]:
     if not isinstance(value, list) or any(
         not isinstance(item, str) for item in value
     ):
         raise ValueError(f"{label} must be a list of strings")
     return list(value)
+
+
+def _research_decision_profile(metadata: dict[str, Any]) -> dict[str, float]:
+    """Project frozen Research metadata into the compact ordering model.
+
+    This is an ephemeral scheduling projection only.  Legacy eight-field
+    records remain byte-for-byte unchanged and explicit Research ids remain
+    schedulable regardless of score.
+    """
+
+    supplied = metadata.get("decision_profile")
+    legacy_present = set(LEGACY_V4_SCORE_FIELDS).intersection(metadata)
+    if supplied is not None and legacy_present:
+        raise ValueError(
+            "Research scheduling metadata cannot mix decision_profile with legacy metrics"
+        )
+    if supplied is not None:
+        return validate_decision_profile(supplied)
+    if legacy_present:
+        missing = sorted(set(LEGACY_V4_SCORE_FIELDS).difference(metadata))
+        if missing:
+            raise ValueError(
+                "Research legacy scheduling metrics are incomplete: "
+                + ", ".join(missing)
+            )
+        return project_legacy_decision_profile(
+            {key: metadata[key] for key in LEGACY_V4_SCORE_FIELDS}
+        )
+    return dict(V5_NEUTRAL_DECISION_PROFILE)
 
 
 # These V4 commands write directly into a truth or migration path.  They stay
@@ -349,6 +481,63 @@ class V5LifecycleManager:
             raise ValueError("research relation must be a string or null")
         if not isinstance(record.get("metadata"), dict):
             raise ValueError("research metadata must be an object")
+        metadata = record["metadata"]
+        _research_decision_profile(metadata)
+        self._research_is_adverse_assignment(record)
+        if "workload_profile" in metadata:
+            validate_workload_profile(metadata["workload_profile"])
+        assurance_revision = metadata.get(
+            "assurance_contract_revision",
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        )
+        if assurance_revision not in {
+            V5_ASSURANCE_CONTRACT_REVISION,
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        }:
+            raise ValueError("research assurance contract revision is invalid")
+        if assurance_revision == V5_ASSURANCE_CONTRACT_REVISION:
+            artifacts = metadata.get("artifacts", [])
+            if not isinstance(artifacts, list) or any(
+                not isinstance(item, dict)
+                or set(item) != {"path", "sha256", "role"}
+                for item in artifacts
+            ):
+                raise ValueError(
+                    "current Research artifacts must be exact path/hash/role objects"
+                )
+            seen_artifact_roles: set[str] = set()
+            for item in artifacts:
+                relpath = _require_nonempty_text(
+                    item["path"], "Research artifact path"
+                )
+                digest = _require_nonempty_text(
+                    item["sha256"], "Research artifact SHA-256"
+                )
+                role = _require_nonempty_text(
+                    item["role"], "Research artifact role"
+                )
+                if SHA256_RE.fullmatch(digest) is None:
+                    raise ValueError("Research artifact SHA-256 is invalid")
+                if role in seen_artifact_roles:
+                    raise ValueError("Research artifact roles must be unique")
+                seen_artifact_roles.add(role)
+                artifact_path = contained_path(
+                    self.store.root, relpath, "Research artifact path"
+                )
+                if (
+                    artifact_path.is_symlink()
+                    or not artifact_path.is_file()
+                    or sha256_bytes(artifact_path.read_bytes()) != digest
+                ):
+                    raise ValueError("Research artifact is missing, unsafe, or drifted")
+            invalidations = metadata.get("route_invalidations", [])
+            if not isinstance(invalidations, list) or any(
+                not isinstance(item, str) or MEMORY_ID_RE.fullmatch(item) is None
+                for item in invalidations
+            ):
+                raise ValueError("Research route_invalidations must be V5 Research ids")
+            if len(invalidations) != len(set(invalidations)):
+                raise ValueError("Research route_invalidations must be unique")
         semantic = {
             key: record[key]
             for key in required.difference(
@@ -367,12 +556,123 @@ class V5LifecycleManager:
             raise ValueError("research record hash mismatch")
         return record
 
+    @staticmethod
+    def _research_assurance_revision(record: dict[str, Any]) -> str:
+        metadata = record.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+        value = metadata.get(
+            "assurance_contract_revision",
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        )
+        return str(value)
+
+    @staticmethod
+    def _research_is_adverse_assignment(record: dict[str, Any]) -> bool:
+        metadata = record.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return False
+        provenance = metadata.get("assignment_provenance")
+        if provenance is None:
+            return False
+        required = {
+            "schema_version",
+            "round_id",
+            "assignment_id",
+            "worker_id",
+            "task_card_sha256",
+            "work_mode",
+            "adverse_assignment",
+        }
+        if not isinstance(provenance, dict) or set(provenance) != required:
+            raise ValueError("Research assignment provenance fields are not exact")
+        if provenance.get("schema_version") != 1:
+            raise ValueError("Research assignment provenance schema is unsupported")
+        validate_round_id(
+            _require_nonempty_text(provenance.get("round_id"), "provenance round id")
+        )
+        validate_assignment_id(
+            _require_nonempty_text(
+                provenance.get("assignment_id"), "provenance assignment id"
+            )
+        )
+        worker_id = _require_nonempty_text(
+            provenance.get("worker_id"), "provenance worker id"
+        )
+        if worker_id != record.get("actor"):
+            raise ValueError("Research assignment provenance worker/actor mismatch")
+        task_card_sha = _require_nonempty_text(
+            provenance.get("task_card_sha256"), "provenance task-card hash"
+        )
+        if SHA256_RE.fullmatch(task_card_sha) is None:
+            raise ValueError("Research assignment provenance task-card hash is invalid")
+        work_mode = provenance.get("work_mode")
+        if work_mode not in WORK_MODES:
+            raise ValueError("Research assignment provenance work mode is invalid")
+        adverse = provenance.get("adverse_assignment")
+        if not isinstance(adverse, bool) or adverse != (work_mode == "refute"):
+            raise ValueError("Research adverse-assignment provenance is inconsistent")
+        task_binding = metadata.get("task_binding")
+        if isinstance(task_binding, dict):
+            for key in ("round_id", "assignment_id", "task_card_sha256"):
+                if task_binding.get(key) != provenance[key]:
+                    raise ValueError(
+                        "Research assignment provenance/task binding mismatch"
+                    )
+        return adverse
+
+    def _typed_research_artifacts(
+        self,
+        record: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        if (
+            self._research_assurance_revision(record)
+            != V5_ASSURANCE_CONTRACT_REVISION
+        ):
+            return []
+        artifacts = record["metadata"].get("artifacts", [])
+        result: list[dict[str, str]] = []
+        for item in artifacts:
+            path = contained_path(
+                self.store.root,
+                item["path"],
+                "Research capability artifact",
+            )
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or sha256_bytes(path.read_bytes()) != item["sha256"]
+            ):
+                raise ValueError("Research capability artifact drifted")
+            result.append(
+                {
+                    "path": item["path"],
+                    "sha256": item["sha256"],
+                    "role": f"{record['research_id']}:{item['role']}",
+                    "source_research_id": record["research_id"],
+                }
+            )
+        return result
+
+    @staticmethod
+    def _research_is_source_dependent(record: dict[str, Any]) -> bool:
+        metadata = record.get("metadata", {})
+        explicit = metadata.get("source_dependent", False)
+        if not isinstance(explicit, bool):
+            raise ValueError("Research source_dependent must be boolean")
+        source_text = "\n".join(
+            str(record.get(field, ""))
+            for field in ("claim", "content", "rationale", "source")
+        )
+        return explicit or _LOCAL_SOURCE_PATH_RE.search(source_text) is not None
+
     def add_research(
         self,
         payload: dict[str, Any],
         *,
         actor: str,
         task_binding: dict[str, str] | None = None,
+        assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("research input must be one object")
@@ -431,10 +731,96 @@ class V5LifecycleManager:
             "source",
             "relation",
             "related_research_ids",
+            "assurance_contract_revision",
         }
         metadata = {
             key: value for key, value in payload.items() if key not in reserved
         }
+        decision_profile = _research_decision_profile(metadata)
+        if "decision_profile" in metadata:
+            metadata["decision_profile"] = decision_profile
+            metadata["score_model"] = COMPACT_SCORE_MODEL
+        if "workload_profile" in metadata:
+            metadata["workload_profile"] = validate_workload_profile(
+                metadata["workload_profile"]
+            )
+        if assurance_contract_revision not in {
+            V5_ASSURANCE_CONTRACT_REVISION,
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        }:
+            raise ValueError("research assurance contract revision is invalid")
+        metadata["assurance_contract_revision"] = assurance_contract_revision
+        if assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION:
+            artifacts = metadata.get("artifacts", [])
+            if not isinstance(artifacts, list) or any(
+                not isinstance(item, dict)
+                or set(item) != {"path", "sha256", "role"}
+                for item in artifacts
+            ):
+                raise ValueError(
+                    "current Research artifacts must be exact path/hash/role objects"
+                )
+            seen_roles: set[str] = set()
+            for item in artifacts:
+                relpath = _require_nonempty_text(
+                    item["path"], "Research artifact path"
+                )
+                digest = _require_nonempty_text(
+                    item["sha256"], "Research artifact SHA-256"
+                )
+                role = _require_nonempty_text(
+                    item["role"], "Research artifact role"
+                )
+                if SHA256_RE.fullmatch(digest) is None:
+                    raise ValueError("Research artifact SHA-256 is invalid")
+                if role in seen_roles:
+                    raise ValueError("Research artifact roles must be unique")
+                seen_roles.add(role)
+                artifact_path = contained_path(
+                    self.store.root, relpath, "Research artifact path"
+                )
+                if (
+                    artifact_path.is_symlink()
+                    or not artifact_path.is_file()
+                    or sha256_bytes(artifact_path.read_bytes()) != digest
+                ):
+                    raise ValueError(
+                        "Research artifact is missing, unsafe, or hash-mismatched"
+                    )
+            source_dependent = metadata.get("source_dependent", False)
+            if not isinstance(source_dependent, bool):
+                raise ValueError("Research source_dependent must be boolean")
+            prospective_record = {
+                "claim": claim,
+                "content": content,
+                "rationale": rationale,
+                "source": source,
+                "metadata": metadata,
+            }
+            if self._research_is_source_dependent(prospective_record) and not artifacts:
+                raise ValueError(
+                    "source-dependent current Research requires at least one exact "
+                    "project-relative path/SHA-256/role artifact capability"
+                )
+            invalidations = metadata.get("route_invalidations", [])
+            if not isinstance(invalidations, list) or any(
+                not isinstance(item, str) or MEMORY_ID_RE.fullmatch(item) is None
+                for item in invalidations
+            ):
+                raise ValueError("Research route_invalidations must be V5 Research ids")
+            if len(invalidations) != len(set(invalidations)):
+                raise ValueError("Research route_invalidations must be unique")
+            if invalidations and kind not in {
+                "challenge",
+                "counterexample",
+                "obstacle",
+                "dead_end",
+            }:
+                raise ValueError(
+                    "only adverse or dead-end Research may invalidate a route"
+                )
+            for target_id in invalidations:
+                self._research_record(target_id)
         if task_binding is not None:
             if not isinstance(task_binding, dict) or any(
                 not isinstance(key, str) or not isinstance(value, str)
@@ -458,6 +844,7 @@ class V5LifecycleManager:
             "metadata": metadata,
             "actor": actor,
         }
+        self._research_is_adverse_assignment(semantic)
         semantic_sha = sha256_json(semantic)
         research_id = semantic_sha[:12]
         created_at = _utc_now()
@@ -846,7 +1233,10 @@ class V5LifecycleManager:
         while changed:
             changed = False
             for research_id, record in records.items():
-                if record["kind"] not in adverse_kinds or research_id in selected:
+                if (
+                    record["kind"] not in adverse_kinds
+                    and not self._research_is_adverse_assignment(record)
+                ) or research_id in selected:
                     continue
                 if research_id in branch or set(record["related_research_ids"]).intersection(
                     branch
@@ -862,6 +1252,64 @@ class V5LifecycleManager:
                         pending.extend(records[related_id]["related_research_ids"])
                     changed = True
         return [records[research_id] for research_id in sorted(selected)]
+
+    def _route_staleness(
+        self,
+        records: dict[str, dict[str, Any]],
+    ) -> dict[str, list[str]]:
+        """Project explicit route invalidations without rewriting Research.
+
+        A current-contract adverse/dead-end Research entry may invalidate exact
+        earlier Research ids.  Descendants remain visibly stale until a later
+        copy-on-write repair branch names the invalidated id.  Historical bytes
+        and statuses are unchanged; this projection only prevents accidental
+        reuse of a known-bad route.
+        """
+
+        invalidations: list[tuple[str, str, str]] = []
+        for invalidator_id, record in records.items():
+            metadata = record.get("metadata", {})
+            if not isinstance(metadata, dict):
+                continue
+            for target_id in metadata.get("route_invalidations", []):
+                if target_id in records:
+                    invalidations.append(
+                        (target_id, invalidator_id, record["created_at"])
+                    )
+
+        def ancestors(research_id: str) -> set[str]:
+            seen: set[str] = set()
+            pending = [research_id]
+            while pending:
+                current_id = pending.pop()
+                if current_id in seen or current_id not in records:
+                    continue
+                seen.add(current_id)
+                pending.extend(records[current_id]["related_research_ids"])
+            return seen
+
+        stale: dict[str, list[str]] = {}
+        for research_id, record in records.items():
+            lineage = ancestors(research_id)
+            for target_id, invalidator_id, invalidated_at in invalidations:
+                if research_id == invalidator_id or target_id not in lineage:
+                    continue
+                repaired = any(
+                    candidate["kind"] == "repair"
+                    and candidate["created_at"] > invalidated_at
+                    and candidate.get("metadata", {}).get(
+                        "repair_of_research_id"
+                    )
+                    == target_id
+                    for candidate_id, candidate in records.items()
+                    if candidate_id in lineage
+                )
+                if not repaired:
+                    stale.setdefault(research_id, []).append(invalidator_id)
+        return {
+            research_id: sorted(dict.fromkeys(invalidator_ids))
+            for research_id, invalidator_ids in stale.items()
+        }
 
     def frontier(
         self,
@@ -882,6 +1330,8 @@ class V5LifecycleManager:
                         dispositions[target_id] = record
                 continue
             bases[record["research_id"]] = record
+        route_staleness = self._route_staleness(bases)
+        active_fact_ids = set(self.store.fact_ids())
         visible: list[dict[str, Any]] = []
         for research_id, record in bases.items():
             projection = dict(record)
@@ -892,11 +1342,49 @@ class V5LifecycleManager:
                 ]
                 projection["latest_disposition_id"] = disposition["research_id"]
                 projection["latest_disposition_note"] = disposition["content"]
+            if research_id in route_staleness:
+                projection["route_status"] = "stale_pending_copy_on_write_repair"
+                projection["route_invalidated_by"] = route_staleness[research_id]
+                if not include_history:
+                    continue
+            else:
+                projection["route_status"] = "current"
+                projection["route_invalidated_by"] = []
             if not include_history and projection["status"] not in ACTIVE_MEMORY_STATUSES:
                 continue
+            readiness = (
+                1.0
+                if all(
+                    fact_id in active_fact_ids
+                    for fact_id in projection["dependencies"]
+                )
+                else 0.0
+            )
+            decision_profile = _research_decision_profile(
+                projection["metadata"]
+            )
+            scoring_entry = {"decision_profile": decision_profile}
+            projection["decision_profile"] = decision_profile
+            projection["decision_factors"] = decision_factors(
+                scoring_entry,
+                readiness=readiness,
+            )
+            projection["score_model"] = COMPACT_SCORE_MODEL
+            projection["score_role"] = COMPACT_SCORE_ROLE
+            projection["readiness"] = readiness
+            projection["score"] = actionable_score(
+                scoring_entry,
+                readiness=readiness,
+            )
             projection["id"] = research_id
             visible.append(projection)
-        visible.sort(key=lambda item: (item["created_at"], item["research_id"]))
+        visible.sort(
+            key=lambda item: (
+                -item["score"],
+                item["created_at"],
+                item["research_id"],
+            )
+        )
         return visible[:limit]
 
     def _work_mode(self, entry: dict[str, Any], index: int) -> str:
@@ -909,9 +1397,273 @@ class V5LifecycleManager:
             return "literature"
         return WORK_MODES[index % len(WORK_MODES)] if kind == "plan" else "prove"
 
-    def _snapshot_for_round(self) -> dict[str, Any]:
+    @staticmethod
+    def _mode_architecture_signature(
+        entry: dict[str, Any],
+        *,
+        work_mode: str,
+        adverse_routing_enabled: bool,
+    ) -> dict[str, Any]:
+        """Project every mode-sensitive cross-component effect.
+
+        L2 suggestions are advisory.  They may alter the worker's research
+        posture, but they may not silently alter an assurance contract, attach
+        an adverse capability, or suppress the later program-math review path.
+        Explicit user modes are intentionally outside this equivalence gate.
+        """
+
+        obligations = entry["metadata"].get("obligations", [])
+        assurance = build_assurance_contract(
+            entry=entry,
+            obligations=obligations,
+            work_mode=work_mode,
+            related_artifacts=[],
+        )
+        stage_count = assurance["computation_stage_count"]
+        semantic = {
+            "revision": "chalxius-v5-mode-architecture-signature-1",
+            "assurance_contract_without_artifact_roles": assurance,
+            "frozen_adverse_task_binding": (
+                "attached"
+                if adverse_routing_enabled and work_mode == "refute"
+                else "absent"
+            ),
+            "program_math_adverse_review": (
+                "suppressed_by_refute_mode"
+                if stage_count > 0 and work_mode == "refute"
+                else (
+                    "eligible_when_routing_enabled"
+                    if stage_count > 0
+                    else "not_applicable"
+                )
+            ),
+        }
+        return {**semantic, "signature_sha256": sha256_json(semantic)}
+
+    def _mode_selection(
+        self,
+        entry: dict[str, Any],
+        *,
+        requested_mode: str,
+        index: int,
+        adverse_routing_enabled: bool | None = None,
+    ) -> dict[str, Any]:
+        if requested_mode != "auto" and requested_mode not in WORK_MODES:
+            raise ValueError(f"unsupported work mode: {requested_mode}")
+        supplied = entry["metadata"].get("suggested_actions")
+        malformed = supplied is not None and (
+            not isinstance(supplied, list)
+            or any(not isinstance(item, str) for item in supplied)
+        )
+        suggestions = list(supplied) if isinstance(supplied, list) and not malformed else []
+        accepted: list[str] = []
+        rejected: list[str] = []
+        for suggestion in suggestions:
+            if suggestion in WORK_MODES:
+                if suggestion not in accepted:
+                    accepted.append(suggestion)
+            else:
+                rejected.append(suggestion)
+        default_mode = self._work_mode(entry, index)
+        eligible: list[str] = []
+        blocked: list[dict[str, str]] = []
+        adverse_enabled = (
+            self.store.adverse_routes().enabled()
+            if adverse_routing_enabled is None
+            else adverse_routing_enabled
+        )
+        if not isinstance(adverse_enabled, bool):
+            raise ValueError("adverse-routing freeze state must be boolean")
+        default_signature = self._mode_architecture_signature(
+            entry,
+            work_mode=default_mode,
+            adverse_routing_enabled=adverse_enabled,
+        )
+        eligible_signatures: list[dict[str, str]] = []
+        for suggestion in accepted:
+            reason: str | None = None
+            suggestion_signature = self._mode_architecture_signature(
+                entry,
+                work_mode=suggestion,
+                adverse_routing_enabled=adverse_enabled,
+            )
+            if (
+                suggestion_signature[
+                    "assurance_contract_without_artifact_roles"
+                ]
+                != default_signature[
+                    "assurance_contract_without_artifact_roles"
+                ]
+            ):
+                reason = "would_change_assurance_contract"
+            elif (
+                suggestion_signature["frozen_adverse_task_binding"]
+                != default_signature["frozen_adverse_task_binding"]
+            ):
+                reason = "would_change_active_adverse_routing_capability"
+            elif (
+                suggestion_signature["program_math_adverse_review"]
+                != default_signature["program_math_adverse_review"]
+            ):
+                reason = "would_change_program_math_adverse_review"
+            if reason is None:
+                eligible.append(suggestion)
+                eligible_signatures.append(
+                    {
+                        "mode": suggestion,
+                        "signature_sha256": suggestion_signature[
+                            "signature_sha256"
+                        ],
+                    }
+                )
+            else:
+                blocked.append({"mode": suggestion, "reason": reason})
+        if requested_mode != "auto":
+            selected_mode = requested_mode
+            source = "explicit_user_mode"
+        elif eligible:
+            selected_mode = eligible[0]
+            source = "bounded_research_suggestion"
+        else:
+            selected_mode = default_mode
+            source = "research_kind_default"
+        semantic = {
+            "source": source,
+            "requested_mode": requested_mode,
+            "fallback_index": index,
+            "default_mode": default_mode,
+            "adverse_routing_enabled_at_freeze": adverse_enabled,
+            "raw_suggestions": suggestions,
+            "accepted_suggestions": accepted,
+            "eligible_suggestions": eligible,
+            "rejected_suggestions": rejected,
+            "blocked_suggestions": blocked,
+            "malformed_suggestions_ignored": malformed,
+            "selected_mode": selected_mode,
+            "architecture_equivalence": {
+                "revision": "chalxius-v5-mode-equivalence-1",
+                "rule": "automatic_suggestion_signature_must_equal_default",
+                "default_signature_sha256": default_signature[
+                    "signature_sha256"
+                ],
+                "eligible_suggestion_signatures": eligible_signatures,
+            },
+            "precedence": "explicit_user_mode_over_suggestion_over_kind_default",
+            "effect": (
+                "hint_applies_only_when_assurance_and_capability_equivalent"
+            ),
+        }
+        return {**semantic, "selection_sha256": sha256_json(semantic)}
+
+    def _promoted_context_binding(
+        self,
+        entry: dict[str, Any],
+        *,
+        require_current_origin: bool = True,
+    ) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        metadata = entry["metadata"]
+        required = {
+            "origin_blackboard_node_id",
+            "origin_blackboard_snapshot_id",
+            "origin_blackboard_node_sha256",
+            "blackboard_query_sha256",
+            "blackboard_query",
+            "promotion_task_sha256",
+        }
+        present = required.intersection(metadata)
+        if not present:
+            return None
+        if present != required:
+            raise ValueError(
+                "promoted V5 Research has incomplete Blackboard provenance"
+            )
+        node_id = _require_nonempty_text(
+            metadata["origin_blackboard_node_id"],
+            "promoted Blackboard origin node id",
+        )
+        snapshot_id = _require_nonempty_text(
+            metadata["origin_blackboard_snapshot_id"],
+            "promoted Blackboard origin snapshot id",
+        )
+        node_sha256 = _require_nonempty_text(
+            metadata["origin_blackboard_node_sha256"],
+            "promoted Blackboard origin node hash",
+        )
+        query_sha256 = _require_nonempty_text(
+            metadata["blackboard_query_sha256"],
+            "promoted Blackboard query hash",
+        )
+        promotion_task_sha256 = _require_nonempty_text(
+            metadata["promotion_task_sha256"],
+            "promoted Blackboard task hash",
+        )
+        if any(
+            SHA256_RE.fullmatch(value) is None
+            for value in (node_sha256, query_sha256, promotion_task_sha256)
+        ):
+            raise ValueError("promoted V5 Research has an invalid provenance hash")
+        query_value = metadata["blackboard_query"]
+        if not isinstance(query_value, dict):
+            raise ValueError("promoted V5 Research lacks its Blackboard query")
+        query = json.loads(json.dumps(query_value))
         blackboard = self.store.blackboard()
-        nodes = blackboard.nodes()
+        blackboard.validate_query(query)
+        if sha256_json(query) != query_sha256:
+            raise ValueError("promoted V5 Research Blackboard query hash mismatch")
+        if node_id not in query["seed_node_ids"]:
+            raise ValueError(
+                "promoted V5 Research query does not seed its origin node"
+            )
+        if (
+            query["node_budget"] > V5_MAX_CONTEXT_SNAPSHOT_NODES
+            or query["edge_budget"] > V5_MAX_CONTEXT_SNAPSHOT_EDGES
+        ):
+            raise ValueError(
+                "promoted V5 Research query exceeds the V5 context snapshot budget"
+            )
+        origin_manifest = blackboard.snapshot_manifest(snapshot_id)
+        if origin_manifest["query_sha256"] != query_sha256:
+            raise ValueError(
+                "promoted V5 Research query disagrees with its origin snapshot"
+            )
+        origin_entries = {
+            item["node_id"]: item["sha256"]
+            for item in origin_manifest["node_entries"]
+        }
+        if origin_entries.get(node_id) != node_sha256:
+            raise ValueError(
+                "promoted V5 Research node disagrees with its origin snapshot"
+            )
+        if require_current_origin:
+            current_nodes = blackboard.current_nodes()
+            if node_id not in current_nodes:
+                raise ValueError("promoted V5 Research origin node is no longer active")
+            current_sha256 = sha256_bytes(
+                json.dumps(
+                    current_nodes[node_id],
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+            )
+            if current_sha256 != node_sha256:
+                raise ValueError("promoted V5 Research origin node hash mismatch")
+        lineage = {
+            "research_id": entry["research_id"],
+            "origin_blackboard_node_id": node_id,
+            "origin_blackboard_node_sha256": node_sha256,
+            "origin_blackboard_snapshot_id": snapshot_id,
+            "blackboard_query_sha256": query_sha256,
+            "promotion_task_sha256": promotion_task_sha256,
+        }
+        return query, lineage
+
+    def _snapshot_for_round(
+        self,
+        selected: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        blackboard = self.store.blackboard()
+        nodes = blackboard.current_nodes()
         spaces = sorted(
             node_id
             for node_id, node in nodes.items()
@@ -919,8 +1671,22 @@ class V5LifecycleManager:
         )
         if not spaces:
             raise ValueError("V5 round planning requires one Blackboard space")
-        return blackboard.snapshot(
-            query={
+        promoted = [
+            binding
+            for entry in selected
+            if (binding := self._promoted_context_binding(entry)) is not None
+        ]
+        if promoted and len(selected) != 1:
+            raise ValueError(
+                "a promoted Blackboard query must be planned as one exact V5 task; "
+                "plan unrelated Research in a separate round"
+            )
+        if promoted:
+            query, lineage = promoted[0]
+            source = "promoted_blackboard_query"
+            origins = [lineage]
+        else:
+            query = {
                 "seed_node_ids": [spaces[0]],
                 "direction": "both",
                 "max_hops": 3,
@@ -928,9 +1694,162 @@ class V5LifecycleManager:
                 "node_type_allowlist": ["*"],
                 "node_budget": 256,
                 "edge_budget": 512,
-            },
+            }
+            source = "default_project_space"
+            origins = []
+        snapshot = blackboard.snapshot(
+            query=query,
             actor="v5-orchestrator",
         )
+        semantic = {
+            "source": source,
+            "query": query,
+            "query_sha256": snapshot["query_sha256"],
+            "origin_bindings": origins,
+            "snapshot_id": snapshot["snapshot_id"],
+            "snapshot_sha256": snapshot["snapshot_sha256"],
+            "omission_receipt": snapshot["omission_receipt"],
+            "budget_contract": {
+                "max_nodes": V5_MAX_CONTEXT_SNAPSHOT_NODES,
+                "max_edges": V5_MAX_CONTEXT_SNAPSHOT_EDGES,
+                "overflow": "fail_before_round_or_explicit_snapshot_omission_receipt",
+            },
+            "truth_effect": "none",
+        }
+        return snapshot, {
+            **semantic,
+            "selection_sha256": sha256_json(semantic),
+        }
+
+    def project_background_index(self) -> dict[str, Any] | None:
+        return current_background_index(self.store.root)
+
+    @staticmethod
+    def _background_snapshot_relpath(round_id: str, source_sha256: str) -> str:
+        return (
+            f"rounds/{validate_round_id(round_id)}/context/"
+            f"project-background-{source_sha256}.md"
+        )
+
+    def _freeze_project_background(
+        self,
+        *,
+        round_id: str,
+        raw: bytes | None,
+        selected_chunk_ids: list[str],
+    ) -> dict[str, Any] | None:
+        if raw is None:
+            if selected_chunk_ids:
+                raise ValueError(
+                    "background chunk selection requires PROJECT_BACKGROUND.md"
+                )
+            return None
+        source_sha256 = sha256_bytes(raw)
+        snapshot_relpath = self._background_snapshot_relpath(
+            round_id, source_sha256
+        )
+        snapshot_path = self.store.root / snapshot_relpath
+        self.store._write_bytes_once(snapshot_path, raw)
+        return build_frozen_background_binding(
+            raw=raw,
+            snapshot_relpath=snapshot_relpath,
+            selected_chunk_ids=selected_chunk_ids,
+        )
+
+    def project_background_chunk(
+        self,
+        *,
+        card: dict[str, Any],
+        chunk_id: str,
+    ) -> dict[str, Any]:
+        self.validate_task_card(card)
+        if card.get("task_context_revision") != V5_TASK_CONTEXT_REVISION:
+            raise ValueError(
+                "exact background chunks require a current indexed V5 task card"
+            )
+        binding = card["mathematical_state"]["project_background"]
+        if binding is None:
+            raise ValueError("this V5 task card has no project background")
+        return background_chunk_from_binding(
+            self.store.root,
+            binding,
+            chunk_id=_require_nonempty_text(chunk_id, "background chunk id"),
+        )
+
+    def current_project_background_chunk(self, chunk_id: str) -> dict[str, Any]:
+        raw = read_project_background(self.store.root)
+        if raw is None:
+            raise ValueError("this V5 project has no PROJECT_BACKGROUND.md")
+        binding = build_frozen_background_binding(
+            raw=raw,
+            snapshot_relpath=V5_PROJECT_BACKGROUND_FILENAME,
+            selected_chunk_ids=[],
+        )
+        return background_chunk_from_binding(
+            self.store.root,
+            binding,
+            chunk_id=_require_nonempty_text(chunk_id, "background chunk id"),
+        )
+
+    @staticmethod
+    def _context_selection_binding(
+        *,
+        blackboard_selection: dict[str, Any],
+        project_background: dict[str, Any] | None,
+        mode_selection: dict[str, Any],
+    ) -> dict[str, Any]:
+        background_selection = (
+            {
+                "source_sha256": None,
+                "index_sha256": None,
+                "selection_receipt": {
+                    "compiler_role": "v5_main_planner",
+                    "policy": "background_absent",
+                    "selected_chunk_ids": [],
+                    "unselected_chunk_count": 0,
+                    "all_unselected_chunks_retrievable": True,
+                    "omission_effect": "none",
+                    "selection_sha256": sha256_json(
+                        {
+                            "compiler_role": "v5_main_planner",
+                            "policy": "background_absent",
+                            "selected_chunk_ids": [],
+                            "unselected_chunk_count": 0,
+                            "all_unselected_chunks_retrievable": True,
+                            "omission_effect": "none",
+                        }
+                    ),
+                },
+            }
+            if project_background is None
+            else {
+                "source_sha256": project_background["source_sha256"],
+                "index_sha256": project_background["index"]["index_sha256"],
+                "selection_receipt": project_background["selection_receipt"],
+            }
+        )
+        semantic = {
+            "revision": V5_CONTEXT_SELECTION_REVISION,
+            "compiler_role": "v5_main_planner",
+            "blackboard": blackboard_selection,
+            "background": background_selection,
+            "mode": mode_selection,
+            "precedence": [
+                "machine_validated_authority",
+                "source_research_dossier",
+                "task_specific_blackboard_snapshot",
+                "project_background_index",
+            ],
+            "host_mathematical_output_rule": (
+                "durable_mathematical_findings_must_enter_research_or_worker_return"
+            ),
+            "truth_effect": "none",
+            "admission_effect": "none",
+        }
+        return {
+            **semantic,
+            "context_selection_sha256": sha256_json(semantic),
+        }
 
     def _task_card_path(self, round_id: str, assignment_id: str) -> Path:
         return (
@@ -939,6 +1858,35 @@ class V5LifecycleManager:
             / "task-cards"
             / f"{validate_assignment_id(assignment_id)}.json"
         )
+
+    @staticmethod
+    def _runtime_binding() -> dict[str, Any]:
+        skill_root = Path(__file__).resolve().parents[2]
+        version_path = skill_root / "VERSION"
+        manifest_path = skill_root / "MANIFEST.sha256"
+        if (
+            version_path.is_symlink()
+            or not version_path.is_file()
+            or manifest_path.is_symlink()
+            or not manifest_path.is_file()
+        ):
+            raise ValueError("Chalxius runtime identity files are missing or unsafe")
+        version = _require_nonempty_text(
+            version_path.read_text(encoding="utf-8").strip(),
+            "Chalxius runtime version",
+        )
+        semantic = {
+            "schema_version": 1,
+            "skill_root": str(skill_root),
+            "skill_version": version,
+            "version_file_sha256": sha256_bytes(version_path.read_bytes()),
+            "manifest_file_sha256": sha256_bytes(manifest_path.read_bytes()),
+            "worker_ledger_contract": "exact_task_card_runtime_binding_required",
+        }
+        return {
+            **semantic,
+            "runtime_identity_sha256": sha256_json(semantic),
+        }
 
     def _project_background_binding(
         self,
@@ -973,6 +1921,431 @@ class V5LifecycleManager:
             "load_bearing_rule": "return_to_exact_cited_source",
         }
 
+    def _source_research_dossier(
+        self,
+        record: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Project the complete immutable source Research record into a task card."""
+
+        dossier = {
+            key: record[key] for key in V5_SOURCE_RESEARCH_DOSSIER_FIELDS
+        }
+        encoded = json.dumps(
+            dossier,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if len(encoded) > V5_MAX_SOURCE_RESEARCH_DOSSIER_BYTES:
+            raise ValueError(
+                "source Research dossier exceeds the 256 KiB task-card limit"
+            )
+        return dossier
+
+    def _task_authority_snapshot(
+        self,
+        record: dict[str, Any],
+        *,
+        contract_revision: str = V5_TASK_CONTEXT_REVISION,
+    ) -> dict[str, Any]:
+        """Bind only task-referenced V5 authority and exact read capabilities.
+
+        PROJECT_BACKGROUND.md remains useful historical context, but it is a
+        nontruth document and cannot state the current admission status.  This
+        projection is deliberately narrow: ordinary tasks see only their
+        explicit Fact references, while an attack receives the exact
+        Release/Decision/Admission bundle named in frozen Research metadata.
+        """
+
+        metadata = record["metadata"]
+        related_fact_id = metadata.get("related_fact_id")
+        if related_fact_id is not None:
+            if not isinstance(related_fact_id, str):
+                raise ValueError("Research related_fact_id must be a Fact id or null")
+            related_fact_id = validate_fact_id(related_fact_id)
+
+        attack_values = {
+            key: metadata.get(key) for key in V5_ATTACK_TARGET_METADATA_FIELDS
+        }
+        attack_present = {
+            key for key, value in attack_values.items() if value is not None
+        }
+        if attack_present and attack_present != set(V5_ATTACK_TARGET_METADATA_FIELDS):
+            raise ValueError(
+                "Research attack target must bind both Candidate Release and "
+                "Certification Decision ids"
+            )
+        if attack_present and related_fact_id is None:
+            raise ValueError("Research attack target requires related_fact_id")
+
+        active_paths = self.active_fact_paths()
+        revoked_fact_ids = self.revoked_fact_ids()
+        referenced_fact_ids = set(record["dependencies"])
+        if related_fact_id is not None:
+            referenced_fact_ids.add(related_fact_id)
+
+        capabilities: list[dict[str, str]] = []
+
+        def add_capability(path: Path, *, role: str) -> None:
+            resolved_root = self.store.root.resolve()
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(f"V5 authority capability is missing or unsafe: {role}")
+            resolved = path.resolve()
+            if not resolved.is_relative_to(resolved_root):
+                raise ValueError(f"V5 authority capability escapes project root: {role}")
+            capabilities.append(
+                {
+                    "path": resolved.relative_to(resolved_root).as_posix(),
+                    "sha256": sha256_bytes(resolved.read_bytes()),
+                    "role": role,
+                }
+            )
+
+        attack_target: dict[str, Any] | None = None
+        candidate_sha256: dict[str, str] = {}
+        if attack_present:
+            release_id = attack_values["attack_target_release_id"]
+            decision_id = attack_values["attack_target_decision_id"]
+            if not isinstance(release_id, str) or not isinstance(decision_id, str):
+                raise ValueError("Research attack target ids must be strings")
+            release = self.release(release_id)
+            decision = self.decision(decision_id)
+            if (
+                decision["release_id"] != release_id
+                or decision["release_sha256"] != release["release_sha256"]
+            ):
+                raise ValueError(
+                    "Research attack target Release/Decision binding is inconsistent"
+                )
+            if related_fact_id not in release["fact_ids"]:
+                raise ValueError(
+                    "Research related_fact_id is outside the attack target Release"
+                )
+
+            referenced_fact_ids.update(release["fact_ids"])
+            candidate_sha256 = {
+                item["fact_id"]: item["fact_sha256"]
+                for item in release["candidates"]
+            }
+            release_path = self._release_path(release_id)
+            decision_path = self._decision_path(decision_id)
+            add_capability(
+                release_path,
+                role="attack_target_candidate_release",
+            )
+            add_capability(
+                decision_path,
+                role="attack_target_certification_decision",
+            )
+            for artifact in release["artifacts"]:
+                add_capability(
+                    contained_path(
+                        self.store.root,
+                        artifact["sealed_relpath"],
+                        "attack target sealed artifact",
+                    ),
+                    role=f"attack_target_artifact:{artifact['role']}",
+                )
+
+            marker_path = self._admission_dir(release_id) / "ACCEPTED.json"
+            marker: dict[str, Any] | None = None
+            admitted_paths: dict[str, Path] = {}
+            if marker_path.is_symlink() or marker_path.exists():
+                marker, admitted_paths = self._validated_admission(release_id)
+                if marker["decision_id"] != decision_id:
+                    raise ValueError(
+                        "Research attack target admission used a different Decision"
+                    )
+                add_capability(
+                    marker_path,
+                    role="attack_target_admission_marker",
+                )
+                for fact_id in release["fact_ids"]:
+                    add_capability(
+                        admitted_paths[fact_id],
+                        role=f"attack_target_admitted_fact:{fact_id}",
+                    )
+
+            if marker is None:
+                admission_status = "not_admitted"
+                acceptance_id = None
+            elif related_fact_id in revoked_fact_ids:
+                admission_status = "revoked"
+                acceptance_id = marker["acceptance_id"]
+            elif related_fact_id in active_paths:
+                admission_status = "active"
+                acceptance_id = marker["acceptance_id"]
+            else:
+                raise ValueError(
+                    "Research attack target admission is not visible as active or revoked"
+                )
+            attack_target = {
+                "release_id": release_id,
+                "release_sha256": release["release_sha256"],
+                "release_record_sha256": release["record_sha256"],
+                "decision_id": decision_id,
+                "decision_sha256": decision["decision_sha256"],
+                "decision_record_sha256": decision["record_sha256"],
+                "decision_verdict": decision["verdict"],
+                "target_fact_id": related_fact_id,
+                "release_fact_ids": list(release["fact_ids"]),
+                "admission_status": admission_status,
+                "acceptance_id": acceptance_id,
+            }
+
+        fact_bindings: list[dict[str, Any]] = []
+        for fact_id in sorted(referenced_fact_ids):
+            if fact_id in active_paths:
+                path = active_paths[fact_id]
+                fact_sha = sha256_bytes(path.read_bytes())
+                status = "active"
+                statement_interface = self.store.statement_interface(
+                    fact_id,
+                    materialize=False,
+                )
+            elif fact_id in revoked_fact_ids:
+                fact_sha = candidate_sha256.get(fact_id)
+                status = "revoked"
+                statement_interface = None
+            elif fact_id in candidate_sha256:
+                fact_sha = candidate_sha256[fact_id]
+                status = "candidate_only"
+                statement_interface = None
+            else:
+                fact_sha = None
+                status = "missing"
+                statement_interface = None
+            fact_bindings.append(
+                {
+                    "fact_id": fact_id,
+                    "status": status,
+                    "fact_sha256": fact_sha,
+                    "statement_interface": statement_interface,
+                }
+            )
+
+        capabilities.sort(
+            key=lambda item: (item["role"], item["path"], item["sha256"])
+        )
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": contract_revision,
+            "research_id": record["research_id"],
+            "scope": "task_referenced_v5_authority_only",
+            "precedence_rule": (
+                "machine_validated_v5_authority_overrides_nontruth_"
+                "project_background_status_claims"
+            ),
+            "background_truth_effect": "none",
+            "fact_bindings": fact_bindings,
+            "attack_target": attack_target,
+            "capabilities": capabilities,
+        }
+        return {**semantic, "snapshot_sha256": sha256_json(semantic)}
+
+    def _validate_context_selection(
+        self,
+        *,
+        card: dict[str, Any],
+        source_research: dict[str, Any],
+    ) -> dict[str, Any]:
+        selection = card.get("context_selection")
+        required = {
+            "revision",
+            "compiler_role",
+            "blackboard",
+            "background",
+            "mode",
+            "precedence",
+            "host_mathematical_output_rule",
+            "truth_effect",
+            "admission_effect",
+            "context_selection_sha256",
+        }
+        if not isinstance(selection, dict) or set(selection) != required:
+            raise ValueError("V5 context-selection fields are not exact")
+        selection_semantic = {
+            key: value
+            for key, value in selection.items()
+            if key != "context_selection_sha256"
+        }
+        if (
+            selection["revision"] != V5_CONTEXT_SELECTION_REVISION
+            or selection["compiler_role"] != "v5_main_planner"
+            or selection["precedence"]
+            != [
+                "machine_validated_authority",
+                "source_research_dossier",
+                "task_specific_blackboard_snapshot",
+                "project_background_index",
+            ]
+            or selection["host_mathematical_output_rule"]
+            != "durable_mathematical_findings_must_enter_research_or_worker_return"
+            or selection["truth_effect"] != "none"
+            or selection["admission_effect"] != "none"
+            or selection["context_selection_sha256"]
+            != sha256_json(selection_semantic)
+        ):
+            raise ValueError("V5 context-selection contract/hash is invalid")
+        blackboard_selection = selection.get("blackboard")
+        blackboard_required = {
+            "source",
+            "query",
+            "query_sha256",
+            "origin_bindings",
+            "snapshot_id",
+            "snapshot_sha256",
+            "omission_receipt",
+            "budget_contract",
+            "truth_effect",
+            "selection_sha256",
+        }
+        if (
+            not isinstance(blackboard_selection, dict)
+            or set(blackboard_selection) != blackboard_required
+        ):
+            raise ValueError("V5 Blackboard context-selection fields are not exact")
+        blackboard_semantic = {
+            key: value
+            for key, value in blackboard_selection.items()
+            if key != "selection_sha256"
+        }
+        if blackboard_selection["selection_sha256"] != sha256_json(
+            blackboard_semantic
+        ):
+            raise ValueError("V5 Blackboard context-selection hash mismatch")
+        if (
+            blackboard_selection["snapshot_id"]
+            != card["blackboard_view"]["snapshot_id"]
+            or blackboard_selection["snapshot_sha256"]
+            != card["blackboard_view"]["snapshot_sha256"]
+            or blackboard_selection["truth_effect"] != "none"
+            or blackboard_selection["budget_contract"]
+            != {
+                "max_nodes": V5_MAX_CONTEXT_SNAPSHOT_NODES,
+                "max_edges": V5_MAX_CONTEXT_SNAPSHOT_EDGES,
+                "overflow": (
+                    "fail_before_round_or_explicit_snapshot_omission_receipt"
+                ),
+            }
+        ):
+            raise ValueError("V5 Blackboard context-selection binding is invalid")
+        query = blackboard_selection.get("query")
+        if not isinstance(query, dict):
+            raise ValueError("V5 Blackboard context-selection query is invalid")
+        self.store.blackboard().validate_query(query)
+        if (
+            blackboard_selection["query_sha256"] != sha256_json(query)
+            or query["node_budget"] > V5_MAX_CONTEXT_SNAPSHOT_NODES
+            or query["edge_budget"] > V5_MAX_CONTEXT_SNAPSHOT_EDGES
+        ):
+            raise ValueError("V5 Blackboard context-selection query/hash is invalid")
+        snapshot_id = blackboard_selection["snapshot_id"]
+        manifest = self.store.blackboard().snapshot_manifest(snapshot_id)
+        manifest_path = (
+            self.store.blackboard().snapshots_dir / snapshot_id / "manifest.json"
+        )
+        if (
+            sha256_bytes(manifest_path.read_bytes())
+            != blackboard_selection["snapshot_sha256"]
+            or manifest["query"] != query
+            or manifest["query_sha256"] != blackboard_selection["query_sha256"]
+            or manifest["omission_receipt"]
+            != blackboard_selection["omission_receipt"]
+        ):
+            raise ValueError("V5 Blackboard context-selection snapshot drifted")
+        source = blackboard_selection["source"]
+        if source == "promoted_blackboard_query":
+            promoted = self._promoted_context_binding(
+                source_research,
+                require_current_origin=False,
+            )
+            if promoted is None:
+                raise ValueError(
+                    "V5 promoted context selection lacks Research provenance"
+                )
+            expected_query, expected_lineage = promoted
+            if (
+                query != expected_query
+                or blackboard_selection["origin_bindings"]
+                != [expected_lineage]
+            ):
+                raise ValueError("V5 promoted context selection drifted")
+        elif source == "default_project_space":
+            if blackboard_selection["origin_bindings"] != []:
+                raise ValueError("V5 default context selection has promotion lineage")
+            snapshot_nodes, _ = self.store.blackboard().snapshot_objects(snapshot_id)
+            if (
+                len(query["seed_node_ids"]) != 1
+                or snapshot_nodes.get(query["seed_node_ids"][0], {}).get("node_type")
+                != "space"
+                or query["direction"] != "both"
+                or query["max_hops"] != 3
+                or query["edge_type_allowlist"] != ["*"]
+                or query["node_type_allowlist"] != ["*"]
+                or query["node_budget"] != V5_MAX_CONTEXT_SNAPSHOT_NODES
+                or query["edge_budget"] != V5_MAX_CONTEXT_SNAPSHOT_EDGES
+            ):
+                raise ValueError("V5 default context selection query is invalid")
+        else:
+            raise ValueError("V5 Blackboard context-selection source is unsupported")
+        mode_selection = selection.get("mode")
+        if not isinstance(mode_selection, dict):
+            raise ValueError("V5 mode-selection binding must be an object")
+        requested_mode = mode_selection.get("requested_mode")
+        fallback_index = mode_selection.get("fallback_index")
+        if (
+            not isinstance(requested_mode, str)
+            or isinstance(fallback_index, bool)
+            or not isinstance(fallback_index, int)
+            or fallback_index < 0
+        ):
+            raise ValueError("V5 mode-selection request/index is invalid")
+        expected_mode = self._mode_selection(
+            source_research,
+            requested_mode=requested_mode,
+            index=fallback_index,
+            adverse_routing_enabled=mode_selection.get(
+                "adverse_routing_enabled_at_freeze"
+            ),
+        )
+        if (
+            (
+                "adverse_routing" in card
+                and mode_selection.get("adverse_routing_enabled_at_freeze")
+                is not True
+            )
+            or mode_selection != expected_mode
+            or card["work_mode"] != expected_mode["selected_mode"]
+        ):
+            raise ValueError("V5 mode-selection binding drifted")
+        background = card["mathematical_state"].get("project_background")
+        if background is not None:
+            if not isinstance(background, dict):
+                raise ValueError(
+                    "V5 indexed project-background binding must be an object"
+                )
+            expected_snapshot_relpath = self._background_snapshot_relpath(
+                card["round_id"],
+                _require_nonempty_text(
+                    background.get("source_sha256"),
+                    "indexed project-background source hash",
+                ),
+            )
+            validate_frozen_background_binding(
+                self.store.root,
+                background,
+                expected_snapshot_relpath=expected_snapshot_relpath,
+            )
+        expected = self._context_selection_binding(
+            blackboard_selection=blackboard_selection,
+            project_background=background,
+            mode_selection=expected_mode,
+        )
+        if selection != expected:
+            raise ValueError("V5 host context-selection receipt drifted")
+        return selection
+
     def validate_task_card(
         self,
         card: Any,
@@ -1005,6 +2378,16 @@ class V5LifecycleManager:
             "reasoning_mode_binding",
             "task_card_semantic_sha256",
         }
+        if "adverse_routing" in card:
+            required.add("adverse_routing")
+        if "assurance_contract" in card:
+            required.add("assurance_contract")
+        if "task_context_revision" in card:
+            required.add("task_context_revision")
+        if "runtime_binding" in card:
+            required.add("runtime_binding")
+        if card.get("task_context_revision") == V5_TASK_CONTEXT_REVISION:
+            required.add("context_selection")
         if set(card) != required:
             raise ValueError("V5 task card fields are not exact")
         if (
@@ -1013,6 +2396,9 @@ class V5LifecycleManager:
             or card.get("project_id") != self.store.project_id()
         ):
             raise ValueError("V5 task card schema/policy/project mismatch")
+        if "runtime_binding" in card:
+            if card["runtime_binding"] != self._runtime_binding():
+                raise ValueError("V5 task-card Chalxius runtime binding drifted")
         round_id = validate_round_id(
             _require_nonempty_text(card.get("round_id"), "task-card round id")
         )
@@ -1100,36 +2486,143 @@ class V5LifecycleManager:
             raise ValueError(
                 "V5 task card research_context does not exactly match Research links"
             )
+        task_context_revision = card.get("task_context_revision")
+        if task_context_revision is not None:
+            if task_context_revision not in {
+                V5_LEGACY_TASK_CONTEXT_REVISION,
+                V5_TASK_CONTEXT_REVISION,
+            }:
+                raise ValueError("V5 task context revision is unsupported")
+            dossier = card["mathematical_state"].get(
+                "source_research_dossier"
+            )
+            if dossier != self._source_research_dossier(source_research):
+                raise ValueError(
+                    "V5 task-card source Research dossier drifted or is incomplete"
+                )
+            authority_snapshot = card["mathematical_state"].get(
+                "authority_snapshot"
+            )
+            if authority_snapshot != self._task_authority_snapshot(
+                source_research,
+                contract_revision=task_context_revision,
+            ):
+                raise ValueError(
+                    "V5 task-card authority snapshot is stale or incomplete"
+                )
+            if (
+                card["narrative_plane"].get("claim") != source_research["claim"]
+                or card["narrative_plane"].get("rationale")
+                != source_research["rationale"]
+            ):
+                raise ValueError(
+                    "V5 task-card narrative does not match source Research"
+                )
+            if task_context_revision == V5_TASK_CONTEXT_REVISION:
+                self._validate_context_selection(
+                    card=card,
+                    source_research=source_research,
+                )
+        if "assurance_contract" in card:
+            contract = validate_assurance_contract(card["assurance_contract"])
+            if card["obligations"] != contract["obligations"]:
+                raise ValueError(
+                    "V5 task-card obligations do not match the frozen assurance contract"
+                )
+            related_artifacts = card["mathematical_state"].get(
+                "related_artifacts"
+            )
+            if not isinstance(related_artifacts, list) or any(
+                not isinstance(item, dict)
+                or set(item)
+                != {"path", "sha256", "role", "source_research_id"}
+                for item in related_artifacts
+            ):
+                raise ValueError(
+                    "V5 task-card related_artifacts must be exact capability objects"
+                )
+            roles: set[str] = set()
+            for item in related_artifacts:
+                validate_memory_id(item["source_research_id"])
+                _require_nonempty_text(item["role"], "related artifact role")
+                if item["role"] in roles:
+                    raise ValueError(
+                        "V5 task-card related artifact roles must be unique"
+                    )
+                roles.add(item["role"])
+                if SHA256_RE.fullmatch(item["sha256"]) is None:
+                    raise ValueError("V5 task-card related artifact hash is invalid")
+                path = contained_path(
+                    self.store.root,
+                    item["path"],
+                    "V5 task-card related artifact",
+                )
+                if (
+                    path.is_symlink()
+                    or not path.is_file()
+                    or sha256_bytes(path.read_bytes()) != item["sha256"]
+                ):
+                    raise ValueError("V5 task-card related artifact drifted")
+            if sorted(roles) != contract["related_artifact_roles"]:
+                raise ValueError(
+                    "V5 task-card related artifact roles disagree with assurance contract"
+                )
         if "project_background" not in card["mathematical_state"]:
             raise ValueError("V5 task card project_background binding is missing")
         background = card["mathematical_state"]["project_background"]
         if background is not None:
-            expected_fields = {
-                "read_policy",
-                "relpath",
-                "sha256",
-                "body",
-                "truth_effect",
-                "load_bearing_rule",
-            }
-            if not isinstance(background, dict) or set(background) != expected_fields:
-                raise ValueError("V5 task-card project background fields are not exact")
-            if (
-                background["read_policy"] != "default_if_present"
-                or background["relpath"] != V5_PROJECT_BACKGROUND_FILENAME
-                or background["truth_effect"] != "nontruth_background_only"
-                or background["load_bearing_rule"]
-                != "return_to_exact_cited_source"
-                or not isinstance(background["body"], str)
-                or not background["body"].strip()
-                or background["sha256"]
-                != sha256_bytes(background["body"].encode("utf-8"))
-            ):
-                raise ValueError("V5 task-card project background binding is invalid")
+            if task_context_revision == V5_TASK_CONTEXT_REVISION:
+                if not isinstance(background, dict):
+                    raise ValueError(
+                        "V5 indexed project-background binding must be an object"
+                    )
+                expected_snapshot_relpath = self._background_snapshot_relpath(
+                    round_id,
+                    _require_nonempty_text(
+                        background.get("source_sha256"),
+                        "indexed project-background source hash",
+                    ),
+                )
+                validate_frozen_background_binding(
+                    self.store.root,
+                    background,
+                    expected_snapshot_relpath=expected_snapshot_relpath,
+                )
+            else:
+                expected_fields = {
+                    "read_policy",
+                    "relpath",
+                    "sha256",
+                    "body",
+                    "truth_effect",
+                    "load_bearing_rule",
+                }
+                if not isinstance(background, dict) or set(background) != expected_fields:
+                    raise ValueError("V5 task-card project background fields are not exact")
+                if (
+                    background["read_policy"] != "default_if_present"
+                    or background["relpath"] != V5_PROJECT_BACKGROUND_FILENAME
+                    or background["truth_effect"] != "nontruth_background_only"
+                    or background["load_bearing_rule"]
+                    != "return_to_exact_cited_source"
+                    or not isinstance(background["body"], str)
+                    or not background["body"].strip()
+                    or background["sha256"]
+                    != sha256_bytes(background["body"].encode("utf-8"))
+                ):
+                    raise ValueError("V5 task-card project background binding is invalid")
         if not isinstance(card.get("obligations"), list) or any(
             not isinstance(item, dict) for item in card["obligations"]
         ):
             raise ValueError("V5 task card obligations must be objects")
+        if "adverse_routing" in card:
+            self.store.adverse_routes().validate_task_card_binding(
+                card["adverse_routing"],
+                work_mode=card["work_mode"],
+                related_artifacts=card["mathematical_state"].get(
+                    "related_artifacts", []
+                ),
+            )
         _require_string_list(card.get("stop_conditions"), "task-card stop conditions")
         semantic = {
             key: value
@@ -1150,6 +2643,56 @@ class V5LifecycleManager:
         card: dict[str, Any],
         task_card_sha256: str,
     ) -> str:
+        adverse_note = ""
+        if "adverse_routing" in card:
+            adverse_note = (
+                "Adverse routing, approved rules, and the counterexample learning contract "
+                "are frozen in the task card. If the outcome is `counterexample`, include "
+                "the exact structured `attack_learning` object. It may create a route "
+                "proposal, but no proposal changes routing without a later operator "
+                "decision.\n\n"
+            )
+        assurance_note = ""
+        if "assurance_contract" in card:
+            assurance_note = (
+                "This task card uses the prospective assurance contract. "
+                "Return exact per-obligation dispositions, a typed computation manifest "
+                "when required, and the exact research_assurance object. Related "
+                "Research artifacts are authorized only through the frozen allowlist.\n\n"
+            )
+        task_context_note = ""
+        if card.get("task_context_revision") == V5_TASK_CONTEXT_REVISION:
+            background = card["mathematical_state"]["project_background"]
+            if background is None:
+                background_note = (
+                    "No PROJECT_BACKGROUND.md was present when this card was frozen. "
+                )
+            else:
+                selected = background["selection_receipt"]["selected_chunk_ids"]
+                selected_text = ", ".join(selected) if selected else "none"
+                task_card_relpath = (
+                    f"rounds/{card['round_id']}/task-cards/"
+                    f"{card['assignment_id']}.json"
+                )
+                background_note = (
+                    "PROJECT_BACKGROUND.md is represented only by its complete exact-byte "
+                    "index; it is lower-priority nontruth context, not task authority. "
+                    f"Planner-committed chunk ids: {selected_text}. Retrieve any exact chunk "
+                    "on demand with `project-background-read CHUNK_ID --task-card "
+                    f"{task_card_relpath}`. After context compaction, reread the card/index "
+                    "and rerun the same retrieval instead of relying on memory. "
+                )
+            task_context_note = (
+                "Read the complete source_research_dossier and the machine-validated "
+                "authority_snapshot in mathematical_state. When project-background "
+                "prose disagrees about current Fact, Release, Decision, or admission "
+                "status, the authority_snapshot controls. Read target evidence only "
+                "through its exact path/hash capability list. The context_selection "
+                "receipt records the Main-planner-compiled Blackboard query and bounded "
+                "mode hint; it does not change capabilities, assurance, truth, or "
+                "admission. "
+                f"{background_note}\n\n"
+            )
         return (
             "# Chalxius V5 worker assignment\n\n"
             f"Round: `{card['round_id']}`  \n"
@@ -1158,7 +2701,13 @@ class V5LifecycleManager:
             "Read the immutable task card for exact capabilities. Use only its frozen "
             "mathematical-state snapshot. Keep rationale and intuition in the bounded "
             "narrative return fields; do not move them into the control channel.\n\n"
+            "Start the worker CHX ledger with this candidate's `scripts/chx_ledger.py` "
+            f"and pass `--task-card {self._task_card_path(card['round_id'], card['assignment_id'])}`; "
+            "runtime mismatch must fail before the ledger is created.\n\n"
             f"Research claim: {card['narrative_plane']['claim']}\n\n"
+            f"{adverse_note}"
+            f"{assurance_note}"
+            f"{task_context_note}"
             f"Write the exact return to `{card['return_contract']['return_relpath']}` "
             "and hand off only its SHA-256 plus status.\n"
         )
@@ -1170,6 +2719,7 @@ class V5LifecycleManager:
         mode: str = "auto",
         research_ids: list[str] | None = None,
         host_task_scope_id: str | None = None,
+        background_chunk_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         if workers < 1:
             raise ValueError("workers must be positive")
@@ -1179,6 +2729,12 @@ class V5LifecycleManager:
             host_task_scope_id = _require_nonempty_text(
                 host_task_scope_id, "host task scope id"
             )
+        selected_background_chunks = _require_string_list(
+            background_chunk_ids or [],
+            "background chunk ids",
+        )
+        if len(set(selected_background_chunks)) != len(selected_background_chunks):
+            raise ValueError("background chunk ids must be unique")
         if research_ids is not None:
             normalized_ids = [validate_memory_id(item) for item in research_ids]
             if len(set(normalized_ids)) != len(normalized_ids):
@@ -1208,8 +2764,59 @@ class V5LifecycleManager:
             )
 
         with self.store.v5_mutation_lock(command="plan-round"):
-            snapshot = self._snapshot_for_round()
-            project_background = self._project_background_binding()
+            source_records = {
+                entry["research_id"]: self._research_record(entry["research_id"])
+                for entry in selected
+            }
+            source_dossiers = {
+                research_id: self._source_research_dossier(record)
+                for research_id, record in source_records.items()
+            }
+            authority_snapshots = {
+                research_id: self._task_authority_snapshot(record)
+                for research_id, record in source_records.items()
+            }
+            for research_id, record in source_records.items():
+                if (
+                    self._research_is_source_dependent(record)
+                    and not self._typed_research_artifacts(record)
+                    and not authority_snapshots[research_id]["capabilities"]
+                ):
+                    raise ValueError(
+                        "source-dependent Research cannot be planned without an exact "
+                        "project-relative path/SHA-256/role artifact capability; append "
+                        "a current-assurance Research successor instead of trusting prose"
+                    )
+            background_raw = read_project_background(self.store.root)
+            if background_raw is None:
+                if selected_background_chunks:
+                    raise ValueError(
+                        "background chunk ids require PROJECT_BACKGROUND.md"
+                    )
+            else:
+                available_background_chunks = {
+                    item["chunk_id"]
+                    for item in build_background_index(background_raw)["chunks"]
+                }
+                unknown_background_chunks = sorted(
+                    set(selected_background_chunks).difference(
+                        available_background_chunks
+                    )
+                )
+                if unknown_background_chunks:
+                    raise ValueError(
+                        "unknown PROJECT_BACKGROUND.md chunk ids: "
+                        + ", ".join(unknown_background_chunks)
+                    )
+            mode_selections = {
+                entry["research_id"]: self._mode_selection(
+                    entry,
+                    requested_mode=mode,
+                    index=index,
+                )
+                for index, entry in enumerate(selected)
+            }
+            snapshot, blackboard_selection = self._snapshot_for_round(selected)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             round_id = (
                 f"round-{stamp}-"
@@ -1222,14 +2829,21 @@ class V5LifecycleManager:
             returns_dir = round_dir / "returns"
             artifacts_dir = round_dir / "artifacts"
             work_dir = round_dir / "work"
+            context_dir = round_dir / "context"
             for directory in (
                 assignments_dir,
                 task_cards_dir,
                 returns_dir,
                 artifacts_dir,
                 work_dir,
+                context_dir,
             ):
                 directory.mkdir(parents=True, exist_ok=False)
+            project_background = self._freeze_project_background(
+                round_id=round_id,
+                raw=background_raw,
+                selected_chunk_ids=selected_background_chunks,
+            )
 
             mode_status = self.store.reasoning_modes().status()
             reasoning_binding = {
@@ -1246,6 +2860,9 @@ class V5LifecycleManager:
                 "effect": "future_research_budget_only",
             }
             all_nodes = self.store.blackboard().nodes()
+            snapshot_nodes, _ = self.store.blackboard().snapshot_objects(
+                snapshot["snapshot_id"]
+            )
             default_spaces = sorted(
                 node_id
                 for node_id, node in all_nodes.items()
@@ -1253,7 +2870,8 @@ class V5LifecycleManager:
             )[:1]
             assignments: list[dict[str, Any]] = []
             for index, entry in enumerate(selected, 1):
-                work_mode = mode if mode != "auto" else self._work_mode(entry, index - 1)
+                mode_selection = mode_selections[entry["research_id"]]
+                work_mode = mode_selection["selected_mode"]
                 assignment_id = f"a{index:02d}-{entry['research_id']}-{work_mode}"
                 validate_assignment_id(assignment_id)
                 prompt_relpath = f"rounds/{round_id}/assignments/{assignment_id}.md"
@@ -1262,15 +2880,25 @@ class V5LifecycleManager:
                 artifact_dir_relpath = f"rounds/{round_id}/artifacts/{assignment_id}"
                 work_dir_relpath = f"rounds/{round_id}/work/{assignment_id}"
                 requested_spaces = entry["metadata"].get(
-                    "blackboard_write_space_ids", default_spaces
+                    "blackboard_write_space_ids"
                 )
+                if requested_spaces is None:
+                    requested_spaces = [
+                        space_id
+                        for space_id in default_spaces
+                        if space_id in snapshot_nodes
+                    ]
                 write_spaces = _require_string_list(
                     requested_spaces, "research Blackboard write spaces"
                 )
                 for space_id in write_spaces:
-                    if all_nodes.get(space_id, {}).get("node_type") != "space":
+                    if (
+                        all_nodes.get(space_id, {}).get("node_type") != "space"
+                        or space_id not in snapshot_nodes
+                    ):
                         raise ValueError(
-                            "research Blackboard write spaces must name existing spaces"
+                            "research Blackboard write spaces must name spaces in the "
+                            "frozen snapshot"
                         )
                 obligations = entry["metadata"].get("obligations", [])
                 if not isinstance(obligations, list) or any(
@@ -1309,6 +2937,8 @@ class V5LifecycleManager:
                     for fact_id in entry["dependencies"]
                 ]
                 research_context = []
+                related_artifacts: list[dict[str, str]] = []
+                related_artifacts.extend(self._typed_research_artifacts(entry))
                 for related_id in entry["related_research_ids"]:
                     related_record = self._research_record(related_id)
                     research_context.append(
@@ -1326,9 +2956,70 @@ class V5LifecycleManager:
                             )
                         }
                     )
+                    related_artifacts.extend(
+                        self._typed_research_artifacts(related_record)
+                    )
+                deduplicated_related_artifacts: dict[
+                    tuple[str, str], dict[str, str]
+                ] = {}
+                for artifact in related_artifacts:
+                    key = (artifact["source_research_id"], artifact["role"])
+                    existing = deduplicated_related_artifacts.get(key)
+                    if existing is not None and existing != artifact:
+                        raise ValueError(
+                            "Research artifact capability role has conflicting bytes"
+                        )
+                    deduplicated_related_artifacts[key] = artifact
+                related_artifacts = sorted(
+                    deduplicated_related_artifacts.values(),
+                    key=lambda item: (
+                        item["source_research_id"],
+                        item["role"],
+                        item["sha256"],
+                    ),
+                )
+                required_related_roles = _require_string_list(
+                    entry["metadata"].get(
+                        "required_related_artifact_roles", []
+                    ),
+                    "research required related artifact roles",
+                )
+                available_unqualified_roles = {
+                    item["role"].split(":", 1)[-1]
+                    for item in related_artifacts
+                }
+                missing_related_roles = sorted(
+                    set(required_related_roles).difference(
+                        available_unqualified_roles
+                    )
+                )
+                if missing_related_roles:
+                    raise ValueError(
+                        "Research work requires capability-bound related artifacts: "
+                        + ", ".join(missing_related_roles)
+                    )
+                adverse_routing = self.store.adverse_routes().task_card_binding(
+                    entry=entry,
+                    work_mode=work_mode,
+                    related_artifacts=related_artifacts,
+                )
+                assurance_contract = build_assurance_contract(
+                    entry=entry,
+                    obligations=obligations,
+                    work_mode=work_mode,
+                    related_artifacts=related_artifacts,
+                )
+                context_selection = self._context_selection_binding(
+                    blackboard_selection=blackboard_selection,
+                    project_background=project_background,
+                    mode_selection=mode_selection,
+                )
                 card_semantic = {
                     "schema_version": 5,
                     "policy_revision": V5_POLICY_REVISION,
+                    "task_context_revision": V5_TASK_CONTEXT_REVISION,
+                    "runtime_binding": self._runtime_binding(),
+                    "context_selection": context_selection,
                     "project_id": self.store.project_id(),
                     "round_id": round_id,
                     "assignment_id": assignment_id,
@@ -1361,9 +3052,20 @@ class V5LifecycleManager:
                             "snapshot_sha256"
                         ],
                         "predecessor_interfaces": predecessor_interfaces,
+                        "source_research_dossier": source_dossiers[
+                            entry["research_id"]
+                        ],
                         "research_context": research_context,
+                        "related_artifacts": related_artifacts,
+                        "authority_snapshot": authority_snapshots[
+                            entry["research_id"]
+                        ],
                         "project_background": project_background,
-                        "read_space_ids": default_spaces,
+                        "read_space_ids": sorted(
+                            node_id
+                            for node_id, node in snapshot_nodes.items()
+                            if node.get("node_type") == "space"
+                        ),
                         "write_space_ids": write_spaces,
                     },
                     "blackboard_view": {
@@ -1378,7 +3080,7 @@ class V5LifecycleManager:
                         "intuition_word_cap": 400,
                         "limitations_word_cap": 400,
                     },
-                    "obligations": [dict(item) for item in obligations],
+                    "obligations": assurance_contract["obligations"],
                     "stop_conditions": stop_conditions,
                     "artifact_capability": {
                         "artifact_dir_relpath": artifact_dir_relpath,
@@ -1395,7 +3097,10 @@ class V5LifecycleManager:
                         ),
                     },
                     "reasoning_mode_binding": reasoning_binding,
+                    "assurance_contract": assurance_contract,
                 }
+                if adverse_routing is not None:
+                    card_semantic["adverse_routing"] = adverse_routing
                 card = {
                     **card_semantic,
                     "task_card_semantic_sha256": sha256_json(card_semantic),
@@ -1606,6 +3311,7 @@ class V5LifecycleManager:
 
     def round_status(self, round_id: str) -> dict[str, Any]:
         round_dir, manifest = self._round_manifest(round_id)
+        abort = self.store.reasoning_modes().work_unit_abort(round_id)
         quarantined = {
             item["assignment_id"]: item
             for item in self._quarantine_records()
@@ -1620,6 +3326,8 @@ class V5LifecycleManager:
                 state = "ingested"
             elif assignment_id in quarantined:
                 state = "quarantined"
+            elif abort is not None:
+                state = "frozen_aborted"
             elif return_path.exists():
                 state = "return_present"
             else:
@@ -1649,6 +3357,12 @@ class V5LifecycleManager:
             "awaiting_count": sum(
                 item["state"] == "awaiting_return" for item in assignments
             ),
+            "frozen_aborted_count": sum(
+                item["state"] == "frozen_aborted" for item in assignments
+            ),
+            "work_unit_state": "aborted" if abort is not None else "active",
+            "abort_id": abort["abort_id"] if abort is not None else None,
+            "work_unit_abort": abort,
             "round_closure_required": False,
         }
 
@@ -1825,7 +3539,9 @@ class V5LifecycleManager:
                     )
                 )
 
-        if any(item["category"] == "return_quarantined" for item in actions):
+        if status["work_unit_state"] == "aborted":
+            advisory_state = "work_unit_aborted"
+        elif any(item["category"] == "return_quarantined" for item in actions):
             advisory_state = "local_repairs_recommended"
         elif any(
             item["category"] in {"return_missing", "return_needs_preflight"}
@@ -1850,6 +3566,7 @@ class V5LifecycleManager:
                 "ingested": status["ingested_count"],
                 "quarantined": status["quarantined_count"],
                 "awaiting": status["awaiting_count"],
+                "frozen_aborted": status["frozen_aborted_count"],
             },
             "admission_authority": False,
             "truth_effect": "none",
@@ -1956,10 +3673,25 @@ class V5LifecycleManager:
             "narrative",
             "artifacts",
         }
-        if set(payload) != required:
-            raise ValueError("V5 worker return fields are not exact")
         round_dir, manifest = self._round_manifest(round_id)
         assignment = self._assignment(manifest, assignment_id)
+        card = self.store._read_json(
+            self.store.root / assignment["task_card_relpath"]
+        )
+        adverse_enabled = "adverse_routing" in card
+        if adverse_enabled:
+            required.add("attack_learning")
+        assurance_enabled = "assurance_contract" in card
+        if assurance_enabled:
+            required.update(
+                {
+                    "obligation_dispositions",
+                    "computation_manifest",
+                    "research_assurance",
+                }
+            )
+        if set(payload) != required:
+            raise ValueError("V5 worker return fields are not exact")
         if (
             payload.get("schema_version") != 5
             or payload.get("project_id") != self.store.project_id()
@@ -1974,6 +3706,13 @@ class V5LifecycleManager:
             raise ValueError("V5 worker return binding mismatch")
         if payload.get("outcome") not in V5_RETURN_OUTCOMES:
             raise ValueError("V5 worker return outcome is invalid")
+        if adverse_enabled:
+            if payload["outcome"] == "counterexample":
+                validate_attack_learning(payload.get("attack_learning"))
+            elif payload.get("attack_learning") is not None:
+                raise ValueError(
+                    "non-counterexample V5 return requires attack_learning=null"
+                )
         _require_nonempty_text(payload.get("claim"), "worker return claim")
         _require_nonempty_text(payload.get("content"), "worker return content")
         narrative = payload.get("narrative")
@@ -1991,18 +3730,26 @@ class V5LifecycleManager:
             if len(value.split()) > cap:
                 raise ValueError(f"V5 worker narrative {name} exceeds {cap} words")
         artifacts = payload.get("artifacts")
+        artifact_fields = (
+            {"path", "sha256", "role"}
+            if assurance_enabled
+            else {"path", "sha256"}
+        )
         if not isinstance(artifacts, list) or any(
-            not isinstance(item, dict) or set(item) != {"path", "sha256"}
+            not isinstance(item, dict) or set(item) != artifact_fields
             for item in artifacts
         ):
-            raise ValueError("V5 worker artifacts must be exact path/hash objects")
-        card = self.store._read_json(
-            self.store.root / assignment["task_card_relpath"]
-        )
+            raise ValueError(
+                "V5 worker artifacts must be exact "
+                + ("path/hash/role" if assurance_enabled else "path/hash")
+                + " objects"
+            )
         capability = card["artifact_capability"]
         if len(artifacts) > capability["max_files"]:
             raise ValueError("V5 worker artifact file count exceeds task-card cap")
         total_bytes = 0
+        seen_roles: set[str] = set()
+        artifact_bytes_by_sha256: dict[str, bytes] = {}
         artifact_root = contained_path(
             self.store.root,
             capability["artifact_dir_relpath"],
@@ -2015,6 +3762,13 @@ class V5LifecycleManager:
                 raise ValueError("V5 worker artifact fields must be strings")
             if SHA256_RE.fullmatch(item["sha256"]) is None:
                 raise ValueError("V5 worker artifact hash is invalid")
+            if assurance_enabled:
+                role = _require_nonempty_text(
+                    item["role"], "V5 worker artifact role"
+                )
+                if role in seen_roles:
+                    raise ValueError("V5 worker artifact roles must be unique")
+                seen_roles.add(role)
             artifact_path = contained_path(
                 self.store.root, item["path"], "V5 worker artifact path"
             )
@@ -2026,14 +3780,26 @@ class V5LifecycleManager:
                 ) from exc
             if artifact_path.is_symlink() or not artifact_path.is_file():
                 raise ValueError("V5 worker artifact is missing or unsafe")
-            size = artifact_path.stat().st_size
+            raw_artifact = artifact_path.read_bytes()
+            size = len(raw_artifact)
             if size > capability["max_file_bytes"]:
                 raise ValueError("V5 worker artifact exceeds per-file cap")
             total_bytes += size
-            if sha256_bytes(artifact_path.read_bytes()) != item["sha256"]:
+            if sha256_bytes(raw_artifact) != item["sha256"]:
                 raise ValueError("V5 worker artifact bytes/hash mismatch")
+            existing_bytes = artifact_bytes_by_sha256.get(item["sha256"])
+            if existing_bytes is not None and existing_bytes != raw_artifact:
+                raise ValueError("V5 worker artifact SHA-256 collision")
+            artifact_bytes_by_sha256[item["sha256"]] = raw_artifact
         if total_bytes > capability["max_total_bytes"]:
             raise ValueError("V5 worker artifacts exceed total-byte cap")
+        if assurance_enabled:
+            validate_return_assurance(
+                payload=payload,
+                contract=card["assurance_contract"],
+                artifacts=artifacts,
+                artifact_bytes_by_sha256=artifact_bytes_by_sha256,
+            )
         canonical_return = self.store.root / assignment["return_relpath"]
         if return_path.resolve() != canonical_return.resolve():
             # Preflight may inspect a draft elsewhere, but its declared
@@ -2120,6 +3886,136 @@ class V5LifecycleManager:
         self.store._write_json_once(path, record)
         return record
 
+    def _enqueue_program_math_adverse_review(
+        self,
+        *,
+        card: dict[str, Any],
+        assignment: dict[str, Any],
+        result_research: dict[str, Any],
+        payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Create a typed Research-stage challenge for a computed return.
+
+        The review is queued only for future scheduling.  It does not run a
+        worker, change routing, reject the source Research, or affect Fact
+        truth.  Exact program/output bytes are inherited through the normal
+        related-Research capability boundary.
+        """
+
+        if not self.store.adverse_routes().enabled():
+            return None
+        if card.get("work_mode") == "refute" or "assurance_contract" not in card:
+            return None
+        stage_count = card["assurance_contract"].get("computation_stage_count", 0)
+        if isinstance(stage_count, bool) or not isinstance(stage_count, int):
+            raise ValueError("program-math review stage count is invalid")
+        if stage_count == 0 or payload.get("outcome") not in {
+            "proof",
+            "evidence",
+            "insight",
+        }:
+            return None
+        artifacts = payload.get("artifacts", [])
+        by_role = {
+            item["role"]: item
+            for item in artifacts
+            if isinstance(item, dict) and isinstance(item.get("role"), str)
+        }
+        required_roles = {"computation_source", "computation_output"}
+        if not required_roles.issubset(by_role):
+            raise ValueError(
+                "computed Research cannot queue an adverse review without canonical "
+                "computation_source and computation_output artifacts"
+            )
+        manifest = payload.get("computation_manifest")
+        manifest_entries = (
+            manifest.get("entries", []) if isinstance(manifest, dict) else []
+        )
+        load_bearing = any(
+            isinstance(item, dict) and item.get("role") == "load_bearing"
+            for item in manifest_entries
+        )
+        workload = workload_profile_for_entry(
+            {
+                "kind": "computation",
+                "verification_plan": {
+                    "mode": "artifact_replay" if load_bearing else "closed_packet"
+                },
+                "budgets": {"max_wall_seconds": 0},
+            }
+        )
+        workload["computation"]["stage_count"] = stage_count
+        workload = validate_workload_profile(workload)
+        source_artifacts = [
+            {
+                "role": role,
+                "sha256": by_role[role]["sha256"],
+            }
+            for role in sorted(required_roles)
+        ]
+        review = self.add_research(
+            {
+                "kind": "challenge",
+                "status": "open",
+                "claim": (
+                    "Adversarially verify the program-mathematics semantic projection for: "
+                    + result_research["claim"]
+                ),
+                "content": (
+                    "Attack formula-to-code projection, signs and conventions, index/domain "
+                    "boundaries, mathematical-object representation, truncation or precision, "
+                    "output interpretation, and non-independent replay. Preserve any valid "
+                    "mathematical conclusion outside the exact failure boundary."
+                ),
+                "rationale": (
+                    "A computation-bearing Research result needs an adverse semantic review "
+                    "before Candidate promotion; this queue entry has no truth effect."
+                ),
+                "source": f"research:{result_research['research_id']}",
+                "relation": "challenges",
+                "related_research_ids": [result_research["research_id"]],
+                "logic_signals": [
+                    "formula_to_code",
+                    "program_math_hybrid",
+                ],
+                "workload_profile": workload,
+                "decision_profile": dict(
+                    V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE
+                ),
+                "required_related_artifact_roles": sorted(required_roles),
+                "obligations": [
+                    {
+                        "obligation_id": "obl-program-math-adverse-review",
+                        "description": (
+                            "Construct an independent or metamorphic attack on the exact "
+                            "formula-code-output chain and report the narrow success boundary."
+                        ),
+                        "required_artifact_roles": [
+                            "computation_output",
+                            "computation_source",
+                        ],
+                        "evidence_types": [
+                            "deterministic_output",
+                            "executable_source",
+                            "runtime_receipt",
+                        ],
+                        "not_applicable_allowed": False,
+                    }
+                ],
+                "program_math_review": {
+                    "source_research_id": result_research["research_id"],
+                    "source_task_card_sha256": assignment["task_card_sha256"],
+                    "source_artifacts": source_artifacts,
+                    "activation": "typed_program_and_output_artifacts",
+                },
+                "truth_effect": "none",
+                "route_effect": "future_refute_task_only",
+            },
+            actor="v5-adverse-router",
+            assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+        )
+        return review
+
     def ingest_return(
         self,
         *,
@@ -2172,6 +4068,31 @@ class V5LifecycleManager:
             card = self.store._read_json(
                 self.store.root / assignment["task_card_relpath"]
             )
+            assurance_revision = (
+                card["assurance_contract"]["revision"]
+                if "assurance_contract" in card
+                else V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+            )
+            assurance_metadata: dict[str, Any] = {}
+            if "assurance_contract" in card:
+                research_assurance = payload["research_assurance"]
+                route_invalidations = list(
+                    research_assurance["route_invalidations"]
+                )
+                for target_id in route_invalidations:
+                    self._research_record(target_id)
+                assurance_metadata = {
+                    "obligation_dispositions": payload[
+                        "obligation_dispositions"
+                    ],
+                    "computation_manifest": payload["computation_manifest"],
+                    "research_assurance": research_assurance,
+                    "route_invalidations": route_invalidations,
+                    "source_uses": research_assurance["source_uses"],
+                    "logic_signals": card["assurance_contract"][
+                        "risk_signals"
+                    ],
+                }
             research = self.add_research(
                 {
                     "kind": kind_by_outcome[payload["outcome"]],
@@ -2183,9 +4104,19 @@ class V5LifecycleManager:
                     "worker_outcome": payload["outcome"],
                     "narrative": payload["narrative"],
                     "artifacts": payload["artifacts"],
+                    **assurance_metadata,
                     "requested_claim_relation": card[
                         "requested_claim_relation"
                     ],
+                    "assignment_provenance": {
+                        "schema_version": 1,
+                        "round_id": round_id,
+                        "assignment_id": assignment_id,
+                        "worker_id": assignment["worker_id"],
+                        "task_card_sha256": assignment["task_card_sha256"],
+                        "work_mode": card["work_mode"],
+                        "adverse_assignment": card["work_mode"] == "refute",
+                    },
                 },
                 actor=assignment["worker_id"],
                 task_binding={
@@ -2197,7 +4128,23 @@ class V5LifecycleManager:
                     ],
                     "return_sha256": worker_final_sha256,
                 },
+                assurance_contract_revision=assurance_revision,
             )
+            program_math_review = self._enqueue_program_math_adverse_review(
+                card=card,
+                assignment=assignment,
+                result_research=research,
+                payload=payload,
+            )
+            attack_capture = None
+            if payload["outcome"] == "counterexample" and "adverse_routing" in card:
+                attack_capture = self.store.adverse_routes().capture_counterexample(
+                    card=card,
+                    assignment=assignment,
+                    payload=payload,
+                    counterexample_research_id=research["research_id"],
+                    return_sha256=worker_final_sha256,
+                )
             receipt_semantic = {
                 "schema_version": 5,
                 "policy_revision": V5_POLICY_REVISION,
@@ -2210,6 +4157,37 @@ class V5LifecycleManager:
                 "research_id": research["research_id"],
                 "effect": "one_cumulative_research_entry",
             }
+            if attack_capture is not None:
+                receipt_semantic.update(
+                    {
+                        "attack_case_id": attack_capture["case_id"],
+                        "route_proposal_id": attack_capture["proposal_id"],
+                        "attack_evidence_status": attack_capture[
+                            "evidence_status"
+                        ],
+                        "route_activation_policy": attack_capture[
+                            "activation_policy"
+                        ],
+                        "effect": (
+                            "one_cumulative_research_entry_plus_nontruth_attack_proposal"
+                        ),
+                    }
+                )
+            if program_math_review is not None:
+                receipt_semantic.update(
+                    {
+                        "program_math_review_research_id": program_math_review[
+                            "research_id"
+                        ],
+                        "program_math_review_policy": (
+                            "queued_for_future_multidimensional_frontier"
+                        ),
+                        "effect": (
+                            receipt_semantic["effect"]
+                            + "_plus_nontruth_program_math_adverse_review"
+                        ),
+                    }
+                )
             receipt = {
                 **receipt_semantic,
                 "receipt_id": "research-ingest-" + sha256_json(receipt_semantic),
@@ -2550,6 +4528,8 @@ class V5LifecycleManager:
         self,
         fact: Fact,
         rendered: bytes,
+        *,
+        assurance_contract_revision: str,
     ) -> dict[str, Any]:
         placeholder = sha256_json(["v5-candidate-interface", fact.fact_id])
         return build_statement_interface(
@@ -2558,14 +4538,154 @@ class V5LifecycleManager:
             acceptance_event_sha256=placeholder,
             admission_review_id=placeholder,
             workflow_evidence_version=5,
+            assurance_contract_revision=assurance_contract_revision,
         )
+
+    def _research_assurance_evidence(
+        self,
+        *,
+        research_records: list[dict[str, Any]],
+        authorized_artifact_hashes: set[str],
+        assurance_contract_revision: str,
+    ) -> list[dict[str, Any]]:
+        if assurance_contract_revision != V5_ASSURANCE_CONTRACT_REVISION:
+            return []
+        evidence: list[dict[str, Any]] = []
+        for record in research_records:
+            if self._research_assurance_revision(record) != V5_ASSURANCE_CONTRACT_REVISION:
+                continue
+            metadata = record["metadata"]
+            if "task_binding" not in metadata:
+                continue
+            required = {
+                "obligation_dispositions",
+                "computation_manifest",
+                "research_assurance",
+                "artifacts",
+            }
+            missing = sorted(required.difference(metadata))
+            if missing:
+                raise ValueError(
+                    "task-bound current Research is missing assurance evidence: "
+                    + ", ".join(missing)
+                )
+            artifact_bindings = [
+                {
+                    "artifact_sha256": item["sha256"],
+                    "role": item["role"],
+                }
+                for item in metadata["artifacts"]
+            ]
+            missing_hashes = sorted(
+                {
+                    item["artifact_sha256"] for item in artifact_bindings
+                }.difference(authorized_artifact_hashes)
+            )
+            if missing_hashes:
+                raise ValueError(
+                    "Candidate Release does not seal and authorize every bound Research "
+                    "artifact needed by the verifier: "
+                    + ", ".join(missing_hashes)
+                )
+            evidence.append(
+                {
+                    "research_id": record["research_id"],
+                    "record_sha256": record["record_sha256"],
+                    "task_binding": metadata["task_binding"],
+                    "obligation_dispositions": metadata[
+                        "obligation_dispositions"
+                    ],
+                    "computation_manifest": metadata["computation_manifest"],
+                    "research_assurance": metadata["research_assurance"],
+                    "artifact_bindings": sorted(
+                        artifact_bindings,
+                        key=lambda item: (
+                            item["role"],
+                            item["artifact_sha256"],
+                        ),
+                    ),
+                }
+            )
+        if not evidence:
+            raise ValueError(
+                "current Candidate Release requires at least one task-bound Research "
+                "assurance-evidence record"
+            )
+        return sorted(evidence, key=lambda item: item["research_id"])
+
+    def _applicable_assurance_checks(
+        self,
+        *,
+        facts: dict[str, Fact],
+        research_records: list[dict[str, Any]],
+        assurance_contract_revision: str,
+    ) -> list[str]:
+        """Derive only the 0.4.3 checks triggered by this exact release."""
+
+        if assurance_contract_revision != V5_ASSURANCE_CONTRACT_REVISION:
+            return []
+        checks = {"research_obligation_evidence"}
+        risk_signals = {
+            signal
+            for record in research_records
+            for signal in record.get("metadata", {}).get("logic_signals", [])
+            if isinstance(signal, str)
+        }
+        if "topology_extremal_invariants" in risk_signals:
+            checks.add("extremal_edge_cases")
+        if "parametric_contour_substitution" in risk_signals:
+            checks.add("contour_substitution")
+        if "claimed_combinatorial_structure" in risk_signals:
+            checks.add("structural_computation")
+        if "geometric_stage_typing" in risk_signals:
+            checks.add("geometric_stage_typing")
+        if "program_math_semantic_alignment" in risk_signals or any(
+            record.get("metadata", {}).get("computation_manifest") is not None
+            for record in research_records
+        ):
+            checks.add("program_math_semantic_alignment")
+        if "source_formula" in risk_signals or "fixed_to_family_transport" in risk_signals:
+            checks.add("research_source_use")
+
+        for fact in facts.values():
+            for ref in fact.external_refs:
+                if ref.get("source_evidence_version") != 4:
+                    continue
+                checks.update(
+                    {
+                        "source_transcription_coverage",
+                        "source_conclusion_transport",
+                        "source_status_evidence",
+                    }
+                )
+                audit = ref.get("critical_audit")
+                if isinstance(audit, dict) and any(
+                    isinstance(item, dict) and item.get("status") != "pass"
+                    for item in audit.get("sanity_checks", [])
+                ):
+                    checks.add("source_nonpass_reconciliation")
+                applicability = ref.get("applicability")
+                if isinstance(applicability, dict) and any(
+                    isinstance(item, dict) and "contour_substitution" in item
+                    for item in applicability.get("transport_obligations", [])
+                ):
+                    checks.add("contour_substitution")
+            if any(
+                isinstance(entry, dict) and "claimed_structure" in entry
+                for entry in fact.computational_evidence
+            ):
+                checks.add("structural_computation")
+        return sorted(checks)
 
     def _prepare_candidate_facts(
         self,
         fact_payloads: Any,
         *,
         artifacts: list[dict[str, str]],
+        authorized_artifact_hashes: set[str],
         verification_plan: dict[str, Any],
+        assurance_contract_revision: str,
+        require_geometric_stage_typing: bool = False,
     ) -> tuple[
         dict[str, Fact],
         dict[str, bytes],
@@ -2594,6 +4714,13 @@ class V5LifecycleManager:
                 fact.proof,
                 require_formula_fidelity=True,
                 require_critical_audit=True,
+                required_source_evidence_version=(
+                    4
+                    if assurance_contract_revision
+                    == V5_ASSURANCE_CONTRACT_REVISION
+                    else 3
+                ),
+                artifact_hashes=authorized_artifact_hashes,
             )
             validate_elementary_uses_for_submission(
                 fact.elementary_uses,
@@ -2614,8 +4741,23 @@ class V5LifecycleManager:
                 artifacts=artifacts,
                 verification_plan=verification_plan,
                 workflow_evidence_version=V5_WORKFLOW_EVIDENCE_VERSION,
+                assurance_contract_revision=assurance_contract_revision,
             )
             validate_terminology(fact.terminology, proof=fact.proof)
+            typed_objects = extract_geometric_objects(fact.statement)
+            if (
+                assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION
+                and require_geometric_stage_typing
+                and any(
+                    clause_is_stage_sensitive(clause["text"])
+                    for clause in clauses
+                )
+                and not typed_objects
+            ):
+                raise ValueError(
+                    "stage-sensitive Candidate Fact requires explicit [GEO:*] "
+                    "stage/ambient/space/genus ownership anchors"
+                )
             facts[fact.fact_id] = fact
             rendered[fact.fact_id] = raw
         active = self.store.facts()
@@ -2638,7 +4780,11 @@ class V5LifecycleManager:
             )
         graph.topological_order()
         candidate_interfaces = {
-            fact_id: self._candidate_interface(fact, rendered[fact_id])
+            fact_id: self._candidate_interface(
+                fact,
+                rendered[fact_id],
+                assurance_contract_revision=assurance_contract_revision,
+            )
             for fact_id, fact in facts.items()
         }
 
@@ -2647,6 +4793,50 @@ class V5LifecycleManager:
                 return candidate_interfaces[fact_id]
             return self.store.statement_interface(fact_id, materialize=False)
 
+        def legacy_premise_resolver(
+            source_fact_id: str,
+            source_clause: dict[str, Any],
+        ) -> list[dict[str, str]]:
+            tokens = referenced_premise_clause_tokens(source_clause["text"])
+            if not tokens:
+                return []
+            source_fact = combined[source_fact_id]
+            matches: list[dict[str, str]] = []
+            for premise_fact_id in source_fact.predecessors:
+                interface = validate_statement_interface(
+                    interface_lookup(premise_fact_id)
+                )
+                for clause in interface["clauses"]:
+                    if clause["clause_id"].upper() not in tokens:
+                        continue
+                    statement_sha = sha256_bytes(
+                        clause["text"].encode("utf-8")
+                    )
+                    matches.append(
+                        {
+                            "fact_id": premise_fact_id,
+                            "clause_id": clause["clause_id"],
+                            "statement_sha256": statement_sha,
+                            "witness_id": (
+                                "LEGACY-PREMISE:"
+                                f"{premise_fact_id}:{clause['clause_id']}:{statement_sha}"
+                            ),
+                        }
+                    )
+            if not matches:
+                raise ValueError(
+                    "legacy conditional predecessor names a premise clause that "
+                    "is not exported by an exact declared predecessor"
+                )
+            if len(matches) != 1:
+                raise ValueError(
+                    "legacy conditional predecessor premise reference is ambiguous"
+                )
+            return sorted(
+                matches,
+                key=lambda item: (item["fact_id"], item["clause_id"]),
+            )
+
         for fact in facts.values():
             validate_predecessor_uses(
                 fact.predecessor_uses,
@@ -2654,6 +4844,9 @@ class V5LifecycleManager:
                 proof=fact.proof,
                 interface_lookup=interface_lookup,
                 convention_profile_ids=fact.convention_profile_ids,
+                assurance_contract_revision=assurance_contract_revision,
+                target_typed_objects=extract_geometric_objects(fact.statement),
+                legacy_premise_resolver=legacy_premise_resolver,
             )
         internal_edges = sorted(
             [
@@ -2683,6 +4876,7 @@ class V5LifecycleManager:
         payload: dict[str, Any],
         *,
         producer: str,
+        preflight_only: bool = False,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("Candidate Release input must be one object")
@@ -2699,7 +4893,9 @@ class V5LifecycleManager:
             "paper_evidence_refs",
             "adverse_actor_ids",
         }
-        if set(payload) != required:
+        if not required.issubset(payload) or set(payload).difference(
+            {*required, "successor_contracts"}
+        ):
             raise ValueError("Candidate Release input fields are not exact")
         if payload.get("schema_version") != 5:
             raise ValueError("Candidate Release schema_version must be 5")
@@ -2721,9 +4917,42 @@ class V5LifecycleManager:
         explicit_research_records = [
             self._research_record(item) for item in research_ids
         ]
+        all_research_records = {
+            item["research_id"]: item for item in self.research_records()
+        }
+        stale_routes = self._route_staleness(all_research_records)
+        stale_selected = {
+            item["research_id"]: stale_routes[item["research_id"]]
+            for item in explicit_research_records
+            if item["research_id"] in stale_routes
+        }
+        if stale_selected:
+            details = ", ".join(
+                f"{research_id} invalidated_by={invalidators}"
+                for research_id, invalidators in sorted(stale_selected.items())
+            )
+            raise ValueError(
+                "Candidate Release selects stale Research; create a copy-on-write "
+                f"repair branch first: {details}"
+            )
         research_records = self._release_research_records(
             explicit_research_records
         )
+        assurance_contract_revision = (
+            V5_ASSURANCE_CONTRACT_REVISION
+            if any(
+                self._research_assurance_revision(record)
+                == V5_ASSURANCE_CONTRACT_REVISION
+                for record in research_records
+            )
+            else V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+        )
+        research_logic_signals = {
+            signal
+            for record in research_records
+            for signal in record.get("metadata", {}).get("logic_signals", [])
+            if isinstance(signal, str)
+        }
         research_bindings = [
             {
                 "research_id": record["research_id"],
@@ -2782,6 +5011,11 @@ class V5LifecycleManager:
             "authorized_artifact_roles": sorted(dict.fromkeys(authorized_roles)),
             "required_checks": sorted(dict.fromkeys(required_checks)),
         }
+        authorized_artifact_hashes = {
+            item["sha256"]
+            for item in validation_artifacts
+            if item["role"] in set(authorized_roles)
+        }
         (
             facts,
             rendered,
@@ -2791,8 +5025,61 @@ class V5LifecycleManager:
         ) = self._prepare_candidate_facts(
             payload.get("candidates"),
             artifacts=validation_artifacts,
+            authorized_artifact_hashes=authorized_artifact_hashes,
             verification_plan=normalized_plan,
+            assurance_contract_revision=assurance_contract_revision,
+            require_geometric_stage_typing=(
+                "geometric_stage_typing" in research_logic_signals
+            ),
         )
+        successor_input = payload.get("successor_contracts", [])
+        if (
+            successor_input
+            and assurance_contract_revision
+            != V5_ASSURANCE_CONTRACT_REVISION
+        ):
+            raise ValueError(
+                "copy-on-write successor contracts are prospective current-assurance only"
+            )
+        successor_contracts = (
+            validate_successor_contracts(
+                successor_input,
+                candidates=facts,
+                active_facts=self.store.facts(),
+                active_fact_sha256=lambda fact_id: sha256_bytes(
+                    self.store.active_fact_path(fact_id).read_bytes()
+                ),
+            )
+            if assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION
+            else []
+        )
+        research_assurance_evidence = self._research_assurance_evidence(
+            research_records=research_records,
+            authorized_artifact_hashes=authorized_artifact_hashes,
+            assurance_contract_revision=assurance_contract_revision,
+        )
+        applicable_assurance_checks = self._applicable_assurance_checks(
+            facts=facts,
+            research_records=research_records,
+            assurance_contract_revision=assurance_contract_revision,
+        )
+        if successor_contracts:
+            applicable_assurance_checks = sorted(
+                {
+                    *applicable_assurance_checks,
+                    "proof_lineage_conservation",
+                }
+            )
+        missing_assurance_checks = sorted(
+            set(applicable_assurance_checks).difference(
+                normalized_plan["required_checks"]
+            )
+        )
+        if missing_assurance_checks:
+            raise ValueError(
+                "Candidate Release omits assurance checks applicable to its exact evidence: "
+                + ", ".join(missing_assurance_checks)
+            )
         if any(
             entry.get("role") == "load_bearing"
             for fact in facts.values()
@@ -2866,7 +5153,11 @@ class V5LifecycleManager:
                 raise ValueError("challenge disposition is duplicated")
             disposed_ids.add(research_id)
             challenge = self._research_record(research_id)
-            if challenge["kind"] not in {"challenge", "counterexample", "obstacle"}:
+            if (
+                challenge["kind"]
+                not in {"challenge", "counterexample", "obstacle"}
+                and not self._research_is_adverse_assignment(challenge)
+            ):
                 raise ValueError(
                     "challenge disposition must reference adverse research"
                 )
@@ -2886,6 +5177,7 @@ class V5LifecycleManager:
             record["research_id"]
             for record in research_records
             if record["kind"] in {"challenge", "counterexample", "obstacle"}
+            or self._research_is_adverse_assignment(record)
         }
         missing_dispositions = sorted(bound_challenges.difference(disposed_ids))
         if missing_dispositions:
@@ -2905,6 +5197,7 @@ class V5LifecycleManager:
                 record["actor"]
                 for record in research_records
                 if record["kind"] in {"challenge", "counterexample", "obstacle"}
+                or self._research_is_adverse_assignment(record)
             }
         )
         if set(adverse_actor_ids) != set(actual_adverse_actor_ids):
@@ -2931,6 +5224,14 @@ class V5LifecycleManager:
             }
             for fact_id in order
         ]
+        candidate_interfaces = [
+            self._candidate_interface(
+                facts[fact_id],
+                rendered[fact_id],
+                assurance_contract_revision=assurance_contract_revision,
+            )
+            for fact_id in order
+        ]
         semantic = {
             "schema_version": 5,
             "policy_revision": V5_POLICY_REVISION,
@@ -2954,6 +5255,18 @@ class V5LifecycleManager:
             "paper_evidence_refs": paper_refs,
             "excluded_verifier_ids": excluded_verifier_ids,
             "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
+            "assurance_contract_revision": assurance_contract_revision,
+            **(
+                {
+                    "applicable_assurance_checks": applicable_assurance_checks,
+                    "candidate_interfaces": candidate_interfaces,
+                    "research_assurance_evidence": research_assurance_evidence,
+                    "successor_contracts": successor_contracts,
+                }
+                if assurance_contract_revision
+                == V5_ASSURANCE_CONTRACT_REVISION
+                else {}
+            ),
             "truth_effect": "none",
         }
         release_sha = sha256_json(semantic)
@@ -2969,6 +5282,17 @@ class V5LifecycleManager:
             **without_record_hash,
             "record_sha256": sha256_json(without_record_hash),
         }
+        if preflight_only:
+            return {
+                "valid": True,
+                "release_id": release_id,
+                "release_sha256": release_sha,
+                "assurance_contract_revision": assurance_contract_revision,
+                "applicable_assurance_checks": applicable_assurance_checks,
+                "successor_contract_count": len(successor_contracts),
+                "project_effect": "none",
+                "truth_effect": "none",
+            }
         path = self._release_path(release_id)
         with self.store.v5_mutation_lock(command="candidate-release"):
             if path.exists():
@@ -2986,7 +5310,14 @@ class V5LifecycleManager:
             self.store._write_json_once(path, record)
         return record
 
-    def release(self, release_id: str) -> dict[str, Any]:
+    def release(
+        self,
+        release_id: str,
+        *,
+        _lineage_facts: dict[str, Fact] | None = None,
+        _lineage_paths: dict[str, Path] | None = None,
+        _skip_successor_validation: bool = False,
+    ) -> dict[str, Any]:
         path = self._release_path(release_id)
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown V5 Candidate Release: {release_id}")
@@ -3052,6 +5383,116 @@ class V5LifecycleManager:
             research = self._research_record(binding["research_id"])
             if research["record_sha256"] != binding["record_sha256"]:
                 raise ValueError("Candidate Release research binding drifted")
+        assurance_revision = record.get(
+            "assurance_contract_revision",
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        )
+        if assurance_revision not in {
+            V5_ASSURANCE_CONTRACT_REVISION,
+            V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        }:
+            raise ValueError("Candidate Release assurance revision is unsupported")
+        if assurance_revision == V5_ASSURANCE_CONTRACT_REVISION:
+            for field in (
+                "applicable_assurance_checks",
+                "candidate_interfaces",
+                "research_assurance_evidence",
+                "successor_contracts",
+            ):
+                if not isinstance(record.get(field), list):
+                    raise ValueError(
+                        f"current Candidate Release {field} must be a list"
+                    )
+            candidate_facts = {
+                candidate["fact_id"]: parse_fact_markdown(
+                    candidate["fact_markdown"]
+                )
+                for candidate in candidates
+            }
+            successor_input_fields = {
+                "mode",
+                "predecessor_fact_id",
+                "successor_fact_id",
+                "predecessor_fact_sha256",
+                "predecessor_proof_sha256",
+                "successor_proof_sha256",
+                "statement_projection",
+                "proof_unit_conservation",
+            }
+            reconstructed_successor_input = [
+                {key: item[key] for key in successor_input_fields}
+                for item in record["successor_contracts"]
+            ]
+            if _skip_successor_validation:
+                # Admission discovery is deliberately two phase.  The first
+                # phase validates immutable release/admission bytes without
+                # asking the active-Fact projection to validate itself.  The
+                # second phase supplies a complete, read-only lineage snapshot
+                # and replays this contract normally.
+                expected_successors = record["successor_contracts"]
+            else:
+                if (_lineage_facts is None) != (_lineage_paths is None):
+                    raise ValueError(
+                        "Candidate Release lineage snapshot is incomplete"
+                    )
+                if _lineage_facts is None or _lineage_paths is None:
+                    _lineage_facts, _lineage_paths = self._lineage_snapshot(
+                        exclude_release_ids={release_id}
+                    )
+                expected_successors = validate_successor_contracts(
+                    reconstructed_successor_input,
+                    candidates=candidate_facts,
+                    active_facts=_lineage_facts,
+                    active_fact_sha256=lambda fact_id: sha256_bytes(
+                        _lineage_paths[fact_id].read_bytes()
+                    ),
+                )
+            if expected_successors != record["successor_contracts"]:
+                raise ValueError("Candidate Release successor contract drifted")
+            authorized_roles = set(
+                record["verification_plan"]["authorized_artifact_roles"]
+            )
+            authorized_hashes = {
+                item["artifact_sha256"]
+                for item in record["artifacts"]
+                if item["role"] in authorized_roles
+            }
+            bound_research = [
+                self._research_record(binding["research_id"])
+                for binding in record["research_bindings"]
+            ]
+            expected_evidence = self._research_assurance_evidence(
+                research_records=bound_research,
+                authorized_artifact_hashes=authorized_hashes,
+                assurance_contract_revision=assurance_revision,
+            )
+            if expected_evidence != record["research_assurance_evidence"]:
+                raise ValueError("Candidate Release Research assurance evidence drifted")
+            expected_interfaces = [
+                self._candidate_interface(
+                    candidate_facts[fact_id],
+                    next(
+                        item["fact_markdown"].encode("utf-8")
+                        for item in candidates
+                        if item["fact_id"] == fact_id
+                    ),
+                    assurance_contract_revision=assurance_revision,
+                )
+                for fact_id in record["fact_ids"]
+            ]
+            if expected_interfaces != record["candidate_interfaces"]:
+                raise ValueError("Candidate Release statement interfaces drifted")
+            expected_checks = self._applicable_assurance_checks(
+                facts=candidate_facts,
+                research_records=bound_research,
+                assurance_contract_revision=assurance_revision,
+            )
+            if expected_successors:
+                expected_checks = sorted(
+                    {*expected_checks, "proof_lineage_conservation"}
+                )
+            if expected_checks != record["applicable_assurance_checks"]:
+                raise ValueError("Candidate Release applicable assurance checks drifted")
         self._validate_paper_evidence_refs(
             record.get("paper_evidence_refs"),
             validation_subject=record["requested_assurance"]["validation_subject"],
@@ -3077,6 +5518,132 @@ class V5LifecycleManager:
             )
         return matches[0]
 
+    def _source_nonpass_checks(
+        self,
+        release: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        result: list[dict[str, str]] = []
+        for candidate in release["candidates"]:
+            fact = parse_fact_markdown(candidate["fact_markdown"])
+            for ref in fact.external_refs:
+                if ref.get("source_evidence_version") != 4:
+                    continue
+                audit = ref.get("critical_audit")
+                if not isinstance(audit, dict):
+                    continue
+                for check in audit.get("sanity_checks", []):
+                    if not isinstance(check, dict) or check.get("status") == "pass":
+                        continue
+                    result.append(
+                        {
+                            "fact_id": fact.fact_id,
+                            "source_key": str(ref.get("key", "")),
+                            "check_kind": str(check.get("kind", "")),
+                            "status": str(check.get("status", "")),
+                            "finding": str(check.get("finding", "")),
+                        }
+                    )
+        return sorted(
+            result,
+            key=lambda item: (
+                item["fact_id"],
+                item["source_key"],
+                item["check_kind"],
+            ),
+        )
+
+    def _source_query_capabilities(
+        self,
+        release: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        capabilities: list[dict[str, Any]] = []
+        for candidate in release["candidates"]:
+            fact = parse_fact_markdown(candidate["fact_markdown"])
+            for ref in fact.external_refs:
+                if ref.get("source_evidence_version") != 4:
+                    continue
+                audit = ref.get("critical_audit")
+                if not isinstance(audit, dict):
+                    continue
+                source_audit = audit.get("source_audit")
+                if not isinstance(source_audit, dict):
+                    continue
+                for search in source_audit.get("issue_searches", []):
+                    if (
+                        isinstance(search, dict)
+                        and search.get("evidence_mode") == "narrow_live_query"
+                        and isinstance(search.get("live_query_capability"), dict)
+                    ):
+                        capabilities.append(
+                            {
+                                "fact_id": fact.fact_id,
+                                "source_key": str(ref.get("key", "")),
+                                "search_kind": str(search.get("kind", "")),
+                                **search["live_query_capability"],
+                            }
+                        )
+        capabilities.sort(
+            key=lambda item: (
+                item["fact_id"],
+                item["source_key"],
+                item["search_kind"],
+            )
+        )
+        return capabilities
+
+    def _certification_decision_template(
+        self,
+        release: dict[str, Any],
+    ) -> dict[str, Any]:
+        source_nonpass = self._source_nonpass_checks(release)
+        template: dict[str, Any] = {
+            "schema_version": 5,
+            "release_id": release["release_id"],
+            "release_sha256": release["release_sha256"],
+            "capsule_sha256": "COPY_EXACT_CAPSULE_SHA256_FROM_CAPSULE_JSON",
+            "verdict": "correct",
+            "findings": [],
+            "check_results": [
+                {"check_id": check_id, "status": "pass", "findings": []}
+                for check_id in release["verification_plan"]["required_checks"]
+            ],
+            "candidate_checks": [
+                {"fact_id": fact_id, "verdict": "correct", "findings": []}
+                for fact_id in release["fact_ids"]
+            ],
+            "edge_checks": [
+                {
+                    "predecessor_fact_id": predecessor,
+                    "fact_id": fact_id,
+                    "verdict": "correct",
+                    "findings": [],
+                }
+                for predecessor, fact_id in release["internal_edges"]
+            ],
+            "assurance_matrix": self._expected_assurance_matrix(release),
+            "reviewer": "REPLACE_WITH_FRESH_VERIFIER_ID",
+            "host_attestation": {
+                "host": "REPLACE_WITH_HOST_ID",
+                "agent_id": "REPLACE_WITH_FRESH_VERIFIER_ID",
+                "isolation": "fresh_context",
+                "fork_turns": "none",
+                "allowed_capsule_sha256": "COPY_EXACT_CAPSULE_SHA256_FROM_CAPSULE_JSON",
+            },
+        }
+        if source_nonpass:
+            template["source_check_reconciliation"] = [
+                {
+                    **{
+                        key: item[key]
+                        for key in ("fact_id", "source_key", "check_kind", "status")
+                    },
+                    "disposition": "bound_correction",
+                    "rationale": "REPLACE_WITH_EXACT_RECONCILIATION_OR_REJECT",
+                }
+                for item in source_nonpass
+            ]
+        return template
+
     def verifier_capsule(self, release_id: str) -> dict[str, Any]:
         release = self.release(release_id)
         predecessor_packets = []
@@ -3100,7 +5667,7 @@ class V5LifecycleManager:
             for artifact in release["artifacts"]
             if artifact["role"] in authorized_roles
         ]
-        semantic = {
+        semantic: dict[str, Any] = {
             "schema_version": 5,
             "policy_revision": V5_POLICY_REVISION,
             "project_id": self.store.project_id(),
@@ -3129,6 +5696,96 @@ class V5LifecycleManager:
                 "truth_effect": "none_until_gateway_admission",
             },
         }
+        if (
+            release.get("assurance_contract_revision")
+            == V5_ASSURANCE_CONTRACT_REVISION
+        ):
+            source_nonpass = self._source_nonpass_checks(release)
+            template = self._certification_decision_template(release)
+            successor_predecessor_packets = []
+            for contract in release.get("successor_contracts", []):
+                predecessor_id = contract["predecessor_fact_id"]
+                predecessor_path = self.store.active_fact_path(predecessor_id)
+                predecessor_raw = predecessor_path.read_bytes()
+                predecessor = self.store.get_fact(predecessor_id)
+                successor_predecessor_packets.append(
+                    {
+                        "fact_id": predecessor_id,
+                        "fact_sha256": sha256_bytes(predecessor_raw),
+                        "fact_markdown": predecessor_raw.decode("utf-8"),
+                        "statement": predecessor.statement,
+                        "proof": predecessor.proof,
+                    }
+                )
+            semantic.update(
+                {
+                    "assurance_contract_revision": V5_ASSURANCE_CONTRACT_REVISION,
+                    "applicable_assurance_checks": release.get(
+                        "applicable_assurance_checks", []
+                    ),
+                    "candidate_interfaces": release.get(
+                        "candidate_interfaces", []
+                    ),
+                    "research_assurance_evidence": release.get(
+                        "research_assurance_evidence", []
+                    ),
+                    "successor_contracts": release.get(
+                        "successor_contracts", []
+                    ),
+                    "successor_predecessor_packets": sorted(
+                        successor_predecessor_packets,
+                        key=lambda item: item["fact_id"],
+                    ),
+                    "proof_diff_policy": {
+                        "display": "statement_and_proof_diffs_separately",
+                        "interface_only": "predecessor_proof_bytes_must_match_exactly",
+                        "rewritten_proof": (
+                            "every_predecessor_proof_unit_mapped_or_explicitly_pruned"
+                        ),
+                    },
+                    "source_nonpass_checks": source_nonpass,
+                    "source_query_capabilities": self._source_query_capabilities(
+                        release
+                    ),
+                    "decision_return": {
+                        "template": template,
+                        "allowed_nested_keys": {
+                            "finding": [
+                                "id",
+                                "severity",
+                                "class",
+                                "description",
+                                "repair_hint",
+                            ],
+                            "check_result": ["check_id", "status", "findings"],
+                            "candidate_check": ["fact_id", "verdict", "findings"],
+                            "edge_check": [
+                                "predecessor_fact_id",
+                                "fact_id",
+                                "verdict",
+                                "findings",
+                            ],
+                            "source_check_reconciliation": [
+                                "fact_id",
+                                "source_key",
+                                "check_kind",
+                                "status",
+                                "disposition",
+                                "rationale",
+                            ],
+                        },
+                        "verifier_action": (
+                            "write and locally preflight output/review.json only; "
+                            "do not record into the project"
+                        ),
+                        "gateway_action": (
+                            "after byte-preserving handoff, the gateway runs "
+                            "certification-record and fact-admit"
+                        ),
+                        "local_validator": "host/validate_decision.py",
+                    },
+                }
+            )
         capsule_sha = sha256_json(semantic)
         return {
             **semantic,
@@ -3137,14 +5794,12 @@ class V5LifecycleManager:
         }
 
     def _validate_finding(self, finding: Any, *, label: str) -> dict[str, str]:
-        if not isinstance(finding, dict) or set(finding) != {
-            "id",
-            "severity",
-            "class",
-            "description",
-            "repair_hint",
-        }:
-            raise ValueError(f"{label} fields are not exact")
+        finding = _require_exact_object_fields(
+            finding,
+            {"id", "severity", "class", "description", "repair_hint"},
+            label=label,
+            pointer=f"/{label.replace('[', '/').replace(']', '')}",
+        )
         normalized = {
             key: _require_nonempty_text(finding[key], f"{label} {key}")
             for key in ("id", "severity", "class", "description")
@@ -3198,6 +5853,8 @@ class V5LifecycleManager:
     def certification_record(
         self,
         payload: dict[str, Any],
+        *,
+        preflight_only: bool = False,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("Certification Decision input must be one object")
@@ -3215,11 +5872,23 @@ class V5LifecycleManager:
             "reviewer",
             "host_attestation",
         }
-        if set(payload) != required:
-            raise ValueError("Certification Decision input fields are not exact")
+        release_id = payload.get("release_id")
+        if not isinstance(release_id, str):
+            raise ValueError(
+                "Certification Decision fields are not exact: missing=/release_id"
+            )
+        release = self.release(release_id)
+        source_nonpass = self._source_nonpass_checks(release)
+        if source_nonpass:
+            required.add("source_check_reconciliation")
+        _require_exact_object_fields(
+            payload,
+            required,
+            label="Certification Decision input",
+            pointer="",
+        )
         if payload.get("schema_version") != 5:
             raise ValueError("Certification Decision schema_version must be 5")
-        release = self.release(payload.get("release_id"))
         capsule = self.verifier_capsule(release["release_id"])
         if (
             payload.get("release_sha256") != release["release_sha256"]
@@ -3239,14 +5908,16 @@ class V5LifecycleManager:
         if len({item["id"] for item in findings}) != len(findings):
             raise ValueError("Certification Decision finding ids must be unique")
         check_results = payload.get("check_results")
-        if not isinstance(check_results, list) or any(
-            not isinstance(item, dict)
-            or set(item) != {"check_id", "status", "findings"}
-            for item in check_results
-        ):
-            raise ValueError("Certification check_results fields are not exact")
+        if not isinstance(check_results, list):
+            raise ValueError("Certification /check_results must be a list")
         normalized_check_results: list[dict[str, Any]] = []
-        for item in check_results:
+        for index, raw_item in enumerate(check_results):
+            item = _require_exact_object_fields(
+                raw_item,
+                {"check_id", "status", "findings"},
+                label="Certification check_result",
+                pointer=f"/check_results/{index}",
+            )
             check_id = _require_nonempty_text(
                 item["check_id"], "Certification check id"
             )
@@ -3275,14 +5946,16 @@ class V5LifecycleManager:
         ):
             raise ValueError("Certification check_results contain duplicate checks")
         candidate_checks = payload.get("candidate_checks")
-        if not isinstance(candidate_checks, list) or any(
-            not isinstance(item, dict)
-            or set(item) != {"fact_id", "verdict", "findings"}
-            for item in candidate_checks
-        ):
-            raise ValueError("Certification candidate_checks fields are not exact")
+        if not isinstance(candidate_checks, list):
+            raise ValueError("Certification /candidate_checks must be a list")
         normalized_candidate_checks: list[dict[str, Any]] = []
-        for item in candidate_checks:
+        for index, raw_item in enumerate(candidate_checks):
+            item = _require_exact_object_fields(
+                raw_item,
+                {"fact_id", "verdict", "findings"},
+                label="Certification candidate_check",
+                pointer=f"/candidate_checks/{index}",
+            )
             fact_id = validate_fact_id(item["fact_id"])
             if item["verdict"] not in {"correct", "reject"}:
                 raise ValueError("Certification candidate verdict is invalid")
@@ -3309,15 +5982,16 @@ class V5LifecycleManager:
         ):
             raise ValueError("Certification candidate_checks contain duplicate Facts")
         edge_checks = payload.get("edge_checks")
-        if not isinstance(edge_checks, list) or any(
-            not isinstance(item, dict)
-            or set(item)
-            != {"predecessor_fact_id", "fact_id", "verdict", "findings"}
-            for item in edge_checks
-        ):
-            raise ValueError("Certification edge_checks fields are not exact")
+        if not isinstance(edge_checks, list):
+            raise ValueError("Certification /edge_checks must be a list")
         normalized_edge_checks: list[dict[str, Any]] = []
-        for item in edge_checks:
+        for index, raw_item in enumerate(edge_checks):
+            item = _require_exact_object_fields(
+                raw_item,
+                {"predecessor_fact_id", "fact_id", "verdict", "findings"},
+                label="Certification edge_check",
+                pointer=f"/edge_checks/{index}",
+            )
             predecessor = validate_fact_id(item["predecessor_fact_id"])
             fact_id = validate_fact_id(item["fact_id"])
             if item["verdict"] not in {"correct", "reject"}:
@@ -3346,6 +6020,77 @@ class V5LifecycleManager:
             )
         if len(normalized_edge_checks) != len(actual_edges):
             raise ValueError("Certification edge_checks contain duplicate edges")
+        normalized_reconciliation: list[dict[str, str]] = []
+        if source_nonpass:
+            reconciliation = payload.get("source_check_reconciliation")
+            if not isinstance(reconciliation, list):
+                raise ValueError(
+                    "Certification /source_check_reconciliation must be a list"
+                )
+            expected_nonpass = {
+                (
+                    item["fact_id"],
+                    item["source_key"],
+                    item["check_kind"],
+                    item["status"],
+                )
+                for item in source_nonpass
+            }
+            seen_nonpass: set[tuple[str, str, str, str]] = set()
+            for index, raw_item in enumerate(reconciliation):
+                item = _require_exact_object_fields(
+                    raw_item,
+                    {
+                        "fact_id",
+                        "source_key",
+                        "check_kind",
+                        "status",
+                        "disposition",
+                        "rationale",
+                    },
+                    label="Certification source_check_reconciliation",
+                    pointer=f"/source_check_reconciliation/{index}",
+                )
+                identity = tuple(
+                    _require_nonempty_text(
+                        item[key],
+                        f"source reconciliation {key}",
+                    )
+                    for key in ("fact_id", "source_key", "check_kind", "status")
+                )
+                if identity not in expected_nonpass or identity in seen_nonpass:
+                    raise ValueError(
+                        "Certification source reconciliation is unknown or duplicated: "
+                        + ":".join(identity)
+                    )
+                seen_nonpass.add(identity)
+                disposition = item.get("disposition")
+                if disposition not in {
+                    "bound_correction",
+                    "scope_restriction",
+                    "reject",
+                }:
+                    raise ValueError(
+                        "Certification source reconciliation disposition is invalid"
+                    )
+                rationale = _require_nonempty_text(
+                    item.get("rationale"),
+                    "source reconciliation rationale",
+                )
+                normalized_reconciliation.append(
+                    {
+                        "fact_id": identity[0],
+                        "source_key": identity[1],
+                        "check_kind": identity[2],
+                        "status": identity[3],
+                        "disposition": disposition,
+                        "rationale": rationale,
+                    }
+                )
+            if seen_nonpass != expected_nonpass:
+                raise ValueError(
+                    "Certification source reconciliation does not exactly cover every non-pass check"
+                )
         expected_matrix = self._expected_assurance_matrix(release)
         if payload.get("assurance_matrix") != expected_matrix:
             raise ValueError("Certification assurance matrix is incorrect")
@@ -3357,14 +6102,18 @@ class V5LifecycleManager:
                 "Certification reviewer participated in candidate/adverse research"
             )
         attestation = payload.get("host_attestation")
-        if not isinstance(attestation, dict) or set(attestation) != {
-            "host",
-            "agent_id",
-            "isolation",
-            "fork_turns",
-            "allowed_capsule_sha256",
-        }:
-            raise ValueError("Certification host_attestation fields are not exact")
+        attestation = _require_exact_object_fields(
+            attestation,
+            {
+                "host",
+                "agent_id",
+                "isolation",
+                "fork_turns",
+                "allowed_capsule_sha256",
+            },
+            label="Certification host_attestation",
+            pointer="/host_attestation",
+        )
         for key in ("host", "agent_id", "isolation", "fork_turns"):
             _require_nonempty_text(attestation[key], f"host attestation {key}")
         if (
@@ -3379,6 +6128,10 @@ class V5LifecycleManager:
             and all(item["status"] == "pass" for item in normalized_check_results)
             and all(item["verdict"] == "correct" for item in normalized_candidate_checks)
             and all(item["verdict"] == "correct" for item in normalized_edge_checks)
+            and all(
+                item["disposition"] != "reject"
+                for item in normalized_reconciliation
+            )
         )
         if verdict == "correct" and not clean:
             raise ValueError("correct Certification Decision must be completely clean")
@@ -3411,10 +6164,34 @@ class V5LifecycleManager:
             "assurance_matrix": expected_matrix,
             "reviewer": reviewer,
             "host_attestation": attestation,
+            **(
+                {
+                    "source_check_reconciliation": sorted(
+                        normalized_reconciliation,
+                        key=lambda item: (
+                            item["fact_id"],
+                            item["source_key"],
+                            item["check_kind"],
+                        ),
+                    )
+                }
+                if source_nonpass
+                else {}
+            ),
             "truth_effect": "none",
         }
         decision_sha = sha256_json(semantic)
         decision_id = "decision-" + decision_sha
+        if preflight_only:
+            return {
+                "valid": True,
+                "decision_id": decision_id,
+                "decision_sha256": decision_sha,
+                "release_id": release["release_id"],
+                "capsule_sha256": capsule["capsule_sha256"],
+                "project_effect": "none",
+                "truth_effect": "none",
+            }
         if existing_for_release:
             existing = existing_for_release[0]
             if existing["decision_id"] == decision_id:
@@ -3511,6 +6288,10 @@ class V5LifecycleManager:
     def _validated_admission(
         self,
         release_id: str,
+        *,
+        _lineage_facts: dict[str, Fact] | None = None,
+        _lineage_paths: dict[str, Path] | None = None,
+        _skip_successor_validation: bool = False,
     ) -> tuple[dict[str, Any], dict[str, Path]]:
         directory = self._admission_dir(release_id)
         marker_path = directory / "ACCEPTED.json"
@@ -3547,7 +6328,12 @@ class V5LifecycleManager:
             != "acceptance-" + sha256_json(semantic)
         ):
             raise ValueError("V5 admission marker schema/project/id/hash mismatch")
-        release = self.release(release_id)
+        release = self.release(
+            release_id,
+            _lineage_facts=_lineage_facts,
+            _lineage_paths=_lineage_paths,
+            _skip_successor_validation=_skip_successor_validation,
+        )
         decision = self.decision(
             marker["decision_id"], validate_bindings=False
         )
@@ -3584,27 +6370,96 @@ class V5LifecycleManager:
             raise ValueError("V5 admission marker Fact hash map mismatch")
         return marker, paths
 
-    def active_fact_paths(self) -> dict[str, Path]:
+    def _lineage_snapshot(
+        self,
+        *,
+        exclude_release_ids: set[str] | None = None,
+    ) -> tuple[dict[str, Fact], dict[str, Path]]:
+        """Build an immutable active-Fact snapshot without recursive lineage reads.
+
+        Release/admission bytes are validated in a first pass with successor
+        replay deferred.  Callers then replay successor contracts against this
+        explicit snapshot.  Facts from an excluded release are never eligible
+        to serve as their own historical active predecessors.
+        """
+
+        excluded = exclude_release_ids or set()
         revoked = self.revoked_fact_ids()
-        result: dict[str, Path] = {}
+        paths: dict[str, Path] = {}
         if not self.admissions_dir.exists():
-            return result
+            return {}, paths
         for directory in sorted(self.admissions_dir.glob("release-*")):
             if directory.is_symlink() or not directory.is_dir():
                 raise ValueError("V5 admission store contains an unsafe entry")
             marker_path = directory / "ACCEPTED.json"
             if not marker_path.exists():
                 continue
-            _, paths = self._validated_admission(directory.name)
-            for fact_id, path in paths.items():
+            if directory.name in excluded:
+                continue
+            _, admitted_paths = self._validated_admission(
+                directory.name,
+                _skip_successor_validation=True,
+            )
+            for fact_id, path in admitted_paths.items():
                 if fact_id in revoked:
                     continue
-                if fact_id in result:
+                if fact_id in paths:
                     raise ValueError(
                         f"V5 Fact {fact_id} has multiple active admissions"
                     )
-                result[fact_id] = path
-        return result
+                paths[fact_id] = path
+        facts: dict[str, Fact] = {}
+        for fact_id, path in paths.items():
+            fact = parse_fact_markdown(path.read_text(encoding="utf-8"))
+            errors = fact.validate()
+            if errors:
+                raise ValueError(
+                    f"invalid admitted V5 Fact {fact_id}: " + "; ".join(errors)
+                )
+            if fact.fact_id != fact_id or fact.problem_id != self.store.project_id():
+                raise ValueError("admitted V5 Fact id/project binding mismatch")
+            facts[fact_id] = fact
+        return facts, paths
+
+    def _validate_lineage_snapshot(
+        self,
+        facts: dict[str, Fact],
+        paths: dict[str, Path],
+        *,
+        exclude_release_ids: set[str] | None = None,
+    ) -> None:
+        excluded = exclude_release_ids or set()
+        if not self.admissions_dir.exists():
+            return
+        for directory in sorted(self.admissions_dir.glob("release-*")):
+            marker_path = directory / "ACCEPTED.json"
+            if directory.name in excluded or not marker_path.exists():
+                continue
+            _, own_paths = self._validated_admission(
+                directory.name,
+                _skip_successor_validation=True,
+            )
+            own_fact_ids = set(own_paths)
+            _, admitted_paths = self._validated_admission(
+                directory.name,
+                _lineage_facts={
+                    fact_id: fact
+                    for fact_id, fact in facts.items()
+                    if fact_id not in own_fact_ids
+                },
+                _lineage_paths={
+                    fact_id: path
+                    for fact_id, path in paths.items()
+                    if fact_id not in own_fact_ids
+                },
+            )
+            if set(admitted_paths) != own_fact_ids:
+                raise ValueError("V5 admission Fact set drifted between validation phases")
+
+    def active_fact_paths(self) -> dict[str, Path]:
+        facts, paths = self._lineage_snapshot()
+        self._validate_lineage_snapshot(facts, paths)
+        return paths
 
     def fact_admit(
         self,
@@ -3659,7 +6514,21 @@ class V5LifecycleManager:
         ) = self._prepare_candidate_facts(
             candidate_payloads,
             artifacts=validation_artifacts,
+            authorized_artifact_hashes={
+                item["sha256"]
+                for item in validation_artifacts
+                if item["role"]
+                in set(release["verification_plan"]["authorized_artifact_roles"])
+            },
             verification_plan=release["verification_plan"],
+            assurance_contract_revision=release.get(
+                "assurance_contract_revision",
+                V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+            ),
+            require_geometric_stage_typing=(
+                "geometric_stage_typing"
+                in release.get("applicable_assurance_checks", [])
+            ),
         )
         if (
             order != release["fact_ids"]
@@ -3671,7 +6540,47 @@ class V5LifecycleManager:
             release["paper_evidence_refs"],
             validation_subject=release["requested_assurance"]["validation_subject"],
         )
+        fact_sha = {
+            fact_id: sha256_bytes(rendered[fact_id])
+            for fact_id in release["fact_ids"]
+        }
+        accepted_at = _utc_now()
+        marker_semantic = {
+            "schema_version": 5,
+            "policy_revision": V5_POLICY_REVISION,
+            "project_id": self.store.project_id(),
+            "release_id": release_id,
+            "release_sha256": release["release_sha256"],
+            "decision_id": decision_id,
+            "decision_sha256": decision["decision_sha256"],
+            "capsule_sha256": capsule["capsule_sha256"],
+            "fact_ids": release["fact_ids"],
+            "fact_sha256": fact_sha,
+            "gateway": gateway,
+            "reviewer": decision["reviewer"],
+            "accepted_at": accepted_at,
+        }
+        marker = {
+            **marker_semantic,
+            "acceptance_id": "acceptance-" + sha256_json(marker_semantic),
+        }
+        projection_plan = self._admission_projection_plan(
+            marker,
+            release=release,
+        )
+        self._preflight_admission_projections(projection_plan)
         with self.store.v5_mutation_lock(command="fact-admit"):
+            if marker_path.exists():
+                existing, _ = self._validated_admission(release_id)
+                if (
+                    existing["decision_id"] != decision_id
+                    or existing["gateway"] != gateway
+                ):
+                    raise ValueError(
+                        "Candidate Release was already admitted with different evidence"
+                    )
+                self._materialize_admission_projections(existing)
+                return existing
             facts_dir = directory / "facts"
             facts_dir.mkdir(parents=True, exist_ok=True)
             if directory.is_symlink() or facts_dir.is_symlink():
@@ -3696,44 +6605,28 @@ class V5LifecycleManager:
                         )
                     )
                 )
-            fact_sha: dict[str, str] = {}
             for fact_id in release["fact_ids"]:
                 path = facts_dir / f"{fact_id}.md"
                 self.store._write_bytes_once(path, rendered[fact_id], mode=0o644)
-                fact_sha[fact_id] = sha256_bytes(rendered[fact_id])
-            accepted_at = _utc_now()
-            marker_semantic = {
-                "schema_version": 5,
-                "policy_revision": V5_POLICY_REVISION,
-                "project_id": self.store.project_id(),
-                "release_id": release_id,
-                "release_sha256": release["release_sha256"],
-                "decision_id": decision_id,
-                "decision_sha256": decision["decision_sha256"],
-                "capsule_sha256": capsule["capsule_sha256"],
-                "fact_ids": release["fact_ids"],
-                "fact_sha256": fact_sha,
-                "gateway": gateway,
-                "reviewer": decision["reviewer"],
-                "accepted_at": accepted_at,
-            }
-            marker = {
-                **marker_semantic,
-                "acceptance_id": "acceptance-" + sha256_json(marker_semantic),
-            }
             # This write is the sole all-or-none visibility switch.
             self.store._write_json_once(marker_path, marker)
-            self._materialize_admission_projections(marker)
+            self._materialize_admission_projections(
+                marker,
+                release=release,
+                projection_plan=projection_plan,
+            )
         return marker
 
-    def _materialize_admission_projections(
+    def _admission_projection_plan(
         self,
         marker: dict[str, Any],
-    ) -> None:
-        release = self.release(marker["release_id"])
+        *,
+        release: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         candidate_by_id = {
             item["fact_id"]: item for item in release["candidates"]
         }
+        plan: list[dict[str, Any]] = []
         for fact_id in release["fact_ids"]:
             event_id = sha256_json(
                 [
@@ -3761,9 +6654,6 @@ class V5LifecycleManager:
                 "claim_relation": release["claim_relation"],
                 "timestamp": marker["accepted_at"],
             }
-            self.store._append_jsonl_once(
-                self.store.verification_log, event, event_id=event_id
-            )
             fact = parse_fact_markdown(
                 candidate_by_id[fact_id]["fact_markdown"]
             )
@@ -3773,9 +6663,97 @@ class V5LifecycleManager:
                 acceptance_event_sha256=event_id,
                 admission_review_id=marker["decision_sha256"],
                 workflow_evidence_version=5,
+                assurance_contract_revision=release.get(
+                    "assurance_contract_revision",
+                    V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+                ),
+            )
+            validate_statement_interface(interface)
+            plan.append(
+                {
+                    "event": event,
+                    "interface": interface,
+                    "interface_path": self.store.interfaces_dir / f"{fact_id}.json",
+                }
+            )
+        return plan
+
+    def _preflight_admission_projections(
+        self,
+        projection_plan: list[dict[str, Any]],
+    ) -> None:
+        existing_events = self.store._read_jsonl(self.store.verification_log)
+        for item in projection_plan:
+            event = item["event"]
+            matches = [
+                existing
+                for existing in existing_events
+                if existing.get("event_id") == event["event_id"]
+            ]
+            if len(matches) > 1:
+                raise ValueError(
+                    "duplicate admission projection event: " + event["event_id"]
+                )
+            if matches:
+                existing_semantic = {
+                    key: value
+                    for key, value in matches[0].items()
+                    if key != "timestamp"
+                }
+                expected_semantic = {
+                    key: value for key, value in event.items() if key != "timestamp"
+                }
+                if existing_semantic != expected_semantic:
+                    raise ValueError(
+                        "divergent admission projection event: " + event["event_id"]
+                    )
+            interface_path = item["interface_path"]
+            if interface_path.is_symlink():
+                raise ValueError(
+                    f"immutable statement interface is unsafe: {interface_path}"
+                )
+            rendered = (
+                json.dumps(
+                    item["interface"],
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            ).encode("utf-8")
+            if interface_path.exists() and (
+                not interface_path.is_file()
+                or interface_path.read_bytes() != rendered
+            ):
+                raise ValueError(
+                    f"immutable statement interface collision at {interface_path}"
+                )
+
+    def _materialize_admission_projections(
+        self,
+        marker: dict[str, Any],
+        *,
+        release: dict[str, Any] | None = None,
+        projection_plan: list[dict[str, Any]] | None = None,
+    ) -> None:
+        if release is None:
+            release = self.release(marker["release_id"])
+        if projection_plan is None:
+            projection_plan = self._admission_projection_plan(
+                marker,
+                release=release,
+            )
+        self._preflight_admission_projections(projection_plan)
+        for item in projection_plan:
+            event = item["event"]
+            self.store._append_jsonl_once(
+                self.store.verification_log,
+                event,
+                event_id=event["event_id"],
             )
             write_interface_once(
-                self.store.interfaces_dir / f"{fact_id}.json", interface
+                item["interface_path"],
+                item["interface"],
             )
 
     def revoked_fact_ids(self) -> set[str]:
@@ -4208,6 +7186,35 @@ class V5LifecycleManager:
                 f"reasoning mode: {message}"
                 for message in mode_report["warnings"]
             )
+
+        try:
+            abort_records = self.store.reasoning_modes().work_unit_aborts()
+        except Exception as exc:
+            workflow_error(f"work-unit abort projection audit failed: {exc}")
+        else:
+            for abort in abort_records:
+                round_id = abort["round_id"]
+                try:
+                    status = self.round_status(round_id)
+                except Exception as exc:
+                    workflow_error(
+                        f"work-unit abort/status projection failed for {round_id}: {exc}"
+                    )
+                    continue
+                if (
+                    status.get("work_unit_state") != "aborted"
+                    or status.get("abort_id") != abort["abort_id"]
+                    or status.get("awaiting_count") != 0
+                    or any(
+                        assignment.get("state")
+                        in {"awaiting_return", "return_present"}
+                        for assignment in status.get("assignments", [])
+                    )
+                ):
+                    workflow_error(
+                        "work-unit abort/status projection mismatch for "
+                        f"{round_id}"
+                    )
 
         return report
 

@@ -20,6 +20,13 @@ design reference: Jihao Liu et al., *Danus: Orchestrating
 Mathematical Reasoning Agents with Fact-Graph Memory*, arXiv:2607.06447,
 version 2, 8 July 2026.
 
+Chalxius 0.4.1 adds a task-scoped CHX architecture ledger. Project-bound runs
+store it in `PROJECT/chx-ledgers/`; projectless runs use private host state
+outside the skill. The operational directory has no audit or truth authority
+and does not change project schemas, research-runtime bytes, or Fact admission.
+The rule is prospective: work already running under 0.4.0 is not backfilled,
+reclassified, invalidated, or asked to redo work when 0.4.1 is installed.
+
 The static nontruth learning-plane algorithm descends from Grill Me 0.2.0.
 Chalxius now owns that opt-in academic teaching/testing surface under the name
 Chalxius Learner. The standalone Grill Me 0.3.2-code companion, distinguished as

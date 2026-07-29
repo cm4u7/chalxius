@@ -12,6 +12,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from chx_ledger import close_ledger, ledger_status, start_ledger  # noqa: E402
 from mathgraph.cli import main as cli_main  # noqa: E402
 from mathgraph.applicability import validate_external_refs_for_submission  # noqa: E402
 from mathgraph.blackboard import make_edge, make_node  # noqa: E402
@@ -92,6 +93,26 @@ def main() -> int:
             raise RuntimeError(
                 f"{command} must remain a main/operator-only capability"
             )
+    if any(
+        command not in allowed_commands(role)
+        for role in ("main", "operator")
+        for command in ("project-background-index", "project-background-read")
+    ) or any(
+        command in allowed_commands("host")
+        for command in ("project-background-index", "project-background-read")
+    ):
+        raise RuntimeError(
+            "background inspection must remain Main/Operator and outside Host"
+        )
+    for command in ("fact-graph-inventory", "fact-graph-append-target"):
+        if command not in allowed_commands("operator") or any(
+            command in allowed_commands(role)
+            for role in ("main", "worker", "gateway", "verifier", "host")
+        ):
+            raise RuntimeError(
+                "cross-project Fact inventory/append-target selection must remain "
+                "explicit Operator-only read-only routing"
+            )
     paper_auditor = allowed_commands("paper-auditor")
     if (
         "paper-logic-record-review" not in paper_auditor
@@ -135,6 +156,8 @@ def main() -> int:
         skill_root / "references" / "unified_architecture.md",
         skill_root / "references" / "reasoning_modes.md",
         skill_root / "references" / "admission_contract.md",
+        skill_root / "references" / "chx_runtime_ledger.md",
+        skill_root / "references" / "adverse_routing_evolution.md",
         skill_root / "references" / "capability_difference_audit.md",
         skill_root / "references" / "unified_learning_plane.md",
         skill_root / "references" / "reader_html_export.md",
@@ -155,7 +178,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius",
+            "# Chalxius 0.4.4 — Back to the Future",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -163,6 +186,14 @@ def main() -> int:
             "Reasoning profile and interaction surface are orthogonal",
             "export-reader-html",
             "PROJECT/visualizations/knowledge-map.html",
+            "For every Chalxius run started after the 0.4.1 activation boundary",
+            "Project-bound runs store their ledger at `PROJECT/chx-ledgers/`",
+            "If `report_required=false`, say nothing about the CHX ledger",
+            "Mixed 0.4.0 and 0.4.1-or-later bytes",
+            "run `attack-report --host-task-scope-id ID`",
+            "never infer approval from silence",
+            "memory-add --current-assurance",
+            "fact-graph-inventory --source-root OLD",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -171,7 +202,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.4.0"',
+            '"version": "0.4.4"',
+            '"release_codename": "Back to the Future"',
             '"default_evidence_version": 5',
             '"v4_authority_inheritance": false',
             '"version": "0.3.2-code"',
@@ -179,12 +211,23 @@ def main() -> int:
             '"semantic_activation": "explicit_programming_grill_or_socratic_intent_only"',
             '"graph_mount_capability": false',
             '"research_authority": false',
-            '"renderer_revision": "chalxius-reader-html-15"',
+            '"renderer_revision": "chalxius-reader-html-17"',
             '"layout": "deterministic_compact_radial_core_layers"',
             '"fixed_output": "visualizations/knowledge-map.html"',
             '"network_runtime": "disabled"',
             '"project_background_read_policy": "default_if_present_never_generate"',
             '"aggressive_bug_audit": "release_time_only"',
+            '"contract_revision": "chalxius-chx-run-ledger-2"',
+            '"chalxius-chx-run-ledger-1"',
+            '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
+            '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
+            '"contract_revision": "chalxius-adverse-routing-evolution-1"',
+            '"activation": "explicit_operator_project_opt_in_only"',
+            '"proposal_activation": "user_decision_only"',
+            '"attack_report": "required_at_enabled_host_task_completion_and_separate_from_chx"',
+            '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_and_manifest_file_hash_fail_closed_at_start"',
+            '"automatic_inheritance": false',
+            '"admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection"',
         ),
         "references/reader_html_export.md": (
             "truth_effect=\"none\"",
@@ -204,16 +247,60 @@ def main() -> int:
             "`$chalxius`, not through standalone `$grill-me`",
         ),
         "references/v5_release_traceability.md": (
-            "Candidate version: `0.4.0`",
+            "Current candidate version: `0.4.4`",
+            "Release codename: `Back to the Future`",
             "Research -> Candidate Release -> Certification Decision -> Fact",
             "four durable states and three happy-path truth transitions",
-            "default and binds its complete UTF-8 body",
-            "8/8",
+            "complete exact-byte index with an immutable round snapshot",
+            "26/26",
             "validated candidate, not an installed release",
+            "later load some 0.4.1-or-later bytes",
+            "Back to the Future field-repair successor",
+            "4c2eb4c14605aacf18d4515e4f5515427321fa968f77b9ce2e5b8032dc1f4522",
+        ),
+        "references/unified_architecture.md": (
+            "later load some 0.4.1-or-later bytes",
+            "Back to the Future field-repair boundaries",
+            "two phases",
+            "fact-graph-append-target",
+        ),
+        "references/chx_runtime_ledger.md": (
+            "runs started after the 0.4.1 activation boundary",
+            "must not be backfilled",
+            "never an audit warning, certification blocker, or reason to redo work",
+            "truth_effect=none",
+            "project_effect=none",
+            "Project-bound runs store their ledger at `PROJECT/chx-ledgers/`",
+            "Projectless runs use private host task state outside the skill",
+            "If `report_required=false`, say nothing about the CHX ledger",
+            "Loading some 0.4.1-or-later bytes",
+            "--task-card /exact/card.json",
+            "older global Chalxius runtime must fail closed",
+        ),
+        "references/admission_contract.md": (
+            "full statement hash",
+            "two-phase immutable snapshot",
+            "outcome kind alone",
+        ),
+        "references/adverse_routing_evolution.md": (
+            "counterexample return",
+            "operator decision",
+            "attack report is separate from the CHX",
+            "worker_reported_counterexample_nontruth",
+            "COPY_EXACT_PROJECT_ID_FROM_TASK_CARD",
+            "Do not start from a schema-v4 example",
+            "approve_modified",
+            "future task cards",
+            "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "second truth or admission gate",
-            "Neither command is required before constructing a verifier capsule",
+            "The 0.4.4 `Back to the Future` candidate or release artifact",
+            "host-wide prospective authorization",
+            "attack-report",
+            "Never backfill attack cases",
+            "loads some 0.4.1-or-later",
+            "The Fact-admission contract is invariant in all modes",
+            "V5 `profile-closure-status` computes local process",
             "V5 never activates a V1-V4 root",
             "Candidate Release/Certification/Fact boundary",
         ),
@@ -224,7 +311,7 @@ def main() -> int:
         ),
         "references/agent_protocol_v4.md": (
             "semantically invalid peer receives an immutable local quarantine receipt",
-            "Round profile repair advice",
+            "Historical V4 round profile repair advice",
             "truth_effect=\"none\"",
         ),
         "references/campaigns_and_migration_v4.md": (
@@ -282,6 +369,188 @@ def main() -> int:
             "missing Chalxius identity or companion-boundary markers: "
             + ", ".join(missing_identity_markers)
         )
+    with tempfile.TemporaryDirectory(prefix="chalxius-self-test-chx-") as directory:
+        project_root = Path(directory) / "project"
+        started = start_ledger(
+            project_root=project_root,
+            task="Self-test the prospective silent-zero CHX contract.",
+            run_id="run-self-test-chx-001",
+            host_task_scope_id="self-test",
+        )
+        ledger_path = Path(started["ledger_path"])
+        if (
+            started["state"] != "open"
+            or started["skill_version"] != "0.4.4"
+            or started["report_required"]
+            or ledger_path.parent != (project_root / "chx-ledgers").resolve()
+        ):
+            raise RuntimeError("CHX start/silent-zero contract failed")
+        closed = close_ledger(ledger_path)
+        if (
+            closed["state"] != "closed"
+            or closed["report_required"]
+            or close_ledger(ledger_path) != closed
+            or ledger_status(ledger_path) != closed
+        ):
+            raise RuntimeError("CHX close/idempotence contract failed")
+    with tempfile.TemporaryDirectory(prefix="chalxius-self-test-adverse-") as directory:
+        adverse_store = MathGraphStore(Path(directory) / "project")
+        adverse_store.initialize(
+            project_id="self-test-adverse",
+            title="Self-test adverse routing",
+            workflow_evidence_version=5,
+        )
+        if adverse_store.adverse_routes().status()["enabled"]:
+            raise RuntimeError("adverse routing must be off before operator opt-in")
+        adverse_store.adverse_routes().initialize(
+            actor="self-test-user",
+            reason="Exercise user-governed adverse learning.",
+        )
+        adverse_lifecycle = adverse_store.v5_lifecycle()
+        target = adverse_lifecycle.add_research(
+            {
+                "kind": "challenge",
+                "claim": "Stress-test the uniform witness claim.",
+                "logic_signals": ["quantifier_sensitive"],
+            },
+            actor="self-test-main",
+        )
+        adverse_round = adverse_lifecycle.create_round(
+            workers=1,
+            research_ids=[target["research_id"]],
+            host_task_scope_id="self-test-adverse-task",
+        )
+        adverse_assignment = adverse_round["assignments"][0]
+        adverse_card_path = Path(adverse_assignment["task_card_path"])
+        adverse_card = json.loads(adverse_card_path.read_text(encoding="utf-8"))
+        if (
+            len(adverse_card.get("adverse_routing", {}).get("baseline_rules", []))
+            != 8
+            or adverse_card["adverse_routing"]["approved_rules"]
+        ):
+            raise RuntimeError("adverse baseline task-card binding failed")
+        adverse_return = {
+            "schema_version": 5,
+            "project_id": adverse_store.project_id(),
+            "round_id": adverse_round["round_id"],
+            "assignment_id": adverse_assignment["assignment_id"],
+            "worker_id": adverse_assignment["worker_id"],
+            "task_card_sha256": adverse_assignment["task_card_sha256"],
+            "blackboard_snapshot_sha256": adverse_assignment[
+                "blackboard_snapshot_sha256"
+            ],
+            "outcome": "counterexample",
+            "claim": "The uniform witness conclusion fails.",
+            "content": "Two parameters require incompatible witnesses.",
+            "narrative": {
+                "rationale": "Attack witness identity.",
+                "summary": "No common witness exists.",
+                "intuition": "Local choices disagree.",
+                "limitations": "Pointwise existence remains possible.",
+            },
+            "artifacts": [],
+            "obligation_dispositions": [
+                {
+                    "obligation_id": item["obligation_id"],
+                    "status": "complete",
+                    "witness_artifact_sha256s": [],
+                    "rationale": (
+                        "This logical counterexample has no artifact-bearing "
+                        "obligation."
+                    ),
+                }
+                for item in adverse_card["assurance_contract"]["obligations"]
+            ],
+            "computation_manifest": None,
+            "research_assurance": {
+                "source_uses": [],
+                "route_invalidations": [],
+                "extremal_cases": [],
+                "claim_strength": [],
+                "contour_substitutions": [],
+                "claimed_structures": [],
+                "program_math_alignments": [],
+            },
+            "attack_learning": {
+                "attack_family": "quantifier_witness",
+                "target_pattern": "Pointwise witnesses are treated as uniform.",
+                "failure_mechanism": "One witness is reused outside its scope.",
+                "premise_witnesses": ["Each parameter has a valid local witness."],
+                "conclusion_failure_witness": "The two valid-witness sets are disjoint.",
+                "reproduction_steps": [
+                    "Choose two parameters.",
+                    "Check their premises.",
+                    "Compare their witness sets.",
+                ],
+                "success_boundary": "Refutes uniformity, not pointwise existence.",
+                "route_rule": {
+                    "attack_family": "quantifier_witness",
+                    "trigger": {
+                        "research_kinds": ["challenge"],
+                        "claim_terms_any": ["uniform"],
+                        "metadata_signals_any": ["quantifier_sensitive"],
+                        "universal_refute": False,
+                    },
+                    "instruction": "Attack silent witness replacement.",
+                    "false_positive_guards": [
+                        "Do not demand uniformity from a literal pointwise claim."
+                    ],
+                    "scope_note": "Use when witness identity is load-bearing.",
+                },
+            },
+        }
+        adverse_return_path = Path(adverse_assignment["return_path"])
+        adverse_return_path.write_text(
+            json.dumps(adverse_return, sort_keys=True), encoding="utf-8"
+        )
+        adverse_return_sha = sha256_bytes(adverse_return_path.read_bytes())
+        adverse_receipt = adverse_lifecycle.ingest_return(
+            round_id=adverse_round["round_id"],
+            assignment_id=adverse_assignment["assignment_id"],
+            worker_final_sha256=adverse_return_sha,
+        )
+        adverse_report = adverse_store.adverse_routes().report(
+            host_task_scope_id="self-test-adverse-task"
+        )
+        if (
+            "attack_case_id" not in adverse_receipt
+            or adverse_report["summary"]["pending_user_decision_count"] != 1
+            or not adverse_report["user_decision_required"]
+            or adverse_report["truth_effect"] != "none"
+        ):
+            raise RuntimeError("adverse case/proposal/report contract failed")
+        adverse_decision = adverse_store.adverse_routes().decide(
+            adverse_receipt["route_proposal_id"],
+            {
+                "action": "approve",
+                "reason": "Self-test approval with exact guard.",
+                "rule": None,
+            },
+            actor="self-test-user",
+        )
+        future_target = adverse_lifecycle.add_research(
+            {
+                "kind": "challenge",
+                "claim": "Stress-test another uniform witness claim.",
+                "logic_signals": ["quantifier_sensitive"],
+            },
+            actor="self-test-main",
+        )
+        future_round = adverse_lifecycle.create_round(
+            workers=1,
+            research_ids=[future_target["research_id"]],
+            host_task_scope_id="self-test-adverse-future",
+        )
+        future_card = json.loads(
+            Path(future_round["assignments"][0]["task_card_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        if [
+            item["rule_id"]
+            for item in future_card["adverse_routing"]["approved_rules"]
+        ] != [adverse_decision["rule_id"]]:
+            raise RuntimeError("approved adverse rule did not bind future task card")
     if "Start every paper-reading response" in policy_texts[
         "references/paper-reading-modes.md"
     ]:
@@ -480,7 +749,7 @@ def main() -> int:
         or "connect-src 'none'" not in reader_html_first
         or "@@CHALXIUS_" in reader_html_first
         or reader_meta_first.get("renderer_revision")
-        != "chalxius-reader-html-15"
+        != "chalxius-reader-html-17"
         or reader_meta_first.get("layout")
         != "deterministic_compact_radial_core_layers"
         or reader_meta_first.get("packet_sha256") != reader_packet_sha256
@@ -775,7 +1044,7 @@ def main() -> int:
         if (
             reader_output.read_bytes() != reader_output_before
             or reader_receipt.get("renderer_revision")
-            != "chalxius-reader-html-15"
+            != "chalxius-reader-html-17"
             or reader_receipt.get("reader_finalize") != expected_reader_finalize
         ):
             raise RuntimeError(
@@ -826,13 +1095,34 @@ def main() -> int:
             Path(second_round["assignments"][0]["task_card_path"])
         )
         background = second_card["mathematical_state"]["project_background"]
+        background_bytes = background_body.encode("utf-8")
+        chunks = background.get("index", {}).get("chunks", [])
         if (
-            background.get("read_policy") != "default_if_present"
-            or background.get("body") != background_body
-            or background.get("sha256")
-            != sha256_bytes(background_body.encode("utf-8"))
+            background.get("binding_revision")
+            != "chalxius-v5-project-background-binding-2"
+            or background.get("read_policy")
+            != "index_by_default_exact_chunks_on_demand"
+            or "body" in background
+            or background.get("source_sha256") != sha256_bytes(background_bytes)
+            or background.get("snapshot_sha256") != sha256_bytes(background_bytes)
+            or background.get("index", {}).get("coverage_receipt", {}).get(
+                "omitted_byte_count"
+            )
+            != 0
+            or not chunks
+            or (v5_root / background["snapshot_relpath"]).read_bytes()
+            != background_bytes
         ):
-            raise RuntimeError("V5 did not bind an existing project background by default")
+            raise RuntimeError("V5 did not index and freeze project background exactly")
+        reconstructed_background = "".join(
+            v5_lifecycle.project_background_chunk(
+                card=second_card,
+                chunk_id=chunk["chunk_id"],
+            )["content"]
+            for chunk in chunks
+        )
+        if reconstructed_background != background_body:
+            raise RuntimeError("V5 background chunks did not rehydrate exact source bytes")
     for legacy_trace in ("references/v0_4_release_traceability.md",):
         if "Legacy package history, not current routing" not in policy_texts[
             legacy_trace
@@ -844,7 +1134,7 @@ def main() -> int:
         "SKILL.md": (
             "three communication planes",
             "host_task_scope_id",
-            "future work units only",
+            "It applies to future work units",
             "expert lint receipts",
             "interpret-lint-receipts",
             "work-unit-abort",
@@ -855,7 +1145,7 @@ def main() -> int:
             "profile-closure-record",
             "different fresh verifier",
             "PROJECT_BACKGROUND.md",
-            "reads it by default",
+            "new task card freezes a complete exact-byte index",
             "does not create",
         ),
         "references/adoption_policy_v4.md": (
@@ -933,9 +1223,10 @@ def main() -> int:
             "release-time only",
             "PROJECT_BACKGROUND.md",
             "only after an explicit user",
-            "reads and binds its complete body",
+            "complete exact-byte index",
             "profile-closure-status",
             "repair advice",
+            "later loads some 0.4.1-or-later bytes",
         ),
         "references/reasoning_modes.md": (
             "future-only switch",
@@ -1817,7 +2108,8 @@ def main() -> int:
         "actual_time_policy=PASS hard_caps=PASS pulse_abort=PASS "
         "preflight_return=PASS campaign_atomic_create=PASS "
         "paper_logic=PASS paper_review_gate=PASS "
-        "reader_html=PASS skill_line_limit=PASS"
+        "reader_html=PASS chx_runtime_ledger=PASS adverse_routing=PASS "
+        "skill_line_limit=PASS"
     )
     return 0
 
