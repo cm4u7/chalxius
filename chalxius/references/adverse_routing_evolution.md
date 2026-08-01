@@ -12,15 +12,17 @@
 
 ## Purpose and authority boundary
 
-The adverse-routing extension lets an adverse worker retain a successful
-counterexample pattern and propose a reusable attack rule. It does not let a
-worker rewrite its own prompt, activate a route, certify a counterexample, or
-write a Fact.
+The adverse-routing extension lets an adverse worker retain either a surviving
+counterexample or a productive challenge and propose a reusable attack rule. A
+productive challenge is one that does not refute the repaired theorem but
+forces a load-bearing hypothesis, scope, definition, proof route, source,
+computation, or boundary change. It does not let a worker rewrite its own
+prompt, activate a route, certify a counterexample, or write a Fact.
 
 The persistent lifecycle is:
 
 ```text
-counterexample return
+surviving counterexample or productive challenge
   -> immutable attack case
   -> immutable route proposal
   -> operator decision
@@ -28,10 +30,10 @@ counterexample return
 ```
 
 Attack cases, proposals, decisions, reports, and rules have
-`truth_effect="none"`. A counterexample return remains worker-reported
-Research until independently assessed through the normal research and
-certification boundaries. Approving a routing heuristic says only that it is
-useful guidance for future adverse exploration.
+`truth_effect="none"`. Both result kinds remain worker-reported Research until
+independently assessed through the normal research and certification
+boundaries. Approving a routing heuristic says only that it is useful guidance
+for future adverse exploration.
 
 The attack report is separate from the CHX runtime architecture report:
 
@@ -44,19 +46,24 @@ Never copy one report into the other or treat either as Fact evidence.
 
 ## Prospective activation
 
-The extension is off unless an operator explicitly enables it in one V5
-project:
+Default adverse reporting is enabled for V5. Every host task produces a
+separate attack report, including an explicit zero report. A newly frozen V5
+`refute` card receives the baseline and already user-approved future rules. The
+first such card lazily materializes only
+`PROJECT/governance/adverse-routing/`; merely loading newer bytes or reading
+status does not write project state. The compatibility command below may still
+materialize the same state explicitly:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
   --actor USER --reason "Enable user-governed adverse routing evolution."
 ```
 
-Activation creates only `PROJECT/governance/adverse-routing/`. Existing
-projects, rounds, task cards, returns, and 0.4.0 work units do not acquire the
-extension merely because they load newer bytes. A round frozen before
-activation retains its original task-card and return schema and never receives
-a retroactive attack-learning obligation.
+Existing rounds, task cards, returns, and V1-V4 work units never acquire the
+extension merely because they load newer bytes. A round frozen before this
+prospective default retains its original task-card and return schema and never
+receives a retroactive attack-learning obligation, warning, downgrade, or redo
+request.
 
 Query the state with:
 
@@ -64,24 +71,31 @@ Query the state with:
 "$MGRAPH" --root "$PROJECT" --role main attack-route-status
 ```
 
-Enabling the extension does not change `fast`, `auto`, or `deep`, and it does
-not change the invariant V5 Fact-admission contract.
+Default reporting does not change `fast`, `auto`, or `deep`, and it does not
+change the invariant V5 Fact-admission contract. L2 may select `refute` because
+the adverse capability is already user-authorized prospectively; the separate
+program-math review and assurance-equivalence guards remain enforced.
 
 ## Case-to-rule lifecycle
 
-For an extension-bound task card, a `counterexample` return must include one
-structured `attack_learning` object. Ingestion first creates the ordinary
-cumulative counterexample Research entry, then records:
+For a current adverse-bound task card, a `counterexample` return must include a
+schema-2 `attack_learning` object with
+`result_kind="surviving_counterexample"`. An `evidence`, `insight`, or
+`challenge` return may include the same object with
+`result_kind="productive_challenge"` only when the attack forced one or more
+explicit value effects. Ingestion first creates the ordinary cumulative
+Research entry, then records:
 
 1. an exact attack case binding the round, assignment, task-card hash, return
-   hash, target Research, counterexample Research, host-task scope, witnesses,
-   reproduction steps, and exact success boundary;
+   hash, target Research, attack Research, result kind, host-task scope,
+   witnesses, reproduction steps, value effects, and exact success boundary;
 2. one proposed route rule containing a deterministic trigger, attack
    instruction, false-positive guards, and scope note.
 
-The case is labeled `worker_reported_counterexample_nontruth`. Schema and hash
-checks establish provenance and reproducibility of the report, not the
-mathematical truth of the refutation.
+The case is labeled `worker_reported_counterexample_nontruth` or
+`worker_reported_productive_challenge_nontruth`. Schema and hash checks
+establish provenance and reproducibility of the report, not the mathematical
+truth of the refutation or of the claimed value.
 
 Proposal creation has no routing effect. Exactly one immutable user decision
 may later approve it unchanged, approve a modified rule, or reject it. Only an
@@ -129,6 +143,8 @@ requires `obligation_dispositions`, `computation_manifest`, and
     "program_math_alignments": []
   },
   "attack_learning": {
+    "schema_version": 2,
+    "result_kind": "surviving_counterexample",
     "attack_family": "quantifier_witness",
     "target_pattern": "A pointwise witness is treated as canonical and uniform.",
     "failure_mechanism": "The proof silently reuses one witness outside its scope.",
@@ -136,6 +152,14 @@ requires `obligation_dispositions`, `computation_manifest`, and
     "conclusion_failure_witness": "Two parameters require incompatible witnesses.",
     "reproduction_steps": ["Choose the parameters.", "Check the premises.", "Show no common witness exists."],
     "success_boundary": "Refutes uniformity, not pointwise existence.",
+    "value_effects": [
+      {
+        "effect_kind": "claim_refuted",
+        "before": "The route asserts one uniform witness.",
+        "after": "Only pointwise existence remains viable.",
+        "evidence": "The two-parameter witness construction is reproduced above."
+      }
+    ],
     "route_rule": {
       "attack_family": "quantifier_witness",
       "trigger": {
@@ -160,9 +184,14 @@ The exact top-level keys are therefore `schema_version`, `project_id`,
 objects must match the exact frozen card revision; the empty values above are
 valid only when the card has no corresponding obligation or computation stage.
 
-For a non-`counterexample` outcome, `attack_learning` is exactly `null`. A
-legacy task card without the extension retains the old return schema and must
-not add this field.
+For `evidence`, `insight`, or `challenge`, `attack_learning` is either `null` or
+a complete schema-2 object with `result_kind="productive_challenge"`. Its
+`value_effects` must identify at least one exact before/after/evidence triple
+using one of `hypothesis_added`, `scope_narrowed`, `definition_repaired`,
+`proof_route_replaced`, `source_defect_isolated`, `computation_corrected`, or
+`boundary_made_explicit`. A `proof` or `dead_end` uses `null`. A legacy frozen
+card retains its old learning schema or lacks the field entirely; never add or
+rewrite it retroactively.
 
 Triggers combine their nonempty axes conjunctively. Terms are
 case-insensitive substrings of the Research claim; metadata signals come only
@@ -182,8 +211,8 @@ the user even when it contains zero attacks:
 
 Report separately:
 
-- each case id, family, target, mechanism, witnesses, reproduction steps, and
-  exact success boundary;
+- each case id, result kind, family, target, mechanism, witnesses,
+  reproduction steps, exact success boundary, and concrete value effects;
 - the proposed trigger, instruction, guards, and scope;
 - its status: pending, approved, modified-and-approved, rejected, or disabled;
 - the explicit evidence boundary that the case is worker-reported nontruth;
@@ -220,19 +249,51 @@ and produce the attack report but cannot alter routing.
 
 ## Future task-card routing
 
-Every extension-bound refutation task card carries:
+Every newly frozen V5 refutation task card carries:
 
 - the fixed low-cost baseline families for exact target, implication
   direction, missing premise, type/domain, quantifier/witness,
-  scope/transport, cases/boundaries, and circularity;
+  scope/transport, cases/boundaries, circularity, and hidden-conjunct
+  splitting;
+- for an exact `adverse_domain_profile` of `philosophy` or `mixed`, or a
+  validated Paper-continuation binding with that domain, three additional
+  philosophy-only families: faithful ordinary-language substitution;
+  burden-of-proof plus strongest charitable objection plus independent failure
+  surfaces; and quantifier/modal/scope/exception equivalence;
 - at most 24 active user-approved rules whose triggers match the frozen
   Research entry;
 - exact hashes for both lists;
-- the requirement that a counterexample return either supplies the structured
-  learning object or fails validation.
+- the requirement that a counterexample supplies schema-2 learning, while a
+  non-refuting attack creates a proposal only when it supplies a structured
+  productive-challenge value witness.
 
-An ordinary refutation card carries exactly the original eight baseline
-families. A ninth fixed family,
+Every new ordinary refutation card carries the original eight families plus
+`baseline_hidden_conjunct_split`. The split requires distinct truth conditions
+or a separating case and must not manufacture claims from grammatical
+coordination or one explicitly defined construction. The three philosophy
+families are selected only from the exact frozen domain binding. Claim text,
+titles, terminology, and substring matching cannot activate them. A generic
+philosophy task may declare:
+
+```json
+{
+  "kind": "challenge",
+  "claim": "Challenge the stated argument.",
+  "adverse_domain_profile": "philosophy"
+}
+```
+
+`mathematics` leaves the philosophy set inactive; `mixed` activates it because
+the bounded task explicitly contains a philosophy component. The
+ordinary-language attack holds stipulated definitions fixed, replaces
+load-bearing terms faithfully, and identifies a hidden premise, equivocation,
+or unsupported step only when the inference changes. The combined dialectical
+attack keeps burdens atomic, uses the strongest good-faith objection supported
+by the source, and prevents one local repair from silently closing independent
+failure surfaces. The equivalence attack seeks a separating scenario when
+quantifier, modality, negation/operator scope, or exception conditions drift.
+
+One further fixed family,
 `baseline_program_math_semantic_alignment`, is appended only to the generated
 review of a successfully ingested computation-bearing Research return. The
 scope check requires an actual positive computation-stage count, the generated
@@ -253,6 +314,11 @@ modification, rejection, or disablement cannot mutate a frozen card. More than
 24 matching approved rules fails planning visibly so the user can narrow or
 disable routes instead of silently truncating them.
 
+This revision is prospective. Schema-1/2 cards retain the original legacy
+learning contract; schema-3 cards retain the earlier eight-rule baseline plus
+its computation scope. They are validated under their frozen bytes and never
+receive the hidden-conjunct or philosophy families by backfill.
+
 Baseline families and approved routes are attack guidance, not a universal
 exploration-completion checklist and not a second adverse certification gate.
 Candidate Release continues to bind the actual challenge/counterexample
@@ -260,7 +326,8 @@ Research already linked to its branch.
 
 ## Compatibility and recovery
 
-- Do not enable the extension merely to modernize an old project.
+- Do not materialize or backfill governance state merely to modernize an old
+  project; default status and explicit zero reports are read-only.
 - Do not backfill attack cases from old returns or describe their absence as a
   warning, blocker, lower standard, or reason to redo work.
 - Mixed 0.4.0 and later bytes do not change a frozen old task card.

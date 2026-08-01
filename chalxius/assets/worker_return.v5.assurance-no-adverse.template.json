@@ -1,0 +1,45 @@
+{
+  "artifacts": [
+    {
+      "path": "PROJECT_RELATIVE_PATH_INSIDE_CARD_ARTIFACT_DIRECTORY",
+      "role": "paper_target_analysis",
+      "sha256": "SHA256_OF_EXACT_ARTIFACT_BYTES"
+    }
+  ],
+  "assignment_id": "COPY_FROM_TASK_CARD",
+  "blackboard_snapshot_sha256": "COPY_FROM_TASK_CARD",
+  "claim": "One precise Research claim.",
+  "computation_manifest": null,
+  "content": "The bounded argument and its explicit limitations.",
+  "narrative": {
+    "intuition": "A clear ordinary-language explanation.",
+    "limitations": "What remains unproved or outside scope.",
+    "rationale": "Why this result addresses the assigned target.",
+    "summary": "A concise summary."
+  },
+  "obligation_dispositions": [
+    {
+      "obligation_id": "COPY_ONE_EXACT_ID_AND_REPEAT_FOR_EVERY_CARD_OBLIGATION",
+      "rationale": "Explain how the cited artifact discharges this exact obligation.",
+      "status": "complete",
+      "witness_artifact_sha256s": [
+        "SHA256_OF_EXACT_ARTIFACT_BYTES"
+      ]
+    }
+  ],
+  "outcome": "insight",
+  "project_id": "COPY_FROM_TASK_CARD",
+  "research_assurance": {
+    "claim_strength": [],
+    "claimed_structures": [],
+    "contour_substitutions": [],
+    "extremal_cases": [],
+    "program_math_alignments": [],
+    "route_invalidations": [],
+    "source_uses": []
+  },
+  "round_id": "COPY_FROM_TASK_CARD",
+  "schema_version": 5,
+  "task_card_sha256": "COPY_FROM_ROUND_STATUS_OR_PROMPT",
+  "worker_id": "COPY_FROM_TASK_CARD"
+}

@@ -117,6 +117,10 @@
           <svg aria-hidden="true"><use href="#reader-icon-redo"></use></svg>
           <span class="tool-label" data-zh="重做" data-en="Redo">重做</span>
         </button>
+        <button id="orbit-gravity-button" class="tool-button" type="button" aria-pressed="true" data-tooltip-zh="主题轨道引力" data-tooltip-en="Theme orbit gravity" data-aria-label-zh="主题轨道引力" data-aria-label-en="Theme orbit gravity">
+          <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
+          <span class="tool-label" data-zh="轨道引力" data-en="Orbit gravity">轨道引力</span>
+        </button>
         <button id="fit-view-button" class="tool-button" type="button" data-tooltip-zh="适应视图" data-tooltip-en="Fit view" data-aria-label-zh="适应视图" data-aria-label-en="Fit view">
           <svg aria-hidden="true"><use href="#reader-icon-focus"></use></svg>
           <span class="tool-label" data-zh="适应视图" data-en="Fit view">适应视图</span>
@@ -142,7 +146,7 @@
         </div>
       </div>
       <div class="canvas-stage">
-        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-zh="可拖动知识图谱。鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-en="Draggable knowledge graph. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. Use two-finger gestures to pan, select a card to read, or double-click to emphasize its complete chain."></div>
+        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。每个主题拥有独立圆心和按成员数量分层的等距重力圆周，共享节点由多个主题场共同吸附；鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-zh="可拖动知识图谱。每个主题拥有独立圆心和按成员数量分层的等距重力圆周，共享节点由多个主题场共同吸附；鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-en="Draggable knowledge graph. Each theme has its own center and equally spaced gravity rings scaled by membership count; shared nodes are attracted by multiple theme fields. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. Use two-finger gestures to pan, select a card to read, or double-click to emphasize its complete chain."></div>
         <div id="box-selection-marquee" class="box-selection-marquee" aria-hidden="true" hidden></div>
         <div id="box-selection-halo-layer" class="box-selection-halo-layer" aria-hidden="true"></div>
         <div id="selected-node-halo" class="selected-node-halo" aria-hidden="true" hidden></div>
@@ -163,7 +167,7 @@
       </div>
       <p class="interaction-note">
         <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
-        <span data-zh="左键框选 · 已选节点作为锚点 · 邻域在环形记忆下有限均衡 · 其余布局固定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链" data-en="Box-select with primary drag · Selected nodes remain anchors · Neighborhood settles under radial memory · Remaining layout stays fixed · Two-finger pan · Pinch to zoom · Internal ± resizes · Double-click emphasizes the complete chain">左键框选 · 已选节点作为锚点 · 邻域在环形记忆下有限均衡 · 其余布局固定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链</span>
+        <span data-zh="左键框选 · 拖动时局部引力/斥力响应 · 关闭轨道后仍保留碰撞斥力 · 松手后节点吸附到一个或多个主题场 · 其余布局保持稳定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链" data-en="Primary-drag to box-select · Local attraction/repulsion responds during movement · Collision repulsion remains active with orbits off · Released nodes settle into one or more theme fields · Remaining layout stays stable · Two-finger pan · Pinch to zoom · Internal ± resizes · Double-click emphasizes the complete chain">左键框选 · 拖动时局部引力/斥力响应 · 关闭轨道后仍保留碰撞斥力 · 松手后节点吸附到一个或多个主题场 · 其余布局保持稳定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链</span>
       </p>
     </section>
 
@@ -191,7 +195,7 @@
       </div>
 
       <div id="detail-readable" class="readable-detail">
-        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。直接拖动只移动并固定所选节点；其余布局保持不变。只有卡片尺寸变化会触发一次有限的防碰撞收敛。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. Direct dragging moves and pins only the selected nodes; the rest of the layout stays unchanged. Only card-size changes trigger one bounded collision-avoidance convergence. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。直接拖动只移动并固定所选节点；其余布局保持不变。只有卡片尺寸变化会触发一次有限的防碰撞收敛。所有当前启用的关系都会保留。</p>
+        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动期间只有局部邻域响应；松手后，真实卡片会保留相对各主题圆心的新角位置并被吸回所属的一个或多个主题场。轨道运动是页面会话内的有限动画，不改变图谱结构或权威。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. Only the local neighborhood responds during dragging. On release, real cards retain their new angles relative to each theme center and are attracted back into one or more assigned theme fields. Orbit motion is a bounded page-session animation and changes neither topology nor authority. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动期间只有局部邻域响应；松手后，真实卡片会保留相对各主题圆心的新角位置并被吸回所属的一个或多个主题场。轨道运动是页面会话内的有限动画，不改变图谱结构或权威。所有当前启用的关系都会保留。</p>
       </div>
 
       <details id="formal-details" class="formal-details">
@@ -234,7 +238,11 @@
           </section>
           <section>
             <h3 data-zh="批量移动" data-en="Group movement">批量移动</h3>
-            <p data-zh="鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。按住修饰键再次框选可追加节点。" data-en="Primary-drag on empty space to draw a selection box. Drag any selected node to move the selection while preserving relative positions; hold a modifier while box-selecting to add nodes.">鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。按住修饰键再次框选可追加节点。</p>
+            <p data-zh="鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。松手后各真实卡片保留相对局部圆心的新角位置并吸附回所属的一个或多个主题场；按住修饰键再次框选可追加节点。" data-en="Primary-drag on empty space to draw a selection box. Drag any selected node to move the selection while preserving relative positions. On release, each real card keeps its new local angles and settles back into one or more assigned theme fields; hold a modifier while box-selecting to add nodes.">鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。松手后各真实卡片保留相对局部圆心的新角位置并吸附回所属的一个或多个主题场；按住修饰键再次框选可追加节点。</p>
+          </section>
+          <section>
+            <h3 data-zh="主题轨道" data-en="Theme orbits">主题轨道</h3>
+            <p data-zh="每个主题拥有独立圆心；主题成员每六个分配到一条等距重力圆周，超过六个便增加下一条。强 prerequisite/support 上游闭包重叠的节点会同时受多个主题场吸附并位于交叉区。轨道引力默认开启，可在左侧工具栏临时关闭；关闭后拖动位置以笛卡尔 pin 保留，但真正相撞的旧 pin 仍会让位并保留新位置。它只控制当前页面中的布局，不写回来源图谱。" data-en="Each theme has its own center, with one equally spaced gravity ring for each group of up to six theme members. Nodes shared by strong prerequisite/support upstream closures are attracted by multiple fields and occupy their overlap. Orbit gravity is enabled by default and may be toggled temporarily from the left toolbar; when off, dragged positions remain Cartesian pins, but an existing pin that actually collides still yields and keeps its displaced position. It controls only the current page layout and never writes back to the source graph.">每个主题拥有独立圆心；主题成员每六个分配到一条等距重力圆周，超过六个便增加下一条。强 prerequisite/support 上游闭包重叠的节点会同时受多个主题场吸附并位于交叉区。轨道引力默认开启，可在左侧工具栏临时关闭；关闭后拖动位置以笛卡尔 pin 保留，但真正相撞的旧 pin 仍会让位并保留新位置。它只控制当前页面中的布局，不写回来源图谱。</p>
           </section>
         </div>
       </details>

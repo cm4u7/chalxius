@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from mathgraph.cli import main as cli_main
-from mathgraph.contracts import sha256_bytes
+from mathgraph.adverse_routing import LEGACY_BASELINE_ATTACK_RULES
+from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
 
@@ -24,8 +27,16 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         return store
 
     @staticmethod
-    def _learning(*, term: str = "uniform", instruction: str = "Attack silent witness replacement.") -> dict[str, object]:
+    def _learning(
+        *,
+        term: str = "uniform",
+        instruction: str = "Attack silent witness replacement.",
+        result_kind: str = "surviving_counterexample",
+        effect_kind: str = "claim_refuted",
+    ) -> dict[str, object]:
         return {
+            "schema_version": 2,
+            "result_kind": result_kind,
             "attack_family": "quantifier_witness",
             "target_pattern": "A pointwise existential witness is treated as canonical and uniform.",
             "failure_mechanism": "The proof silently reuses one witness outside its quantified scope.",
@@ -37,6 +48,14 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 "Show that no single witness satisfies the claimed conclusion.",
             ],
             "success_boundary": "Refutes only the claimed uniform/canonical witness, not pointwise existence.",
+            "value_effects": [
+                {
+                    "effect_kind": effect_kind,
+                    "before": "The route silently required one uniform witness.",
+                    "after": "The claim is either refuted or narrowed to explicit pointwise witnesses.",
+                    "evidence": "The two-parameter construction isolates the load-bearing change.",
+                }
+            ],
             "route_rule": {
                 "attack_family": "quantifier_witness",
                 "trigger": {
@@ -124,13 +143,17 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         store: MathGraphStore,
         host_scope: str = "host-adverse-task",
         claim: str = "Stress-test the uniform witness claim.",
+        adverse_domain_profile: str | None = None,
     ) -> tuple[dict[str, object], dict[str, object]]:
+        payload: dict[str, object] = {
+            "kind": "challenge",
+            "claim": claim,
+            "logic_signals": ["quantifier_sensitive"],
+        }
+        if adverse_domain_profile is not None:
+            payload["adverse_domain_profile"] = adverse_domain_profile
         research = store.v5_lifecycle().add_research(
-            {
-                "kind": "challenge",
-                "claim": claim,
-                "logic_signals": ["quantifier_sensitive"],
-            },
+            payload,
             actor="main",
         )
         round_status = store.v5_lifecycle().create_round(
@@ -160,11 +183,21 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         )
         return assignment, receipt
 
-    def test_default_is_disabled_and_legacy_frozen_round_survives_later_enable(self) -> None:
+    def test_default_reporting_preserves_a_legacy_frozen_round_without_backfill(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
-            self.assertFalse(store.adverse_routes().status()["enabled"])
-            _, assignment = self._counterexample_round(store=store)
+            status = store.adverse_routes().status()
+            self.assertTrue(status["enabled"])
+            self.assertTrue(status["reporting_default"])
+            self.assertFalse(status["state_materialized"])
+            zero = store.adverse_routes().report(host_task_scope_id="read-only-zero")
+            self.assertEqual(zero["attacks"], [])
+            self.assertFalse(store.adverse_routes().contract_path.exists())
+            with patch(
+                "mathgraph.adverse_routing.AdverseRoutingManager.task_card_binding",
+                return_value=None,
+            ):
+                _, assignment = self._counterexample_round(store=store)
             card = json.loads(Path(str(assignment["task_card_path"])).read_text(encoding="utf-8"))
             self.assertNotIn("adverse_routing", card)
 
@@ -213,7 +246,14 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             self.assertIn("attack_case_id", receipt)
             self.assertIn("route_proposal_id", receipt)
             card = json.loads(Path(str(assignment["task_card_path"])).read_text(encoding="utf-8"))
-            self.assertEqual(len(card["adverse_routing"]["baseline_rules"]), 8)
+            self.assertEqual(len(card["adverse_routing"]["baseline_rules"]), 9)
+            self.assertIn(
+                "baseline_hidden_conjunct_split",
+                {
+                    item["rule_id"]
+                    for item in card["adverse_routing"]["baseline_rules"]
+                },
+            )
             self.assertEqual(card["adverse_routing"]["approved_rules"], [])
 
             report = store.adverse_routes().report(
@@ -228,6 +268,187 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             )
             self.assertEqual(report["truth_effect"], "none")
             self.assertNotIn("chx", json.dumps(report).casefold())
+
+    def test_philosophy_baselines_require_an_explicit_validated_domain(self) -> None:
+        philosophy_rule_ids = {
+            "baseline_philosophy_plain_language_substitution",
+            "baseline_philosophy_burden_charity_failure_surface",
+            "baseline_philosophy_operator_scope_equivalence",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            with self.assertRaisesRegex(
+                ValueError,
+                "adverse_domain_profile must be mathematics, philosophy, or mixed",
+            ):
+                store.v5_lifecycle().add_research(
+                    {
+                        "kind": "challenge",
+                        "claim": "Reject an ambiguous domain marker.",
+                        "adverse_domain_profile": "philosophy-ish",
+                    },
+                    actor="main",
+                )
+            unmarked_research, unmarked = self._counterexample_round(
+                store=store,
+                host_scope="unmarked-philosophy-words",
+                claim=(
+                    "A philosophy argument mentions modality, burden, exceptions, "
+                    "and ordinary language."
+                ),
+            )
+            unmarked_card = json.loads(
+                Path(str(unmarked["task_card_path"])).read_text(encoding="utf-8")
+            )
+            unmarked_ids = {
+                item["rule_id"]
+                for item in unmarked_card["adverse_routing"]["baseline_rules"]
+            }
+            self.assertIn("baseline_hidden_conjunct_split", unmarked_ids)
+            self.assertTrue(philosophy_rule_ids.isdisjoint(unmarked_ids))
+            self.assertFalse(
+                unmarked_card["adverse_routing"]["scope_evidence"][
+                    "philosophy_active"
+                ]
+            )
+            self.assertEqual(
+                unmarked_card["adverse_routing"]["scope_evidence"][
+                    "domain_source"
+                ],
+                "none",
+            )
+
+            _, mathematical = self._counterexample_round(
+                store=store,
+                host_scope="explicit-mathematics-domain",
+                claim="Test a mathematical claim containing modal and exception words.",
+                adverse_domain_profile="mathematics",
+            )
+            mathematical_card = json.loads(
+                Path(str(mathematical["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            mathematical_ids = {
+                item["rule_id"]
+                for item in mathematical_card["adverse_routing"]["baseline_rules"]
+            }
+            self.assertTrue(philosophy_rule_ids.isdisjoint(mathematical_ids))
+            self.assertFalse(
+                mathematical_card["adverse_routing"]["scope_evidence"][
+                    "philosophy_active"
+                ]
+            )
+
+            for profile in ("philosophy", "mixed"):
+                with self.subTest(profile=profile):
+                    research, assignment = self._counterexample_round(
+                        store=store,
+                        host_scope=f"{profile}-domain",
+                        claim="Test an explicitly domain-bound argument.",
+                        adverse_domain_profile=profile,
+                    )
+                    card = json.loads(
+                        Path(str(assignment["task_card_path"])).read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    rule_ids = {
+                        item["rule_id"]
+                        for item in card["adverse_routing"]["baseline_rules"]
+                    }
+                    self.assertEqual(len(rule_ids), 12)
+                    self.assertTrue(philosophy_rule_ids.issubset(rule_ids))
+                    self.assertIn("baseline_hidden_conjunct_split", rule_ids)
+                    self.assertTrue(
+                        card["adverse_routing"]["scope_evidence"][
+                            "philosophy_active"
+                        ]
+                    )
+                    self.assertEqual(
+                        card["adverse_routing"]["scope_evidence"][
+                            "domain_profile"
+                        ],
+                        profile,
+                    )
+                    self.assertEqual(
+                        card["adverse_routing"]["scope_evidence"][
+                            "domain_source"
+                        ],
+                        "explicit_research_metadata",
+                    )
+                    rules_by_id = {
+                        item["rule_id"]: item
+                        for item in card["adverse_routing"]["baseline_rules"]
+                    }
+                    self.assertIn(
+                        "ordinary-language",
+                        rules_by_id[
+                            "baseline_philosophy_plain_language_substitution"
+                        ]["instruction"],
+                    )
+                    self.assertIn(
+                        "strongest good-faith objection",
+                        rules_by_id[
+                            "baseline_philosophy_burden_charity_failure_surface"
+                        ]["instruction"],
+                    )
+                    self.assertIn(
+                        "quantifiers",
+                        rules_by_id[
+                            "baseline_philosophy_operator_scope_equivalence"
+                        ]["instruction"],
+                    )
+                    store.adverse_routes().validate_task_card_binding(
+                        card["adverse_routing"],
+                        work_mode="refute",
+                        related_artifacts=[],
+                        entry=research,
+                    )
+
+            tampered = deepcopy(unmarked_card["adverse_routing"])
+            tampered["scope_evidence"]["philosophy_active"] = True
+            tampered["scope_evidence"]["domain_profile"] = "philosophy"
+            tampered["scope_evidence"]["domain_source"] = (
+                "explicit_research_metadata"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "philosophy scope drifted or was inferred from text"
+            ):
+                store.adverse_routes().validate_task_card_binding(
+                    tampered,
+                    work_mode="refute",
+                    related_artifacts=[],
+                    entry=unmarked_research,
+                )
+
+    def test_schema_three_frozen_baseline_remains_valid_without_backfill(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            research, assignment = self._counterexample_round(store=store)
+            card = json.loads(
+                Path(str(assignment["task_card_path"])).read_text(encoding="utf-8")
+            )
+            frozen = deepcopy(card["adverse_routing"])
+            frozen["schema_version"] = 3
+            frozen["contract_revision"] = "chalxius-adverse-routing-evolution-2"
+            frozen["baseline_rules"] = list(LEGACY_BASELINE_ATTACK_RULES)
+            frozen["baseline_rules_sha256"] = sha256_json(
+                frozen["baseline_rules"]
+            )
+            for key in (
+                "philosophy_active",
+                "philosophy_activation",
+                "domain_profile",
+                "domain_source",
+            ):
+                frozen["scope_evidence"].pop(key)
+            store.adverse_routes().validate_task_card_binding(
+                frozen,
+                work_mode="refute",
+                related_artifacts=[],
+                entry=research,
+            )
 
     def test_extension_return_requires_exact_attack_learning_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -247,8 +468,40 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 worker_final_sha256=final_sha,
             )
             self.assertEqual(receipt["status"], "quarantined")
-            self.assertIn("attack_learning fields are not exact", receipt["error"])
+            self.assertIn("attack_learning must be an object", receipt["error"])
             self.assertEqual(store.adverse_routes().status()["case_count"], 0)
+
+    def test_productive_challenge_creates_a_pending_rule_suggestion_without_refutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            _, assignment = self._counterexample_round(store=store)
+            final_sha = self._write_return(
+                store=store,
+                assignment=assignment,
+                outcome="evidence",
+                attack_learning=self._learning(
+                    result_kind="productive_challenge",
+                    effect_kind="hypothesis_added",
+                ),
+                extended=True,
+            )
+            receipt = store.v5_lifecycle().ingest_return(
+                round_id=str(assignment["round_id"]),
+                assignment_id=str(assignment["assignment_id"]),
+                worker_final_sha256=final_sha,
+            )
+            self.assertEqual(
+                receipt["attack_evidence_status"],
+                "worker_reported_productive_challenge_nontruth",
+            )
+            report = store.adverse_routes().report(
+                host_task_scope_id="host-adverse-task"
+            )
+            self.assertEqual(report["summary"]["productive_challenge_count"], 1)
+            self.assertEqual(report["summary"]["surviving_counterexample_count"], 0)
+            self.assertEqual(report["attacks"][0]["attack_result"], "productive_challenge")
+            self.assertEqual(report["attacks"][0]["proposal_status"], "pending_user_decision")
+            self.assertEqual(store.adverse_routes().status()["active_rule_count"], 0)
 
     def test_state_rejects_tampered_or_incomplete_immutable_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

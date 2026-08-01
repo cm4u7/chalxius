@@ -15,6 +15,10 @@ from mathgraph.computations import INDEPENDENCE_AXES
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.model import Fact
 from mathgraph.paper_logic import PaperLogicStore
+from mathgraph.paper_continuation import (
+    PAPER_CONTINUATION_CONTRACT_REVISION,
+    PHILOSOPHY_ATOMICITY_CONTRACT_REVISION,
+)
 from mathgraph.paper_logic_contracts import (
     PAPER_LOGIC_FEATURE_REVISION,
     REVIEW_GLOBAL_CHECKS,
@@ -1625,10 +1629,10 @@ class V5LifecycleTests(unittest.TestCase):
                 )
             )
             rendered, build_meta = render_reader_html(packet)
-            self.assertIn("chalxius-reader-html-17", rendered)
+            self.assertIn("chalxius-reader-html-20", rendered)
             self.assertEqual(
                 build_meta["renderer_revision"],
-                "chalxius-reader-html-17",
+                "chalxius-reader-html-20",
             )
             for node in packet["nodes"]:
                 self.assertLessEqual(len(node["title"]), 64)
@@ -2067,6 +2071,798 @@ class V5LifecycleTests(unittest.TestCase):
                 "program_math_truncation",
                 release["verification_plan"]["required_checks"],
             )
+
+    def test_philosophy_paper_continuation_is_complete_atomic_and_current(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-philosophy-paper-continuation")
+            lifecycle = store.v5_lifecycle()
+            artifact = root / "paper.txt"
+            artifact.write_text(
+                "The supporting lemma holds.\n"
+                "The root theorem follows from the supporting lemma.\n",
+                encoding="utf-8",
+            )
+            artifact_sha = sha256_bytes(artifact.read_bytes())
+            source = {
+                "artifact_sha256": artifact_sha,
+                "artifact_locator": str(artifact),
+                "title": "Philosophy fixture paper",
+                "version": "test-v1",
+                "mime_type": "text/plain",
+                "retrieved_at": "2026-07-30T00:00:00Z",
+                "inspection_methods": [
+                    "rendered_primary",
+                    "text_extraction_secondary",
+                ],
+            }
+            with store.v5_mutation_lock(command="paper-logic-init"):
+                store.paper_logic().initialize(actor="main")
+            logic_bundle = self._paper_logic_bundle(store=store, source=source)
+            logic_bundle["domain_profile"] = "philosophy"
+            logic_bundle["nodes"].append(
+                {
+                    "local_id": "t-support",
+                    "object_type": "paper_target",
+                    "payload": {
+                        "target_role": "supporting",
+                        "claim_id": "c1",
+                        "rationale": "The supporting burden must remain independently visible.",
+                    },
+                }
+            )
+            local_nodes = {
+                str(item["local_id"]): item for item in logic_bundle["nodes"]
+            }
+            logic_bundle["edges"] = PaperLogicStore._expected_logic_edges(local_nodes)
+            with store.v5_mutation_lock(command="paper-logic-freeze"):
+                logic_revision, logic_frozen = self._freeze_paper_bundle(
+                    store=store,
+                    bundle=logic_bundle,
+                    artifact=artifact,
+                )
+            logic_ids = logic_revision["local_id_map"]
+            audit_bundle = self._paper_audit_bundle(
+                store=store,
+                source=source,
+                base_snapshot_id=logic_frozen["snapshot_id"],
+                target_id=logic_ids["c1"],
+                evidence_id=logic_ids["s1"],
+            )
+            audit_bundle["domain_profile"] = "philosophy"
+            with store.v5_mutation_lock(command="paper-logic-freeze"):
+                audit_revision, audit_frozen = self._freeze_paper_bundle(
+                    store=store,
+                    bundle=audit_bundle,
+                    artifact=artifact,
+                )
+            audit_ids = audit_revision["local_id_map"]
+
+            continuation = lifecycle.paper_continuation()
+            plan_status = continuation.create_plan(
+                logic_frozen["snapshot_id"],
+                {
+                    "selection_mode": "all_targets",
+                    "target_node_ids": [],
+                    "objective": (
+                        "Preserve every explicit philosophical burden, objection, and "
+                        "failure surface through revised writing and Fact review."
+                    ),
+                    "source_artifact_sha256": artifact_sha,
+                },
+                actor="main",
+            )
+            self.assertEqual(plan_status["counts"]["total"], 2)
+            self.assertEqual(plan_status["counts"]["frontier_materialized"], 2)
+            self.assertEqual(plan_status["counts"]["unresolved"], 2)
+            self.assertFalse(plan_status["adequacy_complete"])
+            plan_id = plan_status["plan_id"]
+            plan = continuation.plan(plan_id)
+
+            research_ids = [
+                item["research_id"]
+                for item in plan_status["target_research_bindings"]
+            ]
+            round_status = lifecycle.create_round(
+                workers=2,
+                research_ids=research_ids,
+            )
+            result_ids: dict[str, str] = {}
+            analysis_artifacts: list[dict[str, str]] = []
+            for index, assignment in enumerate(round_status["assignments"], 1):
+                card = json.loads(
+                    Path(str(assignment["task_card_path"])).read_text(
+                        encoding="utf-8"
+                    )
+                )
+                scope = card["paper_continuation_scope"]
+                self.assertEqual(scope["plan_id"], plan_id)
+                self.assertEqual(
+                    scope["required_analysis_fields"],
+                    [
+                        "issue",
+                        "importance",
+                        "burden_holder",
+                        "plain_language_summary",
+                        "technical_term_ledger",
+                        "strongest_charitable_objection",
+                        "response_or_revision",
+                        "independent_failure_surfaces",
+                        "writing_coverage",
+                    ],
+                )
+                artifact_dir = root / assignment["artifact_dir_relpath"]
+                artifact_dir.mkdir(parents=True, exist_ok=True)
+                analysis_path = artifact_dir / "paper-target-analysis.json"
+                analysis_bytes = (
+                    json.dumps(
+                        {
+                            "target_node_id": scope["target_node_id"],
+                            "issue": "Which bounded conclusion has been earned?",
+                            "importance": "It controls a distinct inferential burden.",
+                            "burden_holder": "The proponent bears the justificatory burden.",
+                            "plain_language_summary": (
+                                "This step says exactly what must be shown and no more."
+                            ),
+                            "technical_term_ledger": [],
+                            "strongest_charitable_objection": (
+                                "The premise may support less than the stated conclusion."
+                            ),
+                            "response_or_revision": (
+                                "Retain only the exact bounded conclusion."
+                            ),
+                            "independent_failure_surfaces": [
+                                f"fs-{index}"
+                            ],
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+                analysis_path.write_bytes(analysis_bytes)
+                analysis_sha = sha256_bytes(analysis_bytes)
+                analysis_artifacts.append(
+                    {
+                        "path": analysis_path.relative_to(root).as_posix(),
+                        "sha256": analysis_sha,
+                        "role": "paper_target_analysis",
+                    }
+                )
+                payload: dict[str, object] = {
+                    "schema_version": 5,
+                    "project_id": store.project_id(),
+                    "round_id": round_status["round_id"],
+                    "assignment_id": assignment["assignment_id"],
+                    "worker_id": assignment["worker_id"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "blackboard_snapshot_sha256": assignment[
+                        "blackboard_snapshot_sha256"
+                    ],
+                    "outcome": "insight",
+                    "claim": "The exact target survives only with its stated burden.",
+                    "content": "The source closure and adverse boundary were checked.",
+                    "narrative": {
+                        "rationale": "The target is independently challengeable.",
+                        "summary": "One bounded target was retained.",
+                        "intuition": "Keep separate burdens in separate graph nodes.",
+                        "limitations": "No claim is made beyond this target closure.",
+                    },
+                    "artifacts": [analysis_artifacts[-1]],
+                    "obligation_dispositions": [
+                        {
+                            "obligation_id": obligation["obligation_id"],
+                            "status": "complete",
+                            "witness_artifact_sha256s": [analysis_sha],
+                            "rationale": "The exact analysis artifact discharges this obligation.",
+                        }
+                        for obligation in card["assurance_contract"]["obligations"]
+                    ],
+                    "computation_manifest": None,
+                    "research_assurance": {
+                        "source_uses": [],
+                        "route_invalidations": [],
+                        "extremal_cases": [],
+                        "claim_strength": [],
+                        "contour_substitutions": [],
+                        "claimed_structures": [],
+                        "program_math_alignments": [],
+                    },
+                }
+                if "adverse_routing" in card:
+                    payload["attack_learning"] = None
+                return_path = Path(str(assignment["return_path"]))
+                return_path.write_text(
+                    json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                    encoding="utf-8",
+                )
+                return_sha = sha256_bytes(return_path.read_bytes())
+                receipt = lifecycle.ingest_return(
+                    round_id=round_status["round_id"],
+                    assignment_id=assignment["assignment_id"],
+                    worker_final_sha256=return_sha,
+                )
+                self.assertNotEqual(receipt.get("status"), "quarantined", receipt)
+                result_ids[scope["target_node_id"]] = receipt["research_id"]
+
+            writing = root / "output" / "revised.md"
+            writing.parent.mkdir(parents=True, exist_ok=True)
+            writing.write_text(
+                "# Revised\n\nThe support and conclusion remain separately auditable.\n",
+                encoding="utf-8",
+            )
+            writing_sha = sha256_bytes(writing.read_bytes())
+            disposition_ids: dict[str, str] = {}
+            failure_surfaces: dict[str, str] = {}
+            for index, target_id in enumerate(plan["target_node_ids"], 1):
+                surface_id = f"fs-{index}"
+                failure_surfaces[target_id] = surface_id
+                disposition = continuation.record_disposition(
+                    plan_id,
+                    {
+                        "target_node_id": target_id,
+                        "result_research_id": result_ids[target_id],
+                        "outcome": "retained",
+                        "rationale": "The target survives within its exact source closure.",
+                        "successor_research_ids": [],
+                        "dialectical_analysis": {
+                            "issue": "Whether this target is warranted.",
+                            "importance": "It bears an independent part of the argument.",
+                            "burden_holder": "The proponent bears the burden.",
+                            "plain_language_summary": (
+                                "This target states one reason that can stand or fail alone."
+                            ),
+                            "technical_term_ledger": [],
+                            "strongest_charitable_objection": (
+                                "The closure may establish only a weaker conclusion."
+                            ),
+                            "response_or_revision": (
+                                "The wording is bounded to what the closure establishes."
+                            ),
+                            "independent_failure_surfaces": [
+                                {
+                                    "surface_id": surface_id,
+                                    "statement": "The target can fail while its peer survives.",
+                                    "why_independent": (
+                                        "Its source closure and inferential burden are distinct."
+                                    ),
+                                    "resolution": "Retained after bounded revision.",
+                                }
+                            ],
+                        },
+                        "writing_coverage": {
+                            "status": "covered",
+                            "artifact_path": writing.relative_to(root).as_posix(),
+                            "artifact_sha256": writing_sha,
+                            "section_ids": [f"revised-target-{index}"],
+                            "rationale": "The target is explicit in the revised argument.",
+                        },
+                        "supersedes_disposition_id": "",
+                    },
+                    actor="main",
+                )
+                disposition_ids[target_id] = disposition["disposition_id"]
+
+            complete = continuation.status(plan_id)
+            self.assertTrue(complete["adequacy_complete"])
+            self.assertEqual(
+                complete["counts"],
+                {
+                    "total": 2,
+                    "frontier_materialized": 2,
+                    "researched": 2,
+                    "dispositioned": 2,
+                    "unresolved": 0,
+                    "successor_mapped": 2,
+                    "revised_manuscript_covered": 2,
+                },
+            )
+
+            lemma = Fact(
+                problem_id=store.project_id(),
+                author="paper-candidate-producer",
+                predecessors=[],
+                statement="[CLAIM:LEMMA] The supporting lemma holds.",
+                proof="Direct proof of the supporting lemma.",
+            )
+            use_anchor = f"[USE:{lemma.fact_id}:LEMMA:u1]"
+            root_fact = Fact(
+                problem_id=store.project_id(),
+                author="paper-candidate-producer",
+                predecessors=[lemma.fact_id],
+                statement="[CLAIM:ROOT] The bounded paper theorem holds.",
+                proof=f"Apply the supporting lemma {use_anchor}.",
+                predecessor_uses=[
+                    {
+                        "fact_id": lemma.fact_id,
+                        "clause_id": "LEMMA",
+                        "use_anchor": use_anchor,
+                        "used_conclusion": "The supporting lemma holds.",
+                        "hypothesis_witnesses": [],
+                        "convention_bridge": None,
+                        "conclusion_transport": [],
+                    }
+                ],
+            )
+            facts = [lemma, root_fact]
+            payload = self._release_payload(
+                facts=facts,
+                research_ids=list(result_ids.values()),
+                granularity="paper_target_closure",
+            )
+            payload["artifacts"] = [
+                {
+                    "path": artifact.relative_to(root).as_posix(),
+                    "sha256": artifact_sha,
+                    "role": "paper_source",
+                },
+                {
+                    "path": writing.relative_to(root).as_posix(),
+                    "sha256": writing_sha,
+                    "role": "paper_revised_writing",
+                },
+                *analysis_artifacts,
+            ]
+            payload["verification_plan"]["authorized_artifact_roles"] = [
+                "paper_source",
+                "paper_revised_writing",
+                "paper_target_analysis",
+            ]
+            payload["verification_plan"]["required_checks"].extend(
+                [
+                    "research_obligation_evidence",
+                    "paper_source_fidelity",
+                    "paper_graph_structure",
+                    "paper_audit",
+                    "paper_target_coverage",
+                    "paper_continuation_adequacy",
+                    "philosophy_semantic_atomicity",
+                    "philosophy_plain_language_clarity",
+                ]
+            )
+            load_bearing = sorted(
+                {
+                    *plan["selected_reconstruction_node_ids"],
+                    *plan["selected_source_node_ids"],
+                }
+            )
+            claim_to_fact = {
+                logic_ids["c1"]: lemma.fact_id,
+                logic_ids["c-head"]: root_fact.fact_id,
+            }
+            payload["requested_assurance"] = {
+                "validation_subject": {
+                    "kind": "paper",
+                    "subject_id": "fixture-paper",
+                    "artifact_sha256": artifact_sha,
+                    "load_bearing_node_ids": load_bearing,
+                },
+                "validation_granularity": "paper_target_closure",
+                "coverage": [
+                    (
+                        {
+                            "paper_node_id": node_id,
+                            "disposition": "fact_bundle_member",
+                            "fact_id": claim_to_fact[node_id],
+                            "reason": "",
+                        }
+                        if node_id in claim_to_fact
+                        else {
+                            "paper_node_id": node_id,
+                            "disposition": (
+                                "source_only"
+                                if node_id in plan["selected_source_node_ids"]
+                                else "audit_only"
+                            ),
+                            "fact_id": None,
+                            "reason": "Bound to the exact closure without direct Fact promotion.",
+                        }
+                    )
+                    for node_id in load_bearing
+                ],
+            }
+
+            def paper_ref(
+                frozen: dict[str, object],
+                *,
+                graph_kind: str,
+                target_node_ids: list[str],
+            ) -> dict[str, object]:
+                manifest_path = (
+                    store.paper_logic().snapshots_dir
+                    / str(frozen["snapshot_id"])
+                    / "manifest.json"
+                )
+                return {
+                    "paper_id": "fixture-paper",
+                    "snapshot_id": frozen["snapshot_id"],
+                    "snapshot_sha256": sha256_bytes(manifest_path.read_bytes()),
+                    "graph_kind": graph_kind,
+                    "target_artifact_sha256": artifact_sha,
+                    "target_node_ids": target_node_ids,
+                }
+
+            payload["paper_evidence_refs"] = [
+                paper_ref(
+                    logic_frozen,
+                    graph_kind="logic",
+                    target_node_ids=load_bearing,
+                ),
+                paper_ref(
+                    audit_frozen,
+                    graph_kind="audit",
+                    target_node_ids=[audit_ids["finding"]],
+                ),
+            ]
+            payload["paper_continuation_ref"] = {
+                "contract_revision": PAPER_CONTINUATION_CONTRACT_REVISION,
+                "plan_id": plan_id,
+                "plan_record_sha256": plan["record_sha256"],
+                "adequacy_receipt_sha256": complete["adequacy_receipt_sha256"],
+                "disposition_ids": complete["current_disposition_ids"],
+            }
+            target_by_claim = {
+                unit["target_claim_node_id"]: unit["target_node_id"]
+                for unit in plan["work_units"]
+            }
+            fact_target = {
+                lemma.fact_id: target_by_claim[logic_ids["c1"]],
+                root_fact.fact_id: target_by_claim[logic_ids["c-head"]],
+            }
+            conjunct_id = {
+                lemma.fact_id: "conj-lemma",
+                root_fact.fact_id: "conj-root",
+            }
+            payload["philosophy_atomicity"] = {
+                "contract_revision": PHILOSOPHY_ATOMICITY_CONTRACT_REVISION,
+                "plan_id": plan_id,
+                "fact_units": [
+                    {
+                        "fact_id": fact.fact_id,
+                        "primary_conclusion": fact.statement,
+                        "plain_language_paraphrase": (
+                            "The supporting reason holds."
+                            if fact.fact_id == lemma.fact_id
+                            else "The paper's bounded conclusion follows."
+                        ),
+                        "source_target_node_ids": [fact_target[fact.fact_id]],
+                        "conjunct_ids": [conjunct_id[fact.fact_id]],
+                        "defeasible_condition_ids": [],
+                        "decomposition_rationale": (
+                            "This Fact carries one independently challengeable conclusion."
+                        ),
+                    }
+                    for fact in facts
+                ],
+                "conjunct_inventory": [
+                    {
+                        "conjunct_id": conjunct_id[fact.fact_id],
+                        "statement": fact.statement,
+                        "represented_by_fact_id": fact.fact_id,
+                        "failure_surface_ids": [
+                            failure_surfaces[fact_target[fact.fact_id]]
+                        ],
+                        "independence_rationale": (
+                            "Its failure can be localized without replacing the peer Fact."
+                        ),
+                    }
+                    for fact in facts
+                ],
+                "clarity_review": {
+                    "plain_language_abstract": (
+                        "The supporting reason and the conclusion are checked separately, "
+                        "so failure of one part cannot be hidden inside a broad slogan."
+                    ),
+                    "technical_term_ledger": [],
+                },
+            }
+
+            theorem_escape = copy.deepcopy(payload)
+            theorem_escape["requested_assurance"] = {
+                "validation_subject": {
+                    "kind": "theorem",
+                    "subject_id": root_fact.fact_id,
+                    "artifact_sha256": None,
+                    "load_bearing_node_ids": [],
+                },
+                "validation_granularity": "atomic_fact_dag",
+                "coverage": [],
+            }
+            with self.assertRaisesRegex(ValueError, "paper_target_closure"):
+                lifecycle.candidate_release(
+                    theorem_escape, producer="paper-candidate-producer"
+                )
+
+            hidden_conjunct = copy.deepcopy(payload)
+            hidden_conjunct["philosophy_atomicity"]["fact_units"][0][
+                "conjunct_ids"
+            ].append("conj-hidden")
+            with self.assertRaisesRegex(ValueError, "exactly one independently"):
+                lifecycle.candidate_release(
+                    hidden_conjunct, producer="paper-candidate-producer"
+                )
+
+            opaque_paraphrase = copy.deepcopy(payload)
+            opaque_paraphrase["philosophy_atomicity"]["fact_units"][0][
+                "plain_language_paraphrase"
+            ] = "[CLAIM:OPAQUE] Protocol jargon replaces the explanation."
+            with self.assertRaisesRegex(ValueError, "machine protocol anchors"):
+                lifecycle.candidate_release(
+                    opaque_paraphrase, producer="paper-candidate-producer"
+                )
+
+            unreviewed_term = copy.deepcopy(payload)
+            unreviewed_term["philosophy_atomicity"]["clarity_review"][
+                "technical_term_ledger"
+            ] = [
+                {
+                    "term": "dialectical foreclosure",
+                    "plain_definition": "Ending a live objection without answering it.",
+                    "necessity": "Names the exact failure being tested.",
+                }
+            ]
+            with self.assertRaisesRegex(ValueError, "introduce no unreviewed jargon"):
+                lifecycle.candidate_release(
+                    unreviewed_term, producer="paper-candidate-producer"
+                )
+
+            missing_writing_authority = copy.deepcopy(payload)
+            missing_writing_authority["verification_plan"][
+                "authorized_artifact_roles"
+            ].remove("paper_revised_writing")
+            with self.assertRaisesRegex(ValueError, "paper_revised_writing"):
+                lifecycle.candidate_release(
+                    missing_writing_authority,
+                    producer="paper-candidate-producer",
+                )
+
+            release = lifecycle.candidate_release(
+                payload, producer="paper-candidate-producer"
+            )
+            self.assertIn("paper_continuation_ref", release)
+            self.assertIn("paper_continuation_evidence", release)
+            self.assertEqual(
+                len(release["paper_continuation_evidence"]["dispositions"]),
+                2,
+            )
+            self.assertEqual(
+                release["requested_assurance"]["validation_granularity"],
+                "paper_target_closure",
+            )
+            capsule = lifecycle.verifier_capsule(release["release_id"])
+            self.assertIn(
+                "independently reconstruct the conjunct inventory",
+                capsule["instructions"]["paper_continuation_boundary"],
+            )
+            self.assertIn(
+                "reject undefined or unnecessary jargon",
+                capsule["instructions"]["paper_continuation_boundary"],
+            )
+            self.assertEqual(
+                {
+                    artifact["artifact_sha256"]
+                    for artifact in capsule["authorized_artifacts"]
+                    if artifact["role"] == "paper_revised_writing"
+                },
+                {writing_sha},
+            )
+
+            corrected_target = plan["target_node_ids"][0]
+            corrected = continuation.record_disposition(
+                plan_id,
+                {
+                    "target_node_id": corrected_target,
+                    "result_research_id": result_ids[corrected_target],
+                    "outcome": "retained",
+                    "rationale": "The target survives after a more precise objection analysis.",
+                    "successor_research_ids": [],
+                    "dialectical_analysis": {
+                        "issue": "Whether the narrowed target remains warranted.",
+                        "importance": "It bears an independent part of the argument.",
+                        "burden_holder": "The proponent bears the burden.",
+                        "plain_language_summary": (
+                            "The corrected target now says only what its reason supports."
+                        ),
+                        "technical_term_ledger": [],
+                        "strongest_charitable_objection": (
+                            "The conclusion could still overstate the source premise."
+                        ),
+                        "response_or_revision": (
+                            "The corrected wording preserves only the supported scope."
+                        ),
+                        "independent_failure_surfaces": [
+                            {
+                                "surface_id": failure_surfaces[corrected_target],
+                                "statement": "The target can fail while its peer survives.",
+                                "why_independent": (
+                                    "Its source closure and inferential burden are distinct."
+                                ),
+                                "resolution": "Retained after corrected scope analysis.",
+                            }
+                        ],
+                    },
+                    "writing_coverage": {
+                        "status": "covered",
+                        "artifact_path": writing.relative_to(root).as_posix(),
+                        "artifact_sha256": writing_sha,
+                        "section_ids": ["revised-corrected-target"],
+                        "rationale": "The corrected target remains explicit in the revision.",
+                    },
+                    "supersedes_disposition_id": disposition_ids[corrected_target],
+                },
+                actor="main",
+            )
+            self.assertNotEqual(
+                corrected["disposition_id"], disposition_ids[corrected_target]
+            )
+            self.assertEqual(
+                lifecycle.release(release["release_id"])["release_id"],
+                release["release_id"],
+            )
+            with self.assertRaisesRegex(ValueError, "stale or incomplete"):
+                lifecycle.verifier_capsule(release["release_id"])
+
+            refreshed = continuation.status(plan_id)
+            fresh_payload = copy.deepcopy(payload)
+            fresh_payload["paper_continuation_ref"] = {
+                "contract_revision": PAPER_CONTINUATION_CONTRACT_REVISION,
+                "plan_id": plan_id,
+                "plan_record_sha256": plan["record_sha256"],
+                "adequacy_receipt_sha256": refreshed["adequacy_receipt_sha256"],
+                "disposition_ids": refreshed["current_disposition_ids"],
+            }
+            fresh_release = lifecycle.candidate_release(
+                fresh_payload, producer="paper-candidate-producer"
+            )
+            decision = lifecycle.certification_record(
+                self._correct_decision_payload(lifecycle, fresh_release)
+            )
+            lifecycle.fact_admit(
+                release_id=fresh_release["release_id"],
+                decision_id=decision["decision_id"],
+                gateway="independent-gateway",
+            )
+            self.assertEqual(set(store.fact_ids()), {lemma.fact_id, root_fact.fact_id})
+            self.assertTrue(store.audit().current_ok, store.audit().errors)
+
+    def test_candidate_release_exact_field_error_is_publicly_actionable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-public-release-contract")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"missing=.*bundle_claim.*schema=references/paper_input_contracts.md",
+            ):
+                store.v5_lifecycle().candidate_release(
+                    {}, producer="public-contract-producer"
+                )
+
+    def test_public_v5_worker_return_template_and_diagnostics_are_executable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "v5"
+            store = self._store(root, "v5-public-worker-return")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "Check one public worker-return obligation.",
+                    "obligations": [
+                        {
+                            "obligation_id": "obl-public-contract",
+                            "description": "Record one bounded public-contract check.",
+                            "required_artifact_roles": [],
+                            "evidence_types": ["bounded_argument"],
+                            "not_applicable_allowed": False,
+                        }
+                    ],
+                },
+                actor="main",
+            )
+            round_status = lifecycle.create_round(
+                workers=1,
+                research_ids=[research["research_id"]],
+            )
+            assignment = round_status["assignments"][0]
+            card = json.loads(
+                Path(str(assignment["task_card_path"])).read_text(encoding="utf-8")
+            )
+            skill_root = Path(__file__).resolve().parents[1]
+            template = json.loads(
+                (
+                    skill_root
+                    / "assets"
+                    / "worker_return.v5.assurance-no-adverse.template.json"
+                ).read_text(encoding="utf-8")
+            )
+            template.update(
+                {
+                    "project_id": store.project_id(),
+                    "round_id": round_status["round_id"],
+                    "assignment_id": assignment["assignment_id"],
+                    "worker_id": assignment["worker_id"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "blackboard_snapshot_sha256": assignment[
+                        "blackboard_snapshot_sha256"
+                    ],
+                    "artifacts": [],
+                    "obligation_dispositions": [
+                        {
+                            "obligation_id": item["obligation_id"],
+                            "status": "complete",
+                            "witness_artifact_sha256s": [],
+                            "rationale": (
+                                "This public non-artifact obligation is complete."
+                            ),
+                        }
+                        for item in card["assurance_contract"]["obligations"]
+                    ],
+                }
+            )
+            if "adverse_routing" in card:
+                template["attack_learning"] = None
+            draft = base / "worker-return-draft.json"
+            draft.write_text(
+                json.dumps(template, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            valid = lifecycle.preflight_return(
+                round_id=round_status["round_id"],
+                assignment_id=assignment["assignment_id"],
+                input_path=draft,
+            )
+            self.assertTrue(valid["valid"])
+            prompt = Path(str(assignment["prompt_path"])).read_text(encoding="utf-8")
+            self.assertIn("references/v5_worker_return_contract.md", prompt)
+
+            help_text = StringIO()
+            with redirect_stdout(help_text), self.assertRaises(SystemExit) as help_exit:
+                cli_main(
+                    [
+                        "--root",
+                        str(root),
+                        "--role",
+                        "worker",
+                        "preflight-return",
+                        "--help",
+                    ]
+                )
+            self.assertEqual(help_exit.exception.code, 0)
+            self.assertIn("references/v5_worker_return_contract.md", help_text.getvalue())
+
+            bad_top = copy.deepcopy(template)
+            del bad_top["claim"]
+            bad_top["commentary"] = "not an allowed return field"
+            draft.write_text(
+                json.dumps(bad_top, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                r"missing=.*claim.*unknown=.*commentary.*v5_worker_return_contract.md",
+            ):
+                lifecycle.preflight_return(
+                    round_id=round_status["round_id"],
+                    assignment_id=assignment["assignment_id"],
+                    input_path=draft,
+                )
+
+            bad_disposition = copy.deepcopy(template)
+            del bad_disposition["obligation_dispositions"][0]["rationale"]
+            bad_disposition["obligation_dispositions"][0]["note"] = "unknown"
+            draft.write_text(
+                json.dumps(bad_disposition, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                r"missing=.*rationale.*unknown=.*note.*v5_worker_return_contract.md",
+            ):
+                lifecycle.preflight_return(
+                    round_id=round_status["round_id"],
+                    assignment_id=assignment["assignment_id"],
+                    input_path=draft,
+                )
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import contained_path, sha256_bytes, sha256_json
+from .decision_preflight import V5_FINDING_CLASSES
 from .verification_bundles import VerificationBundleStore
 
 
@@ -421,6 +422,7 @@ def _prepare_v5_verifier_capsule(
                 "--decision",
                 review_relpath,
             ],
+            "allowed_finding_classes": list(V5_FINDING_CLASSES),
             "role_boundary": {
                 "verifier": "writes and preflights only output/review.json",
                 "gateway": "records exact returned bytes and admits only after validation",

@@ -36,6 +36,7 @@ _V4_RESERVED_ADDITIVE_PATHS = {
     "claims",
     "conventions",
     "experiments",
+    "evidence",
     "fact_graph/bundles",
     "fact_graph/interfaces",
     "governance/unified-mode",
@@ -256,6 +257,7 @@ from .verification_bundles import (
 from .contracts import POLICY_REVISION_V4
 from .protocol import validate_ingestion_receipt_v4, validate_task_card
 from .paper_logic import PaperLogicStore
+from .evidence import EvidencePlane
 from .profile_closure import ProfileClosureManager
 from .modes import ReasoningModeManager
 from .v5_lifecycle import (
@@ -758,9 +760,12 @@ class MathGraphStore:
 
     def paper_logic(self) -> PaperLogicStore:
         return self._guard_child(
-            PaperLogicStore(self.root),
+            PaperLogicStore(self.root, owner=self),
             _PAPER_LOGIC_MUTATORS,
         )
+
+    def evidence(self) -> EvidencePlane:
+        return EvidencePlane(self)
 
     def profile_closures(self) -> ProfileClosureManager:
         return self._guard_child(

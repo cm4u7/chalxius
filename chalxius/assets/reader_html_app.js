@@ -27,7 +27,9 @@
     includeLearning: false,
     includeReader: false,
     includeWeak: false,
+    orbitGravity: true,
     pinned: new Map(),
+    orbitAnglePinsByNodeId: new Map(),
     selectedId: null,
     selectedNodeIds: new Set(),
     boxSelectedNodeIds: new Set(),
@@ -53,11 +55,15 @@
   let pendingDynamicPasses = 0;
   let pendingDynamicReason = 'direct-manipulation';
   const canonicalPositionByNodeId = new Map();
+  const canonicalOrbitAnglesByNodeId = new Map();
+  const themeCenterByThemeId = new Map();
+  const themeOrbitRadiiByThemeId = new Map();
+  const nodeOrbitAssignmentsByNodeId = new Map();
+  const sharedIntersectionAnchorByNodeId = new Map();
   const boxSelectionHaloByNodeId = new Map();
   const RADIAL_START_ANGLE = Math.PI;
   const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
   const RADIAL_TARGET_MIN_RADIUS = 170;
-  const RADIAL_THEME_MIN_RADIUS = 124;
   const RADIAL_FIRST_RING_SPACING = 236;
   const RADIAL_OUTER_RING_SPACING = 158;
   const RADIAL_TARGET_ARC_SPACING = 330;
@@ -72,14 +78,28 @@
   const RADIAL_RING_REPULSION = 1.7;
   const RADIAL_REFINEMENT_BLEND_FACTORS = Object.freeze([1, 0.8, 0.6, 0.4, 0.2]);
   const DYNAMIC_FORCE_NODE_LIMIT = 240;
-  const DYNAMIC_FORCE_SETTLE_PASSES = 14;
-  const DYNAMIC_FORCE_MAX_STEP = 14;
+  const DYNAMIC_FORCE_SETTLE_PASSES = 24;
+  const DYNAMIC_FORCE_DRAG_PASSES = 2;
+  const DYNAMIC_FORCE_MAX_STEP = 18;
   const DYNAMIC_REPULSION_STRENGTH = 0.42;
   const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
   const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
-  const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.085;
-  const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.055;
-  const DYNAMIC_TETHER_MAX_STEP = 4;
+  const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.16;
+  const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.028;
+  const DYNAMIC_TETHER_MAX_STEP = 16;
+  const THEME_ORBIT_NODES_PER_RING = 6;
+  const THEME_ORBIT_MIN_RADIUS = 400;
+  const THEME_ORBIT_RING_GAP = 96;
+  const THEME_ORBIT_ARC_GAP = 82;
+  const THEME_CENTER_MIN_SCAFFOLD_RADIUS = 280;
+  const THEME_CENTER_MAX_SCAFFOLD_RADIUS = 360;
+  const THEME_CENTER_PER_THEME_RADIUS = 80;
+  const THEME_CENTER_START_ANGLE = Math.PI;
+  const THEME_SHARED_NODE_GAP = 88;
+  const THEME_ORBIT_PALETTE = Object.freeze([
+    '#36c9c6', '#7fdd89', '#d0aa63', '#9a70d1',
+    '#4f93ed', '#d16aa1', '#63d7ad', '#95a9bd'
+  ]);
   const PINCH_ZOOM_SENSITIVITY = 0.008;
   const NODE_SIZE_CONTROL_X_RATIO = 0.29;
   const NODE_SIZE_CONTROL_Y_RATIO = 0.5;
@@ -111,7 +131,37 @@
   });
   const SIZE_HISTORY_LIMIT = 100;
 
+  const themeMembershipByNodeId = themeMemberships();
+  const themeMemberIdsByThemeId = themeOrbitGroups(themeMembershipByNodeId);
+  const initialThemeCenterByThemeId = themeOrbitCenters();
+
   const elements = [];
+  packet.theme_order.forEach((themeId, themeIndex) => {
+    const theme = themeById.get(themeId);
+    const ringCount = Math.max(
+      1,
+      Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+    );
+    for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+      elements.push({
+        group: 'nodes',
+        data: {
+          id: `reader-orbit:${themeId}:${ringIndex}`,
+          kind: 'theme-orbit',
+          label: themeOrbitDisplayLabel(themeIndex, ringIndex),
+          themeId,
+          themeIndex: themeIndex + 1,
+          ringIndex: ringIndex + 1,
+          orbitDiameter: 1,
+          orbitColor: THEME_ORBIT_PALETTE[themeIndex % THEME_ORBIT_PALETTE.length]
+        },
+        grabbable: false,
+        selectable: false,
+        locked: true,
+        position: {...initialThemeCenterByThemeId.get(themeId)}
+      });
+    }
+  });
   for (const themeId of groupedThemeIds) {
     const theme = themeById.get(themeId);
     elements.push({
@@ -155,6 +205,8 @@
         visualStatus: node.visual_status,
         layer: node.layer,
         themeId: node.theme_id,
+        themeIds: themeMembershipByNodeId.get(node.id).join(' '),
+        shared: themeMembershipByNodeId.get(node.id).length > 1 ? 'yes' : 'no',
         minimized: node.reader_role === 'target' ? 'no' : 'yes'
       },
       position: {x: 0, y: 0}
@@ -200,6 +252,32 @@
         }
       },
       {
+        selector: 'node[kind = "theme-orbit"]',
+        style: {
+          'shape': 'ellipse',
+          'width': 'data(orbitDiameter)',
+          'height': 'data(orbitDiameter)',
+          'background-opacity': 0,
+          'border-color': 'data(orbitColor)',
+          'border-opacity': 0.34,
+          'border-style': 'dashed',
+          'border-width': 1.25,
+          'label': 'data(label)',
+          'color': 'data(orbitColor)',
+          'font-family': 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+          'font-size': 11,
+          'font-weight': 700,
+          'text-valign': 'top',
+          'text-halign': 'center',
+          'text-margin-y': -10,
+          'text-background-color': '#08121d',
+          'text-background-opacity': 0.9,
+          'text-background-padding': 4,
+          'events': 'no',
+          'z-index': 0
+        }
+      },
+      {
         selector: 'node[kind = "reader-node"]',
         style: {
           'width': 190,
@@ -232,6 +310,7 @@
       { selector: 'node[plane = "blackboard"]', style: {'background-color': '#18222d', 'border-color': '#718095'} },
       { selector: 'node[plane = "learning"]', style: {'background-color': '#152a20', 'border-color': '#7fdd89'} },
       { selector: 'node[plane = "reader"]', style: {'background-color': '#12282a', 'border-color': '#63d7ad'} },
+      { selector: 'node[shared = "yes"]', style: {'border-width': 4.5} },
       { selector: 'node[role = "target"]', style: {'border-width': 3.5, 'width': 236, 'height': 100, 'text-max-width': 106, 'text-margin-x': 18} },
       { selector: 'node[role = "definition"]', style: {'width': 228, 'height': 92, 'text-max-width': 102, 'text-margin-x': 18} },
       { selector: 'node[role = "result"]', style: {'width': 220, 'height': 88, 'text-max-width': 98, 'text-margin-x': 17} },
@@ -478,6 +557,7 @@
     layerMenuButton: document.getElementById('layer-menu-button'),
     layerPopover: document.getElementById('layer-popover'),
     fit: document.getElementById('fit-view-button'),
+    orbitGravity: document.getElementById('orbit-gravity-button'),
     reset: document.getElementById('reset-layout-button'),
     reloadGraph: document.getElementById('reload-graph-button'),
     undoSizing: document.getElementById('undo-sizing-button'),
@@ -549,6 +629,11 @@
     return `${bi('主题', 'Topic')}\n${theme.label}`;
   }
 
+  function themeOrbitDisplayLabel(themeIndex, ringIndex) {
+    if (ringIndex > 0) return '';
+    return `${bi('主题场', 'Theme field')} ${String(themeIndex + 1).padStart(2, '0')}`;
+  }
+
   function nodeIdentityLabel(node) {
     const orderPrefix = node.reader_role === 'target'
       ? `${targetOrderIndex.get(node.id) + 1}. `
@@ -618,6 +703,19 @@
       for (const themeId of groupedThemeIds) {
         cy.getElementById(`reader-theme:${themeId}`).data('label', themeDisplayLabel(themeById.get(themeId)));
       }
+      packet.theme_order.forEach((themeId, themeIndex) => {
+        const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+          || Math.max(
+            1,
+            Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+          );
+        for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+          cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`).data(
+            'label',
+            themeOrbitDisplayLabel(themeIndex, ringIndex)
+          );
+        }
+      });
       for (const node of packet.nodes) cy.getElementById(node.id).data('label', nodeDisplayLabel(node));
     });
     refreshLocalizedDetail();
@@ -717,9 +815,13 @@
       dom.layerMenuButton.setAttribute('aria-expanded', opening ? 'true' : 'false');
     });
     dom.fit.addEventListener('click', fitVisible);
+    dom.orbitGravity.addEventListener('click', () => {
+      setOrbitGravity(!state.orbitGravity);
+    });
     dom.reset.addEventListener('click', () => {
       cancelScheduledDynamicForces();
       state.pinned.clear();
+      state.orbitAnglePinsByNodeId.clear();
       resetCurrentLayout();
     });
     dom.reloadGraph.addEventListener('click', () => window.location.reload());
@@ -838,21 +940,53 @@
           }
         });
       }
+      const movedIds = groupDrag && groupDrag.anchorId === event.target.id()
+        ? [...groupDrag.origins.keys()]
+        : [event.target.id()];
+      scheduleDynamicForces(
+        movedIds,
+        DYNAMIC_FORCE_DRAG_PASSES,
+        movedIds,
+        'drag'
+      );
     });
     cy.on('dragfree', 'node', (event) => {
+      cancelScheduledDynamicForces();
       const node = event.target;
       const groupDrag = state.groupDrag && state.groupDrag.anchorId === node.id()
         ? state.groupDrag
         : null;
       const movedIds = groupDrag ? [...groupDrag.origins.keys()] : [node.id()];
+      const fixedIds = [];
       for (const nodeId of movedIds) {
         const movedNode = cy.getElementById(nodeId);
-        if (movedNode.length) state.pinned.set(nodeId, {...movedNode.position()});
+        if (!movedNode.length) continue;
+        const position = movedNode.position();
+        if (state.orbitGravity && nodeById.has(nodeId)) {
+          const assignments = nodeOrbitAssignmentsByNodeId.get(nodeId) || [];
+          const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+          const releaseAngles = new Map();
+          for (const assignment of assignments) {
+            const deltaX = position.x - assignment.center.x;
+            const deltaY = position.y - assignment.center.y;
+            releaseAngles.set(
+              assignment.themeId,
+              Math.hypot(deltaX, deltaY) > 0.000001
+                ? Math.atan2(deltaY, deltaX)
+                : canonicalAngles.get(assignment.themeId) || 0
+            );
+          }
+          state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles);
+          state.pinned.delete(nodeId);
+        } else {
+          state.pinned.set(nodeId, {...position});
+          fixedIds.push(nodeId);
+        }
       }
       dom.cy.dataset.lastMovedSelectionCount = String(movedIds.length);
       state.groupDrag = null;
       scheduleDynamicForces(
-        movedIds,
+        fixedIds,
         DYNAMIC_FORCE_SETTLE_PASSES,
         movedIds,
         'drag-release'
@@ -985,7 +1119,9 @@
 
   function ensureGraphContentVisible() {
     cy.resize();
-    const visibleNodes = cy.nodes().filter((node) => !node.hasClass('hidden'));
+    const visibleNodes = cy.nodes().filter((node) => (
+      !node.hasClass('hidden') && node.data('kind') !== 'theme-orbit'
+    ));
     if (!visibleNodes.length) return;
     const width = cy.width();
     const height = cy.height();
@@ -1127,6 +1263,7 @@
   function scheduleSizingConvergence(delta) {
     const changedNodeIds = new Set([...delta.added, ...delta.removed]);
     if (!changedNodeIds.size) return;
+    refreshThemeOrbitRadii();
     scheduleDynamicForces(
       delta.anchorNodeIds || [],
       DYNAMIC_FORCE_SETTLE_PASSES,
@@ -1294,6 +1431,47 @@
     refreshSurface({preserveViewport: true});
   }
 
+  function setOrbitGravity(enabled) {
+    cancelScheduledDynamicForces();
+    state.orbitGravity = Boolean(enabled);
+    const releasedNodeIds = [];
+    if (state.orbitGravity) {
+      refreshThemeOrbitRadii();
+      for (const nodeId of readerNodeIds) {
+        if (!state.pinned.has(nodeId)) continue;
+        const position = cy.getElementById(nodeId).position();
+        const assignments = nodeOrbitAssignmentsByNodeId.get(nodeId) || [];
+        const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+        const releaseAngles = new Map();
+        for (const assignment of assignments) {
+          const deltaX = position.x - assignment.center.x;
+          const deltaY = position.y - assignment.center.y;
+          releaseAngles.set(
+            assignment.themeId,
+            Math.hypot(deltaX, deltaY) > 0.000001
+              ? Math.atan2(deltaY, deltaX)
+              : canonicalAngles.get(assignment.themeId) || 0
+          );
+        }
+        state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles);
+        state.pinned.delete(nodeId);
+        releasedNodeIds.push(nodeId);
+      }
+    }
+    setVisibility(currentVisibleIds());
+    updateViewDescription();
+    updateButtons();
+    if (state.orbitGravity && releasedNodeIds.length) {
+      scheduleDynamicForces(
+        [],
+        DYNAMIC_FORCE_SETTLE_PASSES,
+        releasedNodeIds,
+        'orbit-gravity-enabled'
+      );
+    }
+    dom.cy.dataset.themeOrbitGravity = state.orbitGravity ? 'on' : 'off';
+  }
+
   function resetCurrentLayout() {
     applyCanonicalPositions();
     refreshSurface({preserveViewport: true});
@@ -1304,13 +1482,17 @@
     const eligible = eligibleNodeIds();
     const minimized = [...eligible].filter((nodeId) => state.minimizedNodeIds.has(nodeId)).length;
     const full = eligible.size - minimized;
+    const orbitCount = [...themeOrbitRadiiByThemeId.values()]
+      .reduce((total, radii) => total + radii.length, 0);
+    const sharedCount = [...themeMembershipByNodeId]
+      .filter(([nodeId, themeIds]) => eligible.has(nodeId) && themeIds.length > 1).length;
     dom.cy.dataset.visibleNodeCount = String(eligible.size);
     dom.cy.dataset.visibleReaderEdgeCount = String(packet.edges.filter(edgeEligible).length);
     dom.cy.dataset.fullNodeCount = String(full);
     dom.cy.dataset.minimizedNodeCount = String(minimized);
     dom.viewDescription.textContent = bi(
-      `完整 ${full} · 最小化 ${minimized} · 所有当前启用的关系保持可见`,
-      `Full ${full} · Minimized ${minimized} · All enabled relations remain visible`
+      `完整 ${full} · 最小化 ${minimized} · ${packet.theme_order.length} 个主题场 / ${orbitCount} 条等距轨道 · ${sharedCount} 个共享节点 · 轨道引力${state.orbitGravity ? '开启' : '关闭'} · 所有当前启用的关系保持可见`,
+      `Full ${full} · Minimized ${minimized} · ${packet.theme_order.length} theme fields / ${orbitCount} equally spaced orbits · ${sharedCount} shared nodes · Orbit gravity ${state.orbitGravity ? 'on' : 'off'} · All enabled relations remain visible`
     );
   }
 
@@ -1318,6 +1500,21 @@
     cy.batch(() => {
       cy.elements().addClass('hidden');
       for (const nodeId of visibleIds) cy.getElementById(nodeId).removeClass('hidden');
+      if (state.orbitGravity) {
+        for (const themeId of packet.theme_order) {
+          const hasVisibleMember = themeMemberIdsByThemeId.get(themeId)
+            .some((nodeId) => visibleIds.has(nodeId));
+          if (!hasVisibleMember) continue;
+          const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+            || Math.max(
+              1,
+              Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+            );
+          for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+            cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`).removeClass('hidden');
+          }
+        }
+      }
       for (const themeId of groupedThemeIds) {
         const themeTargets = themeById.get(themeId).target_ids.filter((id) => visibleIds.has(id));
         if (!themeTargets.length) continue;
@@ -1494,6 +1691,370 @@
     return positions;
   }
 
+  function themeMemberships() {
+    const memberships = new Map(
+      packet.nodes.map((node) => [node.id, new Set([node.theme_id])])
+    );
+    const structuralIncoming = new Map(packet.nodes.map((node) => [node.id, []]));
+    for (const edge of packet.edges) {
+      if (edge.weak || !['prerequisite', 'support'].includes(edge.category)) continue;
+      structuralIncoming.get(edge.target).push(edge.source);
+    }
+    for (const themeId of packet.theme_order) {
+      const queue = [...themeById.get(themeId).target_ids];
+      const visited = new Set(queue);
+      for (let cursor = 0; cursor < queue.length; cursor += 1) {
+        const nodeId = queue[cursor];
+        if (memberships.has(nodeId)) memberships.get(nodeId).add(themeId);
+        for (const sourceId of structuralIncoming.get(nodeId) || []) {
+          if (visited.has(sourceId)) continue;
+          visited.add(sourceId);
+          queue.push(sourceId);
+        }
+      }
+    }
+    return new Map(packet.nodes.map((node) => [
+      node.id,
+      [...memberships.get(node.id)].sort((left, right) => (
+        themeOrderIndex.get(left) - themeOrderIndex.get(right)
+      ))
+    ]));
+  }
+
+  function themeOrbitGroups(memberships) {
+    const assignedMemberships = memberships || themeMemberships();
+    const groups = new Map(packet.theme_order.map((themeId) => [themeId, []]));
+    for (const node of packet.nodes) {
+      for (const themeId of assignedMemberships.get(node.id)) groups.get(themeId).push(node.id);
+    }
+    return groups;
+  }
+
+  function themeOrbitRadii(groups) {
+    const assignedGroups = groups || themeOrbitGroups();
+    const radii = new Map();
+    for (const themeId of packet.theme_order) {
+      const nodeIds = assignedGroups.get(themeId);
+      const ringCount = Math.max(1, Math.ceil(nodeIds.length / THEME_ORBIT_NODES_PER_RING));
+      const maximumExtent = Math.max(0, ...nodeIds.map(layoutCollisionRadius));
+      const ringPopulation = Math.min(THEME_ORBIT_NODES_PER_RING, Math.max(1, nodeIds.length));
+      const minimumChord = maximumExtent * 2 + THEME_ORBIT_ARC_GAP;
+      const densityRadius = ringPopulation <= 1
+        ? 0
+        : minimumChord / (2 * Math.sin(Math.PI / ringPopulation));
+      const firstRadius = Math.max(THEME_ORBIT_MIN_RADIUS, densityRadius);
+      const equalSpacing = Math.max(
+        THEME_ORBIT_RING_GAP,
+        maximumExtent * 2 + THEME_ORBIT_RING_GAP
+      );
+      radii.set(
+        themeId,
+        Array.from({length: ringCount}, (_, ringIndex) => (
+          firstRadius + ringIndex * equalSpacing
+        ))
+      );
+    }
+    return radii;
+  }
+
+  function themeOrbitCenters() {
+    const centers = new Map();
+    const count = packet.theme_order.length;
+    if (count === 1) {
+      centers.set(packet.theme_order[0], {x: 0, y: 0});
+      return centers;
+    }
+    const scaffoldRadius = Math.min(
+      THEME_CENTER_MAX_SCAFFOLD_RADIUS,
+      Math.max(THEME_CENTER_MIN_SCAFFOLD_RADIUS, count * THEME_CENTER_PER_THEME_RADIUS)
+    );
+    packet.theme_order.forEach((themeId, themeIndex) => {
+      const angle = THEME_CENTER_START_ANGLE + (2 * Math.PI * themeIndex) / count;
+      centers.set(themeId, {
+        x: Math.cos(angle) * scaffoldRadius,
+        y: Math.sin(angle) * scaffoldRadius
+      });
+    });
+    return centers;
+  }
+
+  function themeOrbitRingAssignments(groups, memberships) {
+    const assignments = new Map();
+    for (const themeId of packet.theme_order) {
+      const nodeIds = [...groups.get(themeId)].sort((left, right) => {
+        const leftMembershipCount = memberships.get(left).length;
+        const rightMembershipCount = memberships.get(right).length;
+        const leftShared = leftMembershipCount > 1 ? 0 : 1;
+        const rightShared = rightMembershipCount > 1 ? 0 : 1;
+        return leftShared - rightShared
+          || rightMembershipCount - leftMembershipCount
+          || nodeById.get(left).packetIndex - nodeById.get(right).packetIndex;
+      });
+      const ringCount = Math.max(1, Math.ceil(nodeIds.length / THEME_ORBIT_NODES_PER_RING));
+      const rings = Array.from({length: ringCount}, () => []);
+      nodeIds.forEach((nodeId, index) => {
+        rings[Math.min(ringCount - 1, Math.floor(index / THEME_ORBIT_NODES_PER_RING))]
+          .push(nodeId);
+      });
+      assignments.set(themeId, rings);
+    }
+    return assignments;
+  }
+
+  function sharedOrbitIntersectionPosition(
+    nodeId,
+    assignments,
+    seedPositions,
+    sharedIndex,
+    sharedCount
+  ) {
+    const seed = seedPositions.get(nodeId) || {x: 0, y: 0};
+    if (assignments.length === 2) {
+      const first = assignments[0];
+      const second = assignments[1];
+      const deltaX = second.center.x - first.center.x;
+      const deltaY = second.center.y - first.center.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      if (
+        distance > 0.000001
+        && distance <= first.radius + second.radius
+        && distance >= Math.abs(first.radius - second.radius)
+      ) {
+        const unitX = deltaX / distance;
+        const unitY = deltaY / distance;
+        const along = (
+          first.radius ** 2 - second.radius ** 2 + distance ** 2
+        ) / (2 * distance);
+        const height = Math.sqrt(Math.max(0, first.radius ** 2 - along ** 2));
+        const base = {
+          x: first.center.x + unitX * along,
+          y: first.center.y + unitY * along
+        };
+        const candidates = [
+          {x: base.x - unitY * height, y: base.y + unitX * height},
+          {x: base.x + unitY * height, y: base.y - unitX * height}
+        ].sort((left, right) => (
+          Math.hypot(left.x - seed.x, left.y - seed.y)
+          - Math.hypot(right.x - seed.x, right.y - seed.y)
+        ));
+        const side = sharedIndex % 2;
+        const layer = Math.floor(sharedIndex / 2);
+        const centeredLayer = layer - Math.floor(Math.max(0, sharedCount - 1) / 4);
+        return {
+          x: candidates[side].x + unitX * centeredLayer * THEME_SHARED_NODE_GAP,
+          y: candidates[side].y + unitY * centeredLayer * THEME_SHARED_NODE_GAP
+        };
+      }
+    }
+    const centroid = assignments.reduce((sum, assignment) => ({
+      x: sum.x + assignment.center.x / assignments.length,
+      y: sum.y + assignment.center.y / assignments.length
+    }), {x: 0, y: 0});
+    const spreadAngle = sharedIndex * RADIAL_RING_PHASE;
+    const spreadRadius = Math.min(
+      THEME_SHARED_NODE_GAP * 1.5,
+      Math.sqrt(sharedIndex) * THEME_SHARED_NODE_GAP
+    );
+    const anchor = {
+      x: centroid.x + Math.cos(spreadAngle) * spreadRadius,
+      y: centroid.y + Math.sin(spreadAngle) * spreadRadius
+    };
+    const position = {...anchor};
+    for (let pass = 0; pass < 64; pass += 1) {
+      let forceX = (anchor.x - position.x) * 0.05;
+      let forceY = (anchor.y - position.y) * 0.05;
+      for (const assignment of assignments) {
+        let deltaX = position.x - assignment.center.x;
+        let deltaY = position.y - assignment.center.y;
+        let distance = Math.hypot(deltaX, deltaY);
+        if (distance < 0.000001) {
+          const angle = RADIAL_START_ANGLE
+            + themeOrderIndex.get(assignment.themeId) * RADIAL_RING_PHASE;
+          deltaX = Math.cos(angle);
+          deltaY = Math.sin(angle);
+          distance = 1;
+        }
+        const radialError = assignment.radius - distance;
+        forceX += (deltaX / distance) * radialError * 0.22 / assignments.length;
+        forceY += (deltaY / distance) * radialError * 0.22 / assignments.length;
+      }
+      const magnitude = Math.hypot(forceX, forceY);
+      const scale = Math.min(1, 20 / Math.max(0.000001, magnitude));
+      position.x += forceX * scale;
+      position.y += forceY * scale;
+    }
+    return position;
+  }
+
+  function themeOrbitCoordinates(seedPositions) {
+    const memberships = themeMembershipByNodeId;
+    const groups = themeOrbitGroups(memberships);
+    const radii = themeOrbitRadii(groups);
+    const centers = themeOrbitCenters();
+    const ringAssignments = themeOrbitRingAssignments(groups, memberships);
+    const positions = new Map();
+    const assignments = new Map(packet.nodes.map((node) => [node.id, []]));
+    const angles = new Map(packet.nodes.map((node) => [node.id, new Map()]));
+    const placementGroups = new Map();
+    const sharedAnchors = new Map();
+    for (const themeId of packet.theme_order) {
+      const center = centers.get(themeId);
+      ringAssignments.get(themeId).forEach((ringNodeIds, ringIndex) => {
+        const radius = radii.get(themeId)[ringIndex];
+        const nodeIds = [...ringNodeIds].sort((left, right) => {
+          const leftPosition = seedPositions.get(left) || {x: 0, y: 0};
+          const rightPosition = seedPositions.get(right) || {x: 0, y: 0};
+          const leftAngle = (
+            Math.atan2(leftPosition.y - center.y, leftPosition.x - center.x) + 2 * Math.PI
+          ) % (2 * Math.PI);
+          const rightAngle = (
+            Math.atan2(rightPosition.y - center.y, rightPosition.x - center.x) + 2 * Math.PI
+          ) % (2 * Math.PI);
+          if (Math.abs(leftAngle - rightAngle) > 0.000001) return leftAngle - rightAngle;
+          return nodeById.get(left).packetIndex - nodeById.get(right).packetIndex;
+        });
+        const count = nodeIds.length;
+        let phaseX = 0;
+        let phaseY = 0;
+        nodeIds.forEach((nodeId, index) => {
+          const seed = seedPositions.get(nodeId) || {x: center.x - 1, y: center.y};
+          const seedAngle = Math.atan2(seed.y - center.y, seed.x - center.x);
+          const candidatePhase = seedAngle - (2 * Math.PI * index) / Math.max(1, count);
+          phaseX += Math.cos(candidatePhase);
+          phaseY += Math.sin(candidatePhase);
+        });
+        const phase = Math.hypot(phaseX, phaseY) > 0.000001
+          ? Math.atan2(phaseY, phaseX)
+          : RADIAL_START_ANGLE
+            + themeOrderIndex.get(themeId) * RADIAL_RING_PHASE
+            + ringIndex * RADIAL_RING_PHASE;
+        const exclusiveIds = [];
+        nodeIds.forEach((nodeId, index) => {
+          const angle = phase + (2 * Math.PI * index) / Math.max(1, count);
+          const assignment = {
+            themeId,
+            ringIndex,
+            radius,
+            center: {...center}
+          };
+          assignments.get(nodeId).push(assignment);
+          angles.get(nodeId).set(themeId, angle);
+          if (memberships.get(nodeId).length > 1) return;
+          exclusiveIds.push(nodeId);
+          positions.set(nodeId, {
+            x: center.x + Math.cos(angle) * radius,
+            y: center.y + Math.sin(angle) * radius
+          });
+        });
+        if (exclusiveIds.length) {
+          placementGroups.set(`${themeId}:${ringIndex}`, exclusiveIds);
+        }
+      });
+    }
+    const sharedBySignature = new Map();
+    for (const [nodeId, themeIds] of memberships) {
+      if (themeIds.length < 2) continue;
+      const signature = themeIds.join('|');
+      if (!sharedBySignature.has(signature)) sharedBySignature.set(signature, []);
+      sharedBySignature.get(signature).push(nodeId);
+    }
+    for (const [signature, nodeIds] of sharedBySignature) {
+      nodeIds.sort((left, right) => (
+        nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
+      nodeIds.forEach((nodeId, sharedIndex) => {
+        const position = sharedOrbitIntersectionPosition(
+          nodeId,
+          assignments.get(nodeId),
+          seedPositions,
+          sharedIndex,
+          nodeIds.length
+        );
+        positions.set(nodeId, position);
+        sharedAnchors.set(nodeId, {...position});
+        const nodeAngles = new Map();
+        for (const assignment of assignments.get(nodeId)) {
+          nodeAngles.set(
+            assignment.themeId,
+            Math.atan2(
+              position.y - assignment.center.y,
+              position.x - assignment.center.x
+            )
+          );
+        }
+        angles.set(nodeId, nodeAngles);
+      });
+      placementGroups.set(`shared:${signature}`, [...nodeIds]);
+    }
+    return {
+      positions,
+      radii,
+      centers,
+      groups,
+      placementGroups,
+      assignments,
+      angles,
+      sharedAnchors,
+      memberships
+    };
+  }
+
+  function updateThemeOrbitGeometry(radii, centers, assignments, sharedAnchors) {
+    const assignedCenters = centers || themeOrbitCenters();
+    const sourceAssignments = assignments || nodeOrbitAssignmentsByNodeId;
+    const updatedAssignments = new Map();
+    for (const [nodeId, nodeAssignments] of sourceAssignments) {
+      updatedAssignments.set(nodeId, nodeAssignments.map((assignment) => ({
+        ...assignment,
+        radius: radii.get(assignment.themeId)[assignment.ringIndex],
+        center: {...assignedCenters.get(assignment.themeId)}
+      })));
+    }
+    themeCenterByThemeId.clear();
+    themeOrbitRadiiByThemeId.clear();
+    nodeOrbitAssignmentsByNodeId.clear();
+    for (const [themeId, center] of assignedCenters) themeCenterByThemeId.set(themeId, {...center});
+    for (const [themeId, themeRadii] of radii) themeOrbitRadiiByThemeId.set(themeId, [...themeRadii]);
+    for (const [nodeId, nodeAssignments] of updatedAssignments) {
+      nodeOrbitAssignmentsByNodeId.set(nodeId, nodeAssignments);
+    }
+    if (sharedAnchors) {
+      sharedIntersectionAnchorByNodeId.clear();
+      for (const [nodeId, anchor] of sharedAnchors) {
+        sharedIntersectionAnchorByNodeId.set(nodeId, {...anchor});
+      }
+    }
+    cy.batch(() => {
+      packet.theme_order.forEach((themeId, themeIndex) => {
+        const center = assignedCenters.get(themeId);
+        radii.get(themeId).forEach((radius, ringIndex) => {
+          const orbit = cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`);
+          orbit.data('orbitDiameter', radius * 2);
+          orbit.data('label', themeOrbitDisplayLabel(themeIndex, ringIndex));
+        });
+      });
+    });
+    const totalOrbitCount = [...radii.values()].reduce(
+      (total, themeRadii) => total + themeRadii.length,
+      0
+    );
+    const maximumRingCount = Math.max(0, ...[...radii.values()].map((item) => item.length));
+    dom.cy.dataset.themeCenterCount = String(assignedCenters.size);
+    dom.cy.dataset.themeOrbitCount = String(totalOrbitCount);
+    dom.cy.dataset.themeOrbitMaximumRingCount = String(maximumRingCount);
+    dom.cy.dataset.themeSharedNodeCount = String(
+      [...themeMembershipByNodeId.values()].filter((themeIds) => themeIds.length > 1).length
+    );
+    dom.cy.dataset.themeOrbitGravity = state.orbitGravity ? 'on' : 'off';
+  }
+
+  function refreshThemeOrbitRadii() {
+    updateThemeOrbitGeometry(
+      themeOrbitRadii(themeMemberIdsByThemeId),
+      themeOrbitCenters()
+    );
+  }
+
   function layoutNodeFootprint(nodeId) {
     const node = nodeById.get(nodeId);
     const role = node ? node.reader_role : 'explanation';
@@ -1545,9 +2106,10 @@
   function dynamicRadialMemoryDisplacement(nodeId, position) {
     const canonical = canonicalPositionByNodeId.get(nodeId);
     if (!canonical) return null;
-    const desiredRadius = Math.hypot(canonical.x, canonical.y);
-    const currentRadius = Math.hypot(position.x, position.y);
-    if (desiredRadius < 0.000001) {
+    const assignments = state.orbitGravity
+      ? nodeOrbitAssignmentsByNodeId.get(nodeId) || []
+      : [];
+    if (!assignments.length) {
       return {
         x: Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
           DYNAMIC_TETHER_MAX_STEP,
@@ -1559,43 +2121,73 @@
         ))
       };
     }
-    const radialX = currentRadius > 0.000001
-      ? position.x / currentRadius
-      : canonical.x / desiredRadius;
-    const radialY = currentRadius > 0.000001
-      ? position.y / currentRadius
-      : canonical.y / desiredRadius;
-    const radialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
-      DYNAMIC_TETHER_MAX_STEP,
-      (desiredRadius - currentRadius) * DYNAMIC_RADIAL_TETHER_STRENGTH
-    ));
-    const currentAngle = currentRadius > 0.000001
-      ? Math.atan2(position.y, position.x)
-      : Math.atan2(canonical.y, canonical.x);
-    const desiredAngle = Math.atan2(canonical.y, canonical.x);
-    const angularError = wrapLayoutAngle(desiredAngle - currentAngle);
-    const tangentialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
-      DYNAMIC_TETHER_MAX_STEP,
-      angularError * Math.max(80, currentRadius) * DYNAMIC_TANGENTIAL_TETHER_STRENGTH
-    ));
-    return {
-      x: radialX * radialPull - radialY * tangentialPull,
-      y: radialY * radialPull + radialX * tangentialPull
-    };
+    const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+    const releaseAngles = state.orbitAnglePinsByNodeId.get(nodeId);
+    let forceX = 0;
+    let forceY = 0;
+    for (const assignment of assignments) {
+      let deltaX = position.x - assignment.center.x;
+      let deltaY = position.y - assignment.center.y;
+      let currentRadius = Math.hypot(deltaX, deltaY);
+      if (currentRadius < 0.000001) {
+        const fallbackAngle = canonicalAngles.get(assignment.themeId) || 0;
+        deltaX = Math.cos(fallbackAngle);
+        deltaY = Math.sin(fallbackAngle);
+        currentRadius = 1;
+      }
+      const radialX = deltaX / currentRadius;
+      const radialY = deltaY / currentRadius;
+      const radialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+        DYNAMIC_TETHER_MAX_STEP,
+        (assignment.radius - currentRadius) * DYNAMIC_RADIAL_TETHER_STRENGTH
+      ));
+      const currentAngle = Math.atan2(deltaY, deltaX);
+      const desiredAngle = releaseAngles?.get(assignment.themeId)
+        ?? canonicalAngles.get(assignment.themeId)
+        ?? currentAngle;
+      const angularError = wrapLayoutAngle(desiredAngle - currentAngle);
+      const tangentialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+        DYNAMIC_TETHER_MAX_STEP,
+        angularError
+          * Math.max(80, currentRadius)
+          * DYNAMIC_TANGENTIAL_TETHER_STRENGTH
+      ));
+      forceX += radialX * radialPull - radialY * tangentialPull;
+      forceY += radialY * radialPull + radialX * tangentialPull;
+    }
+    forceX /= assignments.length;
+    forceY /= assignments.length;
+    const sharedAnchor = sharedIntersectionAnchorByNodeId.get(nodeId);
+    if (assignments.length > 1 && sharedAnchor && !releaseAngles) {
+      forceX += (sharedAnchor.x - position.x) * 0.035;
+      forceY += (sharedAnchor.y - position.y) * 0.035;
+    }
+    const magnitude = Math.hypot(forceX, forceY);
+    const scale = Math.min(1, DYNAMIC_TETHER_MAX_STEP / Math.max(0.000001, magnitude));
+    return {x: forceX * scale, y: forceY * scale};
   }
 
   function applyDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
-    const visibleNodes = [...cy.nodes().filter((node) => !node.hasClass('hidden'))]
+    const allVisibleNodes = [...cy.nodes().filter((node) => (
+      !node.hasClass('hidden')
+      && (typeof node.data !== 'function' || node.data('kind') !== 'theme-orbit')
+    ))]
       .sort((left, right) => left.id().localeCompare(right.id()));
-    if (!visibleNodes.length || visibleNodes.length > DYNAMIC_FORCE_NODE_LIMIT) return 0;
-    const visibleNodeIds = new Set(visibleNodes.map((node) => node.id()));
-    const fixed = new Set(
-      [...fixedNodeIds, ...state.pinned.keys()]
-        .filter((nodeId) => visibleNodeIds.has(nodeId))
+    if (!allVisibleNodes.length) return 0;
+    const visibleNodeIds = new Set(allVisibleNodes.map((node) => node.id()));
+    const gestureFixed = new Set(
+      [...fixedNodeIds].filter((nodeId) => visibleNodeIds.has(nodeId))
     );
+    const sessionPinned = new Set(
+      [...state.pinned.keys()].filter((nodeId) => visibleNodeIds.has(nodeId))
+    );
+    const fixed = new Set([...gestureFixed, ...sessionPinned]);
+    const pinnedCollisionYieldEnabled = !state.orbitGravity
+      && ['drag', 'drag-release'].includes(reason);
     const seeds = new Set([...(seedNodeIds || fixed)].filter((nodeId) => visibleNodeIds.has(nodeId)));
-    const positions = new Map(visibleNodes.map((node) => [node.id(), {...node.position()}]));
-    const extents = new Map(visibleNodes.map((node) => {
+    if (!seeds.size) return 0;
+    const positions = new Map(allVisibleNodes.map((node) => [node.id(), {...node.position()}]));
+    const extents = new Map(allVisibleNodes.map((node) => {
       const box = node.boundingBox({includeLabels: true, includeOverlays: false});
       return [node.id(), {
         halfWidth: Math.max(20, box.w / 2),
@@ -1612,7 +2204,7 @@
           : relationWeight[edge.data('category')] || 0.5
       }))
       .filter((edge) => visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId));
-    const forceNeighborhood = new Set(seeds);
+    let forceNeighborhood = new Set(seeds);
     for (let depth = 0; depth < 2; depth += 1) {
       const current = new Set(forceNeighborhood);
       const next = new Set(forceNeighborhood);
@@ -1622,6 +2214,17 @@
         next.add(edge.targetId);
       }
       for (const nodeId of next) forceNeighborhood.add(nodeId);
+    }
+    if (forceNeighborhood.size > DYNAMIC_FORCE_NODE_LIMIT) {
+      forceNeighborhood = new Set(
+        [...forceNeighborhood]
+          .sort((left, right) => {
+            const leftSeed = seeds.has(left) ? 0 : 1;
+            const rightSeed = seeds.has(right) ? 0 : 1;
+            return leftSeed - rightSeed || left.localeCompare(right);
+          })
+          .slice(0, DYNAMIC_FORCE_NODE_LIMIT)
+      );
     }
     const boundaryGap = (leftId, rightId) => {
       const left = positions.get(leftId);
@@ -1640,7 +2243,8 @@
     };
     const graphNeighborhood = new Set(forceNeighborhood);
     for (const activeId of graphNeighborhood) {
-      for (const node of visibleNodes) {
+      for (const node of allVisibleNodes) {
+        if (forceNeighborhood.size >= DYNAMIC_FORCE_NODE_LIMIT) break;
         const candidateId = node.id();
         if (forceNeighborhood.has(candidateId)) continue;
         if (boundaryGap(activeId, candidateId).gap < RADIAL_VISIBLE_EDGE_GAP) {
@@ -1648,31 +2252,55 @@
         }
       }
     }
+    const activeNodes = allVisibleNodes.filter((node) => forceNeighborhood.has(node.id()));
     const moved = new Set();
     const tethered = new Set();
+    const repelledPinned = new Set();
     let repulsionPairs = 0;
     let attractionEdges = 0;
     const passes = Math.max(1, Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1));
     let executedPasses = 0;
     for (let pass = 0; pass < passes; pass += 1) {
       executedPasses += 1;
-      const displacement = new Map(visibleNodes.map((node) => [node.id(), {x: 0, y: 0}]));
+      const displacement = new Map(activeNodes.map((node) => [node.id(), {x: 0, y: 0}]));
       const clearanceConstrained = new Set();
       let applied = false;
-      for (let leftIndex = 0; leftIndex < visibleNodes.length; leftIndex += 1) {
-        const leftId = visibleNodes[leftIndex].id();
-        const leftActive = forceNeighborhood.has(leftId);
-        for (let rightIndex = leftIndex + 1; rightIndex < visibleNodes.length; rightIndex += 1) {
-          const rightId = visibleNodes[rightIndex].id();
+      const evaluatedPairs = new Set();
+      for (let leftIndex = 0; leftIndex < activeNodes.length; leftIndex += 1) {
+        const leftId = activeNodes[leftIndex].id();
+        const leftActive = true;
+        for (let rightIndex = 0; rightIndex < allVisibleNodes.length; rightIndex += 1) {
+          const rightId = allVisibleNodes[rightIndex].id();
+          if (leftId === rightId) continue;
+          const pairKey = leftId < rightId ? `${leftId}\u0000${rightId}` : `${rightId}\u0000${leftId}`;
+          if (evaluatedPairs.has(pairKey)) continue;
+          evaluatedPairs.add(pairKey);
           const rightActive = forceNeighborhood.has(rightId);
           if (!leftActive && !rightActive) continue;
-          const leftFixed = fixed.has(leftId) || !leftActive;
-          const rightFixed = fixed.has(rightId) || !rightActive;
-          if (leftFixed && rightFixed) continue;
           let measure = boundaryGap(leftId, rightId);
           if (measure.gap >= RADIAL_VISIBLE_EDGE_GAP) continue;
+          let leftFixed = fixed.has(leftId) || !leftActive;
+          let rightFixed = fixed.has(rightId) || !rightActive;
+          if (leftFixed && rightFixed && pinnedCollisionYieldEnabled) {
+            if (
+              gestureFixed.has(leftId)
+              && sessionPinned.has(rightId)
+              && !gestureFixed.has(rightId)
+            ) {
+              rightFixed = false;
+              repelledPinned.add(rightId);
+            } else if (
+              gestureFixed.has(rightId)
+              && sessionPinned.has(leftId)
+              && !gestureFixed.has(leftId)
+            ) {
+              leftFixed = false;
+              repelledPinned.add(leftId);
+            }
+          }
+          if (leftFixed && rightFixed) continue;
           if (measure.distance < 0.000001) {
-            const angle = ((leftIndex + 1) * RADIAL_RING_PHASE) % (2 * Math.PI);
+            const angle = ((leftIndex + rightIndex + 2) * RADIAL_RING_PHASE) % (2 * Math.PI);
             measure = {...measure, deltaX: Math.cos(angle), deltaY: Math.sin(angle), distance: 1};
           }
           const unitX = measure.deltaX / measure.distance;
@@ -1732,7 +2360,7 @@
         attractionEdges += 1;
         applied = true;
       }
-      for (const node of visibleNodes) {
+      for (const node of activeNodes) {
         const nodeId = node.id();
         if (
           fixed.has(nodeId)
@@ -1748,9 +2376,9 @@
       }
       if (!applied) continue;
       cy.batch(() => {
-        for (const node of visibleNodes) {
+        for (const node of activeNodes) {
           const nodeId = node.id();
-          if (fixed.has(nodeId)) continue;
+          if (fixed.has(nodeId) && !repelledPinned.has(nodeId)) continue;
           const delta = displacement.get(nodeId);
           const magnitude = Math.hypot(delta.x, delta.y);
           if (magnitude < 0.01) continue;
@@ -1762,6 +2390,9 @@
           };
           positions.set(nodeId, next);
           node.position(next);
+          if (repelledPinned.has(nodeId) && state.pinned.has(nodeId)) {
+            state.pinned.set(nodeId, {...next});
+          }
           moved.add(nodeId);
         }
       });
@@ -1770,25 +2401,37 @@
     dom.cy.dataset.dynamicForceFixedCount = String(fixed.size);
     dom.cy.dataset.dynamicForceSeedCount = String(seeds.size);
     dom.cy.dataset.dynamicForceNeighborhoodCount = String(forceNeighborhood.size);
+    dom.cy.dataset.dynamicForceVisibleNodeCount = String(allVisibleNodes.length);
+    dom.cy.dataset.dynamicForceNeighborhoodBounded = allVisibleNodes.length > DYNAMIC_FORCE_NODE_LIMIT
+      ? 'yes'
+      : 'no';
     dom.cy.dataset.dynamicRadialTetheredCount = String(tethered.size);
-    dom.cy.dataset.dynamicLayoutModel = 'localized-radial-memory-equilibrium';
+    dom.cy.dataset.dynamicLayoutModel = state.orbitGravity
+      ? 'localized-multicenter-theme-field-equilibrium'
+      : 'localized-radial-memory-equilibrium';
     dom.cy.dataset.dynamicForceRequestedPasses = String(passes);
     dom.cy.dataset.dynamicForceExecutedPasses = String(executedPasses);
     dom.cy.dataset.dynamicForceReason = reason || 'direct-manipulation';
     dom.cy.dataset.dynamicRepulsionPairs = String(repulsionPairs);
+    dom.cy.dataset.dynamicRepelledPinnedCount = String(repelledPinned.size);
     dom.cy.dataset.dynamicAttractionEdges = String(attractionEdges);
     if (moved.size) scheduleNodeControlSync();
     return moved.size;
   }
 
   function scheduleDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
-    pendingDynamicFixedIds = new Set(fixedNodeIds);
-    pendingDynamicSeedIds = new Set(seedNodeIds || fixedNodeIds);
-    pendingDynamicPasses = Math.max(pendingDynamicPasses, passLimit || 1);
+    for (const nodeId of fixedNodeIds) pendingDynamicFixedIds.add(nodeId);
+    for (const nodeId of seedNodeIds || fixedNodeIds) pendingDynamicSeedIds.add(nodeId);
+    const requestedPasses = Math.max(
+      1,
+      Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1)
+    );
+    pendingDynamicPasses = Math.max(pendingDynamicPasses, requestedPasses);
     pendingDynamicReason = reason || 'direct-manipulation';
     if (dynamicForcesFrame) return;
-    dynamicForcesFrame = window.requestAnimationFrame(() => {
-      dynamicForcesFrame = 0;
+    const reducedMotion = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
       const fixed = pendingDynamicFixedIds;
       const seeds = pendingDynamicSeedIds;
       const passes = pendingDynamicPasses;
@@ -1798,7 +2441,39 @@
       pendingDynamicPasses = 0;
       pendingDynamicReason = 'direct-manipulation';
       applyDynamicForces(fixed, passes, seeds, forceReason);
-    });
+      dom.cy.dataset.dynamicAnimationState = 'settled-reduced-motion';
+      dom.cy.dataset.dynamicAnimationRequestedPasses = String(passes);
+      dom.cy.dataset.dynamicAnimationCompletedPasses = String(passes);
+      return;
+    }
+    let completedPasses = 0;
+    dom.cy.dataset.dynamicAnimationState = 'running';
+    dom.cy.dataset.dynamicAnimationRequestedPasses = String(pendingDynamicPasses);
+    const runFrame = () => {
+      dynamicForcesFrame = 0;
+      if (!pendingDynamicPasses) {
+        dom.cy.dataset.dynamicAnimationState = 'settled';
+        return;
+      }
+      applyDynamicForces(
+        pendingDynamicFixedIds,
+        1,
+        pendingDynamicSeedIds,
+        pendingDynamicReason
+      );
+      pendingDynamicPasses -= 1;
+      completedPasses += 1;
+      dom.cy.dataset.dynamicAnimationCompletedPasses = String(completedPasses);
+      if (pendingDynamicPasses) {
+        dynamicForcesFrame = window.requestAnimationFrame(runFrame);
+        return;
+      }
+      pendingDynamicFixedIds = new Set();
+      pendingDynamicSeedIds = new Set();
+      pendingDynamicReason = 'direct-manipulation';
+      dom.cy.dataset.dynamicAnimationState = 'settled';
+    };
+    dynamicForcesFrame = window.requestAnimationFrame(runFrame);
   }
 
   function cancelScheduledDynamicForces() {
@@ -1808,6 +2483,7 @@
     pendingDynamicSeedIds = new Set();
     pendingDynamicPasses = 0;
     pendingDynamicReason = 'direct-manipulation';
+    if (dom && dom.cy) dom.cy.dataset.dynamicAnimationState = 'cancelled';
   }
 
   function layoutGeometryScore(position, groups, baselineIndex) {
@@ -2220,6 +2896,7 @@
 
   function applyCanonicalPositions() {
     canonicalPositionByNodeId.clear();
+    canonicalOrbitAnglesByNodeId.clear();
     const nodeIds = packet.nodes.map((node) => node.id);
     cy.batch(() => {
       for (const nodeId of nodeIds) {
@@ -2252,7 +2929,14 @@
       : String(crossingDiagnostics.finalCrossings);
     dom.cy.dataset.layoutRefinementCandidates = String(crossingDiagnostics.refinementCandidates);
     const compactLayout = compactRadialCoordinates(groups, ranks);
-    const positions = compactLayout.positions;
+    const themeOrbitLayout = themeOrbitCoordinates(compactLayout.positions);
+    const positions = themeOrbitLayout.positions;
+    updateThemeOrbitGeometry(
+      themeOrbitLayout.radii,
+      themeOrbitLayout.centers,
+      themeOrbitLayout.assignments,
+      themeOrbitLayout.sharedAnchors
+    );
     dom.cy.dataset.layoutCompactionEvaluation = compactLayout.evaluated ? 'bounded' : 'skipped-large-graph';
     dom.cy.dataset.layoutCompactionBlend = String(compactLayout.acceptedBlend);
     dom.cy.dataset.layoutBaselineMaximumEdgeLength = compactLayout.baselineScore
@@ -2278,44 +2962,44 @@
       : 'not-evaluated';
     for (const [nodeId, position] of positions) {
       canonicalPositionByNodeId.set(nodeId, {...position});
+      canonicalOrbitAnglesByNodeId.set(
+        nodeId,
+        new Map(themeOrbitLayout.angles.get(nodeId) || [])
+      );
       setPosition(nodeId, position);
     }
-    const themeRadius = groupedThemeIds.length
-      ? Math.max(
-        RADIAL_THEME_MIN_RADIUS,
-        groupedThemeIds.length * 132 / (2 * Math.PI)
-      )
-      : 0;
-    groupedThemeIds.forEach((themeId, themeIndex) => {
-      const targetPositions = themeById.get(themeId).target_ids
-        .map((targetId) => cy.getElementById(targetId))
-        .filter((node) => node.length)
-        .map((node) => node.position());
-      if (!targetPositions.length) return;
-      let angle = groupedThemeIds.length === 1
-        ? -Math.PI / 2
-        : RADIAL_START_ANGLE + (2 * Math.PI * themeIndex) / groupedThemeIds.length;
-      if (groupedThemeIds.length > 1) {
-        const vector = targetPositions.reduce((sum, position) => {
-          const targetAngle = Math.atan2(position.y, position.x);
-          return {
-            x: sum.x + Math.cos(targetAngle),
-            y: sum.y + Math.sin(targetAngle)
-          };
-        }, {x: 0, y: 0});
-        if (Math.hypot(vector.x, vector.y) > 0.001) angle = Math.atan2(vector.y, vector.x);
-      }
+    groupedThemeIds.forEach((themeId) => {
       const themeNodeId = `reader-theme:${themeId}`;
-      const themePosition = {
-        x: Math.cos(angle) * themeRadius,
-        y: Math.sin(angle) * themeRadius
-      };
+      const themePosition = themeOrbitLayout.centers.get(themeId);
       canonicalPositionByNodeId.set(themeNodeId, {...themePosition});
       setPosition(themeNodeId, themePosition);
     });
-    dom.cy.dataset.layoutModel = 'compact-radial-core-layers';
-    dom.cy.dataset.layoutRingCount = String(groups.size);
+    const themeBaselineIndex = new Map();
+    for (const nodeIds of themeOrbitLayout.placementGroups.values()) {
+      nodeIds.forEach((nodeId, index) => themeBaselineIndex.set(nodeId, index));
+    }
+    const themeOrbitScore = layoutGeometryScore(
+      positions,
+      themeOrbitLayout.placementGroups,
+      themeBaselineIndex
+    );
+    const totalRingCount = [...themeOrbitLayout.radii.values()]
+      .reduce((total, themeRadii) => total + themeRadii.length, 0);
+    dom.cy.dataset.layoutModel = 'deterministic-theme-multicenter-orbit-fields';
+    dom.cy.dataset.layoutRingCount = String(totalRingCount);
+    dom.cy.dataset.layoutThemeCenterCount = String(themeOrbitLayout.centers.size);
+    dom.cy.dataset.layoutSharedNodeCount = String(themeOrbitLayout.sharedAnchors.size);
+    dom.cy.dataset.layoutSeedRingCount = String(groups.size);
     dom.cy.dataset.layoutCoreTargetCount = String((groups.get(0) || []).length);
+    dom.cy.dataset.layoutThemeOrbitCollisions = themeOrbitScore
+      ? String(themeOrbitScore.collisionCount)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutThemeOrbitCrossings = themeOrbitScore
+      ? String(themeOrbitScore.crossings)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutThemeOrbitMinimumEdgeClearance = themeOrbitScore
+      ? themeOrbitScore.minimumEdgeClearance.toFixed(3)
+      : 'not-evaluated';
   }
 
   function setPosition(nodeId, position) {
@@ -2349,6 +3033,7 @@
     dom.overview.setAttribute('aria-pressed', allTargetsActive ? 'true' : 'false');
     dom.allCards.setAttribute('aria-pressed', allCardsActive ? 'true' : 'false');
     dom.headerOverview.setAttribute('aria-pressed', allTargetsActive ? 'true' : 'false');
+    dom.orbitGravity.setAttribute('aria-pressed', state.orbitGravity ? 'true' : 'false');
     dom.undoSizing.disabled = state.sizingUndoStack.length === 0;
     dom.redoSizing.disabled = state.sizingRedoStack.length === 0;
     dom.undoSizing.title = state.sizingUndoStack.length
@@ -2713,7 +3398,7 @@
     };
     const pointTouchesNode = (point) => {
       for (const node of cy.nodes()) {
-        if (node.hasClass('hidden')) continue;
+        if (node.hasClass('hidden') || node.data('kind') === 'theme-orbit') continue;
         const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
         if (point.x >= box.x1 && point.x <= box.x2 && point.y >= box.y1 && point.y <= box.y2) {
           return true;
@@ -2742,7 +3427,7 @@
       };
       const selectedIds = [];
       for (const node of cy.nodes()) {
-        if (node.hasClass('hidden')) continue;
+        if (node.hasClass('hidden') || node.data('kind') === 'theme-orbit') continue;
         const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
         const overlaps = box.x2 >= selection.x1 && box.x1 <= selection.x2
           && box.y2 >= selection.y1 && box.y1 <= selection.y2;
@@ -2987,8 +3672,8 @@
     heading.textContent = bi('如何开始', 'How to begin');
     const introduction = document.createElement('p');
     introduction.textContent = bi(
-      '所有已启用的节点和关系都保留在同一画布上。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；松开后，所选卡片保持为锚点，至多两跳的邻域会在环形记忆约束下做一次有限的引力、斥力均衡，其余布局保持固定。切换卡片尺寸使用同一收敛机制。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
-      'Every eligible node and relation remains on one canvas. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. On release, the selected cards remain anchors while at most their two-hop neighborhood performs one bounded attraction/repulsion settlement under radial-memory constraints; the rest of the layout stays fixed. Resizing uses the same convergence. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
+      '所有已启用的节点和关系都保留在同一画布上。每个主题拥有独立圆心；主题节点越多，等距重力圆周越多。被多个目标闭包共同依赖的节点会进入相应主题场的交叉区。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；拖动期间局部邻域响应引力与斥力，松开后真实卡片保留新的局部角位置并吸附回所属的一个或多个主题场。每次响应都是有限帧动画，其余布局保持稳定。切换卡片尺寸使用同一收敛机制。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
+      'Every eligible node and relation remains on one canvas. Each theme has its own center, and themes with more nodes receive more equally spaced gravity rings. Nodes shared by multiple target closures occupy the overlap of their theme fields. Primary-drag on empty space to box-select nodes, then drag any selected node to move the group. The local neighborhood responds with attraction and repulsion during movement; on release, real cards retain their new local angles and settle back into one or more assigned theme fields. Each response is a bounded animation, so the remaining layout stays stable. Resizing uses the same convergence. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
     );
     section.append(heading, introduction);
     dom.detailReadable.append(section);
@@ -3068,8 +3753,8 @@
       dom.detailReadable,
       bi('如何移动', 'How to move'),
       bi(
-        '拖动任一已选节点，整组选中节点会保持相对位置一起移动。单击空白处可清除选择；按住 Shift、Option、Control 或 Command 再框选可追加节点。',
-        'Drag any selected node to move the whole selection while preserving relative positions. Select empty space to clear it; hold Shift, Alt, Control, or Command while box-selecting to add nodes.'
+        '拖动任一已选节点时，整组选中节点会保持相对位置一起移动；松手后，各真实卡片保留新的局部角位置并分别吸附回所属的一个或多个主题场。单击空白处可清除选择；按住 Shift、Option、Control 或 Command 再框选可追加节点。',
+        'While dragging any selected node, the whole selection moves with relative positions preserved. On release, each real card retains its new local angles and settles back into one or more assigned theme fields. Select empty space to clear the selection; hold Shift, Alt, Control, or Command while box-selecting to add nodes.'
       )
     );
     const section = document.createElement('section');
@@ -3109,13 +3794,19 @@
     }
     dom.detail.scrollTop = 0;
     dom.detailTitle.textContent = theme.label;
+    const memberCount = themeMemberIdsByThemeId.get(themeId).length;
+    const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+      || Math.max(1, Math.ceil(memberCount / THEME_ORBIT_NODES_PER_RING));
     replaceBadges([
       bi('阅读分组', 'Reader grouping'),
       bi(`${theme.target_ids.length} 个目标`, `${theme.target_ids.length} targets`),
+      bi(`${memberCount} 个成员 / ${ringCount} 条轨道`, `${memberCount} members / ${ringCount} rings`),
       bi('仅用于展示', 'Presentation only')
     ]);
     allReaderNodes().removeClass('theme-member');
-    for (const targetId of theme.target_ids) cy.getElementById(targetId).addClass('theme-member');
+    for (const nodeId of themeMemberIdsByThemeId.get(themeId)) {
+      cy.getElementById(nodeId).addClass('theme-member');
+    }
     dom.detailReadable.replaceChildren();
     appendSection(
       dom.detailReadable,
@@ -3159,13 +3850,16 @@
     allReaderNodes().removeClass('theme-member');
     dom.detail.scrollTop = 0;
     dom.detailTitle.textContent = node.title;
-    const topic = themeById.get(node.theme_id);
+    const topics = themeMembershipByNodeId.get(nodeId)
+      .map((themeId) => themeById.get(themeId).label);
     replaceBadges([
       roleLabel(node.reader_role),
       planeLabel(node.plane),
       visualStatusLabel(node.visual_status),
       node.layer === 'research' ? bi('研究过程', 'Research process') : bi('知识层', 'Knowledge'),
-      topic ? `${bi('主题', 'Topic')}: ${topic.label}` : ''
+      topics.length
+        ? `${bi(topics.length > 1 ? '共享主题' : '主题', topics.length > 1 ? 'Shared topics' : 'Topic')}: ${topics.join(' / ')}`
+        : ''
     ]);
     dom.detailReadable.replaceChildren();
     appendSection(dom.detailReadable, bi('一句话概括', 'In one sentence'), node.summary);

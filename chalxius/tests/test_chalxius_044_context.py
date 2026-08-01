@@ -453,16 +453,9 @@ class Chalxius044ContextTests(unittest.TestCase):
             )
             _, routing_card = self._card(store, routing_round)
             routing_mode = routing_card["context_selection"]["mode"]
-            self.assertEqual(routing_card["work_mode"], "prove")
-            self.assertEqual(
-                routing_mode["blocked_suggestions"],
-                [
-                    {
-                        "mode": "refute",
-                        "reason": "would_change_active_adverse_routing_capability",
-                    }
-                ],
-            )
+            self.assertEqual(routing_card["work_mode"], "refute")
+            self.assertEqual(routing_mode["blocked_suggestions"], [])
+            self.assertIn("adverse_routing", routing_card)
 
     def test_legacy_043_card_remains_valid_without_rewrite(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the two public, sanitized Chalxius Reader case demonstrations."""
+"""Build the public, sanitized Chalxius Reader case demonstrations."""
 
 from __future__ import annotations
 
@@ -596,6 +596,8 @@ CASES = {
     "xy-swap-potential": xy_swap_packet,
 }
 
+PREBUILT_CASES = ("anonymized-research-topology",)
+
 
 def export_once(packet_path: Path, packet: dict[str, Any]) -> bytes:
     with tempfile.TemporaryDirectory(prefix="chalxius-public-case-") as temporary:
@@ -666,6 +668,28 @@ def main() -> None:
                     "case": slug,
                     "packet_sha256": sha256_bytes(canonical_bytes(packet)),
                     "html_sha256": sha256_bytes(first),
+                    "output": output_path.relative_to(REPOSITORY).as_posix(),
+                },
+                sort_keys=True,
+            )
+        )
+    for slug in PREBUILT_CASES:
+        packet_path = PACKET_DIRECTORY / f"{slug}.json"
+        packet = json.loads(packet_path.read_text(encoding="utf-8"))
+        first = export_once(packet_path, packet)
+        second = export_once(packet_path, packet)
+        if first != second:
+            raise RuntimeError(f"nondeterministic Reader output for {slug}")
+        output_path = CASE_DIRECTORY / f"{slug}.html"
+        output_path.write_bytes(first)
+        print(
+            json.dumps(
+                {
+                    "case": slug,
+                    "packet_sha256": sha256_bytes(canonical_bytes(packet)),
+                    "html_sha256": sha256_bytes(first),
+                    "nodes": len(packet["nodes"]),
+                    "edges": len(packet["edges"]),
                     "output": output_path.relative_to(REPOSITORY).as_posix(),
                 },
                 sort_keys=True,

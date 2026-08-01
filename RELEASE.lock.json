@@ -1,59 +1,71 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "package": "chalxius",
-  "version": "0.4.0",
-  "status": "frozen_validated_installed",
-  "release_date": "2026-07-28",
+  "version": "0.5.0",
+  "release_display_name": "Back to the Future / Paper Continuation",
+  "status": "frozen_validated_for_publication",
+  "release_date": "2026-08-01",
   "workflow_authority": "V5",
   "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
-  "renderer_revision": "chalxius-reader-html-15",
+  "renderer_revision": "chalxius-reader-html-20",
   "reader_packet_schema_version": 1,
-  "layout": "deterministic_compact_radial_core_layers",
+  "layout": "deterministic_theme_multicenter_orbit_fields",
   "public_distribution": {
-    "archive_name": "chalxius-0.4.0-public.tar.gz",
-    "archive_bytes": 1518813,
-    "archive_sha256": "8e19dc4fdfaa6f65bf95f62dde57b5f0bf7f517926dbeec15b593152276ae56f",
-    "archive_members": 150,
-    "manifest_entry_count": 149,
-    "manifest_sha256": "ca6882ab1f4a73661c101da626cdba2e7a001f85c023a8208a076e08fadc0211",
+    "archive_name": "chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz",
+    "archive_bytes": 1791856,
+    "archive_sha256": "5f5d71401fa7c6e2f132c5fa36bc8fde74d285ada27da891ace2b4bf2da2a3a4",
+    "archive_members": 178,
+    "manifest_entry_count": 177,
+    "manifest_sha256": "479b35c0c841d737a5806a3c472d8ffd965be6127e525c5d511708a88c43df8d",
     "deterministic_archive_build": "pass",
     "privacy_scan": "pass"
-  },
-  "local_installation": {
-    "from_version": "0.3.6",
-    "to_version": "0.4.0",
-    "status": "pass",
-    "manifest_entry_count": 149,
-    "manifest_sha256": "ca6882ab1f4a73661c101da626cdba2e7a001f85c023a8208a076e08fadc0211",
-    "rollback_preserved": true,
-    "active_project_migration": false
   },
   "validation": {
     "official_skill_validator": "pass",
     "self_test": "pass",
-    "full_suite": "450/450 pass",
-    "aggressive_bug_audit": "8/8 mutants killed",
+    "full_suite_final_tree": "537/537 pass",
+    "full_suite_cold_archive": "537/537 pass",
+    "native_paper_evidence_focused": "15/15 pass",
+    "aggressive_bug_audit": "51/51 mutants killed",
     "cold_public_archive": "pass",
-    "installed_tree": "pass",
     "exact_tree": "pass",
-    "privacy_scan": "pass"
+    "public_examples": "3/3 pass",
+    "anonymized_showcase_privacy": "pass"
+  },
+  "public_showcase": {
+    "nodes": 175,
+    "edges": 364,
+    "targets": 17,
+    "themes": 7,
+    "packet_file_sha256": "19cb5e0fc9f588305531276241207b1dc60cd2d002946dbfcad90b75e3e7244a",
+    "packet_canonical_sha256": "75df4f4fa769a30485b45f5198b033a72136d50f61c00a576e85ef1a73fad998",
+    "html_sha256": "90207966b1779d8595f0ce8ee9275ff5a2f4abeaa313f0984647d19304cb3ae6",
+    "screenshot_sha256": "3e012ee58684de1b4eb0504b34114a9bec9636365ca2cce4dea9a93404ece444",
+    "identifier_mapping": "ephemeral_hmac_sha256_key_discarded",
+    "truth_effect": "none"
   },
   "authority_boundaries": {
     "v5_initial_fact_authority": "empty",
-    "v4_authority_inheritance": false,
-    "profile_closure_authority": "repair_advice_only",
-    "pulse_failure_policy": "local_quarantine_existing_contributions_survive",
-    "project_background": "generate_only_on_explicit_request_read_default_if_present_nontruth"
+    "legacy_authority_inheritance": false,
+    "evidence_authority": "cross_project_nontruth",
+    "nonpaper_fact_import": "explicit_user_and_operator_only",
+    "attack_route_activation": "user_decision_future_only",
+    "chx_and_attack_reports": "separate",
+    "active_project_migration": false,
+    "installed_runtime_replacement": false
   },
   "contract_hashes": {
     "contracts_py_sha256": "5bd04ce9dc5fea159805e50b921a225875124946ec26e3e119af4236d03d75e1",
-    "fact_admission_contract_sha256": "68c4785a8c36558ee7effb79be755405d2be785ee00f81795328c6cc5a211289",
-    "reasoning_mode_policy_sha256": "0e1939213c834c3f326a20bea5953e387e8fb5ec30ad39386e71a0f7693af1af",
-    "inheritance_lock_sha256": "08cc0972cf11340c6fb15d50acc67ff0542497744af40c704c211b2115425ac8"
+    "fact_admission_contract_sha256": "4879da333f75a90062742a4280cd855697e39a5f7f6cb01f53121a337f70a75c",
+    "reasoning_mode_policy_sha256": "ee2dc78be7ab0a999d4f4738e4ab31056475c13e2c7680f980d8d2da8a5c8d3a",
+    "inheritance_lock_sha256": "cf9f4d32b6fcd5fc4c078bb0ee4c7c15dfe05a5560446fe750fbfcdfb4547265",
+    "evidence_plane_sha256": "27378cf3c32bf3c680313a0adc432f708b38136b0fc3138c30610c0243a4055a",
+    "paper_continuation_sha256": "6b27d559d2cbc7afd487bf35248579765725dc73e838e5067792a0c43f2aaa4e",
+    "reader_app_sha256": "b949ed26a059d71887ac1ca2e7661e7aa987070abc2d12c1438556a92b440fc7"
   },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius",
-    "tag": "v0.4.0",
-    "state_at_lock_freeze": "prepared_after_local_installation"
+    "tag": "v0.5.0",
+    "state_at_lock_freeze": "validated_for_publication"
   }
 }

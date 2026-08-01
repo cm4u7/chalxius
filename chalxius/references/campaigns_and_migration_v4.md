@@ -5,7 +5,8 @@
 > rollback history only. V5 never upgrades or inherits authority from a V1-V4
 > root. Keep historical roots read-only and start V5 in a separate root with an
 > empty Fact Graph. Generate `PROJECT_BACKGROUND.md` only on explicit user
-> instruction; once present, read it by default as nontruth context.
+> instruction; once present, read it by default as nontruth context. In current
+> V5, Campaign frontier use is likewise explicit: never infer it from `ACTIVE`.
 
 Read this reference before changing campaigns, targets, frontier policy, audit behavior, or
 upgrading a v1-v3 project copy.
@@ -18,6 +19,13 @@ definition. Its targets are typed:
 - `headline_proof`;
 - `supporting_proof`;
 - `communication`.
+
+`campaign-create --input` accepts exactly `name`, `objective`,
+`source_claim_ids`, `targets`, `constraints`, `stop_conditions`, and
+`value_definition`. `campaign-update --input` accepts exactly `type` and an
+object `payload`; `type` is one of `constraint_added`,
+`stop_condition_disposition`, `value_definition_updated`, or `note`. The CLI
+also exposes these fields in the corresponding `--help` text.
 
 Only admitted fact ids may be proof targets. Communication targets may point to a fact, source claim,
 report, or verification bundle but never enter proof-target closure. Archiving is append-only.
@@ -34,6 +42,32 @@ collision checks, before publishing anything. Initial proof targets require a ca
 active-admitted-fact predicate. The complete `created` plus `target_added` ledger is staged and
 published as one new campaign directory; a failed validation or publication leaves no partial
 campaign.
+
+## Explicit V5 Campaign envelope
+
+Use `frontier --campaign CAMPAIGN_ID` or `plan-round --campaign CAMPAIGN_ID`
+only when Main deliberately chooses that durable objective. V5 accepts only
+Research whose immutable metadata has that exact `campaign_id`; untagged and
+other-Campaign entries are excluded, including explicit ids. The scoped set is
+still ordered by the ordinary four-factor frontier, with no score cutoff.
+
+Before writing a scoped round, planning revalidates the Campaign, registered
+source claims, and active proof targets. It then freezes one bounded snapshot
+below the round and puts a compact `chalxius-v5-campaign-scope-1` binding in the
+manifest and cards: objective, active typed targets, constraints, value
+definition, stop conditions, event-count/history binding, and exact snapshot
+path/hash. Later Campaign events do not mutate that card. Snapshot damage,
+history truncation, mixed Campaign ids, or a missing Campaign fails closed.
+A bound V5 worker may retrieve only that frozen status with
+`campaign-status CAMPAIGN_ID --task-card CARD`; a passive unscoped association
+does not authorize a live Campaign read.
+
+Omitting `--campaign` preserves the global V5 frontier and the earlier passive
+behavior: a selected Research item may still copy its `campaign_id` into a card,
+but no Campaign envelope or implicit active-Campaign filter is attached. The
+Campaign is nontruth context, never a scheduler, expansion loop, task closure,
+certification gate, or Fact premise. V4 keeps its recorded active-Campaign
+behavior and is not reinterpreted by this V5 option.
 
 ## Actionable frontier
 

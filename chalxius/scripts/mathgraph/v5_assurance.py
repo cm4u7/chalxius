@@ -511,19 +511,36 @@ def validate_return_assurance(
     expected = {item["obligation_id"]: item for item in contract["obligations"]}
     actual: dict[str, dict[str, Any]] = {}
     for index, item in enumerate(dispositions, 1):
-        _exact(
-            item,
-            {"obligation_id", "status", "witness_artifact_sha256s", "rationale"},
-            f"obligation_dispositions[{index}]",
-        )
+        disposition_fields = {
+            "obligation_id",
+            "status",
+            "witness_artifact_sha256s",
+            "rationale",
+        }
+        if not isinstance(item, dict) or set(item) != disposition_fields:
+            actual_fields = set(item) if isinstance(item, dict) else set()
+            raise ValueError(
+                f"obligation_dispositions[{index}] fields are not exact; "
+                f"missing={sorted(disposition_fields.difference(actual_fields))}; "
+                f"unknown={sorted(actual_fields.difference(disposition_fields))}; "
+                "exact schema: references/v5_worker_return_contract.md"
+            )
         obligation_id = _text(item["obligation_id"], "obligation disposition id")
         if obligation_id in actual:
             raise ValueError("obligation dispositions contain duplicate ids")
         if obligation_id not in expected:
-            raise ValueError(f"unknown obligation disposition id: {obligation_id}")
+            raise ValueError(
+                f"unknown obligation disposition id: {obligation_id}; "
+                f"expected={sorted(expected)}; exact schema: "
+                "references/v5_worker_return_contract.md"
+            )
         status = item["status"]
         if status not in {"complete", "blocked", "not_applicable"}:
-            raise ValueError("obligation disposition status is invalid")
+            raise ValueError(
+                "obligation disposition status is invalid; allowed=['blocked', "
+                "'complete', 'not_applicable']; exact schema: "
+                "references/v5_worker_return_contract.md"
+            )
         witnesses = _hashes(
             item["witness_artifact_sha256s"],
             f"obligation_dispositions[{index}].witness_artifact_sha256s",
@@ -561,7 +578,9 @@ def validate_return_assurance(
     if set(actual) != set(expected):
         raise ValueError(
             "obligation dispositions do not exactly cover task-card obligations; "
-            f"missing={sorted(set(expected).difference(actual))}"
+            f"missing={sorted(set(expected).difference(actual))}; "
+            f"extra={sorted(set(actual).difference(expected))}; exact schema: "
+            "references/v5_worker_return_contract.md"
         )
     if payload.get("outcome") == "proof" and any(
         item["status"] == "blocked" for item in actual.values()

@@ -56,8 +56,8 @@ representation, truncation order, or output interpretation. Exact replay and
 the older eight-axis independence matrix remain applicable where their frozen
 contracts require them.
 
-If adverse routing is explicitly enabled, successful ingestion of an actual
-computation-bearing Research return queues one future nontruth `refute` review.
+Successful ingestion of an actual computation-bearing V5 Research return
+queues one future nontruth `refute` review under the prospective default.
 The review is capability-bound to exact source/output artifacts and may attack
 the full formula-code-output chain during Research. It does not interrupt the
 producer or change the ingested return. Ordinary prose mentioning code does

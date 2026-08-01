@@ -168,8 +168,9 @@ class PaperLogicStore:
     explicit mirror projection; neither changes this store's authority.
     """
 
-    def __init__(self, project_root: Path | str) -> None:
+    def __init__(self, project_root: Path | str, *, owner: Any | None = None) -> None:
         self.project_root = Path(project_root).resolve()
+        self.owner = owner
         self.root = self.project_root / "paper_logic"
         self.feature_path = self.root / "store.json"
         self.artifacts_dir = self.root / "artifacts" / "by-sha256"
@@ -701,9 +702,17 @@ class PaperLogicStore:
             normalized.append(dict(edge))
         normalized.sort(key=canonical_json_bytes)
         if normalized != expected:
+            missing = [item for item in expected if item not in normalized]
+            extra = [item for item in normalized if item not in expected]
             raise ValueError(
                 "paper graph edges do not exactly match node-declared "
-                "ports/directions"
+                "ports/directions; "
+                f"missing_count={len(missing)} extra_count={len(extra)} "
+                "missing="
+                + json.dumps(missing[:8], ensure_ascii=False, sort_keys=True)
+                + " extra="
+                + json.dumps(extra[:8], ensure_ascii=False, sort_keys=True)
+                + " schema=references/paper_input_contracts.md"
             )
         return normalized
 
@@ -2027,13 +2036,19 @@ class PaperLogicStore:
             nodes=nodes,
             edges=edges,
         )
-        return {
+        result = {
             "snapshot_id": snapshot_id,
             "revision_id": revision_id,
             "readiness": readiness,
             "status": "frozen_nontruth",
             "truth_effect": "none",
         }
+        if self.owner is not None:
+            result["evidence_sync"] = self.owner.evidence().paper_snapshot_frozen(
+                snapshot_id,
+                actor=actor,
+            )
+        return result
 
     def snapshot_manifest(self, snapshot_id: str) -> dict[str, Any]:
         directory = self._snapshot_path(snapshot_id)

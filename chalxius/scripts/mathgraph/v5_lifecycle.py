@@ -23,6 +23,7 @@ from .contracts import (
     sha256_bytes,
     sha256_json,
     validate_assignment_id,
+    validate_campaign_id,
     validate_fact_id,
     validate_memory_id,
     validate_round_id,
@@ -39,6 +40,7 @@ from .campaigns import (
     validate_decision_profile,
 )
 from .computations import validate_computational_evidence
+from .decision_preflight import V5_FINDING_CLASSES, validate_decision_against_capsule
 from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
 from .graph import DependencyGraph
@@ -70,7 +72,12 @@ from .interfaces import (
 from .markdown import parse_fact_markdown, validate_fact_round_trip
 from .model import Fact
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
-from .adverse_routing import validate_attack_learning
+from .adverse_routing import (
+    ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS,
+    PRODUCTIVE_ATTACK_OUTCOMES,
+    validate_adverse_domain_profile,
+    validate_attack_learning,
+)
 from .v5_assurance import (
     V5_ASSURANCE_CONTRACT_REVISION,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
@@ -82,6 +89,7 @@ from .v5_assurance import (
 
 V5_WORKFLOW_EVIDENCE_VERSION = 5
 V5_POLICY_REVISION = "chalxius-v5-minimal-core-2"
+V5_FACT_EVIDENCE_AUDIT_REVISION = "chalxius-v5-fact-evidence-audit-1"
 V5_LIFECYCLE_CONTRACT: dict[str, Any] = {
     "schema_version": 1,
     "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -137,7 +145,12 @@ _LOCAL_SOURCE_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_])/(?:Users|Volumes|private|tmp)/[^\s`'\"<>]+"
 )
 V5_VALIDATION_GRANULARITIES = frozenset(
-    {"monolithic_theorem", "atomic_fact_dag", "nodewise_proof_dag"}
+    {
+        "monolithic_theorem",
+        "atomic_fact_dag",
+        "nodewise_proof_dag",
+        "paper_target_closure",
+    }
 )
 V5_CHALLENGE_DISPOSITIONS = frozenset(
     {
@@ -161,9 +174,11 @@ V5_MAX_PROJECT_BACKGROUND_BYTES = MAX_PROJECT_BACKGROUND_BYTES
 V5_LEGACY_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.3-2"
 V5_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.4-1"
 V5_CONTEXT_SELECTION_REVISION = "chalxius-v5-context-selection-0.4.4-1"
+V5_CAMPAIGN_SCOPE_REVISION = "chalxius-v5-campaign-scope-1"
 V5_MAX_CONTEXT_SNAPSHOT_NODES = 256
 V5_MAX_CONTEXT_SNAPSHOT_EDGES = 512
 V5_MAX_SOURCE_RESEARCH_DOSSIER_BYTES = 256 * 1024
+V5_MAX_CAMPAIGN_SNAPSHOT_BYTES = 256 * 1024
 V5_SOURCE_RESEARCH_DOSSIER_FIELDS = (
     "schema_version",
     "policy_revision",
@@ -204,6 +219,18 @@ V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE = {
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def _parse_utc_timestamp(value: Any, *, label: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a nonempty timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{label} is not an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None:
+        raise ValueError(f"{label} must include a timezone")
+    return parsed.astimezone(timezone.utc)
 
 
 def _require_nonempty_text(value: Any, label: str) -> str:
@@ -310,6 +337,15 @@ class V5AuditReport:
     paper_source_nodes: int = 0
     paper_reconstruction_nodes: int = 0
     paper_audit_nodes: int = 0
+    paper_continuation_plans: int = 0
+    paper_continuation_complete_plans: int = 0
+    paper_continuation_targets: int = 0
+    paper_continuation_researched: int = 0
+    paper_continuation_dispositioned: int = 0
+    paper_continuation_unresolved: int = 0
+    paper_continuation_successor_mapped: int = 0
+    paper_continuation_revised_manuscript_covered: int = 0
+    paper_continuation_adequacy_complete: bool | None = None
     historical_workflow_warnings: list[str] = field(default_factory=list)
     trust_debt: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -355,6 +391,22 @@ class V5AuditReport:
             "paper_source_nodes": self.paper_source_nodes,
             "paper_reconstruction_nodes": self.paper_reconstruction_nodes,
             "paper_audit_nodes": self.paper_audit_nodes,
+            "paper_continuation": {
+                "plans": self.paper_continuation_plans,
+                "complete_plans": self.paper_continuation_complete_plans,
+                "targets": self.paper_continuation_targets,
+                "researched": self.paper_continuation_researched,
+                "dispositioned": self.paper_continuation_dispositioned,
+                "unresolved": self.paper_continuation_unresolved,
+                "successor_mapped": self.paper_continuation_successor_mapped,
+                "revised_manuscript_covered": (
+                    self.paper_continuation_revised_manuscript_covered
+                ),
+                "adequacy_complete": (
+                    self.paper_continuation_adequacy_complete
+                ),
+                "authority_effect": "none",
+            },
             "historical_workflow_warnings": self.historical_workflow_warnings,
             "trust_debt": self.trust_debt,
             "errors": self.errors,
@@ -405,6 +457,12 @@ class V5LifecycleManager:
             "contract_sha256": V5_LIFECYCLE_CONTRACT_SHA256,
         }
         self.store._write_json_once(self.contract_path, payload)
+        self.paper_continuation().initialize()
+
+    def paper_continuation(self) -> Any:
+        from .paper_continuation import PaperContinuationManager
+
+        return PaperContinuationManager(self)
 
     def _research_path(self, research_id: str) -> Path:
         return self.research_entries_dir / f"{validate_memory_id(research_id)}.json"
@@ -483,6 +541,7 @@ class V5LifecycleManager:
             raise ValueError("research metadata must be an object")
         metadata = record["metadata"]
         _research_decision_profile(metadata)
+        validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
         self._research_is_adverse_assignment(record)
         if "workload_profile" in metadata:
             validate_workload_profile(metadata["workload_profile"])
@@ -737,6 +796,7 @@ class V5LifecycleManager:
             key: value for key, value in payload.items() if key not in reserved
         }
         decision_profile = _research_decision_profile(metadata)
+        validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
         if "decision_profile" in metadata:
             metadata["decision_profile"] = decision_profile
             metadata["score_model"] = COMPACT_SCORE_MODEL
@@ -1311,14 +1371,281 @@ class V5LifecycleManager:
             for research_id, invalidator_ids in stale.items()
         }
 
+    @staticmethod
+    def _campaign_snapshot_bytes(snapshot: dict[str, Any]) -> bytes:
+        raw = (
+            json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True)
+            + "\n"
+        ).encode("utf-8")
+        if len(raw) > V5_MAX_CAMPAIGN_SNAPSHOT_BYTES:
+            raise ValueError(
+                "V5 Campaign snapshot exceeds the 256 KiB planning cap"
+            )
+        return raw
+
+    def _campaign_snapshot_for_planning(
+        self,
+        campaign_id: str,
+    ) -> tuple[dict[str, Any], bytes]:
+        """Validate and freeze one explicit nontruth Campaign envelope."""
+
+        campaign_id = validate_campaign_id(campaign_id)
+        status = self.store.campaigns().status(campaign_id)
+        expected_status_fields = {
+            "campaign_id",
+            "active",
+            "name",
+            "objective",
+            "source_claim_ids",
+            "targets",
+            "constraints",
+            "stop_conditions",
+            "value_definition",
+            "updates",
+            "event_count",
+        }
+        if not isinstance(status, dict) or set(status) != expected_status_fields:
+            raise ValueError("V5 Campaign status fields are not exact")
+        if status.get("campaign_id") != campaign_id:
+            raise ValueError("V5 Campaign status id mismatch")
+        if not isinstance(status.get("active"), bool):
+            raise ValueError("V5 Campaign active projection must be boolean")
+        for key in ("name", "objective", "value_definition"):
+            if not isinstance(status.get(key), str) or not status[key].strip():
+                raise ValueError(f"V5 Campaign {key} must be nonempty")
+        for key in ("source_claim_ids", "constraints", "stop_conditions"):
+            values = status.get(key)
+            if (
+                not isinstance(values, list)
+                or any(not isinstance(item, str) for item in values)
+                or len(values) != len(set(values))
+            ):
+                raise ValueError(f"V5 Campaign {key} must be unique strings")
+        event_count = status.get("event_count")
+        if (
+            isinstance(event_count, bool)
+            or not isinstance(event_count, int)
+            or event_count < 1
+        ):
+            raise ValueError("V5 Campaign event count is invalid")
+        if not isinstance(status.get("updates"), list) or any(
+            not isinstance(item, dict) for item in status["updates"]
+        ):
+            raise ValueError("V5 Campaign updates must be objects")
+        for source_claim_id in status["source_claim_ids"]:
+            self.store.claims().show_claim(source_claim_id)
+        targets = status.get("targets")
+        if not isinstance(targets, dict):
+            raise ValueError("V5 Campaign targets must be an object")
+        active_fact_ids = set(self.store.fact_ids())
+        for target_id, target in targets.items():
+            if not isinstance(target_id, str) or not isinstance(target, dict):
+                raise ValueError("V5 Campaign target projection is malformed")
+            if target.get("target_id") != target_id:
+                raise ValueError("V5 Campaign target id projection mismatch")
+            if target.get("role") not in {
+                "headline_proof",
+                "supporting_proof",
+                "communication",
+            }:
+                raise ValueError("V5 Campaign target role is invalid")
+            if target.get("status") not in {"active", "archived"}:
+                raise ValueError("V5 Campaign target status is invalid")
+            for key in ("subject_kind", "subject_id", "label"):
+                if not isinstance(target.get(key), str) or not target[key].strip():
+                    raise ValueError(f"V5 Campaign target {key} must be nonempty")
+            if (
+                target["status"] == "active"
+                and target["role"] in {"headline_proof", "supporting_proof"}
+                and target["subject_id"] not in active_fact_ids
+            ):
+                raise ValueError(
+                    "V5 Campaign active proof target is not an admitted Fact: "
+                    + target["subject_id"]
+                )
+        snapshot = {
+            "schema_version": 1,
+            "revision": V5_CAMPAIGN_SCOPE_REVISION,
+            "campaign_id": campaign_id,
+            "campaign_status": status,
+            "selection_policy": "explicit_exact_research_campaign_id_match",
+            "scheduler": "v5_main_four_factor_frontier",
+            "truth_effect": "none",
+            "fact_admission_effect": "none",
+        }
+        return snapshot, self._campaign_snapshot_bytes(snapshot)
+
+    @staticmethod
+    def _campaign_scope_from_snapshot(
+        snapshot: dict[str, Any],
+        *,
+        snapshot_relpath: str,
+        snapshot_sha256: str,
+    ) -> dict[str, Any]:
+        required = {
+            "schema_version",
+            "revision",
+            "campaign_id",
+            "campaign_status",
+            "selection_policy",
+            "scheduler",
+            "truth_effect",
+            "fact_admission_effect",
+        }
+        if not isinstance(snapshot, dict) or set(snapshot) != required:
+            raise ValueError("V5 Campaign snapshot fields are not exact")
+        if (
+            snapshot.get("schema_version") != 1
+            or snapshot.get("revision") != V5_CAMPAIGN_SCOPE_REVISION
+            or snapshot.get("selection_policy")
+            != "explicit_exact_research_campaign_id_match"
+            or snapshot.get("scheduler") != "v5_main_four_factor_frontier"
+            or snapshot.get("truth_effect") != "none"
+            or snapshot.get("fact_admission_effect") != "none"
+        ):
+            raise ValueError("V5 Campaign snapshot contract mismatch")
+        campaign_id = validate_campaign_id(snapshot.get("campaign_id"))
+        status = snapshot.get("campaign_status")
+        if not isinstance(status, dict) or status.get("campaign_id") != campaign_id:
+            raise ValueError("V5 Campaign snapshot status mismatch")
+        targets = status.get("targets")
+        if not isinstance(targets, dict):
+            raise ValueError("V5 Campaign snapshot targets are invalid")
+        active_targets: list[dict[str, str]] = []
+        for target_id, target in sorted(targets.items()):
+            if not isinstance(target, dict) or target.get("target_id") != target_id:
+                raise ValueError("V5 Campaign snapshot target projection is invalid")
+            if target.get("status") != "active":
+                continue
+            compact = {
+                key: target.get(key)
+                for key in (
+                    "target_id",
+                    "role",
+                    "subject_kind",
+                    "subject_id",
+                    "label",
+                )
+            }
+            if any(not isinstance(value, str) or not value for value in compact.values()):
+                raise ValueError("V5 Campaign active target is not compactable")
+            active_targets.append(compact)
+        event_count = status.get("event_count")
+        if (
+            isinstance(event_count, bool)
+            or not isinstance(event_count, int)
+            or event_count < 1
+        ):
+            raise ValueError("V5 Campaign snapshot event count is invalid")
+        source_claim_ids = _require_string_list(
+            status.get("source_claim_ids"), "Campaign snapshot source claim ids"
+        )
+        constraints = _require_string_list(
+            status.get("constraints"), "Campaign snapshot constraints"
+        )
+        stop_conditions = _require_string_list(
+            status.get("stop_conditions"), "Campaign snapshot stop conditions"
+        )
+        for key in ("objective", "value_definition"):
+            if not isinstance(status.get(key), str) or not status[key].strip():
+                raise ValueError(f"V5 Campaign snapshot {key} must be nonempty")
+        if not isinstance(status.get("active"), bool):
+            raise ValueError("V5 Campaign snapshot active state is invalid")
+        return {
+            "revision": V5_CAMPAIGN_SCOPE_REVISION,
+            "campaign_id": campaign_id,
+            "selection_policy": snapshot["selection_policy"],
+            "scheduler": snapshot["scheduler"],
+            "snapshot_relpath": snapshot_relpath,
+            "snapshot_sha256": snapshot_sha256,
+            "event_count": event_count,
+            "active_at_freeze": status["active"],
+            "objective": status["objective"],
+            "source_claim_ids": source_claim_ids,
+            "constraints": constraints,
+            "stop_conditions": stop_conditions,
+            "value_definition": status["value_definition"],
+            "active_targets": active_targets,
+            "truth_effect": "none",
+            "fact_admission_effect": "none",
+        }
+
+    def _validate_campaign_scope_binding(
+        self,
+        scope: Any,
+        *,
+        round_id: str,
+    ) -> dict[str, Any]:
+        if not isinstance(scope, dict):
+            raise ValueError("V5 Campaign scope must be one object")
+        expected_fields = {
+            "revision",
+            "campaign_id",
+            "selection_policy",
+            "scheduler",
+            "snapshot_relpath",
+            "snapshot_sha256",
+            "event_count",
+            "active_at_freeze",
+            "objective",
+            "source_claim_ids",
+            "constraints",
+            "stop_conditions",
+            "value_definition",
+            "active_targets",
+            "truth_effect",
+            "fact_admission_effect",
+        }
+        if set(scope) != expected_fields:
+            raise ValueError("V5 Campaign scope fields are not exact")
+        campaign_id = validate_campaign_id(scope.get("campaign_id"))
+        expected_relpath = f"rounds/{round_id}/context/campaign.snapshot.json"
+        if scope.get("snapshot_relpath") != expected_relpath:
+            raise ValueError("V5 Campaign snapshot path is noncanonical")
+        digest = scope.get("snapshot_sha256")
+        if not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
+            raise ValueError("V5 Campaign snapshot hash is invalid")
+        snapshot_path = contained_path(
+            self.store.root,
+            expected_relpath,
+            "V5 Campaign snapshot path",
+        )
+        if snapshot_path.is_symlink() or not snapshot_path.is_file():
+            raise ValueError("V5 Campaign snapshot is missing or unsafe")
+        raw = snapshot_path.read_bytes()
+        if (
+            len(raw) > V5_MAX_CAMPAIGN_SNAPSHOT_BYTES
+            or sha256_bytes(raw) != digest
+        ):
+            raise ValueError("V5 Campaign snapshot bytes/hash mismatch")
+        try:
+            snapshot = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("V5 Campaign snapshot is not valid UTF-8 JSON") from exc
+        expected_scope = self._campaign_scope_from_snapshot(
+            snapshot,
+            snapshot_relpath=expected_relpath,
+            snapshot_sha256=digest,
+        )
+        if scope != expected_scope:
+            raise ValueError("V5 Campaign scope drifted from its frozen snapshot")
+        current = self.store.campaigns().status(campaign_id)
+        if current.get("event_count", 0) < scope["event_count"]:
+            raise ValueError("V5 Campaign history was truncated after round freeze")
+        return scope
+
     def frontier(
         self,
         *,
         limit: int = 10,
         include_history: bool = False,
+        campaign_id: str | None = None,
     ) -> list[dict[str, Any]]:
         if limit < 1:
             raise ValueError("frontier limit must be positive")
+        if campaign_id is not None:
+            campaign_id = validate_campaign_id(campaign_id)
+            self.store.campaigns().status(campaign_id)
         bases: dict[str, dict[str, Any]] = {}
         dispositions: dict[str, dict[str, Any]] = {}
         for record in self.research_records():
@@ -1334,6 +1661,11 @@ class V5LifecycleManager:
         active_fact_ids = set(self.store.fact_ids())
         visible: list[dict[str, Any]] = []
         for research_id, record in bases.items():
+            if (
+                campaign_id is not None
+                and record["metadata"].get("campaign_id") != campaign_id
+            ):
+                continue
             projection = dict(record)
             disposition = dispositions.get(research_id)
             if disposition is not None:
@@ -1424,8 +1756,8 @@ class V5LifecycleManager:
             "revision": "chalxius-v5-mode-architecture-signature-1",
             "assurance_contract_without_artifact_roles": assurance,
             "frozen_adverse_task_binding": (
-                "attached"
-                if adverse_routing_enabled and work_mode == "refute"
+                "available_when_refute_selected"
+                if adverse_routing_enabled
                 else "absent"
             ),
             "program_math_adverse_review": (
@@ -1887,6 +2219,61 @@ class V5LifecycleManager:
             **semantic,
             "runtime_identity_sha256": sha256_json(semantic),
         }
+
+    @staticmethod
+    def _validate_bound_runtime_binding(value: Any) -> dict[str, Any]:
+        fields = {
+            "schema_version",
+            "skill_root",
+            "skill_version",
+            "version_file_sha256",
+            "manifest_file_sha256",
+            "worker_ledger_contract",
+            "runtime_identity_sha256",
+        }
+        if not isinstance(value, dict) or set(value) != fields:
+            raise ValueError("V5 task-card runtime binding fields are not exact")
+        semantic = {
+            key: value[key]
+            for key in fields
+            if key != "runtime_identity_sha256"
+        }
+        if (
+            value["schema_version"] != 1
+            or value["worker_ledger_contract"]
+            != "exact_task_card_runtime_binding_required"
+            or value["runtime_identity_sha256"] != sha256_json(semantic)
+        ):
+            raise ValueError("V5 task-card runtime binding identity is invalid")
+        skill_root_text = _require_nonempty_text(
+            value["skill_root"], "V5 task-card runtime skill root"
+        )
+        skill_root = Path(skill_root_text)
+        if not skill_root.is_absolute() or skill_root.is_symlink() or not skill_root.is_dir():
+            raise ValueError("V5 task-card bound Chalxius runtime root is missing or unsafe")
+        version_path = skill_root / "VERSION"
+        manifest_path = skill_root / "MANIFEST.sha256"
+        if (
+            version_path.is_symlink()
+            or not version_path.is_file()
+            or manifest_path.is_symlink()
+            or not manifest_path.is_file()
+        ):
+            raise ValueError("V5 task-card bound Chalxius runtime identity files are unsafe")
+        version_raw = version_path.read_bytes()
+        manifest_raw = manifest_path.read_bytes()
+        try:
+            bound_version = version_raw.decode("utf-8").strip()
+        except UnicodeDecodeError as exc:
+            raise ValueError("V5 task-card bound Chalxius VERSION is not UTF-8") from exc
+        if (
+            not bound_version
+            or value["skill_version"] != bound_version
+            or value["version_file_sha256"] != sha256_bytes(version_raw)
+            or value["manifest_file_sha256"] != sha256_bytes(manifest_raw)
+        ):
+            raise ValueError("V5 task-card bound Chalxius runtime identity drifted")
+        return value
 
     def _project_background_binding(
         self,
@@ -2351,6 +2738,7 @@ class V5LifecycleManager:
         card: Any,
         *,
         expected_path: Path | None = None,
+        historical_runtime: bool = False,
     ) -> dict[str, Any]:
         if not isinstance(card, dict):
             raise ValueError("V5 task card must be one object")
@@ -2386,6 +2774,10 @@ class V5LifecycleManager:
             required.add("task_context_revision")
         if "runtime_binding" in card:
             required.add("runtime_binding")
+        if "campaign_scope" in card:
+            required.add("campaign_scope")
+        if "paper_continuation_scope" in card:
+            required.add("paper_continuation_scope")
         if card.get("task_context_revision") == V5_TASK_CONTEXT_REVISION:
             required.add("context_selection")
         if set(card) != required:
@@ -2397,7 +2789,8 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 task card schema/policy/project mismatch")
         if "runtime_binding" in card:
-            if card["runtime_binding"] != self._runtime_binding():
+            self._validate_bound_runtime_binding(card["runtime_binding"])
+            if not historical_runtime and card["runtime_binding"] != self._runtime_binding():
                 raise ValueError("V5 task-card Chalxius runtime binding drifted")
         round_id = validate_round_id(
             _require_nonempty_text(card.get("round_id"), "task-card round id")
@@ -2431,6 +2824,17 @@ class V5LifecycleManager:
             raise ValueError("V5 task card campaign id is invalid")
         if card.get("campaign_id") is not None:
             self.store.campaigns().status(card["campaign_id"])
+        if "campaign_scope" in card:
+            if card.get("campaign_id") is None:
+                raise ValueError(
+                    "V5 Campaign scope requires an exact task-card campaign id"
+                )
+            scope = self._validate_campaign_scope_binding(
+                card["campaign_scope"],
+                round_id=round_id,
+            )
+            if scope["campaign_id"] != card["campaign_id"]:
+                raise ValueError("V5 task-card Campaign scope/id mismatch")
         if card.get("source_claim_id") is not None:
             self.store.claims().show_claim(card["source_claim_id"])
         for name in (
@@ -2482,6 +2886,13 @@ class V5LifecycleManager:
                 raise ValueError("V5 task card research_context bytes/hash mismatch")
             context_ids.append(item["research_id"])
         source_research = self._research_record(card["research_id"])
+        expected_paper_scope = self.paper_continuation().scope_for_research(
+            source_research
+        )
+        if card.get("paper_continuation_scope") != expected_paper_scope:
+            raise ValueError(
+                "V5 task-card Paper continuation scope drifted or was omitted"
+            )
         if context_ids != source_research["related_research_ids"]:
             raise ValueError(
                 "V5 task card research_context does not exactly match Research links"
@@ -2622,6 +3033,7 @@ class V5LifecycleManager:
                 related_artifacts=card["mathematical_state"].get(
                     "related_artifacts", []
                 ),
+                entry=source_research,
             )
         _require_string_list(card.get("stop_conditions"), "task-card stop conditions")
         semantic = {
@@ -2646,19 +3058,45 @@ class V5LifecycleManager:
         adverse_note = ""
         if "adverse_routing" in card:
             adverse_note = (
-                "Adverse routing, approved rules, and the counterexample learning contract "
-                "are frozen in the task card. If the outcome is `counterexample`, include "
-                "the exact structured `attack_learning` object. It may create a route "
-                "proposal, but no proposal changes routing without a later operator "
-                "decision.\n\n"
+                "Adverse routing, approved rules, and the attack-learning contract are "
+                "frozen in the task card. Include exact structured `attack_learning` for "
+                "a surviving counterexample, or for a productive challenge that forces a "
+                "load-bearing hypothesis, scope, definition, source, computation, boundary, "
+                "or proof-route repair even when the theorem survives. Otherwise return "
+                "`attack_learning=null`. A proposal never changes routing without a later "
+                "user/operator decision.\n\n"
             )
         assurance_note = ""
         if "assurance_contract" in card:
             assurance_note = (
+                "Exact public worker-return schema: "
+                "references/v5_worker_return_contract.md; copyable template: "
+                "assets/worker_return.v5.assurance-no-adverse.template.json. "
                 "This task card uses the prospective assurance contract. "
                 "Return exact per-obligation dispositions, a typed computation manifest "
                 "when required, and the exact research_assurance object. Related "
                 "Research artifacts are authorized only through the frozen allowlist.\n\n"
+            )
+        campaign_note = ""
+        if "campaign_scope" in card:
+            campaign_note = (
+                "This round was explicitly scoped to the frozen Campaign envelope in "
+                "the task card. Use its objective, active targets, constraints, value "
+                "definition, and stop conditions as nontruth planning context. Main's "
+                "four-factor frontier remains the only scheduler; Campaign status does "
+                "not close this task, certify a result, or change Fact admission.\n\n"
+            )
+        paper_continuation_note = ""
+        if "paper_continuation_scope" in card:
+            paper_continuation_note = (
+                "This is one exact Paper continuation target. Read its complete frozen "
+                "target closure and source capabilities from paper_continuation_scope; "
+                "state the issue, importance, burden holder, strongest charitable "
+                "objection, response or revision, and every independent failure surface. "
+                "Produce the required paper_target_analysis artifact. A clean worker "
+                "return remains Research only: Main must separately record a current "
+                "target disposition and revised-writing mapping before Paper adequacy can "
+                "be complete.\n\n"
             )
         task_context_note = ""
         if card.get("task_context_revision") == V5_TASK_CONTEXT_REVISION:
@@ -2707,6 +3145,8 @@ class V5LifecycleManager:
             f"Research claim: {card['narrative_plane']['claim']}\n\n"
             f"{adverse_note}"
             f"{assurance_note}"
+            f"{campaign_note}"
+            f"{paper_continuation_note}"
             f"{task_context_note}"
             f"Write the exact return to `{card['return_contract']['return_relpath']}` "
             "and hand off only its SHA-256 plus status.\n"
@@ -2718,6 +3158,7 @@ class V5LifecycleManager:
         workers: int,
         mode: str = "auto",
         research_ids: list[str] | None = None,
+        campaign_id: str | None = None,
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
     ) -> dict[str, Any]:
@@ -2729,6 +3170,11 @@ class V5LifecycleManager:
             host_task_scope_id = _require_nonempty_text(
                 host_task_scope_id, "host task scope id"
             )
+        if campaign_id is not None:
+            campaign_id = validate_campaign_id(campaign_id)
+            # Read-only preflight keeps unknown, malformed, or currently invalid
+            # Campaigns from influencing selection or creating round bytes.
+            self._campaign_snapshot_for_planning(campaign_id)
         selected_background_chunks = _require_string_list(
             background_chunk_ids or [],
             "background chunk ids",
@@ -2746,24 +3192,50 @@ class V5LifecycleManager:
             by_id = {
                 item["research_id"]: item
                 for item in self.frontier(
-                    limit=max(self._json_count(self.research_entries_dir), workers)
+                    limit=max(self._json_count(self.research_entries_dir), workers),
+                    campaign_id=campaign_id,
                 )
             }
             missing = sorted(set(normalized_ids).difference(by_id))
             if missing:
+                scope_note = (
+                    f" in Campaign {campaign_id}" if campaign_id is not None else ""
+                )
                 raise ValueError(
-                    "not active V5 research entries: " + ", ".join(missing)
+                    "not active V5 Research entries"
+                    + scope_note
+                    + ": "
+                    + ", ".join(missing)
                 )
             selected = [by_id[item] for item in normalized_ids]
         else:
-            selected = self.frontier(limit=workers)
+            selected = self.frontier(limit=workers, campaign_id=campaign_id)
         if len(selected) != workers:
+            scope_note = (
+                f" in Campaign {campaign_id}" if campaign_id is not None else ""
+            )
             raise ValueError(
                 f"requested {workers} workers but only {len(selected)} active "
-                "V5 research entries are available"
+                f"V5 Research entries{scope_note} are available"
             )
 
         with self.store.v5_mutation_lock(command="plan-round"):
+            campaign_snapshot: dict[str, Any] | None = None
+            campaign_snapshot_raw: bytes | None = None
+            if campaign_id is not None:
+                campaign_snapshot, campaign_snapshot_raw = (
+                    self._campaign_snapshot_for_planning(campaign_id)
+                )
+                mismatched = sorted(
+                    entry["research_id"]
+                    for entry in selected
+                    if entry["metadata"].get("campaign_id") != campaign_id
+                )
+                if mismatched:
+                    raise ValueError(
+                        "selected Research drifted outside explicit Campaign scope: "
+                        + ", ".join(mismatched)
+                    )
             source_records = {
                 entry["research_id"]: self._research_record(entry["research_id"])
                 for entry in selected
@@ -2823,6 +3295,17 @@ class V5LifecycleManager:
                 f"{sha256_json([[item['research_id'] for item in selected], time.time_ns()])[:8]}"
             )
             validate_round_id(round_id)
+            campaign_scope: dict[str, Any] | None = None
+            campaign_snapshot_relpath: str | None = None
+            if campaign_snapshot is not None and campaign_snapshot_raw is not None:
+                campaign_snapshot_relpath = (
+                    f"rounds/{round_id}/context/campaign.snapshot.json"
+                )
+                campaign_scope = self._campaign_scope_from_snapshot(
+                    campaign_snapshot,
+                    snapshot_relpath=campaign_snapshot_relpath,
+                    snapshot_sha256=sha256_bytes(campaign_snapshot_raw),
+                )
             round_dir = self.store.rounds_dir / round_id
             assignments_dir = round_dir / "assignments"
             task_cards_dir = round_dir / "task-cards"
@@ -2839,6 +3322,14 @@ class V5LifecycleManager:
                 context_dir,
             ):
                 directory.mkdir(parents=True, exist_ok=False)
+            if (
+                campaign_snapshot_raw is not None
+                and campaign_snapshot_relpath is not None
+            ):
+                self.store._write_bytes_once(
+                    self.store.root / campaign_snapshot_relpath,
+                    campaign_snapshot_raw,
+                )
             project_background = self._freeze_project_background(
                 round_id=round_id,
                 raw=background_raw,
@@ -3014,6 +3505,9 @@ class V5LifecycleManager:
                     project_background=project_background,
                     mode_selection=mode_selection,
                 )
+                paper_continuation_scope = (
+                    self.paper_continuation().scope_for_research(entry)
+                )
                 card_semantic = {
                     "schema_version": 5,
                     "policy_revision": V5_POLICY_REVISION,
@@ -3101,6 +3595,12 @@ class V5LifecycleManager:
                 }
                 if adverse_routing is not None:
                     card_semantic["adverse_routing"] = adverse_routing
+                if campaign_scope is not None:
+                    card_semantic["campaign_scope"] = campaign_scope
+                if paper_continuation_scope is not None:
+                    card_semantic["paper_continuation_scope"] = (
+                        paper_continuation_scope
+                    )
                 card = {
                     **card_semantic,
                     "task_card_semantic_sha256": sha256_json(card_semantic),
@@ -3149,6 +3649,8 @@ class V5LifecycleManager:
                 "contribution_policy": "independent_ingest_local_quarantine",
                 "assignments": assignments,
             }
+            if campaign_scope is not None:
+                manifest_semantic["campaign_scope"] = campaign_scope
             manifest = {
                 **manifest_semantic,
                 "manifest_sha256": sha256_json(manifest_semantic),
@@ -3176,6 +3678,8 @@ class V5LifecycleManager:
             "assignments",
             "manifest_sha256",
         }
+        if "campaign_scope" in manifest:
+            required.add("campaign_scope")
         if set(manifest) != required:
             raise ValueError("V5 round manifest fields are not exact")
         if (
@@ -3194,10 +3698,18 @@ class V5LifecycleManager:
         }
         if manifest.get("manifest_sha256") != sha256_json(semantic):
             raise ValueError("V5 round manifest hash mismatch")
+        campaign_scope = manifest.get("campaign_scope")
+        if campaign_scope is not None:
+            campaign_scope = self._validate_campaign_scope_binding(
+                campaign_scope,
+                round_id=round_id,
+            )
+        abort = self.store.reasoning_modes().work_unit_abort(round_id)
         assignments = manifest.get("assignments")
         if not isinstance(assignments, list) or not assignments:
             raise ValueError("V5 round assignments must be nonempty")
         seen: set[str] = set()
+        frozen_cards: list[tuple[Path, dict[str, Any]]] = []
         for assignment in assignments:
             if not isinstance(assignment, dict):
                 raise ValueError("V5 round assignment must be an object")
@@ -3237,9 +3749,7 @@ class V5LifecycleManager:
                 != assignment["task_card_sha256"]
             ):
                 raise ValueError("V5 task card bytes/hash mismatch")
-            self.validate_task_card(
-                self.store._read_json(card_path), expected_path=card_path
-            )
+            frozen_cards.append((card_path, self.store._read_json(card_path)))
             prompt_path = contained_path(
                 self.store.root,
                 assignment["prompt_relpath"],
@@ -3252,6 +3762,17 @@ class V5LifecycleManager:
                 != assignment["prompt_sha256"]
             ):
                 raise ValueError("V5 prompt bytes/hash mismatch")
+        completed = self._round_is_completed(round_dir, manifest)
+        for card_path, card in frozen_cards:
+            self.validate_task_card(
+                card,
+                expected_path=card_path,
+                historical_runtime=abort is not None or completed,
+            )
+            if card.get("campaign_scope") != campaign_scope:
+                raise ValueError(
+                    "V5 round/task-card Campaign scope projections disagree"
+                )
         snapshot_path = (
             self.store.blackboard().snapshots_dir
             / manifest["blackboard_snapshot_id"]
@@ -3265,6 +3786,189 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 round Blackboard snapshot bytes/hash mismatch")
         return round_dir, manifest
+
+    def _validated_ingest_receipt(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Validate one receipt strongly enough to make its task historical."""
+
+        assignment_id = validate_assignment_id(
+            _require_nonempty_text(
+                assignment.get("assignment_id"), "V5 receipt assignment id"
+            )
+        )
+        receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+        if receipt_path.is_symlink() or not receipt_path.is_file():
+            raise ValueError("V5 ingestion receipt is missing or unsafe")
+        receipt = self.store._read_json(receipt_path)
+        base_fields = {
+            "schema_version",
+            "policy_revision",
+            "project_id",
+            "round_id",
+            "assignment_id",
+            "task_card_sha256",
+            "return_sha256",
+            "outcome",
+            "research_id",
+            "effect",
+            "receipt_id",
+            "created_at",
+        }
+        attack_fields = {
+            "attack_case_id",
+            "route_proposal_id",
+            "attack_evidence_status",
+            "route_activation_policy",
+        }
+        program_math_fields = {
+            "program_math_review_research_id",
+            "program_math_review_policy",
+        }
+        if not isinstance(receipt, dict):
+            raise ValueError("V5 ingestion receipt must be one object")
+        receipt_fields = set(receipt)
+        has_attack = bool(receipt_fields.intersection(attack_fields))
+        has_program_math = bool(receipt_fields.intersection(program_math_fields))
+        expected_fields = set(base_fields)
+        if has_attack:
+            expected_fields.update(attack_fields)
+        if has_program_math:
+            expected_fields.update(program_math_fields)
+        if receipt_fields != expected_fields:
+            raise ValueError("V5 ingestion receipt fields are not exact")
+        if (
+            receipt.get("schema_version") != 5
+            or receipt.get("policy_revision") != V5_POLICY_REVISION
+            or receipt.get("project_id") != self.store.project_id()
+            or receipt.get("round_id") != round_dir.name
+            or receipt.get("assignment_id") != assignment_id
+            or receipt.get("task_card_sha256")
+            != assignment.get("task_card_sha256")
+            or receipt.get("outcome") not in V5_RETURN_OUTCOMES
+        ):
+            raise ValueError("V5 ingestion receipt binding is invalid")
+        for field_name in ("task_card_sha256", "return_sha256"):
+            value = receipt.get(field_name)
+            if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+                raise ValueError(f"V5 ingestion receipt {field_name} is invalid")
+        _parse_utc_timestamp(
+            receipt.get("created_at"), label="V5 ingestion receipt created_at"
+        )
+        research_id = validate_memory_id(
+            _require_nonempty_text(
+                receipt.get("research_id"), "V5 ingestion receipt research id"
+            )
+        )
+        self._research_record(research_id)
+        return_path = contained_path(
+            self.store.root,
+            assignment["return_relpath"],
+            "V5 ingested return path",
+        )
+        if (
+            return_path.is_symlink()
+            or not return_path.is_file()
+            or sha256_bytes(return_path.read_bytes()) != receipt["return_sha256"]
+        ):
+            raise ValueError("V5 ingested return bytes/hash mismatch")
+
+        expected_effect = "one_cumulative_research_entry"
+        if has_attack:
+            case_id = receipt.get("attack_case_id")
+            proposal_id = receipt.get("route_proposal_id")
+            if (
+                not isinstance(case_id, str)
+                or not case_id.startswith("attack-case-")
+                or SHA256_RE.fullmatch(case_id.removeprefix("attack-case-")) is None
+                or not isinstance(proposal_id, str)
+                or not proposal_id.startswith("route-proposal-")
+                or SHA256_RE.fullmatch(
+                    proposal_id.removeprefix("route-proposal-")
+                )
+                is None
+                or receipt.get("attack_evidence_status")
+                not in {
+                    "worker_reported_counterexample_nontruth",
+                    "worker_reported_productive_challenge_nontruth",
+                }
+                or receipt.get("route_activation_policy") != "user_decision_only"
+            ):
+                raise ValueError("V5 ingestion receipt attack binding is invalid")
+            cases = {
+                item["case_id"]: item for item in self.store.adverse_routes().cases()
+            }
+            proposals = {
+                item["proposal_id"]: item
+                for item in self.store.adverse_routes().proposals()
+            }
+            case = cases.get(case_id)
+            proposal = proposals.get(proposal_id)
+            if (
+                case is None
+                or proposal is None
+                or proposal.get("case_id") != case_id
+                or case.get("round_id") != round_dir.name
+                or case.get("assignment_id") != assignment_id
+                or case.get("attack_research_id") != research_id
+                or case.get("task_card_sha256") != receipt["task_card_sha256"]
+                or case.get("return_sha256") != receipt["return_sha256"]
+                or case.get("evidence_status")
+                != receipt["attack_evidence_status"]
+                or proposal.get("activation_policy")
+                != receipt["route_activation_policy"]
+            ):
+                raise ValueError("V5 ingestion receipt attack records are mismatched")
+            expected_effect += "_plus_nontruth_attack_proposal"
+        if has_program_math:
+            program_research_id = validate_memory_id(
+                _require_nonempty_text(
+                    receipt.get("program_math_review_research_id"),
+                    "V5 program-math review Research id",
+                )
+            )
+            if (
+                receipt.get("program_math_review_policy")
+                != "queued_for_future_multidimensional_frontier"
+            ):
+                raise ValueError("V5 ingestion receipt program-math policy is invalid")
+            self._research_record(program_research_id)
+            expected_effect += "_plus_nontruth_program_math_adverse_review"
+        if receipt.get("effect") != expected_effect:
+            raise ValueError("V5 ingestion receipt effect is invalid")
+        semantic = {
+            key: value
+            for key, value in receipt.items()
+            if key not in {"receipt_id", "created_at"}
+        }
+        if receipt.get("receipt_id") != "research-ingest-" + sha256_json(semantic):
+            raise ValueError("V5 ingestion receipt content id mismatch")
+        return receipt
+
+    def _round_is_completed(
+        self,
+        round_dir: Path,
+        manifest: dict[str, Any],
+    ) -> bool:
+        """A round is historical only after every assignment has a valid receipt."""
+
+        completed = True
+        for assignment in manifest["assignments"]:
+            assignment_id = validate_assignment_id(assignment["assignment_id"])
+            receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+            if receipt_path.is_symlink():
+                raise ValueError("V5 ingestion receipt path is unsafe")
+            if not receipt_path.is_file():
+                completed = False
+                continue
+            self._validated_ingest_receipt(
+                round_dir=round_dir,
+                assignment=assignment,
+            )
+        return completed
 
     def _assignment(
         self,
@@ -3312,6 +4016,7 @@ class V5LifecycleManager:
     def round_status(self, round_id: str) -> dict[str, Any]:
         round_dir, manifest = self._round_manifest(round_id)
         abort = self.store.reasoning_modes().work_unit_abort(round_id)
+        completed = self._round_is_completed(round_dir, manifest)
         quarantined = {
             item["assignment_id"]: item
             for item in self._quarantine_records()
@@ -3360,7 +4065,13 @@ class V5LifecycleManager:
             "frozen_aborted_count": sum(
                 item["state"] == "frozen_aborted" for item in assignments
             ),
-            "work_unit_state": "aborted" if abort is not None else "active",
+            "work_unit_state": (
+                "aborted"
+                if abort is not None
+                else "completed"
+                if completed
+                else "active"
+            ),
             "abort_id": abort["abort_id"] if abort is not None else None,
             "work_unit_abort": abort,
             "round_closure_required": False,
@@ -3691,7 +4402,13 @@ class V5LifecycleManager:
                 }
             )
         if set(payload) != required:
-            raise ValueError("V5 worker return fields are not exact")
+            missing = sorted(required.difference(payload))
+            unknown = sorted(set(payload).difference(required))
+            raise ValueError(
+                "V5 worker return fields are not exact; "
+                f"missing={missing}; unknown={unknown}; exact schema: "
+                "references/v5_worker_return_contract.md"
+            )
         if (
             payload.get("schema_version") != 5
             or payload.get("project_id") != self.store.project_id()
@@ -3707,11 +4424,34 @@ class V5LifecycleManager:
         if payload.get("outcome") not in V5_RETURN_OUTCOMES:
             raise ValueError("V5 worker return outcome is invalid")
         if adverse_enabled:
-            if payload["outcome"] == "counterexample":
-                validate_attack_learning(payload.get("attack_learning"))
-            elif payload.get("attack_learning") is not None:
+            current_adverse = card["adverse_routing"].get("schema_version") in (
+                ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS
+            )
+            learning = payload.get("attack_learning")
+            if current_adverse:
+                if payload["outcome"] == "counterexample":
+                    validate_attack_learning(
+                        learning,
+                        require_current=True,
+                        expected_result_kind="surviving_counterexample",
+                    )
+                elif payload["outcome"] in PRODUCTIVE_ATTACK_OUTCOMES:
+                    if learning is not None:
+                        validate_attack_learning(
+                            learning,
+                            require_current=True,
+                            expected_result_kind="productive_challenge",
+                        )
+                elif learning is not None:
+                    raise ValueError(
+                        "only a surviving counterexample or productive challenge may "
+                        "include attack_learning"
+                    )
+            elif payload["outcome"] == "counterexample":
+                validate_attack_learning(learning)
+            elif learning is not None:
                 raise ValueError(
-                    "non-counterexample V5 return requires attack_learning=null"
+                    "legacy non-counterexample V5 return requires attack_learning=null"
                 )
         _require_nonempty_text(payload.get("claim"), "worker return claim")
         _require_nonempty_text(payload.get("content"), "worker return content")
@@ -4137,14 +4877,25 @@ class V5LifecycleManager:
                 payload=payload,
             )
             attack_capture = None
-            if payload["outcome"] == "counterexample" and "adverse_routing" in card:
-                attack_capture = self.store.adverse_routes().capture_counterexample(
-                    card=card,
-                    assignment=assignment,
-                    payload=payload,
-                    counterexample_research_id=research["research_id"],
-                    return_sha256=worker_final_sha256,
-                )
+            if "adverse_routing" in card and payload.get("attack_learning") is not None:
+                if card["adverse_routing"].get("schema_version") in (
+                    ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS
+                ):
+                    attack_capture = self.store.adverse_routes().capture_attack(
+                        card=card,
+                        assignment=assignment,
+                        payload=payload,
+                        attack_research_id=research["research_id"],
+                        return_sha256=worker_final_sha256,
+                    )
+                elif payload["outcome"] == "counterexample":
+                    attack_capture = self.store.adverse_routes().capture_counterexample(
+                        card=card,
+                        assignment=assignment,
+                        payload=payload,
+                        counterexample_research_id=research["research_id"],
+                        return_sha256=worker_final_sha256,
+                    )
             receipt_semantic = {
                 "schema_version": 5,
                 "policy_revision": V5_POLICY_REVISION,
@@ -4288,6 +5039,7 @@ class V5LifecycleManager:
         refs: Any,
         *,
         validation_subject: dict[str, Any],
+        require_current: bool = True,
     ) -> list[dict[str, Any]]:
         if not isinstance(refs, list) or any(not isinstance(item, dict) for item in refs):
             raise ValueError("paper_evidence_refs must be a list of objects")
@@ -4321,7 +5073,7 @@ class V5LifecycleManager:
             snapshot_id = _require_nonempty_text(
                 ref["snapshot_id"], "paper snapshot id"
             )
-            if snapshot_id not in current:
+            if require_current and snapshot_id not in current:
                 raise ValueError(
                     "paper EvidenceRef must bind a current, nonsuperseded snapshot"
                 )
@@ -4388,6 +5140,97 @@ class V5LifecycleManager:
                 + ", ".join(unbound)
             )
         normalized.sort(key=lambda item: (item["graph_kind"], item["snapshot_id"]))
+        return normalized
+
+    def _validate_evidence_bridge_refs(
+        self,
+        refs: Any,
+        *,
+        artifacts: list[dict[str, Any]],
+        sealed_record: bool,
+        require_current: bool,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(refs, list) or any(not isinstance(item, dict) for item in refs):
+            raise ValueError("evidence_bridge_refs must be a list of objects")
+        expected_fields = (
+            {
+                "bridge_id",
+                "bridge_record_sha256",
+                "bridge_artifact_sha256",
+                "library_id",
+                "evidence_ids",
+            }
+            if sealed_record
+            else {"bridge_id", "bridge_artifact_sha256"}
+        )
+        artifact_bindings: dict[str, Path] = {}
+        bridge_artifact_hashes: set[str] = set()
+        for artifact in artifacts:
+            if sealed_record:
+                digest = artifact.get("artifact_sha256")
+                role = artifact.get("role")
+                relpath = artifact.get("sealed_relpath")
+            else:
+                digest = artifact.get("sha256")
+                role = artifact.get("role")
+                relpath = artifact.get("path")
+            if role != "evidence_bridge_capsule":
+                continue
+            if not isinstance(digest, str) or not isinstance(relpath, str):
+                raise ValueError("Evidence bridge artifact binding is malformed")
+            if digest in artifact_bindings:
+                raise ValueError("Evidence bridge artifact hash is duplicated")
+            artifact_bindings[digest] = contained_path(
+                self.store.root,
+                relpath,
+                "Evidence bridge capsule artifact",
+            )
+            bridge_artifact_hashes.add(digest)
+        normalized: list[dict[str, Any]] = []
+        seen_bridge_ids: set[str] = set()
+        seen_evidence_ids: set[str] = set()
+        for index, ref in enumerate(refs, 1):
+            if set(ref) != expected_fields:
+                raise ValueError(
+                    f"Evidence bridge ref {index} fields are not exact"
+                )
+            bridge_id = _require_nonempty_text(ref["bridge_id"], "Evidence bridge id")
+            digest = _require_nonempty_text(
+                ref["bridge_artifact_sha256"], "Evidence bridge artifact SHA-256"
+            )
+            if SHA256_RE.fullmatch(digest) is None or digest not in artifact_bindings:
+                raise ValueError(
+                    "Evidence bridge ref must bind a declared bridge capsule artifact"
+                )
+            if bridge_id in seen_bridge_ids:
+                raise ValueError("Evidence bridge ref is duplicated")
+            seen_bridge_ids.add(bridge_id)
+            artifact_record = self.store._read_json(artifact_bindings[digest])
+            expected_record_sha = artifact_record.get("record_sha256")
+            if not isinstance(expected_record_sha, str):
+                raise ValueError("Evidence bridge artifact lacks its record hash")
+            validated = self.store.evidence().validate_bridge_artifact(
+                path=artifact_bindings[digest],
+                expected_sha256=digest,
+                expected_bridge_id=bridge_id,
+                expected_record_sha256=expected_record_sha,
+                require_current=require_current,
+            )
+            if sealed_record and validated != ref:
+                raise ValueError("sealed Evidence bridge ref drifted from its capsule")
+            overlap = seen_evidence_ids.intersection(validated["evidence_ids"])
+            if overlap:
+                raise ValueError(
+                    "Evidence item is selected by multiple bridge refs: "
+                    + ", ".join(sorted(overlap))
+                )
+            seen_evidence_ids.update(validated["evidence_ids"])
+            normalized.append(validated)
+        if set(item["bridge_artifact_sha256"] for item in normalized) != bridge_artifact_hashes:
+            raise ValueError(
+                "every evidence_bridge_capsule artifact must have exactly one Evidence bridge ref"
+            )
+        normalized.sort(key=lambda item: item["bridge_id"])
         return normalized
 
     def _validate_requested_assurance(
@@ -4502,7 +5345,7 @@ class V5LifecycleManager:
                 raise ValueError(
                     "atomic_fact_dag without a paper target cannot claim paper coverage"
                 )
-        else:
+        elif granularity == "nodewise_proof_dag":
             if len(candidate_ids) < 2 or not internal_edges:
                 raise ValueError(
                     "nodewise_proof_dag requires multiple candidates and an internal edge"
@@ -4510,6 +5353,15 @@ class V5LifecycleManager:
             if subject["kind"] != "paper" or not load_bearing:
                 raise ValueError(
                     "nodewise_proof_dag requires a paper target and load-bearing nodes"
+                )
+        else:
+            if not candidate_ids:
+                raise ValueError(
+                    "paper_target_closure requires at least one Candidate Fact"
+                )
+            if subject["kind"] != "paper" or not load_bearing:
+                raise ValueError(
+                    "paper_target_closure requires a paper subject and exact closure nodes"
                 )
         return {
             "validation_subject": {
@@ -4893,10 +5745,21 @@ class V5LifecycleManager:
             "paper_evidence_refs",
             "adverse_actor_ids",
         }
-        if not required.issubset(payload) or set(payload).difference(
-            {*required, "successor_contracts"}
-        ):
-            raise ValueError("Candidate Release input fields are not exact")
+        allowed = {
+            *required,
+            "successor_contracts",
+            "evidence_bridge_refs",
+            "paper_continuation_ref",
+            "philosophy_atomicity",
+        }
+        missing_fields = sorted(required.difference(payload))
+        unknown_fields = sorted(set(payload).difference(allowed))
+        if missing_fields or unknown_fields:
+            raise ValueError(
+                "Candidate Release input fields are not exact; "
+                f"missing={missing_fields} unknown={unknown_fields} "
+                "schema=references/paper_input_contracts.md"
+            )
         if payload.get("schema_version") != 5:
             raise ValueError("Candidate Release schema_version must be 5")
         producer = _require_nonempty_text(producer, "Candidate Release producer")
@@ -5016,6 +5879,20 @@ class V5LifecycleManager:
             for item in validation_artifacts
             if item["role"] in set(authorized_roles)
         }
+        bridge_refs = self._validate_evidence_bridge_refs(
+            payload.get("evidence_bridge_refs", []),
+            artifacts=payload.get("artifacts"),
+            sealed_record=False,
+            require_current=True,
+        )
+        if bridge_refs and (
+            "evidence_bridge_capsule" not in authorized_roles
+            or "evidence_bridge_current" not in required_checks
+        ):
+            raise ValueError(
+                "Evidence bridge use requires an authorized evidence_bridge_capsule "
+                "artifact and the evidence_bridge_current certification check"
+            )
         (
             facts,
             rendered,
@@ -5094,7 +5971,10 @@ class V5LifecycleManager:
             candidate_ids=set(facts),
             internal_edges=internal_edges,
         )
-        if assurance["validation_granularity"] == "nodewise_proof_dag":
+        if assurance["validation_granularity"] in {
+            "nodewise_proof_dag",
+            "paper_target_closure",
+        }:
             mapped_fact_ids = {
                 item["fact_id"]
                 for item in assurance["coverage"]
@@ -5106,11 +5986,107 @@ class V5LifecycleManager:
                     "Fact exactly through one or more load-bearing nodes; "
                     f"mapped={sorted(mapped_fact_ids)} candidates={sorted(facts)}"
                 )
+        continuation = self.paper_continuation()
+        continuation_plan_ids = continuation.plan_ids_for_research(
+            research_records
+        )
+        if len(continuation_plan_ids) > 1:
+            raise ValueError(
+                "one Candidate Release cannot mix Paper continuation plans"
+            )
+        continuation_binding: dict[str, Any] | None = None
+        continuation_evidence: dict[str, Any] | None = None
+        if continuation_plan_ids:
+            plan_id = continuation_plan_ids[0]
+            continuation_binding = continuation.validate_release_binding(
+                plan_id=plan_id,
+                ref=payload.get("paper_continuation_ref"),
+                philosophy_atomicity=payload.get("philosophy_atomicity"),
+                facts=facts,
+            )
+            plan = continuation_binding["plan"]
+            expected_nodes = {
+                *plan["selected_reconstruction_node_ids"],
+                *plan["selected_source_node_ids"],
+            }
+            subject = assurance["validation_subject"]
+            if (
+                assurance["validation_granularity"]
+                != "paper_target_closure"
+                or subject["kind"] != "paper"
+                or subject["subject_id"] != plan["paper_id"]
+                or subject["artifact_sha256"]
+                != plan["source_artifact_sha256"]
+                or set(subject["load_bearing_node_ids"]) != expected_nodes
+            ):
+                raise ValueError(
+                    "Paper continuation release must use paper_target_closure over "
+                    "the exact selected source and reconstruction nodes"
+                )
+            continuation_checks = {"paper_continuation_adequacy"}
+            if plan["domain_profile"] in {"philosophy", "mixed"}:
+                continuation_checks.update(
+                    {
+                        "philosophy_semantic_atomicity",
+                        "philosophy_plain_language_clarity",
+                    }
+                )
+            missing_continuation_checks = sorted(
+                continuation_checks.difference(
+                    normalized_plan["required_checks"]
+                )
+            )
+            if missing_continuation_checks:
+                raise ValueError(
+                    "Paper continuation release omits required certification checks: "
+                    + ", ".join(missing_continuation_checks)
+                )
+            continuation_evidence = continuation.release_evidence(
+                plan_id=plan_id,
+                disposition_ids=continuation_binding[
+                    "paper_continuation_ref"
+                ]["disposition_ids"],
+                require_current=True,
+            )
+            required_writing_hashes = {
+                item["artifact_sha256"]
+                for item in continuation_evidence[
+                    "writing_artifact_bindings"
+                ]
+            }
+            authorized_writing_hashes = {
+                item["sha256"]
+                for item in validation_artifacts
+                if item["role"] == "paper_revised_writing"
+                and item["role"] in set(authorized_roles)
+            }
+            missing_writing = sorted(
+                required_writing_hashes.difference(authorized_writing_hashes)
+            )
+            if missing_writing:
+                raise ValueError(
+                    "Paper continuation release must seal and authorize every revised "
+                    "writing artifact as paper_revised_writing: "
+                    + ", ".join(missing_writing)
+                )
+        elif (
+            "paper_continuation_ref" in payload
+            or "philosophy_atomicity" in payload
+        ):
+            raise ValueError(
+                "Paper continuation release fields require bound continuation Research"
+            )
         paper_refs = self._validate_paper_evidence_refs(
             payload.get("paper_evidence_refs"),
             validation_subject=assurance["validation_subject"],
         )
         if assurance["validation_subject"]["kind"] == "paper":
+            subject_sha = assurance["validation_subject"]["artifact_sha256"]
+            if subject_sha not in authorized_artifact_hashes:
+                raise ValueError(
+                    "paper Candidate Release must authorize its exact source artifact "
+                    "for the fresh verifier"
+                )
             paper_checks = {
                 "paper_source_fidelity",
                 "paper_graph_structure",
@@ -5124,6 +6100,27 @@ class V5LifecycleManager:
                 raise ValueError(
                     "paper Candidate Release omits required certification checks: "
                     + ", ".join(missing_paper_checks)
+                )
+        if continuation_binding is not None:
+            plan = continuation_binding["plan"]
+            expected_nodes = {
+                *plan["selected_reconstruction_node_ids"],
+                *plan["selected_source_node_ids"],
+            }
+            matching_logic_refs = [
+                item
+                for item in paper_refs
+                if item["graph_kind"] == "logic"
+                and item["snapshot_id"] == plan["snapshot_id"]
+            ]
+            if (
+                len(matching_logic_refs) != 1
+                or set(matching_logic_refs[0]["target_node_ids"])
+                != expected_nodes
+            ):
+                raise ValueError(
+                    "Paper continuation release must bind its exact Logic snapshot "
+                    "and complete selected closure in one EvidenceRef"
                 )
         subject_artifact = assurance["validation_subject"]["artifact_sha256"]
         if (
@@ -5253,6 +6250,31 @@ class V5LifecycleManager:
                 normalized_dispositions, key=lambda item: item["research_id"]
             ),
             "paper_evidence_refs": paper_refs,
+            **(
+                {
+                    "paper_continuation_ref": continuation_binding[
+                        "paper_continuation_ref"
+                    ],
+                    "paper_continuation_evidence": continuation_evidence,
+                    **(
+                        {
+                            "philosophy_atomicity": continuation_binding[
+                                "philosophy_atomicity"
+                            ]
+                        }
+                        if continuation_binding["philosophy_atomicity"]
+                        is not None
+                        else {}
+                    ),
+                }
+                if continuation_binding is not None
+                else {}
+            ),
+            **(
+                {"evidence_bridge_refs": bridge_refs}
+                if "evidence_bridge_refs" in payload
+                else {}
+            ),
             "excluded_verifier_ids": excluded_verifier_ids,
             "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
             "assurance_contract_revision": assurance_contract_revision,
@@ -5344,6 +6366,9 @@ class V5LifecycleManager:
         }
         if record.get("record_sha256") != sha256_json(without_hash):
             raise ValueError("Candidate Release record hash mismatch")
+        created_at = _parse_utc_timestamp(
+            record.get("created_at"), label="Candidate Release created_at"
+        )
         if record.get("fact_admission_contract_sha256") != FACT_ADMISSION_CONTRACT_SHA256:
             raise ValueError("Candidate Release Fact contract mismatch")
         candidates = record.get("candidates")
@@ -5437,7 +6462,8 @@ class V5LifecycleManager:
                     )
                 if _lineage_facts is None or _lineage_paths is None:
                     _lineage_facts, _lineage_paths = self._lineage_snapshot(
-                        exclude_release_ids={release_id}
+                        admitted_before=created_at,
+                        exclude_release_ids={release_id},
                     )
                 expected_successors = validate_successor_contracts(
                     reconstructed_successor_input,
@@ -5493,10 +6519,97 @@ class V5LifecycleManager:
                 )
             if expected_checks != record["applicable_assurance_checks"]:
                 raise ValueError("Candidate Release applicable assurance checks drifted")
-        self._validate_paper_evidence_refs(
+        sealed_candidate_facts = {
+            candidate["fact_id"]: parse_fact_markdown(
+                candidate["fact_markdown"]
+            )
+            for candidate in candidates
+        }
+        bound_research = [
+            self._research_record(binding["research_id"])
+            for binding in record["research_bindings"]
+        ]
+        continuation = self.paper_continuation()
+        continuation_plan_ids = continuation.plan_ids_for_research(
+            bound_research
+        )
+        continuation_binding: dict[str, Any] | None = None
+        if len(continuation_plan_ids) > 1:
+            raise ValueError("Candidate Release mixes Paper continuation plans")
+        if continuation_plan_ids:
+            continuation_binding = continuation.validate_release_binding(
+                plan_id=continuation_plan_ids[0],
+                ref=record.get("paper_continuation_ref"),
+                philosophy_atomicity=record.get("philosophy_atomicity"),
+                facts=sealed_candidate_facts,
+                require_current=False,
+            )
+            expected_nodes = {
+                *continuation_binding["plan"][
+                    "selected_reconstruction_node_ids"
+                ],
+                *continuation_binding["plan"]["selected_source_node_ids"],
+            }
+            subject = record["requested_assurance"]["validation_subject"]
+            if (
+                record["requested_assurance"]["validation_granularity"]
+                != "paper_target_closure"
+                or set(subject["load_bearing_node_ids"]) != expected_nodes
+            ):
+                raise ValueError("Candidate Release Paper continuation scope drifted")
+            expected_continuation_evidence = continuation.release_evidence(
+                plan_id=continuation_plan_ids[0],
+                disposition_ids=record["paper_continuation_ref"][
+                    "disposition_ids"
+                ],
+                require_current=False,
+            )
+            if record.get("paper_continuation_evidence") != (
+                expected_continuation_evidence
+            ):
+                raise ValueError(
+                    "Candidate Release Paper continuation verifier evidence drifted"
+                )
+        elif (
+            "paper_continuation_ref" in record
+            or "philosophy_atomicity" in record
+            or "paper_continuation_evidence" in record
+        ):
+            raise ValueError(
+                "Candidate Release has unbound Paper continuation fields"
+            )
+        validated_paper_refs = self._validate_paper_evidence_refs(
             record.get("paper_evidence_refs"),
             validation_subject=record["requested_assurance"]["validation_subject"],
+            require_current=False,
         )
+        if continuation_binding is not None:
+            plan = continuation_binding["plan"]
+            expected_nodes = {
+                *plan["selected_reconstruction_node_ids"],
+                *plan["selected_source_node_ids"],
+            }
+            matching_logic_refs = [
+                item
+                for item in validated_paper_refs
+                if item["graph_kind"] == "logic"
+                and item["snapshot_id"] == plan["snapshot_id"]
+            ]
+            if (
+                len(matching_logic_refs) != 1
+                or set(matching_logic_refs[0]["target_node_ids"])
+                != expected_nodes
+            ):
+                raise ValueError(
+                    "Candidate Release Paper continuation Logic binding drifted"
+                )
+        if "evidence_bridge_refs" in record:
+            self._validate_evidence_bridge_refs(
+                record["evidence_bridge_refs"],
+                artifacts=record.get("artifacts", []),
+                sealed_record=True,
+                require_current=False,
+            )
         return record
 
     def releases(self) -> list[dict[str, Any]]:
@@ -5506,6 +6619,56 @@ class V5LifecycleManager:
             self.release(path.stem)
             for path in sorted(self.candidate_releases_dir.glob("release-*.json"))
         ]
+
+    def _require_current_paper_continuation_release(
+        self,
+        release: dict[str, Any],
+    ) -> None:
+        bound_research = [
+            self._research_record(binding["research_id"])
+            for binding in release["research_bindings"]
+        ]
+        continuation = self.paper_continuation()
+        plan_ids = continuation.plan_ids_for_research(bound_research)
+        if not plan_ids:
+            return
+        if len(plan_ids) != 1:
+            raise ValueError("Candidate Release mixes Paper continuation plans")
+        facts = {
+            item["fact_id"]: parse_fact_markdown(item["fact_markdown"])
+            for item in release["candidates"]
+        }
+        binding = continuation.validate_release_binding(
+            plan_id=plan_ids[0],
+            ref=release.get("paper_continuation_ref"),
+            philosophy_atomicity=release.get("philosophy_atomicity"),
+            facts=facts,
+            require_current=True,
+        )
+        paper_refs = self._validate_paper_evidence_refs(
+            release["paper_evidence_refs"],
+            validation_subject=release["requested_assurance"][
+                "validation_subject"
+            ],
+            require_current=True,
+        )
+        plan = binding["plan"]
+        expected_nodes = {
+            *plan["selected_reconstruction_node_ids"],
+            *plan["selected_source_node_ids"],
+        }
+        matching_logic_refs = [
+            item
+            for item in paper_refs
+            if item["graph_kind"] == "logic"
+            and item["snapshot_id"] == plan["snapshot_id"]
+        ]
+        if (
+            len(matching_logic_refs) != 1
+            or set(matching_logic_refs[0]["target_node_ids"])
+            != expected_nodes
+        ):
+            raise ValueError("Candidate Release Paper continuation is stale")
 
     def release_for_fact(self, fact_id: str) -> dict[str, Any]:
         fact_id = validate_fact_id(fact_id)
@@ -5646,6 +6809,7 @@ class V5LifecycleManager:
 
     def verifier_capsule(self, release_id: str) -> dict[str, Any]:
         release = self.release(release_id)
+        self._require_current_paper_continuation_release(release)
         predecessor_packets = []
         for fact_id in release["external_predecessors"]:
             fact_path = self.store.active_fact_path(fact_id)
@@ -5696,6 +6860,37 @@ class V5LifecycleManager:
                 "truth_effect": "none_until_gateway_admission",
             },
         }
+        if "paper_continuation_ref" in release:
+            semantic["paper_continuation_ref"] = release[
+                "paper_continuation_ref"
+            ]
+            if "philosophy_atomicity" in release:
+                semantic["philosophy_atomicity"] = release[
+                    "philosophy_atomicity"
+                ]
+            semantic["paper_continuation_evidence"] = release[
+                "paper_continuation_evidence"
+            ]
+            semantic["instructions"]["paper_continuation_boundary"] = (
+                "verify exact target-closure adequacy separately from Fact truth; "
+                "for philosophy, independently reconstruct the conjunct inventory and "
+                "reject any Fact that hides more than one independently falsifiable "
+                "component behind its single declared conjunct; compare every ordinary-"
+                "language paraphrase with the formal claim and reject undefined or "
+                "unnecessary jargon that conceals a premise, burden, or inferential step"
+            )
+        if "evidence_bridge_refs" in release:
+            current_bridge_refs = self._validate_evidence_bridge_refs(
+                release["evidence_bridge_refs"],
+                artifacts=release["artifacts"],
+                sealed_record=True,
+                require_current=True,
+            )
+            semantic["evidence_bridge_refs"] = current_bridge_refs
+            semantic["instructions"]["evidence_boundary"] = (
+                "bridge capsules are nontruth source inputs; independently verify every "
+                "selected claim before recommending Fact admission"
+            )
         if (
             release.get("assurance_contract_revision")
             == V5_ASSURANCE_CONTRACT_REVISION
@@ -5806,18 +7001,7 @@ class V5LifecycleManager:
         }
         if finding["severity"] not in {"critical_error", "gap"}:
             raise ValueError(f"{label} severity is invalid")
-        if finding["class"] not in {
-            "mathematical",
-            "typing",
-            "scope",
-            "source_mismatch",
-            "source_access",
-            "reproducibility",
-            "evidence_access",
-            "protocol",
-            "assurance_scope",
-            "coverage",
-        }:
+        if finding["class"] not in V5_FINDING_CLASSES:
             raise ValueError(f"{label} class is invalid")
         repair_hint = finding["repair_hint"]
         if not isinstance(repair_hint, str):
@@ -6137,6 +7321,10 @@ class V5LifecycleManager:
             raise ValueError("correct Certification Decision must be completely clean")
         if verdict == "reject" and clean:
             raise ValueError("rejecting Certification Decision requires a failed check")
+        # Execute the byte-identical validator transported to the neutral capsule
+        # before storage.  Gateway-specific diagnostics above remain stable, while
+        # no locally preflighted shape or finding class can diverge at admission.
+        validate_decision_against_capsule(payload, capsule)
         existing_for_release = [
             decision
             for decision in self.decisions()
@@ -6328,6 +7516,9 @@ class V5LifecycleManager:
             != "acceptance-" + sha256_json(semantic)
         ):
             raise ValueError("V5 admission marker schema/project/id/hash mismatch")
+        _parse_utc_timestamp(
+            marker.get("accepted_at"), label="V5 admission accepted_at"
+        )
         release = self.release(
             release_id,
             _lineage_facts=_lineage_facts,
@@ -6373,6 +7564,7 @@ class V5LifecycleManager:
     def _lineage_snapshot(
         self,
         *,
+        admitted_before: datetime | str | None = None,
         exclude_release_ids: set[str] | None = None,
     ) -> tuple[dict[str, Fact], dict[str, Path]]:
         """Build an immutable active-Fact snapshot without recursive lineage reads.
@@ -6383,6 +7575,15 @@ class V5LifecycleManager:
         to serve as their own historical active predecessors.
         """
 
+        cutoff = (
+            _parse_utc_timestamp(admitted_before, label="lineage admission cutoff")
+            if isinstance(admitted_before, str)
+            else admitted_before
+        )
+        if cutoff is not None:
+            if not isinstance(cutoff, datetime) or cutoff.tzinfo is None:
+                raise ValueError("lineage admission cutoff must be timezone-aware")
+            cutoff = cutoff.astimezone(timezone.utc)
         excluded = exclude_release_ids or set()
         revoked = self.revoked_fact_ids()
         paths: dict[str, Path] = {}
@@ -6396,10 +7597,14 @@ class V5LifecycleManager:
                 continue
             if directory.name in excluded:
                 continue
-            _, admitted_paths = self._validated_admission(
+            marker, admitted_paths = self._validated_admission(
                 directory.name,
                 _skip_successor_validation=True,
             )
+            if cutoff is not None and _parse_utc_timestamp(
+                marker["accepted_at"], label="V5 admission accepted_at"
+            ) >= cutoff:
+                continue
             for fact_id, path in admitted_paths.items():
                 if fact_id in revoked:
                     continue
@@ -6435,23 +7640,23 @@ class V5LifecycleManager:
             marker_path = directory / "ACCEPTED.json"
             if directory.name in excluded or not marker_path.exists():
                 continue
+            release = self.release(
+                directory.name,
+                _skip_successor_validation=True,
+            )
             _, own_paths = self._validated_admission(
                 directory.name,
                 _skip_successor_validation=True,
             )
             own_fact_ids = set(own_paths)
+            historical_facts, historical_paths = self._lineage_snapshot(
+                admitted_before=release["created_at"],
+                exclude_release_ids={directory.name},
+            )
             _, admitted_paths = self._validated_admission(
                 directory.name,
-                _lineage_facts={
-                    fact_id: fact
-                    for fact_id, fact in facts.items()
-                    if fact_id not in own_fact_ids
-                },
-                _lineage_paths={
-                    fact_id: path
-                    for fact_id, path in paths.items()
-                    if fact_id not in own_fact_ids
-                },
+                _lineage_facts=historical_facts,
+                _lineage_paths=historical_paths,
             )
             if set(admitted_paths) != own_fact_ids:
                 raise ValueError("V5 admission Fact set drifted between validation phases")
@@ -6460,6 +7665,41 @@ class V5LifecycleManager:
         facts, paths = self._lineage_snapshot()
         self._validate_lineage_snapshot(facts, paths)
         return paths
+
+    def _preflight_post_admission_history(
+        self,
+        *,
+        release: dict[str, Any],
+        accepted_at: str,
+    ) -> None:
+        """Prove that a prospective admission cannot rewrite sealed history.
+
+        Existing releases are replayed against their own seal-time snapshots.  The
+        prospective marker is necessarily later than its release and therefore is
+        absent from every already-sealed release snapshot.
+        """
+
+        accepted = _parse_utc_timestamp(
+            accepted_at, label="prospective V5 admission accepted_at"
+        )
+        release_created = _parse_utc_timestamp(
+            release.get("created_at"), label="Candidate Release created_at"
+        )
+        if accepted <= release_created:
+            raise ValueError("V5 admission timestamp must follow Candidate Release sealing")
+        for path in sorted(self.candidate_releases_dir.glob("release-*.json")):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("V5 Candidate Release store contains an unsafe entry")
+            historical = self.release(path.stem)
+            historical_created = _parse_utc_timestamp(
+                historical.get("created_at"), label="Candidate Release created_at"
+            )
+            if accepted <= historical_created:
+                raise ValueError(
+                    "prospective V5 admission does not postdate sealed release history"
+                )
+        facts, paths = self._lineage_snapshot()
+        self._validate_lineage_snapshot(facts, paths)
 
     def fact_admit(
         self,
@@ -6480,6 +7720,7 @@ class V5LifecycleManager:
             self._materialize_admission_projections(marker)
             return marker
         release = self.release(release_id)
+        self._require_current_paper_continuation_release(release)
         decision = self.decision(decision_id)
         capsule = self.verifier_capsule(release_id)
         if (
@@ -6581,6 +7822,10 @@ class V5LifecycleManager:
                     )
                 self._materialize_admission_projections(existing)
                 return existing
+            self._preflight_post_admission_history(
+                release=release,
+                accepted_at=accepted_at,
+            )
             facts_dir = directory / "facts"
             facts_dir.mkdir(parents=True, exist_ok=True)
             if directory.is_symlink() or facts_dir.is_symlink():
@@ -6866,6 +8111,7 @@ class V5LifecycleManager:
             current_state = "Research"
             blocking_issue = None
             next_safe_command = "research-add"
+        paper_continuation = self.paper_continuation().status_all()
         return {
             "schema_version": 1,
             "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -6881,6 +8127,242 @@ class V5LifecycleManager:
                 "certification_decisions": decisions,
                 "facts": facts,
             },
+            "paper_continuation": paper_continuation,
+        }
+
+    def fact_evidence_audit(self) -> dict[str, Any]:
+        """Audit only the V5 authority bytes required for Fact Evidence.
+
+        External Evidence capture must remain readable across Chalxius runtime
+        upgrades.  Frozen rounds, task cards, modes, Blackboard, Paper, and
+        other nontruth workflow surfaces are therefore deliberately outside
+        this audit.  The active Fact projection and every authority object that
+        makes it visible remain fully validated.
+        """
+
+        authority_errors: list[str] = []
+        graph_errors: list[str] = []
+        warnings: list[str] = []
+        trust_debt: list[str] = []
+        facts: dict[str, Fact] = {}
+        active_paths: dict[str, Path] = {}
+        admitted_fact_markers: dict[str, dict[str, Any]] = {}
+
+        def authority_error(message: str) -> None:
+            authority_errors.append(message)
+
+        def graph_error(message: str) -> None:
+            graph_errors.append(message)
+
+        try:
+            project = self.store.project()
+            project_id = self.store.project_id()
+        except Exception as exc:
+            authority_error(f"invalid project.json: {exc}")
+            project = {}
+            project_id = ""
+        if project:
+            if (
+                project.get("workflow_evidence_version")
+                != V5_WORKFLOW_EVIDENCE_VERSION
+            ):
+                authority_error("Fact Evidence audit requires a V5 source project")
+            if project.get("policy_revision") != V5_POLICY_REVISION:
+                authority_error("V5 source project policy_revision is mismatched")
+            if project.get("truth_policy") != "verifier-gated":
+                authority_error("V5 source project truth policy is not verifier-gated")
+
+        if self.contract_path.is_symlink() or not self.contract_path.is_file():
+            authority_error("V5 lifecycle contract is missing or unsafe")
+        else:
+            try:
+                contract = self.store._read_json(self.contract_path)
+                semantic = {key: contract[key] for key in V5_LIFECYCLE_CONTRACT}
+                if semantic != V5_LIFECYCLE_CONTRACT:
+                    raise ValueError(
+                        "semantic contract differs from the release contract"
+                    )
+                if contract.get("contract_sha256") != sha256_json(semantic):
+                    raise ValueError("contract hash mismatch")
+            except Exception as exc:
+                authority_error(f"invalid V5 lifecycle contract: {exc}")
+
+        for label, directory in (
+            ("research entries", self.research_entries_dir),
+            ("candidate releases", self.candidate_releases_dir),
+            ("candidate artifacts", self.candidate_artifacts_dir),
+            ("certification decisions", self.certification_decisions_dir),
+            ("Fact admissions", self.admissions_dir),
+            ("Fact revocations", self.revocations_dir),
+        ):
+            if directory.is_symlink() or not directory.is_dir():
+                authority_error(f"V5 {label} directory is missing or unsafe")
+
+        try:
+            active_paths = self.active_fact_paths()
+        except Exception as exc:
+            authority_error(f"active V5 Fact lineage failed: {exc}")
+
+        for directory in sorted(self.admissions_dir.glob("release-*")):
+            if directory.is_symlink() or not directory.is_dir():
+                authority_error("V5 admission store contains an unsafe entry")
+                continue
+            marker_path = directory / "ACCEPTED.json"
+            if not marker_path.exists():
+                warnings.append(
+                    f"V5 admission staging {directory.name} has no visibility marker"
+                )
+                continue
+            try:
+                marker, paths = self._validated_admission(directory.name)
+                for fact_id in paths:
+                    if fact_id in admitted_fact_markers:
+                        raise ValueError(
+                            f"Fact {fact_id} has more than one admission marker"
+                        )
+                    admitted_fact_markers[fact_id] = marker
+            except Exception as exc:
+                authority_error(f"V5 admission {directory.name}: {exc}")
+
+        try:
+            revoked_ids = self.revoked_fact_ids()
+        except Exception as exc:
+            authority_error(f"invalid V5 revocation store: {exc}")
+            revoked_ids = set()
+        unknown_revocations = sorted(
+            revoked_ids.difference(admitted_fact_markers)
+        )
+        if unknown_revocations:
+            authority_error(
+                "V5 revocations have no admitted Fact: "
+                + ", ".join(unknown_revocations)
+            )
+        visible_expected = set(admitted_fact_markers).difference(revoked_ids)
+        if set(active_paths) != visible_expected:
+            authority_error(
+                "active V5 Fact visibility differs from admission/revocation provenance"
+            )
+
+        for fact_id, path in sorted(active_paths.items()):
+            try:
+                fact = parse_fact_markdown(path.read_text(encoding="utf-8"))
+                validation_errors = fact.validate()
+                if validation_errors:
+                    raise ValueError("; ".join(validation_errors))
+                if fact.fact_id != fact_id or fact.problem_id != project_id:
+                    raise ValueError("Fact id/project binding mismatch")
+                facts[fact_id] = fact
+            except Exception as exc:
+                graph_error(f"invalid active V5 Fact {fact_id}: {exc}")
+
+        if not facts:
+            authority_error("external Fact Evidence requires at least one active Fact")
+        graph = DependencyGraph(facts)
+        for fact_id, predecessor in graph.missing_predecessors():
+            graph_error(f"{fact_id}: missing active V5 predecessor {predecessor}")
+        try:
+            graph.topological_order()
+            depths = graph.depths()
+            max_depth = max(depths.values(), default=0)
+        except ValueError as exc:
+            graph_error(str(exc))
+            max_depth = 0
+
+        try:
+            verification_events = self.store._read_jsonl(
+                self.store.verification_log
+            )
+        except Exception as exc:
+            authority_error(f"invalid V5 verification log: {exc}")
+            verification_events = []
+        events_by_fact: dict[str, list[dict[str, Any]]] = {}
+        for event in verification_events:
+            if event.get("evidence_version") != V5_WORKFLOW_EVIDENCE_VERSION:
+                authority_error(
+                    "V5 verification log contains non-V5 admission authority"
+                )
+                continue
+            fact_id = str(event.get("fact_id", ""))
+            events_by_fact.setdefault(fact_id, []).append(event)
+        for fact_id, marker in admitted_fact_markers.items():
+            events = events_by_fact.get(fact_id, [])
+            if len(events) != 1:
+                authority_error(
+                    f"V5 Fact {fact_id} must have exactly one acceptance event"
+                )
+                continue
+            event = events[0]
+            expected_id = sha256_json(
+                [
+                    "accepted-v5",
+                    fact_id,
+                    marker["release_id"],
+                    marker["decision_id"],
+                    marker["acceptance_id"],
+                ]
+            )
+            for key, expected in (
+                ("event", "accepted"),
+                ("event_id", expected_id),
+                ("release_id", marker["release_id"]),
+                ("decision_id", marker["decision_id"]),
+                ("capsule_sha256", marker["capsule_sha256"]),
+                ("acceptance_id", marker["acceptance_id"]),
+                ("fact_sha256", marker["fact_sha256"][fact_id]),
+            ):
+                if event.get(key) != expected:
+                    authority_error(
+                        f"V5 Fact {fact_id} acceptance event {key} mismatch"
+                    )
+                    break
+        unknown_event_facts = sorted(
+            set(events_by_fact).difference(admitted_fact_markers)
+        )
+        if unknown_event_facts:
+            authority_error(
+                "V5 acceptance events have no admission marker: "
+                + ", ".join(unknown_event_facts)
+            )
+
+        for fact_id in sorted(facts):
+            try:
+                self.store.statement_interface(fact_id, materialize=False)
+            except Exception as exc:
+                authority_error(f"V5 statement interface {fact_id}: {exc}")
+
+        errors = [
+            *graph_errors,
+            *(f"authority: {message}" for message in authority_errors),
+        ]
+        return {
+            "schema_version": 1,
+            "contract_revision": V5_FACT_EVIDENCE_AUDIT_REVISION,
+            "scope": "active_v5_fact_authority_only",
+            "source_runtime_policy": "independent_of_frozen_nontruth_workflow_runtime",
+            "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
+            "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
+            "current_ok": not errors,
+            "history_clean": not trust_debt,
+            "facts": len(facts),
+            "edges": sum(len(fact.predecessors) for fact in facts.values()),
+            "max_depth": max_depth,
+            "active_fact_ids": sorted(facts),
+            "graph_errors": graph_errors,
+            "authority_errors": authority_errors,
+            "errors": errors,
+            "warnings": warnings,
+            "trust_debt": trust_debt,
+            "ignored_nontruth_surfaces": [
+                "rounds_and_task_cards",
+                "reasoning_modes",
+                "blackboard",
+                "paper_logic_and_audit",
+                "campaigns",
+                "pulses",
+                "experiments",
+            ],
+            "truth_effect": "none",
+            "project_effect": "none",
         }
 
     def audit(self) -> V5AuditReport:
@@ -7131,6 +8613,38 @@ class V5LifecycleManager:
                 workflow_error(f"paper_logic: {message}")
             report.warnings.extend(
                 f"paper_logic: {message}" for message in paper_report["warnings"]
+            )
+
+        try:
+            continuation_report = self.paper_continuation().audit()
+        except Exception as exc:
+            workflow_error(f"Paper continuation audit failed: {exc}")
+        else:
+            for message in continuation_report["errors"]:
+                workflow_error(f"paper_continuation: {message}")
+            continuation_counts = continuation_report["counts"]
+            report.paper_continuation_plans = continuation_counts["plans"]
+            report.paper_continuation_complete_plans = continuation_counts[
+                "complete_plans"
+            ]
+            report.paper_continuation_targets = continuation_counts["targets"]
+            report.paper_continuation_researched = continuation_counts[
+                "researched"
+            ]
+            report.paper_continuation_dispositioned = continuation_counts[
+                "dispositioned"
+            ]
+            report.paper_continuation_unresolved = continuation_counts[
+                "unresolved"
+            ]
+            report.paper_continuation_successor_mapped = continuation_counts[
+                "successor_mapped"
+            ]
+            report.paper_continuation_revised_manuscript_covered = (
+                continuation_counts["revised_manuscript_covered"]
+            )
+            report.paper_continuation_adequacy_complete = (
+                continuation_report["adequacy_complete"]
             )
 
         try:

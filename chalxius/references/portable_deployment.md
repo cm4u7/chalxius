@@ -1,13 +1,15 @@
 # Chalxius portable deployment
 
-The 0.4.4 `Back to the Future` candidate or release artifact contains one self-contained `chalxius`
+The 0.5.0 `Back to the Future / Paper Continuation` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
-3.11+ is required. The Chalxius research engine is the only embedded research
-kernel; retired predecessor, coordinator, and standalone companion skills are
-not runtime dependencies.
+3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
+`scripts/`; its records and PDFs stay in an explicit external library root. The
+Chalxius research engine is the only embedded research kernel; retired
+predecessor, coordinator, and standalone companion skills are not runtime
+dependencies.
 
-## Verify a received candidate
+## Verify a received release
 
 ```bash
 SKILL_ROOT=/absolute/path/to/chalxius
@@ -39,13 +41,13 @@ original status even if the installed skill changes or it loads some 0.4.1-or-la
 bytes. Do not backfill its ledger, recertify it, mark it noncompliant, invalidate
 its work, or request a redo.
 
-## Enable Attack reports prospectively
+## Produce Attack reports prospectively
 
 Global installation makes the adverse-routing commands available but does not
-write to or activate any project. When the user has given an explicit
-host-wide prospective authorization, the operator may consume that
-authorization at the start of each future V5 work unit by enabling the
-project-local extension before planning a new round:
+rewrite any project. The standing authorization makes V5 status and zero
+reports available read-only; the first newly frozen refute card lazily
+materializes project-local governance. The compatibility command may do so
+explicitly before planning:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
@@ -53,13 +55,12 @@ project-local extension before planning a new round:
 "$MGRAPH" --root "$PROJECT" --role main attack-route-status
 ```
 
-Do not enable it in V1-V4 roots, in the middle of a frozen work unit, or merely
-to modernize an old project. Never backfill attack cases, change an old return
-schema, invalidate prior work, or request a redo. A V5 project already in use
-may consume the authorization only when its next new work unit begins; every
-previously frozen task card remains byte-for-byte under its original contract.
+Do not materialize it in V1-V4 roots, in the middle of a frozen work unit, or
+merely to modernize an old project. Never backfill attack cases, change an old
+return schema, invalidate prior work, or request a redo. Every previously
+frozen task card remains byte-for-byte under its original contract.
 
-For every enabled host task, produce the separate report even when it has zero
+For every host task, produce the separate report even when it has zero
 cases:
 
 ```bash
@@ -67,8 +68,9 @@ cases:
   --host-task-scope-id HOST_TASK_SCOPE_ID
 ```
 
-The report contains worker-reported nontruth attack cases and pending route
-proposals. Only the operator may approve, approve after supplying a modified
+The report contains worker-reported nontruth surviving counterexamples,
+productive challenges with concrete value effects, and pending route proposals.
+Only the operator may approve, approve after supplying a modified
 rule, reject, or disable. Decisions affect future task cards only. Attack
 reports never become CHX architecture reports or Fact evidence.
 
@@ -113,7 +115,7 @@ The automatic V5 frontier uses the compact four-factor score and projects
 legacy eight-metric Research without rewriting it. It is an ordering aid only,
 has no cutoff, and does not prevent explicit scheduling of a low-scored item.
 
-For new 0.4.4 work, Main compiles task context and Operator retains governance;
+For new 0.5.0 work, Main compiles task context and Operator retains governance;
 the technical Host role remains the unchanged trusted dispatch adapter. One
 origin-bound promoted Blackboard item may seed its exact bounded query as one
 task. Exact enum mode hints apply only across an equal assurance/adverse
@@ -138,8 +140,11 @@ For a current computation-bearing task card, each stage must bind formula,
 domain, representation, approximation or truncation budget, output meaning,
 and independent checks. In an adverse-routing-enabled project, successful
 ingestion queues a nontruth future refutation review only when exact executable
-source and output artifacts are present. Ordinary challenges keep the eight
-baseline rules; the program-math rule is scoped to that generated review.
+source and output artifacts are present. New ordinary challenges receive the
+original eight baselines plus the general hidden-conjunct split. Only an exact
+frozen `philosophy` or `mixed` domain adds the three philosophy baselines;
+words in the claim do not. The program-math rule is scoped to that generated
+review, and old frozen cards retain their exact earlier baseline.
 
 Materialize a V5 verifier capsule into an absent directory or an existing empty
 directory with mode `0700`:
@@ -262,6 +267,28 @@ Direct drag cancels queued convergence, moves and pins only the dragged set, and
 never launches neighbor forces; the bounded revision-15 solver remains scoped
 to actual card-size changes. Packet v1, authority, and old project bytes remain
 unchanged.
+
+Revision 17 reintroduces only a bounded two-hop/collision-halo force around
+direct manipulation, with the manipulated set fixed, radial-memory springs,
+and no idle simulation. Revision 18 then used that prior radial result only as
+a deterministic angular seed and projected real cards onto one concentric orbit
+per theme. Revision 19 preserves the seed but gives each theme its own center
+and one equally spaced ring per up to six presentation members. Strong
+prerequisite/support target-closure overlap gives shared nodes multiple field
+assignments and deterministic overlap placement. Locked orbit rings remain
+presentation-only.
+Revision 20 preserves that geometry and changes only orbit-off collision
+response: a current drag anchor may repel an actually colliding old Cartesian
+pin, updating that existing pin while unrelated pins remain fixed and no new
+pin is created.
+Default-on session gravity gives drag a rolling two-frame local response and
+settles released real cards or resized neighborhoods for at most 24 frames;
+released cards retain per-center angles and return to one or more assigned
+theme fields. At most 240
+active neighborhood nodes move on any map, while all other visible nodes remain
+measured fixed boundaries. Reduced-motion settlement is synchronous. The
+session toggle, rings, angles, and forces create no packet, source, graph,
+storage, service, authority, admission, or writeback state.
 
 ## Historical projects
 

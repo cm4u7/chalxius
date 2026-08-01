@@ -429,6 +429,16 @@ h1 {
   touch-action: none;
 }
 
+.box-selection-marquee {
+  position: absolute;
+  z-index: 16;
+  border: 1px solid rgba(255, 229, 138, 0.86);
+  border-radius: 0.24rem;
+  background: rgba(255, 229, 138, 0.075);
+  box-shadow: 0 0 1rem rgba(255, 229, 138, 0.12);
+  pointer-events: none;
+}
+
 .node-control-layer {
   position: absolute;
   z-index: 18;
@@ -437,53 +447,99 @@ h1 {
   pointer-events: none;
 }
 
-.selected-node-halo {
+.box-selection-halo-layer {
   position: absolute;
   z-index: 17;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.selected-node-halo,
+.box-selection-halo {
+  position: absolute;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  will-change: left, top, width, height;
+}
+
+.selected-node-halo {
+  z-index: 17;
   filter:
     drop-shadow(0 0 0.34rem rgba(255, 229, 138, 0.62))
     drop-shadow(0 0 1.18rem rgba(255, 229, 138, 0.3));
   opacity: 0.96;
-  will-change: left, top, width, height;
 }
 
-.selected-node-halo::before {
+.box-selection-halo {
+  filter:
+    drop-shadow(0 0 0.32rem rgba(127, 221, 137, 0.58))
+    drop-shadow(0 0 1.08rem rgba(127, 221, 137, 0.28));
+  opacity: 0.9;
+}
+
+.selected-node-halo::before,
+.box-selection-halo::before {
   content: "";
   position: absolute;
   inset: 0;
+}
+
+.selected-node-halo::before {
   background: rgba(255, 229, 138, 0.055);
 }
 
-.selected-node-halo[data-appearance="faceted"][data-role="target"]::before {
+.box-selection-halo::before {
+  background: rgba(127, 221, 137, 0.052);
+}
+
+.selected-node-halo[data-appearance="faceted"][data-role="target"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="target"]::before {
   clip-path: polygon(12% 0%, 88% 0%, 100% 22%, 100% 78%, 88% 100%, 12% 100%, 0% 78%, 0% 22%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="definition"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="definition"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="definition"]::before {
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="result"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="result"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="result"]::before {
   clip-path: polygon(14% 0%, 86% 0%, 100% 50%, 86% 100%, 14% 100%, 0% 50%);
 }
-.selected-node-halo[data-appearance="faceted"][data-role="explanation"]::before {
+.selected-node-halo[data-appearance="faceted"][data-role="explanation"]::before,
+.box-selection-halo[data-appearance="faceted"][data-role="explanation"]::before {
   clip-path: polygon(9% 0%, 91% 0%, 100% 21%, 100% 79%, 91% 100%, 9% 100%, 0% 79%, 0% 21%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="target"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="target"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="target"]::before {
   clip-path: polygon(9% 0%, 91% 0%, 91% 5%, 97% 5%, 97% 14%, 100% 14%, 100% 86%, 97% 86%, 97% 95%, 91% 95%, 91% 100%, 9% 100%, 9% 95%, 3% 95%, 3% 86%, 0% 86%, 0% 14%, 3% 14%, 3% 5%, 9% 5%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="definition"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="definition"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="definition"]::before {
   clip-path: inset(0 round 0.82rem);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="result"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="result"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="result"]::before {
   clip-path: polygon(6% 0%, 94% 0%, 94% 9%, 100% 9%, 100% 91%, 94% 91%, 94% 100%, 6% 100%, 6% 91%, 0% 91%, 0% 9%, 6% 9%);
 }
-.selected-node-halo[data-appearance="plaques"][data-role="explanation"]::before {
+.selected-node-halo[data-appearance="plaques"][data-role="explanation"]::before,
+.box-selection-halo[data-appearance="plaques"][data-role="explanation"]::before {
   clip-path: polygon(0% 0%, 86% 0%, 100% 27%, 100% 100%, 0% 100%);
 }
-.selected-node-halo[data-minimized="yes"] {
+.box-selection-halo[data-kind="theme"]::before {
+  border-radius: 0.58rem;
+}
+
+.selected-node-halo[data-minimized="yes"],
+.box-selection-halo[data-minimized="yes"] {
   filter:
     drop-shadow(0 0 0.28rem rgba(255, 229, 138, 0.68))
     drop-shadow(0 0 0.82rem rgba(255, 229, 138, 0.34));
+}
+
+.box-selection-halo[data-minimized="yes"] {
+  filter:
+    drop-shadow(0 0 0.26rem rgba(127, 221, 137, 0.64))
+    drop-shadow(0 0 0.76rem rgba(127, 221, 137, 0.3));
 }
 
 .node-size-toggle {
@@ -523,11 +579,17 @@ h1 {
     0 0 0 2px var(--canvas),
     0 0 1rem var(--moonlight-glow);
 }
+.node-size-toggle[data-box-selected="yes"] {
+  outline-color: var(--moss);
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 1rem rgba(127, 221, 137, 0.32);
+}
 
 .node-name-tooltip {
   position: absolute;
   z-index: 34;
-  max-width: min(22rem, calc(100% - 1rem));
+  max-width: min(15rem, calc(100% - 1rem));
   padding: 0.38rem 0.55rem;
   border: 1px solid var(--line-strong);
   border-radius: 0.36rem;
@@ -537,6 +599,9 @@ h1 {
   font-size: 0.72rem;
   font-weight: 620;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
@@ -986,8 +1051,10 @@ footer .quiet-button { justify-self: start; }
       startup: { typeset: false },
       options: { enableMenu: false },
       tex: {
-        inlineMath: [['\\(', '\\)']],
-        displayMath: [['\\[', '\\]']],
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: true,
         packages: {'[-]': ['autoload', 'require']}
       },
       svg: { fontCache: 'local' }
@@ -1216,6 +1283,10 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
           <svg aria-hidden="true"><use href="#reader-icon-redo"></use></svg>
           <span class="tool-label" data-zh="重做" data-en="Redo">重做</span>
         </button>
+        <button id="orbit-gravity-button" class="tool-button" type="button" aria-pressed="true" data-tooltip-zh="主题轨道引力" data-tooltip-en="Theme orbit gravity" data-aria-label-zh="主题轨道引力" data-aria-label-en="Theme orbit gravity">
+          <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
+          <span class="tool-label" data-zh="轨道引力" data-en="Orbit gravity">轨道引力</span>
+        </button>
         <button id="fit-view-button" class="tool-button" type="button" data-tooltip-zh="适应视图" data-tooltip-en="Fit view" data-aria-label-zh="适应视图" data-aria-label-en="Fit view">
           <svg aria-hidden="true"><use href="#reader-icon-focus"></use></svg>
           <span class="tool-label" data-zh="适应视图" data-en="Fit view">适应视图</span>
@@ -1241,7 +1312,9 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
         </div>
       </div>
       <div class="canvas-stage">
-        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-zh="可拖动知识图谱。单击卡片阅读，使用卡片内按钮切换尺寸，双击突出完整上下游链，辅助点按打开方向菜单。" data-aria-label-en="Draggable knowledge graph. Select a card to read, use its internal button to change size, double-click to emphasize its complete upstream and downstream chain, or secondary-click for directional commands."></div>
+        <div id="cy" role="application" tabindex="0" aria-keyshortcuts="Shift+F10" aria-label="可拖动知识图谱。每个主题拥有独立圆心和按成员数量分层的等距重力圆周，共享节点由多个主题场共同吸附；鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-zh="可拖动知识图谱。每个主题拥有独立圆心和按成员数量分层的等距重力圆周，共享节点由多个主题场共同吸附；鼠标左键拖动空白处框选节点，拖动任一已选节点可整体移动；双指平移画布，单击卡片阅读，双击突出完整上下游链。" data-aria-label-en="Draggable knowledge graph. Each theme has its own center and equally spaced gravity rings scaled by membership count; shared nodes are attracted by multiple theme fields. Drag on empty space with the primary mouse button to box-select nodes, then drag any selected node to move the group. Use two-finger gestures to pan, select a card to read, or double-click to emphasize its complete chain."></div>
+        <div id="box-selection-marquee" class="box-selection-marquee" aria-hidden="true" hidden></div>
+        <div id="box-selection-halo-layer" class="box-selection-halo-layer" aria-hidden="true"></div>
         <div id="selected-node-halo" class="selected-node-halo" aria-hidden="true" hidden></div>
         <div id="node-control-layer" class="node-control-layer"></div>
         <div id="node-name-tooltip" class="node-name-tooltip" role="tooltip" hidden></div>
@@ -1260,7 +1333,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       </div>
       <p class="interaction-note">
         <svg aria-hidden="true"><use href="#reader-icon-move"></use></svg>
-        <span data-zh="双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销" data-en="Two-finger pan · Pinch to zoom · Drag cards · Internal ± changes size · Double-click emphasizes the complete chain · ⌘Z undo">双指平移 · 捏合缩放 · 拖动卡片 · 卡片内 ± 切换尺寸 · 双击突出完整链 · ⌘Z 撤销</span>
+        <span data-zh="左键框选 · 拖动时局部引力/斥力响应 · 关闭轨道后仍保留碰撞斥力 · 松手后节点吸附到一个或多个主题场 · 其余布局保持稳定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链" data-en="Primary-drag to box-select · Local attraction/repulsion responds during movement · Collision repulsion remains active with orbits off · Released nodes settle into one or more theme fields · Remaining layout stays stable · Two-finger pan · Pinch to zoom · Internal ± resizes · Double-click emphasizes the complete chain">左键框选 · 拖动时局部引力/斥力响应 · 关闭轨道后仍保留碰撞斥力 · 松手后节点吸附到一个或多个主题场 · 其余布局保持稳定 · 双指平移 · 捏合缩放 · 卡片内 ± 切换尺寸 · 双击突出完整链</span>
       </p>
     </section>
 
@@ -1288,7 +1361,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       </div>
 
       <div id="detail-readable" class="readable-detail">
-        <p data-zh="选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。" data-en="Select a card to read it; use the minus or plus inside it to change size while every currently enabled relation remains available.">选择卡片以阅读解释；使用卡片内的减号或加号改变尺寸，所有当前启用的关系都会保留。</p>
+        <p data-zh="单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动期间只有局部邻域响应；松手后，真实卡片会保留相对各主题圆心的新角位置并被吸回所属的一个或多个主题场。轨道运动是页面会话内的有限动画，不改变图谱结构或权威。所有当前启用的关系都会保留。" data-en="Select a card to read it, or primary-drag on empty space to box-select several nodes and then drag any selected node to move the group. Only the local neighborhood responds during dragging. On release, real cards retain their new angles relative to each theme center and are attracted back into one or more assigned theme fields. Orbit motion is a bounded page-session animation and changes neither topology nor authority. Every enabled relation remains available.">单击卡片阅读；在空白处左键框选多个节点，再拖动任一已选节点即可整体移动。拖动期间只有局部邻域响应；松手后，真实卡片会保留相对各主题圆心的新角位置并被吸回所属的一个或多个主题场。轨道运动是页面会话内的有限动画，不改变图谱结构或权威。所有当前启用的关系都会保留。</p>
       </div>
 
       <details id="formal-details" class="formal-details">
@@ -1329,6 +1402,14 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
             <h3 data-zh="卡片尺寸" data-en="Card sizing">卡片尺寸</h3>
             <p data-zh="完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。" data-en="A full card has only a minus; a minimized card has only a plus. Sizing preserves its center and never hides currently enabled relations.">完整卡片只有减号；最小化卡片只有加号。尺寸变化不移动中心，也不隐藏任何当前启用的关系。</p>
           </section>
+          <section>
+            <h3 data-zh="批量移动" data-en="Group movement">批量移动</h3>
+            <p data-zh="鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。松手后各真实卡片保留相对局部圆心的新角位置并吸附回所属的一个或多个主题场；按住修饰键再次框选可追加节点。" data-en="Primary-drag on empty space to draw a selection box. Drag any selected node to move the selection while preserving relative positions. On release, each real card keeps its new local angles and settles back into one or more assigned theme fields; hold a modifier while box-selecting to add nodes.">鼠标左键拖动空白处形成选择框；拖动任一已选节点会保持相对位置并整体移动。松手后各真实卡片保留相对局部圆心的新角位置并吸附回所属的一个或多个主题场；按住修饰键再次框选可追加节点。</p>
+          </section>
+          <section>
+            <h3 data-zh="主题轨道" data-en="Theme orbits">主题轨道</h3>
+            <p data-zh="每个主题拥有独立圆心；主题成员每六个分配到一条等距重力圆周，超过六个便增加下一条。强 prerequisite/support 上游闭包重叠的节点会同时受多个主题场吸附并位于交叉区。轨道引力默认开启，可在左侧工具栏临时关闭；关闭后拖动位置以笛卡尔 pin 保留，但真正相撞的旧 pin 仍会让位并保留新位置。它只控制当前页面中的布局，不写回来源图谱。" data-en="Each theme has its own center, with one equally spaced gravity ring for each group of up to six theme members. Nodes shared by strong prerequisite/support upstream closures are attracted by multiple fields and occupy their overlap. Orbit gravity is enabled by default and may be toggled temporarily from the left toolbar; when off, dragged positions remain Cartesian pins, but an existing pin that actually collides still yields and keeps its displaced position. It controls only the current page layout and never writes back to the source graph.">每个主题拥有独立圆心；主题成员每六个分配到一条等距重力圆周，超过六个便增加下一条。强 prerequisite/support 上游闭包重叠的节点会同时受多个主题场吸附并位于交叉区。轨道引力默认开启，可在左侧工具栏临时关闭；关闭后拖动位置以笛卡尔 pin 保留，但真正相撞的旧 pin 仍会让位并保留新位置。它只控制当前页面中的布局，不写回来源图谱。</p>
+          </section>
         </div>
       </details>
 
@@ -1343,8 +1424,8 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
   </main>
 
   <noscript>此阅读器需要 JavaScript，但不需要网络连接。</noscript>
-  <script id="chalxius-reader-packet" type="application/json">{"audience":"Readers with no prior knowledge of Chalxius or knowledge graphs","audit":{"current_ok":true,"summary":"The audited artifact passed current read-only structural and workflow checks; that result is workflow evidence only.","unresolved":[],"warnings":["The underlying artifact predates current unified-write activation and remains read-only."]},"edges":[{"category":"prerequisite","exact_type":"source_bounds_interpretation","id":"edge-source-reconstruction","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-source-reconstruction","object_id":"public-case:philosophy:edge-source-reconstruction","object_sha256":"a4587cc305248898643ab733243908c8e769802a9f73606d2fbb98c45ff7d44b","original_text_sha256":"848e45ce7c8b58317fb2095f5c061187e08e42ec2ede50b0aa5daf89266b883f","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The reconstruction is bound to frozen source anchors.","source":"paper-source","target":"paper-reconstruction","weak":false},{"category":"prerequisite","exact_type":"requires_independent_review","id":"edge-reconstruction-review","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-review","object_id":"public-case:philosophy:edge-reconstruction-review","object_sha256":"34d19e508b67a40580c458880d58b95579ea6dd8c9a298c005e28b1683bda56e","original_text_sha256":"fc178babf04f8784a7425347964f06f3b6de152580b4c813623af6ec7bc4d308","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Independent review evaluates the bounded reconstruction.","source":"paper-reconstruction","target":"audit-review","weak":false},{"category":"prerequisite","exact_type":"records_revision_history","id":"edge-reconstruction-history","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-history","object_id":"public-case:philosophy:edge-reconstruction-history","object_sha256":"6bf591dfc7084b04e1f358be34e2785529fc3098e39591e9203bdc635ee75626","original_text_sha256":"2ab0dca90f42f0e0a5015434781c0b65c48d6f35b3afca422afacc2f8d7b8bf9","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Correction history records revisions of the reconstruction.","source":"paper-reconstruction","target":"audit-history","weak":false},{"category":"prerequisite","exact_type":"review_supports_workflow","id":"edge-review-target","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-review-target","object_id":"public-case:philosophy:edge-review-target","object_sha256":"0331b084e7772df2fea65a5071ac6944206459e353b920755a190f99d9b02058","original_text_sha256":"93ba47a691b0f91af81b6675ae0aa51d05a8e776a431fbdbb0e69b903dc96cfc","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Dual review supports the bounded workflow claim.","source":"audit-review","target":"target-reconstruction","weak":false},{"category":"prerequisite","exact_type":"history_supports_workflow","id":"edge-history-target","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-history-target","object_id":"public-case:philosophy:edge-history-target","object_sha256":"181800e54dbf5bb15a23ad0940e9a3e877dfff77510e88fe2655b7f8c7a0e528","original_text_sha256":"475aeffa49659a31e6063119f9dd674499b4f25716033b81d7235f19a63564d6","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Traceable correction history supports the workflow claim.","source":"audit-history","target":"target-reconstruction","weak":false},{"category":"prerequisite","exact_type":"workflow_precedes_boundary","id":"edge-reconstruction-authority","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-authority","object_id":"public-case:philosophy:edge-reconstruction-authority","object_sha256":"85b914bb76d7e7bb985e95cd91dd5754d9f2443a809ad47681910ece64032eaf","original_text_sha256":"0c0008650cd0cd0801f138d2637f64642dfd272eef265f1618e44433fd461706","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Authority-safe exploration builds on source-bound reconstruction.","source":"target-reconstruction","target":"target-authority","weak":false},{"category":"prerequisite","exact_type":"audit_boundary","id":"edge-fact-authority","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-fact-authority","object_id":"public-case:philosophy:edge-fact-authority","object_sha256":"7b71f53f7180bd558436fda73e58820fba374b7f3dc5ab337ad3dd56a4cc84de","original_text_sha256":"fcb56d8b11181d22a1811e829e8e3841eef8fcc6451252133bc840a42746e043","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The empty Fact Graph establishes the tested non-leakage boundary.","source":"fact-boundary","target":"target-authority","weak":false},{"category":"repair","exact_type":"append_only_repair","id":"edge-history-repair","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-history-repair","object_id":"public-case:philosophy:edge-history-repair","object_sha256":"8590c67723cbe07c8e16f711e53e77175c8a994aa3f4a10151ca7f770d917402","original_text_sha256":"5805286c3fc7af5c5fa9739c9d7b5815b9f83cd31fc57c38b43fa1eab1084321","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Accepted corrections replace rather than erase prior reconstruction states.","source":"audit-history","target":"paper-reconstruction","weak":false},{"category":"support","exact_type":"exploration_support","id":"edge-blackboard-authority","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-blackboard-authority","object_id":"public-case:philosophy:edge-blackboard-authority","object_sha256":"ab2ad63115f0332638a38a00124cef9e4ba7acedc06d5eb7738c7fc42b8430ff","original_text_sha256":"d01581749e0bec00323c34751a89859e984e74cf2f0cebe9262dbf5c9b1bfa88","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Frozen exploration illustrates nontruth reasoning without source mutation.","source":"blackboard-exploration","target":"target-authority","weak":true},{"category":"support","exact_type":"learning_support","id":"edge-learning-authority","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-learning-authority","object_id":"public-case:philosophy:edge-learning-authority","object_sha256":"f53c0644ec17cdf94ceed52ad2e96be8dc72786571673d85b30a02c4416e4c88","original_text_sha256":"3e03f5862b0a070590cf124c091b6423fddbe2c63c3fb0d1f0f6ef83ef536532","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The read-only learning mount illustrates nontruth teaching.","source":"learner-overlay","target":"target-authority","weak":true}],"language":"en","nodes":[{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The audited workflow preserved 17 frozen source nodes as source authority.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The audited workflow preserved 17 frozen source nodes as source authority."},"id":"paper-source","importance":"A later criticism can then point to a stable source instead of a moving paraphrase.","intuition":"The system first preserves what the publication says before asking what it means.","layer":"knowledge","plane":"paper","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node paper-source","object_id":"public-case:philosophy:paper-source","object_sha256":"289b4569bc2bf5659379591811ec49f43c7cf2a02cefdf330754951d414423fe","original_text_sha256":"b96e0ec745452bd1766bfbe6a303cfd8ee9db71df1b77e082cee37bc36788df0","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"current_source_summary","truth_status":"source_authority"},"reader_role":"definition","reasoning":"Source authority is evidence of wording and context, not automatic proof of the paper's conclusion.","summary":"Exact source passages remain separate from every interpretation.","theme_id":"theme-philosophy-workflow","title":"Frozen source anchors","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The public case records a bounded reconstruction, not a uniquely correct interpretation.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The public case records a bounded reconstruction, not a uniquely correct interpretation."},"id":"paper-reconstruction","importance":"Typed reconstruction makes omissions, ambiguities, and disagreements inspectable.","intuition":"It is a transparent reading of the paper, not a silent replacement for the paper.","layer":"knowledge","plane":"paper","prerequisites":["paper-source"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node paper-reconstruction","object_id":"public-case:philosophy:paper-reconstruction","object_sha256":"1dd08532ab0ff5ae4ca3247bd992175985838b32a5969572691eb02869acd10f","original_text_sha256":"befbfa0be0c5bf17da8d57f4311d2bc17a1e53439ad7cb103736aabc636d94fa","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"current_reconstruction_summary","truth_status":"interpretation"},"reader_role":"result","reasoning":"The audited snapshot contained 40 reconstruction nodes and retained rejected revisions as history.","summary":"A reconstruction makes claims and inferential links explicit while remaining interpretation.","theme_id":"theme-philosophy-workflow","title":"Bounded argument map","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The current reconstruction revision was accepted only after both designated reviews passed.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The current reconstruction revision was accepted only after both designated reviews passed."},"id":"audit-review","importance":"A polished reconstruction cannot approve itself.","intuition":"One reviewer checks faithfulness to the source; another checks whether the map itself is coherent.","layer":"knowledge","plane":"audit","prerequisites":["paper-reconstruction"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node audit-review","object_id":"public-case:philosophy:audit-review","object_sha256":"a2928aa72a6a2eed250585d0e2825d169d65d4e0ef7b1305c09158395427d7c4","original_text_sha256":"5ea14bc70fcfecf17f3d2cae9e557b1bc0de0c6e6dfa454cb69135b91b51f1a1","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"reviewed_audit_summary","truth_status":"audit_evidence"},"reader_role":"result","reasoning":"The two reviews bind different failure modes and preserve their decisions independently.","summary":"The accepted revision required separate source-fidelity and graph-structure review.","theme_id":"theme-philosophy-workflow","title":"Independent dual review","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The audited artifact retained 16 historical audit nodes and explicit replacement relations.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The audited artifact retained 16 historical audit nodes and explicit replacement relations."},"id":"audit-history","importance":"Readers can distinguish the current view from the path that produced it.","intuition":"Correction adds a traceable next state instead of erasing the earlier mistake.","layer":"knowledge","plane":"audit","prerequisites":["paper-reconstruction"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node audit-history","object_id":"public-case:philosophy:audit-history","object_sha256":"555d497708221bfe44197c9ce1e113bd20f47c9f4da1a7b6f5499429abe559cd","original_text_sha256":"b5d357d1094e7ead1da5b73f23a9dffa6a8542627d3804c2722aa4df734f9b66","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"historical_audit_summary","truth_status":"audit_evidence"},"reader_role":"explanation","reasoning":"Append-only replacement prevents a later repair from rewriting the historical record.","summary":"Rejected, superseded, and repaired audit states remain inspectable.","theme_id":"theme-philosophy-workflow","title":"Correctable audit history","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"This case demonstrates source-bound reconstruction workflow, not philosophical truth.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"This case demonstrates source-bound reconstruction workflow, not philosophical truth."},"id":"target-reconstruction","importance":"This supports rigorous reading without pretending that a graph settles the philosophy.","intuition":"A reader can inspect the argument and still see which parts came from the publication and which parts were reconstructed.","layer":"knowledge","plane":"paper","prerequisites":["audit-review","audit-history"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node target-reconstruction","object_id":"public-case:philosophy:target-reconstruction","object_sha256":"785793a5586e2842b27f2111ab62f7274fa5162ba3d1748bdae678cca4e50caf","original_text_sha256":"c63b587fd11bad63f116d982992f5ba770d7cb461ab16a150c2f6b1f0ea14c8c","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"public_case_reconstruction","truth_status":"interpretation"},"reader_role":"target","reasoning":"Frozen source anchors, explicit reconstruction, and independent review jointly support this workflow claim.","summary":"Chalxius can make a philosophical argument readable without merging source and interpretation.","theme_id":"theme-philosophy-workflow","title":"Source-bound reconstruction","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"No philosophical claim from this case was admitted as a Chalxius Fact.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"No philosophical claim from this case was admitted as a Chalxius Fact."},"id":"fact-boundary","importance":"This is positive evidence that authority did not leak between planes.","intuition":"Useful analysis can remain useful without being promoted into trusted premises.","layer":"knowledge","plane":"audit","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node fact-boundary","object_id":"public-case:philosophy:fact-boundary","object_sha256":"3dce3557cfebd997540f1f882cb2446a1251b4349c4e853980663f1830035611","original_text_sha256":"81519fff6bf2aa2ca37b14a5ac7314c7a55e1b74fcf91efd9ae64eec11da99e7","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"fact_boundary_audit","truth_status":"audit_evidence"},"reader_role":"definition","reasoning":"A clean workflow audit checks structure and policy; it does not certify a philosophical proposition.","summary":"The audited Fact Graph contained zero admitted Facts and zero candidates.","theme_id":"theme-philosophy-workflow","title":"Zero admitted Facts","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The demonstrated capability is authority separation across the audited workflow.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The demonstrated capability is authority separation across the audited workflow."},"id":"target-authority","importance":"That boundary is the central safety property of the philosophy workflow.","intuition":"The system can help people think without granting every useful note the power of a premise.","layer":"knowledge","plane":"audit","prerequisites":["target-reconstruction","fact-boundary"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node target-authority","object_id":"public-case:philosophy:target-authority","object_sha256":"ba47fd5be25e5e7d9223ff109e568acef5bb6a6f96ed86bd724333870d0d3565","original_text_sha256":"912016bfeb90244826a7526fdc2e151fba4d6905498248a80d18f81b771b976d","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"reviewed_audit_conclusion","truth_status":"audit_evidence"},"reader_role":"target","reasoning":"The read-only audit passed while the Fact Graph remained empty and the learning mount prohibited writeback.","summary":"Audit, exploration, teaching, and presentation remain nontruth activities unless a separate admission succeeds.","theme_id":"theme-philosophy-workflow","title":"Authority-safe exploration","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"Blackboard projection preserved endpoints without acquiring Paper or Fact authority.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"Blackboard projection preserved endpoints without acquiring Paper or Fact authority."},"id":"blackboard-exploration","importance":"Speculation stays useful and reversible.","intuition":"Researchers can try objections without editing the source or declaring victory.","layer":"research","plane":"blackboard","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node blackboard-exploration","object_id":"public-case:philosophy:blackboard-exploration","object_sha256":"2cea81adc375aff284aff03c232036b3d7d6a4fcae1de499a17984d7cba3d0d4","original_text_sha256":"3bdc4e2d980737026d45fcd115a66bc7d5179159fac9eb0df5d344039233c6bd","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"blackboard","source_status":"frozen_exploration_summary","truth_status":"exploration"},"reader_role":"explanation","reasoning":"Mirror nodes retain bindings to their source snapshots while agent notes remain exploration only.","summary":"Exploratory questions and challenges live in a separate frozen workspace.","theme_id":"theme-philosophy-workflow","title":"Frozen Blackboard","visual_status":"research"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The learning overlay retained nontruth status and began with zero mastery evidence.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The learning overlay retained nontruth status and began with zero mastery evidence."},"id":"learner-overlay","importance":"Pedagogical usefulness does not weaken provenance or admission boundaries.","intuition":"Teaching state is about what a learner has practiced, not what research has proved.","layer":"research","plane":"learning","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node learner-overlay","object_id":"public-case:philosophy:learner-overlay","object_sha256":"5074bdb20f136af6e62743c07052b6708ac84418b8612b8edbe0f0a15f040cb7","original_text_sha256":"1ebabdd5eb063465307b310e22062d7d0199e77c2c807018d5f2fc92ad9e3eed","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"learning","source_status":"frozen_learning_summary","truth_status":"learning"},"reader_role":"explanation","reasoning":"The verified mount prohibited research-runtime invocation, truth inheritance, and source writeback.","summary":"A learning overlay can teach from frozen research snapshots without writing back.","theme_id":"theme-philosophy-workflow","title":"Read-only learning overlay","visual_status":"research"}],"prerequisite_order":{"target-authority":["paper-source","paper-reconstruction","audit-review","audit-history","target-reconstruction","fact-boundary"],"target-reconstruction":["paper-source","paper-reconstruction","audit-review","audit-history"]},"presentation":{"introduction":"This interactive map demonstrates separation of source, interpretation, audit, exploration, and learning authority. It does not prove a philosophical conclusion and admits no Fact.","subtitle":"Two workflow conclusions, with research and learning context available as optional layers."},"project_id":"public-philosophy-case","schema_version":1,"source_snapshot":{"description":"An anonymized public summary bound to a read-only audit of a private philosophy workflow.","id":"public-philosophy-workflow-v1","sha256":"78adc9c87dae3cbf2d0ca4c0fff3f8bd12a6a6a5ef2b4c57ce4f9ec91421b977"},"target_order":["target-reconstruction","target-authority"],"theme_order":["theme-philosophy-workflow"],"themes":[{"description":"A source-bound reconstruction followed by an authority-separation result.","id":"theme-philosophy-workflow","label":"Philosophy workflow","target_ids":["target-reconstruction","target-authority"]}],"title":"Philosophy workflow: reconstruction without authority leakage"}</script>
-  <script id="chalxius-build-meta" type="application/json">{"assets":{"cytoscape":{"sha256":"9c2a3bf2592e0b14a1f7bec07c03a54f16dedf32af9cd0af155c716aa6c87bc3","version":"3.34.0"},"mathjax":{"bundle":"tex-svg","sha256":"d4295dc33744836935c1399feece5159577b34c5c8ffb9f1c6324cd82e03a882","version":"3.2.2"},"tabler_icons":{"license":"MIT","source_sha256":{"collapse":"36f884c26900f088930ceb3c33c9c2da856d3dd95b86b7c91946bccfa3bfdf8c","context":"c07711c7f515e7707b97e32d9a18fed49bb200f1fcf0d1a987422f44e8ec8479","copy":"01da13d33d6163f37ee81f397e567832068d836af0307118156370716357be07","expand":"dcf1a26d76bd90aaa677b83a76eed9b0b345ff692a3d4e867a6d4d621718daf8","file":"755cf3cf9be7a851defe2d7fa52f9430bee608f68fb2a25122ad1eefce9171d0","focus":"273346ebf838f75b31df81ce9d303ee5ef1e8c2f56f1f85cbcd6ef8d6ef8a482","info":"bf4377dff0aaaddf1676a4bb7292f90f1102f19daaca7021331ba6a191317c1c","move":"45b5a5c95a430f7512b9b20d48a3fed70571f4cb31069da74000c94550c7ec4c","overview":"8be5a8c5feb592d921b87a1bd17024e65f57b6de78fe83c5a1af93eaeafa403d","path":"f3221c089a05868154d9fed0251899ca39aaaf7fc5a200f318d1791b6e0e107a","redo":"57fbb7af87706540e921df06362819cde6f618589ee2ee839e3dc092d76ec4a0","refresh":"4c836d26a37be1bdf64ee4d7834599e0b6d2643d230f7cd34eccab2e4dcb39a5","reset":"bf61377e47b2e771d6d4a988cb3cf68e4d1b8947e48d53bed05e0b3f8885a5ee","search":"57e054b6c1508be40d5eba1ea434b702f5ff55dca04e28e5e3f22472c2f6176d","undo":"19eb4a720b914fba83c33d76398f6208f95e1ce8eaa9c48e0fa1db7602e42cb3"},"sprite_sha256":"2fc9b17bafe11e9866ae515ad9b6b06790c8ceabece75e5b9362d41320093e87","version":"3.45.0"}},"layout":"deterministic_ranked_barycenter","network_runtime":"disabled","packet_sha256":"18fb19a15f9e3ec7257b0b4a9add4c531081b600aca4c9cd0c00b6b8e54a081a","reader_finalize":{"node_count":9,"packet_sha256":"18fb19a15f9e3ec7257b0b4a9add4c531081b600aca4c9cd0c00b6b8e54a081a","schema_version":1,"scope":"presentation_readiness_only","sidebar_complete_count":9,"source_snapshot_id":"public-philosophy-workflow-v1","source_snapshot_sha256":"78adc9c87dae3cbf2d0ca4c0fff3f8bd12a6a6a5ef2b4c57ce4f9ec91421b977","status":"ready","truth_effect":"none"},"renderer_revision":"chalxius-reader-html-12","truth_effect":"none"}</script>
+  <script id="chalxius-reader-packet" type="application/json">{"audience":"Readers with no prior knowledge of Chalxius or knowledge graphs","audit":{"current_ok":true,"summary":"The audited artifact passed current read-only structural and workflow checks; that result is workflow evidence only.","unresolved":[],"warnings":["The underlying artifact predates current unified-write activation and remains read-only."]},"edges":[{"category":"prerequisite","exact_type":"source_bounds_interpretation","id":"edge-source-reconstruction","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-source-reconstruction","object_id":"public-case:philosophy:edge-source-reconstruction","object_sha256":"a4587cc305248898643ab733243908c8e769802a9f73606d2fbb98c45ff7d44b","original_text_sha256":"848e45ce7c8b58317fb2095f5c061187e08e42ec2ede50b0aa5daf89266b883f","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The reconstruction is bound to frozen source anchors.","source":"paper-source","target":"paper-reconstruction","weak":false},{"category":"prerequisite","exact_type":"requires_independent_review","id":"edge-reconstruction-review","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-review","object_id":"public-case:philosophy:edge-reconstruction-review","object_sha256":"34d19e508b67a40580c458880d58b95579ea6dd8c9a298c005e28b1683bda56e","original_text_sha256":"fc178babf04f8784a7425347964f06f3b6de152580b4c813623af6ec7bc4d308","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Independent review evaluates the bounded reconstruction.","source":"paper-reconstruction","target":"audit-review","weak":false},{"category":"prerequisite","exact_type":"records_revision_history","id":"edge-reconstruction-history","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-history","object_id":"public-case:philosophy:edge-reconstruction-history","object_sha256":"6bf591dfc7084b04e1f358be34e2785529fc3098e39591e9203bdc635ee75626","original_text_sha256":"2ab0dca90f42f0e0a5015434781c0b65c48d6f35b3afca422afacc2f8d7b8bf9","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Correction history records revisions of the reconstruction.","source":"paper-reconstruction","target":"audit-history","weak":false},{"category":"prerequisite","exact_type":"review_supports_workflow","id":"edge-review-target","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-review-target","object_id":"public-case:philosophy:edge-review-target","object_sha256":"0331b084e7772df2fea65a5071ac6944206459e353b920755a190f99d9b02058","original_text_sha256":"93ba47a691b0f91af81b6675ae0aa51d05a8e776a431fbdbb0e69b903dc96cfc","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Dual review supports the bounded workflow claim.","source":"audit-review","target":"target-reconstruction","weak":false},{"category":"prerequisite","exact_type":"history_supports_workflow","id":"edge-history-target","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-history-target","object_id":"public-case:philosophy:edge-history-target","object_sha256":"181800e54dbf5bb15a23ad0940e9a3e877dfff77510e88fe2655b7f8c7a0e528","original_text_sha256":"475aeffa49659a31e6063119f9dd674499b4f25716033b81d7235f19a63564d6","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Traceable correction history supports the workflow claim.","source":"audit-history","target":"target-reconstruction","weak":false},{"category":"prerequisite","exact_type":"workflow_precedes_boundary","id":"edge-reconstruction-authority","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-reconstruction-authority","object_id":"public-case:philosophy:edge-reconstruction-authority","object_sha256":"85b914bb76d7e7bb985e95cd91dd5754d9f2443a809ad47681910ece64032eaf","original_text_sha256":"0c0008650cd0cd0801f138d2637f64642dfd272eef265f1618e44433fd461706","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Authority-safe exploration builds on source-bound reconstruction.","source":"target-reconstruction","target":"target-authority","weak":false},{"category":"prerequisite","exact_type":"audit_boundary","id":"edge-fact-authority","layer":"knowledge","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-fact-authority","object_id":"public-case:philosophy:edge-fact-authority","object_sha256":"7b71f53f7180bd558436fda73e58820fba374b7f3dc5ab337ad3dd56a4cc84de","original_text_sha256":"fcb56d8b11181d22a1811e829e8e3841eef8fcc6451252133bc840a42746e043","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The empty Fact Graph establishes the tested non-leakage boundary.","source":"fact-boundary","target":"target-authority","weak":false},{"category":"repair","exact_type":"append_only_repair","id":"edge-history-repair","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-history-repair","object_id":"public-case:philosophy:edge-history-repair","object_sha256":"8590c67723cbe07c8e16f711e53e77175c8a994aa3f4a10151ca7f770d917402","original_text_sha256":"5805286c3fc7af5c5fa9739c9d7b5815b9f83cd31fc57c38b43fa1eab1084321","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Accepted corrections replace rather than erase prior reconstruction states.","source":"audit-history","target":"paper-reconstruction","weak":false},{"category":"support","exact_type":"exploration_support","id":"edge-blackboard-authority","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-blackboard-authority","object_id":"public-case:philosophy:edge-blackboard-authority","object_sha256":"ab2ad63115f0332638a38a00124cef9e4ba7acedc06d5eb7738c7fc42b8430ff","original_text_sha256":"d01581749e0bec00323c34751a89859e984e74cf2f0cebe9262dbf5c9b1bfa88","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"Frozen exploration illustrates nontruth reasoning without source mutation.","source":"blackboard-exploration","target":"target-authority","weak":true},{"category":"support","exact_type":"learning_support","id":"edge-learning-authority","layer":"research","provenance":{"locator":"docs/cases/philosophy.source.md; presentation relation edge-learning-authority","object_id":"public-case:philosophy:edge-learning-authority","object_sha256":"f53c0644ec17cdf94ceed52ad2e96be8dc72786571673d85b30a02c4416e4c88","original_text_sha256":"3e03f5862b0a070590cf124c091b6423fddbe2c63c3fb0d1f0f6ef83ef536532","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"reader","source_status":"presentation_only_relation","truth_status":"reader_note"},"relation":"The read-only learning mount illustrates nontruth teaching.","source":"learner-overlay","target":"target-authority","weak":true}],"language":"en","nodes":[{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The audited workflow preserved 17 frozen source nodes as source authority.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The audited workflow preserved 17 frozen source nodes as source authority."},"id":"paper-source","importance":"A later criticism can then point to a stable source instead of a moving paraphrase.","intuition":"The system first preserves what the publication says before asking what it means.","layer":"knowledge","plane":"paper","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node paper-source","object_id":"public-case:philosophy:paper-source","object_sha256":"289b4569bc2bf5659379591811ec49f43c7cf2a02cefdf330754951d414423fe","original_text_sha256":"b96e0ec745452bd1766bfbe6a303cfd8ee9db71df1b77e082cee37bc36788df0","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"current_source_summary","truth_status":"source_authority"},"reader_role":"definition","reasoning":"Source authority is evidence of wording and context, not automatic proof of the paper's conclusion.","summary":"Exact source passages remain separate from every interpretation.","theme_id":"theme-philosophy-workflow","title":"Frozen source anchors","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The public case records a bounded reconstruction, not a uniquely correct interpretation.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The public case records a bounded reconstruction, not a uniquely correct interpretation."},"id":"paper-reconstruction","importance":"Typed reconstruction makes omissions, ambiguities, and disagreements inspectable.","intuition":"It is a transparent reading of the paper, not a silent replacement for the paper.","layer":"knowledge","plane":"paper","prerequisites":["paper-source"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node paper-reconstruction","object_id":"public-case:philosophy:paper-reconstruction","object_sha256":"1dd08532ab0ff5ae4ca3247bd992175985838b32a5969572691eb02869acd10f","original_text_sha256":"befbfa0be0c5bf17da8d57f4311d2bc17a1e53439ad7cb103736aabc636d94fa","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"current_reconstruction_summary","truth_status":"interpretation"},"reader_role":"result","reasoning":"The audited snapshot contained 40 reconstruction nodes and retained rejected revisions as history.","summary":"A reconstruction makes claims and inferential links explicit while remaining interpretation.","theme_id":"theme-philosophy-workflow","title":"Bounded argument map","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The current reconstruction revision was accepted only after both designated reviews passed.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The current reconstruction revision was accepted only after both designated reviews passed."},"id":"audit-review","importance":"A polished reconstruction cannot approve itself.","intuition":"One reviewer checks faithfulness to the source; another checks whether the map itself is coherent.","layer":"knowledge","plane":"audit","prerequisites":["paper-reconstruction"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node audit-review","object_id":"public-case:philosophy:audit-review","object_sha256":"a2928aa72a6a2eed250585d0e2825d169d65d4e0ef7b1305c09158395427d7c4","original_text_sha256":"5ea14bc70fcfecf17f3d2cae9e557b1bc0de0c6e6dfa454cb69135b91b51f1a1","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"reviewed_audit_summary","truth_status":"audit_evidence"},"reader_role":"result","reasoning":"The two reviews bind different failure modes and preserve their decisions independently.","summary":"The accepted revision required separate source-fidelity and graph-structure review.","theme_id":"theme-philosophy-workflow","title":"Independent dual review","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The audited artifact retained 16 historical audit nodes and explicit replacement relations.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The audited artifact retained 16 historical audit nodes and explicit replacement relations."},"id":"audit-history","importance":"Readers can distinguish the current view from the path that produced it.","intuition":"Correction adds a traceable next state instead of erasing the earlier mistake.","layer":"knowledge","plane":"audit","prerequisites":["paper-reconstruction"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node audit-history","object_id":"public-case:philosophy:audit-history","object_sha256":"555d497708221bfe44197c9ce1e113bd20f47c9f4da1a7b6f5499429abe559cd","original_text_sha256":"b5d357d1094e7ead1da5b73f23a9dffa6a8542627d3804c2722aa4df734f9b66","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"historical_audit_summary","truth_status":"audit_evidence"},"reader_role":"explanation","reasoning":"Append-only replacement prevents a later repair from rewriting the historical record.","summary":"Rejected, superseded, and repaired audit states remain inspectable.","theme_id":"theme-philosophy-workflow","title":"Correctable audit history","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"This case demonstrates source-bound reconstruction workflow, not philosophical truth.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"This case demonstrates source-bound reconstruction workflow, not philosophical truth."},"id":"target-reconstruction","importance":"This supports rigorous reading without pretending that a graph settles the philosophy.","intuition":"A reader can inspect the argument and still see which parts came from the publication and which parts were reconstructed.","layer":"knowledge","plane":"paper","prerequisites":["audit-review","audit-history"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node target-reconstruction","object_id":"public-case:philosophy:target-reconstruction","object_sha256":"785793a5586e2842b27f2111ab62f7274fa5162ba3d1748bdae678cca4e50caf","original_text_sha256":"c63b587fd11bad63f116d982992f5ba770d7cb461ab16a150c2f6b1f0ea14c8c","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"paper","source_status":"public_case_reconstruction","truth_status":"interpretation"},"reader_role":"target","reasoning":"Frozen source anchors, explicit reconstruction, and independent review jointly support this workflow claim.","summary":"Chalxius can make a philosophical argument readable without merging source and interpretation.","theme_id":"theme-philosophy-workflow","title":"Source-bound reconstruction","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"No philosophical claim from this case was admitted as a Chalxius Fact.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"No philosophical claim from this case was admitted as a Chalxius Fact."},"id":"fact-boundary","importance":"This is positive evidence that authority did not leak between planes.","intuition":"Useful analysis can remain useful without being promoted into trusted premises.","layer":"knowledge","plane":"audit","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node fact-boundary","object_id":"public-case:philosophy:fact-boundary","object_sha256":"3dce3557cfebd997540f1f882cb2446a1251b4349c4e853980663f1830035611","original_text_sha256":"81519fff6bf2aa2ca37b14a5ac7314c7a55e1b74fcf91efd9ae64eec11da99e7","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"fact_boundary_audit","truth_status":"audit_evidence"},"reader_role":"definition","reasoning":"A clean workflow audit checks structure and policy; it does not certify a philosophical proposition.","summary":"The audited Fact Graph contained zero admitted Facts and zero candidates.","theme_id":"theme-philosophy-workflow","title":"Zero admitted Facts","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The demonstrated capability is authority separation across the audited workflow.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The demonstrated capability is authority separation across the audited workflow."},"id":"target-authority","importance":"That boundary is the central safety property of the philosophy workflow.","intuition":"The system can help people think without granting every useful note the power of a premise.","layer":"knowledge","plane":"audit","prerequisites":["target-reconstruction","fact-boundary"],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node target-authority","object_id":"public-case:philosophy:target-authority","object_sha256":"ba47fd5be25e5e7d9223ff109e568acef5bb6a6f96ed86bd724333870d0d3565","original_text_sha256":"912016bfeb90244826a7526fdc2e151fba4d6905498248a80d18f81b771b976d","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"audit","source_status":"reviewed_audit_conclusion","truth_status":"audit_evidence"},"reader_role":"target","reasoning":"The read-only audit passed while the Fact Graph remained empty and the learning mount prohibited writeback.","summary":"Audit, exploration, teaching, and presentation remain nontruth activities unless a separate admission succeeds.","theme_id":"theme-philosophy-workflow","title":"Authority-safe exploration","visual_status":"current"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"Blackboard projection preserved endpoints without acquiring Paper or Fact authority.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"Blackboard projection preserved endpoints without acquiring Paper or Fact authority."},"id":"blackboard-exploration","importance":"Speculation stays useful and reversible.","intuition":"Researchers can try objections without editing the source or declaring victory.","layer":"research","plane":"blackboard","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node blackboard-exploration","object_id":"public-case:philosophy:blackboard-exploration","object_sha256":"2cea81adc375aff284aff03c232036b3d7d6a4fcae1de499a17984d7cba3d0d4","original_text_sha256":"3bdc4e2d980737026d45fcd115a66bc7d5179159fac9eb0df5d344039233c6bd","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"blackboard","source_status":"frozen_exploration_summary","truth_status":"exploration"},"reader_role":"explanation","reasoning":"Mirror nodes retain bindings to their source snapshots while agent notes remain exploration only.","summary":"Exploratory questions and challenges live in a separate frozen workspace.","theme_id":"theme-philosophy-workflow","title":"Frozen Blackboard","visual_status":"research"},{"formal":{"hypotheses":["Read this node only within the stated public case boundary."],"original_text":"The learning overlay retained nontruth status and began with zero mastery evidence.","proof":"This is a hash-bound public case summary, not a proof or a new authority object.","relations":["Its plane and truth-status labels determine its authority."],"statement":"The learning overlay retained nontruth status and began with zero mastery evidence."},"id":"learner-overlay","importance":"Pedagogical usefulness does not weaken provenance or admission boundaries.","intuition":"Teaching state is about what a learner has practiced, not what research has proved.","layer":"research","plane":"learning","prerequisites":[],"provenance":{"locator":"docs/cases/philosophy.source.md; public summary node learner-overlay","object_id":"public-case:philosophy:learner-overlay","object_sha256":"5074bdb20f136af6e62743c07052b6708ac84418b8612b8edbe0f0a15f040cb7","original_text_sha256":"1ebabdd5eb063465307b310e22062d7d0199e77c2c807018d5f2fc92ad9e3eed","replaces":[],"snapshot_id":"public-philosophy-workflow-v1","source_plane":"learning","source_status":"frozen_learning_summary","truth_status":"learning"},"reader_role":"explanation","reasoning":"The verified mount prohibited research-runtime invocation, truth inheritance, and source writeback.","summary":"A learning overlay can teach from frozen research snapshots without writing back.","theme_id":"theme-philosophy-workflow","title":"Read-only learning overlay","visual_status":"research"}],"prerequisite_order":{"target-authority":["paper-source","paper-reconstruction","audit-review","audit-history","target-reconstruction","fact-boundary"],"target-reconstruction":["paper-source","paper-reconstruction","audit-review","audit-history"]},"presentation":{"introduction":"This interactive map demonstrates separation of source, interpretation, audit, exploration, and learning authority. It does not prove a philosophical conclusion and admits no Fact.","subtitle":"Two workflow conclusions, with research and learning context available as optional layers."},"project_id":"public-philosophy-case","schema_version":1,"source_snapshot":{"description":"An anonymized public summary bound to a read-only audit of a private philosophy workflow.","id":"public-philosophy-workflow-v1","sha256":"1328f9cdac850695c5b538671ebeb11c5277a6ca3162a489668977a87882ad9a"},"target_order":["target-reconstruction","target-authority"],"theme_order":["theme-philosophy-workflow"],"themes":[{"description":"A source-bound reconstruction followed by an authority-separation result.","id":"theme-philosophy-workflow","label":"Philosophy workflow","target_ids":["target-reconstruction","target-authority"]}],"title":"Philosophy workflow: reconstruction without authority leakage"}</script>
+  <script id="chalxius-build-meta" type="application/json">{"assets":{"cytoscape":{"sha256":"9c2a3bf2592e0b14a1f7bec07c03a54f16dedf32af9cd0af155c716aa6c87bc3","version":"3.34.0"},"mathjax":{"bundle":"tex-svg","sha256":"d4295dc33744836935c1399feece5159577b34c5c8ffb9f1c6324cd82e03a882","version":"3.2.2"},"tabler_icons":{"license":"MIT","source_sha256":{"collapse":"36f884c26900f088930ceb3c33c9c2da856d3dd95b86b7c91946bccfa3bfdf8c","context":"c07711c7f515e7707b97e32d9a18fed49bb200f1fcf0d1a987422f44e8ec8479","copy":"01da13d33d6163f37ee81f397e567832068d836af0307118156370716357be07","expand":"dcf1a26d76bd90aaa677b83a76eed9b0b345ff692a3d4e867a6d4d621718daf8","file":"755cf3cf9be7a851defe2d7fa52f9430bee608f68fb2a25122ad1eefce9171d0","focus":"273346ebf838f75b31df81ce9d303ee5ef1e8c2f56f1f85cbcd6ef8d6ef8a482","info":"bf4377dff0aaaddf1676a4bb7292f90f1102f19daaca7021331ba6a191317c1c","move":"45b5a5c95a430f7512b9b20d48a3fed70571f4cb31069da74000c94550c7ec4c","overview":"8be5a8c5feb592d921b87a1bd17024e65f57b6de78fe83c5a1af93eaeafa403d","path":"f3221c089a05868154d9fed0251899ca39aaaf7fc5a200f318d1791b6e0e107a","redo":"57fbb7af87706540e921df06362819cde6f618589ee2ee839e3dc092d76ec4a0","refresh":"4c836d26a37be1bdf64ee4d7834599e0b6d2643d230f7cd34eccab2e4dcb39a5","reset":"bf61377e47b2e771d6d4a988cb3cf68e4d1b8947e48d53bed05e0b3f8885a5ee","search":"57e054b6c1508be40d5eba1ea434b702f5ff55dca04e28e5e3f22472c2f6176d","undo":"19eb4a720b914fba83c33d76398f6208f95e1ce8eaa9c48e0fa1db7602e42cb3"},"sprite_sha256":"2fc9b17bafe11e9866ae515ad9b6b06790c8ceabece75e5b9362d41320093e87","version":"3.45.0"}},"layout":"deterministic_theme_multicenter_orbit_fields","network_runtime":"disabled","packet_sha256":"52205b4dab61c3c655b181efbb95d83f816c8d79b644f9cc5eb37432c4a9bf15","reader_finalize":{"node_count":9,"packet_sha256":"52205b4dab61c3c655b181efbb95d83f816c8d79b644f9cc5eb37432c4a9bf15","schema_version":1,"scope":"presentation_readiness_only","sidebar_complete_count":9,"source_snapshot_id":"public-philosophy-workflow-v1","source_snapshot_sha256":"1328f9cdac850695c5b538671ebeb11c5277a6ca3162a489668977a87882ad9a","status":"ready","truth_effect":"none"},"renderer_revision":"chalxius-reader-html-20","truth_effect":"none"}</script>
   <script id="chalxius-reader-app">
 (function () {
   'use strict';
@@ -1375,8 +1456,15 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     includeLearning: false,
     includeReader: false,
     includeWeak: false,
+    orbitGravity: true,
     pinned: new Map(),
+    orbitAnglePinsByNodeId: new Map(),
     selectedId: null,
+    selectedNodeIds: new Set(),
+    boxSelectedNodeIds: new Set(),
+    boxSelectionAdditive: false,
+    boxSelectionEndedAt: 0,
+    groupDrag: null,
     searchMatches: [],
     contextNodeId: null,
     hoveredCanvasNodeId: null,
@@ -1390,7 +1478,58 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
   let windowResizeTimer = null;
   let nodeControlFrame = 0;
   let nodeHoverFrame = 0;
-  const CANONICAL_COLUMN_SPACING = 340;
+  let dynamicForcesFrame = 0;
+  let pendingDynamicFixedIds = new Set();
+  let pendingDynamicSeedIds = new Set();
+  let pendingDynamicPasses = 0;
+  let pendingDynamicReason = 'direct-manipulation';
+  const canonicalPositionByNodeId = new Map();
+  const canonicalOrbitAnglesByNodeId = new Map();
+  const themeCenterByThemeId = new Map();
+  const themeOrbitRadiiByThemeId = new Map();
+  const nodeOrbitAssignmentsByNodeId = new Map();
+  const sharedIntersectionAnchorByNodeId = new Map();
+  const boxSelectionHaloByNodeId = new Map();
+  const RADIAL_START_ANGLE = Math.PI;
+  const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
+  const RADIAL_TARGET_MIN_RADIUS = 170;
+  const RADIAL_FIRST_RING_SPACING = 236;
+  const RADIAL_OUTER_RING_SPACING = 158;
+  const RADIAL_TARGET_ARC_SPACING = 330;
+  const RADIAL_NODE_ARC_SPACING = 176;
+  const RADIAL_VISIBLE_EDGE_GAP = 72;
+  const RADIAL_LAYOUT_SPACING_MARGIN = 12;
+  const RADIAL_RELAXATION_ITERATIONS = 72;
+  const RADIAL_RELAXATION_NODE_LIMIT = 320;
+  const RADIAL_RELAXATION_START_STEP = 0.14;
+  const RADIAL_RELAXATION_END_STEP = 0.025;
+  const RADIAL_SEED_TETHER = 0.032;
+  const RADIAL_RING_REPULSION = 1.7;
+  const RADIAL_REFINEMENT_BLEND_FACTORS = Object.freeze([1, 0.8, 0.6, 0.4, 0.2]);
+  const DYNAMIC_FORCE_NODE_LIMIT = 240;
+  const DYNAMIC_FORCE_SETTLE_PASSES = 24;
+  const DYNAMIC_FORCE_DRAG_PASSES = 2;
+  const DYNAMIC_FORCE_MAX_STEP = 18;
+  const DYNAMIC_REPULSION_STRENGTH = 0.42;
+  const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
+  const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+  const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.16;
+  const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.028;
+  const DYNAMIC_TETHER_MAX_STEP = 16;
+  const THEME_ORBIT_NODES_PER_RING = 6;
+  const THEME_ORBIT_MIN_RADIUS = 400;
+  const THEME_ORBIT_RING_GAP = 96;
+  const THEME_ORBIT_ARC_GAP = 82;
+  const THEME_CENTER_MIN_SCAFFOLD_RADIUS = 280;
+  const THEME_CENTER_MAX_SCAFFOLD_RADIUS = 360;
+  const THEME_CENTER_PER_THEME_RADIUS = 80;
+  const THEME_CENTER_START_ANGLE = Math.PI;
+  const THEME_SHARED_NODE_GAP = 88;
+  const THEME_ORBIT_PALETTE = Object.freeze([
+    '#36c9c6', '#7fdd89', '#d0aa63', '#9a70d1',
+    '#4f93ed', '#d16aa1', '#63d7ad', '#95a9bd'
+  ]);
+  const PINCH_ZOOM_SENSITIVITY = 0.008;
   const NODE_SIZE_CONTROL_X_RATIO = 0.29;
   const NODE_SIZE_CONTROL_Y_RATIO = 0.5;
   const NODE_SIZE_CONTROL_CARD_HEIGHT_RATIO = 0.45;
@@ -1399,7 +1538,21 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
   const NODE_CONTROL_SAFE_MIN_ZOOM = 0.36;
   const CROSSING_REDUCTION_SWEEPS = 8;
   const CROSSING_REDUCTION_EDGE_LIMIT = 1200;
+  const CROSSING_REFINEMENT_PASSES = 2;
+  const CROSSING_REFINEMENT_CANDIDATE_LIMIT = 48;
   const COMPACT_NODE_SIZES = Object.freeze({
+    target: {width: 78, height: 46},
+    definition: {width: 80, height: 44},
+    result: {width: 76, height: 44},
+    explanation: {width: 74, height: 44}
+  });
+  const FULL_LAYOUT_NODE_FOOTPRINTS = Object.freeze({
+    target: {width: 254, height: 118},
+    definition: {width: 246, height: 110},
+    result: {width: 238, height: 106},
+    explanation: {width: 226, height: 102}
+  });
+  const COMPACT_LAYOUT_NODE_FOOTPRINTS = Object.freeze({
     target: {width: 78, height: 46},
     definition: {width: 80, height: 44},
     result: {width: 76, height: 44},
@@ -1407,7 +1560,37 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
   });
   const SIZE_HISTORY_LIMIT = 100;
 
+  const themeMembershipByNodeId = themeMemberships();
+  const themeMemberIdsByThemeId = themeOrbitGroups(themeMembershipByNodeId);
+  const initialThemeCenterByThemeId = themeOrbitCenters();
+
   const elements = [];
+  packet.theme_order.forEach((themeId, themeIndex) => {
+    const theme = themeById.get(themeId);
+    const ringCount = Math.max(
+      1,
+      Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+    );
+    for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+      elements.push({
+        group: 'nodes',
+        data: {
+          id: `reader-orbit:${themeId}:${ringIndex}`,
+          kind: 'theme-orbit',
+          label: themeOrbitDisplayLabel(themeIndex, ringIndex),
+          themeId,
+          themeIndex: themeIndex + 1,
+          ringIndex: ringIndex + 1,
+          orbitDiameter: 1,
+          orbitColor: THEME_ORBIT_PALETTE[themeIndex % THEME_ORBIT_PALETTE.length]
+        },
+        grabbable: false,
+        selectable: false,
+        locked: true,
+        position: {...initialThemeCenterByThemeId.get(themeId)}
+      });
+    }
+  });
   for (const themeId of groupedThemeIds) {
     const theme = themeById.get(themeId);
     elements.push({
@@ -1451,6 +1634,8 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
         visualStatus: node.visual_status,
         layer: node.layer,
         themeId: node.theme_id,
+        themeIds: themeMembershipByNodeId.get(node.id).join(' '),
+        shared: themeMembershipByNodeId.get(node.id).length > 1 ? 'yes' : 'no',
         minimized: node.reader_role === 'target' ? 'no' : 'yes'
       },
       position: {x: 0, y: 0}
@@ -1479,9 +1664,48 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     layout: {name: 'preset', fit: false},
     minZoom: NODE_CONTROL_SAFE_MIN_ZOOM,
     maxZoom: 3.2,
+    userPanningEnabled: false,
     boxSelectionEnabled: false,
-    selectionType: 'single',
+    selectionType: 'additive',
     style: [
+      {
+        selector: 'core',
+        style: {
+          'selection-box-color': '#ffe58a',
+          'selection-box-opacity': 0.12,
+          'selection-box-border-color': '#ffe58a',
+          'selection-box-border-width': 1.5,
+          'active-bg-color': '#7fdd89',
+          'active-bg-opacity': 0.045,
+          'active-bg-size': 18
+        }
+      },
+      {
+        selector: 'node[kind = "theme-orbit"]',
+        style: {
+          'shape': 'ellipse',
+          'width': 'data(orbitDiameter)',
+          'height': 'data(orbitDiameter)',
+          'background-opacity': 0,
+          'border-color': 'data(orbitColor)',
+          'border-opacity': 0.34,
+          'border-style': 'dashed',
+          'border-width': 1.25,
+          'label': 'data(label)',
+          'color': 'data(orbitColor)',
+          'font-family': 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+          'font-size': 11,
+          'font-weight': 700,
+          'text-valign': 'top',
+          'text-halign': 'center',
+          'text-margin-y': -10,
+          'text-background-color': '#08121d',
+          'text-background-opacity': 0.9,
+          'text-background-padding': 4,
+          'events': 'no',
+          'z-index': 0
+        }
+      },
       {
         selector: 'node[kind = "reader-node"]',
         style: {
@@ -1502,6 +1726,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
           'text-valign': 'center',
           'text-halign': 'center',
           'text-justification': 'left',
+          'box-selection': 'overlap',
           'overlay-padding': 9,
           'overlay-opacity': 0,
           'transition-property': 'border-color, border-width, opacity',
@@ -1514,6 +1739,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       { selector: 'node[plane = "blackboard"]', style: {'background-color': '#18222d', 'border-color': '#718095'} },
       { selector: 'node[plane = "learning"]', style: {'background-color': '#152a20', 'border-color': '#7fdd89'} },
       { selector: 'node[plane = "reader"]', style: {'background-color': '#12282a', 'border-color': '#63d7ad'} },
+      { selector: 'node[shared = "yes"]', style: {'border-width': 4.5} },
       { selector: 'node[role = "target"]', style: {'border-width': 3.5, 'width': 236, 'height': 100, 'text-max-width': 106, 'text-margin-x': 18} },
       { selector: 'node[role = "definition"]', style: {'width': 228, 'height': 92, 'text-max-width': 102, 'text-margin-x': 18} },
       { selector: 'node[role = "result"]', style: {'width': 220, 'height': 88, 'text-max-width': 98, 'text-margin-x': 17} },
@@ -1623,7 +1849,8 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
           'label': 'data(label)',
           'text-wrap': 'wrap',
           'text-max-width': 158,
-          'text-valign': 'center'
+          'text-valign': 'center',
+          'box-selection': 'overlap'
         }
       },
       {
@@ -1724,7 +1951,19 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
           'z-index': 999
         }
       },
-      { selector: 'node.minimized:selected', style: {'outline-width': 2.4, 'outline-offset': 1.6} }
+      { selector: 'node.minimized:selected', style: {'outline-width': 2.4, 'outline-offset': 1.6} },
+      {
+        selector: 'node.box-selected',
+        style: {
+          'outline-color': '#7fdd89',
+          'outline-style': 'solid',
+          'outline-width': 2.6,
+          'outline-offset': 2.4,
+          'outline-opacity': 0.92,
+          'z-index': 998
+        }
+      },
+      { selector: 'node.minimized.box-selected', style: {'outline-width': 2.2, 'outline-offset': 1.5} }
     ]
   });
 
@@ -1747,6 +1986,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     layerMenuButton: document.getElementById('layer-menu-button'),
     layerPopover: document.getElementById('layer-popover'),
     fit: document.getElementById('fit-view-button'),
+    orbitGravity: document.getElementById('orbit-gravity-button'),
     reset: document.getElementById('reset-layout-button'),
     reloadGraph: document.getElementById('reload-graph-button'),
     undoSizing: document.getElementById('undo-sizing-button'),
@@ -1757,6 +1997,8 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     targetPosition: document.getElementById('target-position'),
     canvasStage: document.querySelector('.canvas-stage'),
     cy: document.getElementById('cy'),
+    boxSelectionMarquee: document.getElementById('box-selection-marquee'),
+    boxSelectionHaloLayer: document.getElementById('box-selection-halo-layer'),
     selectedNodeHalo: document.getElementById('selected-node-halo'),
     nodeControlLayer: document.getElementById('node-control-layer'),
     nodeNameTooltip: document.getElementById('node-name-tooltip'),
@@ -1816,15 +2058,25 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     return `${bi('主题', 'Topic')}\n${theme.label}`;
   }
 
-  function nodeDisplayLabel(node) {
-    const topic = themeById.get(node.theme_id);
+  function themeOrbitDisplayLabel(themeIndex, ringIndex) {
+    if (ringIndex > 0) return '';
+    return `${bi('主题场', 'Theme field')} ${String(themeIndex + 1).padStart(2, '0')}`;
+  }
+
+  function nodeIdentityLabel(node) {
     const orderPrefix = node.reader_role === 'target'
       ? `${targetOrderIndex.get(node.id) + 1}. `
       : '';
-    const topicLine = node.reader_role === 'target' && topic && topic.target_ids.length === 1
-      ? `\n${bi('主题', 'Topic')} · ${topic.label}`
-      : '';
-    return `${orderPrefix}${node.title}${topicLine}\n${roleLabel(node.reader_role)} · ${planeLabel(node.plane)}`;
+    const hashPrefix = node.provenance.object_sha256.slice(0, 6);
+    return `${orderPrefix}${hashPrefix}\n${roleLabel(node.reader_role)} · ${planeLabel(node.plane)}`;
+  }
+
+  function nodeIdentityText(node) {
+    return nodeIdentityLabel(node).replace(/\n/g, ' · ');
+  }
+
+  function nodeDisplayLabel(node) {
+    return nodeIdentityLabel(node);
   }
 
   function populatePageHeader() {
@@ -1880,6 +2132,19 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       for (const themeId of groupedThemeIds) {
         cy.getElementById(`reader-theme:${themeId}`).data('label', themeDisplayLabel(themeById.get(themeId)));
       }
+      packet.theme_order.forEach((themeId, themeIndex) => {
+        const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+          || Math.max(
+            1,
+            Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+          );
+        for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+          cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`).data(
+            'label',
+            themeOrbitDisplayLabel(themeIndex, ringIndex)
+          );
+        }
+      });
       for (const node of packet.nodes) cy.getElementById(node.id).data('label', nodeDisplayLabel(node));
     });
     refreshLocalizedDetail();
@@ -1912,11 +2177,17 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
 
   function refreshLocalizedDetail() {
     if (typeof state.selectedId === 'string' && state.selectedId.startsWith('reader-theme:')) {
-      showThemeDetail(state.selectedId.slice('reader-theme:'.length));
+      showThemeDetail(state.selectedId.slice('reader-theme:'.length), {
+        preserveSelection: state.boxSelectedNodeIds.has(state.selectedId)
+      });
     } else if (edgeById.has(state.selectedId)) {
       showEdgeDetail(state.selectedId);
     } else if (nodeById.has(state.selectedId)) {
-      showNodeDetail(state.selectedId);
+      showNodeDetail(state.selectedId, {
+        preserveSelection: state.boxSelectedNodeIds.has(state.selectedId)
+      });
+    } else if (state.selectedNodeIds.size) {
+      showBatchSelectionDetail([...state.selectedNodeIds]);
     } else {
       showOverviewDetail();
     }
@@ -1973,8 +2244,13 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       dom.layerMenuButton.setAttribute('aria-expanded', opening ? 'true' : 'false');
     });
     dom.fit.addEventListener('click', fitVisible);
+    dom.orbitGravity.addEventListener('click', () => {
+      setOrbitGravity(!state.orbitGravity);
+    });
     dom.reset.addEventListener('click', () => {
+      cancelScheduledDynamicForces();
       state.pinned.clear();
+      state.orbitAnglePinsByNodeId.clear();
       resetCurrentLayout();
     });
     dom.reloadGraph.addEventListener('click', () => window.location.reload());
@@ -2018,8 +2294,6 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       closeNodeContextMenu();
       const id = event.target.id();
       if (id.startsWith('reader-theme:')) {
-        cy.elements().unselect();
-        event.target.select();
         showThemeDetail(event.target.data('themeId'));
         return;
       }
@@ -2033,8 +2307,6 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     });
     cy.on('dbltap', 'node[kind = "theme"]', (event) => {
       closeNodeContextMenu();
-      cy.elements().unselect();
-      event.target.select();
       maximizeThemePath(event.target.data('themeId'));
     });
     cy.on('mouseover', 'node[kind = "reader-node"]', (event) => {
@@ -2049,6 +2321,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     });
     cy.on('tap', (event) => {
       if (event.target !== cy) return;
+      if (Date.now() - state.boxSelectionEndedAt < 160) return;
       closeNodeContextMenu();
       hideNodeNameTooltip();
       showOverviewDetail();
@@ -2064,9 +2337,89 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       if (event.target.data('kind') === 'reader-grouping') return;
       showEdgeDetail(event.target.id());
     });
+    cy.on('grab', 'node', (event) => {
+      cancelScheduledDynamicForces();
+      const anchor = event.target;
+      if (state.selectedNodeIds.size < 2 || !state.selectedNodeIds.has(anchor.id())) {
+        state.groupDrag = null;
+        return;
+      }
+      const origins = new Map();
+      for (const nodeId of state.selectedNodeIds) {
+        const node = cy.getElementById(nodeId);
+        if (!node.length || node.hasClass('hidden')) continue;
+        origins.set(nodeId, {...node.position()});
+      }
+      state.groupDrag = {
+        anchorId: anchor.id(),
+        anchorStart: {...anchor.position()},
+        origins
+      };
+    });
+    cy.on('drag', 'node', (event) => {
+      const groupDrag = state.groupDrag;
+      if (groupDrag && groupDrag.anchorId === event.target.id()) {
+        const current = event.target.position();
+        const dx = current.x - groupDrag.anchorStart.x;
+        const dy = current.y - groupDrag.anchorStart.y;
+        cy.batch(() => {
+          for (const [nodeId, origin] of groupDrag.origins) {
+            if (nodeId === groupDrag.anchorId) continue;
+            cy.getElementById(nodeId).position({x: origin.x + dx, y: origin.y + dy});
+          }
+        });
+      }
+      const movedIds = groupDrag && groupDrag.anchorId === event.target.id()
+        ? [...groupDrag.origins.keys()]
+        : [event.target.id()];
+      scheduleDynamicForces(
+        movedIds,
+        DYNAMIC_FORCE_DRAG_PASSES,
+        movedIds,
+        'drag'
+      );
+    });
     cy.on('dragfree', 'node', (event) => {
+      cancelScheduledDynamicForces();
       const node = event.target;
-      state.pinned.set(node.id(), {...node.position()});
+      const groupDrag = state.groupDrag && state.groupDrag.anchorId === node.id()
+        ? state.groupDrag
+        : null;
+      const movedIds = groupDrag ? [...groupDrag.origins.keys()] : [node.id()];
+      const fixedIds = [];
+      for (const nodeId of movedIds) {
+        const movedNode = cy.getElementById(nodeId);
+        if (!movedNode.length) continue;
+        const position = movedNode.position();
+        if (state.orbitGravity && nodeById.has(nodeId)) {
+          const assignments = nodeOrbitAssignmentsByNodeId.get(nodeId) || [];
+          const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+          const releaseAngles = new Map();
+          for (const assignment of assignments) {
+            const deltaX = position.x - assignment.center.x;
+            const deltaY = position.y - assignment.center.y;
+            releaseAngles.set(
+              assignment.themeId,
+              Math.hypot(deltaX, deltaY) > 0.000001
+                ? Math.atan2(deltaY, deltaX)
+                : canonicalAngles.get(assignment.themeId) || 0
+            );
+          }
+          state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles);
+          state.pinned.delete(nodeId);
+        } else {
+          state.pinned.set(nodeId, {...position});
+          fixedIds.push(nodeId);
+        }
+      }
+      dom.cy.dataset.lastMovedSelectionCount = String(movedIds.length);
+      state.groupDrag = null;
+      scheduleDynamicForces(
+        fixedIds,
+        DYNAMIC_FORCE_SETTLE_PASSES,
+        movedIds,
+        'drag-release'
+      );
       scheduleNodeControlSync();
     });
     cy.on('pan zoom position render resize', scheduleNodeControlSync);
@@ -2075,6 +2428,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       hideNodeNameTooltip();
     });
     dom.cy.addEventListener('contextmenu', (event) => event.preventDefault());
+    bindPointerIntent();
     bindTrackpadNavigation();
     for (const button of dom.contextCommands) {
       button.addEventListener('click', () => runContextCommand(button.dataset.contextCommand));
@@ -2194,7 +2548,9 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
 
   function ensureGraphContentVisible() {
     cy.resize();
-    const visibleNodes = cy.nodes().filter((node) => !node.hasClass('hidden'));
+    const visibleNodes = cy.nodes().filter((node) => (
+      !node.hasClass('hidden') && node.data('kind') !== 'theme-orbit'
+    ));
     if (!visibleNodes.length) return;
     const width = cy.width();
     const height = cy.height();
@@ -2265,15 +2621,41 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     return eligibleNodeIds();
   }
 
+  function setCanvasNodeSelection(nodeIds, activeId) {
+    state.boxSelectedNodeIds.clear();
+    state.selectedNodeIds = new Set(nodeIds.filter((nodeId) => {
+      const element = cy.getElementById(nodeId);
+      return element.length && element.isNode();
+    }));
+    state.selectedId = activeId || null;
+    restoreCanvasSelection();
+  }
+
+  function restoreCanvasSelection() {
+    cy.elements().unselect();
+    cy.nodes().removeClass('box-selected');
+    let visibleSelectedCount = 0;
+    for (const nodeId of state.selectedNodeIds) {
+      const element = cy.getElementById(nodeId);
+      if (!element.length || element.hasClass('hidden')) continue;
+      element.select();
+      if (state.boxSelectedNodeIds.has(nodeId)) element.addClass('box-selected');
+      visibleSelectedCount += 1;
+    }
+    if (edgeById.has(state.selectedId)) {
+      const edge = cy.getElementById(state.selectedId);
+      if (edge.length && !edge.hasClass('hidden')) edge.select();
+    }
+    dom.cy.dataset.selectedNodeCount = String(visibleSelectedCount);
+  }
+
   function refreshSurface(options) {
     const preserveViewport = !options || options.preserveViewport !== false;
     const viewport = preserveViewport ? {zoom: cy.zoom(), pan: {...cy.pan()}} : null;
     const visibleIds = currentVisibleIds();
     setVisibility(visibleIds);
     applyNodeSizingClasses();
-    cy.elements().unselect();
-    const selected = cy.getElementById(state.selectedId || '');
-    if (selected.length && !selected.hasClass('hidden')) selected.select();
+    restoreCanvasSelection();
     updateViewDescription();
     updateButtons();
     updateNavigation();
@@ -2307,13 +2689,28 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     return left.size === right.size && [...left].every((value) => right.has(value));
   }
 
-  function commitSizing(nextMinimizedNodeIds, label) {
+  function scheduleSizingConvergence(delta) {
+    const changedNodeIds = new Set([...delta.added, ...delta.removed]);
+    if (!changedNodeIds.size) return;
+    refreshThemeOrbitRadii();
+    scheduleDynamicForces(
+      delta.anchorNodeIds || [],
+      DYNAMIC_FORCE_SETTLE_PASSES,
+      changedNodeIds,
+      'sizing'
+    );
+    dom.cy.dataset.lastSizingConvergenceNodeCount = String(changedNodeIds.size);
+    dom.cy.dataset.lastSizingConvergencePasses = String(DYNAMIC_FORCE_SETTLE_PASSES);
+  }
+
+  function commitSizing(nextMinimizedNodeIds, label, anchorNodeIds) {
     const next = new Set([...nextMinimizedNodeIds].filter((nodeId) => nodeById.has(nodeId)));
     if (sameSet(state.minimizedNodeIds, next)) return false;
     const delta = {
       added: [...next].filter((nodeId) => !state.minimizedNodeIds.has(nodeId)),
       removed: [...state.minimizedNodeIds].filter((nodeId) => !next.has(nodeId)),
-      label
+      label,
+      anchorNodeIds: [...new Set(anchorNodeIds || [])]
     };
     state.sizingUndoStack.push(delta);
     if (state.sizingUndoStack.length > SIZE_HISTORY_LIMIT) state.sizingUndoStack.shift();
@@ -2321,6 +2718,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     state.minimizedNodeIds = next;
     closeNodeContextMenu();
     refreshSurface({preserveViewport: true});
+    scheduleSizingConvergence(delta);
     return true;
   }
 
@@ -2332,6 +2730,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     for (const nodeId of add) next.add(nodeId);
     state.minimizedNodeIds = next;
     refreshSurface({preserveViewport: true});
+    scheduleSizingConvergence(delta);
   }
 
   function undoSizing() {
@@ -2353,7 +2752,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     const next = new Set(state.minimizedNodeIds);
     if (next.has(nodeId)) next.delete(nodeId);
     else next.add(nodeId);
-    commitSizing(next, `toggle:${nodeId}`);
+    commitSizing(next, `toggle:${nodeId}`, [nodeId]);
   }
 
   function maximizeAllCards() {
@@ -2383,7 +2782,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       if (closure.has(eligibleId)) next.delete(eligibleId);
       else next.add(eligibleId);
     }
-    commitSizing(next, `complete-path:${nodeId}`);
+    commitSizing(next, `complete-path:${nodeId}`, [nodeId]);
     showNodeDetail(nodeId);
   }
 
@@ -2401,7 +2800,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       if (closure.has(eligibleId)) next.delete(eligibleId);
       else next.add(eligibleId);
     }
-    commitSizing(next, `theme-path:${themeId}`);
+    commitSizing(next, `theme-path:${themeId}`, [`reader-theme:${themeId}`]);
     showThemeDetail(themeId);
   }
 
@@ -2409,7 +2808,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     if (!nodeEligible(nodeId)) return;
     const next = new Set(state.minimizedNodeIds);
     for (const closureId of directedClosureNodeIds(nodeId, direction)) next.delete(closureId);
-    commitSizing(next, `${direction}:${nodeId}`);
+    commitSizing(next, `${direction}:${nodeId}`, [nodeId]);
     showNodeDetail(nodeId);
   }
 
@@ -2461,6 +2860,47 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     refreshSurface({preserveViewport: true});
   }
 
+  function setOrbitGravity(enabled) {
+    cancelScheduledDynamicForces();
+    state.orbitGravity = Boolean(enabled);
+    const releasedNodeIds = [];
+    if (state.orbitGravity) {
+      refreshThemeOrbitRadii();
+      for (const nodeId of readerNodeIds) {
+        if (!state.pinned.has(nodeId)) continue;
+        const position = cy.getElementById(nodeId).position();
+        const assignments = nodeOrbitAssignmentsByNodeId.get(nodeId) || [];
+        const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+        const releaseAngles = new Map();
+        for (const assignment of assignments) {
+          const deltaX = position.x - assignment.center.x;
+          const deltaY = position.y - assignment.center.y;
+          releaseAngles.set(
+            assignment.themeId,
+            Math.hypot(deltaX, deltaY) > 0.000001
+              ? Math.atan2(deltaY, deltaX)
+              : canonicalAngles.get(assignment.themeId) || 0
+          );
+        }
+        state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles);
+        state.pinned.delete(nodeId);
+        releasedNodeIds.push(nodeId);
+      }
+    }
+    setVisibility(currentVisibleIds());
+    updateViewDescription();
+    updateButtons();
+    if (state.orbitGravity && releasedNodeIds.length) {
+      scheduleDynamicForces(
+        [],
+        DYNAMIC_FORCE_SETTLE_PASSES,
+        releasedNodeIds,
+        'orbit-gravity-enabled'
+      );
+    }
+    dom.cy.dataset.themeOrbitGravity = state.orbitGravity ? 'on' : 'off';
+  }
+
   function resetCurrentLayout() {
     applyCanonicalPositions();
     refreshSurface({preserveViewport: true});
@@ -2471,13 +2911,17 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     const eligible = eligibleNodeIds();
     const minimized = [...eligible].filter((nodeId) => state.minimizedNodeIds.has(nodeId)).length;
     const full = eligible.size - minimized;
+    const orbitCount = [...themeOrbitRadiiByThemeId.values()]
+      .reduce((total, radii) => total + radii.length, 0);
+    const sharedCount = [...themeMembershipByNodeId]
+      .filter(([nodeId, themeIds]) => eligible.has(nodeId) && themeIds.length > 1).length;
     dom.cy.dataset.visibleNodeCount = String(eligible.size);
     dom.cy.dataset.visibleReaderEdgeCount = String(packet.edges.filter(edgeEligible).length);
     dom.cy.dataset.fullNodeCount = String(full);
     dom.cy.dataset.minimizedNodeCount = String(minimized);
     dom.viewDescription.textContent = bi(
-      `完整 ${full} · 最小化 ${minimized} · 所有当前启用的关系保持可见`,
-      `Full ${full} · Minimized ${minimized} · All enabled relations remain visible`
+      `完整 ${full} · 最小化 ${minimized} · ${packet.theme_order.length} 个主题场 / ${orbitCount} 条等距轨道 · ${sharedCount} 个共享节点 · 轨道引力${state.orbitGravity ? '开启' : '关闭'} · 所有当前启用的关系保持可见`,
+      `Full ${full} · Minimized ${minimized} · ${packet.theme_order.length} theme fields / ${orbitCount} equally spaced orbits · ${sharedCount} shared nodes · Orbit gravity ${state.orbitGravity ? 'on' : 'off'} · All enabled relations remain visible`
     );
   }
 
@@ -2485,6 +2929,21 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     cy.batch(() => {
       cy.elements().addClass('hidden');
       for (const nodeId of visibleIds) cy.getElementById(nodeId).removeClass('hidden');
+      if (state.orbitGravity) {
+        for (const themeId of packet.theme_order) {
+          const hasVisibleMember = themeMemberIdsByThemeId.get(themeId)
+            .some((nodeId) => visibleIds.has(nodeId));
+          if (!hasVisibleMember) continue;
+          const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+            || Math.max(
+              1,
+              Math.ceil(themeMemberIdsByThemeId.get(themeId).length / THEME_ORBIT_NODES_PER_RING)
+            );
+          for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+            cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`).removeClass('hidden');
+          }
+        }
+      }
       for (const themeId of groupedThemeIds) {
         const themeTargets = themeById.get(themeId).target_ids.filter((id) => visibleIds.has(id));
         if (!themeTargets.length) continue;
@@ -2511,23 +2970,986 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     }
   }
 
-  function layoutCrossingScore(groups, ranks, baselineIndex) {
-    const position = new Map();
+  function coreDistanceRanks() {
+    const neighbors = new Map(readerNodeIds.map((nodeId) => [nodeId, []]));
+    for (const edge of packet.edges) {
+      if (!neighbors.has(edge.source) || !neighbors.has(edge.target)) continue;
+      neighbors.get(edge.source).push(edge.target);
+      neighbors.get(edge.target).push(edge.source);
+    }
+    for (const adjacent of neighbors.values()) {
+      adjacent.sort((left, right) => (
+        nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
+    }
+    const ranks = new Map();
+    const queue = [];
+    for (const targetId of packet.target_order) {
+      if (!nodeById.has(targetId) || ranks.has(targetId)) continue;
+      ranks.set(targetId, 0);
+      queue.push(targetId);
+    }
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const current = queue[cursor];
+      const nextRank = ranks.get(current) + 1;
+      for (const neighborId of neighbors.get(current)) {
+        if (ranks.has(neighborId)) continue;
+        ranks.set(neighborId, nextRank);
+        queue.push(neighborId);
+      }
+    }
+    const outerRank = Math.max(0, ...ranks.values()) + 1;
+    for (const nodeId of readerNodeIds) {
+      if (!ranks.has(nodeId)) ranks.set(nodeId, outerRank);
+    }
+    return ranks;
+  }
+
+  function radialRingRadii(groups) {
+    const radii = new Map();
+    const orderedRanks = [...groups.keys()].sort((left, right) => left - right);
+    const targetCount = (groups.get(0) || []).length;
+    const radiusForChordSpacing = (count, spacing) => (
+      count <= 1 ? 0 : spacing / (2 * Math.sin(Math.PI / count))
+    );
+    let previousRadius = targetCount <= 1
+      ? 0
+      : Math.max(
+        RADIAL_TARGET_MIN_RADIUS,
+        radiusForChordSpacing(targetCount, RADIAL_TARGET_ARC_SPACING)
+      );
+    radii.set(0, previousRadius);
+    let previousMaximumHalfWidth = Math.max(
+      0,
+      ...(groups.get(0) || []).map((nodeId) => layoutNodeFootprint(nodeId).width / 2)
+    );
+    for (const rank of orderedRanks) {
+      if (rank === 0) continue;
+      const nodeIds = groups.get(rank);
+      const nodeCount = nodeIds.length;
+      const maximumHeight = Math.max(
+        0,
+        ...nodeIds.map((nodeId) => layoutNodeFootprint(nodeId).height)
+      );
+      const currentMaximumHalfWidth = Math.max(
+        0,
+        ...nodeIds.map((nodeId) => layoutNodeFootprint(nodeId).width / 2)
+      );
+      const densityRadius = radiusForChordSpacing(
+        nodeCount,
+        Math.max(
+          RADIAL_NODE_ARC_SPACING,
+          maximumHeight + RADIAL_VISIBLE_EDGE_GAP + RADIAL_LAYOUT_SPACING_MARGIN
+        )
+      );
+      const baseRingSpacing = rank === 1
+        ? RADIAL_FIRST_RING_SPACING
+        : RADIAL_OUTER_RING_SPACING;
+      const ringSpacing = Math.max(
+        baseRingSpacing,
+        previousMaximumHalfWidth
+          + currentMaximumHalfWidth
+          + RADIAL_VISIBLE_EDGE_GAP
+          + RADIAL_LAYOUT_SPACING_MARGIN
+      );
+      previousRadius = Math.max(previousRadius + ringSpacing, densityRadius);
+      radii.set(rank, previousRadius);
+      previousMaximumHalfWidth = currentMaximumHalfWidth;
+    }
+    return radii;
+  }
+
+  function wrapLayoutAngle(angle) {
+    return Math.atan2(Math.sin(angle), Math.cos(angle));
+  }
+
+  function radialLayoutCoordinates(groups) {
+    const positions = new Map();
+    const radii = radialRingRadii(groups);
+    const rankByNode = new Map();
     for (const [rank, nodeIds] of groups) {
-      nodeIds.forEach((nodeId, index) => position.set(nodeId, {x: rank, y: index}));
+      for (const nodeId of nodeIds) rankByNode.set(nodeId, rank);
     }
     const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    for (const [rank, nodeIds] of [...groups.entries()].sort((left, right) => left[0] - right[0])) {
+      const radius = radii.get(rank) || 0;
+      const count = nodeIds.length;
+      const ringPhase = rank === 0 ? 0 : rank * RADIAL_RING_PHASE;
+      const stagger = rank > 0 && rank % 2 === 1 && count > 1 ? Math.PI / count : 0;
+      let baseAngle = RADIAL_START_ANGLE + ringPhase + stagger;
+      if (rank > 0 && count) {
+        const indexByNode = new Map(nodeIds.map((nodeId, index) => [nodeId, index]));
+        let phaseVectorX = 0;
+        let phaseVectorY = 0;
+        let phaseWeight = 0;
+        for (const edge of packet.edges) {
+          const currentId = indexByNode.has(edge.source)
+            ? edge.source
+            : indexByNode.has(edge.target)
+              ? edge.target
+              : null;
+          if (!currentId) continue;
+          const neighborId = currentId === edge.source ? edge.target : edge.source;
+          if ((rankByNode.get(neighborId) ?? rank) >= rank) continue;
+          const neighborPosition = positions.get(neighborId);
+          if (!neighborPosition || Math.hypot(neighborPosition.x, neighborPosition.y) < 0.001) continue;
+          const desiredNodeAngle = Math.atan2(neighborPosition.y, neighborPosition.x);
+          const desiredBaseAngle = desiredNodeAngle
+            - (2 * Math.PI * indexByNode.get(currentId)) / count;
+          const weight = edgeWeight[edge.category] || 1;
+          phaseVectorX += Math.cos(desiredBaseAngle) * weight;
+          phaseVectorY += Math.sin(desiredBaseAngle) * weight;
+          phaseWeight += weight;
+        }
+        if (phaseWeight && Math.hypot(phaseVectorX, phaseVectorY) > 0.001) {
+          baseAngle = Math.atan2(phaseVectorY, phaseVectorX);
+        }
+      }
+      nodeIds.forEach((nodeId, index) => {
+        if (radius === 0) {
+          positions.set(nodeId, {x: 0, y: 0});
+          return;
+        }
+        const angle = baseAngle + (2 * Math.PI * index) / count;
+        positions.set(nodeId, {
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius
+        });
+      });
+    }
+    return positions;
+  }
+
+  function themeMemberships() {
+    const memberships = new Map(
+      packet.nodes.map((node) => [node.id, new Set([node.theme_id])])
+    );
+    const structuralIncoming = new Map(packet.nodes.map((node) => [node.id, []]));
+    for (const edge of packet.edges) {
+      if (edge.weak || !['prerequisite', 'support'].includes(edge.category)) continue;
+      structuralIncoming.get(edge.target).push(edge.source);
+    }
+    for (const themeId of packet.theme_order) {
+      const queue = [...themeById.get(themeId).target_ids];
+      const visited = new Set(queue);
+      for (let cursor = 0; cursor < queue.length; cursor += 1) {
+        const nodeId = queue[cursor];
+        if (memberships.has(nodeId)) memberships.get(nodeId).add(themeId);
+        for (const sourceId of structuralIncoming.get(nodeId) || []) {
+          if (visited.has(sourceId)) continue;
+          visited.add(sourceId);
+          queue.push(sourceId);
+        }
+      }
+    }
+    return new Map(packet.nodes.map((node) => [
+      node.id,
+      [...memberships.get(node.id)].sort((left, right) => (
+        themeOrderIndex.get(left) - themeOrderIndex.get(right)
+      ))
+    ]));
+  }
+
+  function themeOrbitGroups(memberships) {
+    const assignedMemberships = memberships || themeMemberships();
+    const groups = new Map(packet.theme_order.map((themeId) => [themeId, []]));
+    for (const node of packet.nodes) {
+      for (const themeId of assignedMemberships.get(node.id)) groups.get(themeId).push(node.id);
+    }
+    return groups;
+  }
+
+  function themeOrbitRadii(groups) {
+    const assignedGroups = groups || themeOrbitGroups();
+    const radii = new Map();
+    for (const themeId of packet.theme_order) {
+      const nodeIds = assignedGroups.get(themeId);
+      const ringCount = Math.max(1, Math.ceil(nodeIds.length / THEME_ORBIT_NODES_PER_RING));
+      const maximumExtent = Math.max(0, ...nodeIds.map(layoutCollisionRadius));
+      const ringPopulation = Math.min(THEME_ORBIT_NODES_PER_RING, Math.max(1, nodeIds.length));
+      const minimumChord = maximumExtent * 2 + THEME_ORBIT_ARC_GAP;
+      const densityRadius = ringPopulation <= 1
+        ? 0
+        : minimumChord / (2 * Math.sin(Math.PI / ringPopulation));
+      const firstRadius = Math.max(THEME_ORBIT_MIN_RADIUS, densityRadius);
+      const equalSpacing = Math.max(
+        THEME_ORBIT_RING_GAP,
+        maximumExtent * 2 + THEME_ORBIT_RING_GAP
+      );
+      radii.set(
+        themeId,
+        Array.from({length: ringCount}, (_, ringIndex) => (
+          firstRadius + ringIndex * equalSpacing
+        ))
+      );
+    }
+    return radii;
+  }
+
+  function themeOrbitCenters() {
+    const centers = new Map();
+    const count = packet.theme_order.length;
+    if (count === 1) {
+      centers.set(packet.theme_order[0], {x: 0, y: 0});
+      return centers;
+    }
+    const scaffoldRadius = Math.min(
+      THEME_CENTER_MAX_SCAFFOLD_RADIUS,
+      Math.max(THEME_CENTER_MIN_SCAFFOLD_RADIUS, count * THEME_CENTER_PER_THEME_RADIUS)
+    );
+    packet.theme_order.forEach((themeId, themeIndex) => {
+      const angle = THEME_CENTER_START_ANGLE + (2 * Math.PI * themeIndex) / count;
+      centers.set(themeId, {
+        x: Math.cos(angle) * scaffoldRadius,
+        y: Math.sin(angle) * scaffoldRadius
+      });
+    });
+    return centers;
+  }
+
+  function themeOrbitRingAssignments(groups, memberships) {
+    const assignments = new Map();
+    for (const themeId of packet.theme_order) {
+      const nodeIds = [...groups.get(themeId)].sort((left, right) => {
+        const leftMembershipCount = memberships.get(left).length;
+        const rightMembershipCount = memberships.get(right).length;
+        const leftShared = leftMembershipCount > 1 ? 0 : 1;
+        const rightShared = rightMembershipCount > 1 ? 0 : 1;
+        return leftShared - rightShared
+          || rightMembershipCount - leftMembershipCount
+          || nodeById.get(left).packetIndex - nodeById.get(right).packetIndex;
+      });
+      const ringCount = Math.max(1, Math.ceil(nodeIds.length / THEME_ORBIT_NODES_PER_RING));
+      const rings = Array.from({length: ringCount}, () => []);
+      nodeIds.forEach((nodeId, index) => {
+        rings[Math.min(ringCount - 1, Math.floor(index / THEME_ORBIT_NODES_PER_RING))]
+          .push(nodeId);
+      });
+      assignments.set(themeId, rings);
+    }
+    return assignments;
+  }
+
+  function sharedOrbitIntersectionPosition(
+    nodeId,
+    assignments,
+    seedPositions,
+    sharedIndex,
+    sharedCount
+  ) {
+    const seed = seedPositions.get(nodeId) || {x: 0, y: 0};
+    if (assignments.length === 2) {
+      const first = assignments[0];
+      const second = assignments[1];
+      const deltaX = second.center.x - first.center.x;
+      const deltaY = second.center.y - first.center.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      if (
+        distance > 0.000001
+        && distance <= first.radius + second.radius
+        && distance >= Math.abs(first.radius - second.radius)
+      ) {
+        const unitX = deltaX / distance;
+        const unitY = deltaY / distance;
+        const along = (
+          first.radius ** 2 - second.radius ** 2 + distance ** 2
+        ) / (2 * distance);
+        const height = Math.sqrt(Math.max(0, first.radius ** 2 - along ** 2));
+        const base = {
+          x: first.center.x + unitX * along,
+          y: first.center.y + unitY * along
+        };
+        const candidates = [
+          {x: base.x - unitY * height, y: base.y + unitX * height},
+          {x: base.x + unitY * height, y: base.y - unitX * height}
+        ].sort((left, right) => (
+          Math.hypot(left.x - seed.x, left.y - seed.y)
+          - Math.hypot(right.x - seed.x, right.y - seed.y)
+        ));
+        const side = sharedIndex % 2;
+        const layer = Math.floor(sharedIndex / 2);
+        const centeredLayer = layer - Math.floor(Math.max(0, sharedCount - 1) / 4);
+        return {
+          x: candidates[side].x + unitX * centeredLayer * THEME_SHARED_NODE_GAP,
+          y: candidates[side].y + unitY * centeredLayer * THEME_SHARED_NODE_GAP
+        };
+      }
+    }
+    const centroid = assignments.reduce((sum, assignment) => ({
+      x: sum.x + assignment.center.x / assignments.length,
+      y: sum.y + assignment.center.y / assignments.length
+    }), {x: 0, y: 0});
+    const spreadAngle = sharedIndex * RADIAL_RING_PHASE;
+    const spreadRadius = Math.min(
+      THEME_SHARED_NODE_GAP * 1.5,
+      Math.sqrt(sharedIndex) * THEME_SHARED_NODE_GAP
+    );
+    const anchor = {
+      x: centroid.x + Math.cos(spreadAngle) * spreadRadius,
+      y: centroid.y + Math.sin(spreadAngle) * spreadRadius
+    };
+    const position = {...anchor};
+    for (let pass = 0; pass < 64; pass += 1) {
+      let forceX = (anchor.x - position.x) * 0.05;
+      let forceY = (anchor.y - position.y) * 0.05;
+      for (const assignment of assignments) {
+        let deltaX = position.x - assignment.center.x;
+        let deltaY = position.y - assignment.center.y;
+        let distance = Math.hypot(deltaX, deltaY);
+        if (distance < 0.000001) {
+          const angle = RADIAL_START_ANGLE
+            + themeOrderIndex.get(assignment.themeId) * RADIAL_RING_PHASE;
+          deltaX = Math.cos(angle);
+          deltaY = Math.sin(angle);
+          distance = 1;
+        }
+        const radialError = assignment.radius - distance;
+        forceX += (deltaX / distance) * radialError * 0.22 / assignments.length;
+        forceY += (deltaY / distance) * radialError * 0.22 / assignments.length;
+      }
+      const magnitude = Math.hypot(forceX, forceY);
+      const scale = Math.min(1, 20 / Math.max(0.000001, magnitude));
+      position.x += forceX * scale;
+      position.y += forceY * scale;
+    }
+    return position;
+  }
+
+  function themeOrbitCoordinates(seedPositions) {
+    const memberships = themeMembershipByNodeId;
+    const groups = themeOrbitGroups(memberships);
+    const radii = themeOrbitRadii(groups);
+    const centers = themeOrbitCenters();
+    const ringAssignments = themeOrbitRingAssignments(groups, memberships);
+    const positions = new Map();
+    const assignments = new Map(packet.nodes.map((node) => [node.id, []]));
+    const angles = new Map(packet.nodes.map((node) => [node.id, new Map()]));
+    const placementGroups = new Map();
+    const sharedAnchors = new Map();
+    for (const themeId of packet.theme_order) {
+      const center = centers.get(themeId);
+      ringAssignments.get(themeId).forEach((ringNodeIds, ringIndex) => {
+        const radius = radii.get(themeId)[ringIndex];
+        const nodeIds = [...ringNodeIds].sort((left, right) => {
+          const leftPosition = seedPositions.get(left) || {x: 0, y: 0};
+          const rightPosition = seedPositions.get(right) || {x: 0, y: 0};
+          const leftAngle = (
+            Math.atan2(leftPosition.y - center.y, leftPosition.x - center.x) + 2 * Math.PI
+          ) % (2 * Math.PI);
+          const rightAngle = (
+            Math.atan2(rightPosition.y - center.y, rightPosition.x - center.x) + 2 * Math.PI
+          ) % (2 * Math.PI);
+          if (Math.abs(leftAngle - rightAngle) > 0.000001) return leftAngle - rightAngle;
+          return nodeById.get(left).packetIndex - nodeById.get(right).packetIndex;
+        });
+        const count = nodeIds.length;
+        let phaseX = 0;
+        let phaseY = 0;
+        nodeIds.forEach((nodeId, index) => {
+          const seed = seedPositions.get(nodeId) || {x: center.x - 1, y: center.y};
+          const seedAngle = Math.atan2(seed.y - center.y, seed.x - center.x);
+          const candidatePhase = seedAngle - (2 * Math.PI * index) / Math.max(1, count);
+          phaseX += Math.cos(candidatePhase);
+          phaseY += Math.sin(candidatePhase);
+        });
+        const phase = Math.hypot(phaseX, phaseY) > 0.000001
+          ? Math.atan2(phaseY, phaseX)
+          : RADIAL_START_ANGLE
+            + themeOrderIndex.get(themeId) * RADIAL_RING_PHASE
+            + ringIndex * RADIAL_RING_PHASE;
+        const exclusiveIds = [];
+        nodeIds.forEach((nodeId, index) => {
+          const angle = phase + (2 * Math.PI * index) / Math.max(1, count);
+          const assignment = {
+            themeId,
+            ringIndex,
+            radius,
+            center: {...center}
+          };
+          assignments.get(nodeId).push(assignment);
+          angles.get(nodeId).set(themeId, angle);
+          if (memberships.get(nodeId).length > 1) return;
+          exclusiveIds.push(nodeId);
+          positions.set(nodeId, {
+            x: center.x + Math.cos(angle) * radius,
+            y: center.y + Math.sin(angle) * radius
+          });
+        });
+        if (exclusiveIds.length) {
+          placementGroups.set(`${themeId}:${ringIndex}`, exclusiveIds);
+        }
+      });
+    }
+    const sharedBySignature = new Map();
+    for (const [nodeId, themeIds] of memberships) {
+      if (themeIds.length < 2) continue;
+      const signature = themeIds.join('|');
+      if (!sharedBySignature.has(signature)) sharedBySignature.set(signature, []);
+      sharedBySignature.get(signature).push(nodeId);
+    }
+    for (const [signature, nodeIds] of sharedBySignature) {
+      nodeIds.sort((left, right) => (
+        nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
+      nodeIds.forEach((nodeId, sharedIndex) => {
+        const position = sharedOrbitIntersectionPosition(
+          nodeId,
+          assignments.get(nodeId),
+          seedPositions,
+          sharedIndex,
+          nodeIds.length
+        );
+        positions.set(nodeId, position);
+        sharedAnchors.set(nodeId, {...position});
+        const nodeAngles = new Map();
+        for (const assignment of assignments.get(nodeId)) {
+          nodeAngles.set(
+            assignment.themeId,
+            Math.atan2(
+              position.y - assignment.center.y,
+              position.x - assignment.center.x
+            )
+          );
+        }
+        angles.set(nodeId, nodeAngles);
+      });
+      placementGroups.set(`shared:${signature}`, [...nodeIds]);
+    }
+    return {
+      positions,
+      radii,
+      centers,
+      groups,
+      placementGroups,
+      assignments,
+      angles,
+      sharedAnchors,
+      memberships
+    };
+  }
+
+  function updateThemeOrbitGeometry(radii, centers, assignments, sharedAnchors) {
+    const assignedCenters = centers || themeOrbitCenters();
+    const sourceAssignments = assignments || nodeOrbitAssignmentsByNodeId;
+    const updatedAssignments = new Map();
+    for (const [nodeId, nodeAssignments] of sourceAssignments) {
+      updatedAssignments.set(nodeId, nodeAssignments.map((assignment) => ({
+        ...assignment,
+        radius: radii.get(assignment.themeId)[assignment.ringIndex],
+        center: {...assignedCenters.get(assignment.themeId)}
+      })));
+    }
+    themeCenterByThemeId.clear();
+    themeOrbitRadiiByThemeId.clear();
+    nodeOrbitAssignmentsByNodeId.clear();
+    for (const [themeId, center] of assignedCenters) themeCenterByThemeId.set(themeId, {...center});
+    for (const [themeId, themeRadii] of radii) themeOrbitRadiiByThemeId.set(themeId, [...themeRadii]);
+    for (const [nodeId, nodeAssignments] of updatedAssignments) {
+      nodeOrbitAssignmentsByNodeId.set(nodeId, nodeAssignments);
+    }
+    if (sharedAnchors) {
+      sharedIntersectionAnchorByNodeId.clear();
+      for (const [nodeId, anchor] of sharedAnchors) {
+        sharedIntersectionAnchorByNodeId.set(nodeId, {...anchor});
+      }
+    }
+    cy.batch(() => {
+      packet.theme_order.forEach((themeId, themeIndex) => {
+        const center = assignedCenters.get(themeId);
+        radii.get(themeId).forEach((radius, ringIndex) => {
+          const orbit = cy.getElementById(`reader-orbit:${themeId}:${ringIndex}`);
+          orbit.data('orbitDiameter', radius * 2);
+          orbit.data('label', themeOrbitDisplayLabel(themeIndex, ringIndex));
+        });
+      });
+    });
+    const totalOrbitCount = [...radii.values()].reduce(
+      (total, themeRadii) => total + themeRadii.length,
+      0
+    );
+    const maximumRingCount = Math.max(0, ...[...radii.values()].map((item) => item.length));
+    dom.cy.dataset.themeCenterCount = String(assignedCenters.size);
+    dom.cy.dataset.themeOrbitCount = String(totalOrbitCount);
+    dom.cy.dataset.themeOrbitMaximumRingCount = String(maximumRingCount);
+    dom.cy.dataset.themeSharedNodeCount = String(
+      [...themeMembershipByNodeId.values()].filter((themeIds) => themeIds.length > 1).length
+    );
+    dom.cy.dataset.themeOrbitGravity = state.orbitGravity ? 'on' : 'off';
+  }
+
+  function refreshThemeOrbitRadii() {
+    updateThemeOrbitGeometry(
+      themeOrbitRadii(themeMemberIdsByThemeId),
+      themeOrbitCenters()
+    );
+  }
+
+  function layoutNodeFootprint(nodeId) {
+    const node = nodeById.get(nodeId);
+    const role = node ? node.reader_role : 'explanation';
+    const footprints = state.minimizedNodeIds.has(nodeId)
+      ? COMPACT_LAYOUT_NODE_FOOTPRINTS
+      : FULL_LAYOUT_NODE_FOOTPRINTS;
+    return footprints[role] || footprints.explanation;
+  }
+
+  function layoutCollisionRadius(nodeId) {
+    const footprint = layoutNodeFootprint(nodeId);
+    return Math.hypot(footprint.width, footprint.height) / 2;
+  }
+
+  function layoutNodeBoundaryExtent(nodeId, directionX, directionY) {
+    const footprint = layoutNodeFootprint(nodeId);
+    const length = Math.hypot(directionX, directionY);
+    if (length < 0.000001) return layoutCollisionRadius(nodeId);
+    const unitX = Math.abs(directionX / length);
+    const unitY = Math.abs(directionY / length);
+    const horizontal = unitX < 0.000001 ? Number.POSITIVE_INFINITY : footprint.width / (2 * unitX);
+    const vertical = unitY < 0.000001 ? Number.POSITIVE_INFINITY : footprint.height / (2 * unitY);
+    return Math.min(horizontal, vertical);
+  }
+
+  function layoutNodeBoundaryGap(leftId, rightId, left, right) {
+    const deltaX = right.x - left.x;
+    const deltaY = right.y - left.y;
+    const distance = Math.hypot(deltaX, deltaY);
+    return distance
+      - layoutNodeBoundaryExtent(leftId, deltaX, deltaY)
+      - layoutNodeBoundaryExtent(rightId, -deltaX, -deltaY);
+  }
+
+  function dynamicBoundaryExtent(extent, directionX, directionY) {
+    const length = Math.hypot(directionX, directionY);
+    if (length < 0.000001) return Math.hypot(extent.halfWidth, extent.halfHeight);
+    const unitX = Math.abs(directionX / length);
+    const unitY = Math.abs(directionY / length);
+    const horizontal = unitX < 0.000001
+      ? Number.POSITIVE_INFINITY
+      : extent.halfWidth / unitX;
+    const vertical = unitY < 0.000001
+      ? Number.POSITIVE_INFINITY
+      : extent.halfHeight / unitY;
+    return Math.min(horizontal, vertical);
+  }
+
+  function dynamicRadialMemoryDisplacement(nodeId, position) {
+    const canonical = canonicalPositionByNodeId.get(nodeId);
+    if (!canonical) return null;
+    const assignments = state.orbitGravity
+      ? nodeOrbitAssignmentsByNodeId.get(nodeId) || []
+      : [];
+    if (!assignments.length) {
+      return {
+        x: Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+          DYNAMIC_TETHER_MAX_STEP,
+          (canonical.x - position.x) * DYNAMIC_RADIAL_TETHER_STRENGTH
+        )),
+        y: Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+          DYNAMIC_TETHER_MAX_STEP,
+          (canonical.y - position.y) * DYNAMIC_RADIAL_TETHER_STRENGTH
+        ))
+      };
+    }
+    const canonicalAngles = canonicalOrbitAnglesByNodeId.get(nodeId) || new Map();
+    const releaseAngles = state.orbitAnglePinsByNodeId.get(nodeId);
+    let forceX = 0;
+    let forceY = 0;
+    for (const assignment of assignments) {
+      let deltaX = position.x - assignment.center.x;
+      let deltaY = position.y - assignment.center.y;
+      let currentRadius = Math.hypot(deltaX, deltaY);
+      if (currentRadius < 0.000001) {
+        const fallbackAngle = canonicalAngles.get(assignment.themeId) || 0;
+        deltaX = Math.cos(fallbackAngle);
+        deltaY = Math.sin(fallbackAngle);
+        currentRadius = 1;
+      }
+      const radialX = deltaX / currentRadius;
+      const radialY = deltaY / currentRadius;
+      const radialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+        DYNAMIC_TETHER_MAX_STEP,
+        (assignment.radius - currentRadius) * DYNAMIC_RADIAL_TETHER_STRENGTH
+      ));
+      const currentAngle = Math.atan2(deltaY, deltaX);
+      const desiredAngle = releaseAngles?.get(assignment.themeId)
+        ?? canonicalAngles.get(assignment.themeId)
+        ?? currentAngle;
+      const angularError = wrapLayoutAngle(desiredAngle - currentAngle);
+      const tangentialPull = Math.max(-DYNAMIC_TETHER_MAX_STEP, Math.min(
+        DYNAMIC_TETHER_MAX_STEP,
+        angularError
+          * Math.max(80, currentRadius)
+          * DYNAMIC_TANGENTIAL_TETHER_STRENGTH
+      ));
+      forceX += radialX * radialPull - radialY * tangentialPull;
+      forceY += radialY * radialPull + radialX * tangentialPull;
+    }
+    forceX /= assignments.length;
+    forceY /= assignments.length;
+    const sharedAnchor = sharedIntersectionAnchorByNodeId.get(nodeId);
+    if (assignments.length > 1 && sharedAnchor && !releaseAngles) {
+      forceX += (sharedAnchor.x - position.x) * 0.035;
+      forceY += (sharedAnchor.y - position.y) * 0.035;
+    }
+    const magnitude = Math.hypot(forceX, forceY);
+    const scale = Math.min(1, DYNAMIC_TETHER_MAX_STEP / Math.max(0.000001, magnitude));
+    return {x: forceX * scale, y: forceY * scale};
+  }
+
+  function applyDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
+    const allVisibleNodes = [...cy.nodes().filter((node) => (
+      !node.hasClass('hidden')
+      && (typeof node.data !== 'function' || node.data('kind') !== 'theme-orbit')
+    ))]
+      .sort((left, right) => left.id().localeCompare(right.id()));
+    if (!allVisibleNodes.length) return 0;
+    const visibleNodeIds = new Set(allVisibleNodes.map((node) => node.id()));
+    const gestureFixed = new Set(
+      [...fixedNodeIds].filter((nodeId) => visibleNodeIds.has(nodeId))
+    );
+    const sessionPinned = new Set(
+      [...state.pinned.keys()].filter((nodeId) => visibleNodeIds.has(nodeId))
+    );
+    const fixed = new Set([...gestureFixed, ...sessionPinned]);
+    const pinnedCollisionYieldEnabled = !state.orbitGravity
+      && ['drag', 'drag-release'].includes(reason);
+    const seeds = new Set([...(seedNodeIds || fixed)].filter((nodeId) => visibleNodeIds.has(nodeId)));
+    if (!seeds.size) return 0;
+    const positions = new Map(allVisibleNodes.map((node) => [node.id(), {...node.position()}]));
+    const extents = new Map(allVisibleNodes.map((node) => {
+      const box = node.boundingBox({includeLabels: true, includeOverlays: false});
+      return [node.id(), {
+        halfWidth: Math.max(20, box.w / 2),
+        halfHeight: Math.max(20, box.h / 2)
+      }];
+    }));
+    const relationWeight = {prerequisite: 1, support: 0.78, repair: 0.5, conflict: 0.36};
+    const visibleEdges = [...cy.edges().filter((edge) => !edge.hasClass('hidden'))]
+      .map((edge) => ({
+        sourceId: edge.source().id(),
+        targetId: edge.target().id(),
+        weight: edge.data('kind') === 'reader-grouping'
+          ? 0.72
+          : relationWeight[edge.data('category')] || 0.5
+      }))
+      .filter((edge) => visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId));
+    let forceNeighborhood = new Set(seeds);
+    for (let depth = 0; depth < 2; depth += 1) {
+      const current = new Set(forceNeighborhood);
+      const next = new Set(forceNeighborhood);
+      for (const edge of visibleEdges) {
+        if (!current.has(edge.sourceId) && !current.has(edge.targetId)) continue;
+        next.add(edge.sourceId);
+        next.add(edge.targetId);
+      }
+      for (const nodeId of next) forceNeighborhood.add(nodeId);
+    }
+    if (forceNeighborhood.size > DYNAMIC_FORCE_NODE_LIMIT) {
+      forceNeighborhood = new Set(
+        [...forceNeighborhood]
+          .sort((left, right) => {
+            const leftSeed = seeds.has(left) ? 0 : 1;
+            const rightSeed = seeds.has(right) ? 0 : 1;
+            return leftSeed - rightSeed || left.localeCompare(right);
+          })
+          .slice(0, DYNAMIC_FORCE_NODE_LIMIT)
+      );
+    }
+    const boundaryGap = (leftId, rightId) => {
+      const left = positions.get(leftId);
+      const right = positions.get(rightId);
+      const deltaX = right.x - left.x;
+      const deltaY = right.y - left.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      return {
+        deltaX,
+        deltaY,
+        distance,
+        gap: distance
+          - dynamicBoundaryExtent(extents.get(leftId), deltaX, deltaY)
+          - dynamicBoundaryExtent(extents.get(rightId), -deltaX, -deltaY)
+      };
+    };
+    const graphNeighborhood = new Set(forceNeighborhood);
+    for (const activeId of graphNeighborhood) {
+      for (const node of allVisibleNodes) {
+        if (forceNeighborhood.size >= DYNAMIC_FORCE_NODE_LIMIT) break;
+        const candidateId = node.id();
+        if (forceNeighborhood.has(candidateId)) continue;
+        if (boundaryGap(activeId, candidateId).gap < RADIAL_VISIBLE_EDGE_GAP) {
+          forceNeighborhood.add(candidateId);
+        }
+      }
+    }
+    const activeNodes = allVisibleNodes.filter((node) => forceNeighborhood.has(node.id()));
+    const moved = new Set();
+    const tethered = new Set();
+    const repelledPinned = new Set();
+    let repulsionPairs = 0;
+    let attractionEdges = 0;
+    const passes = Math.max(1, Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1));
+    let executedPasses = 0;
+    for (let pass = 0; pass < passes; pass += 1) {
+      executedPasses += 1;
+      const displacement = new Map(activeNodes.map((node) => [node.id(), {x: 0, y: 0}]));
+      const clearanceConstrained = new Set();
+      let applied = false;
+      const evaluatedPairs = new Set();
+      for (let leftIndex = 0; leftIndex < activeNodes.length; leftIndex += 1) {
+        const leftId = activeNodes[leftIndex].id();
+        const leftActive = true;
+        for (let rightIndex = 0; rightIndex < allVisibleNodes.length; rightIndex += 1) {
+          const rightId = allVisibleNodes[rightIndex].id();
+          if (leftId === rightId) continue;
+          const pairKey = leftId < rightId ? `${leftId}\u0000${rightId}` : `${rightId}\u0000${leftId}`;
+          if (evaluatedPairs.has(pairKey)) continue;
+          evaluatedPairs.add(pairKey);
+          const rightActive = forceNeighborhood.has(rightId);
+          if (!leftActive && !rightActive) continue;
+          let measure = boundaryGap(leftId, rightId);
+          if (measure.gap >= RADIAL_VISIBLE_EDGE_GAP) continue;
+          let leftFixed = fixed.has(leftId) || !leftActive;
+          let rightFixed = fixed.has(rightId) || !rightActive;
+          if (leftFixed && rightFixed && pinnedCollisionYieldEnabled) {
+            if (
+              gestureFixed.has(leftId)
+              && sessionPinned.has(rightId)
+              && !gestureFixed.has(rightId)
+            ) {
+              rightFixed = false;
+              repelledPinned.add(rightId);
+            } else if (
+              gestureFixed.has(rightId)
+              && sessionPinned.has(leftId)
+              && !gestureFixed.has(leftId)
+            ) {
+              leftFixed = false;
+              repelledPinned.add(leftId);
+            }
+          }
+          if (leftFixed && rightFixed) continue;
+          if (measure.distance < 0.000001) {
+            const angle = ((leftIndex + rightIndex + 2) * RADIAL_RING_PHASE) % (2 * Math.PI);
+            measure = {...measure, deltaX: Math.cos(angle), deltaY: Math.sin(angle), distance: 1};
+          }
+          const unitX = measure.deltaX / measure.distance;
+          const unitY = measure.deltaY / measure.distance;
+          const clearanceDeficit = RADIAL_VISIBLE_EDGE_GAP - measure.gap;
+          const remainingPasses = passes - pass;
+          const push = Math.min(
+            DYNAMIC_FORCE_MAX_STEP,
+            Math.max(
+              clearanceDeficit * DYNAMIC_REPULSION_STRENGTH,
+              clearanceDeficit / remainingPasses
+            )
+          );
+          if (!leftFixed) {
+            clearanceConstrained.add(leftId);
+            const share = rightFixed ? push : push / 2;
+            displacement.get(leftId).x -= unitX * share;
+            displacement.get(leftId).y -= unitY * share;
+          }
+          if (!rightFixed) {
+            clearanceConstrained.add(rightId);
+            const share = leftFixed ? push : push / 2;
+            displacement.get(rightId).x += unitX * share;
+            displacement.get(rightId).y += unitY * share;
+          }
+          repulsionPairs += 1;
+          applied = true;
+        }
+      }
+      for (const edge of visibleEdges) {
+        const sourceActive = forceNeighborhood.has(edge.sourceId);
+        const targetActive = forceNeighborhood.has(edge.targetId);
+        if (!sourceActive && !targetActive) continue;
+        const sourceFixed = fixed.has(edge.sourceId) || !sourceActive;
+        const targetFixed = fixed.has(edge.targetId) || !targetActive;
+        if (sourceFixed && targetFixed) continue;
+        const measure = boundaryGap(edge.sourceId, edge.targetId);
+        if (measure.distance < 0.000001 || measure.gap <= DYNAMIC_ATTRACTION_TARGET_GAP) continue;
+        const unitX = measure.deltaX / measure.distance;
+        const unitY = measure.deltaY / measure.distance;
+        const pull = Math.min(
+          DYNAMIC_FORCE_MAX_STEP / 2,
+          (measure.gap - DYNAMIC_ATTRACTION_TARGET_GAP)
+            * DYNAMIC_ATTRACTION_STRENGTH
+            * edge.weight
+        );
+        if (!sourceFixed) {
+          const share = targetFixed ? pull : pull / 2;
+          displacement.get(edge.sourceId).x += unitX * share;
+          displacement.get(edge.sourceId).y += unitY * share;
+        }
+        if (!targetFixed) {
+          const share = sourceFixed ? pull : pull / 2;
+          displacement.get(edge.targetId).x -= unitX * share;
+          displacement.get(edge.targetId).y -= unitY * share;
+        }
+        attractionEdges += 1;
+        applied = true;
+      }
+      for (const node of activeNodes) {
+        const nodeId = node.id();
+        if (
+          fixed.has(nodeId)
+          || !forceNeighborhood.has(nodeId)
+          || clearanceConstrained.has(nodeId)
+        ) continue;
+        const memory = dynamicRadialMemoryDisplacement(nodeId, positions.get(nodeId));
+        if (!memory || Math.hypot(memory.x, memory.y) < 0.01) continue;
+        displacement.get(nodeId).x += memory.x;
+        displacement.get(nodeId).y += memory.y;
+        tethered.add(nodeId);
+        applied = true;
+      }
+      if (!applied) continue;
+      cy.batch(() => {
+        for (const node of activeNodes) {
+          const nodeId = node.id();
+          if (fixed.has(nodeId) && !repelledPinned.has(nodeId)) continue;
+          const delta = displacement.get(nodeId);
+          const magnitude = Math.hypot(delta.x, delta.y);
+          if (magnitude < 0.01) continue;
+          const scale = Math.min(1, DYNAMIC_FORCE_MAX_STEP / magnitude);
+          const previous = positions.get(nodeId);
+          const next = {
+            x: previous.x + delta.x * scale,
+            y: previous.y + delta.y * scale
+          };
+          positions.set(nodeId, next);
+          node.position(next);
+          if (repelledPinned.has(nodeId) && state.pinned.has(nodeId)) {
+            state.pinned.set(nodeId, {...next});
+          }
+          moved.add(nodeId);
+        }
+      });
+    }
+    dom.cy.dataset.dynamicForceMovedCount = String(moved.size);
+    dom.cy.dataset.dynamicForceFixedCount = String(fixed.size);
+    dom.cy.dataset.dynamicForceSeedCount = String(seeds.size);
+    dom.cy.dataset.dynamicForceNeighborhoodCount = String(forceNeighborhood.size);
+    dom.cy.dataset.dynamicForceVisibleNodeCount = String(allVisibleNodes.length);
+    dom.cy.dataset.dynamicForceNeighborhoodBounded = allVisibleNodes.length > DYNAMIC_FORCE_NODE_LIMIT
+      ? 'yes'
+      : 'no';
+    dom.cy.dataset.dynamicRadialTetheredCount = String(tethered.size);
+    dom.cy.dataset.dynamicLayoutModel = state.orbitGravity
+      ? 'localized-multicenter-theme-field-equilibrium'
+      : 'localized-radial-memory-equilibrium';
+    dom.cy.dataset.dynamicForceRequestedPasses = String(passes);
+    dom.cy.dataset.dynamicForceExecutedPasses = String(executedPasses);
+    dom.cy.dataset.dynamicForceReason = reason || 'direct-manipulation';
+    dom.cy.dataset.dynamicRepulsionPairs = String(repulsionPairs);
+    dom.cy.dataset.dynamicRepelledPinnedCount = String(repelledPinned.size);
+    dom.cy.dataset.dynamicAttractionEdges = String(attractionEdges);
+    if (moved.size) scheduleNodeControlSync();
+    return moved.size;
+  }
+
+  function scheduleDynamicForces(fixedNodeIds, passLimit, seedNodeIds, reason) {
+    for (const nodeId of fixedNodeIds) pendingDynamicFixedIds.add(nodeId);
+    for (const nodeId of seedNodeIds || fixedNodeIds) pendingDynamicSeedIds.add(nodeId);
+    const requestedPasses = Math.max(
+      1,
+      Math.min(DYNAMIC_FORCE_SETTLE_PASSES, passLimit || 1)
+    );
+    pendingDynamicPasses = Math.max(pendingDynamicPasses, requestedPasses);
+    pendingDynamicReason = reason || 'direct-manipulation';
+    if (dynamicForcesFrame) return;
+    const reducedMotion = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      const fixed = pendingDynamicFixedIds;
+      const seeds = pendingDynamicSeedIds;
+      const passes = pendingDynamicPasses;
+      const forceReason = pendingDynamicReason;
+      pendingDynamicFixedIds = new Set();
+      pendingDynamicSeedIds = new Set();
+      pendingDynamicPasses = 0;
+      pendingDynamicReason = 'direct-manipulation';
+      applyDynamicForces(fixed, passes, seeds, forceReason);
+      dom.cy.dataset.dynamicAnimationState = 'settled-reduced-motion';
+      dom.cy.dataset.dynamicAnimationRequestedPasses = String(passes);
+      dom.cy.dataset.dynamicAnimationCompletedPasses = String(passes);
+      return;
+    }
+    let completedPasses = 0;
+    dom.cy.dataset.dynamicAnimationState = 'running';
+    dom.cy.dataset.dynamicAnimationRequestedPasses = String(pendingDynamicPasses);
+    const runFrame = () => {
+      dynamicForcesFrame = 0;
+      if (!pendingDynamicPasses) {
+        dom.cy.dataset.dynamicAnimationState = 'settled';
+        return;
+      }
+      applyDynamicForces(
+        pendingDynamicFixedIds,
+        1,
+        pendingDynamicSeedIds,
+        pendingDynamicReason
+      );
+      pendingDynamicPasses -= 1;
+      completedPasses += 1;
+      dom.cy.dataset.dynamicAnimationCompletedPasses = String(completedPasses);
+      if (pendingDynamicPasses) {
+        dynamicForcesFrame = window.requestAnimationFrame(runFrame);
+        return;
+      }
+      pendingDynamicFixedIds = new Set();
+      pendingDynamicSeedIds = new Set();
+      pendingDynamicReason = 'direct-manipulation';
+      dom.cy.dataset.dynamicAnimationState = 'settled';
+    };
+    dynamicForcesFrame = window.requestAnimationFrame(runFrame);
+  }
+
+  function cancelScheduledDynamicForces() {
+    if (dynamicForcesFrame) window.cancelAnimationFrame(dynamicForcesFrame);
+    dynamicForcesFrame = 0;
+    pendingDynamicFixedIds = new Set();
+    pendingDynamicSeedIds = new Set();
+    pendingDynamicPasses = 0;
+    pendingDynamicReason = 'direct-manipulation';
+    if (dom && dom.cy) dom.cy.dataset.dynamicAnimationState = 'cancelled';
+  }
+
+  function layoutGeometryScore(position, groups, baselineIndex) {
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
     const segments = [];
+    let maximumEdgeLength = 0;
+    let totalEdgeLength = 0;
+    let weightedEdgeLength = 0;
+    let minimumEdgeClearance = Number.POSITIVE_INFINITY;
+    let edgeClearanceViolationCount = 0;
+    let edgeClearancePenalty = 0;
     for (const edge of packet.edges) {
       const source = position.get(edge.source);
       const target = position.get(edge.target);
-      if (!source || !target || source.x === target.x) continue;
+      if (!source || !target) continue;
+      const weight = edgeWeight[edge.category] || 1;
+      const length = Math.hypot(target.x - source.x, target.y - source.y);
+      maximumEdgeLength = Math.max(maximumEdgeLength, length);
+      totalEdgeLength += length;
+      weightedEdgeLength += length * weight;
+      const edgeClearance = layoutNodeBoundaryGap(
+        edge.source,
+        edge.target,
+        source,
+        target
+      );
+      minimumEdgeClearance = Math.min(minimumEdgeClearance, edgeClearance);
+      if (edgeClearance < RADIAL_VISIBLE_EDGE_GAP) {
+        edgeClearanceViolationCount += 1;
+        edgeClearancePenalty += (RADIAL_VISIBLE_EDGE_GAP - edgeClearance) ** 2;
+      }
       segments.push({
         sourceId: edge.source,
         targetId: edge.target,
         source,
         target,
-        weight: edgeWeight[edge.category] || 1
+        weight
       });
     }
     if (segments.length > CROSSING_REDUCTION_EDGE_LIMIT) return null;
@@ -2564,27 +3986,209 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
         weightedPenalty += left.weight * right.weight;
       }
     }
-    let packetOrderDisplacement = 0;
-    for (const [nodeId, coordinates] of position) {
-      packetOrderDisplacement += Math.abs(coordinates.y - baselineIndex.get(nodeId));
+    const positionedNodeIds = [...groups.values()].flat().filter((nodeId) => position.has(nodeId));
+    let collisionCount = 0;
+    let collisionPenalty = 0;
+    for (let leftIndex = 0; leftIndex < positionedNodeIds.length; leftIndex += 1) {
+      const leftId = positionedNodeIds[leftIndex];
+      const left = position.get(leftId);
+      for (let rightIndex = leftIndex + 1; rightIndex < positionedNodeIds.length; rightIndex += 1) {
+        const rightId = positionedNodeIds[rightIndex];
+        const right = position.get(rightId);
+        const boundaryGap = layoutNodeBoundaryGap(leftId, rightId, left, right);
+        if (boundaryGap >= RADIAL_VISIBLE_EDGE_GAP) continue;
+        collisionCount += 1;
+        collisionPenalty += (RADIAL_VISIBLE_EDGE_GAP - boundaryGap) ** 2;
+      }
     }
-    return {crossings, weightedPenalty, packetOrderDisplacement};
+    let packetOrderDisplacement = 0;
+    for (const nodeIds of groups.values()) {
+      nodeIds.forEach((nodeId, index) => {
+        packetOrderDisplacement += Math.abs(index - baselineIndex.get(nodeId));
+      });
+    }
+    return {
+      crossings,
+      collisionCount,
+      collisionPenalty,
+      minimumEdgeClearance: Number.isFinite(minimumEdgeClearance) ? minimumEdgeClearance : 0,
+      edgeClearanceViolationCount,
+      edgeClearancePenalty,
+      maximumEdgeLength,
+      totalEdgeLength,
+      weightedEdgeLength,
+      weightedPenalty,
+      packetOrderDisplacement
+    };
+  }
+
+  function layoutCrossingScore(groups, ranks, baselineIndex) {
+    return layoutGeometryScore(radialLayoutCoordinates(groups), groups, baselineIndex);
   }
 
   function crossingScoreIsBetter(candidate, incumbent) {
     if (!candidate || !incumbent) return false;
-    return (
-      candidate.crossings < incumbent.crossings
-      || (
-        candidate.crossings === incumbent.crossings
-        && candidate.weightedPenalty < incumbent.weightedPenalty
-      )
-      || (
-        candidate.crossings === incumbent.crossings
-        && candidate.weightedPenalty === incumbent.weightedPenalty
-        && candidate.packetOrderDisplacement < incumbent.packetOrderDisplacement
-      )
-    );
+    const numericOrder = [
+      'crossings',
+      'collisionCount',
+      'collisionPenalty',
+      'edgeClearanceViolationCount',
+      'edgeClearancePenalty',
+      'maximumEdgeLength',
+      'weightedEdgeLength',
+      'weightedPenalty',
+      'packetOrderDisplacement'
+    ];
+    for (const key of numericOrder) {
+      if (candidate[key] < incumbent[key] - 0.000001) return true;
+      if (candidate[key] > incumbent[key] + 0.000001) return false;
+    }
+    return false;
+  }
+
+  function compactRadialCoordinates(groups, ranks) {
+    const seedPositions = radialLayoutCoordinates(groups);
+    const baselineIndex = new Map();
+    for (const nodeIds of groups.values()) {
+      nodeIds.forEach((nodeId, index) => baselineIndex.set(nodeId, index));
+    }
+    const baselineScore = layoutGeometryScore(seedPositions, groups, baselineIndex);
+    if (
+      !baselineScore
+      || readerNodeIds.length > RADIAL_RELAXATION_NODE_LIMIT
+      || packet.edges.length > CROSSING_REDUCTION_EDGE_LIMIT
+    ) {
+      return {
+        positions: seedPositions,
+        evaluated: false,
+        baselineScore,
+        finalScore: baselineScore,
+        acceptedBlend: 0
+      };
+    }
+
+    const radii = radialRingRadii(groups);
+    const angles = new Map();
+    const seedAngles = new Map();
+    for (const [nodeId, position] of seedPositions) {
+      const angle = Math.atan2(position.y, position.x);
+      angles.set(nodeId, angle);
+      seedAngles.set(nodeId, angle);
+    }
+    const layoutEdges = packet.edges.filter((edge) => (
+      angles.has(edge.source) && angles.has(edge.target)
+    ));
+    const edgeWeight = {prerequisite: 4, support: 2, repair: 1, conflict: 1};
+    const rankZero = new Set(groups.get(0) || []);
+
+    for (let iteration = 0; iteration < RADIAL_RELAXATION_ITERATIONS; iteration += 1) {
+      const force = new Map(readerNodeIds.map((nodeId) => [nodeId, 0]));
+      const incidentWeight = new Map(readerNodeIds.map((nodeId) => [nodeId, 0]));
+      for (const edge of layoutEdges) {
+        const sourceRadius = radii.get(ranks.get(edge.source)) || 0;
+        const targetRadius = radii.get(ranks.get(edge.target)) || 0;
+        if (sourceRadius === 0 || targetRadius === 0) continue;
+        const weight = edgeWeight[edge.category] || 1;
+        const delta = wrapLayoutAngle(angles.get(edge.target) - angles.get(edge.source));
+        const angularPull = Math.sin(delta) * weight;
+        if (!rankZero.has(edge.source)) {
+          force.set(edge.source, force.get(edge.source) + angularPull);
+          incidentWeight.set(edge.source, incidentWeight.get(edge.source) + weight);
+        }
+        if (!rankZero.has(edge.target)) {
+          force.set(edge.target, force.get(edge.target) - angularPull);
+          incidentWeight.set(edge.target, incidentWeight.get(edge.target) + weight);
+        }
+      }
+
+      for (const [rank, nodeIds] of groups) {
+        if (rank === 0 || nodeIds.length < 2) continue;
+        const radius = radii.get(rank) || 0;
+        if (!radius) continue;
+        for (let leftIndex = 0; leftIndex < nodeIds.length; leftIndex += 1) {
+          const leftId = nodeIds[leftIndex];
+          for (let rightIndex = leftIndex + 1; rightIndex < nodeIds.length; rightIndex += 1) {
+            const rightId = nodeIds[rightIndex];
+            const minimumChord = Math.max(
+              148,
+              layoutCollisionRadius(leftId)
+                + layoutCollisionRadius(rightId)
+                + RADIAL_VISIBLE_EDGE_GAP
+            );
+            const minimumAngle = 2 * Math.asin(Math.min(1, minimumChord / (2 * radius)));
+            const delta = wrapLayoutAngle(angles.get(rightId) - angles.get(leftId));
+            const separation = Math.abs(delta);
+            if (separation >= minimumAngle) continue;
+            const direction = delta >= 0 ? 1 : -1;
+            const push = RADIAL_RING_REPULSION
+              * (minimumAngle - separation)
+              / Math.max(minimumAngle, 0.000001);
+            force.set(leftId, force.get(leftId) - direction * push);
+            force.set(rightId, force.get(rightId) + direction * push);
+          }
+        }
+      }
+
+      const progress = iteration / Math.max(1, RADIAL_RELAXATION_ITERATIONS - 1);
+      const step = RADIAL_RELAXATION_START_STEP
+        + (RADIAL_RELAXATION_END_STEP - RADIAL_RELAXATION_START_STEP) * progress;
+      for (const [rank, nodeIds] of groups) {
+        if (rank === 0) continue;
+        for (const nodeId of nodeIds) {
+          const normalizedPull = force.get(nodeId) / Math.max(1, incidentWeight.get(nodeId));
+          const tether = wrapLayoutAngle(seedAngles.get(nodeId) - angles.get(nodeId))
+            * RADIAL_SEED_TETHER;
+          const delta = Math.max(-step, Math.min(step, normalizedPull + tether));
+          angles.set(nodeId, wrapLayoutAngle(angles.get(nodeId) + delta));
+        }
+      }
+    }
+
+    let bestPositions = seedPositions;
+    let bestScore = baselineScore;
+    let acceptedBlend = 0;
+    for (const blend of RADIAL_REFINEMENT_BLEND_FACTORS) {
+      const candidatePositions = new Map();
+      for (const [rank, nodeIds] of groups) {
+        const radius = radii.get(rank) || 0;
+        for (const nodeId of nodeIds) {
+          if (!radius) {
+            candidatePositions.set(nodeId, {x: 0, y: 0});
+            continue;
+          }
+          const angle = seedAngles.get(nodeId)
+            + wrapLayoutAngle(angles.get(nodeId) - seedAngles.get(nodeId)) * blend;
+          candidatePositions.set(nodeId, {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius
+          });
+        }
+      }
+      const candidateScore = layoutGeometryScore(candidatePositions, groups, baselineIndex);
+      if (
+        !candidateScore
+        || candidateScore.crossings > baselineScore.crossings
+        || candidateScore.collisionCount > baselineScore.collisionCount
+        || candidateScore.collisionPenalty > baselineScore.collisionPenalty + 0.000001
+        || candidateScore.edgeClearanceViolationCount > baselineScore.edgeClearanceViolationCount
+        || candidateScore.edgeClearancePenalty > baselineScore.edgeClearancePenalty + 0.000001
+        || candidateScore.minimumEdgeClearance + 0.000001
+          < Math.min(RADIAL_VISIBLE_EDGE_GAP, baselineScore.minimumEdgeClearance)
+        || candidateScore.maximumEdgeLength > baselineScore.maximumEdgeLength + 0.000001
+        || candidateScore.totalEdgeLength > baselineScore.totalEdgeLength + 0.000001
+      ) continue;
+      if (!crossingScoreIsBetter(candidateScore, bestScore)) continue;
+      bestPositions = candidatePositions;
+      bestScore = candidateScore;
+      acceptedBlend = blend;
+    }
+    return {
+      positions: bestPositions,
+      evaluated: true,
+      baselineScore,
+      finalScore: bestScore,
+      acceptedBlend
+    };
   }
 
   function reduceEdgeCrossings(groups, ranks) {
@@ -2615,21 +4219,25 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
         const previousIndex = new Map(ids.map((nodeId, index) => [nodeId, index]));
         const score = new Map();
         for (const nodeId of ids) {
-          let weightedPosition = 0;
+          let weightedVectorX = 0;
+          let weightedVectorY = 0;
           let totalWeight = 0;
           for (const neighbor of neighbors.get(nodeId)) {
             const position = orderIndex.get(neighbor.nodeId);
             if (!position) continue;
             const usable = towardLowerRanks ? position.rank < rank : position.rank > rank;
             if (!usable) continue;
-            weightedPosition += position.normalized * neighbor.weight;
+            const angle = position.normalized * 2 * Math.PI;
+            weightedVectorX += Math.cos(angle) * neighbor.weight;
+            weightedVectorY += Math.sin(angle) * neighbor.weight;
             totalWeight += neighbor.weight;
           }
+          const circularPosition = totalWeight
+            ? ((Math.atan2(weightedVectorY, weightedVectorX) / (2 * Math.PI)) + 1) % 1
+            : (previousIndex.get(nodeId) + 0.5) / ids.length;
           score.set(
             nodeId,
-            totalWeight
-              ? weightedPosition / totalWeight
-              : (previousIndex.get(nodeId) + 0.5) / ids.length
+            circularPosition
           );
         }
         ids.sort((left, right) => (
@@ -2654,13 +4262,19 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     let bestOrder = cloneGroupOrder(groups);
     let bestScore = layoutCrossingScore(groups, ranks, baselineIndex);
     if (!bestScore) {
-      return {evaluated: false, baselineCrossings: null, finalCrossings: null};
+      return {
+        evaluated: false,
+        baselineCrossings: null,
+        finalCrossings: null,
+        refinementCandidates: 0
+      };
     }
     const considerCurrentOrder = () => {
       const candidateScore = layoutCrossingScore(groups, ranks, baselineIndex);
-      if (!crossingScoreIsBetter(candidateScore, bestScore)) return;
+      if (!crossingScoreIsBetter(candidateScore, bestScore)) return false;
       bestScore = candidateScore;
       bestOrder = cloneGroupOrder(groups);
+      return true;
     };
 
     for (let iteration = 0; iteration < CROSSING_REDUCTION_SWEEPS; iteration += 1) {
@@ -2670,15 +4284,48 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       considerCurrentOrder();
     }
     restoreGroupOrder(groups, bestOrder);
+    let refinementCandidates = 0;
+    for (
+      let pass = 0;
+      pass < CROSSING_REFINEMENT_PASSES
+        && refinementCandidates < CROSSING_REFINEMENT_CANDIDATE_LIMIT;
+      pass += 1
+    ) {
+      let improved = false;
+      for (const rank of orderedRanks) {
+        const ids = groups.get(rank);
+        if (!ids || ids.length < 2) continue;
+        const swapCount = ids.length === 2 ? 1 : ids.length;
+        for (
+          let index = 0;
+          index < swapCount && refinementCandidates < CROSSING_REFINEMENT_CANDIDATE_LIMIT;
+          index += 1
+        ) {
+          const nextIndex = (index + 1) % ids.length;
+          [ids[index], ids[nextIndex]] = [ids[nextIndex], ids[index]];
+          refinementCandidates += 1;
+          if (considerCurrentOrder()) {
+            improved = true;
+          } else {
+            [ids[index], ids[nextIndex]] = [ids[nextIndex], ids[index]];
+          }
+        }
+      }
+      if (!improved) break;
+    }
+    restoreGroupOrder(groups, bestOrder);
     const baselineScore = layoutCrossingScore(baselineOrder, ranks, baselineIndex);
     return {
       evaluated: true,
       baselineCrossings: baselineScore.crossings,
-      finalCrossings: bestScore.crossings
+      finalCrossings: bestScore.crossings,
+      refinementCandidates
     };
   }
 
   function applyCanonicalPositions() {
+    canonicalPositionByNodeId.clear();
+    canonicalOrbitAnglesByNodeId.clear();
     const nodeIds = packet.nodes.map((node) => node.id);
     cy.batch(() => {
       for (const nodeId of nodeIds) {
@@ -2687,33 +4334,19 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
         node.data('minimized', 'no');
       }
     });
-    const ranks = new Map(nodeIds.map((id) => [id, 0]));
-    const indegree = new Map(nodeIds.map((id) => [id, 0]));
-    const outgoing = new Map(nodeIds.map((id) => [id, []]));
-    for (const edge of packet.edges) {
-      if (edge.category !== 'prerequisite') continue;
-      outgoing.get(edge.source).push(edge.target);
-      indegree.set(edge.target, indegree.get(edge.target) + 1);
-    }
-    const queue = [...nodeIds]
-      .filter((id) => indegree.get(id) === 0)
-      .sort((left, right) => nodeById.get(left).packetIndex - nodeById.get(right).packetIndex);
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const current = queue[cursor];
-      for (const target of outgoing.get(current)) {
-        ranks.set(target, Math.max(ranks.get(target), ranks.get(current) + 1));
-        indegree.set(target, indegree.get(target) - 1);
-        if (indegree.get(target) === 0) queue.push(target);
-      }
-    }
+    const ranks = coreDistanceRanks();
     const groups = new Map();
     for (const nodeId of nodeIds) {
       const rank = ranks.get(nodeId) || 0;
       if (!groups.has(rank)) groups.set(rank, []);
       groups.get(rank).push(nodeId);
     }
-    for (const ids of groups.values()) {
-      ids.sort((left, right) => nodeById.get(left).packetIndex - nodeById.get(right).packetIndex);
+    for (const [rank, ids] of groups) {
+      ids.sort((left, right) => (
+        rank === 0
+          ? targetOrderIndex.get(left) - targetOrderIndex.get(right)
+          : nodeById.get(left).packetIndex - nodeById.get(right).packetIndex
+      ));
     }
     const crossingDiagnostics = reduceEdgeCrossings(groups, ranks);
     dom.cy.dataset.layoutCrossingEvaluation = crossingDiagnostics.evaluated ? 'bounded' : 'skipped-large-graph';
@@ -2723,19 +4356,79 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     dom.cy.dataset.layoutFinalCrossings = crossingDiagnostics.finalCrossings === null
       ? 'not-evaluated'
       : String(crossingDiagnostics.finalCrossings);
-    for (const [rank, ids] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
-      ids.forEach((nodeId, index) => setPosition(nodeId, {x: 285 + rank * CANONICAL_COLUMN_SPACING, y: 115 + index * 132}));
+    dom.cy.dataset.layoutRefinementCandidates = String(crossingDiagnostics.refinementCandidates);
+    const compactLayout = compactRadialCoordinates(groups, ranks);
+    const themeOrbitLayout = themeOrbitCoordinates(compactLayout.positions);
+    const positions = themeOrbitLayout.positions;
+    updateThemeOrbitGeometry(
+      themeOrbitLayout.radii,
+      themeOrbitLayout.centers,
+      themeOrbitLayout.assignments,
+      themeOrbitLayout.sharedAnchors
+    );
+    dom.cy.dataset.layoutCompactionEvaluation = compactLayout.evaluated ? 'bounded' : 'skipped-large-graph';
+    dom.cy.dataset.layoutCompactionBlend = String(compactLayout.acceptedBlend);
+    dom.cy.dataset.layoutBaselineMaximumEdgeLength = compactLayout.baselineScore
+      ? compactLayout.baselineScore.maximumEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutFinalMaximumEdgeLength = compactLayout.finalScore
+      ? compactLayout.finalScore.maximumEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutBaselineTotalEdgeLength = compactLayout.baselineScore
+      ? compactLayout.baselineScore.totalEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutFinalTotalEdgeLength = compactLayout.finalScore
+      ? compactLayout.finalScore.totalEdgeLength.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutCollisionCount = compactLayout.finalScore
+      ? String(compactLayout.finalScore.collisionCount)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutMinimumEdgeClearance = compactLayout.finalScore
+      ? compactLayout.finalScore.minimumEdgeClearance.toFixed(3)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutEdgeClearanceViolations = compactLayout.finalScore
+      ? String(compactLayout.finalScore.edgeClearanceViolationCount)
+      : 'not-evaluated';
+    for (const [nodeId, position] of positions) {
+      canonicalPositionByNodeId.set(nodeId, {...position});
+      canonicalOrbitAnglesByNodeId.set(
+        nodeId,
+        new Map(themeOrbitLayout.angles.get(nodeId) || [])
+      );
+      setPosition(nodeId, position);
     }
-    for (const themeId of groupedThemeIds) {
-      const targetPositions = themeById.get(themeId).target_ids
-        .map((targetId) => cy.getElementById(targetId))
-        .filter((node) => node.length)
-        .map((node) => node.position());
-      if (!targetPositions.length) continue;
-      const minimumX = Math.min(...targetPositions.map((position) => position.x));
-      const averageY = targetPositions.reduce((sum, position) => sum + position.y, 0) / targetPositions.length;
-      setPosition(`reader-theme:${themeId}`, {x: minimumX - 280, y: averageY});
+    groupedThemeIds.forEach((themeId) => {
+      const themeNodeId = `reader-theme:${themeId}`;
+      const themePosition = themeOrbitLayout.centers.get(themeId);
+      canonicalPositionByNodeId.set(themeNodeId, {...themePosition});
+      setPosition(themeNodeId, themePosition);
+    });
+    const themeBaselineIndex = new Map();
+    for (const nodeIds of themeOrbitLayout.placementGroups.values()) {
+      nodeIds.forEach((nodeId, index) => themeBaselineIndex.set(nodeId, index));
     }
+    const themeOrbitScore = layoutGeometryScore(
+      positions,
+      themeOrbitLayout.placementGroups,
+      themeBaselineIndex
+    );
+    const totalRingCount = [...themeOrbitLayout.radii.values()]
+      .reduce((total, themeRadii) => total + themeRadii.length, 0);
+    dom.cy.dataset.layoutModel = 'deterministic-theme-multicenter-orbit-fields';
+    dom.cy.dataset.layoutRingCount = String(totalRingCount);
+    dom.cy.dataset.layoutThemeCenterCount = String(themeOrbitLayout.centers.size);
+    dom.cy.dataset.layoutSharedNodeCount = String(themeOrbitLayout.sharedAnchors.size);
+    dom.cy.dataset.layoutSeedRingCount = String(groups.size);
+    dom.cy.dataset.layoutCoreTargetCount = String((groups.get(0) || []).length);
+    dom.cy.dataset.layoutThemeOrbitCollisions = themeOrbitScore
+      ? String(themeOrbitScore.collisionCount)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutThemeOrbitCrossings = themeOrbitScore
+      ? String(themeOrbitScore.crossings)
+      : 'not-evaluated';
+    dom.cy.dataset.layoutThemeOrbitMinimumEdgeClearance = themeOrbitScore
+      ? themeOrbitScore.minimumEdgeClearance.toFixed(3)
+      : 'not-evaluated';
   }
 
   function setPosition(nodeId, position) {
@@ -2769,6 +4462,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     dom.overview.setAttribute('aria-pressed', allTargetsActive ? 'true' : 'false');
     dom.allCards.setAttribute('aria-pressed', allCardsActive ? 'true' : 'false');
     dom.headerOverview.setAttribute('aria-pressed', allTargetsActive ? 'true' : 'false');
+    dom.orbitGravity.setAttribute('aria-pressed', state.orbitGravity ? 'true' : 'false');
     dom.undoSizing.disabled = state.sizingUndoStack.length === 0;
     dom.redoSizing.disabled = state.sizingRedoStack.length === 0;
     dom.undoSizing.title = state.sizingUndoStack.length
@@ -2874,11 +4568,13 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       button.dataset.nodeId = node.id;
       button.dataset.minimized = minimized ? 'yes' : 'no';
       button.dataset.plane = node.plane;
-      button.dataset.selected = node.id === state.selectedId ? 'yes' : 'no';
+      button.dataset.selected = state.selectedNodeIds.has(node.id) ? 'yes' : 'no';
+      button.dataset.boxSelected = state.boxSelectedNodeIds.has(node.id) ? 'yes' : 'no';
       const action = minimized ? bi('最大化卡片', 'Maximize card') : bi('最小化卡片', 'Minimize card');
-      button.setAttribute('aria-label', `${action}: ${node.title}`);
+      const identity = nodeIdentityText(node);
+      button.setAttribute('aria-label', `${action}: ${identity}`);
       button.setAttribute('aria-pressed', minimized ? 'true' : 'false');
-      if (!minimized) button.title = `${action}: ${node.title}`;
+      if (!minimized) button.title = `${action}: ${identity}`;
       button.append(svgIcon(minimized ? 'expand' : 'collapse'));
       const enterControl = () => {
         state.hoveredControlNodeId = node.id;
@@ -2976,13 +4672,19 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
       button.style.top = `${y}px`;
     }
     syncSelectedNodeHalo();
+    syncBoxSelectionHalos();
     syncNodeNameTooltip();
   }
 
   function syncSelectedNodeHalo() {
     const nodeData = nodeById.get(state.selectedId);
     const node = cy.getElementById(state.selectedId || '');
-    if (!nodeData || !node.length || node.hasClass('hidden')) {
+    if (
+      !nodeData
+      || !node.length
+      || node.hasClass('hidden')
+      || state.boxSelectedNodeIds.has(state.selectedId)
+    ) {
       dom.selectedNodeHalo.hidden = true;
       return;
     }
@@ -3003,12 +4705,47 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     dom.selectedNodeHalo.hidden = false;
   }
 
+  function syncBoxSelectionHalos() {
+    const activeIds = new Set();
+    for (const nodeId of state.boxSelectedNodeIds) {
+      const node = cy.getElementById(nodeId);
+      if (!node.length || node.hasClass('hidden')) continue;
+      const bounds = renderedNodeBox(node);
+      if (!bounds) continue;
+      activeIds.add(nodeId);
+      let halo = boxSelectionHaloByNodeId.get(nodeId);
+      if (!halo) {
+        halo = document.createElement('div');
+        halo.className = 'box-selection-halo';
+        halo.dataset.nodeId = nodeId;
+        dom.boxSelectionHaloLayer.append(halo);
+        boxSelectionHaloByNodeId.set(nodeId, halo);
+      }
+      const nodeData = nodeById.get(nodeId);
+      const minimized = Boolean(nodeData && state.minimizedNodeIds.has(nodeId));
+      const padding = minimized ? 4 : 6;
+      halo.dataset.appearance = state.appearanceScheme;
+      halo.dataset.kind = nodeData ? 'reader-node' : 'theme';
+      halo.dataset.role = nodeData ? nodeData.reader_role : 'theme';
+      halo.dataset.minimized = minimized ? 'yes' : 'no';
+      halo.style.left = `${(bounds.x1 + bounds.x2) / 2}px`;
+      halo.style.top = `${(bounds.y1 + bounds.y2) / 2}px`;
+      halo.style.width = `${bounds.x2 - bounds.x1 + padding * 2}px`;
+      halo.style.height = `${bounds.y2 - bounds.y1 + padding * 2}px`;
+    }
+    for (const [nodeId, halo] of boxSelectionHaloByNodeId) {
+      if (activeIds.has(nodeId)) continue;
+      halo.remove();
+      boxSelectionHaloByNodeId.delete(nodeId);
+    }
+  }
+
   function showNodeNameTooltip(nodeId) {
     if (!state.minimizedNodeIds.has(nodeId)) return;
     const node = nodeById.get(nodeId);
     if (!node) return;
     state.tooltipNodeId = nodeId;
-    dom.nodeNameTooltip.textContent = node.title;
+    dom.nodeNameTooltip.textContent = nodeIdentityText(node);
     dom.nodeNameTooltip.hidden = false;
     syncNodeNameTooltip();
   }
@@ -3075,6 +4812,149 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     });
   }
 
+  function bindPointerIntent() {
+    const activeDirectManipulationPointers = new Set();
+    let selectionGesture = null;
+    const restoreMouseSelectionMode = () => {
+      if (activeDirectManipulationPointers.size) return;
+      cy.userPanningEnabled(false);
+      cy.boxSelectionEnabled(false);
+      dom.cy.dataset.pointerMode = 'mouse-box-selection';
+    };
+    const canvasPoint = (event) => {
+      const bounds = dom.cy.getBoundingClientRect();
+      return {x: event.clientX - bounds.left, y: event.clientY - bounds.top};
+    };
+    const pointTouchesNode = (point) => {
+      for (const node of cy.nodes()) {
+        if (node.hasClass('hidden') || node.data('kind') === 'theme-orbit') continue;
+        const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
+        if (point.x >= box.x1 && point.x <= box.x2 && point.y >= box.y1 && point.y <= box.y2) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const paintSelectionMarquee = () => {
+      if (!selectionGesture) return;
+      const left = Math.min(selectionGesture.start.x, selectionGesture.end.x);
+      const top = Math.min(selectionGesture.start.y, selectionGesture.end.y);
+      const width = Math.abs(selectionGesture.end.x - selectionGesture.start.x);
+      const height = Math.abs(selectionGesture.end.y - selectionGesture.start.y);
+      dom.boxSelectionMarquee.style.left = `${left}px`;
+      dom.boxSelectionMarquee.style.top = `${top}px`;
+      dom.boxSelectionMarquee.style.width = `${width}px`;
+      dom.boxSelectionMarquee.style.height = `${height}px`;
+      dom.boxSelectionMarquee.hidden = !selectionGesture.moved;
+    };
+    const selectedNodesInRectangle = (start, end) => {
+      const selection = {
+        x1: Math.min(start.x, end.x),
+        y1: Math.min(start.y, end.y),
+        x2: Math.max(start.x, end.x),
+        y2: Math.max(start.y, end.y)
+      };
+      const selectedIds = [];
+      for (const node of cy.nodes()) {
+        if (node.hasClass('hidden') || node.data('kind') === 'theme-orbit') continue;
+        const box = node.renderedBoundingBox({includeLabels: true, includeOverlays: true});
+        const overlaps = box.x2 >= selection.x1 && box.x1 <= selection.x2
+          && box.y2 >= selection.y1 && box.y1 <= selection.y2;
+        if (overlaps) selectedIds.push(node.id());
+      }
+      return selectedIds;
+    };
+    const commitSelection = (selectedIds, additive) => {
+      const combinedIds = additive
+        ? [...new Set([...state.selectedNodeIds, ...selectedIds])]
+        : selectedIds;
+      state.boxSelectedNodeIds = new Set(combinedIds);
+      state.boxSelectionEndedAt = Date.now();
+      dom.cy.dataset.boxSelectionEndCount = String(
+        Number(dom.cy.dataset.boxSelectionEndCount || 0) + 1
+      );
+      dom.cy.dataset.boxSelectionCandidateCount = String(selectedIds.length);
+      if (combinedIds.length === 1) {
+        const onlyId = combinedIds[0];
+        state.selectedNodeIds = new Set(combinedIds);
+        if (onlyId.startsWith('reader-theme:')) {
+          showThemeDetail(onlyId.slice('reader-theme:'.length), {preserveSelection: true});
+        } else {
+          showNodeDetail(onlyId, {preserveSelection: true});
+        }
+      } else if (combinedIds.length > 1) {
+        showBatchSelectionDetail(combinedIds);
+      } else {
+        showOverviewDetail();
+      }
+      state.boxSelectionAdditive = false;
+    };
+    dom.cy.dataset.pointerMode = 'mouse-box-selection';
+    dom.cy.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') {
+        state.boxSelectionAdditive = Boolean(
+          event.shiftKey || event.altKey || event.ctrlKey || event.metaKey
+        );
+        restoreMouseSelectionMode();
+        if (event.button !== 0) return;
+        const point = canvasPoint(event);
+        if (pointTouchesNode(point)) return;
+        selectionGesture = {
+          pointerId: event.pointerId,
+          start: point,
+          end: point,
+          moved: false,
+          additive: state.boxSelectionAdditive
+        };
+        dom.cy.dataset.boxSelectionStartCount = String(
+          Number(dom.cy.dataset.boxSelectionStartCount || 0) + 1
+        );
+        closeNodeContextMenu();
+        hideNodeNameTooltip();
+        return;
+      }
+      activeDirectManipulationPointers.add(event.pointerId);
+      cy.boxSelectionEnabled(false);
+      cy.userPanningEnabled(true);
+      dom.cy.dataset.pointerMode = 'direct-touch-pan';
+    }, {capture: true});
+    window.addEventListener('pointermove', (event) => {
+      if (!selectionGesture || event.pointerId !== selectionGesture.pointerId) return;
+      selectionGesture.end = canvasPoint(event);
+      selectionGesture.moved = selectionGesture.moved || Math.hypot(
+        selectionGesture.end.x - selectionGesture.start.x,
+        selectionGesture.end.y - selectionGesture.start.y
+      ) >= 5;
+      paintSelectionMarquee();
+      if (!selectionGesture.moved) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, {capture: true});
+    const endDirectManipulation = (event) => {
+      if (selectionGesture && event.pointerId === selectionGesture.pointerId) {
+        const completedGesture = selectionGesture;
+        selectionGesture = null;
+        dom.boxSelectionMarquee.hidden = true;
+        if (completedGesture.moved && event.type === 'pointerup') {
+          commitSelection(
+            selectedNodesInRectangle(completedGesture.start, completedGesture.end),
+            completedGesture.additive
+          );
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+      activeDirectManipulationPointers.delete(event.pointerId);
+      restoreMouseSelectionMode();
+    };
+    window.addEventListener('pointerup', endDirectManipulation, {capture: true});
+    window.addEventListener('pointercancel', endDirectManipulation, {capture: true});
+    window.addEventListener('blur', () => {
+      activeDirectManipulationPointers.clear();
+      restoreMouseSelectionMode();
+    });
+  }
+
   function bindTrackpadNavigation() {
     const graph = cy.container();
     const captureSurface = dom.canvasStage;
@@ -3083,10 +4963,24 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     let frame = 0;
     captureSurface.addEventListener('wheel', (event) => {
       if (!graph.contains(event.target)) return;
-      if (event.ctrlKey) return;
       event.preventDefault();
       event.stopPropagation();
       closeNodeContextMenu();
+      if (event.ctrlKey) {
+        const bounds = graph.getBoundingClientRect();
+        const renderedPosition = {
+          x: Number.isFinite(event.clientX) ? event.clientX - bounds.left : graph.clientWidth / 2,
+          y: Number.isFinite(event.clientY) ? event.clientY - bounds.top : graph.clientHeight / 2
+        };
+        const boundedDelta = Math.max(-80, Math.min(80, event.deltaY));
+        const level = Math.max(
+          cy.minZoom(),
+          Math.min(cy.maxZoom(), cy.zoom() * Math.exp(-boundedDelta * PINCH_ZOOM_SENSITIVITY))
+        );
+        cy.zoom({level, renderedPosition});
+        dom.cy.dataset.lastZoomInput = 'trackpad-pinch';
+        return;
+      }
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? graph.clientHeight : 1;
       pendingX += event.deltaX * unit;
       pendingY += event.deltaY * unit;
@@ -3187,7 +5081,9 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
 
   function showOverviewDetail() {
     state.selectedId = null;
-    cy.elements().unselect();
+    state.selectedNodeIds.clear();
+    state.boxSelectedNodeIds.clear();
+    restoreCanvasSelection();
     allReaderNodes().removeClass('theme-member');
     dom.detail.scrollTop = 0;
     const eligible = eligibleNodeIds();
@@ -3205,8 +5101,8 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     heading.textContent = bi('如何开始', 'How to begin');
     const introduction = document.createElement('p');
     introduction.textContent = bi(
-      '所有已启用的节点和关系都保留在同一画布上。单击阅读；卡片内的减号或加号切换该卡片尺寸；双击任意节点会最大化它的完整上下游链，并最小化无关节点。',
-      'Every eligible node and relation remains on one canvas. Select to read, use the minus or plus inside a card to change only its size, or double-click any node to maximize its complete upstream and downstream chain while minimizing unrelated nodes.'
+      '所有已启用的节点和关系都保留在同一画布上。每个主题拥有独立圆心；主题节点越多，等距重力圆周越多。被多个目标闭包共同依赖的节点会进入相应主题场的交叉区。鼠标左键拖动空白处可框选节点，随后拖动任一已选节点即可整体移动；拖动期间局部邻域响应引力与斥力，松开后真实卡片保留新的局部角位置并吸附回所属的一个或多个主题场。每次响应都是有限帧动画，其余布局保持稳定。切换卡片尺寸使用同一收敛机制。双指仍用于平移画布。单击阅读，卡片内的减号或加号切换尺寸，双击会突出完整上下游链。',
+      'Every eligible node and relation remains on one canvas. Each theme has its own center, and themes with more nodes receive more equally spaced gravity rings. Nodes shared by multiple target closures occupy the overlap of their theme fields. Primary-drag on empty space to box-select nodes, then drag any selected node to move the group. The local neighborhood responds with attraction and repulsion during movement; on release, real cards retain their new local angles and settle back into one or more assigned theme fields. Each response is a bounded animation, so the remaining layout stays stable. Resizing uses the same convergence. Two-finger gestures still pan the canvas. Select to read, use the internal minus or plus to resize a card, or double-click to emphasize its complete upstream and downstream chain.'
     );
     section.append(heading, introduction);
     dom.detailReadable.append(section);
@@ -3257,22 +5153,89 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     dom.detailReadable.append(orderHeading);
     dom.detailFormal.replaceChildren();
     dom.formalDetails.open = false;
+    typesetDetail();
     updateEdgeDensity();
     renderNodeControls();
   }
 
-  function showThemeDetail(themeId) {
+  function showBatchSelectionDetail(nodeIds) {
+    const selectedIds = nodeIds.filter((nodeId) => {
+      const element = cy.getElementById(nodeId);
+      return element.length && element.isNode() && !element.hasClass('hidden');
+    });
+    state.selectedId = null;
+    state.selectedNodeIds = new Set(selectedIds);
+    restoreCanvasSelection();
+    allReaderNodes().removeClass('theme-member');
+    dom.detail.scrollTop = 0;
+    dom.detailTitle.textContent = bi(
+      `已选择 ${selectedIds.length} 个节点`,
+      `${selectedIds.length} nodes selected`
+    );
+    replaceBadges([
+      bi('批量移动', 'Group move'),
+      bi('仅当前页面会话', 'Current page session only'),
+      bi('不改变图谱结构', 'Graph structure unchanged')
+    ]);
+    dom.detailReadable.replaceChildren();
+    appendSection(
+      dom.detailReadable,
+      bi('如何移动', 'How to move'),
+      bi(
+        '拖动任一已选节点时，整组选中节点会保持相对位置一起移动；松手后，各真实卡片保留新的局部角位置并分别吸附回所属的一个或多个主题场。单击空白处可清除选择；按住 Shift、Option、Control 或 Command 再框选可追加节点。',
+        'While dragging any selected node, the whole selection moves with relative positions preserved. On release, each real card retains its new local angles and settles back into one or more assigned theme fields. Select empty space to clear the selection; hold Shift, Alt, Control, or Command while box-selecting to add nodes.'
+      )
+    );
+    const section = document.createElement('section');
+    const heading = document.createElement('h3');
+    heading.textContent = bi('已选节点', 'Selected nodes');
+    const list = document.createElement('ul');
+    for (const nodeId of selectedIds) {
+      const item = document.createElement('li');
+      if (nodeId.startsWith('reader-theme:')) {
+        const theme = themeById.get(nodeId.slice('reader-theme:'.length));
+        item.textContent = theme ? `${bi('主题', 'Topic')}: ${theme.label}` : nodeId;
+      } else {
+        const node = nodeById.get(nodeId);
+        item.textContent = node ? node.title : nodeId;
+      }
+      list.append(item);
+    }
+    section.append(heading, list);
+    dom.detailReadable.append(section);
+    dom.detailFormal.replaceChildren();
+    dom.formalDetails.open = false;
+    typesetDetail();
+    updateNavigation();
+    updateEdgeDensity();
+    renderNodeControls();
+  }
+
+  function showThemeDetail(themeId, options) {
     const theme = themeById.get(themeId);
-    state.selectedId = `reader-theme:${themeId}`;
+    const canvasId = `reader-theme:${themeId}`;
+    if (options && options.preserveSelection) {
+      state.selectedId = canvasId;
+      state.selectedNodeIds.add(canvasId);
+      restoreCanvasSelection();
+    } else {
+      setCanvasNodeSelection([canvasId], canvasId);
+    }
     dom.detail.scrollTop = 0;
     dom.detailTitle.textContent = theme.label;
+    const memberCount = themeMemberIdsByThemeId.get(themeId).length;
+    const ringCount = themeOrbitRadiiByThemeId.get(themeId)?.length
+      || Math.max(1, Math.ceil(memberCount / THEME_ORBIT_NODES_PER_RING));
     replaceBadges([
       bi('阅读分组', 'Reader grouping'),
       bi(`${theme.target_ids.length} 个目标`, `${theme.target_ids.length} targets`),
+      bi(`${memberCount} 个成员 / ${ringCount} 条轨道`, `${memberCount} members / ${ringCount} rings`),
       bi('仅用于展示', 'Presentation only')
     ]);
     allReaderNodes().removeClass('theme-member');
-    for (const targetId of theme.target_ids) cy.getElementById(targetId).addClass('theme-member');
+    for (const nodeId of themeMemberIdsByThemeId.get(themeId)) {
+      cy.getElementById(nodeId).addClass('theme-member');
+    }
     dom.detailReadable.replaceChildren();
     appendSection(
       dom.detailReadable,
@@ -3297,27 +5260,35 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     dom.detailReadable.append(section);
     dom.detailFormal.replaceChildren();
     dom.formalDetails.open = false;
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
   }
 
-  function showNodeDetail(nodeId) {
+  function showNodeDetail(nodeId, options) {
     const node = nodeById.get(nodeId);
     if (!node) return;
-    state.selectedId = nodeId;
+    if (options && options.preserveSelection) {
+      state.selectedId = nodeId;
+      state.selectedNodeIds.add(nodeId);
+      restoreCanvasSelection();
+    } else {
+      setCanvasNodeSelection([nodeId], nodeId);
+    }
     allReaderNodes().removeClass('theme-member');
     dom.detail.scrollTop = 0;
-    cy.elements().unselect();
-    cy.getElementById(nodeId).select();
     dom.detailTitle.textContent = node.title;
-    const topic = themeById.get(node.theme_id);
+    const topics = themeMembershipByNodeId.get(nodeId)
+      .map((themeId) => themeById.get(themeId).label);
     replaceBadges([
       roleLabel(node.reader_role),
       planeLabel(node.plane),
       visualStatusLabel(node.visual_status),
       node.layer === 'research' ? bi('研究过程', 'Research process') : bi('知识层', 'Knowledge'),
-      topic ? `${bi('主题', 'Topic')}: ${topic.label}` : ''
+      topics.length
+        ? `${bi(topics.length > 1 ? '共享主题' : '主题', topics.length > 1 ? 'Shared topics' : 'Topic')}: ${topics.join(' / ')}`
+        : ''
     ]);
     dom.detailReadable.replaceChildren();
     appendSection(dom.detailReadable, bi('一句话概括', 'In one sentence'), node.summary);
@@ -3327,7 +5298,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     appendSection(dom.detailReadable, bi('推理路线', 'Reasoning route'), node.reasoning);
     renderFormalNode(node);
     dom.formalDetails.open = false;
-    typeset([dom.detailReadable, dom.detailFormal]);
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3419,6 +5390,9 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     const edge = edgeById.get(edgeId);
     if (!edge) return;
     state.selectedId = edgeId;
+    state.selectedNodeIds.clear();
+    state.boxSelectedNodeIds.clear();
+    restoreCanvasSelection();
     dom.detail.scrollTop = 0;
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
@@ -3452,7 +5426,7 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     provenanceBlock.append(copy);
     dom.detailFormal.append(provenanceBlock);
     dom.formalDetails.open = false;
-    typeset([dom.detailReadable, dom.detailFormal]);
+    typesetDetail();
     updateNavigation();
     updateEdgeDensity();
     renderNodeControls();
@@ -3652,6 +5626,10 @@ var Xr=function(e){if(!(this instanceof Xr))return new Xr(e);this.id="Thenable/1
     } catch (error) {
       console.warn('Math typesetting unavailable; exact TeX remains readable.', error);
     }
+  }
+
+  function typesetDetail() {
+    return typeset([dom.detailTitle, dom.detailReadable, dom.detailFormal]);
   }
 
   async function copyText(text, button) {

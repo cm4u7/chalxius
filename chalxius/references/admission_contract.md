@@ -24,25 +24,29 @@ Admission requires all of the following:
    order budget plus a bound deeper truncation replay;
 7. exact Paper Logic/Audit snapshot and nodewise coverage bindings when the
    validation subject is a paper;
-8. automatic inclusion and explicit disposition of every existing adverse
+8. for any Evidence use, one exact destination-bound bridge capsule whose
+   Evidence record hashes and disposition heads are current, sealed under the
+   authorized `evidence_bridge_capsule` role, and covered by the
+   `evidence_bridge_current` verifier check; the bridge remains nontruth;
+9. automatic inclusion and explicit disposition of every existing adverse
    Research item linked to the selected Research branch, including a completed
    refute assignment whose outcome was evidence or insight rather than a
    counterexample; adverse assignment provenance, not outcome kind alone,
    controls binding and verifier exclusion;
-9. proof-lineage conservation for copy-on-write successors, with statement and
+10. proof-lineage conservation for copy-on-write successors, with statement and
    proof changes reviewed separately;
-10. a fresh independent verifier restricted to the neutral frozen capsule,
+11. a fresh independent verifier restricted to the neutral frozen capsule,
    using the complete decision template and standalone preflight, with exact
    candidate and edge panels and every requested check covered once;
-11. one immutable Certification Decision bound to the release and capsule;
-12. gateway revalidation of the accepted decision followed by all-or-none Fact
+12. one immutable Certification Decision bound to the release and capsule;
+13. gateway revalidation of the accepted decision followed by all-or-none Fact
    visibility; active lineage validation uses a two-phase immutable snapshot so
    release validation never recursively asks the Fact projection to validate
    itself, while the admission marker remains the sole visibility switch and
    post-marker event/interface completion is exact and idempotent; and
-13. cascade revocation plus a clean current graph and workflow audit.
+14. cascade revocation plus a clean current graph and workflow audit.
 
-Research, Candidate Release, Certification Decision, Paper/Audit,
+Research, Evidence, Candidate Release, Certification Decision, Paper/Audit,
 Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,
 novelty records, project background, Reader packets/HTML, expert prose, and
 Learning records are not Fact premises.

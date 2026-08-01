@@ -3,6 +3,8 @@
 Use this protocol for a paper-led task in philosophy, mathematics, or a mixed
 domain. It adds a reusable, source-bound representation layer before ordinary
 agent exploration. It does not weaken the Fact Graph admission boundary.
+Exact input keys, node payloads, mechanically derived edges, and a staging-tested
+minimal fixture are in [paper_input_contracts.md](paper_input_contracts.md).
 
 ## Four distinct planes
 
@@ -46,6 +48,14 @@ For a paper-led task:
    freeze the audit snapshot.
 9. Admit a mathematical result only through the existing Fact Graph verifier
    gate. A paper snapshot or audit conclusion never enters predecessor lists.
+
+For a newly reviewed freeze under the Evidence candidate, step 5 or 8 also
+creates an immutable Evidence sync request. When the exact source is a PDF and
+the shared library is configured, the reviewed snapshot, PDF/version, graph
+tree, complete node-id set, review profiles, audit hash, and Chalxius runtime
+identity are archived automatically as `reviewed_paper_graph` Evidence. A
+missing binding, missing exact PDF, or library error leaves the local snapshot
+valid and the request retryable; it never promotes a draft or rewrites history.
 
 Coverage is explicit. A bounded graph must state included and excluded
 locators and cannot call itself a full-paper graph. Any unresolved
@@ -145,6 +155,12 @@ If the defect lies in source transcription or the Paper Logic reconstruction,
 create a new full Logic Graph revision that supersedes the old Logic snapshot.
 Audits whose base is superseded are reported stale. Do not silently retarget
 them.
+
+If the snapshot was already archived as Evidence, also append an Evidence
+disposition (`challenged`, `superseded`, `withdrawn`, or `stale_source`). The
+old graph and Evidence bytes remain available, every bridge frozen against the
+old disposition head becomes stale, and `evidence-impact-report` lists local
+admitted Facts for Operator review. No Fact is silently changed or revoked.
 
 Reasonable philosophical disagreement can remain as challenged parallel audit
 judgments. Do not settle a load-bearing dispute by majority vote.

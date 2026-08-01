@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "feature_revision": "paper-logic-1",
+  "project_id": "REPLACE_WITH_PROJECT_ID",
+  "paper_id": "minimal-public-paper",
+  "graph_kind": "audit",
+  "domain_profile": "philosophy",
+  "builder": "public-example-audit-builder",
+  "builder_context_id": "public-example-audit-fresh-context",
+  "source": {
+    "artifact_sha256": "cbc5d995f81783448cd2fe2554eec1f2bf2d89571f0e126864778f9723830b16",
+    "artifact_locator": "assets/paper_logic_minimal_source.txt",
+    "title": "Minimal public Paper Logic example",
+    "version": "v1",
+    "mime_type": "text/plain",
+    "retrieved_at": "2026-07-30T00:00:00Z",
+    "inspection_methods": [
+      "rendered_primary"
+    ]
+  },
+  "base_snapshot_id": "REPLACE_WITH_LOGIC_SNAPSHOT_ID",
+  "supersedes_snapshot_id": "",
+  "coverage": {
+    "scope_kind": "audit_subset",
+    "included_locators": [
+      "public-fixture-headline"
+    ],
+    "excluded_locators": [],
+    "units": [
+      {
+        "unit_id": "audit-unit-1",
+        "classification": "audit_target",
+        "mapped_node_ids": [
+          "a1"
+        ],
+        "reason": ""
+      }
+    ],
+    "unresolved_load_bearing_units": [],
+    "completeness_claim": "Complete only for the fixture headline target."
+  },
+  "nodes": [
+    {
+      "local_id": "a1",
+      "object_type": "audit_finding",
+      "payload": {
+        "finding_kind": "other",
+        "severity": "minor",
+        "status": "resolved",
+        "target_id": "REPLACE_WITH_C2_PAPER_NODE_ID",
+        "claim": "The public fixture has no unresolved audit finding.",
+        "rationale": "This node exercises the exact Audit interface without asserting paper adequacy.",
+        "evidence_unit_ids": [],
+        "observed_excerpt": "",
+        "compared_text": "",
+        "load_bearing_tokens": []
+      }
+    }
+  ],
+  "edges": [
+    {
+      "relation_type": "audits",
+      "source": "a1",
+      "target": "REPLACE_WITH_C2_PAPER_NODE_ID",
+      "payload": {
+        "finding_kind": "other"
+      }
+    }
+  ]
+}

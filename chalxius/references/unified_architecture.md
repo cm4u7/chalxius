@@ -1,4 +1,4 @@
-# Chalxius 0.4.4 — Back to the Future candidate architecture
+# Chalxius Back to the Future / Evidence candidate architecture
 
 ## One engine, three execution profiles
 
@@ -27,13 +27,19 @@ full active-context background delivery with a complete exact-byte index and
 round-local immutable snapshot. No frozen card, project authority, or Fact gate
 is rewritten.
 
+The isolated 0.5.0 Evidence/Campaign successor adds only an explicit Campaign
+view over that Main planner. Exact stored associations may filter the same
+frontier and freeze one bounded nontruth Campaign envelope. No flag means no
+Campaign filter, including when an active Campaign exists.
+
 ## Authority domains and truth path
 
-V5 has three persistent authority domains and one derived presentation surface:
+V5 has four persistent authority domains and one derived presentation surface:
 
 | Domain | Contents | Truth effect |
 |---|---|---|
 | Research Ledger | cumulative claims, attempts, insights, challenges, counterexamples, obstacles, experiments, repairs, and dispositions | none |
+| Evidence sidecar | reviewed Paper graphs, explicitly imported external Fact capsules, dispositions, and prepared bridges | none |
 | Certification Ledger | immutable decisions over exact sealed Candidate Releases | certification evidence only |
 | V5 Fact Graph | admitted statements, active predecessor edges, admissions, and revocations | sole premise store |
 | Reader projection | deterministic packet-v1/HTML view over the domains plus Paper/Audit, Blackboard, and optional background | none |
@@ -42,6 +48,7 @@ The only truth-bearing path is:
 
 ```text
 Research --release--> Candidate Release --decide--> Certification Decision --admit--> Fact
+Evidence --verified_bridge/nontruth input--> Candidate Release
 ```
 
 There is no Round Closure, Pulse Closure, Profile Closure, Campaign Closure, or
@@ -107,12 +114,25 @@ accepted only with origin-node, origin-snapshot, query, task, and hash lineage,
 and only as one exact task. A later-inactive origin blocks replanning but does
 not mutate or invalidate a previously frozen card. Suggestions are exact enum
 values, never substring routes, and are rejected whenever they would change an
-assurance contract, attached adverse capability, or program-math review path.
+assurance contract or program-math review path. Because V5 adverse reporting is
+prospectively user-authorized by default, selecting `refute` no longer counts as
+an unauthorized capability escalation.
 
 The automatic Research frontier uses impact, information value, feasibility,
 and burden/economy. Historical eight-metric entries are projected at read time
 without rewriting. Scores order work only: they have no cutoff, truth effect,
 or authority over explicit scheduling.
+
+Main can organize a bounded project queue directly with this frontier. A
+Campaign is therefore not a second scheduler or a per-task gate; it remains an
+optional durable multi-round envelope for an explicit objective, typed targets,
+constraints, value definition, stop conditions, and history. The prospective
+Campaign connection is explicit only: `frontier --campaign ID` and
+`plan-round --campaign ID` select exact stored `campaign_id` matches and retain
+the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
+Campaign snapshot plus compact task-card envelope. Without the flag, selection
+stays global even when a Campaign is active. Campaign never expands Research,
+advances continuously, closes work, rewrites frozen cards, or affects Facts.
 
 ## Back to the Future field-repair boundaries
 
@@ -130,9 +150,12 @@ legacy interface.
 
 Fact admission discovers visibility in two phases: immutable marker/release/Fact
 bytes first, then successor-contract replay against an explicit snapshot with
-the release's own Facts removed. No release validation calls the active-Fact
-projection recursively. Every projection is fully planned and collision-checked
-before the marker; after the marker, acceptance-event and statement-interface
+the release's own Facts removed. Each release replays only Facts admitted before
+its own `created_at`; a later repaired Fact can never turn an older rejected
+release into a retroactive successor. Before the marker, a read-only historical
+simulation replays all sealed releases under this cutoff. No release validation
+calls the active-Fact projection recursively. Every projection is fully planned
+and collision-checked before the marker; after the marker, acceptance-event and statement-interface
 materialization is exact and idempotent, so an interrupted admission is resumed
 with the same decision and gateway rather than manually patched.
 
@@ -149,7 +172,19 @@ unit. It blocks future managed return and experiment work for that unit but does
 not delete its Research, snapshots, or already-ingested receipts. The read-only
 V5 status projection joins the exact validated abort record, reports unfinished
 assignments as `frozen_aborted`, exposes the abort id, and sets the live awaiting
-count to zero. Strict audit rejects any abort/status mismatch.
+count to zero. Once aborted, runtime validation checks the frozen card's exact
+bound root, VERSION bytes, and manifest bytes instead of demanding equality with
+the caller's newer runtime. Independently, a round whose complete assignment set
+has exact validated ingestion receipts is projected as `completed` and receives
+the same historical-runtime treatment without fabricating an abort. Receipt,
+return, Research, optional adverse/program-math side-record, abort/status, and
+frozen-runtime mismatches all fail closed; still-actionable work requires the
+current runtime.
+
+The neutral verifier's copied `host/validate_decision.py` and the gateway share
+one `V5_FINDING_CLASSES` enum and the gateway executes that same validator before
+storage. A locally preflighted finding can therefore not fail later merely
+because the gateway used a different class vocabulary.
 
 ## Pulse collaboration
 
@@ -177,6 +212,20 @@ semantics. A V5 paper Candidate Release binds current, nonsuperseded Logic and
 Audit snapshots through exact `paper_evidence_refs`, nodewise target coverage,
 source artifact hashes, and explicit certification checks. Paper/Audit objects
 are never copied into the Fact Graph.
+
+After a reviewed immutable Paper freeze, the Evidence adapter archives the
+exact PDF/version/graph/review attestation by default when configured. A failed
+archive leaves a retryable outbox and never rolls back the local snapshot.
+Non-paper Fact Graphs have no automatic trigger: Operator imports one only after
+an explicit user request. Import eligibility uses a runtime-independent scoped
+Fact-authority audit, so supported older V5 projects may be captured without
+comparing, rewriting, or reopening their frozen nontruth task cards. Exact
+Fact, Release, Decision, admission, revocation, acceptance-event, interface,
+and dependency validation remains fail-closed. Both Evidence kinds remain nontruth. Their exact
+node/Fact selections may enter a Candidate Release only through a sealed,
+current `verified_bridge`; later dispositions stale old bridges and produce an
+impact list without silently revoking admitted Facts. See
+`evidence_plane.md`.
 
 Blackboard remains typed cumulative exploration. Promotion creates Research,
 never Fact. Claims, conventions, campaigns, novelty evidence, experiments, and
@@ -216,16 +265,20 @@ single background projection—not by inherited Fact authority.
 
 ## User-governed adverse-routing evolution
 
-An operator may explicitly enable one project-local nontruth routing store at
-`PROJECT/governance/adverse-routing/`. It is absent by default and never
-backfilled. A frozen task card created before activation retains its old schema
-and does not acquire an attack-learning obligation.
+V5 adverse reporting is prospectively enabled by default. Reading status or
+producing an empty report is nonmutating; the first newly frozen `refute` card
+lazily materializes one project-local nontruth routing store at
+`PROJECT/governance/adverse-routing/`. It is never backfilled. A frozen task
+card created before this default retains its old schema and does not acquire an
+attack-learning obligation.
 
-For extension-bound work, a counterexample return binds structured witnesses,
-reproduction steps, an exact success boundary, and a proposed general route.
-Ingestion records an immutable attack case and proposal. The worker cannot
-activate either. At host-task completion, a separate attack report presents
-the cases and proposals to the user. Only an operator decision may approve,
+For current adverse-bound work, a surviving counterexample or productive
+challenge binds structured witnesses, reproduction steps, an exact success
+boundary, concrete load-bearing before/after/evidence value effects, and a
+proposed general route. Ingestion records an immutable nontruth attack case and
+proposal. The worker cannot activate either. At every host-task completion, a
+separate attack report presents the cases and proposals to the user, including
+an explicit zero report. Only an operator decision may approve,
 modify-and-approve, reject, or later disable a rule, and every such effect is
 limited to task cards frozen afterward.
 
@@ -236,27 +289,39 @@ visibly rather than truncating. The attack report is not a CHX architecture
 report, and neither report is Fact evidence. See
 `adverse_routing_evolution.md`.
 
-When routing is enabled and a successful Research return has an actual
+When a successful Research return has an actual
 computation stage plus exact source/output artifacts, ingestion may queue one
-future nontruth program-math refutation review. Only that generated review gets
-the ninth semantic-alignment baseline rule; ordinary refutation cards keep the
-original eight. The queue does not interrupt the producer, and CHX issues are
-never imported as attacks.
+future nontruth program-math refutation review. New ordinary refutation cards
+carry the original eight rules plus the general hidden-conjunct split. An exact
+frozen `philosophy` or `mixed` domain adds only the three user-approved
+ordinary-language, dialectical-burden/failure-surface, and operator-equivalence
+rules; content keywords cannot activate them. Only the generated computation
+review gets the further semantic-alignment rule. Earlier frozen cards retain
+their exact baseline. The queue does not interrupt the producer, and CHX
+issues are never imported as attacks.
 
 ## Reader and Learner boundaries
 
 The Reader packet-v1 validator remains read-compatible; renderer revision
-`chalxius-reader-html-17` deterministically
+`chalxius-reader-html-20` deterministically
 projects active Facts, Research, releases, decisions, current and superseded
 Paper/Audit snapshots, and Blackboard state. Research-like lifecycle objects
 use explicit Reader projection labels and never masquerade as Facts. Generated
 titles are bounded content-free identities; canvas/hover labels use the first
 six object-hash digits plus role and plane, while full math stays in the detail
 panel. Historical ASCII Fact formulas receive a conservative MathJax-ready
-readable projection while exact text and hashes remain unchanged. After direct
-drag, the selected set remains fixed and only its bounded two-hop/collision
-neighborhood settles under edge, clearance, radial, and angular forces; the
-outside layout is a fixed boundary and no idle simulation runs. If the
+readable projection while exact text and hashes remain unchanged. Each theme
+owns a deterministic local center and `ceil(member_count / 6)` equally spaced
+presentation rings. Explicit theme membership is extended only for Reader
+layout by strong prerequisite/support upstream target closures; shared nodes
+receive multiple field assignments and canonical overlap placement. During
+direct drag only the bounded local neighborhood responds; on release, real
+cards retain per-center angular positions and settle into one or more assigned
+theme fields under damped edge, clearance, radial, and angular forces. The
+outside layout is a fixed boundary, the session-only orbit toggle defaults on,
+and with gravity off only an actually colliding old Cartesian pin yields to
+repulsion and updates its existing pin while unrelated pins remain fixed; no
+idle simulation runs. If the
 unchanged packet limits cannot express the selected project without
 truncation, export fails visibly.
 

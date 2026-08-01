@@ -573,7 +573,10 @@ class CampaignStore:
             "value_definition_updated",
             "note",
         }:
-            raise ValueError("campaign update type is invalid")
+            raise ValueError(
+                "campaign update type must be one of: constraint_added, "
+                "stop_condition_disposition, value_definition_updated, note"
+            )
         if not isinstance(payload.get("payload"), dict):
             raise ValueError("campaign update payload must be an object")
         body = {

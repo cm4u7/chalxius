@@ -30,13 +30,18 @@ Mode is also separate from priority. The V5 frontier orders active Research by
 impact, information value, feasibility, and burden/economy, projecting legacy
 eight-metric entries without rewriting them. The score has no cutoff and no
 truth effect; explicit low-scored Research remains schedulable in every mode.
+An explicitly named Campaign may filter that frontier to exact stored
+associations and freeze nontruth planning context, but never changes the score,
+mode, assurance contract, or Fact gate; no Campaign flag means global selection.
 
-If a project explicitly enables adverse-routing evolution, refutation task
-cards receive the fixed low-cost attack vocabulary plus matching user-approved
+New V5 refutation task cards receive the fixed low-cost attack vocabulary plus matching user-approved
 rules in every reasoning profile. This is worker guidance for an already
 selected refutation assignment, not a requirement to run every attack, spawn an
 extra worker, close exploration, or alter Fact admission. Rule approval and
-disablement remain future-only and profile-independent.
+disablement remain future-only and profile-independent. The general vocabulary
+includes hidden-conjunct splitting; the three philosophy attacks require an
+exact frozen `philosophy` or `mixed` domain and cannot be inferred from claim
+wording.
 
 `profile-closure-status` and `profile-closure-record` survive in V5 only as
 process-readiness compatibility commands. Status emits object-specific repair

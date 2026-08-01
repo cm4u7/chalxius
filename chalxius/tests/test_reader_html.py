@@ -207,7 +207,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         second, second_meta = render_reader_html(copy.deepcopy(packet))
         self.assertEqual(first, second)
         self.assertEqual(first_meta, second_meta)
-        self.assertIn("deterministic_compact_radial_core_layers", first)
+        self.assertIn("deterministic_theme_multicenter_orbit_fields", first)
         self.assertIn("connect-src 'none'", first)
         self.assertIn('id="overview-button"', first)
         self.assertIn('id="all-cards-button"', first)
@@ -305,7 +305,7 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("target-arrow-shape': 'tee'", first)
         self.assertNotIn("@@CHALXIUS_", first)
         self.assertNotIn('class="header-state"', first)
-        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-17")
+        self.assertEqual(first_meta["renderer_revision"], "chalxius-reader-html-20")
         expected_packet_sha256 = sha256_bytes(canonical_json_bytes(packet))
         self.assertEqual(first_meta["packet_sha256"], expected_packet_sha256)
         self.assertEqual(
@@ -468,7 +468,11 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("layoutFinalTotalEdgeLength", canonical_positions)
         self.assertIn("layoutMinimumEdgeClearance", canonical_positions)
         self.assertIn("layoutEdgeClearanceViolations", canonical_positions)
-        self.assertIn("RADIAL_THEME_MIN_RADIUS", canonical_positions)
+        self.assertIn("themeOrbitLayout.centers.get(themeId)", canonical_positions)
+        self.assertIn(
+            "deterministic-theme-multicenter-orbit-fields",
+            canonical_positions,
+        )
         self.assertIn("packet.target_order", core_ranks)
         self.assertIn("ranks.set(targetId, 0)", core_ranks)
         self.assertIn("neighbors.get(edge.source).push(edge.target)", core_ranks)
@@ -523,6 +527,212 @@ class ReaderHtmlRenderTests(unittest.TestCase):
         self.assertIn("document.activeElement.isContentEditable", html)
         self.assertIn("if (event.shiftKey) redoSizing()", html)
         self.assertIn("else undoSizing()", html)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for theme-orbit QA")
+    def test_revision_twenty_preserves_deterministic_multicenter_geometry(self) -> None:
+        html, metadata = render_reader_html(example_packet())
+        theme_memberships = javascript_function_source(html, "themeMemberships")
+        orbit_groups = javascript_function_source(html, "themeOrbitGroups")
+        orbit_radii = javascript_function_source(html, "themeOrbitRadii")
+        orbit_centers = javascript_function_source(html, "themeOrbitCenters")
+        ring_assignments = javascript_function_source(
+            html, "themeOrbitRingAssignments"
+        )
+        shared_intersection = javascript_function_source(
+            html, "sharedOrbitIntersectionPosition"
+        )
+        orbit_coordinates = javascript_function_source(html, "themeOrbitCoordinates")
+        layout_footprint = javascript_function_source(html, "layoutNodeFootprint")
+        collision_radius = javascript_function_source(html, "layoutCollisionRadius")
+        set_visibility = javascript_function_source(html, "setVisibility")
+        dynamic_memory = javascript_function_source(
+            html, "dynamicRadialMemoryDisplacement"
+        )
+        dynamic_schedule = javascript_function_source(html, "scheduleDynamicForces")
+
+        self.assertEqual(
+            metadata["layout"],
+            "deterministic_theme_multicenter_orbit_fields",
+        )
+        self.assertIn('id="orbit-gravity-button"', html)
+        self.assertIn("orbitGravity: true", html)
+        self.assertIn("kind: 'theme-orbit'", html)
+        self.assertIn("grabbable: false", html)
+        self.assertIn("selectable: false", html)
+        self.assertIn("locked: true", html)
+        self.assertIn(
+            "position: {...initialThemeCenterByThemeId.get(themeId)}", html
+        )
+        self.assertIn('selector: \'node[kind = "theme-orbit"]\'', html)
+        self.assertIn("'events': 'no'", html)
+        self.assertIn("THEME_ORBIT_PALETTE", html)
+        self.assertIn("['prerequisite', 'support']", theme_memberships)
+        self.assertIn("edge.weak", theme_memberships)
+        self.assertIn("themeById.get(themeId).target_ids", theme_memberships)
+        self.assertIn("packet.theme_order", orbit_groups)
+        self.assertIn("assignedMemberships.get(node.id)", orbit_groups)
+        self.assertIn("THEME_ORBIT_NODES_PER_RING", ring_assignments)
+        self.assertIn("THEME_ORBIT_MIN_RADIUS", orbit_radii)
+        self.assertIn("THEME_ORBIT_RING_GAP", orbit_radii)
+        self.assertIn("THEME_ORBIT_ARC_GAP", orbit_radii)
+        self.assertIn("themeOrbitCenters()", orbit_coordinates)
+        self.assertIn("themeOrbitRingAssignments", orbit_coordinates)
+        self.assertIn("sharedOrbitIntersectionPosition", orbit_coordinates)
+        self.assertIn("first.radius ** 2", shared_intersection)
+        self.assertIn("seedPositions", orbit_coordinates)
+        self.assertIn("phaseX", orbit_coordinates)
+        self.assertIn("center.x + Math.cos(angle) * radius", orbit_coordinates)
+        self.assertIn("state.orbitGravity", set_visibility)
+        self.assertIn("reader-orbit:${themeId}:${ringIndex}", set_visibility)
+        self.assertIn("nodeOrbitAssignmentsByNodeId", dynamic_memory)
+        self.assertIn("state.orbitAnglePinsByNodeId", dynamic_memory)
+        self.assertIn("sharedIntersectionAnchorByNodeId", dynamic_memory)
+        self.assertIn("requestAnimationFrame(runFrame)", dynamic_schedule)
+        self.assertIn("prefers-reduced-motion: reduce", dynamic_schedule)
+        self.assertIn("dynamicAnimationState", dynamic_schedule)
+        self.assertIn("themeOrbitDisplayLabel", html)
+        self.assertIn("每个主题拥有独立圆心", html)
+        self.assertIn("Each theme has its own center", html)
+        self.assertIn("deterministic-theme-multicenter-orbit-fields", html)
+        self.assertIn("localized-multicenter-theme-field-equilibrium", html)
+
+        functions = "\n".join(
+            function.strip()
+            for function in (
+                layout_footprint,
+                collision_radius,
+                theme_memberships,
+                orbit_groups,
+                orbit_radii,
+                orbit_centers,
+                ring_assignments,
+                shared_intersection,
+                orbit_coordinates,
+            )
+        )
+        harness = f"""
+const THEME_ORBIT_NODES_PER_RING = 6;
+const THEME_ORBIT_MIN_RADIUS = 400;
+const THEME_ORBIT_RING_GAP = 96;
+const THEME_ORBIT_ARC_GAP = 82;
+const THEME_CENTER_MIN_SCAFFOLD_RADIUS = 280;
+const THEME_CENTER_MAX_SCAFFOLD_RADIUS = 360;
+const THEME_CENTER_PER_THEME_RADIUS = 80;
+const THEME_CENTER_START_ANGLE = Math.PI;
+const THEME_SHARED_NODE_GAP = 88;
+const RADIAL_START_ANGLE = Math.PI;
+const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
+const FULL_LAYOUT_NODE_FOOTPRINTS = Object.freeze({{
+  target: {{width: 254, height: 118}},
+  definition: {{width: 246, height: 110}},
+  result: {{width: 238, height: 106}},
+  explanation: {{width: 226, height: 102}}
+}});
+const COMPACT_LAYOUT_NODE_FOOTPRINTS = Object.freeze({{
+  target: {{width: 78, height: 46}},
+  definition: {{width: 80, height: 44}},
+  result: {{width: 76, height: 44}},
+  explanation: {{width: 74, height: 44}}
+}});
+const packet = {{
+  theme_order: ['theme-a', 'theme-b', 'theme-c'],
+  themes: [
+    {{id: 'theme-a', target_ids: ['target-a']}},
+    {{id: 'theme-b', target_ids: ['target-b']}},
+    {{id: 'theme-c', target_ids: ['target-c']}}
+  ],
+  nodes: [
+    {{id: 'target-a', theme_id: 'theme-a'}},
+    {{id: 'shared-ab', theme_id: 'theme-a'}},
+    ...Array.from({{length: 11}}, (_, index) => ({{id: `a-${{index}}`, theme_id: 'theme-a'}})),
+    {{id: 'target-b', theme_id: 'theme-b'}},
+    {{id: 'b-1', theme_id: 'theme-b'}},
+    {{id: 'b-2', theme_id: 'theme-b'}},
+    {{id: 'target-c', theme_id: 'theme-c'}},
+    {{id: 'c-1', theme_id: 'theme-c'}}
+  ],
+  edges: [
+    {{source: 'shared-ab', target: 'target-a', category: 'prerequisite', weak: false}},
+    {{source: 'shared-ab', target: 'target-b', category: 'support', weak: false}},
+    {{source: 'c-1', target: 'target-a', category: 'support', weak: true}},
+    {{source: 'b-1', target: 'target-a', category: 'conflict', weak: false}}
+  ]
+}};
+const nodeById = new Map(packet.nodes.map((node, packetIndex) => [node.id, {{
+  ...node,
+  packetIndex,
+  reader_role: node.id.startsWith('target-') ? 'target' : 'definition'
+}}]));
+const themeById = new Map(packet.themes.map((theme) => [theme.id, theme]));
+const themeOrderIndex = new Map(packet.theme_order.map((themeId, index) => [themeId, index]));
+const state = {{
+  minimizedNodeIds: new Set(packet.nodes.filter((node) => !node.id.startsWith('target-')).map((node) => node.id))
+}};
+{functions}
+const themeMembershipByNodeId = themeMemberships();
+const themeMemberIdsByThemeId = themeOrbitGroups(themeMembershipByNodeId);
+const seed = new Map(packet.nodes.map((node, index) => [node.id, {{
+  x: Math.cos(index * RADIAL_RING_PHASE) * (180 + index * 7),
+  y: Math.sin(index * RADIAL_RING_PHASE) * (180 + index * 7)
+}}]));
+const first = themeOrbitCoordinates(seed);
+const second = themeOrbitCoordinates(seed);
+const exclusiveDistances = [...first.positions]
+  .filter(([nodeId]) => first.memberships.get(nodeId).length === 1)
+  .map(([nodeId, position]) => {{
+    const assignment = first.assignments.get(nodeId)[0];
+    return [
+      nodeId,
+      Math.hypot(position.x - assignment.center.x, position.y - assignment.center.y),
+      assignment.radius
+    ];
+  }});
+const sharedPosition = first.positions.get('shared-ab');
+const sharedDistances = first.assignments.get('shared-ab').map((assignment) => [
+  assignment.themeId,
+  Math.hypot(
+    sharedPosition.x - assignment.center.x,
+    sharedPosition.y - assignment.center.y
+  ),
+  assignment.radius
+]);
+const centerKeys = [...first.centers.values()].map((center) => `${{center.x.toFixed(6)}},${{center.y.toFixed(6)}}`);
+process.stdout.write(JSON.stringify({{
+  ringCounts: Object.fromEntries([...first.radii].map(([themeId, values]) => [themeId, values.length])),
+  themeASpacings: first.radii.get('theme-a').slice(1).map((radius, index) => radius - first.radii.get('theme-a')[index]),
+  centerCount: new Set(centerKeys).size,
+  exclusiveDistances,
+  sharedMembership: first.memberships.get('shared-ab'),
+  sharedDistances,
+  weakMembership: first.memberships.get('c-1'),
+  conflictMembership: first.memberships.get('b-1'),
+  deterministic: JSON.stringify({{
+    positions: [...first.positions], radii: [...first.radii], centers: [...first.centers]
+  }}) === JSON.stringify({{
+    positions: [...second.positions], radii: [...second.radii], centers: [...second.centers]
+  }})
+}}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+        self.assertTrue(result["deterministic"])
+        self.assertEqual(result["ringCounts"], {"theme-a": 3, "theme-b": 1, "theme-c": 1})
+        self.assertEqual(result["centerCount"], 3)
+        self.assertAlmostEqual(
+            result["themeASpacings"][0], result["themeASpacings"][1], places=7
+        )
+        self.assertEqual(result["sharedMembership"], ["theme-a", "theme-b"])
+        self.assertEqual(result["weakMembership"], ["theme-c"])
+        self.assertEqual(result["conflictMembership"], ["theme-b"])
+        for _, distance, radius in result["exclusiveDistances"]:
+            self.assertAlmostEqual(distance, radius, places=7)
+        for _, distance, radius in result["sharedDistances"]:
+            self.assertAlmostEqual(distance, radius, places=7)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for Reader layout behavior QA")
     def test_compact_radial_layout_preserves_crossings_and_shortens_edges(self) -> None:
@@ -777,11 +987,14 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("cy.on('drag', 'node'", html)
         self.assertIn("cy.on('dragfree', 'node'", html)
         self.assertIn("state.groupDrag", html)
-        self.assertIn("state.pinned.set(nodeId, {...movedNode.position()})", html)
+        self.assertIn(
+            "state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles)", html
+        )
+        self.assertIn("state.pinned.set(nodeId, {...position})", html)
         self.assertIn("lastMovedSelectionCount", html)
         self.assertIn("DYNAMIC_FORCE_NODE_LIMIT = 240", html)
-        self.assertNotIn("DYNAMIC_FORCE_DRAG_PASSES", html)
-        self.assertIn("DYNAMIC_FORCE_SETTLE_PASSES = 14", html)
+        self.assertIn("DYNAMIC_FORCE_DRAG_PASSES = 2", html)
+        self.assertIn("DYNAMIC_FORCE_SETTLE_PASSES = 24", html)
         self.assertIn("DYNAMIC_ATTRACTION_TARGET_GAP = 116", html)
         self.assertIn("PINCH_ZOOM_SENSITIVITY = 0.008", html)
         self.assertIn("if (event.ctrlKey)", trackpad_navigation)
@@ -803,14 +1016,14 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("requestAnimationFrame", dynamic_schedule)
         self.assertIn("cancelAnimationFrame", dynamic_cancel)
         self.assertIn("cancelScheduledDynamicForces()", html)
-        self.assertNotIn("scheduleDynamicForces(fixedIds", html)
+        self.assertIn("fixedIds", html)
         self.assertIn("'drag-release'", html)
         self.assertIn("cancelScheduledDynamicForces();\n      const anchor", html)
         self.assertIn("scheduleDynamicForces(\n      delta.anchorNodeIds", html)
         self.assertIn("左键框选", html)
-        self.assertIn("radial-memory constraints", html)
+        self.assertIn("theme fields", html)
 
-    def test_revision_seventeen_uses_compact_identity_and_complete_math_typesetting(self) -> None:
+    def test_revision_twenty_preserves_compact_identity_and_complete_math_typesetting(self) -> None:
         packet = example_packet()
         packet["nodes"][0]["title"] = (
             r"\[\sum_{n=0}^{\infty} a_n\] " + "very-long-title " * 300
@@ -822,7 +1035,7 @@ process.stdout.write(JSON.stringify(results));
         tooltip = javascript_function_source(html, "showNodeNameTooltip")
         detail_typeset = javascript_function_source(html, "typesetDetail")
 
-        self.assertEqual(metadata["renderer_revision"], "chalxius-reader-html-17")
+        self.assertEqual(metadata["renderer_revision"], "chalxius-reader-html-20")
         self.assertIn("object_sha256.slice(0, 6)", identity_label)
         self.assertIn("roleLabel(node.reader_role)", identity_label)
         self.assertIn("planeLabel(node.plane)", identity_label)
@@ -840,9 +1053,9 @@ process.stdout.write(JSON.stringify(results));
         self.assertIn("processEnvironments: true", html)
         self.assertIn("white-space: nowrap", html)
         self.assertIn("text-overflow: ellipsis", html)
-        self.assertIn("selected cards remain anchors", html)
-        self.assertIn("the rest of the layout stays fixed", html)
-        self.assertNotIn("Local repel/pull while dragging", html)
+        self.assertIn("Released nodes settle into one or more theme fields", html)
+        self.assertIn("Remaining layout stays stable", html)
+        self.assertIn("Local attraction/repulsion responds during movement", html)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for trackpad input QA")
     def test_revision_fourteen_trackpad_pinch_zooms_around_pointer(self) -> None:
@@ -936,7 +1149,7 @@ process.stdout.write(JSON.stringify({{pinchResult, panCommand}}));
         self.assertEqual(result["panCommand"], {"x": -7, "y": -11})
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for sizing convergence QA")
-    def test_revision_fifteen_card_sizing_runs_anchored_fourteen_pass_convergence(self) -> None:
+    def test_revision_twenty_card_sizing_runs_anchored_twenty_four_pass_convergence(self) -> None:
         html, _ = render_reader_html(example_packet())
         sizing_convergence = javascript_function_source(html, "scheduleSizingConvergence")
         commit = javascript_function_source(html, "commitSizing")
@@ -973,15 +1186,15 @@ process.stdout.write(JSON.stringify({{pinchResult, panCommand}}));
         harness = f"""
 const RADIAL_VISIBLE_EDGE_GAP = 72;
 const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
-const DYNAMIC_FORCE_SETTLE_PASSES = 14;
+const DYNAMIC_FORCE_SETTLE_PASSES = 24;
 const DYNAMIC_FORCE_NODE_LIMIT = 240;
-const DYNAMIC_FORCE_MAX_STEP = 14;
+const DYNAMIC_FORCE_MAX_STEP = 18;
 const DYNAMIC_REPULSION_STRENGTH = 0.42;
 const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
 const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
-const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.085;
-const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.055;
-const DYNAMIC_TETHER_MAX_STEP = 4;
+const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.16;
+const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.028;
+const DYNAMIC_TETHER_MAX_STEP = 16;
 let controlSyncCount = 0;
 const scheduleNodeControlSync = () => {{ controlSyncCount += 1; }};
 const wrapLayoutAngle = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
@@ -1005,19 +1218,25 @@ const canonicalPositionByNodeId = new Map([
   ['anchor', {{x: 0, y: 0}}],
   ['neighbor', {{x: 322, y: 0}}]
 ]);
+const nodeById = new Map();
 const cy = {{
   nodes: () => nodes,
   edges: () => [],
   batch: (callback) => callback()
 }};
-const state = {{pinned: new Map()}};
+const state = {{
+  pinned: new Map(), orbitGravity: false, orbitAnglePinsByNodeId: new Map()
+}};
+const nodeOrbitAssignmentsByNodeId = new Map();
+const canonicalOrbitAnglesByNodeId = new Map();
+const sharedIntersectionAnchorByNodeId = new Map();
 const dom = {{cy: {{dataset: {{}}}}}};
 {boundary_extent}
 {radial_memory}
 {dynamic_forces}
 const beforeAnchor = anchor.position();
 const beforeNeighbor = neighbor.position();
-const moved = applyDynamicForces(['anchor'], 14, ['anchor'], 'sizing');
+const moved = applyDynamicForces(['anchor'], 24, ['anchor'], 'sizing');
 const afterAnchor = anchor.position();
 const afterNeighbor = neighbor.position();
 const finalGap = afterNeighbor.x - afterAnchor.x - 254 / 2 - 246 / 2;
@@ -1048,13 +1267,102 @@ process.stdout.write(JSON.stringify({{
         self.assertIsNone(result["pinnedNeighbor"])
         self.assertEqual(result["dataset"]["dynamicForceFixedCount"], "1")
         self.assertEqual(result["dataset"]["dynamicForceSeedCount"], "1")
-        self.assertEqual(result["dataset"]["dynamicForceRequestedPasses"], "14")
-        self.assertEqual(result["dataset"]["dynamicForceExecutedPasses"], "14")
+        self.assertEqual(result["dataset"]["dynamicForceRequestedPasses"], "24")
+        self.assertEqual(result["dataset"]["dynamicForceExecutedPasses"], "24")
         self.assertEqual(result["dataset"]["dynamicForceReason"], "sizing")
         self.assertEqual(
             result["dataset"]["dynamicLayoutModel"],
             "localized-radial-memory-equilibrium",
         )
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for pinned-collision QA")
+    def test_revision_twenty_orbit_off_drag_repels_an_existing_session_pin(self) -> None:
+        html, _ = render_reader_html(example_packet())
+        boundary_extent = javascript_function_source(html, "dynamicBoundaryExtent")
+        dynamic_forces = javascript_function_source(html, "applyDynamicForces")
+        harness = f"""
+const RADIAL_VISIBLE_EDGE_GAP = 72;
+const RADIAL_RING_PHASE = Math.PI * (3 - Math.sqrt(5));
+const DYNAMIC_FORCE_SETTLE_PASSES = 24;
+const DYNAMIC_FORCE_NODE_LIMIT = 240;
+const DYNAMIC_FORCE_MAX_STEP = 18;
+const DYNAMIC_REPULSION_STRENGTH = 0.42;
+const DYNAMIC_ATTRACTION_STRENGTH = 0.026;
+const DYNAMIC_ATTRACTION_TARGET_GAP = 116;
+const DYNAMIC_RADIAL_TETHER_STRENGTH = 0.16;
+const DYNAMIC_TANGENTIAL_TETHER_STRENGTH = 0.028;
+const DYNAMIC_TETHER_MAX_STEP = 16;
+let controlSyncCount = 0;
+const scheduleNodeControlSync = () => {{ controlSyncCount += 1; }};
+const dynamicRadialMemoryDisplacement = () => null;
+function makeNode(id, x) {{
+  let current = {{x, y: 0}};
+  return {{
+    id: () => id,
+    hasClass: () => false,
+    position(next) {{
+      if (next === undefined) return {{...current}};
+      current = {{...next}};
+      return this;
+    }},
+    boundingBox: () => ({{w: 100, h: 80}})
+  }};
+}}
+const anchor = makeNode('anchor', 0);
+const neighbor = makeNode('neighbor', 90);
+const unrelatedPin = makeNode('unrelated-pin', 600);
+const nodes = [anchor, neighbor, unrelatedPin];
+const cy = {{
+  nodes: () => nodes,
+  edges: () => [],
+  batch: (callback) => callback()
+}};
+const state = {{
+  pinned: new Map([
+    ['anchor', anchor.position()],
+    ['neighbor', neighbor.position()],
+    ['unrelated-pin', unrelatedPin.position()]
+  ]),
+  orbitGravity: false,
+  orbitAnglePinsByNodeId: new Map()
+}};
+const dom = {{cy: {{dataset: {{}}}}}};
+{boundary_extent}
+{dynamic_forces}
+const beforeAnchor = anchor.position();
+const beforeNeighbor = neighbor.position();
+const beforeUnrelatedPin = unrelatedPin.position();
+const moved = applyDynamicForces(['anchor'], 2, ['anchor'], 'drag');
+const afterAnchor = anchor.position();
+const afterNeighbor = neighbor.position();
+const afterUnrelatedPin = unrelatedPin.position();
+process.stdout.write(JSON.stringify({{
+  beforeAnchor,
+  afterAnchor,
+  beforeNeighbor,
+  afterNeighbor,
+  beforeUnrelatedPin,
+  afterUnrelatedPin,
+  moved,
+  neighborPin: state.pinned.get('neighbor'),
+  dataset: dom.cy.dataset
+}}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["beforeAnchor"], result["afterAnchor"])
+        self.assertGreater(result["afterNeighbor"]["x"], result["beforeNeighbor"]["x"])
+        self.assertEqual(result["beforeUnrelatedPin"], result["afterUnrelatedPin"])
+        self.assertEqual(result["neighborPin"], result["afterNeighbor"])
+        self.assertEqual(result["moved"], 1)
+        self.assertGreater(int(result["dataset"]["dynamicRepulsionPairs"]), 0)
+        self.assertEqual(result["dataset"]["dynamicRepelledPinnedCount"], "1")
+        self.assertEqual(result["dataset"]["dynamicForceReason"], "drag")
 
     def test_revision_eleven_click_anchor_halo_and_plaque_contract_is_embedded(self) -> None:
         html, _ = render_reader_html(example_packet())
@@ -1124,7 +1432,10 @@ process.stdout.write(JSON.stringify({{
         self.assertIn("transition.node.position(compensated)", sizing)
         self.assertNotIn("animate(", sizing)
         self.assertIn("cy.on('dragfree', 'node'", html)
-        self.assertIn("state.pinned.set(nodeId, {...movedNode.position()})", html)
+        self.assertIn(
+            "state.orbitAnglePinsByNodeId.set(nodeId, releaseAngles)", html
+        )
+        self.assertIn("state.pinned.set(nodeId, {...position})", html)
         self.assertIn("nodeSizeControlSize(node)", controls)
         self.assertIn("nodeSizeControlAnchor(node)", controls)
         self.assertIn("minZoom: NODE_CONTROL_SAFE_MIN_ZOOM", html)
@@ -1359,7 +1670,7 @@ class ReaderHtmlExportTests(unittest.TestCase):
         )
         self.assertEqual(first["truth_effect"], "none")
         self.assertEqual(first["network_runtime"], "disabled")
-        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-17")
+        self.assertEqual(first["renderer_revision"], "chalxius-reader-html-20")
         self.assertEqual(first["reader_finalize"]["status"], "ready")
         self.assertEqual(first["reader_finalize"]["scope"], "presentation_readiness_only")
         self.assertEqual(

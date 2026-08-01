@@ -206,6 +206,17 @@ recorded cross-component signature is unchanged; explicit user mode wins. The
 technical Host remains the trusted dispatch adapter and gains no planner or
 background capability.
 
+When Main explicitly plans V5 with `--campaign ID`, the round manifest and each
+card also bind one `chalxius-v5-campaign-scope-1` envelope and its exact frozen
+snapshot path/hash. Read its objective, active typed targets, constraints,
+value definition, stop conditions, and history as nontruth planning context.
+It never replaces the source Research dossier, chooses the work mode, closes
+the assignment, grants an undeclared filesystem capability, or changes Fact
+admission. Cards planned without the flag—including older cards that merely
+carry a passive `campaign_id`—remain valid without this field or any redo.
+Use `campaign-status ID --task-card CARD` to read the frozen V5 status; it must
+never fall through to the current live Campaign.
+
 `PROJECT_BACKGROUND.md` is still generated or refreshed only after explicit
 user instruction. A new card freezes its complete exact-byte index and one
 round-local immutable copy, not its body in active context. A worker must use
@@ -231,8 +242,12 @@ When and only when an operator has enabled adverse-routing evolution for the
 project, a new card additionally binds the fixed baseline attack vocabulary,
 the exact matching user-approved future-only rules, their hashes, and the
 counterexample learning contract. Approval or disablement after planning never
-changes the frozen card. A legacy card without this field keeps its original
-return schema even if later commands enable the extension.
+changes the frozen card. The general baseline includes hidden-conjunct
+splitting. The ordinary-language, burden/charity/independent-failure-surface,
+and quantifier-modal-scope-exception attacks require an exact frozen
+`philosophy` or `mixed` domain profile; prompt wording cannot activate them. A
+legacy card without this field keeps its original return schema even if later
+commands enable the extension.
 
 Unknown fields fail. A worker must not infer extra capability from filesystem visibility.
 For lane-separated collaboration, a V4 memory entry may bind
@@ -266,17 +281,24 @@ outcome-specific fields are exact: do not add commentary keys.
 
 For a current V5 assurance-bound card, the return contains exact
 `obligation_dispositions`, `computation_manifest`, and `research_assurance`
-fields. For an adverse-routing-bound V5 card it additionally contains exactly
-one `attack_learning` field. It is `null` unless the outcome is
-`counterexample`.
+fields. The complete exact-key contract, status enums, evidence-binding rules,
+and a no-adverse template are in
+[v5_worker_return_contract.md](v5_worker_return_contract.md) and
+`assets/worker_return.v5.assurance-no-adverse.template.json`; a worker must not
+infer these shapes from private implementation code. For an
+adverse-routing-bound V5 card it additionally contains exactly
+one `attack_learning` field. A current counterexample requires schema-2
+`result_kind=surviving_counterexample`; `evidence`, `insight`, or `challenge`
+may use `result_kind=productive_challenge` only with a concrete load-bearing
+before/after/evidence value effect. Otherwise the field is `null`.
 A completed `refute` assignment remains adverse provenance even when its
 outcome is `evidence` or `insight`: ingestion records the exact card, worker,
 mode, and assignment independently of Research kind. A later Candidate Release
 must bind and dispose it and exclude that worker from verification, while the
 null learning field creates no attack case or route proposal.
-A counterexample supplies a typed family, target pattern, failure mechanism,
+A reportable attack supplies a typed result and family, target pattern, failure mechanism,
 premise and conclusion-failure witnesses, reproduction steps, exact success
-boundary, and one proposed route with trigger, instruction, false-positive
+boundary, value effects, and one proposed route with trigger, instruction, false-positive
 guards, and scope. Ingestion may record the case and proposal, but only a later
 operator decision can affect future routing. See
 `adverse_routing_evolution.md` for the exact schema and attack-report procedure.

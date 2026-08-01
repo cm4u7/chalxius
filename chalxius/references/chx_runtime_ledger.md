@@ -59,6 +59,15 @@ expected `VERSION`, and `MANIFEST.sha256` file hash before it creates a ledger.
 An older global Chalxius runtime must fail closed instead of starting a
 wrong-version worker ledger. This is prospective: historical cards and running
 0.4.0/0.4.3 work have no new field, warning, invalidation, or redo obligation.
+When newer Chalxius bytes inspect a terminal round, status and audit verify the
+card's exact frozen skill root, VERSION bytes, and manifest bytes instead of
+comparing it to the caller's current runtime. A terminal round is either joined
+to a validated abort or has a complete assignment set whose ingestion receipts,
+return bytes, Research records, and optional adverse/program-math side records
+all validate. Missing or damaged receipts leave the round active or fail closed;
+an active round still requires exact current-runtime equality, and drift of any
+historical bound file still fails closed. Completion never requires an artificial
+abort and never rewrites the frozen round.
 
 ## Record only architecture-caused or amplified problems
 

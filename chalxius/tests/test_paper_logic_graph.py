@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,9 @@ from mathgraph.paper_logic_contracts import (
 )
 from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
+
+
+SKILL_ROOT = Path(__file__).resolve().parents[1]
 
 
 def operator_ledger(text: str) -> list[dict]:
@@ -65,6 +69,58 @@ class PaperLogicGraphTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    def test_public_minimal_logic_fixture_and_edge_diff_are_executable(self) -> None:
+        bundle = json.loads(
+            (
+                SKILL_ROOT
+                / "assets"
+                / "paper_logic_minimal_logic_bundle.v1.example.json"
+            ).read_text(encoding="utf-8")
+        )
+        bundle["project_id"] = self.store.project_id()
+        artifact = SKILL_ROOT / "assets" / "paper_logic_minimal_source.txt"
+        staged = self.paper.stage(
+            bundle,
+            artifact_path=artifact,
+            actor="public-example-builder",
+        )
+        self.assertTrue(staged["revision_id"].startswith("plr-"))
+
+        logic_revision, logic_frozen = self._stage_review_freeze(
+            bundle,
+            artifact=artifact,
+        )
+        audit_bundle = json.loads(
+            (
+                SKILL_ROOT
+                / "assets"
+                / "paper_logic_minimal_audit_bundle.v1.example.json"
+            ).read_text(encoding="utf-8")
+        )
+        audit_bundle["project_id"] = self.store.project_id()
+        audit_bundle["base_snapshot_id"] = logic_frozen["snapshot_id"]
+        c2_id = logic_revision["local_id_map"]["c2"]
+        audit_bundle["nodes"][0]["payload"]["target_id"] = c2_id
+        audit_bundle["edges"][0]["target"] = c2_id
+        _, audit_frozen = self._stage_review_freeze(
+            audit_bundle,
+            artifact=artifact,
+        )
+        self.assertTrue(audit_frozen["snapshot_id"].startswith("pls-"))
+
+        missing_edge = copy.deepcopy(bundle)
+        removed = missing_edge["edges"].pop()
+        with self.assertRaisesRegex(
+            ValueError,
+            r"missing_count=1 extra_count=0.*schema=references/",
+        ) as caught:
+            self.paper.stage(
+                missing_edge,
+                artifact_path=artifact,
+                actor="public-example-builder",
+            )
+        self.assertIn(removed["relation_type"], str(caught.exception))
 
     @staticmethod
     def _source_unit(local_id: str, text: str, order: int) -> dict:

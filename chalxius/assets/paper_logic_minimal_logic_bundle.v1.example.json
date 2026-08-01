@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "feature_revision": "paper-logic-1",
+  "project_id": "REPLACE_WITH_PROJECT_ID",
+  "paper_id": "minimal-public-paper",
+  "graph_kind": "logic",
+  "domain_profile": "philosophy",
+  "builder": "public-example-builder",
+  "builder_context_id": "public-example-fresh-context",
+  "source": {
+    "artifact_sha256": "cbc5d995f81783448cd2fe2554eec1f2bf2d89571f0e126864778f9723830b16",
+    "artifact_locator": "assets/paper_logic_minimal_source.txt",
+    "title": "Minimal public Paper Logic example",
+    "version": "v1",
+    "mime_type": "text/plain",
+    "retrieved_at": "2026-07-30T00:00:00Z",
+    "inspection_methods": [
+      "rendered_primary"
+    ]
+  },
+  "base_snapshot_id": "",
+  "supersedes_snapshot_id": "",
+  "coverage": {
+    "scope_kind": "full_artifact",
+    "included_locators": [
+      "line:1"
+    ],
+    "excluded_locators": [],
+    "units": [
+      {
+        "unit_id": "s1",
+        "classification": "argumentative",
+        "mapped_node_ids": [
+          "s1",
+          "c1",
+          "c2",
+          "i1",
+          "t1"
+        ],
+        "reason": ""
+      }
+    ],
+    "unresolved_load_bearing_units": [],
+    "completeness_claim": "Complete only for the one-line public fixture."
+  },
+  "nodes": [
+    {
+      "local_id": "s1",
+      "object_type": "source_unit",
+      "payload": {
+        "unit_kind": "sentence",
+        "order": 0,
+        "locator": {
+          "kind": "other",
+          "pdf_page_index": -1,
+          "printed_page_label": "",
+          "region": "line:1"
+        },
+        "text": "A reason supports a conclusion.",
+        "text_sha256": "05890aaf83d62d245f943c594073b20f34729593e2bdc10ed51f840b6a707f7c",
+        "speaker": "author",
+        "inspection_methods": [
+          "rendered_primary"
+        ],
+        "render_sha256": "",
+        "context_before": "",
+        "context_after": "",
+        "operator_ledger": []
+      }
+    },
+    {
+      "local_id": "c1",
+      "object_type": "claim",
+      "payload": {
+        "representation_kind": "source_literal",
+        "attribution": "author",
+        "discourse_role": "premise",
+        "content_type": "conceptual",
+        "statement": "A reason supports a conclusion.",
+        "statement_sha256": "05890aaf83d62d245f943c594073b20f34729593e2bdc10ed51f840b6a707f7c",
+        "source_unit_ids": [
+          "s1"
+        ],
+        "semantic_diff": "",
+        "modality": "asserted",
+        "scope_notes": "Limited to the public fixture.",
+        "operator_ledger": [],
+        "definition_ids": [],
+        "parent_claim_id": ""
+      }
+    },
+    {
+      "local_id": "c2",
+      "object_type": "claim",
+      "payload": {
+        "representation_kind": "researcher_reconstruction",
+        "attribution": "researcher",
+        "discourse_role": "headline_conclusion",
+        "content_type": "conceptual",
+        "statement": "The conclusion follows from the reason.",
+        "statement_sha256": "804eee377f26c7297c34dbe312ef8d251dd97a51b72137f88e17f3115575f0d4",
+        "source_unit_ids": [
+          "s1"
+        ],
+        "semantic_diff": "Makes the fixture's inferential relation explicit without treating it as a quotation.",
+        "modality": "asserted",
+        "scope_notes": "Limited to the public fixture.",
+        "operator_ledger": [],
+        "definition_ids": [],
+        "parent_claim_id": ""
+      }
+    },
+    {
+      "local_id": "i1",
+      "object_type": "inference",
+      "payload": {
+        "premise_ids": [
+          "c1"
+        ],
+        "conclusion_id": "c2",
+        "inference_kind": "conceptual_bridge",
+        "strength": "strict",
+        "authorial_status": "researcher_reconstructed",
+        "source_unit_ids": [],
+        "bridge_claim_ids": [
+          "c1"
+        ],
+        "defeater_claim_ids": [],
+        "rationale": "The fixture makes one bridge premise explicit."
+      }
+    },
+    {
+      "local_id": "t1",
+      "object_type": "paper_target",
+      "payload": {
+        "target_role": "headline",
+        "claim_id": "c2",
+        "rationale": "This is the only headline conclusion in the fixture."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "relation_type": "contains",
+      "source": "__source__",
+      "target": "s1",
+      "payload": {
+        "order": 0
+      }
+    },
+    {
+      "relation_type": "anchors",
+      "source": "c1",
+      "target": "s1",
+      "payload": {}
+    },
+    {
+      "relation_type": "anchors",
+      "source": "c2",
+      "target": "s1",
+      "payload": {}
+    },
+    {
+      "relation_type": "premise_of",
+      "source": "c1",
+      "target": "i1",
+      "payload": {
+        "position": 0
+      }
+    },
+    {
+      "relation_type": "concludes",
+      "source": "i1",
+      "target": "c2",
+      "payload": {}
+    },
+    {
+      "relation_type": "targets",
+      "source": "t1",
+      "target": "c2",
+      "payload": {
+        "role": "headline"
+      }
+    }
+  ]
+}

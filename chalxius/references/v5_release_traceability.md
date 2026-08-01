@@ -1,4 +1,96 @@
-# Chalxius V5 release traceability through 0.4.4 — Back to the Future
+# Chalxius V5 traceability through 0.5.0 Paper Continuation
+
+## 0.5.0 Paper Continuation release overlay
+
+- Release version: `0.5.0`; public name **Back to the Future / Paper
+  Continuation**.
+- Exact implementation predecessor: the isolated, validated Paper Continuation
+  candidate derived from Chalxius `0.4.4`. Release promotion changes package
+  identity and documentation only; it performs no project migration, backfill,
+  reclassification, or forced redo of frozen work.
+- Added authority domain: cross-project Evidence sidecar with
+  `truth_effect=none` and no premise eligibility.
+- Reviewed Paper Logic/Audit freezes automatically archive their exact
+  PDF/version/graph/review attestation when configured; sync failures remain
+  retryable and do not roll back local freezes.
+- Non-paper Fact Graph import is explicit-user and Operator-only. Its capsule
+  freezes every active Fact together with its Candidate Release, clean
+  Certification Decision, admission marker, and statement interface.
+- Older supported V5 sources use the scoped
+  `chalxius-v5-fact-evidence-audit-1` authority audit. It ignores frozen
+  nontruth workflow/runtime differences but still validates exact active Fact
+  closure, interfaces, Releases, Decisions, admissions, revocations, and
+  acceptance events. Historical capsules remain readable and no old work is
+  rewritten or reopened.
+- `verified_bridge` binds an exact Evidence selection and disposition head into
+  a sealed Candidate Release artifact. Candidate creation, verifier capsule,
+  certification, and Fact admission recheck current Evidence state. A fresh
+  verifier and the unchanged Fact Gateway remain mandatory.
+- Corrections are append-only. They derive `stale_source` transitively across
+  re-exported Fact Evidence, stale every directly or transitively affected
+  bridge, and return destination/local admitted-Fact impact, but never silently
+  revoke or rewrite Fact authority.
+- New Candidate Release fields are additive and optional; historical releases
+  and verifier capsules without `evidence_bridge_refs` preserve their exact
+  bytes and hashes.
+- An explicit Paper continuation plan materializes every selected Paper target
+  as current-assurance Research without a score cutoff. Target dispositions bind
+  dialectical salience, burden, charitable objection, independent failure
+  surfaces, plain-language explanation, necessary-term definitions, and exact
+  revised-writing bytes. Adequacy is reported separately from Fact validity.
+- The public worker boundary publishes the exact assurance return fields,
+  per-obligation status and artifact rules, conditional adverse field, nested
+  research-assurance shapes, a copyable template, and actionable schema
+  diagnostics. Workers do not need private implementation knowledge.
+- Candidate Release follows Research ancestry transitively, so binding only a
+  worker result cannot hide its Paper origin. Bound releases require exact
+  `paper_target_closure` coverage, Logic/Audit refs, a current adequacy receipt,
+  verifier-visible closure/result/disposition evidence, authorized source and
+  revised-writing bytes, philosophy semantic atomicity, and plain-language
+  clarity. Historical sealed
+  releases remain readable; verifier/certification/admission reject stale
+  dispositions.
+- The public Paper contract includes staging-tested minimal Logic and Audit
+  fixtures, exact node/edge/review/disposition/release/atomicity keys, and CLI
+  schema pointers. Edge mismatches return bounded missing and extra objects;
+  strict validation is no longer reachable only through private implementation
+  knowledge.
+- Explicit `frontier --campaign ID` and `plan-round --campaign ID` now select
+  only exact stored Research associations and freeze one bounded nontruth
+  Campaign envelope. Main's four-factor frontier remains the scheduler;
+  unscoped calls stay global and never consume the active-Campaign pointer.
+  Mixed ids fail before round writes, later Campaign events do not alter frozen
+  cards, and Campaign has no closure or Fact authority.
+- V5 adverse routing revision 3 keeps the revision-2 prospective reporting and
+  proposal lifecycle, adds one general hidden-conjunct split to new refutation
+  cards, and adds three philosophy-only rules solely from an exact frozen
+  `philosophy` or `mixed` domain profile. Claim keywords cannot activate the
+  philosophy set. Successful counterexamples and productive challenges still
+  create nontruth proposals that remain inactive until an explicit Operator
+  decision. Frozen/V1–V4 and schema-1/2/3 work is never backfilled.
+- A complete set of validated ingestion receipts projects a round as
+  `completed` and historical. Newer bytes verify the exact frozen runtime,
+  return, Research, and optional adverse/program-math bindings without an
+  artificial abort; incomplete work still requires the current runtime.
+- Release validation baseline: Paper Library `11/11`; explicit Campaign envelope
+  and input-discovery checks `7/7`; Chalxius inherited/current suite `537/537`; Evidence
+  re-export/correction/cross-binding end-to-end PASS;
+  `scripts/self_test.py` PASS; Skill Creator validation PASS; release-only
+  aggressive audit `51/51` mutants killed with `candidate_unchanged=true`,
+  including Campaign exact-match, active-pointer, frozen-snapshot, worker live-
+  status, completed-round runtime/receipt, general hidden-conjunct omission,
+  philosophy keyword activation/domain drift, and orbit-off pinned-card
+  bypasses.
+- Independent disposable black-box forward test: PASS for global unscoped
+  selection despite an active Campaign, explicit exact scope, future-only
+  update with frozen worker view, cross-Campaign rejection before round write,
+  unchanged Host authority, empty Fact authority, closed CHX ledgers, and full
+  temporary-project cleanup.
+- Current protected runtime surface: `73` files, SHA-256 tree digest
+  `fa58a0b9ef31c088220eede55d5d2e6ee4d8355dba86d50749c6c40161025130`.
+
+The detailed contract is `evidence_plane.md`. The original 0.4.4 trace below is
+retained as predecessor lineage.
 
 ## Candidate identity and scope
 
@@ -74,10 +166,13 @@ frozen capsule. Gateway admission revalidates the exact accepted decision.
   FactBundles, source/applicability checks, expert/interpretation lint, Reader,
   and Chalxius Learner retain their bounded user outcomes. Optional modules add
   task-local bindings rather than a universal closure.
-- Reader packet v1 remains backward-compatible and renderer revision 17 uses
+- Reader packet v1 remains backward-compatible and renderer revision 20 uses
   bounded V5 titles, hash6/role/plane canvas identities, MathJax-ready readable
-  projections of bounded historical ASCII Fact notation, and localized radial-
-  memory force settlement. Exact Fact text remains unchanged. Native Fact, Research, Certification,
+  projections of bounded historical ASCII Fact notation, deterministic distinct
+  theme centers, membership-scaled equally spaced local rings, shared-node
+  overlap placement, bounded multi-center gravity settlement, and collision-
+  scoped yielding of an existing Cartesian pin while orbit gravity is off,
+  with no idle simulation. Exact Fact text remains unchanged. Native Fact, Research, Certification,
   Paper/Audit, and Blackboard authority labels remain intact; silent graph
   truncation still fails.
 
@@ -111,8 +206,8 @@ project-local ledger file.
 
 ## 0.4.2 user-governed adverse-routing candidate
 
-The new extension is absent until `attack-route-enable` is issued by the
-`operator` role in one V5 project. It stores immutable attack cases, route
+The original 0.4.2 extension was absent until `attack-route-enable` was issued
+by the `operator` role in one V5 project. It stores immutable attack cases, route
 proposals, user decisions, active rules, and rule disablements below
 `PROJECT/governance/adverse-routing/`. No installed skill or active project is
 modified merely because the isolated candidate exists.
@@ -125,18 +220,40 @@ task and presents pending proposals even when the report is empty. Only an
 operator may approve, supply and approve a modified rule, reject, or disable.
 Every accepted or disabled rule affects future task cards only.
 
-Refutation cards bind eight fixed low-cost attack families plus at most 24
-matching active user-approved rules. Exact hashes and stored lineage prevent a
-proposal, decision, or active-rule drift from being accepted silently. The
-24-rule bound fails visibly rather than truncating. A task card frozen before
-project activation retains the legacy card and return schema even if the
-project is enabled later.
+Historical revision-1/2 refutation cards bind eight fixed low-cost attack
+families plus at most 24 matching active user-approved rules. Exact hashes and
+stored lineage prevent a proposal, decision, or active-rule drift from being
+accepted silently. The 24-rule bound fails visibly rather than truncating. A
+task card frozen before project activation retains the legacy card and return
+schema even if the project is enabled later.
+
+The current prospective revision consumes the user's later standing
+authorization: V5 status and zero reports are enabled by default without a
+write, and the first new refute card lazily materializes revision-2 governance
+state. Current learning distinguishes `surviving_counterexample` from
+`productive_challenge` and binds nonempty concrete value effects. This changes
+only new cards and reports; the revision-1 contract, old cases, frozen cards,
+V1–V4 projects, and already-running work remain readable and are never
+backfilled or asked to redo work.
 
 The extension has `truth_effect=none`; cases remain worker-reported nontruth
 Research. Attack reporting and route approval neither certify a refutation nor
 enter Candidate Release, Certification Decision, Fact admission, Paper/Audit,
 Blackboard, Reader, Learner, or CHX reporting. Attack and CHX reports are
 explicitly separate.
+
+The user-approved revision-3 task-card vocabulary is also future-only. Every
+new refutation card receives `baseline_hidden_conjunct_split` in addition to
+the original eight. It requires distinct truth conditions or a separating case
+and guards against artificial splitting of grammatical coordination or one
+defined construction. Three more baselines enter only when frozen Research
+declares `adverse_domain_profile=philosophy|mixed`, or a validated Paper
+continuation supplies that domain: faithful ordinary-language substitution;
+atomic burden plus strongest good-faith objection plus independent failure
+surfaces; and quantifier/modal/scope/exception equivalence. Claim or title
+substrings never activate them. A generated computation review receives its
+program-math rule after these applicable baselines. Schema-3 cards continue to
+validate the revision-2 eight-rule/program-math contract without rewriting.
 
 ## 0.4.3 prospective assurance and routing repair
 
@@ -173,18 +290,21 @@ and proof diffs separately.
 
 The V5 automatic frontier now uses the compact four-factor score and projects
 historical eight-metric Research without rewriting. It has no score cutoff and
-does not restrict explicit scheduling. If adverse routing is enabled, a
-successfully ingested actual computation may queue one future nontruth
-program-math review. Only that exact generated review receives the ninth
-baseline rule; ordinary refutation cards retain eight. Attack proposals remain
-subject to user decision, and CHX issues are never imported into routes.
+does not restrict explicit scheduling. Under the prospective V5 adverse default,
+a successfully ingested actual computation may queue one future nontruth
+program-math review. Under revision 3, ordinary new refutation cards carry nine
+general rules, exact philosophy/mixed cards carry twelve, and only that exact
+generated review receives the further program-math rule. Earlier frozen cards
+retain their recorded counts. Attack proposals remain subject to user
+decision, and CHX issues are never imported into routes.
 
-Static capability review also found legacy connections that remain present but
-not automatically enabled in V5: campaign-scoped frontier selection, repair-
+Static capability review at the 0.4.3 checkpoint also found legacy connections
+that were not automatically enabled in V5: campaign-scoped frontier selection, repair-
 leaf collapse, promoted-node/query snapshot seeding, suggestion-driven work
 mode selection, and automatic V4 execution-profile feature activation. They
-remain disabled pending explicit user decisions and are not part of this
-candidate's repair scope.
+remained disabled pending explicit user decisions and were not part of that
+candidate's repair scope. The later 0.5.0 successor connects only the explicit,
+exact-match Campaign filter and frozen nontruth envelope described above.
 
 ## 0.4.3 post-admission attack-context repair
 
@@ -537,6 +657,22 @@ resolution requires the frozen manifest, focused ledger tests, full inherited
 suite, self-test, mutation audit, protected-runtime byte check, and installed-
 tree verification; evidence is appended to the external ledger only after those
 checks pass.
+
+The closed field ledger
+`run-20260730T043905300313Z-41247ad11966.jsonl` adds three coordinated repairs:
+CHX-001 joins a validated abort before comparing runtimes and checks the exact
+historical bound VERSION/manifest bytes; the coordinated successor also derives
+`completed` only from a complete validated receipt set, so already ingested old
+rounds do not need a fabricated abort or rerun. CHX-002 makes the transported
+verifier and gateway use one enumerated finding-class validator; CHX-003 replays
+each Candidate Release against its seal-time admission snapshot and runs a
+pre-marker historical simulation. Focused regressions cover aborted and fully
+receipted 0.4.4 cards inspected by newer bytes, receipt/runtime tampering, all
+allowed plus one rejected finding class, and an older rejected release followed
+by a matching later admission. A read-only canary over
+`chalxius-general-h-proof-20260728` reports `current_ok=true`,
+`history_clean=true`; its four formerly failing historical rounds now project
+as `completed` at 3/3, 2/2, 1/1, and 1/1 receipts without modifying that project.
 
 ## Residual boundaries
 

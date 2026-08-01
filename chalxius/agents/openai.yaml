@@ -1,6 +1,6 @@
 interface:
   display_name: "Chalxius"
-  short_description: "Back to the Future: bounded context restoration and rigorous research"
-  default_prompt: "Use $chalxius in automatic mode with the Chalxius research engine and one invariant Fact Graph admission contract. For each new 0.4.1-or-later run, maintain the mandatory CHX architecture ledger and report it only when qualifying issues exist. Enable adverse-routing evolution only on explicit project opt-in; keep attack reports separate from CHX, apply program-math attacks only to actual computation-bearing Research, and require my decision before any proposed rule affects future task cards. Preserve frozen legacy work without backfill or redo. Render the fixed offline reader page only when I explicitly request visualization, and activate Chalxius Learner only when I explicitly request academic teaching or testing."
+  short_description: "Back to the Future: Evidence and Paper continuation"
+  default_prompt: "Use $chalxius in automatic mode for source-bound Research; when work is explicitly paper-led, preserve the exact Paper target closure, philosophical atomicity, and plain-language clarity; keep Attack and CHX reports separate, and admit Facts only through a fresh verifier and Fact Gateway."
 policy:
   allow_implicit_invocation: true

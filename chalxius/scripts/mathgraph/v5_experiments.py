@@ -88,13 +88,17 @@ class V5ExperimentManager(ExperimentManager):
     ) -> dict[str, Any]:
         del allow_historical_estimate_policy
         raw = self._raw_card(task_card)
-        self.store.v5_lifecycle().validate_task_card(raw)
         if require_active_work_unit:
             self.store.reasoning_modes().require_work_unit_active(
                 raw["round_id"]
             )
-        _, manifest = self.store.v5_lifecycle()._round_manifest(raw["round_id"])
-        assignment = self.store.v5_lifecycle()._assignment(
+        lifecycle = self.store.v5_lifecycle()
+        round_dir, manifest = lifecycle._round_manifest(raw["round_id"])
+        if require_active_work_unit and lifecycle._round_is_completed(
+            round_dir, manifest
+        ):
+            raise ValueError("completed V5 round is historical and cannot start work")
+        assignment = lifecycle._assignment(
             manifest, raw["assignment_id"]
         )
         card_path = contained_path(

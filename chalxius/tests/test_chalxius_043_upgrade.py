@@ -10,7 +10,10 @@ from pathlib import Path
 from mathgraph.adoption import workload_profile_for_entry
 from mathgraph.applicability import validate_external_refs_for_submission
 from mathgraph.contracts import sha256_bytes, sha256_json
-from mathgraph.decision_preflight import validate_decision_against_capsule
+from mathgraph.decision_preflight import (
+    V5_FINDING_CLASSES,
+    validate_decision_against_capsule,
+)
 from mathgraph.interfaces import (
     build_statement_interface,
     extract_geometric_objects,
@@ -707,7 +710,7 @@ class Chalxius043UpgradeTests(unittest.TestCase):
                 )
             )
             self.assertEqual(
-                len(ordinary_card["adverse_routing"]["baseline_rules"]), 8
+                len(ordinary_card["adverse_routing"]["baseline_rules"]), 9
             )
             self.assertFalse(
                 ordinary_card["adverse_routing"]["scope_evidence"]["active"]
@@ -1391,6 +1394,13 @@ class Chalxius043UpgradeTests(unittest.TestCase):
                 Path(materialized["host_capability_path"]),
             ):
                 self.assertTrue(expected.is_file())
+            host_capability = json.loads(
+                Path(materialized["host_capability_path"]).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                host_capability["allowed_finding_classes"],
+                list(V5_FINDING_CLASSES),
+            )
 
             capsule = json.loads(
                 (capsule_root / "input" / "capsule.json").read_text(

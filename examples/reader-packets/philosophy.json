@@ -6,7 +6,7 @@
   "audience": "Readers with no prior knowledge of Chalxius or knowledge graphs",
   "source_snapshot": {
     "id": "public-philosophy-workflow-v1",
-    "sha256": "78adc9c87dae3cbf2d0ca4c0fff3f8bd12a6a6a5ef2b4c57ce4f9ec91421b977",
+    "sha256": "1328f9cdac850695c5b538671ebeb11c5277a6ca3162a489668977a87882ad9a",
     "description": "An anonymized public summary bound to a read-only audit of a private philosophy workflow."
   },
   "presentation": {

@@ -47,9 +47,9 @@
 | deterministic readiness metadata | embedded and stdout `reader_finalize` schema 1 binds source snapshot, packet hash, node count, and complete-sidebar count with no truth effect |
 | no Obsidian, watcher, PDF, or service coupling | fixed project HTML output plus navigation-only reload; no poller, fetch loop, storage, sidecar, or service |
 | human order remains authoritative | strict theme, target, and prerequisite-order validation |
-| deterministic renderer | canonical packet JSON, pinned vendor assets, target-distance compact-radial core layers, fixed circular weighted-neighbor sweeps, bounded constrained angular relaxation, and no time/random input |
+| deterministic renderer | canonical packet JSON, pinned vendor assets, target-distance angular seeds, fixed circular weighted-neighbor sweeps, bounded constrained seed relaxation, final theme-ordered multi-center field projection, and no time/random input |
 | bounded crossing reduction | for at most 1,200 scored edges, exact radial proper-crossing scoring retains the best of packet order, eight deterministic circular sweep pairs, and at most 48 adjacent ring swaps over two refinement passes, guaranteeing no more scored crossings than the packet-order baseline; larger graphs preserve packet order; there is no global-optimum claim and the search runs only at initial placement or explicit layout reset |
-| bounded compactness | for at most 320 nodes and 1,200 edges, current full/minimized card footprints and fixed deterministic relaxation blends shorten maximum and total relation length only when crossings, card collisions, and the protected 72-model-pixel connected-card boundary gap do not worsen; larger graphs keep the radial seed |
+| bounded compactness | for at most 320 nodes and 1,200 edges, current full/minimized card footprints and fixed deterministic relaxation blends improve the target-distance angular seed only under its prior crossing, collision, clearance, and edge-length gates; the final multi-center projection uses conservative chord density and equal intra-field ring spacing and reports its own diagnostics |
 | one offline file | embedded Cytoscape.js and MathJax with network-denying CSP |
 | native graph authority remains visible | plane-specific truth labels, exact source text/hash, no promotion |
 | one persistent eligible graph | every eligible real node and edge remains present; minimization changes card size only and synthetic theme nodes are excluded from sizing |
@@ -60,10 +60,11 @@
 | theme path sizing | double-clicking a synthetic multi-target theme performs one atomic size operation over the union of the complete directed upstream/downstream closures of its currently eligible member targets |
 | node-local broad commands | auxiliary-click or Shift+F10 exposes only maximize-all-upstream and maximize-all-downstream, each including the anchor |
 | bounded reversible sizing | at most 100 session-only size deltas, no-op suppression, redo invalidation, standard undo/redo shortcuts, and no restoration of unrelated UI state |
-| stable navigation | every sizing action preserves selection, viewport, graph ordering, and the normalized 29%/50% control pivot through derived two-axis compensation; an existing pin is replaced when present, no pin is created, and fit remains explicit |
+| stable navigation | every sizing action preserves selection, viewport, graph ordering, and the normalized 29%/50% control pivot through derived two-axis compensation; an existing Cartesian pin is replaced when present, no pin is created, orbit radii are safely recomputed, and fit remains explicit |
 | trackpad-first canvas | two-finger pan, explicit pointer-centered pinch zoom, primary-drag box selection on empty canvas, direct single-card or selected-group drag, and no persistent storage or graph writeback |
-| session-only group movement | a visible selection rectangle overlaps rendered node bounds; every member receives a soft green silhouette glow, modifier-drag adds to the set, and dragging one selected card applies one equal offset to the whole set while preserving relative positions |
-| controlled dynamic forces | for at most 240 visible nodes, direct card/group drag fixes the manipulated set, repels locally below the protected card gap, attracts only visible relation neighbors above the comfortable link gap, settles for at most fourteen release passes, and has no random or idle simulation |
+| session-only group movement | a visible selection rectangle overlaps rendered source/theme-card bounds but excludes orbit geometry; every member receives a soft green silhouette glow, modifier-drag adds to the set, and dragging one selected card applies one equal offset to the whole set while preserving relative positions during the gesture |
+| multi-center theme gravity | every theme receives one deterministic center and `ceil(member_count / 6)` locked, unselectable, event-free local rings; strong prerequisite/support target-closure overlap yields presentation-only multi-theme membership, gravity preserves per-center release angles and balances shared nodes in field overlaps, and the default-on toggle remains session-only with no writeback |
+| controlled dynamic forces | drag uses a rolling two-frame local response and release/size changes use at most 24 damped frames; with gravity off, only an old Cartesian pin actually colliding with the gesture anchor yields and updates its existing pin; at most 240 active neighborhood nodes move while all other visible nodes remain measured fixed boundaries; reduced-motion settles synchronously and there is no random or idle simulation |
 | reliable relation styling | Cytoscape reattaches all retained edges to resized silhouettes; enlarged midpoint and target markers repeat direction at equal half-edge intervals, while synthetic grouping links use smooth dashed arrowless Bezier curves |
 | selectable appearance | Faceted default and Plaques alternative change silhouettes only, independently of packet themes, planes, statuses, edges, size state, and history |
 | switchable human interface | one Chinese/English UI mode at a time, Chinese default; source body text remains unchanged |
@@ -551,6 +552,42 @@ machine Fact anchors to readable labels and adds MathJax delimiters only for a
 bounded historical ASCII formula grammar. Native TeX, formal/original Fact
 text, hashes, packet schema, topology, authority, admission, persistence,
 services, and writeback remain unchanged.
+
+Renderer revision 18 changes only the presentation layout and interaction
+contract. The target-distance radial result remains a deterministic angular
+seed, but every real card is finally projected to the concentric radius assigned
+by its `theme_id` in exact `theme_order`. Locked, event-free orbit rings expose
+that structure without entering source-card counts or selection. Orbit gravity
+defaults on: drag uses a rolling two-frame local response; release records each
+real card's new angle and attracts it to its own theme radius for at most 24
+frames. Card sizing recomputes safe orbit radii and uses the same bounded
+settlement. At most 240 active neighborhood nodes move even on larger maps,
+while all other visible nodes remain measured fixed boundaries. Reduced-motion
+settles synchronously, orbit gravity can be disabled for the page session, and
+no idle simulation, packet change, topology edit, truth effect, persistence,
+service, or writeback is introduced.
+
+Renderer revision 19 preserves packet v1 and replaces only revision 18's final
+presentation geometry. Themes now receive distinct deterministic centers and
+one equally spaced local ring per up to six derived members. Membership starts
+with the packet's explicit `theme_id`; a strong prerequisite/support upstream
+target closure may add presentation-only memberships, while weak, repair, and
+conflict edges may not. Exclusive nodes remain on one local ring. Shared nodes
+receive assignments from every matching field and begin at a deterministic
+circle intersection or bounded higher-order overlap compromise. Release stores
+one angle per assigned center, and the existing bounded 2/24-frame, 240-active-
+node solver averages those local field forces. Ring and shared-node geometry
+remain locked, event-free, session-only, non-authoritative, and free of idle
+simulation or writeback.
+
+Renderer revision 20 preserves revision 19's geometry and repairs only the
+orbit-off Cartesian-pin collision coupling. The current gesture set remains
+fixed. A previously pinned card yields only after its boundary enters the
+protected collision gap and keeps the resulting displacement by replacing its
+existing pin. Unrelated pins remain fixed; pinned cards receive no attraction
+or radial tether; automatic forces still create no new pins. All packet,
+authority, bounded-force, no-idle, persistence, and writeback contracts remain
+unchanged.
 
 Forward-security coverage includes missing/extra/partial feature evidence,
 machine-unready and unrelated pulse commitments, specialist hash/path escape,

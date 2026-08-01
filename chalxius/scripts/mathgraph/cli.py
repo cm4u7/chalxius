@@ -301,24 +301,36 @@ def _authorize_bound_worker_query(
             )
         authorized = requested_id == task_card["campaign_id"]
         if authorized:
-            if (
-                "campaign_snapshot_relpath" not in task_card
-                or "campaign_snapshot_sha256" not in task_card
-            ):
-                raise ValueError(
-                    "bound worker campaign-status requires a frozen "
-                    "campaign snapshot"
-                )
+            if task_card.get("schema_version") == 5:
+                scope = task_card.get("campaign_scope")
+                if not isinstance(scope, dict):
+                    raise ValueError(
+                        "bound V5 worker campaign-status requires an explicitly "
+                        "scoped frozen Campaign envelope"
+                    )
+                snapshot_relpath = require_string(scope, "snapshot_relpath")
+                snapshot_sha256 = require_string(scope, "snapshot_sha256")
+            else:
+                if (
+                    "campaign_snapshot_relpath" not in task_card
+                    or "campaign_snapshot_sha256" not in task_card
+                ):
+                    raise ValueError(
+                        "bound worker campaign-status requires a frozen "
+                        "campaign snapshot"
+                    )
+                snapshot_relpath = task_card["campaign_snapshot_relpath"]
+                snapshot_sha256 = task_card["campaign_snapshot_sha256"]
             snapshot_path = contained_path(
                 store.root,
-                task_card["campaign_snapshot_relpath"],
+                snapshot_relpath,
                 "bound worker campaign snapshot path",
             )
             if (
                 snapshot_path.is_symlink()
                 or not snapshot_path.is_file()
                 or sha256_bytes(snapshot_path.read_bytes())
-                != task_card["campaign_snapshot_sha256"]
+                != snapshot_sha256
             ):
                 raise ValueError(
                     "bound worker campaign snapshot bytes/hash mismatch"
@@ -328,7 +340,15 @@ def _authorize_bound_worker_query(
                 raise ValueError(
                     "bound worker campaign snapshot id mismatch"
                 )
-            args.bound_campaign_status = frozen_campaign
+            if task_card.get("schema_version") == 5:
+                frozen_status = frozen_campaign.get("campaign_status")
+                if not isinstance(frozen_status, dict):
+                    raise ValueError(
+                        "bound V5 worker Campaign snapshot status is malformed"
+                    )
+                args.bound_campaign_status = frozen_status
+            else:
+                args.bound_campaign_status = frozen_campaign
     elif args.command == "blackboard-show":
         requested_id = args.object_id
         nodes, edges = store.blackboard().snapshot_objects(
@@ -378,6 +398,7 @@ READ_ONLY_COMMANDS = {
     "paper-logic-show",
     "paper-logic-query",
     "paper-logic-audit",
+    "paper-continuation-status",
     "verifier-capsule",
     "candidate-release-check",
     "certification-decision-check",
@@ -388,6 +409,10 @@ READ_ONLY_COMMANDS = {
     "attack-report",
     "fact-graph-inventory",
     "fact-graph-append-target",
+    "evidence-library-status",
+    "evidence-query",
+    "evidence-bridge-check",
+    "evidence-impact-report",
 }
 
 
@@ -437,9 +462,11 @@ def _mermaid(store: MathGraphStore, target: str = "") -> str:
     return "\n".join(lines) + "\n"
 
 
-def _authorized_fact_graph_inventory(
+def _fact_graph_inventory(
     current_store: MathGraphStore,
     source_root_value: str,
+    *,
+    evidence_source: bool,
 ) -> dict[str, Any]:
     source_root = Path(source_root_value).expanduser()
     if source_root.is_symlink():
@@ -477,7 +504,39 @@ def _authorized_fact_graph_inventory(
         )
     source_project_id = source_store.project_id()
     current_project_id = current_store.project_id()
-    audit = lifecycle.audit().as_dict()
+    if evidence_source:
+        audit = lifecycle.fact_evidence_audit()
+        if audit["active_fact_ids"] != [
+            item["fact_id"] for item in active_facts
+        ]:
+            raise ValueError(
+                "Fact Evidence inventory changed during authority audit"
+            )
+        if (
+            audit["current_ok"] is not True
+            or audit["history_clean"] is not True
+            or audit["errors"] != []
+        ):
+            detail = "; ".join(audit["errors"]) or "unknown audit failure"
+            raise ValueError(
+                "Fact Evidence source authority audit is not clean: " + detail
+            )
+        source_audit = audit
+        source_audit_scope = audit["scope"]
+    else:
+        audit = lifecycle.audit().as_dict()
+        source_audit = {
+            key: audit[key]
+            for key in (
+                "current_ok",
+                "history_clean",
+                "facts",
+                "edges",
+                "errors",
+                "trust_debt",
+            )
+        }
+        source_audit_scope = "complete_source_project"
     admitted_release_ids = sorted(
         {item["release_id"] for item in active_facts}
     )
@@ -499,21 +558,12 @@ def _authorized_fact_graph_inventory(
         ),
         "active_fact_count": len(active_facts),
         "active_facts": active_facts,
+        "source_audit_scope": source_audit_scope,
         "revoked_fact_ids": sorted(lifecycle.revoked_fact_ids()),
         "unadmitted_or_inactive_release_ids": sorted(
             set(all_release_ids).difference(admitted_release_ids)
         ),
-        "source_audit": {
-            key: audit[key]
-            for key in (
-                "current_ok",
-                "history_clean",
-                "facts",
-                "edges",
-                "errors",
-                "trust_debt",
-            )
-        },
+        "source_audit": source_audit,
         "available_actions": [
             "read_only_lineage_reference_no_authority",
             "select_this_exact_project_as_future_append_target",
@@ -523,6 +573,28 @@ def _authorized_fact_graph_inventory(
         "truth_effect": "none",
         "project_effect": "none",
     }
+
+
+def _authorized_fact_graph_inventory(
+    current_store: MathGraphStore,
+    source_root_value: str,
+) -> dict[str, Any]:
+    return _fact_graph_inventory(
+        current_store,
+        source_root_value,
+        evidence_source=False,
+    )
+
+
+def _authorized_fact_evidence_inventory(
+    current_store: MathGraphStore,
+    source_root_value: str,
+) -> dict[str, Any]:
+    return _fact_graph_inventory(
+        current_store,
+        source_root_value,
+        evidence_source=True,
+    )
 
 
 def _authorized_fact_graph_append_target(
@@ -688,11 +760,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("candidate-release")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help="exact JSON schema: references/paper_input_contracts.md",
+    )
     p.add_argument("--producer", required=True)
 
     p = sub.add_parser("candidate-release-check")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help="same prewrite schema as candidate-release; see paper_input_contracts.md",
+    )
     p.add_argument("--producer", required=True)
 
     p = sub.add_parser("verifier-capsule")
@@ -745,6 +825,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mode", default="auto", choices=("auto", *WORK_MODES))
     p.add_argument("--memory-id", action="append", dest="memory_ids")
     p.add_argument(
+        "--campaign",
+        help=(
+            "explicit V5 Campaign id; select only exact Research associations and "
+            "freeze its nontruth planning envelope"
+        ),
+    )
+    p.add_argument(
         "--host-task-scope-id",
         help=(
             "stable host task/thread identifier; defaults to "
@@ -785,7 +872,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("preflight-return")
     p.add_argument("round_id")
     p.add_argument("assignment_id")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "draft JSON; exact current V5 schema and template: "
+            "references/v5_worker_return_contract.md and "
+            "assets/worker_return.v5.assurance-no-adverse.template.json"
+        ),
+    )
 
     p = sub.add_parser("validate-return")
     p.add_argument("round_id")
@@ -887,7 +982,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--task-card")
 
     p = sub.add_parser("campaign-create")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "JSON object with name, objective, source_claim_ids, targets, "
+            "constraints, stop_conditions, and value_definition"
+        ),
+    )
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("campaign-activate")
@@ -896,7 +998,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("campaign-update")
     p.add_argument("campaign_id")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "JSON object with type (constraint_added, "
+            "stop_condition_disposition, value_definition_updated, or note) "
+            "and an object payload"
+        ),
+    )
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("campaign-status")
@@ -963,12 +1073,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("paper-logic-stage")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "exact node/edge schema and staging-tested fixture: "
+            "references/paper_input_contracts.md"
+        ),
+    )
     p.add_argument("--artifact", required=True)
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("paper-logic-record-review")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help="exact review schema and profile coverage: paper_input_contracts.md",
+    )
 
     p = sub.add_parser("paper-logic-freeze")
     p.add_argument("revision_id")
@@ -1005,6 +1126,78 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--actor", required=True)
 
     sub.add_parser("paper-logic-audit")
+
+    p = sub.add_parser(
+        "paper-continuation-plan",
+        help="materialize an exact Paper-target Research frontier",
+    )
+    p.add_argument("snapshot_id")
+    p.add_argument(
+        "--input",
+        required=True,
+        help="exact four-field schema: references/paper_input_contracts.md",
+    )
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser(
+        "paper-continuation-status",
+        help="report Paper adequacy separately from Fact truth",
+    )
+    p.add_argument("plan_id", nargs="?", default="")
+
+    p = sub.add_parser(
+        "paper-continuation-dispose",
+        help="append a current target disposition and writing mapping",
+    )
+    p.add_argument("plan_id")
+    p.add_argument(
+        "--input",
+        required=True,
+        help="exact disposition schema: references/paper_input_contracts.md",
+    )
+    p.add_argument("--actor", required=True)
+
+    sub.add_parser("evidence-library-status")
+
+    p = sub.add_parser("evidence-query")
+    p.add_argument("--query", default="")
+    p.add_argument("--limit", type=int, default=20)
+    p.add_argument("--include-inactive", action="store_true")
+
+    p = sub.add_parser("evidence-sync-retry")
+    p.add_argument("snapshot_id")
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("evidence-import-fact-graph")
+    p.add_argument("--source-root", required=True)
+    p.add_argument("--expected-project-id", required=True)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+
+    p = sub.add_parser("evidence-bridge-prepare")
+    p.add_argument("--selection", required=True)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--output", default="")
+
+    p = sub.add_parser("evidence-bridge-check")
+    p.add_argument("bridge_id")
+
+    p = sub.add_parser("evidence-mark")
+    p.add_argument("evidence_id")
+    p.add_argument(
+        "--status",
+        choices=("active", "challenged", "superseded", "withdrawn", "stale_source"),
+        required=True,
+    )
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--replacement-evidence-id", action="append", default=[])
+    p.add_argument("--supersedes-disposition-id", action="append", default=[])
+    p.add_argument("--artifact", default="")
+
+    p = sub.add_parser("evidence-impact-report")
+    p.add_argument("--evidence-id", default="")
 
     p = sub.add_parser("pulse-plan")
     p.add_argument("--input", required=True)
@@ -1593,6 +1786,7 @@ def main(argv: list[str] | None = None) -> int:
                     store.v5_lifecycle().frontier(
                         limit=args.limit,
                         include_history=args.history,
+                        campaign_id=args.campaign,
                     )
                 )
             else:
@@ -1614,11 +1808,17 @@ def main(argv: list[str] | None = None) -> int:
                         workers=args.workers,
                         mode=args.mode,
                         research_ids=args.memory_ids,
+                        campaign_id=args.campaign,
                         host_task_scope_id=args.host_task_scope_id,
                         background_chunk_ids=args.background_chunk_ids,
                     )
                 )
             else:
+                if args.campaign:
+                    raise ValueError(
+                        "explicit plan-round --campaign is available only for V5; "
+                        "V4 keeps its frozen active-Campaign behavior"
+                    )
                 if args.background_chunk_ids:
                     raise ValueError(
                         "background chunk selection is available only for V5 planning"
@@ -2180,6 +2380,89 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print_json(report)
             return 0 if report["ok"] else 2
+        elif args.command == "paper-continuation-plan":
+            _print_json(
+                store.v5_lifecycle().paper_continuation().create_plan(
+                    args.snapshot_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "paper-continuation-status":
+            continuation = store.v5_lifecycle().paper_continuation()
+            _print_json(
+                continuation.status(args.plan_id)
+                if args.plan_id
+                else continuation.status_all()
+            )
+        elif args.command == "paper-continuation-dispose":
+            _print_json(
+                store.v5_lifecycle().paper_continuation().record_disposition(
+                    args.plan_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "evidence-library-status":
+            _print_json(store.evidence().status())
+        elif args.command == "evidence-query":
+            _print_json(
+                store.evidence().query(
+                    query=args.query,
+                    limit=args.limit,
+                    include_inactive=args.include_inactive,
+                )
+            )
+        elif args.command == "evidence-sync-retry":
+            _print_json(
+                store.evidence().paper_snapshot_frozen(
+                    args.snapshot_id,
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "evidence-import-fact-graph":
+            inventory = _authorized_fact_evidence_inventory(
+                store, args.source_root
+            )
+            if inventory["source_project_id"] != args.expected_project_id:
+                raise ValueError(
+                    "Evidence import expected project id does not match source"
+                )
+            _print_json(
+                store.evidence().import_fact_graph(
+                    source_root=args.source_root,
+                    inventory=inventory,
+                    actor=args.actor,
+                    reason=args.reason,
+                )
+            )
+        elif args.command == "evidence-bridge-prepare":
+            _print_json(
+                store.evidence().prepare_bridge(
+                    selection_path=args.selection,
+                    actor=args.actor,
+                    reason=args.reason,
+                    output_path=args.output,
+                )
+            )
+        elif args.command == "evidence-bridge-check":
+            _print_json(store.evidence().bridge_check(args.bridge_id))
+        elif args.command == "evidence-mark":
+            _print_json(
+                store.evidence().mark(
+                    evidence_id=args.evidence_id,
+                    status=args.status,
+                    actor=args.actor,
+                    reason=args.reason,
+                    replacement_evidence_ids=args.replacement_evidence_id,
+                    supersedes_disposition_ids=args.supersedes_disposition_id,
+                    artifact=args.artifact,
+                )
+            )
+        elif args.command == "evidence-impact-report":
+            _print_json(
+                store.evidence().impact_report(evidence_id=args.evidence_id)
+            )
         elif args.command == "pulse-plan":
             payload = _json_file(args.input)
             require_exact_keys(

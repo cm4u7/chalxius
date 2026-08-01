@@ -13,7 +13,11 @@ from mathgraph.cli import (
     _authorized_fact_graph_append_target,
     _authorized_fact_graph_inventory,
 )
-from mathgraph.contracts import sha256_bytes
+from mathgraph.contracts import sha256_bytes, sha256_json
+from mathgraph.decision_preflight import (
+    V5_FINDING_CLASSES,
+    validate_decision_against_capsule,
+)
 from mathgraph.interfaces import (
     clause_is_conditional,
     referenced_premise_clause_tokens,
@@ -672,7 +676,10 @@ class BTTFFieldRepairTests(unittest.TestCase):
             candidate_root = Path(card["runtime_binding"]["skill_root"])
             self.assertTrue((candidate_root / "scripts" / "chx_ledger.py").is_file())
             self.assertEqual(card["runtime_binding"]["skill_root"], str(candidate_root))
-            self.assertEqual(card["runtime_binding"]["skill_version"], "0.4.4")
+            current_version = (
+                Path(__file__).resolve().parents[1] / "VERSION"
+            ).read_text(encoding="utf-8").strip()
+            self.assertEqual(card["runtime_binding"]["skill_version"], current_version)
 
             mismatch = copy.deepcopy(card["runtime_binding"])
             mismatch["skill_version"] = "0.4.3"
@@ -693,7 +700,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 run_id="run-runtime-match-001",
                 task_card=card_path,
             )
-            self.assertEqual(started["skill_version"], "0.4.4")
+            self.assertEqual(started["skill_version"], current_version)
 
     def test_chx004_inventory_and_append_target_are_explicit_read_only_routes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -826,6 +833,299 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     for error in stale_audit.errors
                 )
             )
+
+    def test_chx001_aborted_round_uses_exact_bound_runtime_not_current_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            store = self._store(base / "project", "historical-runtime")
+            lifecycle = store.v5_lifecycle()
+            bound_root = base / "bound-chalxius-0.4.4"
+            bound_root.mkdir()
+            version_path = bound_root / "VERSION"
+            manifest_path = bound_root / "MANIFEST.sha256"
+            version_path.write_text("0.4.4\n", encoding="utf-8")
+            manifest_path.write_text("fixture manifest\n", encoding="utf-8")
+            semantic = {
+                "schema_version": 1,
+                "skill_root": str(bound_root),
+                "skill_version": "0.4.4",
+                "version_file_sha256": sha256_bytes(version_path.read_bytes()),
+                "manifest_file_sha256": sha256_bytes(manifest_path.read_bytes()),
+                "worker_ledger_contract": "exact_task_card_runtime_binding_required",
+            }
+            bound_runtime = {
+                **semantic,
+                "runtime_identity_sha256": sha256_json(semantic),
+            }
+            research = lifecycle.add_research(
+                {"kind": "direction", "claim": "Freeze a historical runtime task."},
+                actor="main",
+            )
+            with patch.object(lifecycle, "_runtime_binding", return_value=bound_runtime):
+                planned = lifecycle.create_round(
+                    workers=1,
+                    research_ids=[research["research_id"]],
+                )
+
+            with self.assertRaisesRegex(ValueError, "runtime binding drifted"):
+                lifecycle.round_status(planned["round_id"])
+            with store.v5_mutation_lock(command="work-unit-abort"):
+                store.reasoning_modes().abort_work_unit(
+                    round_id=planned["round_id"],
+                    actor="main",
+                    reason="Freeze before inspecting with a newer runtime.",
+                )
+            status = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(status["work_unit_state"], "aborted")
+            self.assertEqual(status["frozen_aborted_count"], 1)
+            self.assertTrue(lifecycle.audit().current_ok)
+
+            version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
+                lifecycle.round_status(planned["round_id"])
+
+    def test_completed_round_uses_valid_receipts_as_historical_runtime_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            store = self._store(base / "project", "completed-historical-runtime")
+            lifecycle = store.v5_lifecycle()
+            bound_root = base / "bound-chalxius-0.4.4"
+            bound_root.mkdir()
+            version_path = bound_root / "VERSION"
+            manifest_path = bound_root / "MANIFEST.sha256"
+            version_path.write_text("0.4.4\n", encoding="utf-8")
+            manifest_path.write_text("fixture manifest\n", encoding="utf-8")
+            semantic = {
+                "schema_version": 1,
+                "skill_root": str(bound_root),
+                "skill_version": "0.4.4",
+                "version_file_sha256": sha256_bytes(version_path.read_bytes()),
+                "manifest_file_sha256": sha256_bytes(manifest_path.read_bytes()),
+                "worker_ledger_contract": "exact_task_card_runtime_binding_required",
+            }
+            bound_runtime = {
+                **semantic,
+                "runtime_identity_sha256": sha256_json(semantic),
+            }
+            source = lifecycle.add_research(
+                {"kind": "direction", "claim": "Attack the historical fixture."},
+                actor="main",
+            )
+            with patch.object(lifecycle, "_runtime_binding", return_value=bound_runtime):
+                planned = lifecycle.create_round(
+                    workers=1,
+                    mode="refute",
+                    research_ids=[source["research_id"]],
+                )
+                assignment = planned["assignments"][0]
+                payload = {
+                    "schema_version": 5,
+                    "project_id": store.project_id(),
+                    "round_id": planned["round_id"],
+                    "assignment_id": assignment["assignment_id"],
+                    "worker_id": assignment["worker_id"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "blackboard_snapshot_sha256": assignment[
+                        "blackboard_snapshot_sha256"
+                    ],
+                    "outcome": "evidence",
+                    "claim": "The bounded historical attack found no counterexample.",
+                    "content": "The checked boundary cases survived.",
+                    "narrative": {
+                        "rationale": "Exercise the completed-round boundary.",
+                        "summary": "No counterexample.",
+                        "intuition": "The historical result remains useful.",
+                        "limitations": "This bounded check is not a proof.",
+                    },
+                    "artifacts": [],
+                    "attack_learning": None,
+                    "obligation_dispositions": [],
+                    "computation_manifest": None,
+                    "research_assurance": {
+                        "source_uses": [],
+                        "route_invalidations": [],
+                        "extremal_cases": [],
+                        "claim_strength": [],
+                        "contour_substitutions": [],
+                        "claimed_structures": [],
+                        "program_math_alignments": [],
+                    },
+                }
+                return_path = Path(assignment["return_path"])
+                return_path.write_text(
+                    json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                    encoding="utf-8",
+                )
+                receipt = lifecycle.ingest_return(
+                    round_id=planned["round_id"],
+                    assignment_id=assignment["assignment_id"],
+                    worker_final_sha256=sha256_bytes(return_path.read_bytes()),
+                )
+                self.assertEqual(receipt["status"], "ingested")
+
+            status = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(status["work_unit_state"], "completed")
+            self.assertEqual(status["ingested_count"], 1)
+            self.assertTrue(lifecycle.audit().current_ok)
+            self.assertTrue(store.experiments().audit_all()["ok"])
+
+            receipt_path = (
+                store.rounds_dir
+                / planned["round_id"]
+                / "returns"
+                / f"{assignment['assignment_id']}.receipt.json"
+            )
+            original_receipt = receipt_path.read_text(encoding="utf-8")
+            tampered = json.loads(original_receipt)
+            tampered["return_sha256"] = "0" * 64
+            receipt_path.write_text(
+                json.dumps(tampered, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "return bytes/hash mismatch"):
+                lifecycle.round_status(planned["round_id"])
+            receipt_path.write_text(original_receipt, encoding="utf-8")
+
+            version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
+                lifecycle.round_status(planned["round_id"])
+
+    def test_chx002_local_and_gateway_decision_validators_share_finding_classes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project", "finding-classes")
+            fact = Fact(
+                problem_id=store.project_id(),
+                author="field-repair-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The finding-class fixture holds.",
+                proof="Direct proof.",
+            )
+            lifecycle, release = self._legacy_fact_release(store, [fact])
+            capsule = lifecycle.verifier_capsule(release["release_id"])
+            for finding_class in V5_FINDING_CLASSES:
+                decision = self._correct_decision(lifecycle, release)
+                finding_id = f"finding-{finding_class}"
+                decision["verdict"] = "reject"
+                decision["findings"] = [
+                    {
+                        "id": finding_id,
+                        "severity": "gap",
+                        "class": finding_class,
+                        "description": "One bounded verifier finding.",
+                        "repair_hint": "Repair and seal a new Candidate Release.",
+                    }
+                ]
+                decision["check_results"][0] = {
+                    **decision["check_results"][0],
+                    "status": "fail",
+                    "findings": [finding_id],
+                }
+                self.assertTrue(
+                    validate_decision_against_capsule(decision, capsule)["valid"]
+                )
+                self.assertTrue(
+                    lifecycle.certification_record(
+                        decision, preflight_only=True
+                    )["valid"]
+                )
+
+            invalid = self._correct_decision(lifecycle, release)
+            invalid["verdict"] = "reject"
+            invalid["findings"] = [
+                {
+                    "id": "finding-unknown",
+                    "severity": "gap",
+                    "class": "source_transcription_coverage",
+                    "description": "This class is outside the shared enum.",
+                    "repair_hint": "Use one permitted class.",
+                }
+            ]
+            invalid["check_results"][0] = {
+                **invalid["check_results"][0],
+                "status": "fail",
+                "findings": ["finding-unknown"],
+            }
+            with self.assertRaisesRegex(ValueError, "/findings/0/class is invalid"):
+                validate_decision_against_capsule(invalid, capsule)
+            with self.assertRaisesRegex(ValueError, r"finding\[1\] class is invalid"):
+                lifecycle.certification_record(invalid, preflight_only=True)
+
+    def test_chx003_later_admission_cannot_rewrite_older_rejected_release_lineage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project", "sealed-lineage-time")
+            lifecycle = store.v5_lifecycle()
+            older_fact = Fact(
+                problem_id=store.project_id(),
+                author="older-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The chronological lineage claim holds.",
+                proof="An older candidate argument.",
+            )
+            older_research = self._current_task_bound_research(
+                lifecycle, older_fact.statement
+            )
+            older_payload = self._release_payload(
+                [older_fact], [older_research["research_id"]]
+            )
+            older_payload["verification_plan"]["required_checks"].append(
+                "research_obligation_evidence"
+            )
+            older_release = lifecycle.candidate_release(
+                older_payload,
+                producer="older-producer",
+            )
+            rejection = self._correct_decision(lifecycle, older_release)
+            rejection["verdict"] = "reject"
+            rejection["findings"] = [
+                {
+                    "id": "gap-old-route",
+                    "severity": "gap",
+                    "class": "mathematical",
+                    "description": "The older proof route is incomplete.",
+                    "repair_hint": "Use an independent repaired route.",
+                }
+            ]
+            rejection["check_results"][0] = {
+                **rejection["check_results"][0],
+                "status": "fail",
+                "findings": ["gap-old-route"],
+            }
+            lifecycle.certification_record(rejection)
+
+            repaired_fact = Fact(
+                problem_id=store.project_id(),
+                author="new-producer",
+                predecessors=[],
+                statement=(
+                    "[CLAIM:ROOT] [HYP:H1] The chronological lineage claim holds."
+                ),
+                proof="A fresh independent proof under H1.",
+            )
+            repaired_research = self._current_task_bound_research(
+                lifecycle, repaired_fact.statement
+            )
+            repaired_payload = self._release_payload(
+                [repaired_fact], [repaired_research["research_id"]]
+            )
+            repaired_payload["verification_plan"]["required_checks"].append(
+                "research_obligation_evidence"
+            )
+            repaired_release = lifecycle.candidate_release(
+                repaired_payload,
+                producer="new-producer",
+            )
+            self._admit_release(
+                lifecycle,
+                repaired_release,
+                gateway="chronology-gateway",
+            )
+
+            self.assertEqual(
+                lifecycle.release(older_release["release_id"])["successor_contracts"],
+                [],
+            )
+            self.assertIn(repaired_fact.fact_id, store.fact_ids())
+            self.assertTrue(lifecycle.audit().current_ok)
 
 
 if __name__ == "__main__":

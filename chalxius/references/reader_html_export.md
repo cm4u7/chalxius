@@ -124,24 +124,32 @@ Unknown or missing fields fail closed. The top-level fields are:
 `theme_order`, `target_order`, and `prerequisite_order` are semantic input, not
 mutable runtime layout state. The renderer validates and preserves those lists
 verbatim, and `target_order` remains the navigation order. Canonical spatial
-placement is separate: synthetic multi-target themes occupy the innermost core,
-target cards occupy a central ring, and every remaining packet node occupies an
-outward ring indexed by its undirected graph distance from the target set.
-Packet order seeds each ring. For at most 1,200 scored edges, exact radial
-proper-crossing scoring retains the best of that baseline, eight fixed circular
-neighbor-sweep pairs, and at most 48 deterministic adjacent ring swaps across
-two refinement passes, so the selected order cannot contain more scored
-crossings than the baseline. Ring radii use exact chord spacing. For at most
-320 nodes and 1,200 edges, a second bounded deterministic phase applies
-weighted edge attraction, same-ring repulsion, and seed-angle tethering, then
-scores fixed blends. It never accepts more crossings, boundary-clearance
-violations, maximum edge length, or total edge length than the selected radial
-seed. Canonical placement measures each card in its current full or minimized
-state and preserves at least 72 model pixels between connected-card boundaries,
-plus a fixed ring-spacing margin, so compaction cannot erase the visible
-relation segment and direction markers.
-Larger graphs preserve the deterministic seed. Neither search rewrites semantic
-lists, topology, or packet bytes, and card sizing does not invoke them.
+placement is separate. It first computes the former target-distance radial
+layout as a deterministic angular seed: packet order, eight fixed circular
+neighbor-sweep pairs, at most 48 adjacent swaps, and the bounded angular
+compaction remain available for this seed. It then creates one deterministic
+local center per theme. Explicit `theme_id` remains the primary membership;
+the renderer additionally derives presentation-only shared membership when a
+node lies in the strong `prerequisite`/`support` upstream closure of targets
+from another theme. Weak, `repair`, and `conflict` edges never create shared
+membership. This derivation changes no packet field or source relation.
+
+Each theme receives `ceil(member_count / 6)` local rings. Ring radii use current
+card footprints and exact chord density, and every ring around one center has
+the same centerline spacing. Within a local ring, seed angles determine cyclic
+order and a deterministic circular mean determines phase. A one-theme node is
+placed on its assigned local ring. A multi-theme node receives one assignment
+per field and is placed deterministically in their geometric overlap; for two
+intersecting assigned circles this is an exact circle intersection, while a
+bounded symmetric solver supplies the deterministic compromise for higher-order
+overlap. Synthetic multi-target theme cards sit at their theme centers.
+
+The target-distance seed retains its no-worse-crossing and bounded-compaction
+guarantees; those guarantees are not misreported as an optimization guarantee
+for the final multi-center projection, whose crossing and clearance scores are
+recorded only as diagnostics. Larger graphs preserve the same deterministic
+theme projection. Neither phase rewrites semantic lists, topology, or packet
+bytes, and later card sizing never reruns the angular search.
 
 Every node includes:
 
@@ -212,6 +220,16 @@ nodes remain visible while at least one of their targets is eligible, but they
 are not packet source cards and are excluded from card minimization, sizing
 history, and source-card counts.
 
+Every theme also receives one or more dashed, color-coded local concentric
+orbits around its own center. Orbit nodes are locked, ungrabbable, unselectable,
+event-free presentation geometry. They
+are excluded from packet-node and edge counts, search, box selection, collision
+forces, provenance, and authority. Their short labels contain only the localized
+words `Theme field` plus the `theme_order` ordinal on the innermost ring, so a
+long theme label or TeX body
+cannot become an oversized canvas label. The full theme label remains in its
+reader detail.
+
 Every currently eligible real packet node and every currently eligible packet
 edge remains present on one continuing canvas. Minimization changes only a
 card's visual size: it never hides a node, suppresses an edge, or changes graph
@@ -220,18 +238,27 @@ size and minimizes every eligible non-target card. `All cards` maximizes every
 eligible real card, including isolated cards. These are sizing actions rather
 than view modes; if every eligible node is a target, their resulting size states
 may be identical. A compact floating dock also provides explicit `Fit view`,
-layout reset, sizing undo/redo, appearance selection, and optional-layer
-controls.
+layout reset, sizing undo/redo, appearance selection, optional-layer controls,
+and a session-only orbit-gravity toggle. Orbit gravity defaults on.
 
 Primary-button dragging from empty canvas draws a visible selection rectangle.
 Every visible node whose rendered bounds overlap that rectangle joins the
 selection; Shift, Option, Control, or Command preserves the existing set and
 adds the new rectangle. Dragging any selected card body moves every selected
-node by the same model-space offset, preserving their relative positions.
-Those manual coordinates are page-session pins only. Selection and movement do
-not alter packet topology, edge direction, semantic order, source text, or
-authority. A background click clears the set. Direct touch or pen contact pans
-the canvas instead of creating a selection rectangle.
+node by the same model-space offset, preserving their relative positions during
+the gesture. With orbit gravity on, release records each real card's new
+page-session angular anchor relative to every assigned theme center; damped
+gravity then attracts it back to one local ring or balances it in the overlap
+of multiple theme fields. A synthetic multi-target theme card or any card dragged
+while orbit gravity is off keeps an ordinary page-session Cartesian pin.
+During an orbit-off drag, the gesture set remains fixed, but an existing
+Cartesian pin that actually enters the protected collision gap yields to
+repulsion and atomically replaces its own pin with the displaced coordinate.
+Unrelated pins stay fixed, pinned cards receive no attraction or radial tether,
+and the solver creates no new pin.
+Selection and movement do not alter packet topology, edge direction, semantic
+order, source text, or authority. A background click clears the set. Direct
+touch or pen contact pans the canvas instead of creating a selection rectangle.
 
 Any real card, regardless of role, has a node-local size toggle that minimizes
 or maximizes that card only. Full and compact cards place the toggle center at
@@ -295,65 +322,64 @@ a layer switch returns at its prior size when the layer is enabled again.
 
 Every sizing action preserves the current selection, pan, zoom, graph ordering,
 and normalized 29%/50% control pivot. The exporter computes one deterministic
-canonical position for every packet node. Synthetic multi-target theme nodes
-occupy the innermost core, targets occupy the next central ring, and all other
-nodes occupy progressively outward rings by undirected graph distance from the
-target set. Packet order deterministically seeds each ring. Eight fixed circular
-weighted-neighbor sweep pairs followed by at most 48 adjacent ring-swap
-candidates across two refinement passes may reorder nodes within a ring; prerequisite,
-support, repair, and conflict relations have weights `4`, `2`, `1`, and `1`.
-When the packet has at most 1,200 scored edges, the renderer exactly counts
-proper crossings after every half-sweep and retains the best-so-far radial
-order. Crossing count is primary; weighted crossing penalty and packet-order
-displacement provide deterministic tie breaks. Since packet order is the
-initial best-so-far, the final order is guaranteed to have no more scored
-crossings than that baseline. Packets above the edge bound skip the quadratic
-comparison and preserve packet order. This bounded search does not claim a
-global minimum. Ring radii use chord spacing rather than circumference
-averages. A subsequent deterministic angular relaxation, bounded to 320 nodes
-and the same 1,200-edge ceiling, minimizes maximum and total link length
-subject to no-worse crossing, card-clearance, and collision constraints. The
-canonical boundary gap for connected cards is 72 model pixels. It runs only
-for initial canonical placement and explicit
-`Reset layout`, never for card sizing, sizing undo/redo, layer changes, or box
-selection. Compact silhouettes collapse about the control pivot, and
-Cytoscape reattaches each visible edge to the changed silhouette. Sizing derives
-one two-axis model-position compensation for every changed card to keep that
-pivot fixed. If the card was manually pinned, the renderer also replaces that
-existing pin; it never creates a session pin for an unpinned card. Sizing never silently fits the
-canvas, so attention does not jump to another card. `Fit view` remains an
-explicit action and uses a fixed maximum zoom.
+canonical position for every packet node. A bounded target-distance radial
+search first supplies graph-aware seed angles. The final projection then assigns
+one radius per theme in exact `theme_order`; all real cards with that `theme_id`
+share the radius, while seed angle order and phase keep the initial result
+deterministic. Synthetic multi-target theme nodes occupy the innermost core.
+This search runs only for initial canonical placement and explicit `Reset
+layout`, never for card sizing, sizing undo/redo, layer changes, or box
+selection. Compact silhouettes collapse about the control pivot, and Cytoscape
+reattaches each visible edge to the changed silhouette. Sizing derives one
+two-axis model-position compensation for every changed card to keep that pivot
+fixed. If the card has an ordinary Cartesian pin, the renderer also replaces
+that existing pin; it never creates a session pin for an unpinned card. Sizing
+never silently fits the canvas, so attention does not jump to another card.
+`Fit view` remains an explicit action and uses a fixed maximum zoom.
 
-Card sizing does not rerun the canonical radial search, but every effective
-size delta does run a separate deterministic fourteen-pass convergence after
-the new silhouettes exist. This includes a local toggle, the directional and
-complete-path actions, a multi-target topic path, `All targets`, `All cards`,
-undo, and redo. A direct card or path/topic anchor is fixed at the compensated
-29%/50% pivot; bulk actions have no arbitrary fixed card and seed the force with
-the complete changed set. The force neighborhood is the seed set plus at most
-two visible graph hops and one immediate collision halo; every node outside it
-is a fixed boundary. Nearby silhouettes repel below the 72-model-pixel gap,
-visible relation neighbors attract only above the 116-model-pixel comfortable
-gap, and separate radial and tangential springs retain the canonical ring and
-angular order. The current pan and zoom are preserved, the pass count is fixed
-rather than animated to idle, and graphs above 240 visible nodes keep the size
-change without automatic convergence.
+Card sizing does not rerun the canonical angular search, but every effective
+size delta recomputes safe orbit radii and starts a bounded 24-frame damped
+convergence after the new silhouettes exist. This includes a local toggle, the
+directional and complete-path actions, a multi-target topic path, `All targets`,
+`All cards`, undo, and redo. A direct card or path/topic anchor is fixed at the
+compensated 29%/50% pivot; bulk actions have no arbitrary fixed card and seed
+the force with the complete changed set. The force neighborhood is the seed set
+plus at most two visible graph hops and one immediate collision halo. At most
+240 active neighborhood nodes move; all other visible nodes are still measured
+as fixed collision and relation boundaries, so a large map does not lose local
+response merely because its total visible-node count exceeds 240. Nearby
+silhouettes repel below the 72-model-pixel gap, visible relation neighbors
+attract only above the 116-model-pixel comfortable gap, and separate radial and
+tangential springs retain every assigned local theme ring and per-center angular
+anchor. Shared nodes average those bounded field forces and receive a weak
+canonical overlap tether until the user gives them new page-session angles. The
+current pan and zoom are preserved. Ordinary displays expose the bounded frames
+as visible motion; `prefers-reduced-motion` executes the same bounded settlement
+without animation. Neither path becomes an idle simulation.
 
 The canvas follows trackpad conventions: two-finger scrolling pans in both
 axes and pinch input performs explicit pointer-centered zoom. Primary-button
 dragging on empty canvas box-selects; every member receives a soft pale-green
 silhouette while the active/read node retains its moonlight cue. Dragging a
 selected card moves only that selection by one common offset. Starting a drag
-cancels any queued convergence. On release, the selected set remains fixed and
-seeds the same bounded radial-memory force described above; only its two-hop
+cancels any queued convergence. While the pointer moves, a two-frame rolling
+local force lets nearby relation and collision neighbors respond without
+destabilizing the whole map. On release, each real selected card records its
+per-center release angles and becomes movable under the 24-frame multi-center
+theme-field force; a
+synthetic theme card remains an ordinary fixed pin. Only the bounded two-hop
 plus immediate-collision neighborhood may settle, outside nodes remain fixed,
-and force-moved neighbors do not acquire manual pins. Layer changes and idle
-frames do not run it. Direct dragging of an unselected card makes that card the
-sole anchor. The size toggle itself never initiates a card drag. Touch and pen contact
-pan rather than box-select. A manually moved card or group is pinned only in the
-current page session; later sizing actions may replace an existing anchor pin
-for pivot compensation; automatic convergence never creates a pin. `Reset
-layout` clears all session pins. The Reload graph
+and force-moved unpinned neighbors acquire neither angular nor Cartesian pins.
+With gravity off, a previously pinned card may yield only when it actually
+collides with the current gesture anchor; its existing Cartesian pin is updated
+to the repelled coordinate, while every unrelated pin remains fixed. Layer
+changes and idle frames do not run the force. Direct dragging of an unselected
+card makes that card the sole release seed. The size toggle itself never
+initiates a card drag. Touch and pen contact pan rather than box-select. Turning
+orbit gravity off hides the presentation rings and retains subsequent manual
+positions as Cartesian pins; turning it back on converts real-card pins to
+per-center angular anchors and attracts them to their assigned fields. `Reset layout` clears
+both session pin forms. The Reload graph
 button or ordinary browser refresh clears every runtime
 size, history, selection, pin, and appearance choice while loading the latest
 atomically replaced file.
@@ -429,12 +455,13 @@ The renderer canonicalizes the validated JSON, embeds pinned Cytoscape.js
 3.34.0, MathJax 3.2.2 `tex-svg`, and 15 selected Tabler Icons 3.45.0 SVG assets
 whose generated sprite SHA-256 is
 `2fc9b17bafe11e9866ae515ad9b6b06790c8ceabece75e5b9362d41320093e87`,
-and derives canonical coordinates from target-distance radial rings,
-packet-order seeds, and, for at most 1,200 scored edges, eight fixed circular
-weighted-neighbor sweep pairs plus at most 48 adjacent ring-swap candidates
-with exact best-so-far proper-crossing scoring.
-That bounded search has deterministic tie breaks and no global-optimum claim;
-larger graphs preserve packet order. It records no timestamp or random id. The
+and derives angular seeds from target-distance radial rings, packet order, and,
+for at most 1,200 scored edges, eight fixed circular weighted-neighbor sweep
+pairs plus at most 48 adjacent ring-swap candidates with exact best-so-far
+proper-crossing scoring. It then deterministically projects those angles onto
+the concentric radii fixed by `theme_order`, card footprints, and theme density.
+That bounded seed search has deterministic tie breaks and no global-optimum
+claim; larger graphs preserve packet order. It records no timestamp or random id. The
 same semantic packet and same manifest-bound renderer assets therefore produce
 identical HTML bytes.
 Viewport size changes the final fit on screen but not the file or graph order.

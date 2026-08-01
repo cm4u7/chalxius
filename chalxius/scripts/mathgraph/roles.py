@@ -110,6 +110,17 @@ ALL_COMMANDS = {
     "paper-logic-link-exploration",
     "paper-logic-project-blackboard",
     "paper-logic-audit",
+    "paper-continuation-plan",
+    "paper-continuation-status",
+    "paper-continuation-dispose",
+    "evidence-library-status",
+    "evidence-query",
+    "evidence-sync-retry",
+    "evidence-import-fact-graph",
+    "evidence-bridge-prepare",
+    "evidence-bridge-check",
+    "evidence-mark",
+    "evidence-impact-report",
 }
 OPERATOR_COMMANDS = ALL_COMMANDS - {
     "preflight-return",
@@ -222,6 +233,15 @@ ROLE_COMMANDS = {
         "paper-logic-link-exploration",
         "paper-logic-project-blackboard",
         "paper-logic-audit",
+        "paper-continuation-plan",
+        "paper-continuation-status",
+        "paper-continuation-dispose",
+        "evidence-library-status",
+        "evidence-query",
+        "evidence-sync-retry",
+        "evidence-bridge-prepare",
+        "evidence-bridge-check",
+        "evidence-impact-report",
     },
     # The cooperative host adapter alone attests that a real clean-context
     # subagent dispatch occurred. Workers cannot self-report this receipt.

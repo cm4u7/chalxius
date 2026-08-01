@@ -6,7 +6,7 @@
   "audience": "Readers with no prior knowledge of Chalxius, topological recursion, or the predecessor archive",
   "source_snapshot": {
     "id": "public-xy-swap-potential-v1",
-    "sha256": "5d6ffa73fb45c2e63b9351d94703619498c6c4ae8a8e409b3fd0284e2a04d947",
+    "sha256": "3504ee4c7beb617755a463e0bb6d7c04da99b9147101033d94ab12618d94ee2d",
     "description": "A sanitized public summary of a read-only predecessor-archive audit."
   },
   "presentation": {

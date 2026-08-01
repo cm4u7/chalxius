@@ -69,6 +69,9 @@ def review(
 
 
 def main() -> int:
+    current_skill_version = (
+        Path(__file__).resolve().parents[1] / "VERSION"
+    ).read_text(encoding="utf-8").strip()
     if allowed_commands("verifier") or allowed_commands("unknown-role"):
         raise RuntimeError("verifier or unknown role received project CLI capabilities")
     if "preflight-return" not in allowed_commands("worker") or any(
@@ -128,6 +131,21 @@ def main() -> int:
         )
     ):
         raise RuntimeError("Paper Logic role capabilities crossed boundaries")
+    for command in (
+        "paper-continuation-plan",
+        "paper-continuation-status",
+        "paper-continuation-dispose",
+    ):
+        if any(
+            command not in allowed_commands(role)
+            for role in ("main", "operator")
+        ) or any(
+            command in allowed_commands(role)
+            for role in ("worker", "verifier", "gateway", "host", "paper-auditor")
+        ):
+            raise RuntimeError(
+                f"{command} must remain a Main/Operator Paper-governance capability"
+            )
 
     skill_root = Path(__file__).resolve().parents[1]
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -148,6 +166,10 @@ def main() -> int:
         skill_root / "references" / "blackboard_graph_v4.md",
         skill_root / "references" / "data_contracts.md",
         skill_root / "references" / "paper_logic_graph_v1.md",
+        skill_root / "references" / "paper_input_contracts.md",
+        skill_root / "references" / "v5_worker_return_contract.md",
+        skill_root / "references" / "paper_continuation_contract.md",
+        skill_root / "references" / "evidence_plane.md",
         skill_root / "references" / "paper-reading-modes.md",
         skill_root / "references" / "math-grilling.md",
         skill_root / "references" / "fact-graph-grilling.md",
@@ -168,6 +190,8 @@ def main() -> int:
         skill_root / "assets" / "AGENTS.routing.md",
         skill_root / "agents" / "openai.yaml",
         skill_root / "INHERITANCE.lock.json",
+        skill_root / "scripts" / "paperlib",
+        skill_root / "scripts" / "paper_library.py",
     )
     policy_texts = {
         path.relative_to(skill_root).as_posix(): path.read_text(
@@ -178,7 +202,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.4.4 — Back to the Future",
+            "# Chalxius 0.5.0 — Back to the Future / Paper Continuation",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -190,8 +214,8 @@ def main() -> int:
             "Project-bound runs store their ledger at `PROJECT/chx-ledgers/`",
             "If `report_required=false`, say nothing about the CHX ledger",
             "Mixed 0.4.0 and 0.4.1-or-later bytes",
-            "run `attack-report --host-task-scope-id ID`",
-            "never infer approval from silence",
+            "`attack-report --host-task-scope-id ID`",
+            "silence and successful return never activate a",
             "memory-add --current-assurance",
             "fact-graph-inventory --source-root OLD",
         ),
@@ -202,8 +226,13 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.4.4"',
-            '"release_codename": "Back to the Future"',
+            '"version": "0.5.0"',
+            '"release_codename": "Back to the Future — Paper Continuation"',
+            '"authority": "cross_project_nontruth_sidecar"',
+            '"library_runtime": "bundled_native_local_cli"',
+            '"library_cli": "scripts/paperlib"',
+            '"zotero_dependency": false',
+            '"nonpaper_fact_import": "explicit_user_request_and_operator_only"',
             '"default_evidence_version": 5',
             '"v4_authority_inheritance": false',
             '"version": "0.3.2-code"',
@@ -211,8 +240,8 @@ def main() -> int:
             '"semantic_activation": "explicit_programming_grill_or_socratic_intent_only"',
             '"graph_mount_capability": false',
             '"research_authority": false',
-            '"renderer_revision": "chalxius-reader-html-17"',
-            '"layout": "deterministic_compact_radial_core_layers"',
+            '"renderer_revision": "chalxius-reader-html-20"',
+            '"layout": "deterministic_theme_multicenter_orbit_fields"',
             '"fixed_output": "visualizations/knowledge-map.html"',
             '"network_runtime": "disabled"',
             '"project_background_read_policy": "default_if_present_never_generate"',
@@ -221,13 +250,18 @@ def main() -> int:
             '"chalxius-chx-run-ledger-1"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
-            '"contract_revision": "chalxius-adverse-routing-evolution-1"',
-            '"activation": "explicit_operator_project_opt_in_only"',
+            '"contract_revision": "chalxius-adverse-routing-evolution-3"',
+            '"productive_contract_revision": "chalxius-adverse-routing-evolution-2"',
+            '"legacy_contract_revision": "chalxius-adverse-routing-evolution-1"',
+            '"activation": "prospective_default_for_new_v5_tasks_with_lazy_project_materialization"',
             '"proposal_activation": "user_decision_only"',
-            '"attack_report": "required_at_enabled_host_task_completion_and_separate_from_chx"',
+            '"attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx"',
             '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_and_manifest_file_hash_fail_closed_at_start"',
             '"automatic_inheritance": false',
             '"admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection"',
+            '"contract_revision": "chalxius-v5-campaign-scope-1"',
+            '"selection": "explicit_exact_research_campaign_id_only"',
+            '"scheduler": "v5_main_four_factor_frontier"',
         ),
         "references/reader_html_export.md": (
             "truth_effect=\"none\"",
@@ -236,6 +270,28 @@ def main() -> int:
             "Fact-plane nodes",
             "There is no watcher, local storage, or graph writeback.",
             "PDF production is outside this feature",
+        ),
+        "references/paper_continuation_contract.md": (
+            "paper-continuation-plan",
+            "paper_target_closure",
+            "philosophy_semantic_atomicity",
+            "philosophy_plain_language_clarity",
+            "Clear wording is the default",
+            "does not backfill old tasks",
+        ),
+        "references/paper_input_contracts.md": (
+            "paper_logic_minimal_logic_bundle.v1.example.json",
+            "missing=",
+            "paper_revised_writing",
+            "philosophy_atomicity",
+            "must not be placed in the input",
+        ),
+        "references/v5_worker_return_contract.md": (
+            "obligation_dispositions",
+            "complete`, `blocked`, or `not_applicable",
+            "program_math_alignments",
+            "ordinary language",
+            "does not create a Fact",
         ),
         "references/unified_learning_plane.md": (
             "Chalxius Learner",
@@ -282,8 +338,15 @@ def main() -> int:
             "two-phase immutable snapshot",
             "outcome kind alone",
         ),
+        "references/evidence_plane.md": (
+            "Evidence is a persistent cross-project nontruth plane",
+            "There is no automatic scanner or project discovery trigger",
+            "evidence_bridge_current",
+            "does not silently",
+            "No running 0.4.0 project is backfilled",
+        ),
         "references/adverse_routing_evolution.md": (
-            "counterexample return",
+            "`counterexample` return",
             "operator decision",
             "attack report is separate from the CHX",
             "worker_reported_counterexample_nontruth",
@@ -294,8 +357,8 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.4.4 `Back to the Future` candidate or release artifact",
-            "host-wide prospective authorization",
+            "The 0.5.0 `Back to the Future / Paper Continuation` release artifact",
+            "standing authorization",
             "attack-report",
             "Never backfill attack cases",
             "loads some 0.4.1-or-later",
@@ -303,6 +366,15 @@ def main() -> int:
             "V5 `profile-closure-status` computes local process",
             "V5 never activates a V1-V4 root",
             "Candidate Release/Certification/Fact boundary",
+        ),
+        "scripts/paperlib": (
+            "exec python3 -B",
+            "paper_library.py",
+        ),
+        "scripts/paper_library.py": (
+            'CONTRACT_REVISION = "chalxius-paper-library-1"',
+            'ARXIV_API_ENDPOINT = "https://export.arxiv.org/api/query"',
+            'EVIDENCE_KINDS = {"reviewed_paper_graph", "external_fact_graph"}',
         ),
         "references/adoption_policy_v4.md": (
             "have no Fact-admission authority",
@@ -380,7 +452,7 @@ def main() -> int:
         ledger_path = Path(started["ledger_path"])
         if (
             started["state"] != "open"
-            or started["skill_version"] != "0.4.4"
+            or started["skill_version"] != current_skill_version
             or started["report_required"]
             or ledger_path.parent != (project_root / "chx-ledgers").resolve()
         ):
@@ -400,8 +472,14 @@ def main() -> int:
             title="Self-test adverse routing",
             workflow_evidence_version=5,
         )
-        if adverse_store.adverse_routes().status()["enabled"]:
-            raise RuntimeError("adverse routing must be off before operator opt-in")
+        initial_adverse = adverse_store.adverse_routes().status()
+        if (
+            not initial_adverse["enabled"]
+            or initial_adverse["state_materialized"]
+            or initial_adverse["activation"]
+            != "prospective_default_user_authorization"
+        ):
+            raise RuntimeError("default adverse status must be enabled and nonmutating")
         adverse_store.adverse_routes().initialize(
             actor="self-test-user",
             reason="Exercise user-governed adverse learning.",
@@ -423,12 +501,53 @@ def main() -> int:
         adverse_assignment = adverse_round["assignments"][0]
         adverse_card_path = Path(adverse_assignment["task_card_path"])
         adverse_card = json.loads(adverse_card_path.read_text(encoding="utf-8"))
+        adverse_rule_ids = {
+            item["rule_id"]
+            for item in adverse_card.get("adverse_routing", {}).get(
+                "baseline_rules", []
+            )
+        }
         if (
-            len(adverse_card.get("adverse_routing", {}).get("baseline_rules", []))
-            != 8
+            len(adverse_rule_ids) != 9
+            or "baseline_hidden_conjunct_split" not in adverse_rule_ids
+            or any(
+                item.startswith("baseline_philosophy_")
+                for item in adverse_rule_ids
+            )
             or adverse_card["adverse_routing"]["approved_rules"]
         ):
             raise RuntimeError("adverse baseline task-card binding failed")
+        philosophy_target = adverse_lifecycle.add_research(
+            {
+                "kind": "challenge",
+                "claim": "Stress-test one explicitly philosophical argument.",
+                "adverse_domain_profile": "philosophy",
+            },
+            actor="self-test-main",
+        )
+        philosophy_round = adverse_lifecycle.create_round(
+            workers=1,
+            research_ids=[philosophy_target["research_id"]],
+            host_task_scope_id="self-test-philosophy-adverse-task",
+        )
+        philosophy_card = json.loads(
+            Path(
+                philosophy_round["assignments"][0]["task_card_path"]
+            ).read_text(encoding="utf-8")
+        )
+        philosophy_rule_ids = {
+            item["rule_id"]
+            for item in philosophy_card["adverse_routing"]["baseline_rules"]
+        }
+        if (
+            len(philosophy_rule_ids) != 12
+            or {
+                "baseline_philosophy_plain_language_substitution",
+                "baseline_philosophy_burden_charity_failure_surface",
+                "baseline_philosophy_operator_scope_equivalence",
+            }.difference(philosophy_rule_ids)
+        ):
+            raise RuntimeError("philosophy-only adverse baseline binding failed")
         adverse_return = {
             "schema_version": 5,
             "project_id": adverse_store.project_id(),
@@ -472,6 +591,8 @@ def main() -> int:
                 "program_math_alignments": [],
             },
             "attack_learning": {
+                "schema_version": 2,
+                "result_kind": "surviving_counterexample",
                 "attack_family": "quantifier_witness",
                 "target_pattern": "Pointwise witnesses are treated as uniform.",
                 "failure_mechanism": "One witness is reused outside its scope.",
@@ -483,6 +604,14 @@ def main() -> int:
                     "Compare their witness sets.",
                 ],
                 "success_boundary": "Refutes uniformity, not pointwise existence.",
+                "value_effects": [
+                    {
+                        "effect_kind": "claim_refuted",
+                        "before": "One uniform witness is asserted.",
+                        "after": "Only parameterwise witnesses remain viable.",
+                        "evidence": "The two valid witness sets are disjoint.",
+                    }
+                ],
                 "route_rule": {
                     "attack_family": "quantifier_witness",
                     "trigger": {
@@ -749,9 +878,9 @@ def main() -> int:
         or "connect-src 'none'" not in reader_html_first
         or "@@CHALXIUS_" in reader_html_first
         or reader_meta_first.get("renderer_revision")
-        != "chalxius-reader-html-17"
+        != "chalxius-reader-html-20"
         or reader_meta_first.get("layout")
-        != "deterministic_compact_radial_core_layers"
+        != "deterministic_theme_multicenter_orbit_fields"
         or reader_meta_first.get("packet_sha256") != reader_packet_sha256
         or reader_meta_first.get("reader_finalize") != expected_reader_finalize
         or reader_meta_first.get("truth_effect") != "none"
@@ -825,10 +954,24 @@ def main() -> int:
                 "lastSizingConvergencePasses",
                 "DYNAMIC_ATTRACTION_TARGET_GAP",
                 "dynamicAttractionEdges",
+                "pinnedCollisionYieldEnabled",
+                "repelledPinned",
+                "dynamicRepelledPinnedCount",
                 "RADIAL_RING_PHASE",
                 "CROSSING_REFINEMENT_CANDIDATE_LIMIT",
                 "layoutRefinementCandidates",
-                "compact-radial-core-layers",
+                "themeOrbitGroups",
+                "themeOrbitRadii",
+                "themeOrbitCenters",
+                "themeOrbitRingAssignments",
+                "sharedOrbitIntersectionPosition",
+                "themeOrbitCoordinates",
+                "themeOrbitRadiiByThemeId",
+                "nodeOrbitAssignmentsByNodeId",
+                "localized-multicenter-theme-field-equilibrium",
+                "deterministic-theme-multicenter-orbit-fields",
+                'id="orbit-gravity-button"',
+                "kind: 'theme-orbit'",
             )
         )
         or reader_html_first.count('data-context-command="') != 2
@@ -1044,7 +1187,7 @@ def main() -> int:
         if (
             reader_output.read_bytes() != reader_output_before
             or reader_receipt.get("renderer_revision")
-            != "chalxius-reader-html-17"
+            != "chalxius-reader-html-20"
             or reader_receipt.get("reader_finalize") != expected_reader_finalize
         ):
             raise RuntimeError(

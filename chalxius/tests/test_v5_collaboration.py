@@ -83,6 +83,8 @@ class V5CollaborationTests(unittest.TestCase):
                     },
                 }
             )
+        if "adverse_routing" in card:
+            payload["attack_learning"] = None
         return payload
 
     def test_two_wave_pulse_keeps_good_work_when_one_peer_is_quarantined(self) -> None:

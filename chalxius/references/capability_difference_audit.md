@@ -274,6 +274,38 @@ Fact text and hashes are untouched. Packet bytes, topology, semantic ordering,
 truth authority, admission, persistence, services, and writeback remain
 unchanged.
 
+Renderer revision 18 remains presentation-only and replaces the final canonical
+projection with theme-ordered concentric orbits. The previous target-distance
+radial model remains a deterministic angular seed; locked orbit rings are
+unselectable and excluded from source counts. With default-on session gravity,
+dragging produces only a rolling two-frame local response and release preserves
+the real card's new angle while attracting it to the corresponding theme radius
+for at most 24 frames. Size changes recompute safe orbit radii. The active force
+neighborhood is capped at 240 nodes even when the whole map is larger, with all
+outside visible nodes treated as fixed boundaries. Reduced-motion runs the same
+bounded settlement synchronously, the toggle creates no persistence, and idle
+simulation remains forbidden. Packet bytes, topology, semantic ordering, truth
+authority, admission, persistence, services, and writeback remain unchanged.
+
+Renderer revision 19 remains presentation-only and replaces only revision 18's
+final geometry. Each theme has a distinct deterministic center and one equally
+spaced local ring per up to six members. Explicit packet membership is extended
+for layout only by strong prerequisite/support upstream target closures; weak,
+repair, and conflict edges cannot create shared membership. Shared nodes receive
+multiple local assignments and deterministic overlap placement, and release
+preserves one angle per assigned center. The existing 2/24-frame and 240-active-
+node bounds, fixed outside boundary, reduced-motion behavior, no-idle rule,
+packet v1, and all truth and persistence boundaries remain unchanged.
+
+Renderer revision 20 remains presentation-only and repairs revision 19's
+orbit-off pin coupling. The current drag gesture remains a fixed anchor, but a
+previously pinned card that actually crosses the protected collision gap may
+yield to repulsion and atomically update its existing Cartesian pin. Unrelated
+pins stay fixed, no attraction or radial tether moves a pinned card, and no new
+pin is created by the solver. Multi-center geometry, packet v1, the 2/24-frame
+and 240-active-node bounds, no-idle behavior, authority, persistence, and
+writeback boundaries remain unchanged.
+
 Chalxius 0.4.1 adds only a CHX runtime ledger and its mandatory
 start/close reporting procedure. CHX-057 identified that 0.4.0 could finish a
 run without a task-scoped causal architecture account or a silent-zero rule.
@@ -292,7 +324,13 @@ extension is absent until an operator explicitly enables it. An old project,
 round, task card, or return that lacks the activation contract follows the
 0.4.0/0.4.1 code path and schema unchanged.
 
-The worker may autonomously abstract a counterexample into a route proposal,
+The later standing authorization changes only the prospective default: status
+and zero reports are read-only, the first new V5 refute card lazily materializes
+revision-2 state, and schema-2 learning also covers productive challenges.
+Revision-1 state and every frozen old card remain unchanged.
+
+The worker may autonomously abstract a surviving counterexample or structured
+productive challenge into a route proposal,
 but that proposal has no activation authority. The user-facing outcome is
 preserved through a separate attack report and three operator decisions:
 approve, approve after supplying a complete modified rule, or reject. Approved
@@ -321,9 +359,14 @@ four-factor ordering and read-time projection of historical eight-metric
 Research. Scores remain ordering-only with no eligibility cutoff. In an
 adverse-routing-enabled project, actual computation stages may queue one
 future nontruth program-math review with an additional scoped attack rule;
-ordinary refutation cards still receive exactly the original eight rules.
-Architecture issues are expressly forbidden from that route and remain CHX
-ledger material only.
+new ordinary refutation cards receive the original eight rules plus one
+general hidden-conjunct split. An exact frozen philosophy or mixed domain adds
+three user-approved philosophy-only attacks for faithful ordinary-language
+substitution, atomic burdens/strongest-charitable objection/independent failure
+surfaces, and quantifier-modal-scope-exception equivalence. Claim wording
+cannot activate those three. Earlier frozen cards keep their exact baseline.
+Architecture issues are expressly forbidden from every attack route and remain
+CHX ledger material only.
 
 The prospective 0.4.4 successor restores only the user-approved L1 and L2
 connections. L1 turns one promoted Blackboard item's exact bounded query into
@@ -341,6 +384,16 @@ longer occupies active task-card context. Historical full-body cards remain
 unchanged, and neither background nor context selection receives truth or
 admission authority.
 
+The later user-approved Campaign successor reconnects only explicit V5 scope.
+`frontier --campaign ID` and `plan-round --campaign ID` require exact stored
+Research associations and keep the existing four-factor ordering. A scoped
+round freezes one bounded nontruth Campaign snapshot and compact envelope;
+later Campaign events are future-only. The active-Campaign pointer is never an
+implicit V5 trigger, and unscoped calls, passive historical associations,
+frozen cards, L1/L2 context, Host authority, adverse routing, and Fact admission
+remain unchanged. This is a filtering/context adapter, not a second scheduler,
+expansion loop, or closure mechanism.
+
 The later field report
 `run-20260729T081913970946Z-2f0a9e345447/CHX-001` exposed a control-plane
 projection gap rather than an abort-authority failure: a valid work-unit abort
@@ -350,6 +403,33 @@ abort authority into status, uses `frozen_aborted`, reports zero live awaiting
 returns and the exact abort id, and makes strict audit reject any mismatch. It
 does not rewrite the abort, task cards, returns, Research, or Facts.
 
+The philosophy field report
+`run-20260730T145847217907Z-eedfc9368ea0/CHX-001–003` exposed a different
+coupling boundary: a large reviewed Paper graph could be flattened into thematic
+Research and a theorem-mode release, while structural `atomic_fact_dag` checks
+could not see hidden independently falsifiable claims and clean Fact audit said
+nothing about paper adequacy. The prospective Paper continuation surface now
+creates the complete selected target frontier, preserves exact closure ancestry,
+separates adequacy from Fact truth, and forces descended releases through exact
+Paper coverage. Philosophy releases also require one declared conjunct per Fact,
+ordinary-language paraphrases, reviewed term definitions, and independent fresh
+verification against hidden conjuncts or jargon. Existing projects, releases,
+and five admitted field Facts are not rewritten, downgraded, or made to repeat
+work.
+
+An independent public-interface forward test then found that these strict gates
+were not fully operable from their documentation: node/edge, review,
+disposition, release-overlay, and atomicity inputs lacked exact public shapes,
+while edge mismatches exposed no useful delta. The candidate now ships
+staging-tested minimal Logic and Audit fixtures, one exact-key contract for the
+whole Paper path, CLI schema pointers, and bounded `missing`/`extra` edge
+objects. A second public-only pass reached the generated worker card and exposed
+the adjacent missing return contract. The candidate now also publishes exact
+top-level, per-obligation, computation, research-assurance, and conditional
+adverse shapes, a copyable V5 template, prompt/help pointers, and actionable
+missing/unknown diagnostics. This is an interface-contract repair, not an
+adverse route rule.
+
 ## Residual risks to test
 
 - deterministic auto triggers may need calibration against real workloads;
@@ -358,6 +438,9 @@ does not rewrite the abort, task cards, returns, Research, or Facts.
 - previous-round campaign or novelty events, superseded Paper snapshots, stale
   Audit bases, sibling artifact paths, and unrelated pulse commitments must not
   close current work;
+- explicit Campaign scope must reject untagged or cross-Campaign Research before
+  round writes, preserve unscoped global ordering, and detect frozen-snapshot
+  damage or history truncation without invalidating later legitimate updates;
 - accepted-idempotent retries and audits must fail after closure-evidence drift;
 - legacy Danus import must preserve assurance without silently recertifying;
 - every pre-V5 project must remain readable and read-only as nontruth lineage;

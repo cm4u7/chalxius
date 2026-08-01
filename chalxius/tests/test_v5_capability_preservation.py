@@ -54,19 +54,27 @@ class V5CapabilityPreservationTests(unittest.TestCase):
                 "assets/reader_html_app.js",
                 "assets/reader_html_template.html",
                 "scripts/chx_ledger.py",
+                "scripts/mathgraph/adverse_routing.py",
                 "scripts/mathgraph/cli.py",
+                "scripts/mathgraph/decision_preflight.py",
+                "scripts/mathgraph/evidence.py",
                 "scripts/mathgraph/interfaces.py",
                 "scripts/mathgraph/modes.py",
+                "scripts/mathgraph/paper_continuation.py",
+                "scripts/mathgraph/paper_logic.py",
                 "scripts/mathgraph/project_background.py",
                 "scripts/mathgraph/reader_html.py",
                 "scripts/mathgraph/roles.py",
+                "scripts/mathgraph/store.py",
+                "scripts/mathgraph/v5_experiments.py",
                 "scripts/mathgraph/v5_lifecycle.py",
                 "scripts/mathgraph/v5_reader.py",
+                "scripts/mathgraph/verifier_capsule.py",
             ],
         )
         self.assertEqual(
             compatibility["project_schema_change"],
-            "prospective_v5_context_selection_indexed_background_runtime_binding_source_capability_and_adverse_provenance_only",
+            "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_and_explicit_paper_continuation_only",
         )
         self.assertEqual(
             compatibility["activation_absent_behavior"],
@@ -75,7 +83,7 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         self.assertFalse(compatibility["fact_admission_change"])
         self.assertEqual(
             compatibility["fact_admission_change_scope"],
-            "contract_unchanged_implementation_hardened_for_nonrecursive_recovery_and_future_legacy_premise_validation",
+            "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_and_prospective_explicit_paper_continuation_freshness",
         )
         task_context = lock["v5_task_context_surface"]
         self.assertEqual(
@@ -88,6 +96,35 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertEqual(task_context["truth_effect"], "none")
         self.assertFalse(task_context["fact_admission_change"])
+        campaign_scope = lock["v5_campaign_scope_surface"]
+        self.assertEqual(
+            campaign_scope["contract_revision"],
+            "chalxius-v5-campaign-scope-1",
+        )
+        self.assertEqual(
+            campaign_scope["selection"],
+            "explicit_exact_research_campaign_id_only",
+        )
+        self.assertEqual(
+            campaign_scope["scheduler"],
+            "v5_main_four_factor_frontier",
+        )
+        self.assertFalse(campaign_scope["active_campaign_pointer_default"])
+        self.assertFalse(campaign_scope["fact_admission_change"])
+        self.assertEqual(campaign_scope["truth_effect"], "none")
+        paper = lock["paper_continuation_surface"]
+        self.assertEqual(
+            paper["contract_revision"], "chalxius-v5-paper-continuation-1"
+        )
+        self.assertEqual(
+            paper["selection"],
+            "all_targets_without_score_cutoff_or_explicit_bounded_targets",
+        )
+        self.assertEqual(
+            paper["adequacy_state"], "separate_from_fact_truth_and_clean_audit"
+        )
+        self.assertIn("ordinary_language", paper["plain_language_gate"])
+        self.assertEqual(paper["historical_fact_effect"], "none")
 
     def test_every_036_cli_command_is_accounted_for(self) -> None:
         cli_path = SKILL_ROOT / "scripts" / "mathgraph" / "cli.py"

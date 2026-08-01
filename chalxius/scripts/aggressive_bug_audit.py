@@ -33,6 +33,13 @@ CONTEXT_TEST_MODULE = (
 )
 FIELD_TEST_MODULE = "tests.test_bttf_field_repairs.BTTFFieldRepairTests"
 READER_TEST_MODULE = "tests.test_reader_html.ReaderHtmlRenderTests"
+PAPER_TEST_MODULE = "tests.test_paper_logic_graph.PaperLogicGraphTests"
+CAMPAIGN_TEST_MODULE = (
+    "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests"
+)
+ADVERSE_TEST_MODULE = (
+    "tests.test_adverse_routing.AdverseRoutingEvolutionTests"
+)
 MUTANTS = (
     Mutant(
         name="frontier_limit_minus_one",
@@ -41,6 +48,269 @@ MUTANTS = (
         test=(
             f"{TEST_MODULE}."
             "test_frontier_limits_and_explicit_last_entry_have_no_truncation_error"
+        ),
+    ),
+    Mutant(
+        name="campaign_frontier_exact_match_bypassed",
+        old=(
+            "            if (\n"
+            "                campaign_id is not None\n"
+            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
+            "            ):\n"
+            "                continue\n"
+        ),
+        new=(
+            "            if False and (\n"
+            "                campaign_id is not None\n"
+            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
+            "            ):\n"
+            "                continue\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
+        ),
+    ),
+    Mutant(
+        name="campaign_active_pointer_becomes_implicit_v5_scope",
+        old=(
+            "        if campaign_id is not None:\n"
+            "            campaign_id = validate_campaign_id(campaign_id)\n"
+            "            self.store.campaigns().status(campaign_id)\n"
+            "        bases: dict[str, dict[str, Any]] = {}\n"
+        ),
+        new=(
+            "        campaign_id = campaign_id or self.store.campaigns().active()\n"
+            "        if campaign_id is not None:\n"
+            "            campaign_id = validate_campaign_id(campaign_id)\n"
+            "            self.store.campaigns().status(campaign_id)\n"
+            "        bases: dict[str, dict[str, Any]] = {}\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
+        ),
+    ),
+    Mutant(
+        name="campaign_snapshot_hash_bypass",
+        old=(
+            "            len(raw) > V5_MAX_CAMPAIGN_SNAPSHOT_BYTES\n"
+            "            or sha256_bytes(raw) != digest\n"
+        ),
+        new=(
+            "            len(raw) > V5_MAX_CAMPAIGN_SNAPSHOT_BYTES\n"
+            "            or False and sha256_bytes(raw) != digest\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_campaign_snapshot_tamper_fails_closed"
+        ),
+    ),
+    Mutant(
+        name="campaign_scope_omitted_from_round_manifest",
+        old=(
+            "            if campaign_scope is not None:\n"
+            "                manifest_semantic[\"campaign_scope\"] = campaign_scope\n"
+        ),
+        new=(
+            "            if False and campaign_scope is not None:\n"
+            "                manifest_semantic[\"campaign_scope\"] = campaign_scope\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_scoped_round_freezes_lightweight_nontruth_campaign_envelope"
+        ),
+    ),
+    Mutant(
+        name="campaign_bound_worker_reads_live_status",
+        old="                args.bound_campaign_status = frozen_status\n",
+        new=(
+            "                args.bound_campaign_status = "
+            "store.campaigns().status(requested_id)\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_scoped_round_freezes_lightweight_nontruth_campaign_envelope"
+        ),
+        target="mathgraph/cli.py",
+    ),
+    Mutant(
+        name="general_hidden_conjunct_baseline_omitted",
+        old="        baseline = list(BASELINE_ATTACK_RULES)\n",
+        new="        baseline = list(LEGACY_BASELINE_ATTACK_RULES)\n",
+        test=(
+            f"{ADVERSE_TEST_MODULE}."
+            "test_philosophy_baselines_require_an_explicit_validated_domain"
+        ),
+        target="mathgraph/adverse_routing.py",
+    ),
+    Mutant(
+        name="philosophy_baselines_activated_by_claim_keyword",
+        old=(
+            '            "philosophy_active": domain_profile in {"philosophy", "mixed"},\n'
+        ),
+        new=(
+            '            "philosophy_active": domain_profile in {"philosophy", "mixed"} '
+            'or "philosophy" in entry["claim"].casefold(),\n'
+        ),
+        test=(
+            f"{ADVERSE_TEST_MODULE}."
+            "test_philosophy_baselines_require_an_explicit_validated_domain"
+        ),
+        target="mathgraph/adverse_routing.py",
+    ),
+    Mutant(
+        name="philosophy_baselines_not_appended_for_exact_domain",
+        old='        if philosophy_scope["philosophy_active"]:\n',
+        new='        if False and philosophy_scope["philosophy_active"]:\n',
+        test=(
+            f"{ADVERSE_TEST_MODULE}."
+            "test_philosophy_baselines_require_an_explicit_validated_domain"
+        ),
+        target="mathgraph/adverse_routing.py",
+    ),
+    Mutant(
+        name="philosophy_scope_task_card_drift_bypassed",
+        old=(
+            "                if any(\n"
+            "                    scope[key] != expected_philosophy_scope[key]\n"
+            "                    for key in philosophy_scope_fields\n"
+            "                ):\n"
+        ),
+        new=(
+            "                if False and any(\n"
+            "                    scope[key] != expected_philosophy_scope[key]\n"
+            "                    for key in philosophy_scope_fields\n"
+            "                ):\n"
+        ),
+        test=(
+            f"{ADVERSE_TEST_MODULE}."
+            "test_philosophy_baselines_require_an_explicit_validated_domain"
+        ),
+        target="mathgraph/adverse_routing.py",
+    ),
+    Mutant(
+        name="paper_edge_delta_diagnostic_removed",
+        old='                f"missing_count={len(missing)} extra_count={len(extra)} "\n',
+        new='                "missing_count=unknown extra_count=unknown "\n',
+        test=(
+            f"{PAPER_TEST_MODULE}."
+            "test_public_minimal_logic_fixture_and_edge_diff_are_executable"
+        ),
+        target="mathgraph/paper_logic.py",
+    ),
+    Mutant(
+        name="candidate_release_public_schema_pointer_removed",
+        old='                "schema=references/paper_input_contracts.md"\n',
+        new='                "schema=unavailable"\n',
+        test=(
+            f"{TEST_MODULE}."
+            "test_candidate_release_exact_field_error_is_publicly_actionable"
+        ),
+    ),
+    Mutant(
+        name="worker_return_cli_public_schema_pointer_removed",
+        old=(
+            '            "references/v5_worker_return_contract.md and "\n'
+            '            "assets/worker_return.v5.assurance-no-adverse.template.json"\n'
+        ),
+        new=(
+            '            "schema unavailable and "\n'
+            '            "template unavailable"\n'
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_public_v5_worker_return_template_and_diagnostics_are_executable"
+        ),
+        target="mathgraph/cli.py",
+    ),
+    Mutant(
+        name="worker_return_top_level_delta_diagnostic_removed",
+        old=(
+            '                f"missing={missing}; unknown={unknown}; exact schema: "\n'
+            '                "references/v5_worker_return_contract.md"\n'
+        ),
+        new=(
+            '                f"missing={missing}; unknown={unknown}; exact schema: "\n'
+            '                "unavailable"\n'
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_public_v5_worker_return_template_and_diagnostics_are_executable"
+        ),
+    ),
+    Mutant(
+        name="worker_return_disposition_delta_diagnostic_removed",
+        old=(
+            '                f"unknown={sorted(actual_fields.difference(disposition_fields))}; "\n'
+            '                "exact schema: references/v5_worker_return_contract.md"\n'
+        ),
+        new=(
+            '                f"unknown={sorted(actual_fields.difference(disposition_fields))}; "\n'
+            '                "exact schema: unavailable"\n'
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_public_v5_worker_return_template_and_diagnostics_are_executable"
+        ),
+        target="mathgraph/v5_assurance.py",
+    ),
+    Mutant(
+        name="paper_continuation_transitive_ancestry_bypassed",
+        old=(
+            "            binding = record.get(\"metadata\", {}).get(\"paper_continuation\")\n"
+            "            if binding is not None:\n"
+            "                validated = self._validate_research_binding(binding, record=record)\n"
+            "                result.add(validated[\"plan_id\"])\n"
+            "            pending.extend(record.get(\"related_research_ids\", []))\n"
+        ),
+        new=(
+            "            binding = record.get(\"metadata\", {}).get(\"paper_continuation\")\n"
+            "            if binding is not None:\n"
+            "                validated = self._validate_research_binding(binding, record=record)\n"
+            "                result.add(validated[\"plan_id\"])\n"
+            "            # mutant: ignore transitive Research ancestry\n"
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_philosophy_paper_continuation_is_complete_atomic_and_current"
+        ),
+        target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="paper_revised_writing_authority_bypassed",
+        old="            if missing_writing:\n",
+        new="            if False and missing_writing:\n",
+        test=(
+            f"{TEST_MODULE}."
+            "test_philosophy_paper_continuation_is_complete_atomic_and_current"
+        ),
+    ),
+    Mutant(
+        name="philosophy_unreviewed_term_gate_bypassed",
+        old=(
+            "        if {item[\"term\"].casefold(): item for item in term_ledger} != (\n"
+            "            disposition_terms\n"
+            "        ):\n"
+        ),
+        new=(
+            "        if False and {item[\"term\"].casefold(): item for item in term_ledger} != (\n"
+            "            disposition_terms\n"
+            "        ):\n"
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_philosophy_paper_continuation_is_complete_atomic_and_current"
+        ),
+        target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="paper_verifier_evidence_omitted",
+        old="                    \"paper_continuation_evidence\": continuation_evidence,\n",
+        new="                    # mutant: omit verifier-visible continuation evidence\n",
+        test=(
+            f"{TEST_MODULE}."
+            "test_philosophy_paper_continuation_is_complete_atomic_and_current"
         ),
     ),
     Mutant(
@@ -393,6 +663,35 @@ MUTANTS = (
         ),
     ),
     Mutant(
+        name="completed_round_historical_runtime_boundary_bypassed",
+        old=(
+            "        completed = self._round_is_completed(round_dir, manifest)\n"
+            "        for card_path, card in frozen_cards:\n"
+        ),
+        new=(
+            "        completed = False\n"
+            "        for card_path, card in frozen_cards:\n"
+        ),
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_completed_round_uses_valid_receipts_as_historical_runtime_boundary"
+        ),
+    ),
+    Mutant(
+        name="completed_round_receipt_integrity_bypassed",
+        old=(
+            "            self._validated_ingest_receipt(\n"
+            "                round_dir=round_dir,\n"
+            "                assignment=assignment,\n"
+            "            )\n"
+        ),
+        new="            pass\n",
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_completed_round_uses_valid_receipts_as_historical_runtime_boundary"
+        ),
+    ),
+    Mutant(
         name="reader_summary_interface_and_math_projection_bypassed",
         old=(
             "    readable = _READER_INTERFACE_ANCHOR_RE.sub(\n"
@@ -416,6 +715,19 @@ MUTANTS = (
         test=(
             f"{READER_TEST_MODULE}."
             "test_revision_thirteen_box_selection_and_group_movement_contract_is_embedded"
+        ),
+        target="../assets/reader_html_app.js",
+    ),
+    Mutant(
+        name="reader_orbit_off_pinned_collision_yield_bypassed",
+        old=(
+            "    const pinnedCollisionYieldEnabled = !state.orbitGravity\n"
+            "      && ['drag', 'drag-release'].includes(reason);\n"
+        ),
+        new="    const pinnedCollisionYieldEnabled = false;\n",
+        test=(
+            f"{READER_TEST_MODULE}."
+            "test_revision_twenty_orbit_off_drag_repels_an_existing_session_pin"
         ),
         target="../assets/reader_html_app.js",
     ),
@@ -489,9 +801,16 @@ def main() -> int:
         "schema_version": 1,
         "scope": (
             "V5 truncation, exact-set, context authority, frozen background, "
-            "mode equivalence, source capability, adverse provenance, prior-Fact "
-            "routing, legacy premises, runtime identity, admission recovery, abort "
-            "status projection, Reader math projection, radial-memory layout, and "
+            "mode equivalence, source capability, adverse provenance, general hidden-"
+            "conjunct and philosophy-domain baseline gating, prior-Fact routing, "
+            "legacy premises, runtime identity, admission recovery, abort, "
+            "explicit Campaign exact-match scope and frozen snapshot integrity, "
+            "public Paper and V5 worker-return interface reachability and diagnostics, "
+            "Paper continuation "
+            "ancestry, revised-writing authority, philosophy "
+            "term review, verifier-visible evidence, "
+            "status projection, Reader math projection, multi-center theme-field layout, "
+            "orbit-off pinned-card collision repulsion, and "
             "off-by-one critical guards"
         ),
         "mutants": results,

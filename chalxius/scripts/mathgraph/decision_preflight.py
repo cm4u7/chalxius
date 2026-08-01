@@ -14,6 +14,20 @@ from pathlib import Path
 from typing import Any
 
 
+V5_FINDING_CLASSES: tuple[str, ...] = (
+    "mathematical",
+    "typing",
+    "scope",
+    "source_mismatch",
+    "source_access",
+    "reproducibility",
+    "evidence_access",
+    "protocol",
+    "assurance_scope",
+    "coverage",
+)
+
+
 def _exact(value: Any, fields: set[str], pointer: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{pointer or '/'} must be an object")
@@ -50,9 +64,13 @@ def _finding_ids(decision: dict[str, Any]) -> set[str]:
             raise ValueError(f"/findings/{index}/id is empty or duplicated")
         if item["severity"] not in {"critical_error", "gap"}:
             raise ValueError(f"/findings/{index}/severity is invalid")
-        for key in ("class", "description"):
-            if not isinstance(item[key], str) or not item[key].strip():
-                raise ValueError(f"/findings/{index}/{key} must be nonempty")
+        if item["class"] not in V5_FINDING_CLASSES:
+            raise ValueError(
+                f"/findings/{index}/class is invalid; allowed="
+                + ",".join(V5_FINDING_CLASSES)
+            )
+        if not isinstance(item["description"], str) or not item["description"].strip():
+            raise ValueError(f"/findings/{index}/description must be nonempty")
         if not isinstance(item["repair_hint"], str):
             raise ValueError(f"/findings/{index}/repair_hint must be a string")
         result.add(finding_id)

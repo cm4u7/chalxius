@@ -23,6 +23,7 @@ contracts in the linked V4 references.
 6. Novelty ledger
 7. V4 inheritance, append anchors, and expert assurance
 8. Paper Logic and Audit Graph evidence
+9. V5 Paper continuation and philosophy clarity
 
 ## Exploration memory
 
@@ -657,3 +658,29 @@ premises.
 Every Paper Logic object, review, readiness facet, bridge, mirror projection,
 and snapshot has `truth_effect: "none"`. Complete schemas and correction rules
 are in [paper_logic_graph_v1.md](paper_logic_graph_v1.md).
+
+## V5 Paper continuation and philosophy clarity
+
+An explicit V5 `paper-continuation-plan` binds one current Logic snapshot and
+materializes one current-assurance Research entry per selected `paper_target`.
+Its `paper_continuation` metadata freezes the plan hash, source hash, target and
+claim ids, exact reconstruction/source/edge closure, and required analysis
+fields. Managed worker results remain Research and descend through
+`related_research_ids`.
+
+Append-only `pcd-*` dispositions bind one exact managed result, terminal
+outcome, dialectical analysis, failure surfaces, technical-term ledger, and a
+content-addressed revised-writing copy. A correction names the exact current
+disposition; stale concurrent heads fail.
+
+A descended Candidate Release uses `paper_target_closure`, exact node coverage,
+Logic/Audit EvidenceRefs, `paper_continuation_ref`, and current disposition ids.
+Philosophy/mixed releases additionally carry `philosophy_atomicity`, with one
+Fact per declared independently falsifiable conjunct, ordinary-language Fact
+paraphrases, a plain abstract, and an exact reviewed term ledger. The fresh
+verifier checks that the inventory is complete and the paraphrases preserve the
+formal claim. Its closed capsule embeds the selected Paper objects, managed
+result Research, dispositions, and writing bindings, and authorizes the exact
+`paper_source` and `paper_revised_writing` bytes; ids or hashes alone do not
+satisfy the gate. Full schemas and historical policy are in
+[paper_continuation_contract.md](paper_continuation_contract.md).
