@@ -24,6 +24,8 @@ from .paper_logic_contracts import (
     PAPER_EDGE_ID_RE,
     PAPER_LOGIC_FEATURE_REVISION,
     PAPER_LOGIC_TRUTH_BOUNDARY,
+    PAPER_SOURCE_ROLE_CONTRACT_REVISION,
+    PAPER_SOURCE_ROLES,
     PAPER_NODE_ID_RE,
     PAPER_OBJECT_ID_RE,
     PAPER_PLANES,
@@ -57,6 +59,10 @@ _FEATURE_FIELDS = {
     "truth_boundary",
     "initialized_by",
 }
+_CURRENT_FEATURE_FIELDS = {
+    *_FEATURE_FIELDS,
+    "source_role_contract_revision",
+}
 _BUNDLE_FIELDS = {
     "schema_version",
     "feature_revision",
@@ -73,6 +79,7 @@ _BUNDLE_FIELDS = {
     "nodes",
     "edges",
 }
+_CURRENT_BUNDLE_FIELDS = {*_BUNDLE_FIELDS, "source_role"}
 _REVISION_FIELDS = {
     "schema_version",
     "feature_revision",
@@ -263,11 +270,12 @@ class PaperLogicStore:
 
     def _feature(self) -> dict[str, Any]:
         payload = self._read_json(self.feature_path)
-        require_exact_keys(
-            payload,
-            required=_FEATURE_FIELDS,
-            label="paper-logic feature manifest",
-        )
+        if set(payload) not in (_FEATURE_FIELDS, _CURRENT_FEATURE_FIELDS):
+            require_exact_keys(
+                payload,
+                required=_CURRENT_FEATURE_FIELDS,
+                label="paper-logic feature manifest",
+            )
         if (
             payload.get("schema_version") != 1
             or payload.get("feature_revision") != PAPER_LOGIC_FEATURE_REVISION
@@ -275,6 +283,10 @@ class PaperLogicStore:
             or payload.get("truth_boundary") != PAPER_LOGIC_TRUTH_BOUNDARY
         ):
             raise ValueError("paper-logic feature manifest binding mismatch")
+        if "source_role_contract_revision" in payload and payload[
+            "source_role_contract_revision"
+        ] != PAPER_SOURCE_ROLE_CONTRACT_REVISION:
+            raise ValueError("paper-logic source-role contract mismatch")
         require_string(payload, "initialized_by")
         return payload
 
@@ -306,6 +318,9 @@ class PaperLogicStore:
             "project_id": project["project_id"],
             "truth_boundary": PAPER_LOGIC_TRUTH_BOUNDARY,
             "initialized_by": actor.strip(),
+            "source_role_contract_revision": (
+                PAPER_SOURCE_ROLE_CONTRACT_REVISION
+            ),
         }
         self._write_json_once(self.feature_path, manifest)
         return manifest
@@ -1239,9 +1254,18 @@ class PaperLogicStore:
         actor: str,
     ) -> dict[str, Any]:
         feature = self._feature()
+        source_role_required = (
+            feature.get("source_role_contract_revision")
+            == PAPER_SOURCE_ROLE_CONTRACT_REVISION
+        )
         require_exact_keys(
             bundle,
-            required=_BUNDLE_FIELDS,
+            required=(
+                _CURRENT_BUNDLE_FIELDS
+                if source_role_required
+                else _BUNDLE_FIELDS
+            ),
+            optional=(set() if source_role_required else {"source_role"}),
             label="paper graph bundle",
         )
         if (
@@ -1258,6 +1282,9 @@ class PaperLogicStore:
         domain_profile = bundle["domain_profile"]
         if domain_profile not in DOMAIN_PROFILES:
             raise ValueError("paper graph bundle domain_profile is invalid")
+        source_role = bundle.get("source_role")
+        if source_role is not None and source_role not in PAPER_SOURCE_ROLES:
+            raise ValueError("paper graph bundle source_role is invalid")
         builder = require_string(bundle, "builder")
         builder_context_id = require_string(bundle, "builder_context_id")
         if builder != actor:
@@ -1285,6 +1312,9 @@ class PaperLogicStore:
                 or base_manifest["domain_profile"] != domain_profile
             ):
                 raise ValueError("audit graph/base snapshot paper binding mismatch")
+            base_source_role = base_manifest.get("source_role")
+            if source_role != base_source_role:
+                raise ValueError("audit graph/base snapshot source_role mismatch")
             if source["artifact_sha256"] not in {
                 item["artifact_sha256"]
                 for item in base_manifest["source_artifacts"]
@@ -1439,6 +1469,7 @@ class PaperLogicStore:
             "paper_id": paper_id,
             "graph_kind": graph_kind,
             "domain_profile": domain_profile,
+            **({"source_role": source_role} if source_role is not None else {}),
             "builder": builder,
             "builder_context_id": builder_context_id,
             "source": source,
@@ -1479,6 +1510,7 @@ class PaperLogicStore:
         require_exact_keys(
             revision,
             required=_REVISION_FIELDS,
+            optional={"source_role"},
             label="paper graph revision",
         )
         if (
@@ -1500,6 +1532,11 @@ class PaperLogicStore:
             raise ValueError("paper graph revision graph_kind is invalid")
         if revision["domain_profile"] not in DOMAIN_PROFILES:
             raise ValueError("paper graph revision domain_profile is invalid")
+        if (
+            "source_role" in revision
+            and revision["source_role"] not in PAPER_SOURCE_ROLES
+        ):
+            raise ValueError("paper graph revision source_role is invalid")
         if revision["required_review_profiles"] != list(
             REVIEW_PROFILES_BY_GRAPH_KIND[revision["graph_kind"]]
         ):
@@ -2010,6 +2047,11 @@ class PaperLogicStore:
             "paper_id": revision["paper_id"],
             "graph_kind": revision["graph_kind"],
             "domain_profile": revision["domain_profile"],
+            **(
+                {"source_role": revision["source_role"]}
+                if "source_role" in revision
+                else {}
+            ),
             "revision_ids": revision_ids,
             "base_snapshot_id": revision["base_snapshot_id"],
             "supersedes_snapshot_id": revision["supersedes_snapshot_id"],
@@ -2066,6 +2108,7 @@ class PaperLogicStore:
         require_exact_keys(
             manifest,
             required=_SNAPSHOT_FIELDS,
+            optional={"source_role"},
             label="paper snapshot manifest",
         )
         if (
@@ -2091,7 +2134,19 @@ class PaperLogicStore:
             self._validate_entry(entry, "paper snapshot edge entry")
         if manifest["truth_effect"] != "none":
             raise ValueError("paper snapshot truth_effect must be none")
+        if (
+            "source_role" in manifest
+            and manifest["source_role"] not in PAPER_SOURCE_ROLES
+        ):
+            raise ValueError("paper snapshot source_role is invalid")
         return manifest
+
+    def snapshot_source_role(self, snapshot_id: str) -> str:
+        """Return the prospective role or an explicit legacy compatibility value."""
+
+        return self.snapshot_manifest(snapshot_id).get(
+            "source_role", "legacy_unspecified"
+        )
 
     @staticmethod
     def _read_jsonl_objects(
@@ -2361,6 +2416,9 @@ class PaperLogicStore:
                     "paper_id": revision["paper_id"],
                     "graph_kind": revision["graph_kind"],
                     "domain_profile": revision["domain_profile"],
+                    "source_role": revision.get(
+                        "source_role", "legacy_unspecified"
+                    ),
                     "state": state,
                     "reviews": [
                         {

@@ -5,6 +5,7 @@
   "paper_id": "minimal-public-paper",
   "graph_kind": "audit",
   "domain_profile": "philosophy",
+  "source_role": "external_reference",
   "builder": "public-example-audit-builder",
   "builder_context_id": "public-example-audit-fresh-context",
   "source": {

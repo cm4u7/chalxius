@@ -13,6 +13,8 @@ from .contracts import (
 
 
 PAPER_LOGIC_FEATURE_REVISION = "paper-logic-1"
+PAPER_SOURCE_ROLE_CONTRACT_REVISION = "chalxius-paper-source-role-1"
+PAPER_SOURCE_ROLES = {"research_draft", "external_reference"}
 PAPER_LOGIC_TRUTH_BOUNDARY = (
     "Paper Logic and Audit Graph objects are nontruth evidence. "
     "Only independently admitted Fact Graph facts are proof premises."
@@ -57,7 +59,7 @@ PAPER_PROJECTION_ID_RE = re.compile(r"plp-[0-9a-f]{64}")
 
 LOCAL_ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.:-]{0,127}")
 
-DOMAIN_PROFILES = {"philosophy", "mathematics", "mixed"}
+DOMAIN_PROFILES = {"philosophy", "mathematics", "empirical", "mixed"}
 GRAPH_KINDS = {"logic", "audit"}
 REPRESENTATION_KINDS = {
     "source_literal",

@@ -5,6 +5,7 @@
   "paper_id": "minimal-public-paper",
   "graph_kind": "logic",
   "domain_profile": "philosophy",
+  "source_role": "external_reference",
   "builder": "public-example-builder",
   "builder_context_id": "public-example-fresh-context",
   "source": {

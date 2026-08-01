@@ -9,7 +9,13 @@ reviewable, and verifier-gated.
 [📦 Download v0.5.0](https://github.com/cm4u7/chalxius/releases/tag/v0.5.0) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [✅ Validation](VALIDATION.md) ·
+[⚠️ Known limitations](chalxius/KNOWN_LIMITATIONS.md) ·
 [📚 Use cases](USE_CASES.md)
+
+> **Release boundary:** v0.5.0 is published with 17 known, unresolved CHX
+> architecture issues from a private field run. Tests validate the software and
+> package; they do not close those issues or certify any research result. See
+> [Known architecture limitations](chalxius/KNOWN_LIMITATIONS.md).
 
 ## A research graph at working scale
 
@@ -31,7 +37,7 @@ Two smaller guided cases are also available:
 
 | Capability | Outcome | Authority boundary |
 |---|---|---|
-| Paper Logic + Audit | Freeze exact paper versions, reconstruct nodewise arguments, review them independently, and keep corrections append-only | Paper and Audit are evidence, never automatic Fact premises |
+| Paper Logic + Audit | Freeze exact paper versions, distinguish research drafts from external references, reconstruct nodewise arguments, review them independently, and keep corrections append-only | Source role is orthogonal to authority; Paper and Audit are never automatic Fact premises |
 | Cross-project Evidence | Archive reviewed Paper Graphs with their PDF/version; explicitly import older or external Fact Graphs; query and mark stale evidence | Evidence is higher-trust nontruth; a verified bridge must still pass release, fresh verification, and gateway admission |
 | Research + Blackboard | Accumulate attempts, insights, counterexamples, obstacles, typed questions, and alternative routes | Exploration remains nontruth and cannot silently overwrite a Fact |
 | Campaigns | Scope a bounded family of related Research targets while Main keeps the four-factor frontier ordering | Campaigns plan work; they do not certify completion |
@@ -361,6 +367,8 @@ The upgrade is prospective. It performs no project migration, backfill,
 reclassification, forced redo, or authority inheritance. See
 [`RELEASE.md`](RELEASE.md) and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).
+It is intentionally published before the 17 field-discovered architecture
+issues in [`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md) are closed.
 
 ## Scope and acknowledgements
 

@@ -28,7 +28,8 @@ SCHEMA_VERSION = 1
 CONTRACT_REVISION = "chalxius-paper-library-1"
 EVENT_REVISION = "chalxius-paper-library-event-1"
 CAPSULE_REVISION = "chalxius-paper-context-capsule-1"
-EVIDENCE_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-1"
+LEGACY_EVIDENCE_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-1"
+EVIDENCE_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-2"
 FACT_EVIDENCE_CAPSULE_REVISION = "chalxius-external-fact-evidence-capsule-1"
 FACT_EVIDENCE_SOURCE_AUDIT_REVISION = "chalxius-v5-fact-evidence-audit-1"
 BRIDGE_CAPSULE_REVISION = "chalxius-evidence-bridge-capsule-1"
@@ -44,6 +45,17 @@ COLLECTION_PREFIXES = {
     "bridge_capsules": "evb",
 }
 EVIDENCE_KINDS = {"reviewed_paper_graph", "external_fact_graph"}
+PAPER_EVIDENCE_SOURCE_ROLES = {
+    "research_draft",
+    "external_reference",
+    "legacy_unspecified",
+}
+PAPER_EVIDENCE_MATERIAL_USES = [
+    "background",
+    "citation_source",
+    "inspiration",
+    "research_material",
+]
 EVIDENCE_DISPOSITIONS = {
     "active",
     "challenged",
@@ -1419,7 +1431,7 @@ def validate_paper_attestation(
     *,
     graph: dict[str, Any],
 ) -> None:
-    required = {
+    legacy_required = {
         "schema_version",
         "contract_revision",
         "graph_id",
@@ -1436,14 +1448,33 @@ def validate_paper_attestation(
         "paper_logic_audit_sha256",
         "truth_effect",
     }
+    revision = attestation.get("contract_revision")
+    required = (
+        {
+            *legacy_required,
+            "source_role",
+            "material_uses",
+        }
+        if revision == EVIDENCE_ATTESTATION_REVISION
+        else legacy_required
+    )
     if set(attestation) != required:
         raise LibraryError("paper Evidence attestation fields are not exact")
     if (
         attestation["schema_version"] != 1
-        or attestation["contract_revision"] != EVIDENCE_ATTESTATION_REVISION
+        or revision
+        not in {
+            LEGACY_EVIDENCE_ATTESTATION_REVISION,
+            EVIDENCE_ATTESTATION_REVISION,
+        }
         or attestation["truth_effect"] != "none"
     ):
         raise LibraryError("paper Evidence attestation contract mismatch")
+    if revision == EVIDENCE_ATTESTATION_REVISION:
+        if attestation["source_role"] not in PAPER_EVIDENCE_SOURCE_ROLES:
+            raise LibraryError("paper Evidence source_role is invalid")
+        if attestation["material_uses"] != PAPER_EVIDENCE_MATERIAL_USES:
+            raise LibraryError("paper Evidence material_uses are not exact")
     if attestation["graph_id"] != graph["object_id"]:
         raise LibraryError("paper Evidence attestation graph id mismatch")
     if attestation["graph_tree_sha256"] != graph["tree"]["sha256"]:
@@ -1532,6 +1563,15 @@ def cmd_evidence_paper_add(args: argparse.Namespace) -> dict[str, Any]:
             "graph_id": graph["object_id"],
             "paper_snapshot_id": attestation["paper_snapshot_id"],
             "pdf_sha256": graph["pdf_sha256"],
+            **(
+                {
+                    "source_role": attestation["source_role"],
+                    "material_uses": attestation["material_uses"],
+                }
+                if attestation["contract_revision"]
+                == EVIDENCE_ATTESTATION_REVISION
+                else {}
+            ),
         },
         "attestation": {
             "sha256": digest,
@@ -2264,6 +2304,18 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
                     }
                     if paper is not None
                     else None
+                ),
+                "source_role": (
+                    record["source"].get("source_role", "legacy_unspecified")
+                    if record["evidence_kind"] == "reviewed_paper_graph"
+                    else None
+                ),
+                "material_uses": (
+                    record["source"].get(
+                        "material_uses", PAPER_EVIDENCE_MATERIAL_USES
+                    )
+                    if record["evidence_kind"] == "reviewed_paper_graph"
+                    else []
                 ),
                 "premise_eligible": False,
             }

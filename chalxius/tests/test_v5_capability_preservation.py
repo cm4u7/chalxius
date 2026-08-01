@@ -62,6 +62,7 @@ class V5CapabilityPreservationTests(unittest.TestCase):
                 "scripts/mathgraph/modes.py",
                 "scripts/mathgraph/paper_continuation.py",
                 "scripts/mathgraph/paper_logic.py",
+                "scripts/mathgraph/paper_logic_contracts.py",
                 "scripts/mathgraph/project_background.py",
                 "scripts/mathgraph/reader_html.py",
                 "scripts/mathgraph/roles.py",

@@ -16,7 +16,13 @@ from .contracts import canonical_json_bytes, sha256_bytes, sha256_json
 
 EVIDENCE_BINDING_REVISION = "chalxius-evidence-library-binding-1"
 PAPER_SYNC_REVISION = "chalxius-paper-evidence-sync-1"
-PAPER_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-1"
+PAPER_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-2"
+PAPER_EVIDENCE_MATERIAL_USES = [
+    "background",
+    "citation_source",
+    "inspiration",
+    "research_material",
+]
 FACT_CAPSULE_REVISION = "chalxius-external-fact-evidence-capsule-1"
 BRIDGE_CAPSULE_REVISION = "chalxius-evidence-bridge-capsule-1"
 
@@ -187,6 +193,7 @@ class EvidencePlane:
             "snapshot_id": snapshot_id,
             "snapshot_manifest_sha256": sha256_bytes(manifest_path.read_bytes()),
             "graph_kind": manifest["graph_kind"],
+            "source_role": manifest.get("source_role", "legacy_unspecified"),
             "revision_id": revision_id,
             "source_artifact_sha256": revision["source"]["artifact_sha256"],
             "source_artifact_relpath": revision["artifact_relpath"],
@@ -319,6 +326,8 @@ class EvidencePlane:
                     "paper_snapshot_id": snapshot_id,
                     "snapshot_manifest_sha256": request["snapshot_manifest_sha256"],
                     "snapshot_graph_kind": request["graph_kind"],
+                    "source_role": request["source_role"],
+                    "material_uses": PAPER_EVIDENCE_MATERIAL_USES,
                     "source_project_id": request["project_id"],
                     "pdf_sha256": version_result["pdf_sha256"],
                     "node_ids": sorted(snapshot_nodes),

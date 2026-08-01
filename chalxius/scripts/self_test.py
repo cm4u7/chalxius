@@ -1923,6 +1923,7 @@ def main() -> int:
             "paper_id": "self-test-paper",
             "graph_kind": "logic",
             "domain_profile": "philosophy",
+            "source_role": "external_reference",
             "builder": "paper-builder",
             "builder_context_id": "paper-builder-context",
             "source": {

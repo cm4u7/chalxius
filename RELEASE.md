@@ -4,6 +4,10 @@ Chalxius 0.5.0 preserves the V5 truth path and the bounded context restoration
 of v0.4.4, then makes reviewed paper work reusable across projects without
 turning a library, graph, or visualization into Fact authority.
 
+This release is intentionally published with 17 unresolved CHX architecture
+issues. They are listed in [`chalxius/KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md).
+Passing software and packaging checks does not close them.
+
 ## User-facing invocation
 
 The primary interface is ordinary Chinese or English, not the low-level CLI.
@@ -29,6 +33,10 @@ computation, and prepare only verifier-ready claims for release.
 - A reviewed Paper Logic/Audit freeze can archive its exact paper version, PDF,
   graph, and review attestation into a configured cross-project Evidence
   library.
+- A prospective `source_role` distinguishes `research_draft` from
+  `external_reference`; older objects remain readable as `legacy_unspecified`.
+  This role never grants Evidence or Fact authority and is only a partial
+  compatibility seam for the still-open research-draft lifecycle issues.
 - Older supported V5 Evidence remains importable without reopening completed
   work. Non-paper Fact Graph import is explicit-user and Operator-only.
 - A `verified_bridge` binds selected Evidence into one destination Candidate
@@ -98,11 +106,26 @@ Research -> Candidate Release -> Certification Decision -> Fact
 - Release-only aggressive audit: 51/51 mutants killed with
   `candidate_unchanged=true`.
 - Self-test and official Skill Creator validation: PASS.
-- Manifest: 177/177 entries; no symlinks, caches, bytecode, or unexpected files.
-- Deterministic public archive: 178 regular members; two builds byte-identical.
+- Manifest: 178/178 entries; no symlinks, caches, bytecode, or unexpected files.
+- Deterministic public archive: 179 regular members; two builds byte-identical.
 - Public examples: deterministic build and privacy validation PASS.
 
 See [`VALIDATION.md`](VALIDATION.md) for exact hashes and bounded claims.
+
+## Known architecture limitations
+
+CHX-001 through CHX-017 remain open at this release freeze. Their scope includes
+research-draft routing, semantic atomization and coverage, source-unit and
+speaker alignment, repeated whole-plan validation, technical-term conflicts,
+issue-ledger promotion, verifier sharding/composition, EvidenceRef transport,
+interface completeness, and false one-conjunct atomicity. The exact public,
+content-free registry is
+[`chalxius/KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md).
+
+These limitations do not authorize weaker Fact gates. Affected results remain
+Research unless their exact release, verifier, and gateway requirements are
+satisfied. Existing projects and frozen work are neither migrated nor asked to
+redo work.
 
 ## Install
 

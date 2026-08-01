@@ -163,6 +163,8 @@ class PaperLibraryTests(unittest.TestCase):
             "paper_snapshot_id": snapshot_id,
             "snapshot_manifest_sha256": "b" * 64,
             "snapshot_graph_kind": "logic",
+            "source_role": "external_reference",
+            "material_uses": library.PAPER_EVIDENCE_MATERIAL_USES,
             "source_project_id": "TEST-PROJECT",
             "pdf_sha256": graph["pdf_sha256"],
             "node_ids": ["node-a", "node-b"],

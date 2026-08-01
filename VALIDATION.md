@@ -2,6 +2,10 @@
 
 Result: **PASS**.
 
+This result is limited to the software, package, and checks enumerated below.
+It does not close the 17 open field issues in
+[`chalxius/KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md).
+
 ## Frozen public package
 
 | Property | Value |
@@ -12,12 +16,12 @@ Result: **PASS**.
 | Truth path | `Research -> Candidate Release -> Certification Decision -> Fact` |
 | Renderer | `chalxius-reader-html-20` |
 | Layout | `deterministic_theme_multicenter_orbit_fields` |
-| Manifest entries | 177 |
-| `MANIFEST.sha256` SHA-256 | `479b35c0c841d737a5806a3c472d8ffd965be6127e525c5d511708a88c43df8d` |
+| Manifest entries | 178 |
+| `MANIFEST.sha256` SHA-256 | `7a0ed8f28f1a9312b30515c81c0204078596c9e660956a5bb03da3e8ec177a60` |
 | Archive | `chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz` |
-| Archive bytes | 1,791,856 |
-| Archive members | 178 regular files |
-| Archive SHA-256 | `5f5d71401fa7c6e2f132c5fa36bc8fde74d285ada27da891ace2b4bf2da2a3a4` |
+| Archive bytes | 1,795,607 |
+| Archive members | 179 regular files |
+| Archive SHA-256 | `7efb196d9fb51a6e844388ad6169c865665ebb44af1d562f6f9fcfe32366bbaa` |
 
 The archive is built twice from the manifest allowlist and the resulting bytes
 must be identical. It uses sorted USTAR regular-file members, numeric UID/GID 0,
@@ -33,7 +37,7 @@ member.
 | Native Paper/Evidence focused suite | 15/15 PASS | Included in complete suite |
 | `scripts/self_test.py` | PASS | PASS |
 | Official Skill Creator validator | PASS | PASS |
-| Manifest exact path/hash set | 177/177 PASS | 177/177 PASS |
+| Manifest exact path/hash set | 178/178 PASS | 178/178 PASS |
 | Exact tree comparison | — | PASS |
 | Release-only aggressive mutation audit | 51/51 killed | Bound by identical tree |
 | Git whitespace check | PASS | — |
@@ -78,8 +82,8 @@ the user's explicit design.
 | `scripts/mathgraph/contracts.py` | `5bd04ce9dc5fea159805e50b921a225875124946ec26e3e119af4236d03d75e1` |
 | `references/admission_contract.md` | `4879da333f75a90062742a4280cd855697e39a5f7f6cb01f53121a337f70a75c` |
 | `references/reasoning_modes.md` | `ee2dc78be7ab0a999d4f4738e4ab31056475c13e2c7680f980d8d2da8a5c8d3a` |
-| `INHERITANCE.lock.json` | `cf9f4d32b6fcd5fc4c078bb0ee4c7c15dfe05a5560446fe750fbfcdfb4547265` |
-| `references/evidence_plane.md` | `27378cf3c32bf3c680313a0adc432f708b38136b0fc3138c30610c0243a4055a` |
+| `INHERITANCE.lock.json` | `fe0b9bb48433adbd73f2aeee7172a088202c684c2b471cd0e23f3f6c3fff9280` |
+| `references/evidence_plane.md` | `c49992de542d5ba6a012a0a2984d56e953dc716ca967d74d26371a1f1969d0fd` |
 | `references/paper_continuation_contract.md` | `6b27d559d2cbc7afd487bf35248579765725dc73e838e5067792a0c43f2aaa4e` |
 | `assets/reader_html_app.js` | `b949ed26a059d71887ac1ca2e7661e7aa987070abc2d12c1438556a92b440fc7` |
 
@@ -89,6 +93,10 @@ These checks establish software, packaging, deterministic presentation, and the
 stated workflow properties. They do not prove a mathematical theorem, establish
 novelty, certify a private source graph, or Fact-admit any research claim. The
 public showcase has `truth_effect="none"`.
+
+They also do not establish architecture completeness. CHX-001 through CHX-017
+remain unresolved at this release freeze; the preliminary Paper `source_role`
+contract is not recorded as closing CHX-001 or CHX-002.
 
 Publishing this release does not replace the globally installed runtime and does
 not migrate, backfill, reopen, or request redo of any active project.

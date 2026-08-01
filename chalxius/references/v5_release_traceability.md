@@ -10,6 +10,11 @@
   reclassification, or forced redo of frozen work.
 - Added authority domain: cross-project Evidence sidecar with
   `truth_effect=none` and no premise eligibility.
+- The release freeze adds a prospective Paper `source_role` seam for
+  `research_draft` and `external_reference`, while reading older objects as
+  `legacy_unspecified`. Source role remains orthogonal to Evidence/Fact
+  authority and is explicitly a partial compatibility mechanism, not closure
+  of the open research-draft lifecycle issues.
 - Reviewed Paper Logic/Audit freezes automatically archive their exact
   PDF/version/graph/review attestation when configured; sync failures remain
   retryable and do not roll back local freezes.
@@ -87,7 +92,11 @@
   unchanged Host authority, empty Fact authority, closed CHX ledgers, and full
   temporary-project cleanup.
 - Current protected runtime surface: `73` files, SHA-256 tree digest
-  `fa58a0b9ef31c088220eede55d5d2e6ee4d8355dba86d50749c6c40161025130`.
+  `a1fb8bc8bcc91bb035d504de6432db6ac50af9ec84daf4eb591fedae2801be47`.
+
+The release was intentionally frozen with the architecture issues enumerated
+in `../KNOWN_LIMITATIONS.md` still open. The validation baseline above is
+software evidence only and must not be reported as CHX closure.
 
 The detailed contract is `evidence_plane.md`. The original 0.4.4 trace below is
 retained as predecessor lineage.

@@ -3,8 +3,8 @@
   "package": "chalxius",
   "version": "0.5.0",
   "release_display_name": "Back to the Future / Paper Continuation",
-  "status": "frozen_validated_for_publication",
-  "release_date": "2026-08-01",
+  "status": "frozen_validated_with_known_architecture_limitations",
+  "release_date": "2026-08-02",
   "workflow_authority": "V5",
   "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
   "renderer_revision": "chalxius-reader-html-20",
@@ -12,11 +12,11 @@
   "layout": "deterministic_theme_multicenter_orbit_fields",
   "public_distribution": {
     "archive_name": "chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz",
-    "archive_bytes": 1791856,
-    "archive_sha256": "5f5d71401fa7c6e2f132c5fa36bc8fde74d285ada27da891ace2b4bf2da2a3a4",
-    "archive_members": 178,
-    "manifest_entry_count": 177,
-    "manifest_sha256": "479b35c0c841d737a5806a3c472d8ffd965be6127e525c5d511708a88c43df8d",
+    "archive_bytes": 1795607,
+    "archive_sha256": "7efb196d9fb51a6e844388ad6169c865665ebb44af1d562f6f9fcfe32366bbaa",
+    "archive_members": 179,
+    "manifest_entry_count": 178,
+    "manifest_sha256": "7a0ed8f28f1a9312b30515c81c0204078596c9e660956a5bb03da3e8ec177a60",
     "deterministic_archive_build": "pass",
     "privacy_scan": "pass"
   },
@@ -31,6 +31,15 @@
     "exact_tree": "pass",
     "public_examples": "3/3 pass",
     "anonymized_showcase_privacy": "pass"
+  },
+  "known_architecture_limitations": {
+    "architecture_complete": false,
+    "open_issue_count": 17,
+    "open_issue_range": "CHX-001..CHX-017",
+    "public_disclosure": "chalxius/KNOWN_LIMITATIONS.md",
+    "private_field_ledger_included": false,
+    "source_role_contract_status": "partial_compatibility_mechanism_not_issue_closure",
+    "fact_gate_weakening_authorized": false
   },
   "public_showcase": {
     "nodes": 175,
@@ -58,14 +67,14 @@
     "contracts_py_sha256": "5bd04ce9dc5fea159805e50b921a225875124946ec26e3e119af4236d03d75e1",
     "fact_admission_contract_sha256": "4879da333f75a90062742a4280cd855697e39a5f7f6cb01f53121a337f70a75c",
     "reasoning_mode_policy_sha256": "ee2dc78be7ab0a999d4f4738e4ab31056475c13e2c7680f980d8d2da8a5c8d3a",
-    "inheritance_lock_sha256": "cf9f4d32b6fcd5fc4c078bb0ee4c7c15dfe05a5560446fe750fbfcdfb4547265",
-    "evidence_plane_sha256": "27378cf3c32bf3c680313a0adc432f708b38136b0fc3138c30610c0243a4055a",
+    "inheritance_lock_sha256": "fe0b9bb48433adbd73f2aeee7172a088202c684c2b471cd0e23f3f6c3fff9280",
+    "evidence_plane_sha256": "c49992de542d5ba6a012a0a2984d56e953dc716ca967d74d26371a1f1969d0fd",
     "paper_continuation_sha256": "6b27d559d2cbc7afd487bf35248579765725dc73e838e5067792a0c43f2aaa4e",
     "reader_app_sha256": "b949ed26a059d71887ac1ca2e7661e7aa987070abc2d12c1438556a92b440fc7"
   },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius",
     "tag": "v0.5.0",
-    "state_at_lock_freeze": "validated_for_publication"
+    "state_at_lock_freeze": "validated_for_publication_with_known_architecture_limitations"
   }
 }

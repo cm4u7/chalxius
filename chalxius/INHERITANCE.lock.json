@@ -35,6 +35,20 @@
       "reviewed_paper_graph",
       "external_fact_graph"
     ],
+    "paper_attestation_revision": "chalxius-paper-evidence-attestation-2",
+    "paper_source_role_contract_revision": "chalxius-paper-source-role-1",
+    "paper_source_roles": [
+      "research_draft",
+      "external_reference"
+    ],
+    "legacy_paper_source_role": "legacy_unspecified",
+    "paper_material_uses": [
+      "background",
+      "citation_source",
+      "inspiration",
+      "research_material"
+    ],
+    "source_role_authority_effect": "none",
     "retrieval_order": [
       "active_local_fact",
       "current_external_fact_evidence",
@@ -367,7 +381,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 73,
-    "protected_tree_sha256": "fa58a0b9ef31c088220eede55d5d2e6ee4d8355dba86d50749c6c40161025130",
+    "protected_tree_sha256": "a1fb8bc8bcc91bb035d504de6432db6ac50af9ec84daf4eb591fedae2801be47",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -380,6 +394,7 @@
       "scripts/mathgraph/modes.py",
       "scripts/mathgraph/paper_continuation.py",
       "scripts/mathgraph/paper_logic.py",
+      "scripts/mathgraph/paper_logic_contracts.py",
       "scripts/mathgraph/project_background.py",
       "scripts/mathgraph/reader_html.py",
       "scripts/mathgraph/roles.py",

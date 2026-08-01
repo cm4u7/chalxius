@@ -91,6 +91,16 @@ class PaperLogicGraphTests(unittest.TestCase):
             bundle,
             artifact=artifact,
         )
+        self.assertEqual(
+            self.paper.snapshot_source_role(logic_frozen["snapshot_id"]),
+            "external_reference",
+        )
+        self.assertEqual(
+            self.paper.snapshot_manifest(logic_frozen["snapshot_id"])[
+                "source_role"
+            ],
+            "external_reference",
+        )
         audit_bundle = json.loads(
             (
                 SKILL_ROOT
@@ -108,6 +118,10 @@ class PaperLogicGraphTests(unittest.TestCase):
             artifact=artifact,
         )
         self.assertTrue(audit_frozen["snapshot_id"].startswith("pls-"))
+        self.assertEqual(
+            self.paper.snapshot_source_role(audit_frozen["snapshot_id"]),
+            "external_reference",
+        )
 
         missing_edge = copy.deepcopy(bundle)
         removed = missing_edge["edges"].pop()
@@ -277,6 +291,7 @@ class PaperLogicGraphTests(unittest.TestCase):
             "paper_id": "fixture-paper",
             "graph_kind": "logic",
             "domain_profile": domain_profile,
+            "source_role": "external_reference",
             "builder": builder,
             "builder_context_id": builder_context_id,
             "source": copy.deepcopy(self.source),
@@ -314,6 +329,7 @@ class PaperLogicGraphTests(unittest.TestCase):
             "paper_id": "fixture-paper",
             "graph_kind": "audit",
             "domain_profile": domain_profile,
+            "source_role": "external_reference",
             "builder": builder,
             "builder_context_id": builder_context_id,
             "source": copy.deepcopy(self.source),
