@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 from collections import deque
@@ -24,6 +25,7 @@ from .paper_logic_contracts import (
     PAPER_EDGE_ID_RE,
     PAPER_LOGIC_FEATURE_REVISION,
     PAPER_LOGIC_TRUTH_BOUNDARY,
+    PAPER_RESEARCH_DRAFT_CONTRACT_REVISION,
     PAPER_SOURCE_ROLE_CONTRACT_REVISION,
     PAPER_SOURCE_ROLES,
     PAPER_NODE_ID_RE,
@@ -62,6 +64,10 @@ _FEATURE_FIELDS = {
 _CURRENT_FEATURE_FIELDS = {
     *_FEATURE_FIELDS,
     "source_role_contract_revision",
+}
+_RESEARCH_DRAFT_FEATURE_FIELDS = {
+    *_CURRENT_FEATURE_FIELDS,
+    "research_draft_contract_revision",
 }
 _BUNDLE_FIELDS = {
     "schema_version",
@@ -270,10 +276,14 @@ class PaperLogicStore:
 
     def _feature(self) -> dict[str, Any]:
         payload = self._read_json(self.feature_path)
-        if set(payload) not in (_FEATURE_FIELDS, _CURRENT_FEATURE_FIELDS):
+        if set(payload) not in (
+            _FEATURE_FIELDS,
+            _CURRENT_FEATURE_FIELDS,
+            _RESEARCH_DRAFT_FEATURE_FIELDS,
+        ):
             require_exact_keys(
                 payload,
-                required=_CURRENT_FEATURE_FIELDS,
+                required=_RESEARCH_DRAFT_FEATURE_FIELDS,
                 label="paper-logic feature manifest",
             )
         if (
@@ -287,6 +297,10 @@ class PaperLogicStore:
             "source_role_contract_revision"
         ] != PAPER_SOURCE_ROLE_CONTRACT_REVISION:
             raise ValueError("paper-logic source-role contract mismatch")
+        if "research_draft_contract_revision" in payload and payload[
+            "research_draft_contract_revision"
+        ] != PAPER_RESEARCH_DRAFT_CONTRACT_REVISION:
+            raise ValueError("paper-logic research-draft contract mismatch")
         require_string(payload, "initialized_by")
         return payload
 
@@ -320,6 +334,9 @@ class PaperLogicStore:
             "initialized_by": actor.strip(),
             "source_role_contract_revision": (
                 PAPER_SOURCE_ROLE_CONTRACT_REVISION
+            ),
+            "research_draft_contract_revision": (
+                PAPER_RESEARCH_DRAFT_CONTRACT_REVISION
             ),
         }
         self._write_json_once(self.feature_path, manifest)
@@ -373,6 +390,7 @@ class PaperLogicStore:
         *,
         graph_kind: str,
         local_nodes: dict[str, dict[str, Any]],
+        strict_research_draft: bool = False,
     ) -> dict[str, Any]:
         if not isinstance(coverage, dict):
             raise ValueError("paper graph coverage must be an object")
@@ -420,6 +438,10 @@ class PaperLogicStore:
         seen: set[str] = set()
         mapped: set[str] = set()
         for item in units:
+            current_unit_fields = {
+                "proposition_component_ids",
+                "component_dispositions",
+            }
             require_exact_keys(
                 item,
                 required={
@@ -428,8 +450,18 @@ class PaperLogicStore:
                     "mapped_node_ids",
                     "reason",
                 },
+                optional=(
+                    current_unit_fields
+                    if graph_kind == "logic"
+                    else set()
+                ),
                 label="paper graph coverage unit",
             )
+            if strict_research_draft and not current_unit_fields.issubset(item):
+                raise ValueError(
+                    "research-draft coverage needs proposition_component_ids and "
+                    "component_dispositions for every source unit"
+                )
             unit_id = require_string(item, "unit_id")
             if unit_id in seen:
                 raise ValueError(
@@ -470,6 +502,87 @@ class PaperLogicStore:
                 raise ValueError(
                     "excluded paper graph coverage needs a reason"
                 )
+            if strict_research_draft:
+                source_node = local_nodes.get(unit_id)
+                if (
+                    source_node is None
+                    or source_node["object_type"] != "source_unit"
+                ):
+                    raise ValueError(
+                        "research-draft coverage rows must be source-unit keyed"
+                    )
+                inventory = source_node["payload"].get(
+                    "proposition_inventory"
+                )
+                if not isinstance(inventory, list) or not inventory:
+                    raise ValueError(
+                        f"research-draft source unit {unit_id} lacks a proposition inventory"
+                    )
+                inventory_by_id = {
+                    component["component_id"]: component
+                    for component in inventory
+                }
+                declared_ids = PaperLogicStore._require_strings(
+                    item["proposition_component_ids"],
+                    "paper graph proposition_component_ids",
+                )
+                if set(declared_ids) != set(inventory_by_id):
+                    raise ValueError(
+                        f"research-draft coverage is not proposition-total for {unit_id}"
+                    )
+                dispositions = item["component_dispositions"]
+                if not isinstance(dispositions, list) or any(
+                    not isinstance(entry, dict) for entry in dispositions
+                ):
+                    raise ValueError(
+                        "paper graph component_dispositions must be objects"
+                    )
+                seen_components: set[str] = set()
+                for entry in dispositions:
+                    require_exact_keys(
+                        entry,
+                        required={
+                            "component_id",
+                            "disposition",
+                            "mapped_node_ids",
+                            "reason",
+                        },
+                        label="paper graph component disposition",
+                    )
+                    component_id = require_string(entry, "component_id")
+                    if (
+                        component_id not in inventory_by_id
+                        or component_id in seen_components
+                    ):
+                        raise ValueError(
+                            "paper graph component disposition is unknown or duplicated"
+                        )
+                    seen_components.add(component_id)
+                    component = inventory_by_id[component_id]
+                    if entry["disposition"] != component["disposition"]:
+                        raise ValueError(
+                            "paper graph component disposition drifts from its source inventory"
+                        )
+                    entry_mapped = PaperLogicStore._require_strings(
+                        entry["mapped_node_ids"],
+                        "paper graph component mapped_node_ids",
+                    )
+                    if sorted(entry_mapped) != sorted(component["mapped_node_ids"]):
+                        raise ValueError(
+                            "paper graph component mapping drifts from its source inventory"
+                        )
+                    if entry["reason"] != component["reason"]:
+                        raise ValueError(
+                            "paper graph component reason drifts from its source inventory"
+                        )
+                    if entry["disposition"] == "unresolved":
+                        raise ValueError(
+                            "research-draft proposition coverage contains an unresolved component"
+                        )
+                if seen_components != set(inventory_by_id):
+                    raise ValueError(
+                        "paper graph component disposition coverage is incomplete"
+                    )
         if graph_kind == "logic":
             source_units = {
                 local_id
@@ -761,6 +874,8 @@ class PaperLogicStore:
     def _validate_logic_semantics(
         cls,
         local_nodes: dict[str, dict[str, Any]],
+        *,
+        strict_research_draft: bool = False,
     ) -> None:
         claims = {
             local_id: node
@@ -781,6 +896,83 @@ class PaperLogicStore:
             raise ValueError(
                 "paper logic graph requires source units and claim nodes"
             )
+        component_owner: dict[str, str] = {}
+        components: dict[str, dict[str, Any]] = {}
+        hierarchical_components: set[str] = set()
+        if strict_research_draft:
+            for source_id, source_node in source_units.items():
+                inventory = source_node["payload"].get("proposition_inventory")
+                if not isinstance(inventory, list) or not inventory:
+                    raise ValueError(
+                        f"research-draft source unit {source_id} needs a nonempty proposition inventory"
+                    )
+                for component in inventory:
+                    component_id = component["component_id"]
+                    if component_id in component_owner:
+                        raise ValueError(
+                            "research-draft proposition component ids must be graph-global"
+                        )
+                    component_owner[component_id] = source_id
+                    components[component_id] = component
+                    hierarchy_fields = {
+                        "component_level",
+                        "partition_path",
+                        "child_component_ids",
+                    }
+                    if hierarchy_fields.issubset(component):
+                        hierarchical_components.add(component_id)
+                        path = component["partition_path"]
+                        if path[0] != source_id or path[-1] != component_id:
+                            raise ValueError(
+                                f"source component {component_id} hierarchy crosses its source-unit boundary"
+                            )
+                    for mapped_id in component["mapped_node_ids"]:
+                        mapped_node = local_nodes.get(mapped_id)
+                        if mapped_node is None:
+                            raise ValueError(
+                                f"source component {component_id} maps an unknown graph node"
+                            )
+                        if mapped_node["object_type"] == "source_unit":
+                            raise ValueError(
+                                f"source component {component_id} cannot use its source unit as semantic coverage"
+                            )
+                        if (
+                            component["challengeability"]
+                            == "independently_challengeable"
+                            and mapped_node["object_type"]
+                            not in {"claim", "inference", "paper_target"}
+                        ):
+                            raise ValueError(
+                                f"challengeable source component {component_id} maps only a nonargumentative object"
+                            )
+            if not components:
+                raise ValueError("research-draft graph has zero source propositions")
+            if hierarchical_components:
+                if hierarchical_components != set(components):
+                    raise ValueError(
+                        "research-draft source-component hierarchy must be graph-total once activated"
+                    )
+                for component_id, component in components.items():
+                    path = component["partition_path"]
+                    children = component["child_component_ids"]
+                    for child_id in children:
+                        child = components.get(child_id)
+                        if child is None:
+                            raise ValueError(
+                                f"source component {component_id} has an unknown hierarchy child"
+                            )
+                        if component_owner[child_id] != component_owner[component_id]:
+                            raise ValueError(
+                                f"source component {component_id} hierarchy crosses source units"
+                            )
+                        if child["partition_path"] != [*path, child_id]:
+                            raise ValueError(
+                                f"source component {child_id} has a noncontiguous partition path"
+                            )
+                    if component["component_level"] == "atom" and children:
+                        raise ValueError(
+                            f"source component {component_id} atom cannot have children"
+                        )
         order_values = [node["payload"]["order"] for node in source_units.values()]
         if len(order_values) != len(set(order_values)):
             raise ValueError("paper source-unit order values must be unique")
@@ -837,6 +1029,120 @@ class PaperLogicStore:
                         raise ValueError(
                             f"literal claim {local_id} attribution/speaker "
                             "mismatch"
+                        )
+                if strict_research_draft:
+                    required_extension = {
+                        "semantic_direction",
+                        "source_component_ids",
+                        "residual_component_dispositions",
+                        "qualifier_set",
+                    }
+                    if not required_extension.issubset(payload):
+                        raise ValueError(
+                            f"research-draft claim {local_id} lacks its semantic-direction contract"
+                        )
+                    component_ids = payload["source_component_ids"]
+                    unknown_components = set(component_ids).difference(components)
+                    if unknown_components:
+                        raise ValueError(
+                            f"research-draft claim {local_id} cites unknown source components"
+                        )
+                    allowed_source_ids = set(payload["source_unit_ids"])
+                    wrong_sources = {
+                        component_id
+                        for component_id in component_ids
+                        if component_owner[component_id] not in allowed_source_ids
+                    }
+                    if wrong_sources:
+                        raise ValueError(
+                            f"research-draft claim {local_id} crosses source-unit or speaker locality"
+                        )
+                    for component_id in component_ids:
+                        if local_id not in components[component_id]["mapped_node_ids"]:
+                            raise ValueError(
+                                f"research-draft claim {local_id} has no reciprocal source-component mapping"
+                            )
+                    independently_challengeable = [
+                        component_id
+                        for component_id in component_ids
+                        if components[component_id]["challengeability"]
+                        == "independently_challengeable"
+                    ]
+                    if len(independently_challengeable) > 1:
+                        raise ValueError(
+                            f"research-draft claim {local_id} merges independently "
+                            "challengeable source propositions; split them into an "
+                            "explicit mini-DAG"
+                        )
+                    direction = payload["semantic_direction"]
+                    if direction in {"exact_literal", "equivalent"}:
+                        source_operators = {
+                            (
+                                operator["token"].casefold(),
+                                operator["occurrence"],
+                                operator["kind"],
+                                operator["scope"],
+                                operator["disposition"],
+                                tuple(sorted(operator["depends_on"])),
+                            )
+                            for component_id in component_ids
+                            for operator in components[component_id]["operator_ledger"]
+                        }
+                        claim_operators = {
+                            (
+                                operator["token"].casefold(),
+                                operator["occurrence"],
+                                operator["kind"],
+                                operator["scope"],
+                                operator["disposition"],
+                                tuple(sorted(operator["depends_on"])),
+                            )
+                            for operator in payload["operator_ledger"]
+                        }
+                        if source_operators != claim_operators:
+                            raise ValueError(
+                                f"research-draft claim {local_id} changes source operators while claiming equivalence"
+                            )
+                        source_qualifiers = {
+                            (
+                                qualifier["kind"],
+                                qualifier["value"],
+                                qualifier["scope"],
+                            )
+                            for component_id in component_ids
+                            for qualifier in components[component_id]["qualifiers"]
+                        }
+                        claim_qualifiers = {
+                            (
+                                qualifier["kind"],
+                                qualifier["value"],
+                                qualifier["scope"],
+                            )
+                            for qualifier in payload["qualifier_set"]
+                        }
+                        if source_qualifiers != claim_qualifiers:
+                            raise ValueError(
+                                f"research-draft claim {local_id} changes source qualifiers while claiming equivalence"
+                            )
+                    generated_witness_text = "\n".join(
+                        [
+                            payload.get("semantic_diff", ""),
+                            payload.get("scope_notes", ""),
+                            *[
+                                str(entry.get("scope", ""))
+                                for entry in payload.get("operator_ledger", [])
+                            ],
+                            *[
+                                str(entry.get("reason", ""))
+                                for entry in payload.get(
+                                    "residual_component_dispositions", []
+                                )
+                            ],
+                        ]
+                    )
+                    if re.search(r"(?<![A-Za-z0-9])V[0-9]+(?![A-Za-z0-9])", generated_witness_text, re.IGNORECASE):
+                        raise ValueError(
+                            f"research-draft claim {local_id} contains a stale version-specific generated witness"
                         )
             elif object_type == "inference":
                 for premise_id in payload["premise_ids"]:
@@ -1285,6 +1591,17 @@ class PaperLogicStore:
         source_role = bundle.get("source_role")
         if source_role is not None and source_role not in PAPER_SOURCE_ROLES:
             raise ValueError("paper graph bundle source_role is invalid")
+        strict_research_draft = (
+            feature.get("research_draft_contract_revision")
+            == PAPER_RESEARCH_DRAFT_CONTRACT_REVISION
+            and source_role == "research_draft"
+        )
+        if strict_research_draft and graph_kind == "logic" and bundle["coverage"].get(
+            "scope_kind"
+        ) != "full_artifact":
+            raise ValueError(
+                "research-draft Paper Logic must declare full_artifact coverage"
+            )
         builder = require_string(bundle, "builder")
         builder_context_id = require_string(bundle, "builder_context_id")
         if builder != actor:
@@ -1355,9 +1672,13 @@ class PaperLogicStore:
             bundle["coverage"],
             graph_kind=graph_kind,
             local_nodes=local_nodes,
+            strict_research_draft=(strict_research_draft and graph_kind == "logic"),
         )
         if graph_kind == "logic":
-            self._validate_logic_semantics(local_nodes)
+            self._validate_logic_semantics(
+                local_nodes,
+                strict_research_draft=strict_research_draft,
+            )
             expected_edges = self._expected_logic_edges(local_nodes)
         else:
             self._validate_audit_semantics(

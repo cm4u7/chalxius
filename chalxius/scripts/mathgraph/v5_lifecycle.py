@@ -45,6 +45,15 @@ from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
 from .graph import DependencyGraph
 from .proof_lineage import validate_successor_contracts
+from .research_draft_preflight import (
+    ASSURANCE_REVISION as RESEARCH_DRAFT_ASSURANCE_REVISION,
+    PAPER_TRANSPORT_REVISION,
+    PREFLIGHT_REVISION as RESEARCH_DRAFT_PREFLIGHT_REVISION,
+    research_draft_admission_preflight,
+    validate_dependency_receipt,
+    validate_research_draft_ref,
+    validate_research_draft_assurance,
+)
 from .project_background import (
     BACKGROUND_BINDING_REVISION,
     BACKGROUND_CHUNK_MAX_BYTES,
@@ -84,6 +93,12 @@ from .v5_assurance import (
     build_assurance_contract,
     validate_assurance_contract,
     validate_return_assurance,
+)
+from .runtime_archive import (
+    resolve_historical_runtime,
+    runtime_binding_from_root,
+    validate_bound_runtime_at,
+    validate_runtime_binding,
 )
 
 
@@ -458,11 +473,25 @@ class V5LifecycleManager:
         }
         self.store._write_json_once(self.contract_path, payload)
         self.paper_continuation().initialize()
+        self.research_draft().initialize()
+        self.parallel_verification().initialize()
 
     def paper_continuation(self) -> Any:
         from .paper_continuation import PaperContinuationManager
 
         return PaperContinuationManager(self)
+
+    def research_draft(self) -> Any:
+        from .research_draft import ResearchDraftManager
+
+        return ResearchDraftManager(self)
+
+    def parallel_verification(self) -> Any:
+        from .parallel_verification_lifecycle import (
+            ParallelVerificationLifecycleManager,
+        )
+
+        return ParallelVerificationLifecycleManager(self)
 
     def _research_path(self, research_id: str) -> Path:
         return self.research_entries_dir / f"{validate_memory_id(research_id)}.json"
@@ -597,6 +626,13 @@ class V5LifecycleManager:
                 raise ValueError("Research route_invalidations must be V5 Research ids")
             if len(invalidations) != len(set(invalidations)):
                 raise ValueError("Research route_invalidations must be unique")
+        if "brave_future_repair_contract" in metadata:
+            # Prospective only.  Replay performs exact structural validation;
+            # cross-record coverage/cycle semantics are rechecked by the BF
+            # projector and BF audit without changing historical authority.
+            from .brave_future import validate_repair_contract_structure
+
+            validate_repair_contract_structure(record)
         semantic = {
             key: record[key]
             for key in required.difference(
@@ -918,6 +954,22 @@ class V5LifecycleManager:
             **record_without_hash,
             "record_sha256": sha256_json(record_without_hash),
         }
+        if "brave_future_repair_contract" in metadata:
+            from .brave_future import validate_repair_contract_semantics
+
+            campaign_id = metadata.get("campaign_id")
+            if not isinstance(campaign_id, str):
+                raise ValueError(
+                    "Brave Future repair Research requires an explicit Campaign id"
+                )
+            self.store.campaigns().status(campaign_id)
+            existing_records = {
+                item["research_id"]: item for item in self.research_records()
+            }
+            validate_repair_contract_semantics(
+                record,
+                {**existing_records, research_id: record},
+            )
         path = self._research_path(research_id)
         with self.store.v5_mutation_lock(command="research-add"):
             if path.exists():
@@ -2194,86 +2246,24 @@ class V5LifecycleManager:
     @staticmethod
     def _runtime_binding() -> dict[str, Any]:
         skill_root = Path(__file__).resolve().parents[2]
-        version_path = skill_root / "VERSION"
-        manifest_path = skill_root / "MANIFEST.sha256"
-        if (
-            version_path.is_symlink()
-            or not version_path.is_file()
-            or manifest_path.is_symlink()
-            or not manifest_path.is_file()
-        ):
-            raise ValueError("Chalxius runtime identity files are missing or unsafe")
-        version = _require_nonempty_text(
-            version_path.read_text(encoding="utf-8").strip(),
-            "Chalxius runtime version",
-        )
-        semantic = {
-            "schema_version": 1,
-            "skill_root": str(skill_root),
-            "skill_version": version,
-            "version_file_sha256": sha256_bytes(version_path.read_bytes()),
-            "manifest_file_sha256": sha256_bytes(manifest_path.read_bytes()),
-            "worker_ledger_contract": "exact_task_card_runtime_binding_required",
-        }
-        return {
-            **semantic,
-            "runtime_identity_sha256": sha256_json(semantic),
-        }
+        return runtime_binding_from_root(skill_root)
 
     @staticmethod
-    def _validate_bound_runtime_binding(value: Any) -> dict[str, Any]:
-        fields = {
-            "schema_version",
-            "skill_root",
-            "skill_version",
-            "version_file_sha256",
-            "manifest_file_sha256",
-            "worker_ledger_contract",
-            "runtime_identity_sha256",
-        }
-        if not isinstance(value, dict) or set(value) != fields:
-            raise ValueError("V5 task-card runtime binding fields are not exact")
-        semantic = {
-            key: value[key]
-            for key in fields
-            if key != "runtime_identity_sha256"
-        }
-        if (
-            value["schema_version"] != 1
-            or value["worker_ledger_contract"]
-            != "exact_task_card_runtime_binding_required"
-            or value["runtime_identity_sha256"] != sha256_json(semantic)
-        ):
-            raise ValueError("V5 task-card runtime binding identity is invalid")
-        skill_root_text = _require_nonempty_text(
-            value["skill_root"], "V5 task-card runtime skill root"
-        )
-        skill_root = Path(skill_root_text)
-        if not skill_root.is_absolute() or skill_root.is_symlink() or not skill_root.is_dir():
-            raise ValueError("V5 task-card bound Chalxius runtime root is missing or unsafe")
-        version_path = skill_root / "VERSION"
-        manifest_path = skill_root / "MANIFEST.sha256"
-        if (
-            version_path.is_symlink()
-            or not version_path.is_file()
-            or manifest_path.is_symlink()
-            or not manifest_path.is_file()
-        ):
-            raise ValueError("V5 task-card bound Chalxius runtime identity files are unsafe")
-        version_raw = version_path.read_bytes()
-        manifest_raw = manifest_path.read_bytes()
-        try:
-            bound_version = version_raw.decode("utf-8").strip()
-        except UnicodeDecodeError as exc:
-            raise ValueError("V5 task-card bound Chalxius VERSION is not UTF-8") from exc
-        if (
-            not bound_version
-            or value["skill_version"] != bound_version
-            or value["version_file_sha256"] != sha256_bytes(version_raw)
-            or value["manifest_file_sha256"] != sha256_bytes(manifest_raw)
-        ):
-            raise ValueError("V5 task-card bound Chalxius runtime identity drifted")
-        return value
+    def _validate_bound_runtime_binding(
+        value: Any,
+        *,
+        historical_runtime: bool = False,
+    ) -> dict[str, Any]:
+        normalized = validate_runtime_binding(value)
+        if historical_runtime:
+            resolve_historical_runtime(normalized)
+        else:
+            validate_bound_runtime_at(
+                Path(normalized["skill_root"]),
+                normalized,
+                verify_manifest_tree=True,
+            )
+        return normalized
 
     def _project_background_binding(
         self,
@@ -2739,6 +2729,7 @@ class V5LifecycleManager:
         *,
         expected_path: Path | None = None,
         historical_runtime: bool = False,
+        _runtime_validation_cache: set[tuple[bool, str]] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(card, dict):
             raise ValueError("V5 task card must be one object")
@@ -2789,9 +2780,26 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 task card schema/policy/project mismatch")
         if "runtime_binding" in card:
-            self._validate_bound_runtime_binding(card["runtime_binding"])
-            if not historical_runtime and card["runtime_binding"] != self._runtime_binding():
-                raise ValueError("V5 task-card Chalxius runtime binding drifted")
+            normalized_runtime = validate_runtime_binding(card["runtime_binding"])
+            runtime_cache_key = (
+                historical_runtime,
+                normalized_runtime["runtime_identity_sha256"],
+            )
+            if (
+                _runtime_validation_cache is None
+                or runtime_cache_key not in _runtime_validation_cache
+            ):
+                self._validate_bound_runtime_binding(
+                    normalized_runtime,
+                    historical_runtime=historical_runtime,
+                )
+                if (
+                    not historical_runtime
+                    and normalized_runtime != self._runtime_binding()
+                ):
+                    raise ValueError("V5 task-card Chalxius runtime binding drifted")
+                if _runtime_validation_cache is not None:
+                    _runtime_validation_cache.add(runtime_cache_key)
         round_id = validate_round_id(
             _require_nonempty_text(card.get("round_id"), "task-card round id")
         )
@@ -3220,6 +3228,23 @@ class V5LifecycleManager:
             )
 
         with self.store.v5_mutation_lock(command="plan-round"):
+            planned_runtime_binding = validate_runtime_binding(
+                self._runtime_binding()
+            )
+            self._validate_bound_runtime_binding(
+                planned_runtime_binding,
+                historical_runtime=False,
+            )
+            if planned_runtime_binding != self._runtime_binding():
+                raise ValueError(
+                    "V5 round runtime changed during preflight"
+                )
+            runtime_validation_cache: set[tuple[bool, str]] = {
+                (
+                    False,
+                    planned_runtime_binding["runtime_identity_sha256"],
+                )
+            }
             campaign_snapshot: dict[str, Any] | None = None
             campaign_snapshot_raw: bytes | None = None
             if campaign_id is not None:
@@ -3512,7 +3537,7 @@ class V5LifecycleManager:
                     "schema_version": 5,
                     "policy_revision": V5_POLICY_REVISION,
                     "task_context_revision": V5_TASK_CONTEXT_REVISION,
-                    "runtime_binding": self._runtime_binding(),
+                    "runtime_binding": planned_runtime_binding,
                     "context_selection": context_selection,
                     "project_id": self.store.project_id(),
                     "round_id": round_id,
@@ -3607,7 +3632,11 @@ class V5LifecycleManager:
                 }
                 card_path = self.store.root / task_card_relpath
                 self.store._write_json_once(card_path, card)
-                self.validate_task_card(card, expected_path=card_path)
+                self.validate_task_card(
+                    card,
+                    expected_path=card_path,
+                    _runtime_validation_cache=runtime_validation_cache,
+                )
                 task_card_sha = sha256_bytes(card_path.read_bytes())
                 prompt = self._compact_prompt(
                     card=card, task_card_sha256=task_card_sha
@@ -3763,11 +3792,13 @@ class V5LifecycleManager:
             ):
                 raise ValueError("V5 prompt bytes/hash mismatch")
         completed = self._round_is_completed(round_dir, manifest)
+        runtime_validation_cache: set[tuple[bool, str]] = set()
         for card_path, card in frozen_cards:
             self.validate_task_card(
                 card,
                 expected_path=card_path,
                 historical_runtime=abort is not None or completed,
+                _runtime_validation_cache=runtime_validation_cache,
             )
             if card.get("campaign_scope") != campaign_scope:
                 raise ValueError(
@@ -4844,6 +4875,11 @@ class V5LifecycleManager:
                     "worker_outcome": payload["outcome"],
                     "narrative": payload["narrative"],
                     "artifacts": payload["artifacts"],
+                    **(
+                        {"campaign_id": card["campaign_id"]}
+                        if card.get("campaign_id") is not None
+                        else {}
+                    ),
                     **assurance_metadata,
                     "requested_claim_relation": card[
                         "requested_claim_relation"
@@ -5239,7 +5275,22 @@ class V5LifecycleManager:
         *,
         candidate_ids: set[str],
         internal_edges: list[list[str]],
+        candidate_facts: dict[str, Fact] | None = None,
     ) -> dict[str, Any]:
+        if (
+            isinstance(assurance, dict)
+            and assurance.get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        ):
+            if candidate_facts is None or set(candidate_facts) != candidate_ids:
+                raise ValueError(
+                    "research-draft assurance requires the exact Candidate Fact set"
+                )
+            return validate_research_draft_assurance(
+                assurance,
+                candidate_facts=candidate_facts,
+                internal_edges=internal_edges,
+            )
         if not isinstance(assurance, dict) or set(assurance) != {
             "validation_subject",
             "validation_granularity",
@@ -5392,6 +5443,239 @@ class V5LifecycleManager:
             workflow_evidence_version=5,
             assurance_contract_revision=assurance_contract_revision,
         )
+
+    def _validate_sealed_research_draft_release(
+        self,
+        record: dict[str, Any],
+        *,
+        candidate_facts: dict[str, Fact],
+        deep_dependencies: bool,
+    ) -> dict[str, Any]:
+        """Validate the prospective Paper-admission seam without reopening it N times."""
+
+        evidence = record.get("research_draft_evidence")
+        if not isinstance(evidence, dict) or set(evidence) != {
+            "plan",
+            "batch",
+            "adequacy_receipt",
+            "research_records",
+        }:
+            raise ValueError("sealed research-draft evidence fields are not exact")
+        plan = evidence["plan"]
+        batch = evidence["batch"]
+        adequacy = evidence["adequacy_receipt"]
+        if not all(isinstance(item, dict) for item in (plan, batch, adequacy)):
+            raise ValueError("sealed research-draft evidence records are malformed")
+        if plan.get("record_sha256") != sha256_json(
+            {key: value for key, value in plan.items() if key != "record_sha256"}
+        ):
+            raise ValueError("sealed research-draft plan hash mismatch")
+        if batch.get("record_sha256") != sha256_json(
+            {key: value for key, value in batch.items() if key != "record_sha256"}
+        ):
+            raise ValueError("sealed research-draft batch hash mismatch")
+        if adequacy.get("adequacy_receipt_sha256") != sha256_json(
+            {
+                key: value
+                for key, value in adequacy.items()
+                if key != "adequacy_receipt_sha256"
+            }
+        ):
+            raise ValueError("sealed research-draft adequacy receipt hash mismatch")
+        validate_research_draft_ref(
+            record.get("research_draft_ref"),
+            plan=plan,
+            batch=batch,
+            adequacy_receipt=adequacy,
+        )
+        research_records = evidence["research_records"]
+        if not isinstance(research_records, list) or any(
+            not isinstance(item, dict) for item in research_records
+        ):
+            raise ValueError("sealed research-draft Research records are malformed")
+        embedded_research: dict[str, dict[str, Any]] = {}
+        for item in research_records:
+            research_id = item.get("research_id")
+            if not isinstance(research_id, str) or research_id in embedded_research:
+                raise ValueError("sealed research-draft Research id is invalid or duplicated")
+            if item.get("record_sha256") != sha256_json(
+                {key: value for key, value in item.items() if key != "record_sha256"}
+            ):
+                raise ValueError("sealed research-draft Research record hash mismatch")
+            embedded_research[research_id] = item
+        expected_research = {
+            binding["research_id"]: binding["record_sha256"]
+            for binding in record.get("research_bindings", [])
+        }
+        if set(embedded_research) != set(expected_research) or any(
+            embedded_research[research_id]["record_sha256"] != digest
+            for research_id, digest in expected_research.items()
+        ):
+            raise ValueError("sealed research-draft Research closure drifted")
+        assurance = validate_research_draft_assurance(
+            record.get("requested_assurance"),
+            candidate_facts=candidate_facts,
+            internal_edges=record.get("internal_edges", []),
+        )
+        if assurance != record.get("requested_assurance"):
+            raise ValueError("sealed research-draft assurance normalization drifted")
+        preflight = record.get("research_draft_admission_preflight")
+        if not isinstance(preflight, dict):
+            raise ValueError("sealed research-draft preflight is missing")
+        preflight_semantic = {
+            key: value
+            for key, value in preflight.items()
+            if key not in {"preflight_id", "preflight_sha256"}
+        }
+        preflight_sha = sha256_json(preflight_semantic)
+        if (
+            preflight.get("contract_revision")
+            != RESEARCH_DRAFT_PREFLIGHT_REVISION
+            or preflight.get("preflight_id") != "rdpf-" + preflight_sha
+            or preflight.get("preflight_sha256") != preflight_sha
+            or preflight.get("structural_status") != "PASS"
+            or preflight.get("truth_effect") != "none"
+            or set(preflight.get("candidate_fact_ids", [])) != set(candidate_facts)
+            or preflight.get("plan_id") != plan.get("plan_id")
+            or preflight.get("batch_id") != batch.get("batch_id")
+        ):
+            raise ValueError("sealed research-draft preflight binding is invalid")
+        closure = record.get("paper_evidence_transport_closure")
+        if not isinstance(closure, dict):
+            raise ValueError("sealed Paper EvidenceRef transport closure is missing")
+        closure_semantic = {
+            key: value for key, value in closure.items() if key != "closure_sha256"
+        }
+        if (
+            closure.get("contract_revision") != PAPER_TRANSPORT_REVISION
+            or closure.get("closure_sha256") != sha256_json(closure_semantic)
+            or closure.get("off_project_reconstructable") is not True
+            or preflight.get("paper_transport_closure_sha256")
+            != closure.get("closure_sha256")
+        ):
+            raise ValueError("sealed Paper EvidenceRef transport closure drifted")
+        members = closure.get("members")
+        if not isinstance(members, list) or any(
+            not isinstance(item, dict) for item in members
+        ):
+            raise ValueError("sealed Paper transport members are malformed")
+        artifact_bindings = {
+            (item.get("artifact_sha256"), item.get("role"))
+            for item in record.get("artifacts", [])
+        }
+        required_members = {
+            (item.get("artifact_sha256"), item.get("role")) for item in members
+        }
+        if not required_members.issubset(artifact_bindings):
+            raise ValueError("sealed release omits a Paper transport member")
+        ref_snapshot_ids = {
+            item.get("snapshot_id") for item in record.get("paper_evidence_refs", [])
+        }
+        if not ref_snapshot_ids.issubset(set(closure.get("snapshot_ids", []))):
+            raise ValueError("sealed Paper EvidenceRef/transport snapshot set drifted")
+        receipt = record.get("validated_dependency_receipt")
+        receipt_result = self._validate_research_draft_dependency_cache(
+            record,
+            force_deep=deep_dependencies,
+        )
+        if receipt.get("validation_subject_sha256") != preflight_sha:
+            raise ValueError("validated dependency receipt binds the wrong preflight")
+        return receipt_result
+
+    def _validate_research_draft_dependency_cache(
+        self,
+        record: dict[str, Any],
+        *,
+        force_deep: bool,
+    ) -> dict[str, Any]:
+        """Hash only dependency files whose stable local fingerprint changed."""
+
+        receipt = record["validated_dependency_receipt"]
+        validate_dependency_receipt(
+            receipt,
+            project_root=self.store.root,
+            changed_dependency_ids=set(),
+        )
+        fingerprints: dict[str, dict[str, int]] = {}
+        for item in receipt["dependencies"]:
+            relpath = item["relpath_or_null"]
+            if relpath is None:
+                continue
+            path = contained_path(
+                self.store.root,
+                relpath,
+                "research-draft cached dependency",
+            )
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("research-draft dependency is missing or unsafe")
+            stat = path.stat()
+            fingerprints[item["dependency_id"]] = {
+                "device": stat.st_dev,
+                "inode": stat.st_ino,
+                "size": stat.st_size,
+                "mtime_ns": stat.st_mtime_ns,
+                "ctime_ns": stat.st_ctime_ns,
+            }
+        cache_dir = self.candidate_releases_dir / "_dependency_cache"
+        cache_path = cache_dir / f"{record['release_id']}.json"
+        previous: dict[str, Any] | None = None
+        if cache_path.exists():
+            if cache_path.is_symlink() or not cache_path.is_file():
+                raise ValueError("research-draft dependency cache is unsafe")
+            value = self.store._read_json(cache_path)
+            if (
+                isinstance(value, dict)
+                and value.get("release_id") == record["release_id"]
+                and value.get("receipt_id") == receipt["receipt_id"]
+                and value.get("truth_effect") == "none"
+            ):
+                previous = value
+        previous_fingerprints = (
+            previous.get("file_fingerprints", {}) if previous is not None else {}
+        )
+        changed = (
+            set(fingerprints)
+            if force_deep or previous is None
+            else {
+                dependency_id
+                for dependency_id, fingerprint in fingerprints.items()
+                if previous_fingerprints.get(dependency_id) != fingerprint
+            }
+        )
+        removed = set(previous_fingerprints).difference(fingerprints)
+        if removed:
+            raise ValueError("research-draft dependency cache inventory drifted")
+        if not changed and previous is not None:
+            return {
+                "receipt_id": receipt["receipt_id"],
+                "checked_dependency_ids": [],
+                "reuse_mode": "sealed_record_only",
+                "truth_effect": "none",
+                "cache_status": "reused",
+                "changed_dependency_ids": [],
+            }
+        validation = validate_dependency_receipt(
+            receipt,
+            project_root=self.store.root,
+            changed_dependency_ids=changed,
+        )
+        cache = {
+            "schema_version": 1,
+            "release_id": record["release_id"],
+            "release_sha256": record["release_sha256"],
+            "receipt_id": receipt["receipt_id"],
+            "file_fingerprints": fingerprints,
+            "last_checked_dependency_ids": validation["checked_dependency_ids"],
+            "cache_effect": "performance_only",
+            "truth_effect": "none",
+        }
+        if previous != cache:
+            self.store._write_json_atomic(cache_path, cache)
+        return {
+            **validation,
+            "cache_status": "refreshed" if changed else "reused",
+            "changed_dependency_ids": sorted(changed),
+        }
 
     def _research_assurance_evidence(
         self,
@@ -5698,6 +5982,7 @@ class V5LifecycleManager:
                 convention_profile_ids=fact.convention_profile_ids,
                 assurance_contract_revision=assurance_contract_revision,
                 target_typed_objects=extract_geometric_objects(fact.statement),
+                target_statement_interface=candidate_interfaces[fact.fact_id],
                 legacy_premise_resolver=legacy_premise_resolver,
             )
         internal_edges = sorted(
@@ -5751,6 +6036,7 @@ class V5LifecycleManager:
             "evidence_bridge_refs",
             "paper_continuation_ref",
             "philosophy_atomicity",
+            "research_draft_ref",
         }
         missing_fields = sorted(required.difference(payload))
         unknown_fields = sorted(set(payload).difference(allowed))
@@ -5970,11 +6256,38 @@ class V5LifecycleManager:
             payload.get("requested_assurance"),
             candidate_ids=set(facts),
             internal_edges=internal_edges,
+            candidate_facts=facts,
         )
-        if assurance["validation_granularity"] in {
+        strict_research_draft = (
+            assurance.get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        )
+        if (
+            strict_research_draft
+            and assurance_contract_revision != V5_ASSURANCE_CONTRACT_REVISION
+        ):
+            raise ValueError(
+                "research-draft admission requires current Research assurance"
+            )
+        if strict_research_draft and (
+            "paper_continuation_ref" in payload
+            or "philosophy_atomicity" in payload
+        ):
+            raise ValueError(
+                "research_draft_ref cannot be mixed with the legacy Paper continuation path"
+            )
+        if not strict_research_draft and "research_draft_ref" in payload:
+            raise ValueError(
+                "research_draft_ref requires the prospective research-draft assurance"
+            )
+        if (
+            assurance.get("contract_revision")
+            != RESEARCH_DRAFT_ASSURANCE_REVISION
+            and assurance["validation_granularity"] in {
             "nodewise_proof_dag",
             "paper_target_closure",
-        }:
+            }
+        ):
             mapped_fact_ids = {
                 item["fact_id"]
                 for item in assurance["coverage"]
@@ -5990,6 +6303,10 @@ class V5LifecycleManager:
         continuation_plan_ids = continuation.plan_ids_for_research(
             research_records
         )
+        if strict_research_draft and continuation_plan_ids:
+            raise ValueError(
+                "prospective research-draft admission cannot inherit a legacy continuation plan"
+            )
         if len(continuation_plan_ids) > 1:
             raise ValueError(
                 "one Candidate Release cannot mix Paper continuation plans"
@@ -6076,6 +6393,40 @@ class V5LifecycleManager:
             raise ValueError(
                 "Paper continuation release fields require bound continuation Research"
             )
+        research_draft_context: dict[str, Any] | None = None
+        if strict_research_draft:
+            release_ref = payload.get("research_draft_ref")
+            if not isinstance(release_ref, dict):
+                raise ValueError(
+                    "prospective research-draft release requires research_draft_ref"
+                )
+            plan_id = _require_nonempty_text(
+                release_ref.get("plan_id"), "research-draft release plan id"
+            )
+            manager = self.research_draft()
+            plan = manager.plan(plan_id, deep=True)
+            current_batch = manager.current_batch(plan_id)
+            if current_batch is None:
+                raise ValueError(
+                    "research-draft plan has no complete current disposition batch"
+                )
+            batch_id = _require_nonempty_text(
+                release_ref.get("batch_id"), "research-draft release batch id"
+            )
+            if current_batch["batch_id"] != batch_id:
+                raise ValueError(
+                    "research_draft_ref must bind the exact current disposition batch"
+                )
+            batch = manager.batch(batch_id, deep=True)
+            adequacy_receipt = current_batch["cached_summary"][
+                "adequacy_receipt"
+            ]
+            research_draft_context = {
+                "release_ref": release_ref,
+                "plan": plan,
+                "batch": batch,
+                "adequacy_receipt": adequacy_receipt,
+            }
         paper_refs = self._validate_paper_evidence_refs(
             payload.get("paper_evidence_refs"),
             validation_subject=assurance["validation_subject"],
@@ -6100,6 +6451,24 @@ class V5LifecycleManager:
                 raise ValueError(
                     "paper Candidate Release omits required certification checks: "
                     + ", ".join(missing_paper_checks)
+                )
+        if strict_research_draft:
+            research_draft_checks = {
+                "composable_parallel_verification",
+                "research_draft_admission_preflight",
+                "paper_evidence_transport_closure",
+                "validated_dependency_receipt",
+                "language_neutral_statement_interfaces",
+                "semantic_component_atomicity",
+                "stance_preservation",
+            }
+            missing_research_draft_checks = sorted(
+                research_draft_checks.difference(normalized_plan["required_checks"])
+            )
+            if missing_research_draft_checks:
+                raise ValueError(
+                    "research-draft release omits required certification checks: "
+                    + ", ".join(missing_research_draft_checks)
                 )
         if continuation_binding is not None:
             plan = continuation_binding["plan"]
@@ -6229,6 +6598,36 @@ class V5LifecycleManager:
             )
             for fact_id in order
         ]
+        research_draft_preflight: dict[str, Any] | None = None
+        if research_draft_context is not None:
+            research_draft_preflight = research_draft_admission_preflight(
+                store=self.store,
+                plan=research_draft_context["plan"],
+                batch=research_draft_context["batch"],
+                adequacy_receipt=research_draft_context["adequacy_receipt"],
+                release_ref=research_draft_context["release_ref"],
+                assurance=assurance,
+                candidate_facts=facts,
+                candidate_fact_file_sha256={
+                    fact_id: sha256_bytes(rendered[fact_id])
+                    for fact_id in facts
+                },
+                candidate_interfaces=candidate_interfaces,
+                internal_edges=internal_edges,
+                external_predecessor_ids=external_predecessors,
+                research_bindings=research_bindings,
+                paper_evidence_refs=paper_refs,
+                artifacts=validation_artifacts,
+                authorized_artifact_roles=authorized_roles,
+                active_fact_file_sha256=lambda fact_id: sha256_bytes(
+                    self.store.active_fact_path(fact_id).read_bytes()
+                ),
+                revoked_fact_ids=self.revoked_fact_ids(),
+            )
+            if research_draft_preflight["normalized_assurance"] != assurance:
+                raise ValueError(
+                    "research-draft assurance normalization drifted across preflight"
+                )
         semantic = {
             "schema_version": 5,
             "policy_revision": V5_POLICY_REVISION,
@@ -6250,6 +6649,35 @@ class V5LifecycleManager:
                 normalized_dispositions, key=lambda item: item["research_id"]
             ),
             "paper_evidence_refs": paper_refs,
+            **(
+                {
+                    "research_draft_ref": research_draft_context[
+                        "release_ref"
+                    ],
+                    "research_draft_evidence": {
+                        "plan": research_draft_context["plan"],
+                        "batch": research_draft_context["batch"],
+                        "adequacy_receipt": research_draft_context[
+                            "adequacy_receipt"
+                        ],
+                        "research_records": research_records,
+                    },
+                    "research_draft_admission_preflight": (
+                        research_draft_preflight["preflight"]
+                    ),
+                    "paper_evidence_transport_closure": (
+                        research_draft_preflight["paper_transport_closure"]
+                    ),
+                    "validated_dependency_receipt": (
+                        research_draft_preflight[
+                            "validated_dependency_receipt"
+                        ]
+                    ),
+                }
+                if research_draft_context is not None
+                and research_draft_preflight is not None
+                else {}
+            ),
             **(
                 {
                     "paper_continuation_ref": continuation_binding[
@@ -6329,6 +6757,11 @@ class V5LifecycleManager:
                 raise ValueError(
                     "candidate artifact binding changed between preflight and seal"
                 )
+            if strict_research_draft:
+                self._validate_research_draft_dependency_cache(
+                    record,
+                    force_deep=True,
+                )
             self.store._write_json_once(path, record)
         return record
 
@@ -6339,6 +6772,7 @@ class V5LifecycleManager:
         _lineage_facts: dict[str, Fact] | None = None,
         _lineage_paths: dict[str, Path] | None = None,
         _skip_successor_validation: bool = False,
+        _deep_dependencies: bool = False,
     ) -> dict[str, Any]:
         path = self._release_path(release_id)
         if path.is_symlink() or not path.is_file():
@@ -6371,6 +6805,10 @@ class V5LifecycleManager:
         )
         if record.get("fact_admission_contract_sha256") != FACT_ADMISSION_CONTRACT_SHA256:
             raise ValueError("Candidate Release Fact contract mismatch")
+        strict_research_draft = (
+            record.get("requested_assurance", {}).get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        )
         candidates = record.get("candidates")
         if not isinstance(candidates, list) or not candidates:
             raise ValueError("Candidate Release candidates are invalid")
@@ -6391,23 +6829,24 @@ class V5LifecycleManager:
             seen.append(fact.fact_id)
         if seen != record.get("fact_ids"):
             raise ValueError("Candidate Release Fact order is inconsistent")
-        for artifact in record.get("artifacts", []):
-            sealed = contained_path(
-                self.store.root,
-                artifact["sealed_relpath"],
-                "sealed Candidate Release artifact",
-            )
-            if (
-                sealed.is_symlink()
-                or not sealed.is_file()
-                or sha256_bytes(sealed.read_bytes())
-                != artifact["artifact_sha256"]
-            ):
-                raise ValueError("sealed Candidate Release artifact drifted")
-        for binding in record.get("research_bindings", []):
-            research = self._research_record(binding["research_id"])
-            if research["record_sha256"] != binding["record_sha256"]:
-                raise ValueError("Candidate Release research binding drifted")
+        if not strict_research_draft:
+            for artifact in record.get("artifacts", []):
+                sealed = contained_path(
+                    self.store.root,
+                    artifact["sealed_relpath"],
+                    "sealed Candidate Release artifact",
+                )
+                if (
+                    sealed.is_symlink()
+                    or not sealed.is_file()
+                    or sha256_bytes(sealed.read_bytes())
+                    != artifact["artifact_sha256"]
+                ):
+                    raise ValueError("sealed Candidate Release artifact drifted")
+            for binding in record.get("research_bindings", []):
+                research = self._research_record(binding["research_id"])
+                if research["record_sha256"] != binding["record_sha256"]:
+                    raise ValueError("Candidate Release research binding drifted")
         assurance_revision = record.get(
             "assurance_contract_revision",
             V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
@@ -6483,10 +6922,14 @@ class V5LifecycleManager:
                 for item in record["artifacts"]
                 if item["role"] in authorized_roles
             }
-            bound_research = [
-                self._research_record(binding["research_id"])
-                for binding in record["research_bindings"]
-            ]
+            bound_research = (
+                record["research_draft_evidence"]["research_records"]
+                if strict_research_draft
+                else [
+                    self._research_record(binding["research_id"])
+                    for binding in record["research_bindings"]
+                ]
+            )
             expected_evidence = self._research_assurance_evidence(
                 research_records=bound_research,
                 authorized_artifact_hashes=authorized_hashes,
@@ -6525,10 +6968,20 @@ class V5LifecycleManager:
             )
             for candidate in candidates
         }
-        bound_research = [
-            self._research_record(binding["research_id"])
-            for binding in record["research_bindings"]
-        ]
+        if strict_research_draft:
+            self._validate_sealed_research_draft_release(
+                record,
+                candidate_facts=sealed_candidate_facts,
+                deep_dependencies=_deep_dependencies,
+            )
+            bound_research = record["research_draft_evidence"][
+                "research_records"
+            ]
+        else:
+            bound_research = [
+                self._research_record(binding["research_id"])
+                for binding in record["research_bindings"]
+            ]
         continuation = self.paper_continuation()
         continuation_plan_ids = continuation.plan_ids_for_research(
             bound_research
@@ -6578,10 +7031,16 @@ class V5LifecycleManager:
             raise ValueError(
                 "Candidate Release has unbound Paper continuation fields"
             )
-        validated_paper_refs = self._validate_paper_evidence_refs(
-            record.get("paper_evidence_refs"),
-            validation_subject=record["requested_assurance"]["validation_subject"],
-            require_current=False,
+        validated_paper_refs = (
+            record.get("paper_evidence_refs", [])
+            if strict_research_draft
+            else self._validate_paper_evidence_refs(
+                record.get("paper_evidence_refs"),
+                validation_subject=record["requested_assurance"][
+                    "validation_subject"
+                ],
+                require_current=False,
+            )
         )
         if continuation_binding is not None:
             plan = continuation_binding["plan"]
@@ -6805,6 +7264,13 @@ class V5LifecycleManager:
                 }
                 for item in source_nonpass
             ]
+        if (
+            release["requested_assurance"].get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        ):
+            template["parallel_verification_aggregate_id"] = (
+                "COPY_EXACT_ELIGIBLE_AGGREGATE_ID_FROM_PROJECT"
+            )
         return template
 
     def verifier_capsule(self, release_id: str) -> dict[str, Any]:
@@ -6878,6 +7344,33 @@ class V5LifecycleManager:
                 "component behind its single declared conjunct; compare every ordinary-"
                 "language paraphrase with the formal claim and reject undefined or "
                 "unnecessary jargon that conceals a premise, burden, or inferential step"
+            )
+        if (
+            release["requested_assurance"].get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        ):
+            semantic.update(
+                {
+                    "research_draft_ref": release["research_draft_ref"],
+                    "research_draft_evidence": release[
+                        "research_draft_evidence"
+                    ],
+                    "research_draft_admission_preflight": release[
+                        "research_draft_admission_preflight"
+                    ],
+                    "paper_evidence_transport_closure": release[
+                        "paper_evidence_transport_closure"
+                    ],
+                    "validated_dependency_receipt": release[
+                        "validated_dependency_receipt"
+                    ],
+                }
+            )
+            semantic["instructions"]["research_draft_boundary"] = (
+                "reconstruct the complete Paper target closure from the sealed transport; "
+                "check node dispositions separately from many-to-many Paper-Fact mappings; "
+                "check every source-derived atomic component and qualified failure surface; "
+                "preserve the declared stance unless an exact Operator authorization is sealed"
             )
         if "evidence_bridge_refs" in release:
             current_bridge_refs = self._validate_evidence_bridge_refs(
@@ -7062,6 +7555,12 @@ class V5LifecycleManager:
                 "Certification Decision fields are not exact: missing=/release_id"
             )
         release = self.release(release_id)
+        strict_research_draft = (
+            release["requested_assurance"].get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        )
+        if strict_research_draft:
+            required.add("parallel_verification_aggregate_id")
         source_nonpass = self._source_nonpass_checks(release)
         if source_nonpass:
             required.add("source_check_reconciliation")
@@ -7079,6 +7578,15 @@ class V5LifecycleManager:
             or payload.get("capsule_sha256") != capsule["capsule_sha256"]
         ):
             raise ValueError("Certification Decision release/capsule binding mismatch")
+        parallel_aggregate: dict[str, Any] | None = None
+        if strict_research_draft:
+            aggregate_id = _require_nonempty_text(
+                payload.get("parallel_verification_aggregate_id"),
+                "parallel verification aggregate id",
+            )
+            parallel_aggregate = self.parallel_verification().require_eligible_for_release(
+                release["release_id"], aggregate_id
+            )
         verdict = payload.get("verdict")
         if verdict not in {"correct", "reject"}:
             raise ValueError("Certification Decision verdict must be correct or reject")
@@ -7354,6 +7862,18 @@ class V5LifecycleManager:
             "host_attestation": attestation,
             **(
                 {
+                    "parallel_verification_aggregate_id": parallel_aggregate[
+                        "aggregate"
+                    ]["aggregate_id"],
+                    "parallel_verification_aggregate_record_sha256": (
+                        parallel_aggregate["record_sha256"]
+                    ),
+                }
+                if parallel_aggregate is not None
+                else {}
+            ),
+            **(
+                {
                     "source_check_reconciliation": sorted(
                         normalized_reconciliation,
                         key=lambda item: (
@@ -7459,6 +7979,36 @@ class V5LifecycleManager:
                 or record["capsule_sha256"] != capsule["capsule_sha256"]
             ):
                 raise ValueError("Certification Decision binding drifted")
+            strict_research_draft = (
+                release["requested_assurance"].get("contract_revision")
+                == RESEARCH_DRAFT_ASSURANCE_REVISION
+            )
+            if strict_research_draft:
+                aggregate_id = record.get("parallel_verification_aggregate_id")
+                if not isinstance(aggregate_id, str):
+                    raise ValueError(
+                        "research-draft Certification Decision lacks parallel verification"
+                    )
+                aggregate = self.parallel_verification().require_eligible_for_release(
+                    release["release_id"], aggregate_id
+                )
+                if (
+                    record.get("parallel_verification_aggregate_record_sha256")
+                    != aggregate["record_sha256"]
+                ):
+                    raise ValueError(
+                        "Certification Decision parallel aggregate binding drifted"
+                    )
+            elif any(
+                key in record
+                for key in (
+                    "parallel_verification_aggregate_id",
+                    "parallel_verification_aggregate_record_sha256",
+                )
+            ):
+                raise ValueError(
+                    "non-research-draft Certification Decision has parallel aggregate fields"
+                )
         return record
 
     def decisions(self) -> list[dict[str, Any]]:
@@ -7486,6 +8036,16 @@ class V5LifecycleManager:
         if marker_path.is_symlink() or not marker_path.is_file():
             raise ValueError("V5 admission marker is missing or unsafe")
         marker = self.store._read_json(marker_path)
+        release = self.release(
+            release_id,
+            _lineage_facts=_lineage_facts,
+            _lineage_paths=_lineage_paths,
+            _skip_successor_validation=_skip_successor_validation,
+        )
+        strict_research_draft = (
+            release["requested_assurance"].get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        )
         required = {
             "schema_version",
             "policy_revision",
@@ -7502,6 +8062,13 @@ class V5LifecycleManager:
             "accepted_at",
             "acceptance_id",
         }
+        if strict_research_draft:
+            required.update(
+                {
+                    "parallel_verification_aggregate_id",
+                    "parallel_verification_aggregate_record_sha256",
+                }
+            )
         if not isinstance(marker, dict) or set(marker) != required:
             raise ValueError("V5 admission marker fields are not exact")
         semantic = {
@@ -7519,12 +8086,6 @@ class V5LifecycleManager:
         _parse_utc_timestamp(
             marker.get("accepted_at"), label="V5 admission accepted_at"
         )
-        release = self.release(
-            release_id,
-            _lineage_facts=_lineage_facts,
-            _lineage_paths=_lineage_paths,
-            _skip_successor_validation=_skip_successor_validation,
-        )
         decision = self.decision(
             marker["decision_id"], validate_bindings=False
         )
@@ -7537,6 +8098,22 @@ class V5LifecycleManager:
             or marker["fact_ids"] != release["fact_ids"]
         ):
             raise ValueError("V5 admission release/decision/capsule binding mismatch")
+        if strict_research_draft:
+            aggregate_id = marker["parallel_verification_aggregate_id"]
+            aggregate = self.parallel_verification().require_eligible_for_release(
+                release_id, aggregate_id
+            )
+            if (
+                marker["parallel_verification_aggregate_record_sha256"]
+                != aggregate["record_sha256"]
+                or decision.get("parallel_verification_aggregate_id")
+                != aggregate_id
+                or decision.get("parallel_verification_aggregate_record_sha256")
+                != aggregate["record_sha256"]
+            ):
+                raise ValueError(
+                    "V5 admission parallel-verification binding drifted"
+                )
         candidate_by_id = {
             item["fact_id"]: item for item in release["candidates"]
         }
@@ -7719,7 +8296,7 @@ class V5LifecycleManager:
                 )
             self._materialize_admission_projections(marker)
             return marker
-        release = self.release(release_id)
+        release = self.release(release_id, _deep_dependencies=True)
         self._require_current_paper_continuation_release(release)
         decision = self.decision(decision_id)
         capsule = self.verifier_capsule(release_id)
@@ -7732,6 +8309,27 @@ class V5LifecycleManager:
             raise ValueError(
                 "V5 admission requires the clean exact Certification Decision"
             )
+        strict_research_draft = (
+            release["requested_assurance"].get("contract_revision")
+            == RESEARCH_DRAFT_ASSURANCE_REVISION
+        )
+        parallel_aggregate: dict[str, Any] | None = None
+        if strict_research_draft:
+            aggregate_id = decision.get("parallel_verification_aggregate_id")
+            if not isinstance(aggregate_id, str):
+                raise ValueError(
+                    "research-draft admission lacks parallel verification aggregate"
+                )
+            parallel_aggregate = self.parallel_verification().require_eligible_for_release(
+                release_id, aggregate_id
+            )
+            if (
+                decision.get("parallel_verification_aggregate_record_sha256")
+                != parallel_aggregate["record_sha256"]
+            ):
+                raise ValueError(
+                    "research-draft admission aggregate binding differs from the decision"
+                )
         if gateway.casefold() == decision["reviewer"].casefold():
             raise ValueError("V5 admission gateway must differ from the verifier")
         candidate_payloads = [
@@ -7777,10 +8375,16 @@ class V5LifecycleManager:
             or external_predecessors != release["external_predecessors"]
         ):
             raise ValueError("Candidate Release mathematical graph binding drifted")
-        self._validate_paper_evidence_refs(
-            release["paper_evidence_refs"],
-            validation_subject=release["requested_assurance"]["validation_subject"],
-        )
+        if (
+            release["requested_assurance"].get("contract_revision")
+            != RESEARCH_DRAFT_ASSURANCE_REVISION
+        ):
+            self._validate_paper_evidence_refs(
+                release["paper_evidence_refs"],
+                validation_subject=release["requested_assurance"][
+                    "validation_subject"
+                ],
+            )
         fact_sha = {
             fact_id: sha256_bytes(rendered[fact_id])
             for fact_id in release["fact_ids"]
@@ -7799,6 +8403,18 @@ class V5LifecycleManager:
             "fact_sha256": fact_sha,
             "gateway": gateway,
             "reviewer": decision["reviewer"],
+            **(
+                {
+                    "parallel_verification_aggregate_id": parallel_aggregate[
+                        "aggregate"
+                    ]["aggregate_id"],
+                    "parallel_verification_aggregate_record_sha256": (
+                        parallel_aggregate["record_sha256"]
+                    ),
+                }
+                if parallel_aggregate is not None
+                else {}
+            ),
             "accepted_at": accepted_at,
         }
         marker = {
@@ -8646,6 +9262,22 @@ class V5LifecycleManager:
             report.paper_continuation_adequacy_complete = (
                 continuation_report["adequacy_complete"]
             )
+
+        try:
+            research_draft_report = self.research_draft().audit()
+        except Exception as exc:
+            workflow_error(f"research-draft lifecycle audit failed: {exc}")
+        else:
+            for message in research_draft_report["errors"]:
+                workflow_error(f"research_draft: {message}")
+
+        try:
+            parallel_verification_report = self.parallel_verification().audit()
+        except Exception as exc:
+            workflow_error(f"parallel-verification lifecycle audit failed: {exc}")
+        else:
+            for message in parallel_verification_report["errors"]:
+                workflow_error(f"parallel_verification: {message}")
 
         try:
             claims_report = self.store.claims().audit()

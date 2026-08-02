@@ -1,52 +1,85 @@
 # 🧭 Chalxius
 
-Chalxius is a source-bound research system for papers, proofs, computations,
-philosophical arguments, reusable evidence, and graph-aware teaching. It keeps
-exploration productive while making the transition to reusable Facts explicit,
-reviewable, and verifier-gated.
+Chalxius helps researchers turn drafts, papers, proof ideas, computations, and
+teaching goals into a working research graph that Codex can inspect, extend,
+attack, verify, and present. Exploration stays useful; reusable Facts remain
+explicitly verifier-gated.
 
-**[🚀 Open the live Reader](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)** ·
-[📦 Download v0.5.0](https://github.com/cm4u7/chalxius/releases/tag/v0.5.0) ·
+**[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
+[📚 Read the use cases](USE_CASES.md) ·
+[📦 Download v0.6.2](https://github.com/cm4u7/chalxius/releases/tag/v0.6.2) ·
+[✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
-[✅ Validation](VALIDATION.md) ·
-[⚠️ Known limitations](chalxius/KNOWN_LIMITATIONS.md) ·
-[📚 Use cases](USE_CASES.md)
+[🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
 
-> **Release boundary:** v0.5.0 is published with 17 known, unresolved CHX
-> architecture issues from a private field run. Tests validate the software and
-> package; they do not close those issues or certify any research result. See
-> [Known architecture limitations](chalxius/KNOWN_LIMITATIONS.md).
+## 🚀 Start with the interactive cases
 
-## A research graph at working scale
+These self-contained Reader pages are the quickest way to see the graph model.
+Select cards, inspect exact detail, expand complete paths, and move around the
+topology without changing any source or research authority.
 
-[![Open the 175-node anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
-
-The featured case preserves the real topology of a completed research run: **175
-nodes, 364 edges, 17 targets, and 7 themes**. Its claims, formulas, names, paths,
-source identifiers, and node text were removed. Every public node identifier and
-content-bearing field is an opaque HMAC-SHA-256 value produced with a discarded
-ephemeral key. The page demonstrates graph scale and interaction only; it has
-`truth_effect="none"`.
-
-Two smaller guided cases are also available:
-
-- [Philosophy argument workflow](https://cm4u7.github.io/chalxius/cases/philosophy.html): source, interpretation, audit, correction, and authority separation.
-- [Potential x-y interchange workflow](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html): computation, blockers, correction history, and guarded presentation. This is a potential application, not an author-confirmed result.
-
-## What Chalxius does
-
-| Capability | Outcome | Authority boundary |
+| 🗺️ Working-scale topology | 📚 Philosophy workflow | 🧮 Potential x-y interchange |
 |---|---|---|
-| Paper Logic + Audit | Freeze exact paper versions, distinguish research drafts from external references, reconstruct nodewise arguments, review them independently, and keep corrections append-only | Source role is orthogonal to authority; Paper and Audit are never automatic Fact premises |
-| Cross-project Evidence | Archive reviewed Paper Graphs with their PDF/version; explicitly import older or external Fact Graphs; query and mark stale evidence | Evidence is higher-trust nontruth; a verified bridge must still pass release, fresh verification, and gateway admission |
-| Research + Blackboard | Accumulate attempts, insights, counterexamples, obstacles, typed questions, and alternative routes | Exploration remains nontruth and cannot silently overwrite a Fact |
-| Campaigns | Scope a bounded family of related Research targets while Main keeps the four-factor frontier ordering | Campaigns plan work; they do not certify completion |
-| Program–mathematics verification | Bind formulas, code, domains, representations, approximation budgets, checkpoints, outputs, and replay evidence | A successful computation supports only its exact bound claim |
-| Adverse review | Run general attacks plus domain-gated philosophical attacks; produce a task-end Attack report and route-evolution proposals | Productive attacks remain Research; only the user/Operator may activate future routing rules |
-| CHX architecture reporting | Keep one causal, hash-chained CHX ledger per new run and report architecture-caused or architecture-amplified failures | Silent when no qualifying issue exists; never mixed into attack routing or mathematical truth |
-| V5 certification | Seal exact Research as a Candidate Release, obtain a fresh immutable Certification Decision, and admit through the Fact Gateway | The only truth path is `Research → Candidate Release → Certification Decision → Fact` |
-| Reader | Export one offline HTML file with MathJax, hash6 canvas identities, topic orbits, stable radial-memory forces, drag/zoom, path expansion, and bilingual controls | Presentation only; no topology, source, or authority writeback |
-| Chalxius Learner | Teach, question, test, and schedule review from frozen graph snapshots when explicitly requested | Learning records are nontruth and cannot mutate research authority |
+| [![Open the 175-node anonymized Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html) | [![Open the philosophy workflow Reader](docs/assets/philosophy-case.png)](https://cm4u7.github.io/chalxius/cases/philosophy.html) | [![Open the potential x-y interchange Reader](docs/assets/xy-swap-potential-case.png)](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html) |
+| Real run topology: 175 nodes, 364 edges, 17 targets, and 7 themes; every content-bearing field is anonymized. | Source-bound argument reconstruction, independent audit, correction, and authority separation. | A guarded visualization of computation, blockers, and revocation. **Potential application only; not author-confirmed.** |
+
+All three pages have `truth_effect="none"`. The featured graph uses opaque
+HMAC-SHA-256 identifiers produced with a discarded ephemeral key; it preserves
+structure, not private claims, formulas, names, or source locators.
+
+## 🧰 What you can do with Chalxius
+
+- 📄 **Research a draft from its Paper Graph.** Freeze the exact draft,
+  decompose it into a proposition-total DAG, inherit every target and ordered
+  premise, and strengthen it copy-on-write instead of replacing it with a tiny
+  convenience Fact bundle.
+- 📚 **Keep finished external papers as Evidence.** PDF bytes, DOI identity,
+  peer review, and citations do not create Fact authority. Exact claims still
+  need an explicit bridge, fresh verification, and ordinary admission.
+- 🧩 **Develop or refute a mathematical target.** Preserve the exact
+  conjecture, hypotheses, domains, quantifiers, and target ids; a valid result
+  may be `proved`, `disproved`, or
+  `unresolved_with_obstruction`.
+- 🧠 **Run several lines of reasoning without mixing them.** Keep exploratory
+  attempts, counterexamples, objections, repairs, and computations on the
+  Research/Blackboard planes until their dependencies are visible.
+- 🧮 **Make computation replayable.** Bind formulas, code, versions, domains,
+  representations, checkpoints, outputs, and approximation budgets to the
+  exact claim they support.
+- 🔎 **Investigate sources and novelty.** Check publication identity, theorem
+  applicability, locators, witnesses, conventions, nearby literature, and the
+  bounded corpus behind a novelty statement.
+- ✅ **Promote only reusable results.** The sole truth path remains
+  `Research → Candidate Release → Certification Decision → Fact`.
+- ♻️ **Correct without losing history.** Challenge, replace, refute, or revoke
+  a node while preserving its old bytes and showing downstream impact.
+- 🧾 **Learn from architecture failures.** Revision-3 CHX ledgers record every
+  discovery before classification, preserve typed relations, and now gate
+  public disclosure against one exact `run_id/CHX-NNN` namespace.
+- 🛰️ **Use only a cautious slice of Brave Future.** BF-1 through BF-3 provide
+  read-only repair-lineage projection, dry-run reassessment, and one bounded
+  advisory receipt. They cannot plan rounds, dispatch agents, create Research,
+  mutate Campaigns, or affect Candidate, Certification, Gateway, or Fact.
+- 🎓 **Teach from a frozen graph.** Chalxius Learner can explain, question,
+  test, and schedule review without changing research state.
+- 🗺️ **Publish a readable map.** Export one deterministic offline Reader with
+  bilingual controls, MathJax, draggable cards, theme fields, and complete path
+  exploration.
+
+## 🧬 Preserve the research target, not one universal “stance”
+
+The continuity rule is domain-indexed:
+
+| Draft type | What stays exact | Legitimate outcomes |
+|---|---|---|
+| Philosophy | Declared argumentative direction, headline, required and forbidden claims | `preserved` or `strengthened`, unless the Operator authorizes an exact revision |
+| Mathematics | Conjecture/question, hypotheses, domains, quantifiers, target claim ids | `proved`, `disproved`, or `unresolved_with_obstruction` |
+| Empirical | Question, estimand, population, exposure/intervention, outcome, scope | supported, disconfirmed, or inconclusive |
+| Mixed | At least two explicit component adapters and their shared target ids | The composed outcomes of those exact adapters |
+
+A counterexample to an unchanged mathematical conjecture is target-preserving.
+A proof of a weakened or re-quantified theorem is not a resolution of the
+original target merely because it points in the same direction.
 
 ## Architecture in one minute
 
@@ -85,14 +118,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz`
-- `chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz.sha256`
+- `chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz`
+- `chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz.sha256
-tar -xzf chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz
+shasum -a 256 -c chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256
+tar -xzf chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -142,6 +175,8 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 |---|---|
 | Ordinary proof research | `用 Chalxius 研究这个命题，先列出目标闭包和缺失前提，再比较证明路线。`<br>`Use $chalxius to build the target closure and compare proof routes.` |
 | Build and audit a Paper Graph | `用 Chalxius 对这篇论文建立 Paper Graph，逐节点绑定原文、定义、量词和依赖，再交给独立 paper auditor。` |
+| Strengthen a research draft | `把这个研究中草稿拆成完整 DAG；以 Paper Graph 为研究基底，逐节点做 Fact 准入、补强和反驳检查，不要压缩成少量 convenience Facts。` |
+| Resolve an exact mathematical target | `保持这个猜想的假设、定义域和量词不变；证明或证伪它。若都做不到，返回可核验的 obstruction，不要改成更弱命题。` |
 | Continue from a reviewed paper | `从这个已审查 Paper Graph 继续研究，不要退回只读论文；保持每个 Research 节点与 Paper target 的绑定。` |
 | Archive paper Evidence | `把审查完成的 Paper Graph 连同论文版本和 PDF 保存到跨项目 Evidence 仓库。`<br>When a library is configured, a reviewed immutable freeze syncs automatically. |
 | Import a non-paper Fact Graph as Evidence | `把 /path/to/fact_graph 作为非论文 Fact Graph 显式导入 Evidence；不要继承它的 Fact 权威。` |
@@ -149,6 +184,7 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 | Correct a Paper/Evidence graph | `这个 Paper Graph 节点有误：追加修正、标记旧图 stale，并报告所有 bridge 和本地 Fact 的影响；不要静默重写。` |
 | Program–mathematics attack | `对这段公式到代码的投影做数学-程序一致性攻击，检查截断阶数、表示、定义域、误差预算和独立重放。` |
 | Lightweight Campaign | `为这组相关目标建立一个轻量 Campaign；Main 仍按四因子 frontier 排序，不把 Campaign 当完成证明。` |
+| Cautious Brave Future reassessment | `对这个显式激活的 Campaign 做一次 BF-2 dry-run reassessment；若我随后明确批准，只写一份 BF-3 advisory receipt，不要计划轮次或派发 worker。` |
 | Adverse review | `对这个结论做 hostile/refute 审查；任务结束时给我成功或有价值的 Attack report 和规则进化建议，但不要自动采用。` |
 | Philosophy-only attacks | `这是哲学论证。启用普通语言替换、举证责任、最强善意反驳、独立失败面，以及量词/模态/范围/例外等价性攻击。` |
 | Approve or reject a route proposal | `采用 Attack report 中规则 R…，但把适用范围改成……` / `拒绝这个规则` / `停用规则 R…` |
@@ -354,21 +390,27 @@ or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
 
-## v0.5.0: Back to the Future / Paper Continuation
+## v0.6.2: Paper Graph Continuity / Brave Future BF-1–BF-3
 
-This release preserves the V5 truth path and the bounded L1/L2 context recovery
-from v0.4.4, then adds the cross-project Evidence plane, reviewed Paper Graph
-auto-archival, explicit external Fact Graph import, verified bridges, append-only
-correction impact, exact Paper continuation, public worker assurance contracts,
-lightweight Campaign scoping, default task-end Attack reports, philosophy-gated
-attack routes, and Reader revision 20.
+This release turns the research-draft lifecycle into an executable, prospective
+pipeline: exact draft freeze, proposition-total Paper DAG, ordered inherited
+frontier, copy-on-write Research successor, claim-level Evidence review,
+domain-indexed target continuity, Paper-subject atomic preflight, independent
+composable verification, and the unchanged V5 Fact Gateway.
 
-The upgrade is prospective. It performs no project migration, backfill,
-reclassification, forced redo, or authority inheritance. See
-[`RELEASE.md`](RELEASE.md) and
+It also restores only the bounded advisory slice of Brave Future described as
+BF-1 through BF-3. The same frozen Campaign snapshot can be projected, dry-run
+reassessed, and—after explicit opt-in—produce one nontruth advisory receipt.
+Repeated blockage parks; nothing plans a round, dispatches a worker, changes a
+score, closes a Campaign, or affects Candidate, Certification, Gateway, or Fact.
+
+The field mechanisms CHX-001 through CHX-057 are explicitly disclosed and
+resolved in this prospective package. Their public short ids are bound to the
+exact ledger namespace documented in
+[`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md); a private ledger is not
+shipped. The upgrade performs no migration, backfill, reclassification, forced
+redo, or authority inheritance. See [`RELEASE.md`](RELEASE.md) and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).
-It is intentionally published before the 17 field-discovered architecture
-issues in [`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md) are closed.
 
 ## Scope and acknowledgements
 

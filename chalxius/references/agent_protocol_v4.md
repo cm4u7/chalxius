@@ -197,9 +197,24 @@ generated card rather than merging the schemas by hand.
 A newly planned 0.4.4 card uses
 `task_context_revision="chalxius-v5-task-context-0.4.4-1"` and adds one exact
 Main-planner context-selection receipt plus an exact candidate-root/version
-runtime binding. Start the worker CHX ledger with that candidate's script and
-`--task-card CARD`; a mismatched older global runtime fails before creating the
-ledger. An origin-bound promoted Blackboard
+runtime binding. In 0.6.2, a newly generated schema-2 binding also freezes a
+path-independent content identity and the canonical object locator under the
+host-managed archive root outside skill discovery. The locator is cross-checked
+against current host configuration; task-card text never chooses the trust root.
+Legacy schema-1 cards remain byte-exact and use an immutable identity-registry
+mapping to the same kind of verified content object.
+
+Start the worker CHX ledger with that candidate's script and `--task-card CARD`;
+a mismatched older global runtime fails before creating the ledger. Historical
+archive resolution is available only after a valid abort or complete validation
+of every return, receipt, Research record, and conditionally required adverse or
+program-math side record. It is read/status/audit-only, rehashes the complete
+archive and registry on every bounded phase, and never imports or executes the
+archive. Active cards, worker startup, return preflight/validation/ingestion,
+experiments, Pulse, and all writes remain exact-current-runtime operations.
+Within one bounded round phase, identical runtime identities may share one
+successful scan; that in-memory deduplication is discarded before the next
+phase and never caches authority. An origin-bound promoted Blackboard
 query may seed only one task and retains its node/snapshot/query/hash lineage.
 Exact enum mode hints are advisory and may apply automatically only when the
 recorded cross-component signature is unchanged; explicit user mode wins. The

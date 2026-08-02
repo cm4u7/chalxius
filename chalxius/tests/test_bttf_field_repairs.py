@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +26,13 @@ from mathgraph.interfaces import (
 from mathgraph.model import Fact
 from mathgraph.proof_lineage import statement_projection_sha256
 from mathgraph.roles import allowed_commands
+from mathgraph.runtime_archive import (
+    archive_runtime,
+    historical_archive_path,
+    resolve_historical_runtime,
+    runtime_binding_from_root,
+    trusted_runtime_archive_root,
+)
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 from mathgraph.v5_reader import _readable_fact_summary
@@ -674,6 +682,16 @@ class BTTFFieldRepairTests(unittest.TestCase):
             card_path = Path(planned["assignments"][0]["task_card_path"])
             card = json.loads(card_path.read_text(encoding="utf-8"))
             candidate_root = Path(card["runtime_binding"]["skill_root"])
+            self.assertEqual(card["runtime_binding"]["schema_version"], 2)
+            self.assertRegex(
+                card["runtime_binding"]["runtime_content_sha256"], r"^[0-9a-f]{64}$"
+            )
+            self.assertEqual(
+                Path(card["runtime_binding"]["historical_archive_root"]),
+                trusted_runtime_archive_root(runtime_skill_root=candidate_root)
+                / "by-content"
+                / card["runtime_binding"]["runtime_content_sha256"],
+            )
             self.assertTrue((candidate_root / "scripts" / "chx_ledger.py").is_file())
             self.assertEqual(card["runtime_binding"]["skill_root"], str(candidate_root))
             current_version = (
@@ -701,6 +719,118 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 task_card=card_path,
             )
             self.assertEqual(started["skill_version"], current_version)
+
+    def test_chx_worker_ledger_rehashes_the_task_card_runtime_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            runtime_root = base / "candidate" / "chalxius"
+            runtime_root.mkdir(parents=True)
+            version_path = runtime_root / "VERSION"
+            payload_path = runtime_root / "runtime_payload.txt"
+            manifest_path = runtime_root / "MANIFEST.sha256"
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            payload_path.write_text("worker runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
+            binding = runtime_binding_from_root(runtime_root)
+            semantic = {"runtime_binding": binding}
+            card = {
+                **semantic,
+                "task_card_semantic_sha256": sha256_json(semantic),
+            }
+            card_path = base / "task-card.json"
+            card_path.write_text(
+                json.dumps(card, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            payload_path.write_text("worker runtime drifted\n", encoding="utf-8")
+            project_root = base / "worker-project"
+            with patch.object(chx_ledger, "_skill_root", return_value=runtime_root):
+                with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
+                    chx_ledger.start_ledger(
+                        project_root=project_root,
+                        task="Reject a drifted worker runtime.",
+                        run_id="run-runtime-tree-drift-001",
+                        task_card=card_path,
+                    )
+            self.assertFalse(project_root.exists())
+
+    def test_round_runtime_preflight_fails_before_any_project_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            root = base / "project"
+            store = self._store(root, "runtime-preflight-atomicity")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "Preflight the runtime before freezing a round.",
+                },
+                actor="main",
+            )
+            runtime_root = base / "candidate" / "chalxius"
+            runtime_root.mkdir(parents=True)
+            version_path = runtime_root / "VERSION"
+            payload_path = runtime_root / "runtime_payload.txt"
+            manifest_path = runtime_root / "MANIFEST.sha256"
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            payload_path.write_text("planner runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
+            binding = runtime_binding_from_root(runtime_root)
+            payload_path.write_text("planner runtime drifted\n", encoding="utf-8")
+            before = {
+                path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
+                for path in root.rglob("*")
+                if path.is_file()
+            }
+            with patch.object(lifecycle, "_runtime_binding", return_value=binding):
+                with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
+                    lifecycle.create_round(
+                        workers=1,
+                        research_ids=[research["research_id"]],
+                    )
+            self.assertEqual(
+                before,
+                {
+                    path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
+                    for path in root.rglob("*")
+                    if path.is_file()
+                },
+            )
+
+    def test_runtime_binding_is_scanned_once_per_bounded_round_phase(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / "project"
+            store = self._store(root, "runtime-validation-dedup")
+            lifecycle = store.v5_lifecycle()
+            research_ids = [
+                lifecycle.add_research(
+                    {
+                        "kind": "direction",
+                        "claim": f"Runtime validation branch {index}.",
+                    },
+                    actor="main",
+                )["research_id"]
+                for index in range(2)
+            ]
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                wraps=lifecycle._validate_bound_runtime_binding,
+            ) as validator:
+                lifecycle.create_round(workers=2, research_ids=research_ids)
+            self.assertEqual(
+                validator.call_count,
+                2,
+                "creation and returned status may each scan one unique runtime once",
+            )
 
     def test_chx004_inventory_and_append_target_are_explicit_read_only_routes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -836,7 +966,13 @@ class BTTFFieldRepairTests(unittest.TestCase):
 
     def test_chx001_aborted_round_uses_exact_bound_runtime_not_current_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
+            base = Path(temporary).resolve()
+            self.enterContext(
+                patch.dict(
+                    os.environ,
+                    {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "host-archive")},
+                )
+            )
             store = self._store(base / "project", "historical-runtime")
             lifecycle = store.v5_lifecycle()
             bound_root = base / "bound-chalxius-0.4.4"
@@ -844,7 +980,13 @@ class BTTFFieldRepairTests(unittest.TestCase):
             version_path = bound_root / "VERSION"
             manifest_path = bound_root / "MANIFEST.sha256"
             version_path.write_text("0.4.4\n", encoding="utf-8")
-            manifest_path.write_text("fixture manifest\n", encoding="utf-8")
+            payload_path = bound_root / "runtime_payload.txt"
+            payload_path.write_text("historical runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
             semantic = {
                 "schema_version": 1,
                 "skill_root": str(bound_root),
@@ -884,9 +1026,124 @@ class BTTFFieldRepairTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
                 lifecycle.round_status(planned["round_id"])
 
+            version_path.write_text("0.4.4\n", encoding="utf-8")
+            archived = archive_runtime(bound_root, bound_runtime)
+            self.assertTrue(archived["created"])
+            self.assertEqual(
+                Path(archived["archive_path"]), historical_archive_path(bound_runtime)
+            )
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            recovered = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(recovered["work_unit_state"], "aborted")
+
+            archived_payload = historical_archive_path(bound_runtime) / "runtime_payload.txt"
+            archived_payload.chmod(0o600)
+            archived_payload.write_text("tampered archive\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "no valid content-addressed"):
+                lifecycle.round_status(planned["round_id"])
+
+    def test_active_round_never_uses_historical_runtime_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            self.enterContext(
+                patch.dict(
+                    os.environ,
+                    {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "host-archive")},
+                )
+            )
+            store = self._store(base / "project", "active-runtime-archive-block")
+            lifecycle = store.v5_lifecycle()
+            bound_root = base / "bound-chalxius-active"
+            bound_root.mkdir()
+            version_path = bound_root / "VERSION"
+            payload_path = bound_root / "runtime_payload.txt"
+            manifest_path = bound_root / "MANIFEST.sha256"
+            version_path.write_text("0.6.0\n", encoding="utf-8")
+            payload_path.write_text("active runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
+            semantic = {
+                "schema_version": 1,
+                "skill_root": str(bound_root),
+                "skill_version": "0.6.0",
+                "version_file_sha256": sha256_bytes(version_path.read_bytes()),
+                "manifest_file_sha256": sha256_bytes(manifest_path.read_bytes()),
+                "worker_ledger_contract": "exact_task_card_runtime_binding_required",
+            }
+            bound_runtime = {
+                **semantic,
+                "runtime_identity_sha256": sha256_json(semantic),
+            }
+            source = lifecycle.add_research(
+                {"kind": "direction", "claim": "Keep this work unit active."},
+                actor="main",
+            )
+            with patch.object(lifecycle, "_runtime_binding", return_value=bound_runtime):
+                planned = lifecycle.create_round(
+                    workers=1,
+                    research_ids=[source["research_id"]],
+                )
+            archive_runtime(bound_root, bound_runtime)
+            payload_path.write_text("active runtime payload drifted\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
+                lifecycle.round_status(planned["round_id"])
+            payload_path.write_text("active runtime payload\n", encoding="utf-8")
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "runtime identity drifted"):
+                lifecycle.round_status(planned["round_id"])
+
+    def test_schema2_runtime_archive_is_content_addressed_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            self.enterContext(
+                patch.dict(
+                    os.environ,
+                    {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "host-archive")},
+                )
+            )
+            runtime_root = base / "skills" / "chalxius"
+            runtime_root.mkdir(parents=True)
+            version_path = runtime_root / "VERSION"
+            payload_path = runtime_root / "runtime_payload.txt"
+            manifest_path = runtime_root / "MANIFEST.sha256"
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            payload_path.write_text("schema2 runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
+            binding = runtime_binding_from_root(runtime_root)
+            self.assertEqual(binding["schema_version"], 2)
+            first = archive_runtime(runtime_root, binding)
+            second = archive_runtime(runtime_root, binding)
+            self.assertTrue(first["created"])
+            self.assertFalse(second["created"])
+            self.assertEqual(first["archive_path"], binding["historical_archive_root"])
+
+            version_path.write_text("0.6.2\n", encoding="utf-8")
+            resolved = resolve_historical_runtime(binding)
+            self.assertEqual(
+                resolved["resolution"], "content_addressed_historical_archive"
+            )
+            extra = Path(binding["historical_archive_root"]) / "unexpected.txt"
+            extra.parent.chmod(0o700)
+            extra.write_text("unexpected\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "no valid content-addressed"):
+                resolve_historical_runtime(binding)
+
     def test_completed_round_uses_valid_receipts_as_historical_runtime_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
+            base = Path(temporary).resolve()
+            self.enterContext(
+                patch.dict(
+                    os.environ,
+                    {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "host-archive")},
+                )
+            )
             store = self._store(base / "project", "completed-historical-runtime")
             lifecycle = store.v5_lifecycle()
             bound_root = base / "bound-chalxius-0.4.4"
@@ -894,7 +1151,13 @@ class BTTFFieldRepairTests(unittest.TestCase):
             version_path = bound_root / "VERSION"
             manifest_path = bound_root / "MANIFEST.sha256"
             version_path.write_text("0.4.4\n", encoding="utf-8")
-            manifest_path.write_text("fixture manifest\n", encoding="utf-8")
+            payload_path = bound_root / "runtime_payload.txt"
+            payload_path.write_text("completed runtime payload\n", encoding="utf-8")
+            manifest_path.write_text(
+                f"{sha256_bytes(version_path.read_bytes())}  VERSION\n"
+                f"{sha256_bytes(payload_path.read_bytes())}  runtime_payload.txt\n",
+                encoding="utf-8",
+            )
             semantic = {
                 "schema_version": 1,
                 "skill_root": str(bound_root),
@@ -989,6 +1252,13 @@ class BTTFFieldRepairTests(unittest.TestCase):
             version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
                 lifecycle.round_status(planned["round_id"])
+
+            version_path.write_text("0.4.4\n", encoding="utf-8")
+            archive_runtime(bound_root, bound_runtime)
+            version_path.write_text("0.6.1\n", encoding="utf-8")
+            recovered = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(recovered["work_unit_state"], "completed")
+            self.assertEqual(recovered["ingested_count"], 1)
 
     def test_chx002_local_and_gateway_decision_validators_share_finding_classes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

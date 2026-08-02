@@ -14,7 +14,16 @@ from .contracts import (
 
 PAPER_LOGIC_FEATURE_REVISION = "paper-logic-1"
 PAPER_SOURCE_ROLE_CONTRACT_REVISION = "chalxius-paper-source-role-1"
-PAPER_SOURCE_ROLES = {"research_draft", "external_reference"}
+PAPER_RESEARCH_DRAFT_CONTRACT_REVISION = (
+    "chalxius-research-draft-paper-semantics-1"
+)
+PAPER_SOURCE_ROLES = {
+    "research_draft",
+    "external_finished_publication",
+    # Read compatibility for 0.5.0 objects.  A feature manifest carrying the
+    # research-draft contract rejects this spelling for newly staged bundles.
+    "external_reference",
+}
 PAPER_LOGIC_TRUTH_BOUNDARY = (
     "Paper Logic and Audit Graph objects are nontruth evidence. "
     "Only independently admitted Fact Graph facts are proof premises."
@@ -75,6 +84,45 @@ ATTRIBUTIONS = {
     "objection",
     "editor",
     "researcher",
+}
+SEMANTIC_DIRECTIONS = {
+    "exact_literal",
+    "equivalent",
+    "narrowing",
+    "broadening",
+    "partial",
+    "reconstruction",
+    "emendation",
+    "erratum",
+}
+SOURCE_PROPOSITION_KINDS = {
+    "premise",
+    "intermediate_conclusion",
+    "headline_conclusion",
+    "definition",
+    "objection",
+    "reply",
+    "qualification",
+    "method",
+    "empirical_hypothesis",
+    "limitation",
+    "mathematical_claim",
+    "background",
+}
+SOURCE_PROPOSITION_DISPOSITIONS = {
+    "represented",
+    "excluded_with_reason",
+    "unresolved",
+}
+QUALIFIER_KINDS = {
+    "modality",
+    "quantifier",
+    "temporal",
+    "applicability",
+    "comparison",
+    "exception",
+    "authorization",
+    "threshold",
 }
 DISCOURSE_ROLES = {
     "premise",
@@ -440,6 +488,7 @@ def validate_operator_ledger(
                 "conditional",
                 "comparator",
                 "normative",
+                "other",
             },
             f"{label} operator kind",
         )
@@ -511,8 +560,25 @@ def validate_operator_ledger(
     if missing:
         rendered = ", ".join(f"{token}[{index}]" for token, index in missing)
         raise ValueError(f"{label} operator ledger misses: {rendered}")
-    if extra:
-        rendered = ", ".join(f"{token}[{index}]" for token, index in extra)
+    rejected_extra: list[tuple[str, int]] = []
+    for token, occurrence in extra:
+        entry = surface_entries[(token, occurrence)]
+        # The built-in scanner remains the completeness floor for known
+        # high-risk operators.  An exact producer-observed operator outside
+        # that vocabulary may be recorded conservatively as ``other`` instead
+        # of being rejected by a closed lexer.  It still has to name an exact
+        # surface occurrence; reviewers decide its eventual semantic class.
+        if entry["kind"] != "other":
+            rejected_extra.append((token, occurrence))
+            continue
+        pattern = re.compile(re.escape(entry["token"]), re.IGNORECASE)
+        matches = list(pattern.finditer(text))
+        if occurrence >= len(matches):
+            rejected_extra.append((token, occurrence))
+    if rejected_extra:
+        rendered = ", ".join(
+            f"{token}[{index}]" for token, index in rejected_extra
+        )
         raise ValueError(
             f"{label} operator ledger has unanchored surface entries: {rendered}"
         )
@@ -582,6 +648,332 @@ def _validate_locator(locator: Any, label: str) -> dict[str, Any]:
     return locator
 
 
+def _validate_qualifier_set(value: Any, label: str) -> list[dict[str, str]]:
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ValueError(f"{label} must be a list of objects")
+    normalized: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(value, 1):
+        require_exact_keys(
+            item,
+            required={"qualifier_id", "kind", "value", "scope"},
+            label=f"{label}[{index}]",
+        )
+        qualifier_id = require_string(item, "qualifier_id")
+        validate_local_id(qualifier_id)
+        if qualifier_id in seen:
+            raise ValueError(f"{label} duplicates qualifier {qualifier_id}")
+        seen.add(qualifier_id)
+        kind = _validate_enum(
+            item["kind"], QUALIFIER_KINDS, f"{label}[{index}] kind"
+        )
+        normalized.append(
+            {
+                "qualifier_id": qualifier_id,
+                "kind": kind,
+                "value": require_string(item, "value"),
+                "scope": require_string(item, "scope"),
+            }
+        )
+    return normalized
+
+
+def validate_source_proposition_inventory(
+    value: Any,
+    *,
+    source_text: str,
+    source_speaker: str,
+    label: str,
+) -> list[dict[str, Any]]:
+    """Validate a speaker-local, proposition-total inventory for one source unit.
+
+    The inventory is evidence structure, not truth.  Exact character spans are
+    deliberately local to one source unit so adjacent paragraphs and different
+    speakers cannot silently supply a proposition or qualifier.
+    """
+
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ValueError(f"{label} must be a list of objects")
+    normalized: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    seen_spans: set[tuple[int, int]] = set()
+    for index, item in enumerate(value, 1):
+        item_label = f"{label}[{index}]"
+        require_exact_keys(
+            item,
+            required={
+                "component_id",
+                "exact_span",
+                "proposition_kind",
+                "attribution",
+                "speaker",
+                "quotation_status",
+                "operator_ledger",
+                "qualifiers",
+                "challengeability",
+                "expected_graph_roles",
+                "mapped_node_ids",
+                "disposition",
+                "reason",
+                "composition_witness",
+            },
+            optional={
+                "component_level",
+                "partition_path",
+                "child_component_ids",
+                "source_occurrence_ledger",
+            },
+            label=item_label,
+        )
+        component_id = validate_local_id(require_string(item, "component_id"))
+        if component_id in seen_ids:
+            raise ValueError(f"{label} duplicates component {component_id}")
+        seen_ids.add(component_id)
+        span = item["exact_span"]
+        if not isinstance(span, dict):
+            raise ValueError(f"{item_label} exact_span must be an object")
+        require_exact_keys(
+            span,
+            required={"start", "end", "text", "text_sha256"},
+            label=f"{item_label} exact_span",
+        )
+        start = span["start"]
+        end = span["end"]
+        if (
+            isinstance(start, bool)
+            or isinstance(end, bool)
+            or not isinstance(start, int)
+            or not isinstance(end, int)
+            or start < 0
+            or end <= start
+            or end > len(source_text)
+        ):
+            raise ValueError(f"{item_label} exact_span bounds are invalid")
+        exact_text = require_string(span, "text")
+        if source_text[start:end] != exact_text:
+            raise ValueError(f"{item_label} exact_span is not source-local")
+        if span["text_sha256"] != sha256_bytes(exact_text.encode("utf-8")):
+            raise ValueError(f"{item_label} exact_span hash mismatch")
+        if (start, end) in seen_spans:
+            raise ValueError(f"{label} duplicates an exact proposition span")
+        seen_spans.add((start, end))
+        occurrence_ledger: list[dict[str, Any]] = []
+        if "source_occurrence_ledger" in item:
+            raw_occurrences = item["source_occurrence_ledger"]
+            if not isinstance(raw_occurrences, list) or any(
+                not isinstance(entry, dict) for entry in raw_occurrences
+            ):
+                raise ValueError(
+                    f"{item_label} source_occurrence_ledger must be a list of objects"
+                )
+            seen_occurrence_ids: set[str] = set()
+            seen_occurrence_spans: set[tuple[int, int, str]] = set()
+            for occurrence_index, entry in enumerate(raw_occurrences, 1):
+                occurrence_label = (
+                    f"{item_label} source_occurrence_ledger[{occurrence_index}]"
+                )
+                require_exact_keys(
+                    entry,
+                    required={
+                        "occurrence_id",
+                        "token",
+                        "start",
+                        "end",
+                        "kind",
+                        "disposition",
+                        "scope",
+                    },
+                    label=occurrence_label,
+                )
+                occurrence_id = validate_local_id(
+                    require_string(entry, "occurrence_id")
+                )
+                if occurrence_id in seen_occurrence_ids:
+                    raise ValueError(
+                        f"{item_label} duplicates source occurrence {occurrence_id}"
+                    )
+                seen_occurrence_ids.add(occurrence_id)
+                token = require_string(entry, "token")
+                occurrence_start = entry["start"]
+                occurrence_end = entry["end"]
+                if (
+                    isinstance(occurrence_start, bool)
+                    or isinstance(occurrence_end, bool)
+                    or not isinstance(occurrence_start, int)
+                    or not isinstance(occurrence_end, int)
+                    or not (start <= occurrence_start < occurrence_end <= end)
+                    or source_text[occurrence_start:occurrence_end] != token
+                ):
+                    raise ValueError(
+                        f"{occurrence_label} is not an exact component-local occurrence"
+                    )
+                occurrence_key = (
+                    occurrence_start,
+                    occurrence_end,
+                    token.casefold(),
+                )
+                if occurrence_key in seen_occurrence_spans:
+                    raise ValueError(
+                        f"{item_label} duplicates one source occurrence span"
+                    )
+                seen_occurrence_spans.add(occurrence_key)
+                occurrence_ledger.append(
+                    {
+                        "occurrence_id": occurrence_id,
+                        "token": token,
+                        "start": occurrence_start,
+                        "end": occurrence_end,
+                        "kind": require_string(entry, "kind"),
+                        "disposition": _validate_enum(
+                            entry["disposition"],
+                            {
+                                "mapped_as_operator",
+                                "mapped_as_qualifier",
+                                "context_only",
+                                "unresolved",
+                            },
+                            f"{occurrence_label} disposition",
+                        ),
+                        "scope": require_string(entry, "scope"),
+                    }
+                )
+        proposition_kind = _validate_enum(
+            item["proposition_kind"],
+            SOURCE_PROPOSITION_KINDS,
+            f"{item_label} proposition_kind",
+        )
+        attribution = _validate_enum(
+            item["attribution"], ATTRIBUTIONS, f"{item_label} attribution"
+        )
+        speaker = _validate_enum(
+            item["speaker"],
+            {"author", "quoted_source", "interlocutor", "objection", "editor", "other"},
+            f"{item_label} speaker",
+        )
+        if speaker != source_speaker:
+            raise ValueError(f"{item_label} crosses the source-unit speaker boundary")
+        speaker_map = {
+            "author": {"author"},
+            "cited_author": {"quoted_source"},
+            "interlocutor": {"interlocutor"},
+            "objection": {"objection", "interlocutor"},
+            "editor": {"editor"},
+            "researcher": set(),
+        }
+        if speaker not in speaker_map.get(attribution, set()):
+            raise ValueError(f"{item_label} attribution/speaker mismatch")
+        quotation_status = _validate_enum(
+            item["quotation_status"],
+            {"author_text", "direct_quotation", "reported_position", "editorial"},
+            f"{item_label} quotation_status",
+        )
+        operator_ledger = validate_operator_ledger(
+            item["operator_ledger"], text=exact_text, label=item_label
+        )
+        qualifiers = _validate_qualifier_set(
+            item["qualifiers"], f"{item_label} qualifiers"
+        )
+        challengeability = _validate_enum(
+            item["challengeability"],
+            {"independently_challengeable", "dependent_context", "nonargumentative"},
+            f"{item_label} challengeability",
+        )
+        roles = _require_string_list(
+            item["expected_graph_roles"],
+            f"{item_label} expected_graph_roles",
+            nonempty=(challengeability != "nonargumentative"),
+        )
+        mapped = _require_string_list(
+            item["mapped_node_ids"], f"{item_label} mapped_node_ids"
+        )
+        disposition = _validate_enum(
+            item["disposition"],
+            SOURCE_PROPOSITION_DISPOSITIONS,
+            f"{item_label} disposition",
+        )
+        reason = require_string(item, "reason", allow_empty=True)
+        composition_witness = require_string(
+            item, "composition_witness", allow_empty=True
+        )
+        hierarchy_fields = {
+            "component_level",
+            "partition_path",
+            "child_component_ids",
+        }
+        present_hierarchy = hierarchy_fields.intersection(item)
+        if present_hierarchy and present_hierarchy != hierarchy_fields:
+            raise ValueError(
+                f"{item_label} source-component hierarchy fields must be supplied together"
+            )
+        hierarchy: dict[str, Any] = {}
+        if present_hierarchy:
+            component_level = _validate_enum(
+                item["component_level"],
+                {"partition", "atom"},
+                f"{item_label} component_level",
+            )
+            partition_path = _require_string_list(
+                item["partition_path"],
+                f"{item_label} partition_path",
+                nonempty=True,
+            )
+            child_component_ids = _require_string_list(
+                item["child_component_ids"],
+                f"{item_label} child_component_ids",
+            )
+            if partition_path[-1] != component_id:
+                raise ValueError(
+                    f"{item_label} partition_path must terminate at component_id"
+                )
+            if component_level == "atom" and child_component_ids:
+                raise ValueError(f"{item_label} atom cannot declare children")
+            if component_level == "partition" and not child_component_ids:
+                raise ValueError(f"{item_label} partition needs child components")
+            hierarchy = {
+                "component_level": component_level,
+                "partition_path": partition_path,
+                "child_component_ids": child_component_ids,
+            }
+        if disposition == "represented" and not mapped:
+            raise ValueError(f"{item_label} represented component needs graph mappings")
+        if disposition == "excluded_with_reason" and (mapped or not reason):
+            raise ValueError(
+                f"{item_label} excluded component needs a reason and no graph mapping"
+            )
+        if disposition == "unresolved" and mapped:
+            raise ValueError(f"{item_label} unresolved component cannot claim a mapping")
+        normalized.append(
+            {
+                "component_id": component_id,
+                "exact_span": {
+                    "start": start,
+                    "end": end,
+                    "text": exact_text,
+                    "text_sha256": span["text_sha256"],
+                },
+                "proposition_kind": proposition_kind,
+                "attribution": attribution,
+                "speaker": speaker,
+                "quotation_status": quotation_status,
+                "operator_ledger": operator_ledger,
+                "qualifiers": qualifiers,
+                "challengeability": challengeability,
+                "expected_graph_roles": roles,
+                "mapped_node_ids": mapped,
+                "disposition": disposition,
+                "reason": reason,
+                "composition_witness": composition_witness,
+                **(
+                    {"source_occurrence_ledger": occurrence_ledger}
+                    if "source_occurrence_ledger" in item
+                    else {}
+                ),
+                **hierarchy,
+            }
+        )
+    return normalized
+
+
 def validate_source_unit(payload: dict[str, Any], label: str) -> dict[str, Any]:
     require_exact_keys(
         payload,
@@ -598,6 +990,7 @@ def validate_source_unit(payload: dict[str, Any], label: str) -> dict[str, Any]:
             "context_after",
             "operator_ledger",
         },
+        optional={"proposition_inventory", "source_occurrence_ledger"},
         label=label,
     )
     _validate_enum(
@@ -612,6 +1005,65 @@ def validate_source_unit(payload: dict[str, Any], label: str) -> dict[str, Any]:
     text = require_string(payload, "text")
     if payload["text_sha256"] != sha256_bytes(text.encode("utf-8")):
         raise ValueError(f"{label} text_sha256 mismatch")
+    if "source_occurrence_ledger" in payload:
+        occurrences = payload["source_occurrence_ledger"]
+        if not isinstance(occurrences, list) or any(
+            not isinstance(entry, dict) for entry in occurrences
+        ):
+            raise ValueError(f"{label} source_occurrence_ledger must be objects")
+        seen_ids: set[str] = set()
+        seen_spans: set[tuple[int, int, str]] = set()
+        for index, entry in enumerate(occurrences, 1):
+            occurrence_label = f"{label} source_occurrence_ledger[{index}]"
+            require_exact_keys(
+                entry,
+                required={
+                    "occurrence_id",
+                    "token",
+                    "start",
+                    "end",
+                    "kind",
+                    "disposition",
+                    "scope",
+                },
+                label=occurrence_label,
+            )
+            occurrence_id = validate_local_id(
+                require_string(entry, "occurrence_id")
+            )
+            if occurrence_id in seen_ids:
+                raise ValueError(f"{label} duplicates source occurrence id")
+            seen_ids.add(occurrence_id)
+            token = require_string(entry, "token")
+            start = entry["start"]
+            end = entry["end"]
+            if (
+                isinstance(start, bool)
+                or isinstance(end, bool)
+                or not isinstance(start, int)
+                or not isinstance(end, int)
+                or not (0 <= start < end <= len(text))
+                or text[start:end] != token
+            ):
+                raise ValueError(
+                    f"{occurrence_label} is not an exact source-unit occurrence"
+                )
+            occurrence_key = (start, end, token.casefold())
+            if occurrence_key in seen_spans:
+                raise ValueError(f"{label} duplicates a source occurrence span")
+            seen_spans.add(occurrence_key)
+            require_string(entry, "kind")
+            _validate_enum(
+                entry["disposition"],
+                {
+                    "mapped_as_operator",
+                    "mapped_as_qualifier",
+                    "context_only",
+                    "unresolved",
+                },
+                f"{occurrence_label} disposition",
+            )
+            require_string(entry, "scope")
     _validate_enum(
         payload["speaker"],
         {
@@ -651,6 +1103,13 @@ def validate_source_unit(payload: dict[str, Any], label: str) -> dict[str, Any]:
             raise ValueError(
                 f"{label} is operator-sensitive and needs render_sha256"
             )
+    if "proposition_inventory" in payload:
+        validate_source_proposition_inventory(
+            payload["proposition_inventory"],
+            source_text=text,
+            source_speaker=payload["speaker"],
+            label=f"{label} proposition_inventory",
+        )
     return payload
 
 
@@ -671,6 +1130,12 @@ def validate_claim(payload: dict[str, Any], label: str) -> dict[str, Any]:
             "operator_ledger",
             "definition_ids",
             "parent_claim_id",
+        },
+        optional={
+            "semantic_direction",
+            "source_component_ids",
+            "residual_component_dispositions",
+            "qualifier_set",
         },
         label=label,
     )
@@ -737,6 +1202,79 @@ def validate_claim(payload: dict[str, Any], label: str) -> dict[str, Any]:
         raise ValueError(
             f"{label} researcher reconstruction must be attributed to researcher"
         )
+    extension_fields = {
+        "semantic_direction",
+        "source_component_ids",
+        "residual_component_dispositions",
+        "qualifier_set",
+    }
+    present_extensions = extension_fields.intersection(payload)
+    if present_extensions and present_extensions != extension_fields:
+        raise ValueError(
+            f"{label} research-draft semantic fields must be supplied together"
+        )
+    if present_extensions:
+        direction = _validate_enum(
+            payload["semantic_direction"],
+            SEMANTIC_DIRECTIONS,
+            f"{label} semantic_direction",
+        )
+        expected_directions = {
+            "source_literal": {"exact_literal"},
+            "source_paraphrase": {"equivalent", "narrowing", "broadening", "partial"},
+            "researcher_reconstruction": {"reconstruction"},
+            "local_emendation": {"emendation"},
+            "official_erratum": {"erratum"},
+        }
+        if direction not in expected_directions[representation]:
+            raise ValueError(
+                f"{label} semantic_direction is incompatible with representation_kind"
+            )
+        components = _require_string_list(
+            payload["source_component_ids"],
+            f"{label} source_component_ids",
+            nonempty=representation in {"source_literal", "source_paraphrase"},
+        )
+        residuals = payload["residual_component_dispositions"]
+        if not isinstance(residuals, list) or any(
+            not isinstance(item, dict) for item in residuals
+        ):
+            raise ValueError(
+                f"{label} residual_component_dispositions must be objects"
+            )
+        seen_residuals: set[str] = set()
+        for index, item in enumerate(residuals, 1):
+            require_exact_keys(
+                item,
+                required={"component_id", "disposition", "reason"},
+                label=f"{label} residual component {index}",
+            )
+            component_id = validate_local_id(
+                require_string(item, "component_id")
+            )
+            if component_id in seen_residuals:
+                raise ValueError(f"{label} duplicates a residual component")
+            seen_residuals.add(component_id)
+            _validate_enum(
+                item["disposition"],
+                {"represented_elsewhere", "excluded_with_reason"},
+                f"{label} residual disposition",
+            )
+            if not require_string(item, "reason").strip():
+                raise ValueError(f"{label} residual disposition needs a reason")
+        if direction in {"exact_literal", "equivalent"} and residuals:
+            raise ValueError(
+                f"{label} equivalent reconstruction cannot declare residual claims"
+            )
+        if direction in {"narrowing", "broadening", "partial"} and not residuals:
+            raise ValueError(
+                f"{label} non-equivalent paraphrase must dispose every residual claim"
+            )
+        if set(seen_residuals).intersection(components):
+            raise ValueError(
+                f"{label} cannot both represent and residualize one source component"
+            )
+        _validate_qualifier_set(payload["qualifier_set"], f"{label} qualifier_set")
     return payload
 
 
@@ -885,6 +1423,7 @@ def validate_inference(payload: dict[str, Any], label: str) -> dict[str, Any]:
             "defeater_claim_ids",
             "rationale",
         },
+        optional={"semantic_operation"},
         label=label,
     )
     premises = _require_string_list(
@@ -925,6 +1464,35 @@ def validate_inference(payload: dict[str, Any], label: str) -> dict[str, Any]:
         raise ValueError(f"{label} bridge claims must be explicit premises")
     if set(defeater_ids).intersection(premises):
         raise ValueError(f"{label} defeaters cannot also be premises")
+    if "semantic_operation" in payload:
+        operation = _validate_enum(
+            payload["semantic_operation"],
+            {
+                "argumentative_inference",
+                "normative_bridge",
+                "conceptual_bridge",
+                "classification_repair",
+                "definition_repair",
+                "relation_materialization",
+            },
+            f"{label} semantic_operation",
+        )
+        if kind == "normative_bridge" and operation != "normative_bridge":
+            raise ValueError(
+                f"{label} normative_bridge must retain its semantic operation"
+            )
+        if operation == "normative_bridge" and kind != "normative_bridge":
+            raise ValueError(
+                f"{label} cannot acquire normative-bridge authority by relabelling"
+            )
+        if operation in {
+            "classification_repair",
+            "definition_repair",
+            "relation_materialization",
+        } and kind == "normative_bridge":
+            raise ValueError(
+                f"{label} classification/relation repair cannot masquerade as a normative bridge"
+            )
     if conclusion in defeater_ids:
         raise ValueError(f"{label} conclusion cannot defeat its own inference")
     return payload

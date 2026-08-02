@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius 0.5.0 — Back to the Future / Paper Continuation
+# Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3
 
 Use the bundled Chalxius research engine as the only research runtime. Fast,
 auto, and deep are execution profiles of that one engine. The Fact Graph
@@ -20,8 +20,8 @@ Before substantive work or any project write, read [references/unified_architect
 
 Read the directly applicable Chalxius reference before acting:
 
-- Paper reconstruction, audit, Evidence archive/bridge, correction, mirroring, or paper-led planning: [references/paper_logic_graph_v1.md](references/paper_logic_graph_v1.md), [references/paper_input_contracts.md](references/paper_input_contracts.md), [references/evidence_plane.md](references/evidence_plane.md), and [references/paper_continuation_contract.md](references/paper_continuation_contract.md).
-- V5 Research, lifecycle, retained capabilities, or release work: [references/v5_capability_matrix.md](references/v5_capability_matrix.md).
+- Paper reconstruction, inherited-draft research, research-draft admission, audit, Evidence archive/bridge, correction, mirroring, or paper-led planning: [references/paper_logic_graph_v1.md](references/paper_logic_graph_v1.md), [references/paper_input_contracts.md](references/paper_input_contracts.md), [references/evidence_plane.md](references/evidence_plane.md), [references/paper_continuation_contract.md](references/paper_continuation_contract.md), and [references/paper_research_pipeline.md](references/paper_research_pipeline.md).
+- V5 Research, lifecycle, retained capabilities, release work, or explicitly enabled L3/L4 advice: [references/v5_capability_matrix.md](references/v5_capability_matrix.md) and [references/brave_future_l3_l4.md](references/brave_future_l3_l4.md).
 - Historical V4 memory, routing, or adoption behavior: [references/adoption_policy_v4.md](references/adoption_policy_v4.md).
 - Round creation, worker execution, return validation, or ingestion: [references/agent_protocol_v4.md](references/agent_protocol_v4.md).
 - Adverse-worker counterexample learning, attack reports, or route decisions: [references/adverse_routing_evolution.md](references/adverse_routing_evolution.md).
@@ -52,18 +52,10 @@ projection with an exact receipt. If an Audit Graph is wrong, append a
 challenge, disposition, replacement object, and new snapshot; never rewrite
 historical audit bytes.
 
-For every Chalxius run started after the 0.4.1 activation boundary, start one
-task-scoped CHX runtime ledger before substantive analysis or tool execution.
-Project-bound runs store their ledger at `PROJECT/chx-ledgers/`. Projectless
-runs use private host task state outside the skill. The directory is an
-operational container only: `truth_effect=none` and `project_effect=none` mean
-that its bytes never enter project audit, Research, Certification, or Fact
-admission. Record only problems that the Chalxius architecture caused or
-materially amplified, with an exact causal mechanism and audit anchors. Runs
-already underway under 0.4.0 must not be backfilled, reclassified, or reopened,
-and their missing ledger is never an audit warning, certification blocker, or
-reason to redo work. Mixed 0.4.0 and 0.4.1-or-later bytes do not alter an older run's
-original status.
+For every Chalxius run started after the 0.4.1 activation boundary, start one task-scoped CHX runtime ledger before substantive analysis or tool execution.
+Project-bound runs store it at `PROJECT/chx-ledgers/`; projectless runs use private host task state. Its bytes have `truth_effect=none` and `project_effect=none`.
+Record every architecture-caused or materially amplified mechanism first as a stable finding; revision 3 requires transactional promotion, reasoned merge, or reasoned exclusion before close and preserves typed issue relations plus successor-ledger lineage.
+V1/V2 remain byte-exact readable. Never backfill, reclassify, warn about, or redo an older run merely because its original contract lacked the newer ledger.
 
 ## Choose a reasoning mode
 
@@ -114,8 +106,7 @@ explicit and guarded.
   --to deep --actor main --reason "Paper ambiguity requires full audit."
 ```
 
-Every switch appends a content-addressed event. It applies to future work units
-only. A frozen V5 round retains its original mode event, assurance contract,
+Every switch appends a content-addressed event. It applies to future work units only. A frozen V5 round retains its original mode event, assurance contract,
 and admission-contract hash until completion. Historical V4 cards retain their
 original execution profiles without backfill. To discontinue a work unit
 explicitly:
@@ -130,17 +121,18 @@ commitments or dispatch for that round. It preserves existing Research,
 receipts, and read-only audit. A fully receipted round becomes `completed` and
 historical without an artificial abort; otherwise `round-status` projects aborted
 unfinished assignments as `frozen_aborted` with no live awaiting count. Audit checks
-exact frozen runtime bytes in either terminal state. Use whole-pulse abort only to stop future Pulse
+exact frozen runtime bytes in either terminal state. A terminal schema-1 or schema-2 card may resolve those bytes only through the host-managed, content-addressed runtime archive outside skill discovery. The resolver rehashes the complete manifest, exact file set, read-only content object, and immutable identity registry record on each bounded read; it never imports or executes archived code.
+Active cards, worker CHX startup, return ingestion, experiments, Pulse, and every mutation still require the exact current live runtime, including every manifest-listed byte. `plan-round` completes that runtime preflight before it writes a Blackboard snapshot, round directory, or task card; worker CHX startup performs the same full-tree check before creating a ledger. Replace or roll back a global runtime only through `scripts/runtime_cutover.py`, with an explicit protected-project inventory, approved manifest, host archive, and rollback root; the gate archives the live identity once, revalidates distinct sealed historical identities without forcing one alias to match several versions, reruns status/audit, and restores the prior install on failure.
+Use whole-pulse abort only to stop future Pulse
 dispatch while retaining accumulated contributions.
 
 ## Run research work
 
 1. Add or select cumulative Research. Challenges, counterexamples, obstacles, insights, repairs, and dispositions remain separate immutable entries. Source-dependent work uses `memory-add --current-assurance` with exact project-relative path/hash/role artifacts; path-only prose cannot be planned.
-2. For paper-led work, freeze exact Paper Logic and Audit snapshots with their
-   independent reviews, then explicitly materialize and disposition the selected target frontier under the Paper continuation contract and its exact public V5 worker-return schema.
-3. Plan a round. The card binds the candidate skill root/version, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; the dedicated Host role remains dispatch-only. Bind the task/thread through `host_task_scope_id` when available; worker CHX startup passes the exact task card and fails on runtime drift.
-4. Execute only from the frozen card. Preflight a repairable draft, then ingest
-   only the exact worker-final hash. A malformed peer is quarantined locally.
+2. At intake, distinguish a `research_draft` from an external finished source. For a draft, freeze the exact artifact, decompose its full load-bearing Paper DAG, inherit that graph copy-on-write, project its complete order-preserving research frontier with `scripts/paper_research_pipeline.py`, research and repair every selected claim/inference node, verify publication identity and claim-level witnesses, commit one atomic target-total disposition batch, and preserve its domain-specific research target unless the Operator authorizes a revision. Philosophy preserves argumentative stance; mathematics preserves the exact problem, hypotheses, and quantifiers while permitting proof, disproof, or unresolved obstruction. `auto` may accelerate work units but cannot compress topology.
+   Target revision authorization is a durable Operator-only record bound to the exact plan hash, target, prior domain-continuity contract, and impact; a producer-supplied assertion is never authority. Admit the complete mapped atomic Candidate DAG through the project-bound signed verification lifecycle and Gateway before continuing Research from that Fact Graph. An external finished source enters Evidence, never Fact by credibility alone.
+3. Plan a round. The card binds the candidate skill root/version, content identity and host archive locator, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; the dedicated Host role remains dispatch-only. Bind the task/thread through `host_task_scope_id` when available; worker CHX startup passes the exact task card and fails on runtime drift. Runtime validation is deduplicated only within one bounded phase for one identical identity; no cache hit supplies authority across phases.
+4. Execute only from the frozen card. Preflight a repairable draft, then ingest only the exact worker-final hash. A malformed peer is quarantined locally.
 5. For collaborative work, use optional two-wave Pulse. Each valid Wave-1 and
    Wave-2 contribution enters Research independently; Pulse closure is advice,
    not certification.
@@ -152,12 +144,20 @@ dispatch while retaining accumulated contributions.
 8. Send only the frozen verifier capsule to a fresh verifier, record one
    immutable decision, then let the gateway admit an accepted release.
 
+For a strict research-draft release, use the Operator-only trust registry, one signed exact release plan, blind-to-peer immutable shards, signed receipts, and
+`verification-aggregate`. Certification and `fact-admit` revalidate the same aggregate;
+unsigned plans, self-supplied keys, one public key registered under multiple identities, idempotent registration, cache-hit authority, or status/audit drift, reused nonces, incomplete overlap,
+or release/capsule drift fail closed.
+
 The automatic V5 frontier uses impact, information value, feasibility, and burden/economy,
 projecting historical eight-metric Research without rewriting. The score has no cutoff or truth effect.
 `frontier --campaign ID` and `plan-round --campaign ID` explicitly select only exact stored
 `campaign_id` matches, preserve score order, and freeze the Campaign objective, typed active targets,
 constraints, value, stop conditions, and history head as nontruth context. Without the flag the global
 frontier is unchanged; Campaign never silently schedules, expands, closes, rewrites, or affects Facts.
+
+An explicitly enabled `frontier --campaign ID --brave-future` may project only strict typed repair lineage over that same scheduler. `campaign-reassess` is bounded advice: dry-run writes zero bytes and persistence writes one atomic nontruth sidecar transaction.
+It never reads `ACTIVE`, creates Research or a round, dispatches work, changes Campaign state, or enters Candidate, Certification, Gateway, Reader, Learner, or Fact paths. Operator decisions are still advice; `plan_one` and `execute_one` remain rejected.
 
 For new 0.4.4 cards, one promoted Blackboard Research item may seed its exact
 bounded query and lineage. Exact enum mode suggestions apply only when their

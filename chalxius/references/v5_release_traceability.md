@@ -1,4 +1,179 @@
-# Chalxius V5 traceability through 0.5.0 Paper Continuation
+# Chalxius V5 traceability through 0.6.2 Paper Graph Continuity
+
+## 0.6.2 coordinated Paper Graph continuity overlay
+
+The CHX identifiers in this overlay are scoped to
+`run-20260801T233737840117Z-a29d00a787c1`; the current qualified head is
+`run-20260801T233737840117Z-a29d00a787c1/CHX-057`. Identically numbered
+issues in older release lineages belong to their own ledgers.
+
+- Release version: `0.6.2`; public name **Paper Graph Continuity / Brave
+  Future BF-1–3**. This is a prospective research-draft mechanism repair, not a
+  new truth plane or autonomy level.
+- CHX-036 through CHX-052 are repaired by one reusable Paper Research
+  Pipeline: prospective activation; copy-on-write native succession; complete
+  inherited claim/inference/target topology; ordered premises; source
+  component hierarchy and exact occurrence accounting; stable identity merge;
+  heterogeneous delta normalization; publication identity and claim-level
+  support review; conservative PDF dehyphenation; and a Paper-subject atomic
+  preflight that forbids a compatibility FactBundle substitute.
+- CHX-053 binds the actual runtime protected closure to one shared validator.
+  New modules and public CLIs cannot pass self-test with stale compatibility
+  counts, path/content digests, changed-path inventory digest, or out-of-closure
+  declarations; tests consume the shared validator instead of a second path
+  list.
+- CHX-054 binds every evidence and native-successor receipt by exact field set,
+  recomputed type-prefixed content address, and complete canonical receipt hash
+  inside preflight. The reusable reliability matrix independently mutates the
+  Paper graph, ordered frontier, atomic DAG, research-continuity contract, evidence receipt,
+  and successor receipt; unexpected exceptions are harness errors rather than
+  credited mutation kills.
+- CHX-055 replaces a domain-general stance surrogate with exact
+  research-target continuity. Philosophy preserves its declared argumentative
+  stance. Mathematics preserves the exact conjecture/question, hypotheses,
+  domains, quantifiers, and target claim ids while allowing `proved`,
+  `disproved`, or `unresolved_with_obstruction`. Empirical and mixed drafts
+  use their own exact target adapters; cross-domain substitution fails closed.
+- CHX-056 adds a publication-disclosure preflight that compares the exact
+  private release ledger with a contiguous machine-readable public issue
+  registry and the required public documents. It blocks omitted ids and stale
+  semantics without publishing the private ledger or research content.
+- CHX-057 adds the missing public identifier namespace. The registry binds the
+  exact ledger run id, emits qualified `run_id/CHX-NNN` identities, and
+  rejects a different run even when every short issue id happens to match.
+- A research draft starts from its current Paper Graph. `auto` may allocate
+  work rapidly but cannot compress nodes, edges, premise order, provenance,
+  atomic claims, or verifier coverage. An external finished publication remains
+  Evidence until an explicit bridge and fresh normal admission.
+- The pipeline is domain-general across philosophy, mathematics, empirical,
+  and mixed drafts. Its invariant is research-target continuity, not universal
+  stance preservation. The exact domain adapter protects the argumentative
+  headline, mathematical target/hypotheses/quantifiers, empirical
+  question/estimand/scope, or mixed component targets unless the Operator
+  authorizes an exact target revision.
+- The successor materializer keeps stable local ids and every edge, hashes all
+  dropped non-native metadata, inherits no Fact authority, and still requires
+  native Paper stage/review/freeze. A preflight receipt remains nontruth.
+- Source occurrence accounting is separate from logical operator semantics.
+  Inference semantic operations distinguish normative/conceptual bridges from
+  classification, definition, and relation repairs, preventing authority by
+  relabelling.
+- The L3/L4 finite recovery remains exactly BF-1 through BF-3, advisory only.
+  No automatic round, dispatch, Research write, Campaign close, Candidate,
+  Certification, Gateway, Reader, Learner, or Fact seam is added.
+- Historical Paper, Research, Candidate, Certification, admission, Fact, CHX,
+  task-card, runtime archive, Evidence, and Brave Future bytes are not rewritten
+  or backfilled.
+
+## 0.6.1 coordinated runtime-continuity overlay
+
+- Release version: `0.6.1`; public name remains **Research Draft Integrity /
+  Brave Future BF-1–3**. This is a coordination repair over the frozen 0.6.0 R5
+  candidate, not a new graph plane or autonomy level.
+- CHX-027 records that path-sensitive schema-1 task cards became unreadable
+  after a verified global cutover replaced the bytes behind the same mutable
+  skill alias. Ten affected rounds remained structurally terminal and their
+  Paper/Research evidence bytes were not changed.
+- Terminal completed or aborted cards may now resolve one exact historical
+  runtime through a host-managed archive outside skill discovery. One sealed
+  content object binds every manifest-listed byte and exact file set; one
+  immutable identity record binds the frozen runtime identity to that object.
+  Schema-1 cards remain byte-exact; new schema-2 cards additionally freeze a
+  path-independent content id and host locator.
+- CHX-028 records and repairs the first archive candidate's ancestor-symlink
+  and trust-root coupling. Canonical absolute paths are checked component by
+  component; no-follow file opens reject links and nonregular or multiply
+  linked files; archive validation rejects traversal, extra files, nested
+  cross-device objects, writable objects, registry drift, and host-root
+  mismatch. Archived code is never imported or executed.
+- Terminality is proven from a validated abort or the complete set of returns,
+  receipts, Research, and conditionally required side records before archive
+  resolution. Active cards, worker CHX startup, return ingestion, experiments,
+  Pulse, and every mutation remain exact-current-runtime operations. Runtime
+  scans are deduplicated only for an identical identity inside one bounded
+  phase; no cache hit supplies cross-phase authority.
+- CHX-029 requires that exact-current-runtime mean the complete manifest tree,
+  including worker CHX startup. CHX-030 closes the V5 experiment-finalize
+  terminal write escape. CHX-031 moves round runtime preflight before every
+  project write and preserves a byte-identical project on failure.
+- CHX-032 replaces the manual deployment checklist with
+  `scripts/runtime_cutover.py`: explicit project inventory, approved exact
+  candidate, prior/new archives, pre/post terminal status and audit,
+  same-parent cutover, and automatic restoration on failure. The same gate is
+  used for rollback and refuses an old runtime that cannot validate protected
+  projects.
+- CHX-033 closes the real-versus-dry-run archive-preparation gap. The current
+  installed identity is archived once; every distinct historical identity at
+  that mutable alias must instead resolve through its exact sealed host object
+  and immutable registry record. Dry-run executes the same eligibility
+  preflight, so one live directory is never required to match several versions.
+- CHX-034 makes the externally approved candidate manifest hash mandatory at
+  both CLI and programmatic cutover boundaries. A self-consistent candidate
+  cannot authorize itself for dry-run, installation, or rollback.
+- CHX-035 strengthens the release stance canary from a generic constrained-
+  intervention phrase to the exact limited restorative thesis: justified
+  minimum moral-agency or motivational-capacity threshold, conditional
+  restoration for later voluntary choice, and rejection of universal or
+  maximization-oriented compulsion. The runtime remains domain-general and
+  still requires fresh semantic review rather than equating hash equality with
+  philosophical equivalence.
+- Archive seeding and installation do not rewrite a task card, Paper/Audit
+  graph, Evidence object, Research record, Candidate Release, Certification
+  Decision, admission, Fact, CHX ledger, Campaign, Reader, or Learner object.
+  BF-1 through BF-3 remain advisory-only exactly as in 0.6.0; BF-4 and
+  autonomous planning/execution remain rejected.
+
+## 0.6.0 coordinated repair overlay
+
+- Release version: `0.6.0`; public name **Research Draft Integrity / Brave
+  Future BF-1–3**.
+- Field mechanisms CHX-001 through CHX-017 are mapped to one prospective strict
+  Paper source-role and proposition contract, target-total research-draft plan
+  and batch, cross-plane admission preflight, language-neutral schema-6
+  interfaces, source-derived atomicity, release-relative Paper transport,
+  content-addressed dependency cache, and composable signed verification.
+- CHX ledger revision 3 introduces mandatory finding reconciliation, typed issue
+  relations, immutable successor-ledger lineage, and deterministic report
+  verification while reading revision 1/2 bytes unchanged. First close and
+  every later status read expose the same verified report projection.
+- Two integration findings discovered during this repair are preserved as
+  CHX-018 (Campaign-scoped worker-result lineage) and CHX-019 (first-close/report
+  projection parity), rather than being omitted after the original issue list
+  was frozen.
+- The rejected first 0.6.0 candidate exposed three further integration
+  findings and therefore was not installed: CHX-020 makes major stance change
+  authorization a durable exact-bound Operator record; CHX-021 replaces
+  self-supplied/identity-key verification with an Operator trust registry and
+  prime-order Ed25519 checks; CHX-022 connects signed planning, packets,
+  receipts, aggregation, Certification, and Gateway admission into one formal
+  project lifecycle. The rejected candidate remains immutable evidence and
+  conveys no release authority.
+- The independently audited second candidate also remains rejected: CHX-023
+  records that distinct content-derived key ids and self-described identities
+  could still resolve to one Ed25519 public key. The successor validates the
+  complete project registry on registration and every read, and forbids this
+  cryptographic-identity alias before planning or aggregation.
+- R3 remains rejected after independent coordination audit found CHX-024:
+  runtime registry reads failed closed, but subsystem and top-level audit could
+  still report a reassuring state by validating keys only one file at a time.
+  The successor makes status and both audit layers execute the same
+  registry-wide uniqueness validator.
+- R4 also remains rejected: CHX-025 records an idempotent-registration early
+  return that could report success before inspecting a separately corrupted
+  registry. The successor validates the complete registry inside the project
+  lock before every existing-record or new-record branch.
+- Before R5 freeze, an exhaustive public-entry audit found CHX-026: warm
+  signed-plan, packet, and receipt caches, plus a direct single-key read, could
+  return without rechecking a registry corrupted after cache population. R5
+  treats caches only as byte-I/O optimizations; every successful public record
+  read is conditional on the current complete registry invariant.
+- The cautious L3/L4 recovery is opt-in per exact Campaign and advisory only.
+  It reuses the sole V5 four-factor scheduler, never `ACTIVE`, and has no plan,
+  dispatch, Campaign-close, Candidate, Certification, Gateway, Reader, Learner,
+  or Fact effect.
+- V4/V5 historical cards, releases, decisions, admissions, Facts, Paper
+  snapshots, Evidence, and project roots remain unmodified. New strict claims
+  require copy-on-write objects and the unchanged final Fact Gateway.
 
 ## 0.5.0 Paper Continuation release overlay
 

@@ -1,0 +1,2218 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+from .contracts import (
+    ACTIVE_MEMORY_STATUSES,
+    MEMORY_ID_RE,
+    SHA256_RE,
+    canonical_json_bytes,
+    sha256_bytes,
+    sha256_json,
+    validate_assignment_id,
+    validate_campaign_id,
+    validate_memory_id,
+    validate_round_id,
+)
+from .modes import FACT_ADMISSION_CONTRACT_SHA256
+from .v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
+
+
+BF_POLICY_REVISION = "chalxius-brave-future-policy-1"
+BF_REPAIR_CONTRACT_REVISION = "chalxius-bf-repair-contract-1"
+BF_PLANNING_SNAPSHOT_REVISION = "chalxius-bf-planning-snapshot-1"
+BF_FRONTIER_PROJECTION_REVISION = "chalxius-bf-frontier-projection-1"
+BF_BLOCKAGE_REVISION = "chalxius-bf-blockage-1"
+BF_CANDIDATE_MANIFEST_REVISION = "chalxius-bf-candidate-manifest-1"
+BF_REASSESSMENT_REVISION = "chalxius-bf-reassessment-1"
+BF_DECISION_REVISION = "chalxius-bf-decision-1"
+BF_ACTIVATION_REVISION = "chalxius-bf-activation-event-1"
+
+BF_TRUTH_EFFECT = "none"
+BF_FACT_ADMISSION_EFFECT = "none"
+BF_MAX_OBJECT_BYTES = 256 * 1024
+
+BF_REPAIR_STRATEGIES = frozenset(
+    {
+        "replacement",
+        "restriction",
+        "proof_repair",
+        "source_repair",
+        "computation_repair",
+        "split",
+        "counterexample_reframe",
+    }
+)
+BF_REPAIR_RELATIONS = frozenset(
+    {"repairs", "supersedes", "splits", "reframes"}
+)
+BF_COVERAGE_OUTCOMES = frozenset({"preserved", "resolved", "rehome"})
+BF_BLOCKER_CLASSES = frozenset(
+    {
+        "missing_prerequisite",
+        "surviving_counterexample",
+        "scope_or_quantifier_mismatch",
+        "source_or_applicability_gap",
+        "representation_mismatch",
+        "program_math_failure",
+        "method_exhaustion",
+        "dependency_conflict",
+        "resource_bound_requiring_reformulation",
+    }
+)
+BF_ATTEMPT_RESULTS = frozenset(
+    {
+        "blocker_survived",
+        "prerequisite_missing",
+        "scope_mismatch",
+        "source_gap",
+        "representation_failure",
+        "program_math_failure",
+        "method_exhausted",
+        "dependency_conflict",
+        "reformulation_required",
+    }
+)
+BF_ACTIONS = frozenset(
+    {
+        "retry_with_changed_method",
+        "inspect_prerequisite",
+        "test_counterexample",
+        "split_target",
+        "switch_sibling_route",
+        "recheck_source_or_applicability",
+        "run_program_math_review",
+        "park_and_escalate",
+    }
+)
+BF_VIEWS = frozenset({"actionable", "all-active", "history"})
+BF_PROJECTION_STATUSES = frozenset(
+    {
+        "actionable_current",
+        "actionable_residual",
+        "current_repair_leaf",
+        "failed_repair",
+        "blocked",
+        "stale_by_route_invalidation",
+        "collapsed_repaired",
+        "collapsed_split_parent",
+        "historical_disposed",
+        "resolved_by_release_nontruth",
+        "resolved_by_active_fact",
+    }
+)
+
+_BF_ID_PATTERNS = {
+    "planning_snapshot_id": re.compile(r"bfps-[0-9a-f]{64}"),
+    "projection_id": re.compile(r"bfp-[0-9a-f]{64}"),
+    "blockage_id": re.compile(r"bfb-[0-9a-f]{64}"),
+    "candidate_manifest_id": re.compile(r"bfcm-[0-9a-f]{64}"),
+    "reassessment_id": re.compile(r"bfr-[0-9a-f]{64}"),
+    "decision_id": re.compile(r"bfd-[0-9a-f]{64}"),
+}
+
+_FIXED_POLICY = {
+    "revision": BF_POLICY_REVISION,
+    "autonomy_level": "advisory",
+    "max_reassessments_per_signature": 1,
+    "max_reassessments_per_epoch": 3,
+    "shortlist_limit": 5,
+    "local_graph_depth": 2,
+    "local_graph_node_limit": 64,
+    "max_new_research_nodes": 0,
+    "max_auto_workers": 0,
+    "max_consecutive_auto_rounds": 0,
+    "allow_active_campaign_pointer": False,
+    "allow_chx_as_route_input": False,
+    "truth_effect": BF_TRUTH_EFFECT,
+    "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+}
+
+_SNAPSHOT_SEMANTIC_FIELDS = {
+    "revision",
+    "project_id",
+    "campaign_id",
+    "campaign_scope_revision",
+    "campaign_status_sha256",
+    "campaign_event_count",
+    "policy_head_sha256",
+    "policy_epoch",
+    "research_manifest",
+    "research_manifest_sha256",
+    "disposition_heads",
+    "disposition_heads_sha256",
+    "repair_lineage_manifest",
+    "repair_lineage_manifest_sha256",
+    "authority_snapshot",
+    "blackboard_preview_manifest",
+    "blackboard_preview_sha256",
+    "workflow_heads",
+    "background_index_sha256",
+    "program_math_projection",
+    "program_math_queue_head_sha256",
+    "scheduler",
+    "score_writeback",
+    "active_campaign_pointer_used",
+    "truth_effect",
+    "fact_admission_effect",
+}
+_PROJECTION_SEMANTIC_FIELDS = {
+    "revision",
+    "project_id",
+    "campaign_id",
+    "planning_snapshot_id",
+    "planning_snapshot_semantic_sha256",
+    "view",
+    "collapse_repairs",
+    "lineage_edges",
+    "collapse_map",
+    "residual_surface",
+    "failed_repairs",
+    "invalidator_inventory",
+    "obligation_inventory",
+    "full_eligible_manifest",
+    "full_eligible_manifest_sha256",
+    "entries",
+    "omitted_count",
+    "scheduler",
+    "score_writeback",
+    "truth_effect",
+    "fact_admission_effect",
+}
+_CANDIDATE_MANIFEST_SEMANTIC_FIELDS = {
+    "revision",
+    "project_id",
+    "campaign_id",
+    "planning_snapshot_id",
+    "frontier_projection_id",
+    "blockage_signature",
+    "candidates",
+    "candidate_count",
+    "truth_effect",
+    "fact_admission_effect",
+}
+_REASSESSMENT_SEMANTIC_FIELDS = {
+    "revision",
+    "project_id",
+    "campaign_id",
+    "blockage_id",
+    "blockage_signature",
+    "planning_snapshot_id",
+    "frontier_projection_id",
+    "candidate_manifest_id",
+    "candidate_manifest_sha256",
+    "shortlist",
+    "omitted_count",
+    "omission_policy",
+    "recommended_action",
+    "autonomy_level",
+    "cooldown_state",
+    "created_by",
+    "plan_effect",
+    "dispatch_effect",
+    "campaign_close_effect",
+    "truth_effect",
+    "fact_admission_effect",
+}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def _text(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a nonempty string")
+    return value.strip()
+
+
+def _strings(value: Any, label: str, *, nonempty: bool = False) -> list[str]:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError(f"{label} must be a list of strings")
+    normalized = [_text(item, label) for item in value]
+    if len(normalized) != len(set(normalized)):
+        raise ValueError(f"{label} must be unique")
+    if nonempty and not normalized:
+        raise ValueError(f"{label} must be nonempty")
+    return normalized
+
+
+def _exact(payload: Any, fields: set[str], label: str) -> dict[str, Any]:
+    if not isinstance(payload, dict) or set(payload) != fields:
+        missing = sorted(fields.difference(payload if isinstance(payload, dict) else {}))
+        extra = sorted((set(payload) if isinstance(payload, dict) else set()).difference(fields))
+        raise ValueError(f"{label} fields are not exact; missing={missing}; extra={extra}")
+    return payload
+
+
+def _validate_sha(value: Any, label: str) -> str:
+    if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+        raise ValueError(f"{label} must be a SHA-256")
+    return value
+
+
+def _validate_bf_id(value: Any, kind: str) -> str:
+    pattern = _BF_ID_PATTERNS[kind]
+    if not isinstance(value, str) or pattern.fullmatch(value) is None:
+        raise ValueError(f"invalid Brave Future {kind}: {value!r}")
+    return value
+
+
+def _sealed_record(
+    semantic: dict[str, Any],
+    *,
+    id_key: str,
+    prefix: str,
+    created_at: str,
+) -> dict[str, Any]:
+    semantic_sha = sha256_json(semantic)
+    body = {
+        **semantic,
+        id_key: prefix + semantic_sha,
+        "created_at": created_at,
+        "semantic_sha256": semantic_sha,
+    }
+    return {**body, "record_sha256": sha256_json(body)}
+
+
+def _validate_sealed_record(
+    record: Any,
+    *,
+    semantic_fields: set[str],
+    id_key: str,
+    prefix: str,
+    revision: str,
+    label: str,
+) -> dict[str, Any]:
+    required = {
+        *semantic_fields,
+        id_key,
+        "created_at",
+        "semantic_sha256",
+        "record_sha256",
+    }
+    value = _exact(record, required, label)
+    if value.get("revision") != revision:
+        raise ValueError(f"{label} revision is invalid")
+    _text(value.get("created_at"), f"{label} created_at")
+    semantic = {key: value[key] for key in semantic_fields}
+    semantic_sha = sha256_json(semantic)
+    if value.get("semantic_sha256") != semantic_sha:
+        raise ValueError(f"{label} semantic hash mismatch")
+    if value.get(id_key) != prefix + semantic_sha:
+        raise ValueError(f"{label} content id mismatch")
+    without_hash = {key: item for key, item in value.items() if key != "record_sha256"}
+    if value.get("record_sha256") != sha256_json(without_hash):
+        raise ValueError(f"{label} record hash mismatch")
+    if value.get("truth_effect") != BF_TRUTH_EFFECT or value.get(
+        "fact_admission_effect"
+    ) != BF_FACT_ADMISSION_EFFECT:
+        raise ValueError(f"{label} truth boundary is invalid")
+    return value
+
+
+def _canonical_file_bytes(payload: Any) -> bytes:
+    return (
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
+def _bounded(payload: Any, label: str) -> None:
+    if len(_canonical_file_bytes(payload)) > BF_MAX_OBJECT_BYTES:
+        raise ValueError(f"{label} exceeds the 256 KiB bounded-object limit")
+
+
+def _tree_manifest(root: Path, *, project_root: Path) -> dict[str, Any]:
+    entries: list[dict[str, str]] = []
+    if root.exists():
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError(f"unsafe planning-head directory: {root}")
+        for path in sorted(root.rglob("*")):
+            if path.is_symlink():
+                raise ValueError(f"planning head contains a symlink: {path}")
+            if not path.is_file():
+                continue
+            entries.append(
+                {
+                    "path": path.relative_to(project_root).as_posix(),
+                    "sha256": sha256_bytes(path.read_bytes()),
+                }
+            )
+    return {
+        "entries": entries,
+        "entry_count": len(entries),
+        "manifest_sha256": sha256_json(entries),
+    }
+
+
+def validate_brave_future_policy(
+    payload: Any, *, campaign_id: str
+) -> dict[str, Any]:
+    campaign_id = validate_campaign_id(campaign_id)
+    required = {"campaign_id", *_FIXED_POLICY}
+    value = _exact(payload, required, "Brave Future policy")
+    normalized = dict(value)
+    if normalized.get("campaign_id") != campaign_id:
+        raise ValueError("Brave Future policy Campaign mismatch")
+    for key, expected in _FIXED_POLICY.items():
+        if normalized.get(key) != expected:
+            raise ValueError(
+                f"Brave Future 0.6.0 accepts only advisory policy; {key} must be {expected!r}"
+            )
+    return normalized
+
+
+_REPAIR_FIELDS = {
+    "repair_contract_revision",
+    "strategy",
+    "predecessor_research_ids",
+    "method_family",
+    "method_descriptor_sha256",
+    "coverage",
+    "residual_obligations",
+    "inherited_invalidator_ids",
+    "disposed_invalidator_ids",
+    "source_capability_hashes",
+    "created_under_snapshot_id",
+}
+_COVERAGE_FIELDS = {
+    "predecessor_research_id",
+    "obligation_key",
+    "outcome",
+    "supporting_research_ids",
+}
+
+
+def validate_repair_contract_structure(record: dict[str, Any]) -> dict[str, Any] | None:
+    metadata = record.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    supplied = metadata.get("brave_future_repair_contract")
+    if supplied is None:
+        return None
+    contract = _exact(supplied, _REPAIR_FIELDS, "Brave Future repair contract")
+    if contract.get("repair_contract_revision") != BF_REPAIR_CONTRACT_REVISION:
+        raise ValueError("Brave Future repair contract revision is invalid")
+    if record.get("kind") != "repair":
+        raise ValueError("Brave Future repair contract is allowed only on repair Research")
+    if metadata.get("assurance_contract_revision") != V5_ASSURANCE_CONTRACT_REVISION:
+        raise ValueError("Brave Future repair contract requires current-assurance Research")
+    if record.get("relation") not in BF_REPAIR_RELATIONS:
+        raise ValueError("Brave Future repair Research relation is not typed")
+    strategy = contract.get("strategy")
+    if strategy not in BF_REPAIR_STRATEGIES:
+        raise ValueError("Brave Future repair strategy is invalid")
+    predecessors = _strings(
+        contract.get("predecessor_research_ids"),
+        "repair predecessor ids",
+        nonempty=True,
+    )
+    for research_id in predecessors:
+        validate_memory_id(research_id)
+    related = record.get("related_research_ids", [])
+    if not isinstance(related, list) or not set(predecessors).issubset(related):
+        raise ValueError("repair predecessors must all be explicit related Research ids")
+    _text(contract.get("method_family"), "repair method family")
+    _validate_sha(contract.get("method_descriptor_sha256"), "repair method descriptor")
+    coverage = contract.get("coverage")
+    if not isinstance(coverage, list):
+        raise ValueError("repair coverage must be a list")
+    coverage_keys: set[tuple[str, str]] = set()
+    for item in coverage:
+        item = _exact(item, _COVERAGE_FIELDS, "repair coverage entry")
+        predecessor_id = validate_memory_id(
+            _text(item.get("predecessor_research_id"), "coverage predecessor id")
+        )
+        if predecessor_id not in predecessors:
+            raise ValueError("repair coverage names a non-predecessor")
+        obligation_key = _text(item.get("obligation_key"), "coverage obligation key")
+        pair = (predecessor_id, obligation_key)
+        if pair in coverage_keys:
+            raise ValueError("repair coverage keys must be unique per predecessor")
+        coverage_keys.add(pair)
+        if item.get("outcome") not in BF_COVERAGE_OUTCOMES:
+            raise ValueError("repair coverage outcome is invalid")
+        supports = _strings(
+            item.get("supporting_research_ids"), "coverage supporting Research ids"
+        )
+        for research_id in supports:
+            validate_memory_id(research_id)
+        if item["outcome"] in {"resolved", "rehome"} and not supports:
+            raise ValueError(
+                f"repair coverage outcome {item['outcome']} requires supporting Research"
+            )
+    _strings(contract.get("residual_obligations"), "repair residual obligations")
+    inherited = _strings(
+        contract.get("inherited_invalidator_ids"), "inherited invalidator ids"
+    )
+    disposed = _strings(
+        contract.get("disposed_invalidator_ids"), "disposed invalidator ids"
+    )
+    if set(inherited).intersection(disposed):
+        raise ValueError("an invalidator cannot be both inherited and disposed")
+    for research_id in [*inherited, *disposed]:
+        validate_memory_id(research_id)
+    capabilities = _strings(
+        contract.get("source_capability_hashes"), "repair source capability hashes"
+    )
+    for digest in capabilities:
+        _validate_sha(digest, "repair source capability hash")
+    snapshot_id = contract.get("created_under_snapshot_id")
+    if snapshot_id is not None:
+        _validate_bf_id(snapshot_id, "planning_snapshot_id")
+    return contract
+
+
+def _obligation_keys(record: dict[str, Any]) -> list[str]:
+    metadata = record.get("metadata", {})
+    obligations = metadata.get("obligations", []) if isinstance(metadata, dict) else []
+    if not isinstance(obligations, list):
+        raise ValueError("Research obligations must be a list")
+    keys: list[str] = []
+    for item in obligations:
+        if isinstance(item, str):
+            key = _text(item, "Research obligation")
+        elif isinstance(item, dict):
+            key = _text(
+                item.get("obligation_id", item.get("obligation_key")),
+                "Research obligation id",
+            )
+        else:
+            raise ValueError("Research obligations must be strings or typed objects")
+        keys.append(key)
+    if len(keys) != len(set(keys)):
+        raise ValueError("Research obligation ids must be unique")
+    return sorted(keys)
+
+
+def validate_repair_contract_semantics(
+    record: dict[str, Any], records: dict[str, dict[str, Any]]
+) -> dict[str, Any] | None:
+    contract = validate_repair_contract_structure(record)
+    if contract is None:
+        return None
+    own_id = record.get("research_id")
+    campaign_id = record.get("metadata", {}).get("campaign_id")
+    campaign_id = validate_campaign_id(_text(campaign_id, "repair Campaign id"))
+    if own_id is not None and own_id in contract["predecessor_research_ids"]:
+        raise ValueError("repair contract contains a self edge")
+    for predecessor_id in contract["predecessor_research_ids"]:
+        predecessor = records.get(predecessor_id)
+        if predecessor is None:
+            raise ValueError(f"repair contract has unknown predecessor: {predecessor_id}")
+        if predecessor.get("metadata", {}).get("campaign_id") != campaign_id:
+            raise ValueError("repair contract crosses Campaigns")
+    referenced_ids = {
+        research_id
+        for item in contract["coverage"]
+        for research_id in item["supporting_research_ids"]
+    }
+    referenced_ids.update(contract["inherited_invalidator_ids"])
+    referenced_ids.update(contract["disposed_invalidator_ids"])
+    for research_id in referenced_ids:
+        referenced = records.get(research_id)
+        if referenced is None:
+            raise ValueError(f"repair contract references unknown Research: {research_id}")
+        if referenced.get("metadata", {}).get("campaign_id") != campaign_id:
+            raise ValueError("repair contract semantic references cross Campaigns")
+    artifact_hashes = sorted(
+        item["sha256"]
+        for item in record.get("metadata", {}).get("artifacts", [])
+        if isinstance(item, dict) and isinstance(item.get("sha256"), str)
+    )
+    if sorted(contract["source_capability_hashes"]) != artifact_hashes:
+        raise ValueError(
+            "repair contract source capability hashes must exactly match Research artifacts"
+        )
+    return contract
+
+
+class BraveFuturePolicyStore:
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.root = store.root / "governance" / "brave-future"
+        self.events_path = self.root / "activation-events.jsonl"
+
+    def _events(self) -> list[dict[str, Any]]:
+        if not self.events_path.exists():
+            return []
+        if self.events_path.is_symlink() or not self.events_path.is_file():
+            raise ValueError("Brave Future activation ledger is unsafe")
+        events: list[dict[str, Any]] = []
+        previous = None
+        for number, raw in enumerate(
+            self.events_path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not raw.strip():
+                continue
+            event = json.loads(raw)
+            expected = {
+                "revision",
+                "event",
+                "campaign_id",
+                "policy",
+                "actor",
+                "reason",
+                "recorded_at",
+                "previous_event_sha256",
+                "event_sha256",
+                "truth_effect",
+                "fact_admission_effect",
+            }
+            _exact(event, expected, f"Brave Future activation event line {number}")
+            if event.get("revision") != BF_ACTIVATION_REVISION:
+                raise ValueError("Brave Future activation revision mismatch")
+            validate_campaign_id(event.get("campaign_id"))
+            if event.get("event") not in {"enabled", "disabled"}:
+                raise ValueError("Brave Future activation event type is invalid")
+            if event.get("previous_event_sha256") != previous:
+                raise ValueError("Brave Future activation chain is broken")
+            semantic = {key: value for key, value in event.items() if key != "event_sha256"}
+            if event.get("event_sha256") != sha256_json(semantic):
+                raise ValueError("Brave Future activation event hash mismatch")
+            if event.get("truth_effect") != BF_TRUTH_EFFECT or event.get(
+                "fact_admission_effect"
+            ) != BF_FACT_ADMISSION_EFFECT:
+                raise ValueError("Brave Future activation truth boundary is invalid")
+            if event["event"] == "enabled":
+                validate_brave_future_policy(
+                    event.get("policy"), campaign_id=event["campaign_id"]
+                )
+                if event.get("reason") != "":
+                    raise ValueError("Brave Future enable reason must be empty")
+            elif event.get("policy") is not None:
+                raise ValueError("Brave Future disable event cannot carry a policy")
+            previous = event["event_sha256"]
+            events.append(event)
+        return events
+
+    def _append(self, event: dict[str, Any]) -> None:
+        events = self._events()
+        payload = b"".join(canonical_json_bytes(item) + b"\n" for item in [*events, event])
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.store._write_bytes_atomic(self.events_path, payload)
+
+    def status(self, campaign_id: str) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        self.store.campaigns().status(campaign_id)
+        events = [item for item in self._events() if item["campaign_id"] == campaign_id]
+        head = events[-1] if events else None
+        enabled = bool(head and head["event"] == "enabled")
+        epoch = sum(1 for item in events if item["event"] == "enabled")
+        return {
+            "revision": BF_POLICY_REVISION,
+            "campaign_id": campaign_id,
+            "enabled": enabled,
+            "policy": head["policy"] if enabled else None,
+            "head_event_sha256": head["event_sha256"] if head else None,
+            "epoch": epoch,
+            "event_count": len(events),
+            "active_campaign_pointer_used": False,
+            "autonomy_effect": "advisory_only" if enabled else "none",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+
+    def enable(
+        self, *, campaign_id: str, policy: dict[str, Any], actor: str
+    ) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        self.store.campaigns().status(campaign_id)
+        normalized = validate_brave_future_policy(policy, campaign_id=campaign_id)
+        actor = _text(actor, "Brave Future actor")
+        with self.store.v5_mutation_lock(command="brave-future-enable"):
+            current = self.status(campaign_id)
+            if current["enabled"]:
+                if current["policy"] != normalized:
+                    raise ValueError("Brave Future is already enabled with another policy")
+                return {**current, "write_effect": "none", "idempotent": True}
+            events = self._events()
+            previous = events[-1]["event_sha256"] if events else None
+            semantic = {
+                "revision": BF_ACTIVATION_REVISION,
+                "event": "enabled",
+                "campaign_id": campaign_id,
+                "policy": normalized,
+                "actor": actor,
+                "reason": "",
+                "recorded_at": _now(),
+                "previous_event_sha256": previous,
+                "truth_effect": BF_TRUTH_EFFECT,
+                "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            }
+            self._append({**semantic, "event_sha256": sha256_json(semantic)})
+        return {**self.status(campaign_id), "write_effect": "activation_event"}
+
+    def disable(self, *, campaign_id: str, actor: str, reason: str) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        actor = _text(actor, "Brave Future actor")
+        reason = _text(reason, "Brave Future disable reason")
+        with self.store.v5_mutation_lock(command="brave-future-disable"):
+            current = self.status(campaign_id)
+            if not current["enabled"]:
+                return {**current, "write_effect": "none", "idempotent": True}
+            events = self._events()
+            previous = events[-1]["event_sha256"] if events else None
+            semantic = {
+                "revision": BF_ACTIVATION_REVISION,
+                "event": "disabled",
+                "campaign_id": campaign_id,
+                "policy": None,
+                "actor": actor,
+                "reason": reason,
+                "recorded_at": _now(),
+                "previous_event_sha256": previous,
+                "truth_effect": BF_TRUTH_EFFECT,
+                "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            }
+            self._append({**semantic, "event_sha256": sha256_json(semantic)})
+        return {**self.status(campaign_id), "write_effect": "disablement_event"}
+
+
+class PlanningSnapshotBuilder:
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.lifecycle = store.v5_lifecycle()
+
+    @staticmethod
+    def _effective_research(
+        records: list[dict[str, Any]], campaign_id: str
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+        bases: dict[str, dict[str, Any]] = {}
+        dispositions: dict[str, dict[str, Any]] = {}
+        for record in records:
+            metadata = record.get("metadata", {})
+            if record["kind"] == "disposition":
+                target_id = metadata.get("target_research_id")
+                if not isinstance(target_id, str):
+                    continue
+                target = bases.get(target_id)
+                if target is None:
+                    # The target may sort after its disposition; retain it and
+                    # filter by the target Campaign below.
+                    pass
+                prior = dispositions.get(target_id)
+                if prior is None or record["created_at"] > prior["created_at"]:
+                    dispositions[target_id] = record
+                continue
+            if metadata.get("campaign_id") == campaign_id:
+                bases[record["research_id"]] = record
+        dispositions = {
+            target_id: record
+            for target_id, record in dispositions.items()
+            if target_id in bases
+        }
+        return bases, dispositions
+
+    def _authority(self) -> dict[str, Any]:
+        audit = self.lifecycle.fact_evidence_audit()
+        empty_authority = (
+            audit.get("facts") == 0
+            and audit.get("graph_errors") == []
+            and audit.get("authority_errors")
+            == ["external Fact Evidence requires at least one active Fact"]
+        )
+        if not audit.get("current_ok") and not empty_authority:
+            raise ValueError("Brave Future requires a current valid Fact authority snapshot")
+        roots = [
+            self.store.fact_graph_dir / "facts",
+            self.store.fact_graph_dir / "interfaces",
+            self.lifecycle.admissions_dir,
+            self.lifecycle.revocations_dir,
+        ]
+        manifests = [
+            _tree_manifest(path, project_root=self.store.root) for path in roots
+        ]
+        semantic = {
+            "audit_sha256": sha256_json(audit),
+            "active_fact_ids": list(audit.get("active_fact_ids", [])),
+            "authority_state": "valid_empty" if empty_authority else "valid_nonempty",
+            "authority_manifests": manifests,
+            "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
+        }
+        return {**semantic, "authority_snapshot_sha256": sha256_json(semantic)}
+
+    def _head_manifest(self) -> dict[str, Any]:
+        roots = {
+            "paper_logic": self.store.root / "paper_logic",
+            "paper_continuation": self.lifecycle.root / "paper-continuations",
+            "research_draft_admission": self.lifecycle.root / "research-draft-admission",
+            "evidence": self.store.root / "evidence",
+            "reasoning_mode": self.store.root / "governance" / "unified-mode",
+            "adverse_routing": self.store.root / "governance" / "adverse-routing",
+        }
+        return {
+            name: _tree_manifest(path, project_root=self.store.root)
+            for name, path in roots.items()
+        }
+
+    def preview(
+        self, *, campaign_id: str, policy_status: dict[str, Any]
+    ) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        if not policy_status.get("enabled") or policy_status.get("campaign_id") != campaign_id:
+            raise ValueError("Brave Future is not enabled for the explicit Campaign")
+        campaign_status = dict(self.store.campaigns().status(campaign_id))
+        # ACTIVE is an informational legacy pointer, never a BF selector or head.
+        campaign_status.pop("active", None)
+        records = self.lifecycle.research_records()
+        bases, dispositions = self._effective_research(records, campaign_id)
+        manifest = [
+            {
+                "research_id": research_id,
+                "record_sha256": record["record_sha256"],
+                "kind": record["kind"],
+                "status": record["status"],
+            }
+            for research_id, record in sorted(bases.items())
+        ]
+        disposition_manifest = [
+            {
+                "target_research_id": target_id,
+                "research_id": record["research_id"],
+                "record_sha256": record["record_sha256"],
+            }
+            for target_id, record in sorted(dispositions.items())
+        ]
+        repair_manifest = [
+            {
+                "research_id": research_id,
+                "record_sha256": record["record_sha256"],
+                "contract_sha256": sha256_json(
+                    record.get("metadata", {}).get("brave_future_repair_contract")
+                ),
+            }
+            for research_id, record in sorted(bases.items())
+            if record.get("metadata", {}).get("brave_future_repair_contract") is not None
+        ]
+        blackboard = self.store.blackboard()
+        nodes = blackboard.current_nodes()
+        edges = blackboard.current_edges()
+        blackboard_manifest = {
+            "node_entries": [
+                {"node_id": key, "sha256": sha256_json(value)}
+                for key, value in sorted(nodes.items())
+            ],
+            "edge_entries": [
+                {"edge_id": key, "sha256": sha256_json(value)}
+                for key, value in sorted(edges.items())
+            ],
+            "projection_sha256": sha256_json(blackboard.current_projection()),
+            "publication_effect": "none",
+        }
+        program_math = [
+            {
+                "research_id": research_id,
+                "record_sha256": record["record_sha256"],
+                "program_math_review_sha256": sha256_json(
+                    record.get("metadata", {}).get("program_math_review")
+                ),
+            }
+            for research_id, record in sorted(bases.items())
+            if record.get("metadata", {}).get("program_math_review") is not None
+        ]
+        background_path = self.store.root / "PROJECT_BACKGROUND.md"
+        background_sha = (
+            sha256_bytes(background_path.read_bytes())
+            if background_path.is_file() and not background_path.is_symlink()
+            else None
+        )
+        semantic = {
+            "revision": BF_PLANNING_SNAPSHOT_REVISION,
+            "project_id": self.store.project_id(),
+            "campaign_id": campaign_id,
+            "campaign_scope_revision": "chalxius-v5-campaign-scope-1",
+            "campaign_status_sha256": sha256_json(campaign_status),
+            "campaign_event_count": campaign_status["event_count"],
+            "policy_head_sha256": policy_status["head_event_sha256"],
+            "policy_epoch": policy_status["epoch"],
+            "research_manifest": manifest,
+            "research_manifest_sha256": sha256_json(manifest),
+            "disposition_heads": disposition_manifest,
+            "disposition_heads_sha256": sha256_json(disposition_manifest),
+            "repair_lineage_manifest": repair_manifest,
+            "repair_lineage_manifest_sha256": sha256_json(repair_manifest),
+            "authority_snapshot": self._authority(),
+            "blackboard_preview_manifest": blackboard_manifest,
+            "blackboard_preview_sha256": sha256_json(blackboard_manifest),
+            "workflow_heads": self._head_manifest(),
+            "background_index_sha256": background_sha,
+            "program_math_projection": program_math,
+            "program_math_queue_head_sha256": sha256_json(program_math),
+            "scheduler": "v5_main_four_factor_frontier",
+            "score_writeback": False,
+            "active_campaign_pointer_used": False,
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        record = _sealed_record(
+            semantic,
+            id_key="planning_snapshot_id",
+            prefix="bfps-",
+            created_at=_now(),
+        )
+        _bounded(record, "Brave Future planning snapshot")
+        return record
+
+    def revalidate(self, snapshot: dict[str, Any], policy_status: dict[str, Any]) -> bool:
+        current = self.preview(
+            campaign_id=snapshot["campaign_id"], policy_status=policy_status
+        )
+        return current["semantic_sha256"] == snapshot["semantic_sha256"]
+
+
+class RepairLineageProjector:
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.lifecycle = store.v5_lifecycle()
+
+    @staticmethod
+    def _effective_statuses(
+        bases: dict[str, dict[str, Any]], dispositions: dict[str, dict[str, Any]]
+    ) -> dict[str, str]:
+        return {
+            research_id: (
+                dispositions[research_id]["metadata"]["disposition_status"]
+                if research_id in dispositions
+                else record["status"]
+            )
+            for research_id, record in bases.items()
+        }
+
+    @staticmethod
+    def _cycles(edges: list[tuple[str, str]]) -> set[str]:
+        outgoing: dict[str, list[str]] = {}
+        for predecessor, successor in edges:
+            outgoing.setdefault(predecessor, []).append(successor)
+        visiting: set[str] = set()
+        visited: set[str] = set()
+        cyclic: set[str] = set()
+
+        def visit(node: str, path: list[str]) -> None:
+            if node in visiting:
+                start = path.index(node) if node in path else 0
+                cyclic.update(path[start:])
+                return
+            if node in visited:
+                return
+            visiting.add(node)
+            path.append(node)
+            for child in outgoing.get(node, []):
+                visit(child, path)
+            path.pop()
+            visiting.remove(node)
+            visited.add(node)
+
+        for node in sorted(outgoing):
+            visit(node, [])
+        return cyclic
+
+    @staticmethod
+    def _paper_and_program_drift(
+        predecessor: dict[str, Any], successor: dict[str, Any]
+    ) -> list[str]:
+        errors: list[str] = []
+        predecessor_meta = predecessor.get("metadata", {})
+        successor_meta = successor.get("metadata", {})
+        paper_keys = {
+            key
+            for key in predecessor_meta
+            if key.startswith("paper_") or key == "research_draft_ref"
+        }
+        for key in sorted(paper_keys):
+            if successor_meta.get(key) != predecessor_meta.get(key):
+                errors.append(f"paper_mapping_drift:{key}")
+        if (
+            predecessor_meta.get("program_math_review") is not None
+            and successor_meta.get("program_math_review")
+            != predecessor_meta.get("program_math_review")
+        ):
+            errors.append("program_math_obligation_drift")
+        return errors
+
+    def project(
+        self,
+        *,
+        snapshot: dict[str, Any],
+        view: str,
+        collapse_repairs: bool,
+        limit: int,
+    ) -> dict[str, Any]:
+        if view not in BF_VIEWS:
+            raise ValueError("Brave Future frontier view is invalid")
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+            raise ValueError("Brave Future frontier limit must be positive")
+        campaign_id = validate_campaign_id(snapshot["campaign_id"])
+        records = self.lifecycle.research_records()
+        bases, dispositions = PlanningSnapshotBuilder._effective_research(
+            records, campaign_id
+        )
+        if sha256_json(
+            [
+                {
+                    "research_id": research_id,
+                    "record_sha256": record["record_sha256"],
+                    "kind": record["kind"],
+                    "status": record["status"],
+                }
+                for research_id, record in sorted(bases.items())
+            ]
+        ) != snapshot["research_manifest_sha256"]:
+            raise ValueError("Brave Future Research manifest drifted from planning snapshot")
+        statuses = self._effective_statuses(bases, dispositions)
+        invalidators: dict[str, set[str]] = {research_id: set() for research_id in bases}
+        for invalidator_id, record in bases.items():
+            if statuses[invalidator_id] not in ACTIVE_MEMORY_STATUSES:
+                continue
+            for target_id in record.get("metadata", {}).get("route_invalidations", []):
+                if target_id in invalidators:
+                    invalidators[target_id].add(invalidator_id)
+
+        contracts: dict[str, dict[str, Any]] = {}
+        lineage_edges: list[tuple[str, str]] = []
+        failed_repairs: dict[str, list[str]] = {}
+        for research_id, record in sorted(bases.items()):
+            try:
+                contract = validate_repair_contract_semantics(record, bases)
+            except Exception as exc:
+                if record.get("metadata", {}).get("brave_future_repair_contract") is not None:
+                    failed_repairs[research_id] = [str(exc)]
+                continue
+            if contract is None:
+                if record["kind"] == "repair" and record.get("metadata", {}).get(
+                    "repair_of_research_id"
+                ):
+                    failed_repairs[research_id] = ["legacy_repair_contract_is_not_collapsible"]
+                continue
+            contracts[research_id] = contract
+            lineage_edges.extend(
+                (predecessor_id, research_id)
+                for predecessor_id in contract["predecessor_research_ids"]
+            )
+        cyclic = self._cycles(lineage_edges)
+        for research_id in sorted(cyclic):
+            failed_repairs.setdefault(research_id, []).append("repair_lineage_cycle")
+
+        successors: dict[str, list[str]] = {}
+        for predecessor_id, successor_id in lineage_edges:
+            successors.setdefault(predecessor_id, []).append(successor_id)
+
+        collapse_map: dict[str, list[str]] = {}
+        residual_surface: dict[str, list[str]] = {}
+        for predecessor_id, successor_ids in sorted(successors.items()):
+            reasons: list[str] = []
+            eligible_successors = [
+                successor_id
+                for successor_id in sorted(set(successor_ids))
+                if successor_id not in failed_repairs
+                and successor_id not in cyclic
+                and statuses.get(successor_id) in ACTIVE_MEMORY_STATUSES
+                and not invalidators.get(successor_id)
+            ]
+            if not eligible_successors:
+                reasons.append("no_current_hash_valid_successor")
+            strategies = [contracts[item]["strategy"] for item in eligible_successors]
+            if len(eligible_successors) > 1 and any(
+                strategy != "split" for strategy in strategies
+            ):
+                reasons.append("conflicting_complete_successors")
+            obligations = set(_obligation_keys(bases[predecessor_id]))
+            covered: set[str] = set()
+            inherited: set[str] = set()
+            disposed: set[str] = set()
+            residuals: set[str] = set()
+            for successor_id in eligible_successors:
+                contract = contracts[successor_id]
+                for item in contract["coverage"]:
+                    if item["predecessor_research_id"] == predecessor_id:
+                        supports = item["supporting_research_ids"]
+                        if item["outcome"] == "resolved" and any(
+                            statuses.get(research_id) not in ACTIVE_MEMORY_STATUSES
+                            for research_id in supports
+                        ):
+                            reasons.append(
+                                "coverage_support_not_current:"
+                                + item["obligation_key"]
+                            )
+                            continue
+                        if item["outcome"] == "rehome" and not any(
+                            research_id in eligible_successors
+                            and statuses.get(research_id) in ACTIVE_MEMORY_STATUSES
+                            for research_id in supports
+                        ):
+                            reasons.append(
+                                "coverage_rehome_not_visible:"
+                                + item["obligation_key"]
+                            )
+                            continue
+                        covered.add(item["obligation_key"])
+                inherited.update(contract["inherited_invalidator_ids"])
+                disposed.update(contract["disposed_invalidator_ids"])
+                residuals.update(contract["residual_obligations"])
+                reasons.extend(
+                    self._paper_and_program_drift(
+                        bases[predecessor_id], bases[successor_id]
+                    )
+                )
+            missing_obligations = sorted(obligations.difference(covered))
+            if missing_obligations:
+                reasons.append("uncovered_obligations:" + ",".join(missing_obligations))
+            if residuals:
+                reasons.append("residual_obligations:" + ",".join(sorted(residuals)))
+            falsely_disposed = sorted(
+                invalidators[predecessor_id].intersection(disposed)
+            )
+            if falsely_disposed:
+                reasons.append(
+                    "invalidators_claimed_disposed_but_still_live:"
+                    + ",".join(falsely_disposed)
+                )
+            missing_invalidators = sorted(
+                invalidators[predecessor_id].difference(inherited)
+            )
+            if missing_invalidators:
+                reasons.append("unhandled_invalidators:" + ",".join(missing_invalidators))
+            if reasons:
+                residual_surface[predecessor_id] = sorted(set(reasons))
+            else:
+                collapse_map[predecessor_id] = eligible_successors
+
+        full_frontier = self.lifecycle.frontier(
+            limit=max(1, len(bases)), include_history=True, campaign_id=campaign_id
+        )
+        frontier_by_id = {item["research_id"]: item for item in full_frontier}
+        ordered_ids = [item["research_id"] for item in full_frontier]
+        ordered_ids.extend(sorted(set(bases).difference(ordered_ids)))
+        entries: list[dict[str, Any]] = []
+        collapsed_ids = set(collapse_map) if collapse_repairs else set()
+        for research_id in ordered_ids:
+            record = bases[research_id]
+            status = statuses[research_id]
+            is_active = status in ACTIVE_MEMORY_STATUSES
+            if research_id in failed_repairs:
+                projection_status = "failed_repair"
+            elif status == "blocked":
+                projection_status = "blocked"
+            elif not is_active:
+                projection_status = "historical_disposed"
+            elif research_id in collapsed_ids:
+                projection_status = (
+                    "collapsed_split_parent"
+                    if all(
+                        contracts[child]["strategy"] == "split"
+                        for child in collapse_map[research_id]
+                    )
+                    else "collapsed_repaired"
+                )
+            elif research_id in residual_surface:
+                projection_status = "actionable_residual"
+            elif invalidators.get(research_id):
+                projection_status = "stale_by_route_invalidation"
+            elif research_id in contracts:
+                projection_status = "current_repair_leaf"
+            else:
+                projection_status = "actionable_current"
+            if projection_status not in BF_PROJECTION_STATUSES:
+                raise AssertionError(projection_status)
+            if view == "actionable" and (
+                (
+                    not is_active
+                    and projection_status
+                    not in {"failed_repair", "blocked", "actionable_residual"}
+                )
+                or projection_status in {"collapsed_repaired", "collapsed_split_parent"}
+            ):
+                continue
+            if view == "all-active" and not is_active:
+                continue
+            scoring = frontier_by_id.get(research_id, {})
+            entries.append(
+                {
+                    "research_id": research_id,
+                    "record_sha256": record["record_sha256"],
+                    "kind": record["kind"],
+                    "status": status,
+                    "projection_status": projection_status,
+                    "route_invalidator_ids": sorted(invalidators.get(research_id, set())),
+                    "residual_reasons": residual_surface.get(research_id, []),
+                    "score": scoring.get("score"),
+                    "decision_factors": scoring.get("decision_factors"),
+                    "score_model": scoring.get("score_model"),
+                    "score_role": scoring.get("score_role"),
+                    "readiness": scoring.get("readiness"),
+                }
+            )
+        full_manifest = [
+            {
+                "research_id": item["research_id"],
+                "record_sha256": item["record_sha256"],
+                "projection_status": item["projection_status"],
+                "score_bytes_sha256": sha256_json(
+                    {
+                        "score": item["score"],
+                        "decision_factors": item["decision_factors"],
+                        "score_model": item["score_model"],
+                        "score_role": item["score_role"],
+                        "readiness": item["readiness"],
+                    }
+                ),
+            }
+            for item in entries
+        ]
+        semantic = {
+            "revision": BF_FRONTIER_PROJECTION_REVISION,
+            "project_id": self.store.project_id(),
+            "campaign_id": campaign_id,
+            "planning_snapshot_id": snapshot["planning_snapshot_id"],
+            "planning_snapshot_semantic_sha256": snapshot["semantic_sha256"],
+            "view": view,
+            "collapse_repairs": bool(collapse_repairs),
+            "lineage_edges": [
+                {
+                    "predecessor_research_id": predecessor,
+                    "successor_research_id": successor,
+                    "relation": bases[successor]["relation"],
+                    "strategy": contracts.get(successor, {}).get("strategy"),
+                }
+                for predecessor, successor in sorted(lineage_edges)
+            ],
+            "collapse_map": {
+                key: value for key, value in sorted(collapse_map.items())
+            },
+            "residual_surface": {
+                key: value for key, value in sorted(residual_surface.items())
+            },
+            "failed_repairs": {
+                key: value for key, value in sorted(failed_repairs.items())
+            },
+            "invalidator_inventory": {
+                key: sorted(value)
+                for key, value in sorted(invalidators.items())
+                if value
+            },
+            "obligation_inventory": {
+                key: _obligation_keys(record)
+                for key, record in sorted(bases.items())
+                if _obligation_keys(record)
+            },
+            "full_eligible_manifest": full_manifest,
+            "full_eligible_manifest_sha256": sha256_json(full_manifest),
+            "entries": entries[:limit],
+            "omitted_count": max(0, len(entries) - limit),
+            "scheduler": "v5_main_four_factor_frontier",
+            "score_writeback": False,
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        record = _sealed_record(
+            semantic,
+            id_key="projection_id",
+            prefix="bfp-",
+            created_at=snapshot["created_at"],
+        )
+        _bounded(record, "Brave Future frontier projection")
+        return record
+
+
+class BlockageValidator:
+    _FIELDS = {
+        "revision",
+        "campaign_id",
+        "target_research_id",
+        "blocked_route_research_ids",
+        "blocker_class",
+        "method_family",
+        "method_descriptor_sha256",
+        "attempts",
+        "information_gained_research_ids",
+        "remaining_obligation_keys",
+        "mechanical_extension_failure",
+        "operator_constraints",
+        "planning_snapshot_id",
+        "created_by",
+        "truth_effect",
+        "fact_admission_effect",
+    }
+    _ATTEMPT_FIELDS = {
+        "round_id",
+        "assignment_id",
+        "task_card_sha256",
+        "result_research_ids",
+        "result",
+    }
+
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.lifecycle = store.v5_lifecycle()
+
+    def validate(
+        self, payload: Any, *, snapshot: dict[str, Any]
+    ) -> dict[str, Any]:
+        value = _exact(payload, self._FIELDS, "Brave Future blockage input")
+        if value.get("revision") != BF_BLOCKAGE_REVISION:
+            raise ValueError("Brave Future blockage revision is invalid")
+        campaign_id = validate_campaign_id(value.get("campaign_id"))
+        if campaign_id != snapshot["campaign_id"]:
+            raise ValueError("Brave Future blockage Campaign/snapshot mismatch")
+        if value.get("planning_snapshot_id") != snapshot["planning_snapshot_id"]:
+            raise ValueError("Brave Future blockage planning snapshot mismatch")
+        if value.get("truth_effect") != BF_TRUTH_EFFECT or value.get(
+            "fact_admission_effect"
+        ) != BF_FACT_ADMISSION_EFFECT:
+            raise ValueError("Brave Future blockage truth boundary is invalid")
+        target_id = validate_memory_id(value.get("target_research_id"))
+        blocked_ids = _strings(
+            value.get("blocked_route_research_ids"),
+            "blocked route Research ids",
+            nonempty=True,
+        )
+        if target_id not in blocked_ids:
+            raise ValueError("blocked routes must include the target Research")
+        information_ids = _strings(
+            value.get("information_gained_research_ids"),
+            "information-gained Research ids",
+            nonempty=True,
+        )
+        records = {
+            record["research_id"]: record for record in self.lifecycle.research_records()
+        }
+        for research_id in {*blocked_ids, *information_ids}:
+            validate_memory_id(research_id)
+            record = records.get(research_id)
+            if record is None:
+                raise ValueError(f"blockage references unknown Research: {research_id}")
+            if record.get("metadata", {}).get("campaign_id") != campaign_id:
+                raise ValueError("blockage references cross-Campaign Research")
+        if value.get("blocker_class") not in BF_BLOCKER_CLASSES:
+            raise ValueError("Brave Future blockage class is ineligible")
+        _text(value.get("method_family"), "blockage method family")
+        _validate_sha(value.get("method_descriptor_sha256"), "blockage method descriptor")
+        remaining = _strings(
+            value.get("remaining_obligation_keys"),
+            "remaining blockage obligations",
+            nonempty=True,
+        )
+        failure = _text(
+            value.get("mechanical_extension_failure"),
+            "mechanical-extension failure explanation",
+        )
+        if "chx-" in failure.lower() or "architecture issue" in failure.lower():
+            raise ValueError("CHX architecture issues are not Brave Future blockages")
+        _strings(value.get("operator_constraints"), "blockage Operator constraints")
+        _text(value.get("created_by"), "blockage creator")
+        attempts = value.get("attempts")
+        if not isinstance(attempts, list) or not attempts:
+            raise ValueError("a Brave Future blockage requires at least one exact ingested attempt")
+        for attempt in attempts:
+            attempt = _exact(attempt, self._ATTEMPT_FIELDS, "blockage attempt")
+            round_id = validate_round_id(attempt.get("round_id"))
+            assignment_id = validate_assignment_id(attempt.get("assignment_id"))
+            task_sha = _validate_sha(
+                attempt.get("task_card_sha256"), "blockage task-card hash"
+            )
+            result_ids = _strings(
+                attempt.get("result_research_ids"),
+                "blockage result Research ids",
+                nonempty=True,
+            )
+            if attempt.get("result") not in BF_ATTEMPT_RESULTS:
+                raise ValueError("Brave Future blockage attempt result is invalid")
+            round_dir, manifest = self.lifecycle._round_manifest(round_id)
+            assignment = next(
+                (
+                    item
+                    for item in manifest["assignments"]
+                    if item["assignment_id"] == assignment_id
+                ),
+                None,
+            )
+            if assignment is None or assignment["task_card_sha256"] != task_sha:
+                raise ValueError("blockage attempt is not bound to the frozen task card")
+            receipt = self.lifecycle._validated_ingest_receipt(
+                round_dir=round_dir, assignment=assignment
+            )
+            if receipt["research_id"] not in result_ids:
+                raise ValueError("blockage result ids omit the ingested Research result")
+            for research_id in result_ids:
+                record = records.get(research_id)
+                if record is None or record.get("metadata", {}).get("campaign_id") != campaign_id:
+                    raise ValueError("blockage attempt result is unknown or cross-Campaign")
+        return {
+            **value,
+            "blocked_route_research_ids": sorted(blocked_ids),
+            "information_gained_research_ids": sorted(information_ids),
+            "remaining_obligation_keys": sorted(remaining),
+        }
+
+    @staticmethod
+    def signature(blockage: dict[str, Any], *, snapshot: dict[str, Any]) -> str:
+        semantic = {
+            "campaign_id": blockage["campaign_id"],
+            "target_research_id": blockage["target_research_id"],
+            "blocked_route_research_ids": sorted(
+                blockage["blocked_route_research_ids"]
+            ),
+            "blocker_class": blockage["blocker_class"],
+            "method_family": blockage["method_family"],
+            "method_descriptor_sha256": blockage["method_descriptor_sha256"],
+            "remaining_obligation_keys": sorted(
+                blockage["remaining_obligation_keys"]
+            ),
+            "research_manifest_sha256": snapshot["research_manifest_sha256"],
+            "disposition_heads_sha256": snapshot["disposition_heads_sha256"],
+            "authority_snapshot_sha256": snapshot["authority_snapshot"][
+                "authority_snapshot_sha256"
+            ],
+            "workflow_heads_sha256": sha256_json(snapshot["workflow_heads"]),
+            "program_math_queue_head_sha256": snapshot[
+                "program_math_queue_head_sha256"
+            ],
+        }
+        return sha256_json(semantic)
+
+
+class StepBackPlanner:
+    _BLOCKER_ACTIONS = {
+        "missing_prerequisite": "inspect_prerequisite",
+        "surviving_counterexample": "test_counterexample",
+        "scope_or_quantifier_mismatch": "split_target",
+        "source_or_applicability_gap": "recheck_source_or_applicability",
+        "representation_mismatch": "retry_with_changed_method",
+        "program_math_failure": "run_program_math_review",
+        "method_exhaustion": "switch_sibling_route",
+        "dependency_conflict": "inspect_prerequisite",
+        "resource_bound_requiring_reformulation": "split_target",
+    }
+
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.lifecycle = store.v5_lifecycle()
+
+    def reassess(
+        self,
+        *,
+        snapshot: dict[str, Any],
+        projection: dict[str, Any],
+        blockage: dict[str, Any],
+        policy: dict[str, Any],
+        blockage_signature: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        blocked = set(blockage["blocked_route_research_ids"])
+        records = {
+            record["research_id"]: record
+            for record in self.lifecycle.research_records()
+            if record["kind"] != "disposition"
+        }
+        projection_status = {
+            item["research_id"]: item for item in projection["full_eligible_manifest"]
+        }
+        score_order = {
+            item["research_id"]: index
+            for index, item in enumerate(projection["entries"])
+        }
+        candidates: list[dict[str, Any]] = []
+        target = records[blockage["target_research_id"]]
+        target_related = set(target.get("related_research_ids", []))
+        for research_id, item in projection_status.items():
+            if research_id in blocked:
+                continue
+            if item["projection_status"] not in {
+                "actionable_current",
+                "actionable_residual",
+                "current_repair_leaf",
+            }:
+                continue
+            record = records[research_id]
+            related = set(record.get("related_research_ids", []))
+            if blockage["target_research_id"] in related or research_id in target_related:
+                relevance = "direct"
+                rank = 0
+            elif record["kind"] in {"challenge", "counterexample", "obstacle"}:
+                relevance = "diagnostic"
+                rank = 1
+            else:
+                relevance = "indirect"
+                rank = 2
+            contract = record.get("metadata", {}).get("brave_future_repair_contract")
+            method_family = (
+                contract.get("method_family")
+                if isinstance(contract, dict)
+                else record.get("metadata", {}).get("method_family", record["kind"])
+            )
+            method_distance = (
+                "same"
+                if method_family == blockage["method_family"]
+                else (
+                    "orthogonal"
+                    if record["kind"] in {"counterexample", "computation", "literature"}
+                    else "adjacent"
+                )
+            )
+            candidates.append(
+                {
+                    "research_id": research_id,
+                    "record_sha256": record["record_sha256"],
+                    "action": self._BLOCKER_ACTIONS[blockage["blocker_class"]],
+                    "blocker_relevance": relevance,
+                    "method_family": str(method_family),
+                    "method_distance": method_distance,
+                    "reuse_value": len(related.union(target_related)),
+                    "suggested_l2_mode": (
+                        "refute"
+                        if record["kind"] in {"challenge", "counterexample", "obstacle"}
+                        else (
+                            "compute"
+                            if record["kind"] == "computation"
+                            else (
+                                "literature"
+                                if record["kind"] == "literature"
+                                else "prove"
+                            )
+                        )
+                    ),
+                    "why_not_mechanical_extension": (
+                        "Selects an existing route with a different frozen Research identity "
+                        "or method family; it does not extend the blocked route in place."
+                    ),
+                    "expected_information_gain": (
+                        "Tests the recorded blocker against reusable Campaign evidence."
+                    ),
+                    "stop_conditions": [
+                        "stop after one bounded Research work unit",
+                        "return to Operator review before any plan or dispatch",
+                    ],
+                    "_rank": rank,
+                    "_score_order": score_order.get(research_id, 10**9),
+                }
+            )
+        candidates.sort(
+            key=lambda item: (
+                item["_rank"],
+                item["_score_order"],
+                item["research_id"],
+            )
+        )
+        full_candidates = [
+            {key: value for key, value in item.items() if not key.startswith("_")}
+            for item in candidates
+        ]
+        manifest_semantic = {
+            "revision": BF_CANDIDATE_MANIFEST_REVISION,
+            "project_id": self.store.project_id(),
+            "campaign_id": blockage["campaign_id"],
+            "planning_snapshot_id": snapshot["planning_snapshot_id"],
+            "frontier_projection_id": projection["projection_id"],
+            "blockage_signature": blockage_signature,
+            "candidates": full_candidates,
+            "candidate_count": len(full_candidates),
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        manifest = _sealed_record(
+            manifest_semantic,
+            id_key="candidate_manifest_id",
+            prefix="bfcm-",
+            created_at=snapshot["created_at"],
+        )
+        _bounded(manifest, "Brave Future candidate manifest")
+        selected: list[dict[str, Any]] = []
+        family_counts: dict[str, int] = {}
+        for item in full_candidates:
+            family = item["method_family"]
+            if family_counts.get(family, 0) >= 2:
+                continue
+            selected.append(item)
+            family_counts[family] = family_counts.get(family, 0) + 1
+            if len(selected) >= policy["shortlist_limit"]:
+                break
+        recommended = selected[0]["action"] if selected else "park_and_escalate"
+        if recommended not in BF_ACTIONS:
+            raise AssertionError(recommended)
+        return manifest, {
+            "shortlist": selected,
+            "omitted_count": len(full_candidates) - len(selected),
+            "recommended_action": recommended,
+        }
+
+
+class BraveFutureManager:
+    def __init__(self, store: Any) -> None:
+        self.store = store
+        self.root = store.root / "governance" / "brave-future"
+        self.policy_store = BraveFuturePolicyStore(store)
+        self.snapshot_builder = PlanningSnapshotBuilder(store)
+        self.projector = RepairLineageProjector(store)
+        self.blockage_validator = BlockageValidator(store)
+        self.planner = StepBackPlanner(store)
+
+    def _campaign_root(self, campaign_id: str) -> Path:
+        return self.root / "campaigns" / validate_campaign_id(campaign_id)
+
+    def _transactions_dir(self, campaign_id: str) -> Path:
+        return self._campaign_root(campaign_id) / "transactions"
+
+    def _transaction_path(self, campaign_id: str, reassessment_id: str) -> Path:
+        return self._transactions_dir(campaign_id) / _validate_bf_id(
+            reassessment_id, "reassessment_id"
+        )
+
+    def _read_transaction(
+        self, campaign_id: str, reassessment_id: str
+    ) -> dict[str, dict[str, Any]]:
+        directory = self._transaction_path(campaign_id, reassessment_id)
+        if directory.is_symlink() or not directory.is_dir():
+            raise KeyError(f"unknown Brave Future reassessment: {reassessment_id}")
+        expected = {
+            "blockage.json",
+            "planning-snapshot.json",
+            "frontier-projection.json",
+            "candidate-manifest.json",
+            "reassessment.json",
+            "transaction-manifest.json",
+        }
+        actual = {item.name for item in directory.iterdir()}
+        if actual != expected or any(item.is_symlink() for item in directory.iterdir()):
+            raise ValueError("Brave Future transaction object set is not exact")
+        objects = {
+            name.removesuffix(".json"): json.loads(
+                (directory / name).read_text(encoding="utf-8")
+            )
+            for name in expected.difference({"transaction-manifest.json"})
+        }
+        manifest = json.loads(
+            (directory / "transaction-manifest.json").read_text(encoding="utf-8")
+        )
+        expected_manifest = {
+            "revision": "chalxius-bf-atomic-transaction-1",
+            "campaign_id": campaign_id,
+            "reassessment_id": reassessment_id,
+            "objects": [
+                {
+                    "filename": name,
+                    "sha256": sha256_bytes((directory / name).read_bytes()),
+                }
+                for name in sorted(expected.difference({"transaction-manifest.json"}))
+            ],
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        if manifest != expected_manifest:
+            raise ValueError("Brave Future atomic transaction manifest mismatch")
+        snapshot = _validate_sealed_record(
+            objects["planning-snapshot"],
+            semantic_fields=_SNAPSHOT_SEMANTIC_FIELDS,
+            id_key="planning_snapshot_id",
+            prefix="bfps-",
+            revision=BF_PLANNING_SNAPSHOT_REVISION,
+            label="Brave Future planning snapshot",
+        )
+        projection = _validate_sealed_record(
+            objects["frontier-projection"],
+            semantic_fields=_PROJECTION_SEMANTIC_FIELDS,
+            id_key="projection_id",
+            prefix="bfp-",
+            revision=BF_FRONTIER_PROJECTION_REVISION,
+            label="Brave Future frontier projection",
+        )
+        blockage = _validate_sealed_record(
+            objects["blockage"],
+            semantic_fields=set(BlockageValidator._FIELDS),
+            id_key="blockage_id",
+            prefix="bfb-",
+            revision=BF_BLOCKAGE_REVISION,
+            label="Brave Future blockage",
+        )
+        candidate = _validate_sealed_record(
+            objects["candidate-manifest"],
+            semantic_fields=_CANDIDATE_MANIFEST_SEMANTIC_FIELDS,
+            id_key="candidate_manifest_id",
+            prefix="bfcm-",
+            revision=BF_CANDIDATE_MANIFEST_REVISION,
+            label="Brave Future candidate manifest",
+        )
+        reassessment = _validate_sealed_record(
+            objects["reassessment"],
+            semantic_fields=_REASSESSMENT_SEMANTIC_FIELDS,
+            id_key="reassessment_id",
+            prefix="bfr-",
+            revision=BF_REASSESSMENT_REVISION,
+            label="Brave Future reassessment",
+        )
+        if any(
+            item["campaign_id"] != campaign_id
+            for item in (snapshot, projection, blockage, candidate, reassessment)
+        ):
+            raise ValueError("Brave Future transaction crosses Campaigns")
+        if (
+            reassessment["reassessment_id"] != reassessment_id
+            or projection["planning_snapshot_id"]
+            != snapshot["planning_snapshot_id"]
+            or blockage["planning_snapshot_id"]
+            != snapshot["planning_snapshot_id"]
+            or candidate["planning_snapshot_id"]
+            != snapshot["planning_snapshot_id"]
+            or reassessment["planning_snapshot_id"]
+            != snapshot["planning_snapshot_id"]
+            or candidate["frontier_projection_id"] != projection["projection_id"]
+            or reassessment["frontier_projection_id"] != projection["projection_id"]
+            or reassessment["blockage_id"] != blockage["blockage_id"]
+            or reassessment["candidate_manifest_id"]
+            != candidate["candidate_manifest_id"]
+            or reassessment["candidate_manifest_sha256"]
+            != candidate["record_sha256"]
+            or reassessment["blockage_signature"]
+            != candidate["blockage_signature"]
+        ):
+            raise ValueError("Brave Future transaction references are inconsistent")
+        if (
+            reassessment["autonomy_level"] != "advisory"
+            or reassessment["plan_effect"] != "none"
+            or reassessment["dispatch_effect"] != "none"
+            or reassessment["campaign_close_effect"] != "none"
+        ):
+            raise ValueError("Brave Future reassessment exceeded advisory authority")
+        return objects
+
+    def _transactions(self, campaign_id: str) -> list[dict[str, dict[str, Any]]]:
+        directory = self._transactions_dir(campaign_id)
+        if not directory.exists():
+            return []
+        if directory.is_symlink() or not directory.is_dir():
+            raise ValueError("Brave Future transactions directory is unsafe")
+        result = []
+        for path in sorted(directory.iterdir()):
+            if path.name.startswith("."):
+                continue
+            result.append(self._read_transaction(campaign_id, path.name))
+        return result
+
+    def _decisions_path(self, campaign_id: str) -> Path:
+        return self._campaign_root(campaign_id) / "decisions.jsonl"
+
+    def _decisions(self, campaign_id: str) -> list[dict[str, Any]]:
+        path = self._decisions_path(campaign_id)
+        if not path.exists():
+            return []
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Brave Future decision ledger is unsafe")
+        decisions: list[dict[str, Any]] = []
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            if not raw.strip():
+                continue
+            decision = json.loads(raw)
+            semantic_fields = {
+                "revision",
+                "project_id",
+                "campaign_id",
+                "reassessment_id",
+                "action",
+                "selected_research_ids",
+                "modified_proposal",
+                "reason",
+                "actor",
+                "plan_effect",
+                "dispatch_effect",
+                "campaign_close_effect",
+                "truth_effect",
+                "fact_admission_effect",
+            }
+            _validate_sealed_record(
+                decision,
+                semantic_fields=semantic_fields,
+                id_key="decision_id",
+                prefix="bfd-",
+                revision=BF_DECISION_REVISION,
+                label="Brave Future decision",
+            )
+            if decision["campaign_id"] != campaign_id:
+                raise ValueError("Brave Future decision ledger Campaign mismatch")
+            decisions.append(decision)
+        return decisions
+
+    def status(self, campaign_id: str) -> dict[str, Any]:
+        policy = self.policy_store.status(campaign_id)
+        transactions = self._transactions(campaign_id)
+        decisions = self._decisions(campaign_id)
+        return {
+            **policy,
+            "reassessment_count": len(transactions),
+            "decision_count": len(decisions),
+            "latest_reassessment_id": (
+                transactions[-1]["reassessment"]["reassessment_id"]
+                if transactions
+                else None
+            ),
+            "sidecar_only": True,
+            "automatic_plan": False,
+            "automatic_dispatch": False,
+        }
+
+    def enable(
+        self, *, campaign_id: str, policy: dict[str, Any], actor: str
+    ) -> dict[str, Any]:
+        return self.policy_store.enable(
+            campaign_id=campaign_id, policy=policy, actor=actor
+        )
+
+    def disable(self, *, campaign_id: str, actor: str, reason: str) -> dict[str, Any]:
+        return self.policy_store.disable(
+            campaign_id=campaign_id, actor=actor, reason=reason
+        )
+
+    def frontier(
+        self,
+        *,
+        campaign_id: str,
+        view: str = "actionable",
+        collapse_repairs: bool = True,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        status = self.policy_store.status(campaign_id)
+        if not status["enabled"]:
+            raise ValueError("Brave Future is disabled for the explicit Campaign")
+        snapshot = self.snapshot_builder.preview(
+            campaign_id=campaign_id, policy_status=status
+        )
+        projection = self.projector.project(
+            snapshot=snapshot,
+            view=view,
+            collapse_repairs=collapse_repairs,
+            limit=limit,
+        )
+        return {
+            "planning_snapshot": snapshot,
+            "frontier_projection": projection,
+            "write_effect": "none",
+            "scheduler": "v5_main_four_factor_frontier",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+
+    def _epoch_count(self, campaign_id: str, policy_status: dict[str, Any]) -> int:
+        resets = [
+            decision
+            for decision in self._decisions(campaign_id)
+            if decision["action"] == "reset_epoch_with_reason"
+        ]
+        reset_at = resets[-1]["created_at"] if resets else ""
+        return sum(
+            transaction["reassessment"]["created_at"] > reset_at
+            for transaction in self._transactions(campaign_id)
+        )
+
+    def _repeated_signature(
+        self, campaign_id: str, signature: str
+    ) -> dict[str, Any] | None:
+        for transaction in self._transactions(campaign_id):
+            if transaction["reassessment"]["blockage_signature"] == signature:
+                return transaction["reassessment"]
+        return None
+
+    def blockage_input(self, *, campaign_id: str, blockage_id: str) -> dict[str, Any]:
+        """Recover the exact immutable prewrite semantics of a stored blockage."""
+
+        campaign_id = validate_campaign_id(campaign_id)
+        blockage_id = _validate_bf_id(blockage_id, "blockage_id")
+        for transaction in self._transactions(campaign_id):
+            blockage = transaction["blockage"]
+            if blockage["blockage_id"] != blockage_id:
+                continue
+            return {
+                key: value
+                for key, value in blockage.items()
+                if key
+                not in {
+                    "blockage_id",
+                    "created_at",
+                    "semantic_sha256",
+                    "record_sha256",
+                }
+            }
+        raise KeyError(f"unknown Brave Future blockage: {blockage_id}")
+
+    def _prepare_reassessment(
+        self,
+        *,
+        campaign_id: str,
+        blockage_input: dict[str, Any],
+    ) -> dict[str, Any]:
+        status = self.policy_store.status(campaign_id)
+        if not status["enabled"]:
+            raise ValueError("Brave Future is disabled for the explicit Campaign")
+        snapshot = self.snapshot_builder.preview(
+            campaign_id=campaign_id, policy_status=status
+        )
+        blockage_semantic = self.blockage_validator.validate(
+            blockage_input, snapshot=snapshot
+        )
+        signature = self.blockage_validator.signature(
+            blockage_semantic, snapshot=snapshot
+        )
+        repeated = self._repeated_signature(campaign_id, signature)
+        if repeated is not None:
+            return {
+                "parked": True,
+                "reason": "identical_blockage_signature_already_consumed",
+                "prior_reassessment_id": repeated["reassessment_id"],
+                "blockage_signature": signature,
+                "recommended_action": "park_and_escalate",
+                "write_effect": "none",
+                "truth_effect": BF_TRUTH_EFFECT,
+                "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            }
+        if self._epoch_count(campaign_id, status) >= status["policy"][
+            "max_reassessments_per_epoch"
+        ]:
+            return {
+                "parked": True,
+                "reason": "campaign_epoch_reassessment_budget_exhausted",
+                "blockage_signature": signature,
+                "recommended_action": "park_and_escalate",
+                "write_effect": "none",
+                "truth_effect": BF_TRUTH_EFFECT,
+                "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            }
+        projection = self.projector.project(
+            snapshot=snapshot,
+            view="actionable",
+            collapse_repairs=True,
+            limit=max(1, len(snapshot["research_manifest"])),
+        )
+        created_at = _now()
+        blockage = _sealed_record(
+            blockage_semantic,
+            id_key="blockage_id",
+            prefix="bfb-",
+            created_at=created_at,
+        )
+        manifest, plan = self.planner.reassess(
+            snapshot=snapshot,
+            projection=projection,
+            blockage=blockage_semantic,
+            policy=status["policy"],
+            blockage_signature=signature,
+        )
+        semantic = {
+            "revision": BF_REASSESSMENT_REVISION,
+            "project_id": self.store.project_id(),
+            "campaign_id": campaign_id,
+            "blockage_id": blockage["blockage_id"],
+            "blockage_signature": signature,
+            "planning_snapshot_id": snapshot["planning_snapshot_id"],
+            "frontier_projection_id": projection["projection_id"],
+            "candidate_manifest_id": manifest["candidate_manifest_id"],
+            "candidate_manifest_sha256": manifest["record_sha256"],
+            "shortlist": plan["shortlist"],
+            "omitted_count": plan["omitted_count"],
+            "omission_policy": "full_content_addressed_manifest_retained",
+            "recommended_action": plan["recommended_action"],
+            "autonomy_level": "advisory",
+            "cooldown_state": "signature_consumed",
+            "created_by": blockage_semantic["created_by"],
+            "plan_effect": "none",
+            "dispatch_effect": "none",
+            "campaign_close_effect": "none",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        reassessment = _sealed_record(
+            semantic,
+            id_key="reassessment_id",
+            prefix="bfr-",
+            created_at=created_at,
+        )
+        for label, obj in (
+            ("blockage", blockage),
+            ("planning snapshot", snapshot),
+            ("frontier projection", projection),
+            ("candidate manifest", manifest),
+            ("reassessment", reassessment),
+        ):
+            _bounded(obj, f"Brave Future {label}")
+        return {
+            "parked": False,
+            "blockage": blockage,
+            "planning_snapshot": snapshot,
+            "frontier_projection": projection,
+            "candidate_manifest": manifest,
+            "reassessment": reassessment,
+            "write_effect": "not_yet_persisted",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+
+    def _publish_transaction(self, prepared: dict[str, Any]) -> Path:
+        reassessment = prepared["reassessment"]
+        campaign_id = reassessment["campaign_id"]
+        reassessment_id = reassessment["reassessment_id"]
+        destination = self._transaction_path(campaign_id, reassessment_id)
+        if os.path.lexists(destination):
+            existing = self._read_transaction(campaign_id, reassessment_id)
+            if existing["reassessment"] != reassessment:
+                raise ValueError("Brave Future reassessment id collision")
+            return destination
+        transactions = self._transactions_dir(campaign_id)
+        transactions.mkdir(parents=True, exist_ok=True)
+        staging_root = self._campaign_root(campaign_id) / ".staging"
+        staging_root.mkdir(parents=True, exist_ok=True)
+        stage = Path(tempfile.mkdtemp(prefix="transaction-", dir=staging_root))
+        objects = {
+            "blockage.json": prepared["blockage"],
+            "planning-snapshot.json": prepared["planning_snapshot"],
+            "frontier-projection.json": prepared["frontier_projection"],
+            "candidate-manifest.json": prepared["candidate_manifest"],
+            "reassessment.json": reassessment,
+        }
+        try:
+            for filename, payload in objects.items():
+                (stage / filename).write_bytes(_canonical_file_bytes(payload))
+            manifest = {
+                "revision": "chalxius-bf-atomic-transaction-1",
+                "campaign_id": campaign_id,
+                "reassessment_id": reassessment_id,
+                "objects": [
+                    {
+                        "filename": filename,
+                        "sha256": sha256_bytes((stage / filename).read_bytes()),
+                    }
+                    for filename in sorted(objects)
+                ],
+                "truth_effect": BF_TRUTH_EFFECT,
+                "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            }
+            (stage / "transaction-manifest.json").write_bytes(
+                _canonical_file_bytes(manifest)
+            )
+            for path in stage.iterdir():
+                with path.open("rb") as handle:
+                    os.fsync(handle.fileno())
+            os.replace(stage, destination)
+            directory_fd = os.open(transactions, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            try:
+                staging_root.rmdir()
+            except OSError:
+                # Another in-flight staging directory is not part of this
+                # transaction and must never be removed here.
+                pass
+        except BaseException:
+            if stage.exists():
+                shutil.rmtree(stage)
+            raise
+        return destination
+
+    def reassess(
+        self,
+        *,
+        campaign_id: str,
+        blockage_input: dict[str, Any],
+        dry_run: bool,
+    ) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        if dry_run:
+            result = self._prepare_reassessment(
+                campaign_id=campaign_id, blockage_input=blockage_input
+            )
+            return {**result, "dry_run": True, "write_effect": "none"}
+        with self.store.v5_mutation_lock(command="campaign-reassess"):
+            prepared = self._prepare_reassessment(
+                campaign_id=campaign_id, blockage_input=blockage_input
+            )
+            if prepared["parked"]:
+                return {**prepared, "dry_run": False}
+            # Recheck all heads while holding the V5 project mutation lock.
+            status = self.policy_store.status(campaign_id)
+            if not self.snapshot_builder.revalidate(
+                prepared["planning_snapshot"], status
+            ):
+                raise ValueError("Brave Future planning heads drifted before publish")
+            destination = self._publish_transaction(prepared)
+        return {
+            **prepared["reassessment"],
+            "transaction_relpath": destination.relative_to(self.store.root).as_posix(),
+            "dry_run": False,
+            "write_effect": "one_atomic_sidecar_transaction",
+        }
+
+    def _find_reassessment(
+        self, reassessment_id: str
+    ) -> tuple[str, dict[str, dict[str, Any]]]:
+        reassessment_id = _validate_bf_id(reassessment_id, "reassessment_id")
+        campaigns_root = self.root / "campaigns"
+        if not campaigns_root.exists():
+            raise KeyError(f"unknown Brave Future reassessment: {reassessment_id}")
+        matches: list[tuple[str, dict[str, dict[str, Any]]]] = []
+        for campaign_dir in sorted(campaigns_root.iterdir()):
+            if not campaign_dir.is_dir() or campaign_dir.is_symlink():
+                continue
+            try:
+                campaign_id = validate_campaign_id(campaign_dir.name)
+            except ValueError:
+                continue
+            path = self._transaction_path(campaign_id, reassessment_id)
+            if path.is_dir() and not path.is_symlink():
+                matches.append((campaign_id, self._read_transaction(campaign_id, reassessment_id)))
+        if len(matches) != 1:
+            raise KeyError(f"unknown or ambiguous Brave Future reassessment: {reassessment_id}")
+        return matches[0]
+
+    def decide(
+        self,
+        reassessment_id: str,
+        *,
+        decision: dict[str, Any],
+        actor: str,
+    ) -> dict[str, Any]:
+        campaign_id, transaction = self._find_reassessment(reassessment_id)
+        actor = _text(actor, "Brave Future decision actor")
+        fields = {
+            "revision",
+            "action",
+            "selected_research_ids",
+            "modified_proposal",
+            "reason",
+        }
+        value = _exact(decision, fields, "Brave Future decision input")
+        if value.get("revision") != BF_DECISION_REVISION:
+            raise ValueError("Brave Future decision revision is invalid")
+        action = value.get("action")
+        if action not in {
+            "select",
+            "select_modified",
+            "park",
+            "reject_reassessment",
+            "reset_epoch_with_reason",
+        }:
+            raise ValueError("Brave Future decision action is invalid")
+        selected = _strings(
+            value.get("selected_research_ids"), "Brave Future selected Research ids"
+        )
+        shortlist_ids = {
+            item["research_id"] for item in transaction["reassessment"]["shortlist"]
+        }
+        if action == "select":
+            if len(selected) != 1 or selected[0] not in shortlist_ids:
+                raise ValueError("select must name exactly one frozen shortlist Research id")
+            if value.get("modified_proposal") is not None:
+                raise ValueError("select cannot carry a modified proposal")
+        elif action == "select_modified":
+            if len(selected) != 1 or not isinstance(value.get("modified_proposal"), dict):
+                raise ValueError("select_modified requires one id and one proposal object")
+            record = self.store.v5_lifecycle()._research_record(selected[0])
+            if record.get("metadata", {}).get("campaign_id") != campaign_id:
+                raise ValueError("modified selection crosses Campaigns")
+        else:
+            if selected or value.get("modified_proposal") is not None:
+                raise ValueError(f"{action} cannot select Research")
+        reason = _text(value.get("reason"), "Brave Future decision reason")
+        if action in {"select", "select_modified"}:
+            policy = self.policy_store.status(campaign_id)
+            if not policy["enabled"]:
+                raise ValueError("cannot select from a disabled Brave Future Campaign")
+            if not self.snapshot_builder.revalidate(
+                transaction["planning-snapshot"], policy
+            ):
+                raise ValueError("Brave Future reassessment is stale for selection")
+        semantic = {
+            "revision": BF_DECISION_REVISION,
+            "project_id": self.store.project_id(),
+            "campaign_id": campaign_id,
+            "reassessment_id": reassessment_id,
+            "action": action,
+            "selected_research_ids": selected,
+            "modified_proposal": value["modified_proposal"],
+            "reason": reason,
+            "actor": actor,
+            "plan_effect": "none",
+            "dispatch_effect": "none",
+            "campaign_close_effect": "none",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
+        record = _sealed_record(
+            semantic,
+            id_key="decision_id",
+            prefix="bfd-",
+            created_at=_now(),
+        )
+        with self.store.v5_mutation_lock(command="campaign-reassess-decide"):
+            existing = self._decisions(campaign_id)
+            prior = [
+                item for item in existing if item["reassessment_id"] == reassessment_id
+            ]
+            if prior:
+                if prior[-1]["semantic_sha256"] != record["semantic_sha256"]:
+                    raise ValueError("Brave Future reassessment already has another decision")
+                return {**prior[-1], "write_effect": "none", "idempotent": True}
+            path = self._decisions_path(campaign_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = b"".join(
+                canonical_json_bytes(item) + b"\n" for item in [*existing, record]
+            )
+            self.store._write_bytes_atomic(path, payload)
+        return {**record, "write_effect": "one_advisory_decision_event"}
+
+    def audit(self) -> dict[str, Any]:
+        errors: list[str] = []
+        warnings: list[str] = []
+        campaigns = 0
+        transactions = 0
+        decisions = 0
+        try:
+            self.policy_store._events()
+        except Exception as exc:
+            errors.append(f"activation ledger: {exc}")
+        campaigns_root = self.root / "campaigns"
+        if campaigns_root.exists():
+            if campaigns_root.is_symlink() or not campaigns_root.is_dir():
+                errors.append("campaign sidecar root is unsafe")
+            else:
+                for campaign_dir in sorted(campaigns_root.iterdir()):
+                    if campaign_dir.name.startswith("."):
+                        warnings.append(f"ignored incomplete staging root: {campaign_dir.name}")
+                        continue
+                    try:
+                        campaign_id = validate_campaign_id(campaign_dir.name)
+                        campaigns += 1
+                        transactions += len(self._transactions(campaign_id))
+                        decisions += len(self._decisions(campaign_id))
+                    except Exception as exc:
+                        errors.append(f"campaign sidecar {campaign_dir.name}: {exc}")
+        forbidden = {
+            "ACTIVE",
+            "queue",
+            "dispatch",
+            "facts",
+            "fact_graph",
+            "certification",
+            "candidate_releases",
+        }
+        if self.root.exists():
+            for path in self.root.rglob("*"):
+                if path.name in forbidden:
+                    errors.append(
+                        "forbidden authority or automation path in Brave Future sidecar: "
+                        + path.relative_to(self.root).as_posix()
+                    )
+        return {
+            "revision": "chalxius-bf-audit-1",
+            "ok": not errors,
+            "errors": errors,
+            "warnings": warnings,
+            "campaigns": campaigns,
+            "transactions": transactions,
+            "decisions": decisions,
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+            "stable_v5_audit_effect": "none",
+        }

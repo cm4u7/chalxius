@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.5.0 `Back to the Future / Paper Continuation` release artifact contains one self-contained `chalxius`
+The 0.6.2 `Paper Graph Continuity / Brave Future BF-1–3` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -24,6 +24,68 @@ If a separately authorized release archive contains `MANIFEST.sha256`, run
 `shasum -a 256 -c MANIFEST.sha256` and reject unexpected files. Also verify
 `INHERITANCE.lock.json` against the named source manifests. A workspace
 candidate without a release manifest must not be represented as packaged.
+
+## Preserve runtime continuity before every global cutover
+
+A global skill path is a mutable discovery alias, not an immutable historical
+runtime locator. An authorized replacement or rollback must use the executable
+cutover gate, with every protected project named explicitly:
+
+```bash
+python3 -B /absolute/path/to/candidate/scripts/runtime_cutover.py \
+  --candidate-root /absolute/path/to/candidate \
+  --installed-root /absolute/path/to/.codex/skills/chalxius \
+  --rollback-root /absolute/path/to/.codex/skills/chalxius-prior \
+  --archive-root /absolute/path/to/.codex/skill-runtime-archives/chalxius \
+  --project-root /absolute/path/to/protected-project \
+  --expected-candidate-manifest-sha256 APPROVED_64_HEX
+```
+
+The gate requires either one or more `--project-root` values or the explicit
+`--confirm-no-protected-projects` assertion. It verifies the exact candidate
+file set and self-test, rejects every nonterminal or non-current protected
+project, archives the installed runtime and every matching frozen card identity,
+performs a same-parent rename cutover, archives and self-tests the new install,
+and reruns all project status/audits. Any post-swap failure automatically restores the prior
+installation. An explicit rollback uses the same gate with `--operation
+rollback`, the exact rollback tree as `--candidate-root`, and a new backup root;
+an old runtime incapable of validating protected projects is refused before the
+swap.
+
+The low-level `scripts/archive_runtime.py` command copies only manifest-listed
+regular files, verifies every hash and the exact resulting file set, seals one
+content object read-only, and publishes one immutable identity-registry record.
+The archive is validation data only: it
+must never be added to skill discovery, imported, executed, or treated as Fact,
+Evidence, Paper, Research, Candidate, Certification, or Gateway authority.
+
+To seed a legacy schema-1 identity, use one exact frozen task card and a source
+tree whose VERSION, MANIFEST, and all declared file hashes match that card:
+
+```bash
+python3 -B /absolute/path/to/0.6.2/scripts/archive_runtime.py \
+  --source-root /absolute/path/to/exact-historical-runtime \
+  --archive-root "$ARCHIVE_ROOT" \
+  --task-card /absolute/path/to/frozen-task-card.json \
+  --expected-runtime-identity EXACT_64_HEX_ID
+```
+
+Inputs, runtime roots, archive roots, registry paths, manifest directories, and
+files are traversed component by component without following links. Traversal,
+special files, hard links, nested cross-device entries, extra archive files,
+registry drift, or a host-root mismatch fail closed. An optional
+`CHALXIUS_RUNTIME_ARCHIVE_ROOT` is host configuration and must equal the locator
+frozen into any new schema-2 card; all processes serving one project must use
+the same value.
+
+The cutover gate runs `round-status` and `audit` before and after replacement.
+Refuse replacement while any protected round remains active; complete it or
+explicitly abort it first. A terminal completed
+or aborted card may use the archive only for read/status/audit interpretation;
+worker CHX startup, returns, ingestion, experiments, Pulse, and every mutation
+still require the exact current live runtime. Cards, receipts, Research, Paper,
+Evidence, Candidate Releases, decisions, admissions, Facts, and CHX ledgers are
+never rewritten during archive seeding or cutover.
 
 ## Start and finish the CHX ledger
 
@@ -115,7 +177,7 @@ The automatic V5 frontier uses the compact four-factor score and projects
 legacy eight-metric Research without rewriting it. It is an ordering aid only,
 has no cutoff, and does not prevent explicit scheduling of a low-scored item.
 
-For new 0.5.0 work, Main compiles task context and Operator retains governance;
+For new 0.6.2 work, Main compiles task context and Operator retains governance;
 the technical Host role remains the unchanged trusted dispatch adapter. One
 origin-bound promoted Blackboard item may seed its exact bounded query as one
 task. Exact enum mode hints apply only across an equal assurance/adverse

@@ -105,7 +105,11 @@ invalidated by the new contract.
 New 0.4.4 cards instead use
 `task_context_revision="chalxius-v5-task-context-0.4.4-1"` and an exact
 `context_selection` receipt. They also bind the canonical candidate skill root,
-expected version, `VERSION` hash, and manifest-file hash. The worker starts its
+expected version, `VERSION` hash, and manifest-file hash. New 0.6.2 schema-2
+bindings additionally carry a path-independent content id and the canonical
+host archive object locator outside skill discovery. The locator is verified
+against host configuration rather than trusted because it appears in the card.
+The worker starts its
 CHX ledger with that exact task card; a global/candidate mismatch fails before
 ledger creation. Main is the only autonomous task-context compiler;
 Operator retains governance and explicit override; the dedicated Host role
@@ -173,8 +177,11 @@ not delete its Research, snapshots, or already-ingested receipts. The read-only
 V5 status projection joins the exact validated abort record, reports unfinished
 assignments as `frozen_aborted`, exposes the abort id, and sets the live awaiting
 count to zero. Once aborted, runtime validation checks the frozen card's exact
-bound root, VERSION bytes, and manifest bytes instead of demanding equality with
-the caller's newer runtime. Independently, a round whose complete assignment set
+VERSION, manifest, and all listed bytes at the original root or in one sealed
+host-managed content object plus identity record, instead of demanding equality
+with the caller's newer runtime. The archive is read-only validation data and is
+never imported, executed, or accepted for active work or a write. Independently,
+a round whose complete assignment set
 has exact validated ingestion receipts is projected as `completed` and receives
 the same historical-runtime treatment without fabricating an abort. Receipt,
 return, Research, optional adverse/program-math side-record, abort/status, and

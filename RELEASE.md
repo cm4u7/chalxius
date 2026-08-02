@@ -1,142 +1,152 @@
-# Chalxius v0.5.0 — Back to the Future / Paper Continuation
+# Chalxius v0.6.2 — Paper Graph Continuity / Brave Future BF-1–BF-3
 
-Chalxius 0.5.0 preserves the V5 truth path and the bounded context restoration
-of v0.4.4, then makes reviewed paper work reusable across projects without
-turning a library, graph, or visualization into Fact authority.
+Chalxius 0.6.2 makes a research draft—not a compressed convenience summary—the
+continuing research object. It preserves the V5 truth path while adding a
+prospective, domain-general Paper Research Pipeline and a deliberately bounded
+advisory restoration of Brave Future L3/L4.
 
-This release is intentionally published with 17 unresolved CHX architecture
-issues. They are listed in [`chalxius/KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md).
-Passing software and packaging checks does not close them.
+The release does not rewrite old Paper snapshots, Research, Candidates,
+Certification Decisions, Facts, task cards, Evidence, or CHX ledgers. Stronger
+contracts apply only when an Operator explicitly starts a new strict
+\`research_draft\` plan or opts a Campaign into BF-1 through BF-3.
 
-## User-facing invocation
+## Research drafts and finished external papers
 
-The primary interface is ordinary Chinese or English, not the low-level CLI.
-Name `$chalxius` or `Chalxius`, optionally select `fast`, `auto`, or `deep`, and
-state the object, action, boundary, and output. The README now includes a
-bilingual prompt table for every major capability, plus explicit/default
-activation boundaries.
+A research draft is treated as the origin of the project:
 
-Examples:
+1. Freeze the exact draft bytes and declared research target.
+2. Decompose the draft into a proposition-total Paper DAG with source
+   occurrences, operators, qualifiers, ordered premises, targets, bridges,
+   objections, and defeaters.
+3. Continue Research from the inherited Paper Graph. Copy-on-write successors
+   keep stable local identities and explicit predecessor relations.
+4. Review literature support claim by claim, with publication identity,
+   locators, witnesses, and an independent support judgement.
+5. Run a Paper-subject atomic preflight, composable verification,
+   Certification Decision, and the ordinary Fact Gateway.
 
-```text
-用 $chalxius 自动模式从已审查的 Paper Graph 继续研究，逐节点绑定原文，
-任务结束时给我 Attack report，但不要自动采用路由建议。
-```
+The \`auto\` reasoning mode may reduce research cost; it may not compress Paper
+topology, provenance, atomic claims, target closure, or Fact requirements.
 
-```text
-Use $chalxius in deep mode to compare proof routes, replay the load-bearing
-computation, and prepare only verifier-ready claims for release.
-```
+A finished external paper follows a different route. It may become immutable,
+cross-project Evidence, but neither reputation, peer review, a DOI, a PDF, nor a
+citation grants Fact authority. Its exact claims require an explicit bridge and
+fresh project-local verification before admission.
 
-## Paper continuation and Evidence
+## Domain-indexed research continuity
 
-- A reviewed Paper Logic/Audit freeze can archive its exact paper version, PDF,
-  graph, and review attestation into a configured cross-project Evidence
-  library.
-- A prospective `source_role` distinguishes `research_draft` from
-  `external_reference`; older objects remain readable as `legacy_unspecified`.
-  This role never grants Evidence or Fact authority and is only a partial
-  compatibility seam for the still-open research-draft lifecycle issues.
-- Older supported V5 Evidence remains importable without reopening completed
-  work. Non-paper Fact Graph import is explicit-user and Operator-only.
-- A `verified_bridge` binds selected Evidence into one destination Candidate
-  Release. Release, verifier capsule, certification, and Fact admission recheck
-  the current Evidence disposition.
-- Corrections are append-only, propagate `stale_source` across re-exported
-  Evidence, and report bridge/local-Fact impact without silent rewrite or
-  revocation.
-- Paper continuation materializes exact target-bound Research, preserves
-  transitive Paper ancestry, and reports Paper adequacy separately from Fact
-  validity.
+There is no single cross-domain “stance preservation” surrogate:
 
-## Research, Campaign, and adverse work
+| Domain | Frozen continuity object | Valid terminal outcomes |
+|---|---|---|
+| Philosophy | Argumentative direction, headline thesis, required and forbidden claims | \`preserved\` or \`strengthened\`, unless the Operator authorizes an exact major revision |
+| Mathematics | Exact problem/conjecture, hypotheses, domains, quantifiers, and target claim ids | \`proved\`, \`disproved\`, or \`unresolved_with_obstruction\` |
+| Empirical | Question, estimand, population, exposure/intervention, outcome, and scope | supported, disconfirmed, or inconclusive |
+| Mixed | Explicit component adapters and their shared target ids | Composition of the component outcomes |
 
-- Main retains the four-factor Research frontier. Explicit Campaign scope is a
-  lightweight, frozen nontruth envelope; an active Campaign pointer never
-  silently filters unscoped work.
-- New refutation cards include hidden-conjunct splitting. Exact frozen
-  `philosophy` or `mixed` domain metadata adds plain-language replacement,
-  burden/strongest-charitable-objection/independent-failure-surface, and
-  quantifier–modal–scope–exception attacks.
-- New governed V5 tasks produce a task-end Attack report, including an explicit
-  zero report. Route proposals remain inactive until a user/Operator decision.
-- CHX architecture reporting remains separate and silent when there is no
-  architecture-caused or architecture-amplified issue.
+A counterexample to the unchanged conjecture preserves a mathematical target.
+A proof of a weakened or re-quantified statement does not resolve it.
 
-## Reader revision 20
+## Composable verification
 
-- One gravity center per theme, concentric node-count-scaled topic orbits, and
-  overlap placement for shared nodes.
-- Local attraction and repulsion remain active when topic orbits are disabled.
-- Radial/angular memory springs retain the canonical layered circular layout;
-  selected, path, and topic anchors remain stable during local settlement.
-- Canvas identity is hash6 plus role/plane. MathJax renders readable summaries
-  and formal detail without changing exact source bytes.
-- The new public showcase preserves a real run's topology—175 nodes, 364 edges,
-  17 targets, 7 themes—while every content-bearing node field and original ID is
-  replaced by an ephemeral-key HMAC-SHA-256 value.
+CHX-014 is resolved with a risk-derived, immutable verification work plan
+rather than one omniscient verifier:
 
-## Public worker and paper contracts
+- a planner signs the exact Candidate/capsule-derived shard plan before
+  dispatch;
+- the Host signs immutable role and artifact capabilities;
+- reviewers are project-registered, distinct, scope-bound, and blind to peer
+  results;
+- signed receipts cover claims, targets, predecessors, defeaters, interfaces,
+  transport, and artifacts;
+- a deterministic aggregate fails closed on missing, duplicate, conflicting,
+  stale, or incomplete receipts;
+- adjudication and the Fact Gateway remain separate from shard reviewers.
 
-The release includes executable minimal Paper Logic/Audit fixtures, an exact V5
-worker-return template, schema pointers, bounded missing/extra field diagnostics,
-and verifier-visible target-closure/revised-writing evidence. Workers no longer
-need private implementation knowledge to produce a structurally valid return.
+This is a reusable mechanism for philosophy, mathematics, empirical work, and
+mixed projects. Parallelism changes verification organization, never the truth
+gate.
 
-## Compatibility and authority boundary
+## Brave Future BF-1 through BF-3
 
-The release is prospective. It performs no project migration, Fact import,
-backfill, reclassification, forced redo, or automatic runtime replacement.
-Already-frozen task cards retain their exact contracts. V1–V4 and older V5
-material remains readable history; it cannot become a new V5 premise merely by
-being read or copied.
+The cautious L3/L4 restoration is advisory and requires an exact, explicitly
+activated Campaign:
 
-The only V5 truth path remains:
+- **BF-1:** read-only projection of typed, complete repair lineage from one
+  frozen planning snapshot;
+- **BF-2:** deterministic zero-write reassessment of that same snapshot;
+- **BF-3:** after explicit opt-in, one same-volume atomic nontruth advisory
+  receipt.
 
-```text
+Repeated blockage parks and escalates without another write. There is no active
+Campaign pointer selection, second scheduler, background loop, \`plan_one\`,
+\`execute_one\`, round planning, worker dispatch, score writeback, Campaign
+closure, Reader/Learner mutation, or Candidate/Certification/Gateway/Fact
+effect.
+
+## CHX architecture closure and disclosure
+
+The public registry explicitly enumerates CHX-001 through CHX-057. For this
+release, every short id is qualified by ledger namespace
+\`run-20260801T233737840117Z-a29d00a787c1/CHX-NNN\`; a same-numbered issue from
+another immutable ledger is not the same issue.
+
+The prospective mechanisms are documented in
+[\`chalxius/KNOWN_LIMITATIONS.md\`](chalxius/KNOWN_LIMITATIONS.md) and bound into
+\`INHERITANCE.lock.json\`. A publication-disclosure preflight compares the
+public list and required documentation markers with the exact private ledger
+and fails if an issue is missing, unresolved, or assigned to the wrong run.
+Private source content and the private ledger are not distributed.
+
+Resolved field mechanisms are evidence for this release contract, not a claim
+that no future architecture defect can exist. A new discovery opens a new
+append-only CHX issue; it never weakens Fact admission.
+
+## Compatibility and authority
+
+The only truth path remains:
+
+\`\`\`text
 Research -> Candidate Release -> Certification Decision -> Fact
-```
+\`\`\`
+
+The release is prospective. It performs no automatic project migration,
+backfill, reclassification, forced redo, authority inheritance, or global
+runtime replacement. Frozen work remains readable under its exact runtime
+identity. Historical runtime archives are validation data and are never
+executed or used for active writes.
 
 ## Validation summary
 
-- Complete suite: 537/537 PASS on the final tree and cold archive.
-- Native Paper/Evidence runtime checks: 15/15 PASS, including exact PDF/version
-  capture, arXiv update detection, graph correction, stale propagation, bridge
-  checks, SQLite indexing, and tamper rejection.
-- Release-only aggressive audit: 51/51 mutants killed with
-  `candidate_unchanged=true`.
-- Self-test and official Skill Creator validation: PASS.
-- Manifest: 178/178 entries; no symlinks, caches, bytecode, or unexpected files.
-- Deterministic public archive: 179 regular members; two builds byte-identical.
-- Public examples: deterministic build and privacy validation PASS.
+- Complete suite: 622/622 PASS on the final tree and 622/622 PASS after a cold
+  archive extraction.
+- Targeted installed-tree CHX/Paper tests: 37/37 PASS.
+- Release mutation audit: 110/110 killed with
+  \`candidate_unchanged=true\`.
+- Field Paper Pipeline reliability matrix: 1200/1200 semantic mutations killed,
+  with zero surviving mutations and zero harness errors.
+- Manifest: 201/201 entries; cold extracted tree exact; no symlinks, caches,
+  bytecode, or unexpected files.
+- Deterministic archive: 202 regular files; two builds byte-identical.
+- Public examples: 3/3 deterministic/privacy validations PASS.
+- Transactional global-cutover rehearsal and final cutover: all ten audit
+  rounds completed before and after replacement, with rollback preserved.
 
-See [`VALIDATION.md`](VALIDATION.md) for exact hashes and bounded claims.
-
-## Known architecture limitations
-
-CHX-001 through CHX-017 remain open at this release freeze. Their scope includes
-research-draft routing, semantic atomization and coverage, source-unit and
-speaker alignment, repeated whole-plan validation, technical-term conflicts,
-issue-ledger promotion, verifier sharding/composition, EvidenceRef transport,
-interface completeness, and false one-conjunct atomicity. The exact public,
-content-free registry is
-[`chalxius/KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md).
-
-These limitations do not authorize weaker Fact gates. Affected results remain
-Research unless their exact release, verifier, and gateway requirements are
-satisfied. Existing projects and frozen work are neither migrated nor asked to
-redo work.
+These checks establish bounded software and workflow properties only. They do
+not prove a theorem, establish philosophical or empirical truth, establish
+novelty, certify a private graph, or admit a research claim. See
+[\`VALIDATION.md\`](VALIDATION.md).
 
 ## Install
 
-Verify the adjacent checksum before extracting:
+Download the two adjacent release assets and verify before extraction:
 
-```sh
-shasum -a 256 -c chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz.sha256
-tar -xzf chalxius-0.5.0-back-to-the-future-paper-continuation.tar.gz
+\`\`\`sh
+shasum -a 256 -c chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256
+tar -xzf chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
-```
+\`\`\`
 
-Replacing a currently installed skill is a separate, explicit cutover. Never
-replace the runtime beneath an already-frozen work unit.
+Replacing a currently installed skill remains a separate explicit cutover
+decision. Never replace the runtime beneath an already-frozen work unit.

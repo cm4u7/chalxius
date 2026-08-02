@@ -28,6 +28,91 @@ The new contract adds three linked but separate gates:
 targets. A target remains unresolved until a managed worker result and Main
 disposition exist.
 
+## Strict research-draft successor path
+
+The legacy continuation commands remain readable and usable for their original
+prospective contract. A new `research_draft` that is intended to become the
+substrate for further research uses the stricter successor path instead:
+
+```bash
+mgraph --root PROJECT --role main research-draft-plan LOGIC_SNAPSHOT_ID \
+  --input research-draft-plan.json --actor main
+mgraph --root PROJECT --role main research-draft-disposition-batch PLAN_ID \
+  --input research-draft-batch.json --actor main
+mgraph --root PROJECT --role main research-draft-status PLAN_ID --deep
+```
+
+The plan input has exactly `objective`, `source_artifact_sha256`,
+`stance_policy`, and `term_registry`. `stance_policy` has exactly `policy`,
+`headline_target_ids`, `declared_stance`, and
+`major_revision_requires_operator_authorization=true`. The default policy for
+strengthening an existing argument is `steelman_headline`; narrowing, reversing,
+or withdrawing a headline requires an immutable Operator authorization record.
+Create it with `research-draft-authorize-major-revision`; the batch carries only
+its exact `decision_id` and `decision_record_sha256`. The stored decision binds
+the project, plan id/hash, headline target, declared-stance hash, exact impact,
+actor, role, and reason. A producer-supplied actor, key, or authorization story
+cannot substitute for that record.
+`term_registry` is sense-aware: each entry binds `term`, `sense_id`,
+`exact_definition`, and `necessity`, and one sense id cannot carry conflicting
+definitions across targets.
+
+The plan freezes every Paper target, its complete source/reconstruction/edge
+closure, exact snapshot bytes, domain closure profile, declared stance, and
+source artifact. It has `auto_topology_effect=none`: `auto` may schedule broad
+research cheaply but cannot omit or merge Paper nodes.
+
+One disposition batch covers the exact complete target set and supersedes the
+exact current batch. Every entry separately records its Paper-node disposition,
+Research ids, stance impact, successor mappings, term senses, complete
+profile-specific obligation dispositions, target-qualified failure surfaces,
+and revised-writing bytes/sections. Node disposition is not a one-to-one Fact
+mapping: one Paper node may split into several Candidate components and one
+Candidate may be supported through several Paper predecessors. Publication is
+all-or-none under one V5 mutation lock and one atomic batch-directory rename;
+no per-target partial state is visible.
+
+The domain profile is versioned and target-total. Philosophy covers claims,
+normative bridges, objections, defeaters, authority routes, scope, and failure
+surfaces. Mathematics covers definitions, hypotheses, lemmas, proof
+obligations, cases, transports, counterexamples, and conclusion. Empirical work
+covers hypotheses, design, method, measurement, data lineage, uncertainty,
+causal identification, transport, and limitations. `mixed` is their union.
+
+A Candidate descended from this path must use the prospective research-draft
+assurance, a Paper validation subject, the exact current plan and batch, and
+the required checks `research_draft_admission_preflight`,
+`composable_parallel_verification`, and `validated_dependency_receipt`. The
+native preflight recomputes Paper closure, source-derived atomic components,
+many-to-many Paper/Fact mappings, semantic interfaces and edge transports,
+stance preservation, revised-writing authorization, release-relative Paper
+transport closure, active/revoked Fact authority, and verifier shard coverage.
+It seals a content-addressed dependency receipt; unchanged reads use the
+validated fingerprint cache, while any changed dependency is revalidated.
+
+For this strict path, each Candidate Fact exports exactly one schema-6 semantic
+component. Its component id, source-component ids, and failure-mode ids must
+equal the atomicity/failure-surface records, and every source operator and
+qualifier must survive in that interface. More than one independently
+challengeable source proposition must be represented as an explicit Candidate
+mini-DAG. These are structural gates; they do not claim that a machine has
+discovered every philosophically possible decomposition.
+
+Passing this preflight is structural nontruth evidence, not certification.
+Fresh independent reviewer receipts must aggregate monotonically; a missing or
+conflicting shard rejects. The Operator first registers project-bound planner,
+Host, and reviewer prime-order Ed25519 keys. The project registry is revalidated
+from immutable records on every use and forbids one public key from appearing
+under multiple role, principal, Host, or trust-domain identities. Every registration
+branch validates the complete registry before a new write or an idempotent return. Public key, signed-plan, packet, receipt, and aggregate reads also revalidate the complete registry; immutable-record caches may save byte I/O but never cache authority. A signed exact release/capsule-derived plan
+precedes dispatch; Host packets and reviewer receipts are blind-to-peer and use
+durable project-wide nonrepeating nonces. `verification-aggregate` performs no
+semantic inference. Public verification status, the subsystem audit, and the
+top-level V5 audit all revalidate the registry-wide invariant. The Certification Decision and Fact Gateway both revalidate
+the same eligible aggregate before admitting the complete Candidate DAG. Only that admitted Fact Graph,
+not the original draft, batch, prose, or preflight receipt, becomes the
+authoritative base for inherited further Research.
+
 ## Start an explicit continuation
 
 The input file has exactly four fields:

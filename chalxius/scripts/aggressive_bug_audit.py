@@ -40,6 +40,26 @@ CAMPAIGN_TEST_MODULE = (
 ADVERSE_TEST_MODULE = (
     "tests.test_adverse_routing.AdverseRoutingEvolutionTests"
 )
+RESEARCH_DRAFT_CONTRACT_TEST_MODULE = (
+    "tests.test_research_draft_contracts.ResearchDraftContractTests"
+)
+RESEARCH_DRAFT_ADMISSION_TEST_MODULE = (
+    "tests.test_research_draft_admission.ResearchDraftAdmissionTests"
+)
+PARALLEL_VERIFICATION_TEST_MODULE = (
+    "tests.test_parallel_verification.ParallelVerificationTests"
+)
+BRAVE_FUTURE_TEST_MODULE = "tests.test_brave_future.BraveFutureTests"
+CHX_TEST_MODULE = "tests.test_chx_ledger.CHXRunLedgerTests"
+RUNTIME_ARCHIVE_TEST_MODULE = "tests.test_runtime_archive.RuntimeArchiveTests"
+V5_EXPERIMENT_TEST_MODULE = "tests.test_v5_experiments.V5ExperimentTests"
+RUNTIME_CUTOVER_TEST_MODULE = "tests.test_runtime_cutover.RuntimeCutoverTests"
+PAPER_RESEARCH_PIPELINE_TEST_MODULE = (
+    "tests.test_paper_research_pipeline.PaperResearchPipelineTests"
+)
+RUNTIME_COMPATIBILITY_TEST_MODULE = (
+    "tests.test_runtime_compatibility.RuntimeCompatibilityClosureTests"
+)
 MUTANTS = (
     Mutant(
         name="frontier_limit_minus_one",
@@ -461,18 +481,14 @@ MUTANTS = (
     ),
     Mutant(
         name="host_background_capability_leak",
-        old=(
-            '    "host": {\n'
-            '        "pulse-dispatch",\n'
-        ),
+        old="        return commands.intersection(V5_HOST_COMMANDS)\n",
         new=(
-            '    "host": {\n'
-            '        "project-background-read",\n'
-            '        "pulse-dispatch",\n'
+            "        return commands.intersection(V5_HOST_COMMANDS) "
+            "| {\"project-background-read\"}\n"
         ),
         test=(
             f"{CONTEXT_TEST_MODULE}."
-            "test_host_role_is_unchanged_and_v4_workers_do_not_expand"
+            "test_host_v5_verification_extension_is_additive_and_v4_does_not_expand"
         ),
         target="mathgraph/roles.py",
     ),
@@ -666,10 +682,12 @@ MUTANTS = (
         name="completed_round_historical_runtime_boundary_bypassed",
         old=(
             "        completed = self._round_is_completed(round_dir, manifest)\n"
+            "        runtime_validation_cache: set[tuple[bool, str]] = set()\n"
             "        for card_path, card in frozen_cards:\n"
         ),
         new=(
             "        completed = False\n"
+            "        runtime_validation_cache: set[tuple[bool, str]] = set()\n"
             "        for card_path, card in frozen_cards:\n"
         ),
         test=(
@@ -692,6 +710,324 @@ MUTANTS = (
         ),
     ),
     Mutant(
+        name="runtime_archive_ancestor_symlink_check_bypassed",
+        old=(
+            "        if stat.S_ISLNK(info.st_mode):\n"
+            "            raise ValueError(f\"{label} traverses a symlink\")\n"
+        ),
+        new=(
+            "        if False and stat.S_ISLNK(info.st_mode):\n"
+            "            raise ValueError(f\"{label} traverses a symlink\")\n"
+        ),
+        test=(
+            f"{RUNTIME_ARCHIVE_TEST_MODULE}."
+            "test_bound_root_rejects_a_symlink_in_any_ancestor"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="runtime_archive_host_trust_root_mismatch_bypassed",
+        old=(
+            "    if (\n"
+            "        normalized[\"schema_version\"] == 2\n"
+            "        and Path(normalized[\"historical_archive_root\"]) != expected\n"
+            "    ):\n"
+        ),
+        new=(
+            "    if False and (\n"
+            "        normalized[\"schema_version\"] == 2\n"
+            "        and Path(normalized[\"historical_archive_root\"]) != expected\n"
+            "    ):\n"
+        ),
+        test=(
+            f"{RUNTIME_ARCHIVE_TEST_MODULE}."
+            "test_schema2_locator_must_match_current_host_trust_root"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="runtime_archive_original_manifest_tree_not_rehashed",
+        old=(
+            "            result = validate_bound_runtime_at(\n"
+            "                bound_root,\n"
+            "                normalized,\n"
+            "                verify_manifest_tree=True,\n"
+            "            )\n"
+        ),
+        new=(
+            "            result = validate_bound_runtime_at(\n"
+            "                bound_root,\n"
+            "                normalized,\n"
+            "                verify_manifest_tree=False,\n"
+            "            )\n"
+        ),
+        test=(
+            f"{RUNTIME_ARCHIVE_TEST_MODULE}."
+            "test_original_bound_root_rehashes_every_manifest_entry"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="runtime_archive_exact_file_set_bypassed",
+        old="        if require_exact_file_set:\n",
+        new="        if False and require_exact_file_set:\n",
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_schema2_runtime_archive_is_content_addressed_and_idempotent"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="runtime_archive_read_only_seal_check_bypassed",
+        old="                require_read_only=require_read_only,\n",
+        new="                require_read_only=False,\n",
+        test=(
+            f"{RUNTIME_ARCHIVE_TEST_MODULE}."
+            "test_writable_archive_object_is_rejected_even_when_bytes_match"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="runtime_archive_registry_binding_bypassed",
+        old=(
+            "    if value != expected or raw != canonical_json_bytes(expected) + b\"\\n\":\n"
+        ),
+        new=(
+            "    if False and (value != expected or raw != "
+            "canonical_json_bytes(expected) + b\"\\n\"):\n"
+        ),
+        test=(
+            f"{RUNTIME_ARCHIVE_TEST_MODULE}."
+            "test_registry_and_archive_are_both_required_and_revalidated"
+        ),
+        target="mathgraph/runtime_archive.py",
+    ),
+    Mutant(
+        name="active_runtime_manifest_tree_rehash_bypassed",
+        old=(
+            "        else:\n"
+            "            validate_bound_runtime_at(\n"
+            "                Path(normalized[\"skill_root\"]),\n"
+            "                normalized,\n"
+            "                verify_manifest_tree=True,\n"
+            "            )\n"
+        ),
+        new=(
+            "        else:\n"
+            "            validate_bound_runtime_at(\n"
+            "                Path(normalized[\"skill_root\"]),\n"
+            "                normalized,\n"
+            "                verify_manifest_tree=False,\n"
+            "            )\n"
+        ),
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_active_round_never_uses_historical_runtime_archive"
+        ),
+    ),
+    Mutant(
+        name="active_round_illegally_uses_historical_archive",
+        old="        if historical_runtime:\n",
+        new="        if True:\n",
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_active_round_never_uses_historical_runtime_archive"
+        ),
+    ),
+    Mutant(
+        name="runtime_validation_bounded_phase_dedup_removed",
+        old=(
+            "                if _runtime_validation_cache is not None:\n"
+            "                    _runtime_validation_cache.add(runtime_cache_key)\n"
+        ),
+        new=(
+            "                if _runtime_validation_cache is not None:\n"
+            "                    pass  # mutant: rescan each identical card\n"
+        ),
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_runtime_binding_is_scanned_once_per_bounded_round_phase"
+        ),
+    ),
+    Mutant(
+        name="chx_worker_runtime_manifest_tree_rehash_bypassed",
+        old=(
+            "    validate_bound_runtime_at(\n"
+            "        Path(runtime[\"skill_root\"]),\n"
+            "        runtime,\n"
+            "        verify_manifest_tree=True,\n"
+            "    )\n"
+        ),
+        new=(
+            "    validate_bound_runtime_at(\n"
+            "        Path(runtime[\"skill_root\"]),\n"
+            "        runtime,\n"
+            "        verify_manifest_tree=False,\n"
+            "    )\n"
+        ),
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_chx_worker_ledger_rehashes_the_task_card_runtime_before_writing"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="round_runtime_preflight_before_write_bypassed",
+        old=(
+            "            self._validate_bound_runtime_binding(\n"
+            "                planned_runtime_binding,\n"
+            "                historical_runtime=False,\n"
+            "            )\n"
+        ),
+        new=(
+            "            pass  # mutant: skip the pre-write runtime preflight\n"
+        ),
+        test=(
+            f"{FIELD_TEST_MODULE}."
+            "test_round_runtime_preflight_fails_before_any_project_write"
+        ),
+    ),
+    Mutant(
+        name="terminal_v5_experiment_finalize_write_allowed",
+        old=(
+            "        with self._mutation_lock():\n"
+            "            self._validate_bound_task_card(\n"
+            "                task_card,\n"
+            "                require_active_work_unit=True,\n"
+            "            )\n"
+            "            if not selected_paths:\n"
+        ),
+        new=(
+            "        with self._mutation_lock():\n"
+            "            self._validate_bound_task_card(\n"
+            "                task_card,\n"
+            "                require_active_work_unit=False,\n"
+            "            )\n"
+            "            if not selected_paths:\n"
+        ),
+        test=(
+            f"{V5_EXPERIMENT_TEST_MODULE}."
+            "test_v5_task_local_experiment_replays_resumes_and_finalizes"
+        ),
+        target="mathgraph/v5_experiments.py",
+    ),
+    Mutant(
+        name="runtime_cutover_exact_candidate_file_set_bypassed",
+        old="        require_exact_file_set=exact_file_set,\n",
+        new="        require_exact_file_set=False,\n",
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_candidate_with_an_unexpected_file_is_rejected_before_cutover"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_project_inventory_confirmation_bypassed",
+        old=(
+            "    if not normalized_projects and not confirm_no_protected_projects:\n"
+        ),
+        new=(
+            "    if False and not normalized_projects and not confirm_no_protected_projects:\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_cutover_requires_an_explicit_protected_project_inventory"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_candidate_approval_hash_optional",
+        old=(
+            "    if expected_candidate_manifest_sha256 is None:\n"
+            "        raise ValueError(\n"
+            "            \"cutover requires an approved candidate MANIFEST.sha256 hash\"\n"
+            "        )\n"
+        ),
+        new=(
+            "    if False and expected_candidate_manifest_sha256 is None:\n"
+            "        raise ValueError(\n"
+            "            \"cutover requires an approved candidate MANIFEST.sha256 hash\"\n"
+            "        )\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_cutover_rejects_a_missing_candidate_approval_hash"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_prior_runtime_archive_bypassed",
+        old=(
+            "    if installed_binding is not None:\n"
+            "        bindings_to_archive[\n"
+            "            installed_binding[\"runtime_identity_sha256\"]\n"
+            "        ] = installed_binding\n"
+        ),
+        new=(
+            "    if False and installed_binding is not None:\n"
+            "        bindings_to_archive[\n"
+            "            installed_binding[\"runtime_identity_sha256\"]\n"
+            "        ] = installed_binding\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_install_and_explicit_rollback_both_archive_and_swap_exact_trees"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_multiversion_archive_resolution_bypassed",
+        old=(
+            "        if live_matches:\n"
+            "            bindings_to_archive[identity] = normalized\n"
+            "            continue\n"
+        ),
+        new=(
+            "        if True:  # mutant: require every historical identity at one live alias\n"
+            "            bindings_to_archive[identity] = normalized\n"
+            "            continue\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_multiversion_project_uses_sealed_history_instead_of_one_live_alias"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_postflight_project_gate_bypassed",
+        old=(
+            "        postflight = project_validator(\n"
+            "            installed,\n"
+            "            normalized_projects,\n"
+            "            archive_root=archive,\n"
+            "        )\n"
+        ),
+        new=(
+            "        postflight = {\"projects\": [], \"runtime_bindings\": []}\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_post_cutover_project_gate_failure_also_restores_the_prior_installation"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_automatic_restore_bypassed",
+        old=(
+            "            if prior_moved and rollback is not None and rollback.exists():\n"
+            "                os.rename(rollback, installed)\n"
+        ),
+        new=(
+            "            if False and prior_moved and rollback is not None and rollback.exists():\n"
+            "                os.rename(rollback, installed)\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_post_cutover_failure_restores_the_prior_installation"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
         name="reader_summary_interface_and_math_projection_bypassed",
         old=(
             "    readable = _READER_INTERFACE_ANCHOR_RE.sub(\n"
@@ -707,6 +1043,638 @@ MUTANTS = (
         target="mathgraph/v5_reader.py",
     ),
     Mutant(
+        name="research_draft_partial_target_batch_accepted",
+        old="            if set(target_ids) != set(plan[\"target_node_ids\"]):\n",
+        new=(
+            "            if False and set(target_ids) != "
+            "set(plan[\"target_node_ids\"]):\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_CONTRACT_TEST_MODULE}."
+            "test_batch_rejects_partial_target_set_before_publish"
+        ),
+        target="mathgraph/research_draft.py",
+    ),
+    Mutant(
+        name="research_draft_headline_reversal_authorization_bypassed",
+        old=(
+            "            if major_impact and authorization is None:\n"
+            "                raise ValueError(\n"
+            "                    \"research-draft headline narrowing/reversal "
+            "requires explicit Operator authorization\"\n"
+            "                )\n"
+        ),
+        new=(
+            "            if False and major_impact and authorization is None:\n"
+            "                raise ValueError(\n"
+            "                    \"research-draft headline narrowing/reversal "
+            "requires explicit Operator authorization\"\n"
+            "                )\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_CONTRACT_TEST_MODULE}."
+            "test_headline_reversal_without_authorization_fails_before_publish"
+        ),
+        target="mathgraph/research_draft.py",
+    ),
+    Mutant(
+        name="research_draft_source_self_coverage_accepted",
+        old=(
+            "                        if mapped_node[\"object_type\"] == \"source_unit\":\n"
+            "                            raise ValueError(\n"
+            "                                f\"source component {component_id} cannot use its source unit as semantic coverage\"\n"
+            "                            )\n"
+        ),
+        new=(
+            "                        if False and mapped_node[\"object_type\"] == \"source_unit\":\n"
+            "                            raise ValueError(\n"
+            "                                f\"source component {component_id} cannot use its source unit as semantic coverage\"\n"
+            "                            )\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_source_unit_cannot_count_as_its_own_proposition_coverage"
+        ),
+        target="mathgraph/paper_logic.py",
+    ),
+    Mutant(
+        name="research_draft_independent_components_compressed",
+        old="                    if len(independently_challengeable) > 1:\n",
+        new="                    if False and len(independently_challengeable) > 1:\n",
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_independent_source_components_require_an_explicit_mini_dag"
+        ),
+        target="mathgraph/paper_logic.py",
+    ),
+    Mutant(
+        name="research_draft_semantic_component_binding_bypassed",
+        old="        if semantic[\"component_id\"] != component[\"component_id\"]:\n",
+        new=(
+            "        if False and semantic[\"component_id\"] "
+            "!= component[\"component_id\"]:\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_strict_release_rejects_mapping_component_and_stance_seam_drift"
+        ),
+        target="mathgraph/research_draft_preflight.py",
+    ),
+    Mutant(
+        name="research_draft_source_operator_drop_accepted",
+        old="        if not required_operators.issubset(interface_operators):\n",
+        new=(
+            "        if False and not "
+            "required_operators.issubset(interface_operators):\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_strict_release_rejects_mapping_component_and_stance_seam_drift"
+        ),
+        target="mathgraph/research_draft_preflight.py",
+    ),
+    Mutant(
+        name="research_draft_source_qualifier_drop_accepted",
+        old="        if not required_qualifiers.issubset(interface_qualifiers):\n",
+        new=(
+            "        if False and not "
+            "required_qualifiers.issubset(interface_qualifiers):\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_strict_release_rejects_mapping_component_and_stance_seam_drift"
+        ),
+        target="mathgraph/research_draft_preflight.py",
+    ),
+    Mutant(
+        name="parallel_verification_identity_subgroup_guard_bypassed",
+        old=(
+            "    if point == (0, 1) or _scalarmult(point, _L) != (0, 1):\n"
+        ),
+        new=(
+            "    if False and (point == (0, 1) or "
+            "_scalarmult(point, _L) != (0, 1)):\n"
+        ),
+        test=(
+            f"{PARALLEL_VERIFICATION_TEST_MODULE}."
+            "test_identity_public_key_and_zero_signature_are_rejected"
+        ),
+        target="mathgraph/parallel_verification.py",
+    ),
+    Mutant(
+        name="parallel_verification_public_key_alias_accepted",
+        old=(
+            "        if prior_key_id is not None and prior_key_id != key_id:\n"
+        ),
+        new=(
+            "        if False and prior_key_id is not None and "
+            "prior_key_id != key_id:\n"
+        ),
+        test=(
+            f"{PARALLEL_VERIFICATION_TEST_MODULE}."
+            "test_registry_rejects_one_public_key_under_multiple_identities"
+        ),
+        target="mathgraph/parallel_verification.py",
+    ),
+    Mutant(
+        name="parallel_verification_status_skips_registry_integrity",
+        old=(
+            "    def status(self, release_id: str) -> dict[str, Any]:\n"
+            "        # Status is a public integrity projection, not a per-file inventory.\n"
+            "        # Fail before returning a reassuring state when the project trust\n"
+            "        # registry contains cross-record identity aliases.\n"
+            "        self.trusted_keys()\n"
+        ),
+        new=(
+            "    def status(self, release_id: str) -> dict[str, Any]:\n"
+            "        # Status is a public integrity projection, not a per-file inventory.\n"
+            "        # Fail before returning a reassuring state when the project trust\n"
+            "        # registry contains cross-record identity aliases.\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_fails_status_subsystem_and_top_level_audit"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_audit_skips_registry_integrity",
+        old=(
+            "        try:\n"
+            "            self.trusted_keys()\n"
+            "        except Exception as exc:\n"
+            "            errors.append(f\"trusted_key_registry: {exc}\")\n"
+            "        try:\n"
+            "            self._fresh_nonce_owners()\n"
+        ),
+        new=(
+            "        try:\n"
+            "            self._fresh_nonce_owners()\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_fails_status_subsystem_and_top_level_audit"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_idempotent_registration_skips_registry_integrity",
+        old="            current = self._load_trusted_keys()\n",
+        new="            current = {record[\"key_id\"]: record}\n",
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_fails_status_subsystem_and_top_level_audit"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_single_key_read_skips_registry_integrity",
+        old="        registry = self._load_trusted_keys()\n",
+        new="        registry = {key_id: self._key_record(key_id)}\n",
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_invalidates_cached_public_record_reads"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_signed_plan_cache_skips_registry_integrity",
+        old=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # A cache is a byte-I/O optimization only, never cached authority.\n"
+            "            self.trusted_keys()\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        signed = self.store._read_json(path)\n"
+        ),
+        new=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # Mutant: cached signed plan bypasses current authority.\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        signed = self.store._read_json(path)\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_invalidates_cached_public_record_reads"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_packet_cache_skips_registry_integrity",
+        old=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # A cache is a byte-I/O optimization only, never cached authority.\n"
+            "            self.trusted_keys()\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        wrapper = self.store._read_json(path)\n"
+            "        fields = {\n"
+            "            \"schema_version\",\n"
+            "            \"contract_revision\",\n"
+            "            \"project_id\",\n"
+            "            \"signed_plan_id\",\n"
+            "            \"slot_id\",\n"
+            "            \"packet\",\n"
+        ),
+        new=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # Mutant: cached packet bypasses current authority.\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        wrapper = self.store._read_json(path)\n"
+            "        fields = {\n"
+            "            \"schema_version\",\n"
+            "            \"contract_revision\",\n"
+            "            \"project_id\",\n"
+            "            \"signed_plan_id\",\n"
+            "            \"slot_id\",\n"
+            "            \"packet\",\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_invalidates_cached_public_record_reads"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_receipt_cache_skips_registry_integrity",
+        old=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # A cache is a byte-I/O optimization only, never cached authority.\n"
+            "            self.trusted_keys()\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        wrapper = self.store._read_json(path)\n"
+            "        fields = {\n"
+            "            \"schema_version\",\n"
+            "            \"contract_revision\",\n"
+            "            \"project_id\",\n"
+            "            \"signed_plan_id\",\n"
+            "            \"slot_id\",\n"
+            "            \"packet_id\",\n"
+        ),
+        new=(
+            "        if not deep and cached is not None and cached[0] == fingerprint:\n"
+            "            # Mutant: cached receipt bypasses current authority.\n"
+            "            return cached[1]\n"
+            "        trusted = self.trusted_keys()\n"
+            "        wrapper = self.store._read_json(path)\n"
+            "        fields = {\n"
+            "            \"schema_version\",\n"
+            "            \"contract_revision\",\n"
+            "            \"project_id\",\n"
+            "            \"signed_plan_id\",\n"
+            "            \"slot_id\",\n"
+            "            \"packet_id\",\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_disk_registry_alias_invalidates_cached_public_record_reads"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="parallel_verification_signature_bypassed",
+        old=(
+            "    if not verify_ed25519(public_key, jcs_bytes(projection), signature):\n"
+            "        raise ValueError(\"verification fresh attestation signature is invalid\")\n"
+        ),
+        new=(
+            "    if False and not verify_ed25519(public_key, jcs_bytes(projection), signature):\n"
+            "        raise ValueError(\"verification fresh attestation signature is invalid\")\n"
+        ),
+        test=(
+            f"{PARALLEL_VERIFICATION_TEST_MODULE}."
+            "test_tampered_host_signature_fails_closed"
+        ),
+        target="mathgraph/parallel_verification.py",
+    ),
+    Mutant(
+        name="parallel_verification_project_nonce_replay_accepted",
+        old=(
+            "        if existing is not None and existing != owner_id:\n"
+            "            raise ValueError(\"verification freshness nonce was replayed\")\n"
+        ),
+        new=(
+            "        if False and existing is not None and existing != owner_id:\n"
+            "            raise ValueError(\"verification freshness nonce was replayed\")\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_strict_release_closes_every_plane_and_invalidates_only_changed_dependency"
+        ),
+        target="mathgraph/parallel_verification_lifecycle.py",
+    ),
+    Mutant(
+        name="research_draft_certification_parallel_aggregate_requirement_dropped",
+        old=(
+            "        if strict_research_draft:\n"
+            "            required.add(\"parallel_verification_aggregate_id\")\n"
+            "        source_nonpass = self._source_nonpass_checks(release)\n"
+        ),
+        new=(
+            "        if False and strict_research_draft:\n"
+            "            required.add(\"parallel_verification_aggregate_id\")\n"
+            "        source_nonpass = self._source_nonpass_checks(release)\n"
+        ),
+        test=(
+            f"{RESEARCH_DRAFT_ADMISSION_TEST_MODULE}."
+            "test_strict_release_closes_every_plane_and_invalidates_only_changed_dependency"
+        ),
+        target="mathgraph/v5_lifecycle.py",
+    ),
+    Mutant(
+        name="campaign_worker_result_lineage_dropped",
+        old=(
+            "                    **(\n"
+            "                        {\"campaign_id\": card[\"campaign_id\"]}\n"
+            "                        if card.get(\"campaign_id\") is not None\n"
+            "                        else {}\n"
+            "                    ),\n"
+        ),
+        new="",
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_real_attempt_dry_run_atomic_advisory_and_cooldown"
+        ),
+    ),
+    Mutant(
+        name="brave_future_reassessment_gains_plan_effect",
+        old=(
+            "            \"autonomy_level\": \"advisory\",\n"
+            "            \"cooldown_state\": \"signature_consumed\",\n"
+            "            \"created_by\": blockage_semantic[\"created_by\"],\n"
+            "            \"plan_effect\": \"none\",\n"
+            "            \"dispatch_effect\": \"none\",\n"
+            "            \"campaign_close_effect\": \"none\",\n"
+        ),
+        new=(
+            "            \"autonomy_level\": \"advisory\",\n"
+            "            \"cooldown_state\": \"signature_consumed\",\n"
+            "            \"created_by\": blockage_semantic[\"created_by\"],\n"
+            "            \"plan_effect\": \"plan_one\",\n"
+            "            \"dispatch_effect\": \"none\",\n"
+            "            \"campaign_close_effect\": \"none\",\n"
+        ),
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_real_attempt_dry_run_atomic_advisory_and_cooldown"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
+        name="chx_first_close_status_projection_drift",
+        old="        return ledger_status(path)\n    return status\n",
+        new="        return status\n    return status\n",
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_empty_run_is_persisted_but_requires_no_feedback"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="paper_research_premise_order_reduced_to_set_equality",
+        old=(
+            "            _require(\n"
+            "                edge_order == premise_ids,\n"
+            "                f\"{object_id} premise edge order differs from payload order\",\n"
+            "            )\n"
+        ),
+        new=(
+            "            _require(\n"
+            "                set(edge_order) == set(premise_ids),\n"
+            "                f\"{object_id} premise edge order differs from payload order\",\n"
+            "            )\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_frontier_preserves_premise_order_and_rejects_position_drift"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_represented_component_zero_mapping_accepted",
+        old=(
+            "                    _require(mapped, f\"{component_id} represented without graph mapping\")\n"
+        ),
+        new=(
+            "                    _require(True, f\"{component_id} represented without graph mapping\")\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_represented_component_requires_mapping_and_composition_witness"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_claim_support_review_bypassed",
+        old=(
+            "            _require(review.get(\"status\") == \"passed\", f\"{claim_id}: review not passed\")\n"
+        ),
+        new=(
+            "            _require(True, f\"{claim_id}: review not passed\")\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_evidence_identity_witness_and_support_review_gate"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_atomic_subject_escapes_through_theorem",
+        old=(
+            "    _require(subject.get(\"kind\") == \"paper\", \"atomic DAG escaped through theorem mode\")\n"
+        ),
+        new=(
+            "    _require(True, \"atomic DAG escaped through theorem mode\")\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_atomic_preflight_rejects_theorem_escape_and_target_loss"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_cross_domain_continuity_substitution_accepted",
+        old=(
+            "    graph_profile = _normalized_domain_profile(graph.get(\"domain_profile\"))\n"
+            "    contract_profile = _normalized_domain_profile(\n"
+            "        continuity_contract.get(\"domain_profile\")\n"
+            "    )\n"
+        ),
+        new=(
+            "    contract_profile = _normalized_domain_profile(\n"
+            "        continuity_contract.get(\"domain_profile\")\n"
+            "    )\n"
+            "    graph_profile = contract_profile\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_mathematics_preserves_target_and_allows_proof_or_disproof"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_mathematical_disproof_removed",
+        old=(
+            "        {\"proved\", \"disproved\", \"unresolved_with_obstruction\"}\n"
+        ),
+        new=(
+            "        {\"proved\", \"unresolved_with_obstruction\"}\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_mathematics_preserves_target_and_allows_proof_or_disproof"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_stable_identity_semantic_collision_accepted",
+        old=(
+            "            _require(\n"
+            "                merged[identity] == item,\n"
+            "                f\"stable identity collision with semantic drift: {identity}\",\n"
+            "            )\n"
+        ),
+        new=(
+            "            _require(\n"
+            "                True,\n"
+            "                f\"stable identity collision with semantic drift: {identity}\",\n"
+            "            )\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_stable_identity_merge_rejects_semantic_collision"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_source_occurrence_span_tamper_accepted",
+        old="                or text[start:end] != token\n",
+        new="                or False and text[start:end] != token\n",
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_source_occurrence_ledger_is_exact_and_tamper_evident"
+        ),
+        target="mathgraph/paper_logic_contracts.py",
+    ),
+    Mutant(
+        name="paper_research_normative_operation_relabel_accepted",
+        old=(
+            "        if kind == \"normative_bridge\" and operation != \"normative_bridge\":\n"
+        ),
+        new=(
+            "        if False and kind == \"normative_bridge\" and operation != \"normative_bridge\":\n"
+        ),
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_semantic_operation_cannot_masquerade_as_normative_bridge"
+        ),
+        target="mathgraph/paper_logic_contracts.py",
+    ),
+    Mutant(
+        name="paper_research_receipt_content_address_recomputation_bypassed",
+        old="    expected_id = id_prefix + sha256_json(semantic)\n",
+        new="    expected_id = declared_id\n",
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_evidence_identity_witness_and_support_review_gate"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="paper_research_receipt_exact_field_set_bypassed",
+        old="    _require(set(receipt) == allowed_fields, f\"{label} receipt field set drifted\")\n",
+        new="    _require(True, f\"{label} receipt field set drifted\")\n",
+        test=(
+            f"{PAPER_RESEARCH_PIPELINE_TEST_MODULE}."
+            "test_evidence_identity_witness_and_support_review_gate"
+        ),
+        target="mathgraph/paper_research_pipeline.py",
+    ),
+    Mutant(
+        name="runtime_compatibility_protected_count_drift_bypassed",
+        old=(
+            "    _require(\n"
+            "        compatibility.get(\"protected_file_count\") == status[\"protected_file_count\"],\n"
+            "        \"runtime compatibility protected_file_count drifted\",\n"
+            "    )\n"
+        ),
+        new=(
+            "    _require(\n"
+            "        True,\n"
+            "        \"runtime compatibility protected_file_count drifted\",\n"
+            "    )\n"
+        ),
+        test=(
+            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
+            "test_new_runtime_file_fails_stale_count_and_digest"
+        ),
+        target="mathgraph/runtime_compatibility.py",
+    ),
+    Mutant(
+        name="runtime_compatibility_protected_digest_drift_bypassed",
+        old=(
+            "    _require(\n"
+            "        compatibility.get(\"protected_tree_sha256\")\n"
+            "        == status[\"protected_tree_sha256\"],\n"
+            "        \"runtime compatibility protected_tree_sha256 drifted\",\n"
+            "    )\n"
+        ),
+        new=(
+            "    _require(\n"
+            "        True,\n"
+            "        \"runtime compatibility protected_tree_sha256 drifted\",\n"
+            "    )\n"
+        ),
+        test=(
+            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
+            "test_content_drift_fails_stale_digest_with_same_file_count"
+        ),
+        target="mathgraph/runtime_compatibility.py",
+    ),
+    Mutant(
+        name="runtime_compatibility_changed_path_escape_bypassed",
+        old=(
+            "    _require(\n"
+            "        set(changed).issubset(protected),\n"
+            "        \"runtime compatibility changed path is outside the protected closure\",\n"
+            "    )\n"
+        ),
+        new=(
+            "    _require(\n"
+            "        True,\n"
+            "        \"runtime compatibility changed path is outside the protected closure\",\n"
+            "    )\n"
+        ),
+        test=(
+            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
+            "test_changed_path_cannot_escape_protected_closure"
+        ),
+        target="mathgraph/runtime_compatibility.py",
+    ),
+    Mutant(
+        name="runtime_compatibility_changed_path_inventory_digest_bypassed",
+        old=(
+            "    _require(\n"
+            "        compatibility.get(\"changed_path_inventory_sha256\") == changed_digest,\n"
+            "        \"runtime compatibility changed path inventory digest drifted\",\n"
+            "    )\n"
+        ),
+        new=(
+            "    _require(\n"
+            "        True,\n"
+            "        \"runtime compatibility changed path inventory digest drifted\",\n"
+            "    )\n"
+        ),
+        test=(
+            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
+            "test_changed_path_inventory_fails_stale_digest"
+        ),
+        target="mathgraph/runtime_compatibility.py",
+    ),
+    Mutant(
         name="reader_dynamic_radial_memory_bypassed",
         old=(
             "        const memory = dynamicRadialMemoryDisplacement(nodeId, positions.get(nodeId));\n"
@@ -717,6 +1685,42 @@ MUTANTS = (
             "test_revision_thirteen_box_selection_and_group_movement_contract_is_embedded"
         ),
         target="../assets/reader_html_app.js",
+    ),
+    Mutant(
+        name="chx_public_disclosure_unresolved_issue_accepted",
+        old=(
+            "    if any(item[\"status\"] != \"resolved\" for item in issues):\n"
+            "        raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+        ),
+        new=(
+            "    if False and any(item[\"status\"] != \"resolved\" for item in issues):\n"
+            "        raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+        ),
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_public_disclosure_binds_ledger_registry_and_documents"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_public_disclosure_explicit_enumeration_bypassed",
+        old="            if enumerated != included:\n",
+        new="            if False and enumerated != included:\n",
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_public_disclosure_binds_ledger_registry_and_documents"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_public_disclosure_run_namespace_bypassed",
+        old="    if status[\"run_id\"] != contract[\"ledger_run_id\"]:\n",
+        new="    if False and status[\"run_id\"] != contract[\"ledger_run_id\"]:\n",
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_public_disclosure_binds_ledger_registry_and_documents"
+        ),
+        target="chx_ledger.py",
     ),
     Mutant(
         name="reader_orbit_off_pinned_collision_yield_bypassed",
@@ -804,11 +1808,23 @@ def main() -> int:
             "mode equivalence, source capability, adverse provenance, general hidden-"
             "conjunct and philosophy-domain baseline gating, prior-Fact routing, "
             "legacy premises, runtime identity, admission recovery, abort, "
+            "terminal historical-runtime content objects, identity registry, "
+            "component no-follow containment, active/write isolation, bounded-phase "
+            "runtime-scan deduplication, CHX worker runtime rehash, pre-write round "
+            "runtime preflight, fail-closed runtime cutover and automatic rollback, "
             "explicit Campaign exact-match scope and frozen snapshot integrity, "
             "public Paper and V5 worker-return interface reachability and diagnostics, "
             "Paper continuation "
             "ancestry, revised-writing authority, philosophy "
             "term review, verifier-visible evidence, "
+            "strict research-draft proposition and target-total batch coverage, "
+            "stance authorization, semantic-component and source-operator/qualifier "
+            "continuity, explicit mini-DAG atomicity, exact receipt schemas and "
+            "content-address recomputation, trusted prime-order signature "
+            "verification, registry-wide cryptographic-identity, idempotent-registration, and cached-read authority integrity, "
+            "project-wide freshness, Certification aggregate enforcement, Campaign "
+            "worker-result lineage, Brave Future advisory-only effects, CHX "
+            "close/status parity, public-disclosure completeness and run namespace, "
             "status projection, Reader math projection, multi-center theme-field layout, "
             "orbit-off pinned-card collision repulsion, and "
             "off-by-one critical guards"

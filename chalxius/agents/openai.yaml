@@ -1,6 +1,6 @@
 interface:
   display_name: "Chalxius"
-  short_description: "Back to the Future: Evidence and Paper continuation"
+  short_description: "Research-draft integrity and cautious L3/L4 advice"
   default_prompt: "Use $chalxius in automatic mode for source-bound Research; when work is explicitly paper-led, preserve the exact Paper target closure, philosophical atomicity, and plain-language clarity; keep Attack and CHX reports separate, and admit Facts only through a fresh verifier and Fact Gateway."
 policy:
   allow_implicit_invocation: true

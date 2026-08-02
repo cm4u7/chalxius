@@ -9,16 +9,29 @@ import os
 import re
 import secrets
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from mathgraph.runtime_archive import (
+    runtime_binding_from_root,
+    validate_bound_runtime_at,
+    validate_runtime_binding,
+)
+
 
 SCHEMA_VERSION = 1
 LEGACY_CONTRACT_REVISION = "chalxius-chx-run-ledger-1"
-CONTRACT_REVISION = "chalxius-chx-run-ledger-2"
+PLACEMENT_CONTRACT_REVISION = "chalxius-chx-run-ledger-2"
+FINDING_CONTRACT_REVISION = "chalxius-chx-run-ledger-3"
+CONTRACT_REVISION = FINDING_CONTRACT_REVISION
 SUPPORTED_CONTRACT_REVISIONS = frozenset(
-    {LEGACY_CONTRACT_REVISION, CONTRACT_REVISION}
+    {
+        LEGACY_CONTRACT_REVISION,
+        PLACEMENT_CONTRACT_REVISION,
+        FINDING_CONTRACT_REVISION,
+    }
 )
 DEFAULT_PROJECT_LEDGER_DIR = "chx-ledgers"
 CAUSATIONS = frozenset({"caused", "materially_amplified"})
@@ -34,9 +47,17 @@ MECHANISM_TYPES = frozenset(
     }
 )
 DISPOSITION_STATUSES = frozenset({"resolved", "excluded_nonarchitectural"})
+FINDING_RECONCILIATIONS = frozenset(
+    {"promoted_to_issue", "merged_with_reason", "excluded_with_reason"}
+)
+ISSUE_RELATION_TYPES = frozenset(
+    {"related_to", "extends", "discovered_from", "supersedes"}
+)
 RUN_ID_RE = re.compile(r"run-[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 ISSUE_ID_RE = re.compile(r"CHX-[0-9]{3,}")
+FINDING_ID_RE = re.compile(r"finding-[0-9a-f]{64}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
+PUBLIC_DISCLOSURE_CONTRACT_REVISION = "chalxius-chx-public-disclosure-1"
 
 
 def _canonical_bytes(payload: Any) -> bytes:
@@ -46,6 +67,30 @@ def _canonical_bytes(payload: Any) -> bytes:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
+
+
+def _canonical_nfc_bytes(payload: Any) -> bytes:
+    return _canonical_bytes(_normalize_unicode(payload))
+
+
+def _normalize_unicode(value: Any) -> Any:
+    """Return the NFC-normalized JSON value used by prospective v3 ids.
+
+    Historical v1/v2 event bytes are never rewritten.  This normalization is
+    applied only while computing new canonical bytes, which prevents two
+    visually identical findings from acquiring different ids.
+    """
+
+    if isinstance(value, str):
+        return unicodedata.normalize("NFC", value)
+    if isinstance(value, list):
+        return [_normalize_unicode(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            _normalize_unicode(key): _normalize_unicode(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 def _sha256(payload: bytes) -> str:
@@ -103,28 +148,7 @@ def _skill_version() -> str:
 
 
 def _runtime_binding() -> dict[str, Any]:
-    root = _skill_root()
-    version_path = root / "VERSION"
-    manifest_path = root / "MANIFEST.sha256"
-    if (
-        version_path.is_symlink()
-        or not version_path.is_file()
-        or manifest_path.is_symlink()
-        or not manifest_path.is_file()
-    ):
-        raise ValueError("Chalxius runtime identity files are missing or unsafe")
-    semantic = {
-        "schema_version": 1,
-        "skill_root": str(root),
-        "skill_version": _skill_version(),
-        "version_file_sha256": _sha256(version_path.read_bytes()),
-        "manifest_file_sha256": _sha256(manifest_path.read_bytes()),
-        "worker_ledger_contract": "exact_task_card_runtime_binding_required",
-    }
-    return {
-        **semantic,
-        "runtime_identity_sha256": _sha256(_canonical_bytes(semantic)),
-    }
+    return runtime_binding_from_root(_skill_root())
 
 
 def _validate_task_card_runtime(task_card: Path | str) -> dict[str, Any]:
@@ -134,11 +158,16 @@ def _validate_task_card_runtime(task_card: Path | str) -> dict[str, Any]:
     card = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(card, dict):
         raise ValueError("CHX worker task card must contain one object")
-    runtime = card.get("runtime_binding")
+    runtime = validate_runtime_binding(card.get("runtime_binding"))
     if runtime != _runtime_binding():
         raise ValueError(
             "CHX worker runtime does not match the task-card candidate skill root/version"
         )
+    validate_bound_runtime_at(
+        Path(runtime["skill_root"]),
+        runtime,
+        verify_manifest_tree=True,
+    )
     semantic = {
         key: value
         for key, value in card.items()
@@ -190,11 +219,16 @@ def _with_hash(payload: dict[str, Any], previous: str) -> dict[str, Any]:
 
 
 def _write_new_ledger(path: Path, event: dict[str, Any]) -> None:
+    _write_new_ledger_events(path, [event])
+
+
+def _write_new_ledger_events(path: Path, events: list[dict[str, Any]]) -> None:
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     descriptor = os.open(path, flags, 0o600)
     try:
         with os.fdopen(descriptor, "wb", closefd=True) as handle:
-            handle.write(_canonical_bytes(event) + b"\n")
+            for event in events:
+                handle.write(_canonical_bytes(event) + b"\n")
             handle.flush()
             os.fsync(handle.fileno())
     except BaseException:
@@ -268,6 +302,90 @@ def _validate_issue_fields(event: dict[str, Any]) -> None:
     )
 
 
+def _validate_issue_relations(
+    value: Any,
+    *,
+    known_issue_ids: set[str],
+    current_issue_id: str,
+) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        raise ValueError("CHX issue relations must be a list")
+    normalized: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for index, item in enumerate(value, 1):
+        if not isinstance(item, dict) or set(item) != {
+            "relation_type",
+            "issue_id",
+        }:
+            raise ValueError(f"CHX issue relation {index} fields are not exact")
+        relation_type = item.get("relation_type")
+        issue_id = item.get("issue_id")
+        if relation_type not in ISSUE_RELATION_TYPES:
+            raise ValueError("CHX issue relation type is invalid")
+        if not isinstance(issue_id, str) or ISSUE_ID_RE.fullmatch(issue_id) is None:
+            raise ValueError("CHX issue relation target is invalid")
+        if issue_id == current_issue_id:
+            raise ValueError("CHX issue relation must not target itself")
+        if issue_id not in known_issue_ids:
+            raise ValueError("CHX issue relation targets an unknown issue")
+        key = (relation_type, issue_id)
+        if key in seen:
+            raise ValueError("CHX issue relation is duplicated")
+        seen.add(key)
+        normalized.append(
+            {"relation_type": relation_type, "issue_id": issue_id}
+        )
+    return sorted(
+        normalized, key=lambda item: (item["relation_type"], item["issue_id"])
+    )
+
+
+def _finding_semantic(finding: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: finding[key]
+        for key in (
+            "classification",
+            "mechanism_type",
+            "mechanism",
+            "trigger",
+            "observed_effect",
+            "mathematical_effect",
+            "current_workaround",
+            "upgrade_requirement",
+            "audit_anchors",
+        )
+    }
+
+
+def _finding_id(finding: dict[str, Any]) -> str:
+    return "finding-" + _sha256(_canonical_nfc_bytes(_finding_semantic(finding)))
+
+
+def _validate_finding_fields(event: dict[str, Any]) -> None:
+    if event.get("mechanism_type") not in MECHANISM_TYPES:
+        raise ValueError("CHX finding mechanism_type is invalid")
+    for field_name in (
+        "classification",
+        "mechanism",
+        "trigger",
+        "observed_effect",
+        "mathematical_effect",
+        "current_workaround",
+        "upgrade_requirement",
+    ):
+        _require_text(event.get(field_name), f"CHX finding {field_name}")
+    _require_string_list(
+        event.get("audit_anchors"),
+        "CHX finding audit_anchors",
+        nonempty=True,
+    )
+    finding_id = event.get("finding_id")
+    if not isinstance(finding_id, str) or FINDING_ID_RE.fullmatch(finding_id) is None:
+        raise ValueError("CHX finding id is invalid")
+    if finding_id != _finding_id(event):
+        raise ValueError("CHX finding content id mismatch")
+
+
 def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None:
     if not events or events[0].get("event") != "run_started":
         raise ValueError("CHX ledger must begin with run_started")
@@ -281,7 +399,7 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         raise ValueError("CHX ledger contract revision mismatch")
     if ledger_path.stem != run_id:
         raise ValueError("CHX ledger path/run id mismatch")
-    start_keys = {
+    legacy_start_keys = {
         "schema_version",
         "contract_revision",
         "event",
@@ -296,7 +414,18 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         "previous_event_sha256",
         "event_sha256",
     }
-    if set(start) != start_keys:
+    v3_start_keys = legacy_start_keys | {
+        "predecessor_ledger_path",
+        "predecessor_ledger_sha256",
+        "predecessor_issue_ids",
+        "inherited_finding_ids",
+    }
+    expected_start_keys = (
+        v3_start_keys
+        if contract_revision == FINDING_CONTRACT_REVISION
+        else legacy_start_keys
+    )
+    if set(start) != expected_start_keys:
         raise ValueError("CHX run_started fields are not exact")
     _require_text(start.get("task"), "CHX run task", maximum=2_000)
     _require_text(start.get("skill_version"), "CHX run skill_version", maximum=64)
@@ -308,10 +437,43 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         or start.get("project_effect") != "none"
     ):
         raise ValueError("CHX run authority boundary is invalid")
+    predecessor_issue_ids: set[str] = set()
+    inherited_finding_ids: set[str] = set()
+    if contract_revision == FINDING_CONTRACT_REVISION:
+        predecessor_path = start["predecessor_ledger_path"]
+        predecessor_sha256 = start["predecessor_ledger_sha256"]
+        if not isinstance(predecessor_path, str):
+            raise ValueError("CHX predecessor ledger path must be text")
+        if not isinstance(predecessor_sha256, str):
+            raise ValueError("CHX predecessor ledger SHA-256 must be text")
+        if bool(predecessor_path) != bool(predecessor_sha256):
+            raise ValueError("CHX predecessor path/hash binding is incomplete")
+        if predecessor_sha256 and SHA256_RE.fullmatch(predecessor_sha256) is None:
+            raise ValueError("CHX predecessor ledger SHA-256 is invalid")
+        predecessor_issue_ids = set(
+            _require_string_list(
+                start["predecessor_issue_ids"],
+                "CHX predecessor issue ids",
+                nonempty=False,
+            )
+        )
+        if any(ISSUE_ID_RE.fullmatch(item) is None for item in predecessor_issue_ids):
+            raise ValueError("CHX predecessor issue id is invalid")
+        inherited_finding_ids = set(
+            _require_string_list(
+                start["inherited_finding_ids"],
+                "CHX inherited finding ids",
+                nonempty=False,
+            )
+        )
+        if any(FINDING_ID_RE.fullmatch(item) is None for item in inherited_finding_ids):
+            raise ValueError("CHX inherited finding id is invalid")
 
     expected_previous = ""
     observed: dict[str, dict[str, Any]] = {}
     dispositions: dict[str, dict[str, Any]] = {}
+    findings: dict[str, dict[str, Any]] = {}
+    reconciliations: dict[str, dict[str, Any]] = {}
     closed = False
     for index, event in enumerate(events):
         _validate_common_event(
@@ -327,8 +489,44 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
             continue
         if closed:
             raise ValueError("CHX ledger contains an event after run_closed")
-        if event_type == "issue_observed":
-            issue_keys = {
+        if (
+            event_type == "finding_observed"
+            and contract_revision == FINDING_CONTRACT_REVISION
+        ):
+            finding_keys = {
+                "schema_version",
+                "contract_revision",
+                "event",
+                "run_id",
+                "finding_id",
+                "classification",
+                "mechanism_type",
+                "mechanism",
+                "trigger",
+                "observed_effect",
+                "mathematical_effect",
+                "current_workaround",
+                "upgrade_requirement",
+                "audit_anchors",
+                "inherited_from_predecessor",
+                "occurred_at",
+                "previous_event_sha256",
+                "event_sha256",
+            }
+            if set(event) != finding_keys:
+                raise ValueError("CHX finding_observed fields are not exact")
+            _validate_finding_fields(event)
+            finding_id = event["finding_id"]
+            if finding_id in findings:
+                raise ValueError("CHX finding is duplicated")
+            inherited = event["inherited_from_predecessor"]
+            if not isinstance(inherited, bool):
+                raise ValueError("CHX finding inherited marker must be boolean")
+            if inherited != (finding_id in inherited_finding_ids):
+                raise ValueError("CHX inherited finding binding mismatch")
+            findings[finding_id] = event
+        elif event_type == "issue_observed":
+            legacy_issue_keys = {
                 "schema_version",
                 "contract_revision",
                 "event",
@@ -348,16 +546,84 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                 "previous_event_sha256",
                 "event_sha256",
             }
+            v3_issue_keys = legacy_issue_keys | {"finding_id", "relations"}
+            issue_keys = (
+                v3_issue_keys
+                if contract_revision == FINDING_CONTRACT_REVISION
+                else legacy_issue_keys
+            )
             if set(event) != issue_keys:
                 raise ValueError("CHX issue_observed fields are not exact")
             issue_id = event.get("issue_id")
             if not isinstance(issue_id, str) or ISSUE_ID_RE.fullmatch(issue_id) is None:
                 raise ValueError("CHX issue id is invalid")
-            expected_issue_id = f"CHX-{len(observed) + 1:03d}"
+            prior_numbers = [
+                int(item.split("-")[1]) for item in predecessor_issue_ids
+            ]
+            first_number = max(prior_numbers, default=0) + 1
+            expected_issue_id = f"CHX-{first_number + len(observed):03d}"
             if issue_id != expected_issue_id or issue_id in observed:
                 raise ValueError("CHX issue sequence is invalid")
             _validate_issue_fields(event)
+            if contract_revision == FINDING_CONTRACT_REVISION:
+                finding_id = event["finding_id"]
+                if finding_id not in findings:
+                    raise ValueError("CHX issue lacks an observed finding")
+                if any(
+                    item.get("finding_id") == finding_id for item in observed.values()
+                ):
+                    raise ValueError("one CHX finding cannot create multiple issues")
+                relations = _validate_issue_relations(
+                    event["relations"],
+                    known_issue_ids=predecessor_issue_ids | set(observed),
+                    current_issue_id=issue_id,
+                )
+                if event["relations"] != relations:
+                    raise ValueError("CHX issue relations are not canonical")
             observed[issue_id] = event
+        elif (
+            event_type == "finding_reconciled"
+            and contract_revision == FINDING_CONTRACT_REVISION
+        ):
+            reconciliation_keys = {
+                "schema_version",
+                "contract_revision",
+                "event",
+                "run_id",
+                "finding_id",
+                "status",
+                "reason",
+                "issue_id",
+                "occurred_at",
+                "previous_event_sha256",
+                "event_sha256",
+            }
+            if set(event) != reconciliation_keys:
+                raise ValueError("CHX finding_reconciled fields are not exact")
+            finding_id = event.get("finding_id")
+            if finding_id not in findings:
+                raise ValueError("CHX reconciliation targets an unknown finding")
+            if finding_id in reconciliations:
+                raise ValueError("CHX finding is already reconciled")
+            status = event.get("status")
+            if status not in FINDING_RECONCILIATIONS:
+                raise ValueError("CHX finding reconciliation status is invalid")
+            _require_text(event.get("reason"), "CHX finding reconciliation reason")
+            issue_id = event.get("issue_id")
+            if not isinstance(issue_id, str):
+                raise ValueError("CHX finding reconciliation issue_id must be text")
+            if status == "excluded_with_reason":
+                if issue_id:
+                    raise ValueError("excluded CHX finding must not name an issue")
+            else:
+                if issue_id not in (set(observed) | predecessor_issue_ids):
+                    raise ValueError("CHX finding reconciliation issue is unknown")
+                if (
+                    status == "promoted_to_issue"
+                    and observed.get(issue_id, {}).get("finding_id") != finding_id
+                ):
+                    raise ValueError("CHX finding promotion binding mismatch")
+            reconciliations[finding_id] = event
         elif event_type == "issue_disposition":
             disposition_keys = {
                 "schema_version",
@@ -393,7 +659,7 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                 )
             dispositions[issue_id] = event
         elif event_type == "run_closed":
-            close_keys = {
+            legacy_close_keys = {
                 "schema_version",
                 "contract_revision",
                 "event",
@@ -405,6 +671,16 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                 "previous_event_sha256",
                 "event_sha256",
             }
+            v3_close_keys = legacy_close_keys | {
+                "finding_ids",
+                "reconciled_finding_ids",
+                "architecture_report_semantic_sha256",
+            }
+            close_keys = (
+                v3_close_keys
+                if contract_revision == FINDING_CONTRACT_REVISION
+                else legacy_close_keys
+            )
             if set(event) != close_keys:
                 raise ValueError("CHX run_closed fields are not exact")
             included = sorted(
@@ -420,9 +696,53 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                 or event.get("report_required") is not bool(included)
             ):
                 raise ValueError("CHX run_closed summary mismatch")
+            if contract_revision == FINDING_CONTRACT_REVISION:
+                unresolved_findings = sorted(set(findings).difference(reconciliations))
+                if unresolved_findings:
+                    raise ValueError(
+                        "CHX run cannot close with unreconciled findings: "
+                        + ", ".join(unresolved_findings)
+                    )
+                if (
+                    event.get("finding_ids") != sorted(findings)
+                    or event.get("reconciled_finding_ids")
+                    != sorted(reconciliations)
+                ):
+                    raise ValueError("CHX run_closed finding summary mismatch")
+                report_semantic = {
+                    "run_id": run_id,
+                    "predecessor_ledger_sha256": start[
+                        "predecessor_ledger_sha256"
+                    ],
+                    "finding_ids": sorted(findings),
+                    "included_issue_ids": included,
+                    "excluded_issue_ids": excluded,
+                    "reconciliation": {
+                        finding_id: {
+                            "status": item["status"],
+                            "issue_id": item["issue_id"],
+                        }
+                        for finding_id, item in sorted(reconciliations.items())
+                    },
+                    "issue_relations": {
+                        issue_id: item["relations"]
+                        for issue_id, item in sorted(observed.items())
+                    },
+                }
+                if event.get("architecture_report_semantic_sha256") != _sha256(
+                    _canonical_nfc_bytes(report_semantic)
+                ):
+                    raise ValueError("CHX architecture report semantic hash mismatch")
             closed = True
         else:
             raise ValueError(f"unsupported CHX ledger event: {event_type!r}")
+    if (
+        contract_revision == FINDING_CONTRACT_REVISION
+        and not inherited_finding_ids.issubset(
+        findings
+        )
+    ):
+        raise ValueError("CHX successor ledger omitted inherited findings")
 
 
 def _status_from_events(
@@ -438,6 +758,16 @@ def _status_from_events(
         event["issue_id"]: event
         for event in events
         if event["event"] == "issue_disposition"
+    }
+    finding_events = {
+        event["finding_id"]: event
+        for event in events
+        if event["event"] == "finding_observed"
+    }
+    reconciliations = {
+        event["finding_id"]: event
+        for event in events
+        if event["event"] == "finding_reconciled"
     }
     issues: list[dict[str, Any]] = []
     excluded = 0
@@ -464,11 +794,43 @@ def _status_from_events(
                 "occurred_at",
             )
         }
+        if "finding_id" in event:
+            issue["finding_id"] = event["finding_id"]
+            issue["relations"] = event["relations"]
         issue["status"] = status
         if disposition:
             issue["disposition_reason"] = disposition["reason"]
             issue["regression_evidence"] = disposition["regression_evidence"]
         issues.append(issue)
+    findings = []
+    for finding_id, event in finding_events.items():
+        reconciliation = reconciliations.get(finding_id)
+        findings.append(
+            {
+                "finding_id": finding_id,
+                "classification": event["classification"],
+                "mechanism_type": event["mechanism_type"],
+                "mechanism": event["mechanism"],
+                "trigger": event["trigger"],
+                "observed_effect": event["observed_effect"],
+                "mathematical_effect": event["mathematical_effect"],
+                "current_workaround": event["current_workaround"],
+                "upgrade_requirement": event["upgrade_requirement"],
+                "audit_anchors": event["audit_anchors"],
+                "inherited_from_predecessor": event[
+                    "inherited_from_predecessor"
+                ],
+                "reconciliation": (
+                    {
+                        "status": reconciliation["status"],
+                        "reason": reconciliation["reason"],
+                        "issue_id": reconciliation["issue_id"],
+                    }
+                    if reconciliation is not None
+                    else None
+                ),
+            }
+        )
     return {
         "schema_version": start["schema_version"],
         "contract_revision": start["contract_revision"],
@@ -482,6 +844,15 @@ def _status_from_events(
         "excluded_issue_count": excluded,
         "report_required": bool(issues),
         "issues": issues,
+        "finding_count": len(findings),
+        "unreconciled_finding_ids": sorted(
+            set(finding_events).difference(reconciliations)
+        ),
+        "findings": findings,
+        "predecessor_ledger_path": start.get("predecessor_ledger_path", ""),
+        "predecessor_ledger_sha256": start.get(
+            "predecessor_ledger_sha256", ""
+        ),
         "truth_effect": "none",
         "project_effect": "none",
     }
@@ -524,6 +895,41 @@ def _mutate_locked(
     return event, _status_from_events(candidate, ledger_path=path)
 
 
+def _mutate_many_locked(
+    path: Path,
+    builder: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Append an all-or-none group of events under one ledger lock."""
+
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("CHX ledger path is missing, unsafe, or not a file")
+    with path.open("r+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            events = _parse_events(handle.read(), ledger_path=path)
+            payloads = builder(events)
+            if not isinstance(payloads, list):
+                raise ValueError("CHX grouped mutation must produce an event list")
+            if not payloads:
+                return [], _status_from_events(events, ledger_path=path)
+            appended: list[dict[str, Any]] = []
+            previous = events[-1]["event_sha256"]
+            for payload in payloads:
+                event = _with_hash(payload, previous)
+                appended.append(event)
+                previous = event["event_sha256"]
+            candidate = [*events, *appended]
+            _validate_events(candidate, ledger_path=path)
+            handle.seek(0, os.SEEK_END)
+            for event in appended:
+                handle.write(_canonical_bytes(event).decode("utf-8") + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    return appended, _status_from_events(candidate, ledger_path=path)
+
+
 def start_ledger(
     *,
     task: str,
@@ -533,6 +939,8 @@ def start_ledger(
     host_task_scope_id: str = "",
     project_roots: Sequence[Path | str] = (),
     task_card: Path | str | None = None,
+    predecessor_ledger: Path | str | None = None,
+    inherited_findings: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
     if task_card is not None:
         _validate_task_card_runtime(task_card)
@@ -562,9 +970,36 @@ def start_ledger(
     task = _require_text(task, "CHX run task", maximum=2_000)
     if not isinstance(host_task_scope_id, str) or len(host_task_scope_id) > 512:
         raise ValueError("host_task_scope_id must be text with at most 512 code points")
+    predecessor_path_text = ""
+    predecessor_sha256 = ""
+    predecessor_issue_ids: list[str] = []
+    if predecessor_ledger is not None:
+        if CONTRACT_REVISION != FINDING_CONTRACT_REVISION:
+            raise ValueError("only CHX ledger revision 3 supports a predecessor")
+        predecessor_path = _resolved_path(predecessor_ledger)
+        predecessor_events, predecessor_status = _read_locked(predecessor_path)
+        if predecessor_status["state"] != "closed":
+            raise ValueError("CHX successor requires a closed predecessor ledger")
+        predecessor_path_text = str(predecessor_path)
+        predecessor_sha256 = _sha256(predecessor_path.read_bytes())
+        predecessor_issue_ids = sorted(
+            {
+                event["issue_id"]
+                for event in predecessor_events
+                if event["event"] == "issue_observed"
+            },
+            key=lambda item: int(item.split("-")[1]),
+        )
+    normalized_inherited = [
+        _validate_finding_input(item) for item in inherited_findings
+    ]
+    inherited_ids = sorted({_finding_id(item) for item in normalized_inherited})
+    if len(inherited_ids) != len(normalized_inherited):
+        raise ValueError("CHX inherited findings must be content-distinct")
+    if inherited_ids and not predecessor_sha256:
+        raise ValueError("inherited CHX findings require a predecessor ledger")
     path = ledger_root / f"{run_id}.jsonl"
-    event = _with_hash(
-        {
+    start_payload = {
             "schema_version": SCHEMA_VERSION,
             "contract_revision": CONTRACT_REVISION,
             "event": "run_started",
@@ -576,11 +1011,81 @@ def start_ledger(
             "truth_effect": "none",
             "project_effect": "none",
             "occurred_at": _utc_now(),
-        },
-        "",
-    )
-    _write_new_ledger(path, event)
+    }
+    if CONTRACT_REVISION == FINDING_CONTRACT_REVISION:
+        start_payload.update(
+            {
+                "predecessor_ledger_path": predecessor_path_text,
+                "predecessor_ledger_sha256": predecessor_sha256,
+                "predecessor_issue_ids": predecessor_issue_ids,
+                "inherited_finding_ids": inherited_ids,
+            }
+        )
+    elif predecessor_ledger is not None or inherited_findings:
+        raise ValueError("legacy CHX ledger revisions do not support successors")
+    events = [_with_hash(start_payload, "")]
+    previous = events[0]["event_sha256"]
+    for finding in sorted(normalized_inherited, key=_finding_id):
+        payload = _finding_event_payload(
+            events[0], finding, inherited_from_predecessor=True
+        )
+        event = _with_hash(payload, previous)
+        events.append(event)
+        previous = event["event_sha256"]
+    _validate_events(events, ledger_path=path)
+    _write_new_ledger_events(path, events)
     return ledger_status(path)
+
+
+def _validate_finding_input(finding: Any) -> dict[str, Any]:
+    expected = {
+        "classification",
+        "mechanism_type",
+        "mechanism",
+        "trigger",
+        "observed_effect",
+        "mathematical_effect",
+        "current_workaround",
+        "upgrade_requirement",
+        "audit_anchors",
+    }
+    if not isinstance(finding, dict) or set(finding) != expected:
+        raise ValueError("CHX finding input fields are not exact")
+    candidate = {
+        **finding,
+        "finding_id": "",
+    }
+    candidate["finding_id"] = _finding_id(candidate)
+    _validate_finding_fields(candidate)
+    return _normalize_unicode(dict(finding))
+
+
+def _finding_event_payload(
+    start: dict[str, Any],
+    finding: dict[str, Any],
+    *,
+    inherited_from_predecessor: bool,
+) -> dict[str, Any]:
+    return {
+        "schema_version": start["schema_version"],
+        "contract_revision": start["contract_revision"],
+        "event": "finding_observed",
+        "run_id": start["run_id"],
+        "finding_id": _finding_id(finding),
+        **finding,
+        "inherited_from_predecessor": inherited_from_predecessor,
+        "occurred_at": _utc_now(),
+    }
+
+
+def _finding_from_issue(issue: dict[str, Any]) -> dict[str, Any]:
+    return _validate_finding_input(
+        {
+            key: value
+            for key, value in issue.items()
+            if key != "causation"
+        }
+    )
 
 
 def _validate_issue_input(issue: Any) -> dict[str, Any]:
@@ -602,9 +1107,196 @@ def _validate_issue_input(issue: Any) -> dict[str, Any]:
     return dict(issue)
 
 
-def record_issue(ledger_path: Path | str, issue: dict[str, Any]) -> dict[str, Any]:
+def record_finding(
+    ledger_path: Path | str,
+    finding: dict[str, Any],
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    normalized = _validate_finding_input(finding)
+
+    def build(events: list[dict[str, Any]]) -> dict[str, Any]:
+        if events[0]["contract_revision"] != FINDING_CONTRACT_REVISION:
+            raise ValueError("CHX findings require ledger contract revision 3")
+        if events[-1]["event"] == "run_closed":
+            raise ValueError("CHX ledger is closed")
+        finding_id = _finding_id(normalized)
+        if any(
+            event.get("finding_id") == finding_id
+            and event["event"] == "finding_observed"
+            for event in events
+        ):
+            raise ValueError("CHX finding is already recorded")
+        return _finding_event_payload(
+            events[0], normalized, inherited_from_predecessor=False
+        )
+
+    event, _ = _mutate_locked(path, build)
+    if event is None:  # pragma: no cover - builder always returns an event
+        raise RuntimeError("CHX finding mutation produced no event")
+    return event
+
+
+def reconcile_finding(
+    ledger_path: Path | str,
+    *,
+    finding_id: str,
+    status: str,
+    reason: str,
+    issue_id: str = "",
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    if not isinstance(finding_id, str) or FINDING_ID_RE.fullmatch(finding_id) is None:
+        raise ValueError("CHX reconciliation finding_id is invalid")
+    if status not in FINDING_RECONCILIATIONS:
+        raise ValueError("CHX finding reconciliation status is invalid")
+    reason = _require_text(reason, "CHX finding reconciliation reason")
+    if not isinstance(issue_id, str):
+        raise ValueError("CHX finding reconciliation issue_id must be text")
+
+    def build(events: list[dict[str, Any]]) -> dict[str, Any]:
+        if events[0]["contract_revision"] != FINDING_CONTRACT_REVISION:
+            raise ValueError("CHX findings require ledger contract revision 3")
+        if events[-1]["event"] == "run_closed":
+            raise ValueError("CHX ledger is closed")
+        return {
+            "schema_version": events[0]["schema_version"],
+            "contract_revision": events[0]["contract_revision"],
+            "event": "finding_reconciled",
+            "run_id": events[0]["run_id"],
+            "finding_id": finding_id,
+            "status": status,
+            "reason": reason,
+            "issue_id": issue_id,
+            "occurred_at": _utc_now(),
+        }
+
+    event, _ = _mutate_locked(path, build)
+    if event is None:  # pragma: no cover - builder always returns an event
+        raise RuntimeError("CHX reconciliation mutation produced no event")
+    return event
+
+
+def record_issue(
+    ledger_path: Path | str,
+    issue: dict[str, Any],
+    *,
+    relations: Sequence[dict[str, str]] = (),
+    finding_id: str | None = None,
+) -> dict[str, Any]:
     path = _resolved_path(ledger_path)
     normalized = _validate_issue_input(issue)
+
+    _, initial_status = _read_locked(path)
+    if initial_status["contract_revision"] == FINDING_CONTRACT_REVISION:
+        finding = _finding_from_issue(normalized)
+        supplied_finding_id = finding_id
+        if supplied_finding_id is not None and (
+            not isinstance(supplied_finding_id, str)
+            or FINDING_ID_RE.fullmatch(supplied_finding_id) is None
+        ):
+            raise ValueError("CHX issue finding_id is invalid")
+        relation_list = list(relations)
+
+        def build_v3(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            if events[-1]["event"] == "run_closed":
+                raise ValueError("CHX ledger is closed")
+            starts = events[0]
+            known_findings = {
+                event["finding_id"]
+                for event in events
+                if event["event"] == "finding_observed"
+            }
+            reconciled = {
+                event["finding_id"]
+                for event in events
+                if event["event"] == "finding_reconciled"
+            }
+            effective_finding_id = supplied_finding_id or _finding_id(finding)
+            payloads: list[dict[str, Any]] = []
+            if effective_finding_id not in known_findings:
+                if supplied_finding_id is not None:
+                    raise ValueError("CHX issue targets an unknown finding")
+                payloads.append(
+                    _finding_event_payload(
+                        starts, finding, inherited_from_predecessor=False
+                    )
+                )
+            else:
+                existing_finding = next(
+                    event
+                    for event in events
+                    if event["event"] == "finding_observed"
+                    and event["finding_id"] == effective_finding_id
+                )
+                if _finding_semantic(existing_finding) != _finding_semantic(finding):
+                    raise ValueError("CHX issue/finding semantic binding mismatch")
+            if effective_finding_id in reconciled:
+                reconciliation = next(
+                    event
+                    for event in events
+                    if event["event"] == "finding_reconciled"
+                    and event["finding_id"] == effective_finding_id
+                )
+                if reconciliation["status"] == "promoted_to_issue":
+                    return []
+                raise ValueError("CHX issue finding is already reconciled")
+            observed_ids = {
+                event["issue_id"]
+                for event in events
+                if event["event"] == "issue_observed"
+            }
+            predecessor_ids = set(starts["predecessor_issue_ids"])
+            prior_numbers = [
+                int(item.split("-")[1])
+                for item in predecessor_ids | observed_ids
+            ]
+            issue_id_value = f"CHX-{max(prior_numbers, default=0) + 1:03d}"
+            canonical_relations = _validate_issue_relations(
+                relation_list,
+                known_issue_ids=predecessor_ids | observed_ids,
+                current_issue_id=issue_id_value,
+            )
+            payloads.append(
+                {
+                    "schema_version": starts["schema_version"],
+                    "contract_revision": starts["contract_revision"],
+                    "event": "issue_observed",
+                    "run_id": starts["run_id"],
+                    "issue_id": issue_id_value,
+                    "finding_id": effective_finding_id,
+                    **normalized,
+                    "relations": canonical_relations,
+                    "occurred_at": _utc_now(),
+                }
+            )
+            payloads.append(
+                {
+                    "schema_version": starts["schema_version"],
+                    "contract_revision": starts["contract_revision"],
+                    "event": "finding_reconciled",
+                    "run_id": starts["run_id"],
+                    "finding_id": effective_finding_id,
+                    "status": "promoted_to_issue",
+                    "reason": "Promoted transactionally into the append-only CHX issue ledger.",
+                    "issue_id": issue_id_value,
+                    "occurred_at": _utc_now(),
+                }
+            )
+            return payloads
+
+        appended, _ = _mutate_many_locked(path, build_v3)
+        if appended:
+            return next(
+                event for event in appended if event["event"] == "issue_observed"
+            )
+        events, _ = _read_locked(path)
+        effective_finding_id = supplied_finding_id or _finding_id(finding)
+        return next(
+            event
+            for event in events
+            if event["event"] == "issue_observed"
+            and event["finding_id"] == effective_finding_id
+        )
 
     def build(events: list[dict[str, Any]]) -> dict[str, Any]:
         if events[-1]["event"] == "run_closed":
@@ -686,6 +1378,121 @@ def dispose_issue(
     return event
 
 
+def _architecture_report_path(ledger_path: Path) -> Path:
+    return ledger_path.with_name(ledger_path.stem + ".architecture-report.md")
+
+
+def render_architecture_report(ledger_path: Path | str) -> str:
+    path = _resolved_path(ledger_path)
+    events, status = _read_locked(path)
+    if status["contract_revision"] != FINDING_CONTRACT_REVISION:
+        raise ValueError("derived architecture reports require CHX ledger revision 3")
+    if status["state"] != "closed":
+        raise ValueError("derived architecture reports require a closed CHX ledger")
+    close = events[-1]
+    projection = {
+        "schema_version": 1,
+        "contract_revision": "chalxius-chx-derived-architecture-report-1",
+        "run_id": status["run_id"],
+        "ledger_sha256": _sha256(path.read_bytes()),
+        "predecessor_ledger_path": status["predecessor_ledger_path"],
+        "predecessor_ledger_sha256": status["predecessor_ledger_sha256"],
+        "architecture_report_semantic_sha256": close[
+            "architecture_report_semantic_sha256"
+        ],
+        "finding_count": status["finding_count"],
+        "issue_count": status["issue_count"],
+        "excluded_issue_count": status["excluded_issue_count"],
+        "findings": status["findings"],
+        "issues": status["issues"],
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
+    lines = [
+        f"# CHX architecture report — {status['run_id']}",
+        "",
+        "This report is a deterministic projection of the append-only CHX ledger.",
+        "It has no truth, project, Certification, Gateway, or Fact-admission effect.",
+        "",
+        f"- Findings: {status['finding_count']}",
+        f"- Included issues: {status['issue_count']}",
+        f"- Excluded issues: {status['excluded_issue_count']}",
+        f"- Ledger SHA-256: `{projection['ledger_sha256']}`",
+        "",
+        "## Machine projection",
+        "",
+        "```json",
+        json.dumps(projection, ensure_ascii=False, indent=2, sort_keys=True),
+        "```",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_architecture_report(
+    ledger_path: Path | str,
+    output_path: Path | str | None = None,
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    target = (
+        _resolved_path(output_path)
+        if output_path is not None
+        else _architecture_report_path(path)
+    )
+    if target == path:
+        raise ValueError("CHX report path must differ from the ledger path")
+    if target.exists() and (target.is_symlink() or not target.is_file()):
+        raise ValueError("CHX architecture report path is unsafe")
+    raw = render_architecture_report(path).encode("utf-8")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(
+        f".{target.name}.tmp-{os.getpid()}-{secrets.token_hex(4)}"
+    )
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "wb", closefd=True) as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, target)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    return {
+        "report_path": str(target),
+        "report_sha256": _sha256(raw),
+        "ledger_path": str(path),
+        "ledger_sha256": _sha256(path.read_bytes()),
+        "truth_effect": "none",
+    }
+
+
+def verify_architecture_report(
+    ledger_path: Path | str,
+    report_path: Path | str | None = None,
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    target = (
+        _resolved_path(report_path)
+        if report_path is not None
+        else _architecture_report_path(path)
+    )
+    if target.is_symlink() or not target.is_file():
+        raise ValueError("CHX architecture report is missing or unsafe")
+    expected = render_architecture_report(path).encode("utf-8")
+    observed = target.read_bytes()
+    if observed != expected:
+        raise ValueError("CHX architecture report drifted from its ledger")
+    return {
+        "report_path": str(target),
+        "report_sha256": _sha256(observed),
+        "ledger_path": str(path),
+        "ledger_sha256": _sha256(path.read_bytes()),
+        "status": "exact",
+        "truth_effect": "none",
+    }
+
+
 def close_ledger(ledger_path: Path | str) -> dict[str, Any]:
     path = _resolved_path(ledger_path)
 
@@ -704,7 +1511,7 @@ def close_ledger(ledger_path: Path | str) -> dict[str, Any]:
             and event["status"] == "excluded_nonarchitectural"
         }
         included_ids = observed_ids.difference(excluded_ids)
-        return {
+        payload = {
             "schema_version": events[0]["schema_version"],
             "contract_revision": events[0]["contract_revision"],
             "event": "run_closed",
@@ -714,15 +1521,256 @@ def close_ledger(ledger_path: Path | str) -> dict[str, Any]:
             "report_required": bool(included_ids),
             "occurred_at": _utc_now(),
         }
+        if events[0]["contract_revision"] == FINDING_CONTRACT_REVISION:
+            finding_ids = sorted(
+                event["finding_id"]
+                for event in events
+                if event["event"] == "finding_observed"
+            )
+            reconciliations = {
+                event["finding_id"]: event
+                for event in events
+                if event["event"] == "finding_reconciled"
+            }
+            unresolved = sorted(set(finding_ids).difference(reconciliations))
+            if unresolved:
+                raise ValueError(
+                    "CHX run cannot close with unreconciled findings: "
+                    + ", ".join(unresolved)
+                )
+            observed = {
+                event["issue_id"]: event
+                for event in events
+                if event["event"] == "issue_observed"
+            }
+            report_semantic = {
+                "run_id": events[0]["run_id"],
+                "predecessor_ledger_sha256": events[0][
+                    "predecessor_ledger_sha256"
+                ],
+                "finding_ids": finding_ids,
+                "included_issue_ids": sorted(included_ids),
+                "excluded_issue_ids": sorted(excluded_ids),
+                "reconciliation": {
+                    finding_id: {
+                        "status": item["status"],
+                        "issue_id": item["issue_id"],
+                    }
+                    for finding_id, item in sorted(reconciliations.items())
+                },
+                "issue_relations": {
+                    issue_id: item["relations"]
+                    for issue_id, item in sorted(observed.items())
+                },
+            }
+            payload.update(
+                {
+                    "finding_ids": finding_ids,
+                    "reconciled_finding_ids": sorted(reconciliations),
+                    "architecture_report_semantic_sha256": _sha256(
+                        _canonical_nfc_bytes(report_semantic)
+                    ),
+                }
+            )
+        return payload
 
     _, status = _mutate_locked(path, build)
+    if status["contract_revision"] == FINDING_CONTRACT_REVISION:
+        write_architecture_report(path)
+        # Return the same verified projection as every later status/read call.
+        # Without this refresh, the first close omitted architecture_report
+        # while idempotent close/status included it, breaking API equality.
+        return ledger_status(path)
     return status
 
 
 def ledger_status(ledger_path: Path | str) -> dict[str, Any]:
     path = _resolved_path(ledger_path)
     _, status = _read_locked(path)
+    if (
+        status["contract_revision"] == FINDING_CONTRACT_REVISION
+        and status["state"] == "closed"
+    ):
+        status = {
+            **status,
+            "architecture_report": verify_architecture_report(path),
+        }
     return status
+
+
+def validate_public_disclosure_contract(
+    skill_root: Path | str | None = None,
+) -> dict[str, Any]:
+    """Validate the machine-readable public CHX registry against its documents.
+
+    The registry contains issue identifiers and release semantics, not the
+    private ledger or research content. Ledger equality is checked by
+    :func:`verify_public_disclosure` at publication time.
+    """
+
+    requested_root = (
+        Path(skill_root).expanduser()
+        if skill_root is not None
+        else _skill_root()
+    )
+    if requested_root.is_symlink():
+        raise ValueError("CHX public-disclosure skill root must not be a symlink")
+    root = requested_root.resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError("CHX public-disclosure skill root is not a directory")
+    lock_path = root / "INHERITANCE.lock.json"
+    if lock_path.is_symlink() or not lock_path.is_file():
+        raise ValueError("CHX public-disclosure inheritance lock is unsafe")
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    disclosure = lock.get("chx_public_disclosure")
+    expected_fields = {
+        "contract_revision",
+        "included_issue_ids",
+        "ledger_issue_ids",
+        "ledger_run_id",
+        "latest_issue_id",
+        "document_contracts",
+        "private_ledger_included",
+        "truth_effect",
+    }
+    if not isinstance(disclosure, dict) or set(disclosure) != expected_fields:
+        raise ValueError("CHX public-disclosure contract fields are not exact")
+    if disclosure["contract_revision"] != PUBLIC_DISCLOSURE_CONTRACT_REVISION:
+        raise ValueError("CHX public-disclosure contract revision is invalid")
+    ledger_run_id = disclosure["ledger_run_id"]
+    if not isinstance(ledger_run_id, str) or RUN_ID_RE.fullmatch(ledger_run_id) is None:
+        raise ValueError("CHX public-disclosure ledger run id is invalid")
+    if (
+        disclosure["private_ledger_included"] is not False
+        or disclosure["truth_effect"] != "none"
+    ):
+        raise ValueError("CHX public-disclosure authority boundary is invalid")
+
+    included = disclosure["included_issue_ids"]
+    ledger_ids = disclosure["ledger_issue_ids"]
+    for label, values in (
+        ("included issue ids", included),
+        ("ledger issue ids", ledger_ids),
+    ):
+        if (
+            not isinstance(values, list)
+            or not values
+            or any(
+                not isinstance(item, str) or ISSUE_ID_RE.fullmatch(item) is None
+                for item in values
+            )
+            or values
+            != sorted(
+                set(values),
+                key=lambda item: int(item.removeprefix("CHX-")),
+            )
+        ):
+            raise ValueError(f"CHX public-disclosure {label} are invalid")
+    included_numbers = [int(item.removeprefix("CHX-")) for item in included]
+    if included_numbers != list(range(1, included_numbers[-1] + 1)):
+        raise ValueError("CHX public-disclosure included issue ids are not contiguous")
+    if not set(ledger_ids).issubset(included):
+        raise ValueError("CHX ledger issue ids escape public disclosure")
+    if disclosure["latest_issue_id"] != included[-1]:
+        raise ValueError("CHX public-disclosure latest issue id drifted")
+
+    document_contracts = disclosure["document_contracts"]
+    if not isinstance(document_contracts, dict) or not document_contracts:
+        raise ValueError("CHX public-disclosure document contracts are invalid")
+    document_hashes: dict[str, str] = {}
+    for relative, contract in sorted(document_contracts.items()):
+        relative_path = Path(relative)
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or relative_path.is_absolute()
+            or any(part in {"", ".", ".."} for part in relative_path.parts)
+        ):
+            raise ValueError("CHX public-disclosure document path is invalid")
+        if not isinstance(contract, dict) or set(contract) != {
+            "explicit_issue_enumeration",
+            "required_markers",
+        }:
+            raise ValueError("CHX public-disclosure document contract is malformed")
+        explicit = contract["explicit_issue_enumeration"]
+        markers = contract["required_markers"]
+        if not isinstance(explicit, bool) or (
+            not isinstance(markers, list)
+            or not markers
+            or any(not isinstance(item, str) or not item for item in markers)
+            or markers != sorted(set(markers))
+        ):
+            raise ValueError("CHX public-disclosure document requirements are invalid")
+        document = root / relative_path
+        if document.is_symlink() or not document.is_file():
+            raise ValueError("CHX public-disclosure document is missing or unsafe")
+        if root not in document.resolve(strict=True).parents:
+            raise ValueError("CHX public-disclosure document escaped the skill root")
+        raw = document.read_bytes()
+        text = raw.decode("utf-8")
+        missing = [marker for marker in markers if marker not in text]
+        if missing:
+            raise ValueError(
+                f"CHX public-disclosure document lacks required markers: {relative}"
+            )
+        if explicit:
+            enumerated = re.findall(
+                r"^[0-9]+\. \*\*(CHX-[0-9]{3,}) [—-]",
+                text,
+                flags=re.MULTILINE,
+            )
+            if enumerated != included:
+                raise ValueError(
+                    "CHX public-disclosure explicit issue enumeration drifted"
+                )
+        document_hashes[relative] = _sha256(raw)
+    return {
+        "contract_revision": PUBLIC_DISCLOSURE_CONTRACT_REVISION,
+        "included_issue_ids": included,
+        "ledger_issue_ids": ledger_ids,
+        "ledger_run_id": ledger_run_id,
+        "latest_issue_id": included[-1],
+        "qualified_included_issue_ids": [
+            f"{ledger_run_id}/{issue_id}" for issue_id in included
+        ],
+        "qualified_ledger_issue_ids": [
+            f"{ledger_run_id}/{issue_id}" for issue_id in ledger_ids
+        ],
+        "document_sha256": document_hashes,
+        "registry_sha256": _sha256(_canonical_nfc_bytes(disclosure)),
+        "status": "current",
+        "truth_effect": "none",
+    }
+
+
+def verify_public_disclosure(
+    ledger_path: Path | str,
+    skill_root: Path | str | None = None,
+) -> dict[str, Any]:
+    """Bind one exact private CHX ledger to the public release disclosure."""
+
+    contract = validate_public_disclosure_contract(skill_root)
+    path = _resolved_path(ledger_path)
+    events, status = _read_locked(path)
+    if status.get("unreconciled_finding_ids"):
+        raise ValueError("CHX publication has unreconciled findings")
+    if status["run_id"] != contract["ledger_run_id"]:
+        raise ValueError("CHX ledger run id differs from public disclosure")
+    issues = status["issues"]
+    if any(item["status"] != "resolved" for item in issues):
+        raise ValueError("CHX publication contains an unresolved included issue")
+    observed_ids = [item["issue_id"] for item in issues]
+    if observed_ids != contract["ledger_issue_ids"]:
+        raise ValueError("CHX ledger issue set differs from public disclosure")
+    return {
+        **contract,
+        "ledger_path": str(path),
+        "ledger_state": status["state"],
+        "ledger_event_head_sha256": events[-1]["event_sha256"],
+        "ledger_file_sha256": _sha256(path.read_bytes()),
+        "status": "pass",
+        "private_ledger_included": False,
+    }
 
 
 def _json_file(path_value: str) -> dict[str, Any]:
@@ -732,6 +1780,16 @@ def _json_file(path_value: str) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("input JSON must contain one object")
+    return payload
+
+
+def _json_list_file(path_value: str) -> list[Any]:
+    path = _resolved_path(path_value)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"input JSON is missing, unsafe, or not a file: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("input JSON must contain one list")
     return payload
 
 
@@ -746,6 +1804,13 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--task", required=True)
     start.add_argument("--run-id")
     start.add_argument("--host-task-scope-id", default="")
+    start.add_argument("--predecessor-ledger")
+    start.add_argument(
+        "--inherited-finding",
+        action="append",
+        default=[],
+        help="JSON object for one late finding inherited by a successor ledger",
+    )
     start.add_argument(
         "--task-card",
         help=(
@@ -757,6 +1822,19 @@ def _parser() -> argparse.ArgumentParser:
     record = commands.add_parser("record")
     record.add_argument("--ledger", required=True)
     record.add_argument("--input", required=True)
+    record.add_argument("--finding-id")
+    record.add_argument("--relations-input")
+
+    finding = commands.add_parser("finding")
+    finding.add_argument("--ledger", required=True)
+    finding.add_argument("--input", required=True)
+
+    reconcile = commands.add_parser("reconcile-finding")
+    reconcile.add_argument("--ledger", required=True)
+    reconcile.add_argument("--finding-id", required=True)
+    reconcile.add_argument("--status", choices=sorted(FINDING_RECONCILIATIONS), required=True)
+    reconcile.add_argument("--reason", required=True)
+    reconcile.add_argument("--issue-id", default="")
 
     dispose = commands.add_parser("dispose")
     dispose.add_argument("--ledger", required=True)
@@ -768,6 +1846,18 @@ def _parser() -> argparse.ArgumentParser:
 
     close = commands.add_parser("close")
     close.add_argument("--ledger", required=True)
+
+    report = commands.add_parser("report")
+    report.add_argument("--ledger", required=True)
+    report.add_argument("--output")
+
+    verify_report = commands.add_parser("verify-report")
+    verify_report.add_argument("--ledger", required=True)
+    verify_report.add_argument("--report")
+
+    verify_disclosure = commands.add_parser("verify-public-disclosure")
+    verify_disclosure.add_argument("--ledger", required=True)
+    verify_disclosure.add_argument("--skill-root")
     return parser
 
 
@@ -781,9 +1871,32 @@ def main(argv: list[str] | None = None) -> int:
             run_id=args.run_id,
             host_task_scope_id=args.host_task_scope_id,
             task_card=args.task_card,
+            predecessor_ledger=args.predecessor_ledger,
+            inherited_findings=[
+                _json_file(path) for path in args.inherited_finding
+            ],
         )
     elif args.command == "record":
-        result = record_issue(args.ledger, _json_file(args.input))
+        result = record_issue(
+            args.ledger,
+            _json_file(args.input),
+            finding_id=args.finding_id,
+            relations=(
+                _json_list_file(args.relations_input)
+                if args.relations_input
+                else []
+            ),
+        )
+    elif args.command == "finding":
+        result = record_finding(args.ledger, _json_file(args.input))
+    elif args.command == "reconcile-finding":
+        result = reconcile_finding(
+            args.ledger,
+            finding_id=args.finding_id,
+            status=args.status,
+            reason=args.reason,
+            issue_id=args.issue_id,
+        )
     elif args.command == "dispose":
         result = dispose_issue(
             args.ledger,
@@ -792,8 +1905,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "status":
         result = ledger_status(args.ledger)
-    else:
+    elif args.command == "close":
         result = close_ledger(args.ledger)
+    elif args.command == "report":
+        result = write_architecture_report(args.ledger, args.output)
+    elif args.command == "verify-report":
+        result = verify_architecture_report(args.ledger, args.report)
+    else:
+        result = verify_public_disclosure(args.ledger, args.skill_root)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

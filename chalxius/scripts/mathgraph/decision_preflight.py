@@ -113,12 +113,20 @@ def validate_decision_against_capsule(
     }
     if source_nonpass:
         top_fields.add("source_check_reconciliation")
+    strict_research_draft = "research_draft_ref" in capsule
+    if strict_research_draft:
+        top_fields.add("parallel_verification_aggregate_id")
     decision = _exact(decision, top_fields, "")
     if decision["schema_version"] != 5:
         raise ValueError("/schema_version must be 5")
     for key in ("release_id", "release_sha256", "capsule_sha256"):
         if decision[key] != capsule[key]:
             raise ValueError(f"/{key} does not match capsule")
+    if strict_research_draft and (
+        not isinstance(decision["parallel_verification_aggregate_id"], str)
+        or not decision["parallel_verification_aggregate_id"].startswith("vag-")
+    ):
+        raise ValueError("/parallel_verification_aggregate_id is invalid")
     if decision["verdict"] not in {"correct", "reject"}:
         raise ValueError("/verdict must be correct or reject")
     finding_ids = _finding_ids(decision)

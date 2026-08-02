@@ -399,6 +399,13 @@ READ_ONLY_COMMANDS = {
     "paper-logic-query",
     "paper-logic-audit",
     "paper-continuation-status",
+    "research-draft-status",
+    "verification-plan-prepare",
+    "verification-packet-prepare",
+    "verification-receipt-prepare",
+    "verification-status",
+    "brave-future-status",
+    "brave-future-audit",
     "verifier-capsule",
     "candidate-release-check",
     "certification-decision-check",
@@ -427,6 +434,8 @@ def _command_requires_mutation_lock(args: argparse.Namespace) -> bool:
     if args.command == "upgrade-project-copy":
         return False
     if args.command == "upgrade-workflow" and args.dry_run:
+        return False
+    if args.command == "campaign-reassess" and args.dry_run:
         return False
     if args.command == "ingest-return":
         # The orchestrator owns one complete validation/effect/pulse-failure
@@ -816,6 +825,43 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all-active", action="store_true")
     p.add_argument("--no-collapse-repairs", action="store_true")
     p.add_argument("--history", action="store_true")
+    p.add_argument(
+        "--brave-future",
+        action="store_true",
+        help="use the explicitly enabled V5 BF-1/L4 advisory projection",
+    )
+    p.add_argument(
+        "--view",
+        choices=("actionable", "all-active", "history"),
+        help="explicit Brave Future view; valid only with --brave-future",
+    )
+
+    p = sub.add_parser("brave-future-enable")
+    p.add_argument("--campaign", required=True)
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("brave-future-status")
+    p.add_argument("--campaign", required=True)
+
+    sub.add_parser("brave-future-audit")
+
+    p = sub.add_parser("campaign-reassess")
+    p.add_argument("--campaign", required=True)
+    blockage_group = p.add_mutually_exclusive_group(required=True)
+    blockage_group.add_argument("--blockage-input")
+    blockage_group.add_argument("--blockage")
+    p.add_argument("--dry-run", action="store_true")
+
+    p = sub.add_parser("campaign-reassess-decide")
+    p.add_argument("reassessment_id")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("brave-future-disable")
+    p.add_argument("--campaign", required=True)
+    p.add_argument("--actor", required=True)
+    p.add_argument("--reason", required=True)
 
     p = sub.add_parser("adoption-plan")
     p.add_argument("--input", required=True)
@@ -1157,6 +1203,69 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--actor", required=True)
 
+    p = sub.add_parser(
+        "research-draft-plan",
+        help="freeze the full research-draft Paper target graph and stance policy",
+    )
+    p.add_argument("snapshot_id")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser(
+        "research-draft-disposition-batch",
+        help="publish all target dispositions in one all-or-none transaction",
+    )
+    p.add_argument("plan_id")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser(
+        "research-draft-authorize-major-revision",
+        help="record an Operator-only immutable authorization for one exact headline impact",
+    )
+    p.add_argument("plan_id")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("research-draft-status")
+    p.add_argument("plan_id")
+    p.add_argument("--deep", action="store_true")
+
+    p = sub.add_parser("verification-key-register")
+    p.add_argument("--input", required=True)
+    p.add_argument("--actor", required=True)
+
+    p = sub.add_parser("verification-plan-prepare")
+    p.add_argument("release_id")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("verification-plan-record")
+    p.add_argument("release_id")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("verification-packet-prepare")
+    p.add_argument("signed_plan_id")
+    p.add_argument("slot_id")
+
+    p = sub.add_parser("verification-packet-record")
+    p.add_argument("signed_plan_id")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("verification-receipt-prepare")
+    p.add_argument("signed_plan_id")
+    p.add_argument("slot_id")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("verification-receipt-record")
+    p.add_argument("signed_plan_id")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("verification-aggregate")
+    p.add_argument("signed_plan_id")
+
+    p = sub.add_parser("verification-status")
+    p.add_argument("release_id")
+
     sub.add_parser("evidence-library-status")
 
     p = sub.add_parser("evidence-query")
@@ -1353,6 +1462,16 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 3
+    if (
+        args.command == "frontier"
+        and getattr(args, "brave_future", False)
+        and args.role not in {"main", "operator"}
+    ):
+        print(
+            "Brave Future frontier is restricted to main or operator",
+            file=sys.stderr,
+        )
+        return 3
     stack = ExitStack()
     try:
         root = Path(args.root).expanduser().resolve()
@@ -1378,23 +1497,26 @@ def main(argv: list[str] | None = None) -> int:
                 "legacy Chalk V4 project is read-only in the unified engine; "
                 "run mode-init explicitly before any new write"
             )
-        if args.role == "worker" and args.command != "init":
+        if args.role in {"worker", "host"} and args.command != "init":
             workflow_version = store.workflow_evidence_version()
-            worker_commands = allowed_commands_for_workflow(
-                args.role,
-                workflow_version,
-            ) | allowed_bound_worker_queries_for_workflow(
+            workflow_commands = allowed_commands_for_workflow(
                 args.role,
                 workflow_version,
             )
-            if args.command not in worker_commands:
+            if args.role == "worker":
+                workflow_commands |= allowed_bound_worker_queries_for_workflow(
+                    args.role,
+                    workflow_version,
+                )
+            if args.command not in workflow_commands:
                 print(
                     f"role {args.role!r} is not allowed to run "
                     f"{args.command!r} in this workflow-evidence version",
                     file=sys.stderr,
                 )
                 return 3
-            _authorize_bound_worker_query(store, args)
+            if args.role == "worker":
+                _authorize_bound_worker_query(store, args)
         if (
             args.command == "upgrade-workflow"
             and not args.dry_run
@@ -1782,14 +1904,46 @@ def main(argv: list[str] | None = None) -> int:
                 )
         elif args.command == "frontier":
             if store.workflow_evidence_version() == 5:
-                _print_json(
-                    store.v5_lifecycle().frontier(
-                        limit=args.limit,
-                        include_history=args.history,
-                        campaign_id=args.campaign,
+                if args.brave_future:
+                    if not args.campaign:
+                        raise ValueError(
+                            "Brave Future frontier requires an explicit --campaign"
+                        )
+                    selected_views = {
+                        value
+                        for value in (
+                            args.view,
+                            "history" if args.history else None,
+                            "all-active" if args.all_active else None,
+                        )
+                        if value is not None
+                    }
+                    if len(selected_views) > 1:
+                        raise ValueError(
+                            "Brave Future frontier view switches conflict; choose one view"
+                        )
+                    view = next(iter(selected_views), "actionable")
+                    _print_json(
+                        store.brave_future().frontier(
+                            campaign_id=args.campaign,
+                            view=view,
+                            collapse_repairs=not args.no_collapse_repairs,
+                            limit=args.limit,
+                        )
                     )
-                )
+                else:
+                    if args.view is not None:
+                        raise ValueError("--view requires --brave-future")
+                    _print_json(
+                        store.v5_lifecycle().frontier(
+                            limit=args.limit,
+                            include_history=args.history,
+                            campaign_id=args.campaign,
+                        )
+                    )
             else:
+                if args.brave_future or args.view is not None:
+                    raise ValueError("Brave Future frontier requires a V5 project")
                 _print_json(
                     store.frontier(
                         limit=args.limit,
@@ -2401,6 +2555,140 @@ def main(argv: list[str] | None = None) -> int:
                     args.plan_id,
                     _json_file(args.input),
                     actor=args.actor,
+                )
+            )
+        elif args.command == "research-draft-plan":
+            _print_json(
+                store.v5_lifecycle().research_draft().create_plan(
+                    args.snapshot_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "research-draft-disposition-batch":
+            _print_json(
+                store.v5_lifecycle().research_draft().record_batch(
+                    args.plan_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "research-draft-authorize-major-revision":
+            _print_json(
+                store.v5_lifecycle().research_draft().authorize_major_revision(
+                    args.plan_id,
+                    _json_file(args.input),
+                    actor=args.actor,
+                    authority_role=args.role,
+                )
+            )
+        elif args.command == "research-draft-status":
+            _print_json(
+                store.v5_lifecycle().research_draft().status(
+                    args.plan_id, deep=args.deep
+                )
+            )
+        elif args.command == "verification-key-register":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().register_key(
+                    _json_file(args.input),
+                    actor=args.actor,
+                    authority_role=args.role,
+                )
+            )
+        elif args.command == "verification-plan-prepare":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().prepare_plan(
+                    args.release_id, _json_file(args.input)
+                )
+            )
+        elif args.command == "verification-plan-record":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().record_plan(
+                    args.release_id, _json_file(args.input)
+                )
+            )
+        elif args.command == "verification-packet-prepare":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().prepare_packet(
+                    args.signed_plan_id, args.slot_id
+                )
+            )
+        elif args.command == "verification-packet-record":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().record_packet(
+                    args.signed_plan_id, _json_file(args.input)
+                )
+            )
+        elif args.command == "verification-receipt-prepare":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().prepare_receipt(
+                    args.signed_plan_id,
+                    args.slot_id,
+                    _json_file(args.input),
+                )
+            )
+        elif args.command == "verification-receipt-record":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().record_receipt(
+                    args.signed_plan_id, _json_file(args.input)
+                )
+            )
+        elif args.command == "verification-aggregate":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().aggregate(
+                    args.signed_plan_id
+                )
+            )
+        elif args.command == "verification-status":
+            _print_json(
+                store.v5_lifecycle().parallel_verification().status(args.release_id)
+            )
+        elif args.command == "brave-future-enable":
+            _print_json(
+                store.brave_future().enable(
+                    campaign_id=args.campaign,
+                    policy=_json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "brave-future-status":
+            _print_json(store.brave_future().status(args.campaign))
+        elif args.command == "brave-future-audit":
+            report = store.brave_future().audit()
+            _print_json(report)
+            return 0 if report["ok"] else 2
+        elif args.command == "campaign-reassess":
+            manager = store.brave_future()
+            blockage_input = (
+                _json_file(args.blockage_input)
+                if args.blockage_input
+                else manager.blockage_input(
+                    campaign_id=args.campaign,
+                    blockage_id=args.blockage,
+                )
+            )
+            _print_json(
+                manager.reassess(
+                    campaign_id=args.campaign,
+                    blockage_input=blockage_input,
+                    dry_run=args.dry_run,
+                )
+            )
+        elif args.command == "campaign-reassess-decide":
+            _print_json(
+                store.brave_future().decide(
+                    args.reassessment_id,
+                    decision=_json_file(args.input),
+                    actor=args.actor,
+                )
+            )
+        elif args.command == "brave-future-disable":
+            _print_json(
+                store.brave_future().disable(
+                    campaign_id=args.campaign,
+                    actor=args.actor,
+                    reason=args.reason,
                 )
             )
         elif args.command == "evidence-library-status":

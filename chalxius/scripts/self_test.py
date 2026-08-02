@@ -12,7 +12,13 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from chx_ledger import close_ledger, ledger_status, start_ledger  # noqa: E402
+from chx_ledger import (  # noqa: E402
+    close_ledger,
+    ledger_status,
+    start_ledger,
+    validate_public_disclosure_contract,
+)
+from mathgraph import parallel_verification as pv  # noqa: E402
 from mathgraph.cli import main as cli_main  # noqa: E402
 from mathgraph.applicability import validate_external_refs_for_submission  # noqa: E402
 from mathgraph.blackboard import make_edge, make_node  # noqa: E402
@@ -41,7 +47,8 @@ from mathgraph.reader_html import (  # noqa: E402
     load_reader_packet,
     render_reader_html,
 )
-from mathgraph.roles import allowed_commands  # noqa: E402
+from mathgraph.roles import allowed_commands, allowed_commands_for_workflow  # noqa: E402
+from mathgraph.runtime_compatibility import validate_runtime_compatibility  # noqa: E402
 from mathgraph.store import MathGraphStore  # noqa: E402
 
 
@@ -74,6 +81,40 @@ def main() -> int:
     ).read_text(encoding="utf-8").strip()
     if allowed_commands("verifier") or allowed_commands("unknown-role"):
         raise RuntimeError("verifier or unknown role received project CLI capabilities")
+    basepoint_public_key = (bytes([0x58]) + bytes([0x66]) * 31).hex()
+    alias_planner = pv.build_trusted_key_record(
+        project_id="self-test-key-registry",
+        key_role="planner",
+        public_key_hex=basepoint_public_key,
+        principal_id="self-test-planner",
+        reviewer_role_or_null=None,
+        host_context_id_or_null=None,
+        trust_domain_id="self-test-control",
+        registered_by="self-test-operator",
+    )
+    alias_host = pv.build_trusted_key_record(
+        project_id="self-test-key-registry",
+        key_role="host",
+        public_key_hex=basepoint_public_key,
+        principal_id="self-test-host",
+        reviewer_role_or_null=None,
+        host_context_id_or_null="self-test-host-context",
+        trust_domain_id="self-test-host-domain",
+        registered_by="self-test-operator",
+    )
+    try:
+        pv.validate_trusted_key_registry(
+            {
+                alias_planner["key_id"]: alias_planner,
+                alias_host["key_id"]: alias_host,
+            },
+            project_id="self-test-key-registry",
+        )
+    except ValueError as exc:
+        if "aliases one Ed25519 public key" not in str(exc):
+            raise
+    else:
+        raise RuntimeError("verification registry accepted one key as two identities")
     if "preflight-return" not in allowed_commands("worker") or any(
         "preflight-return" in allowed_commands(role)
         for role in ("main", "operator", "host", "gateway", "verifier")
@@ -146,8 +187,101 @@ def main() -> int:
             raise RuntimeError(
                 f"{command} must remain a Main/Operator Paper-governance capability"
             )
+    for command in (
+        "research-draft-plan",
+        "research-draft-disposition-batch",
+        "research-draft-status",
+    ):
+        if any(command not in allowed_commands(role) for role in ("main", "operator")) or any(
+            command in allowed_commands(role)
+            for role in ("worker", "verifier", "gateway", "host", "paper-auditor")
+        ):
+            raise RuntimeError(f"{command} crossed the research-draft governance boundary")
+    if "research-draft-authorize-major-revision" not in allowed_commands(
+        "operator"
+    ) or any(
+        "research-draft-authorize-major-revision" in allowed_commands(role)
+        for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
+    ):
+        raise RuntimeError(
+            "research-draft major revision authorization must remain Operator-only"
+        )
+    verification_commands = {
+        "verification-key-register",
+        "verification-plan-prepare",
+        "verification-plan-record",
+        "verification-packet-prepare",
+        "verification-packet-record",
+        "verification-receipt-prepare",
+        "verification-receipt-record",
+        "verification-aggregate",
+        "verification-status",
+    }
+    if not verification_commands.issubset(allowed_commands("operator")):
+        raise RuntimeError("Operator lacks a required verification lifecycle command")
+    if {
+        "verification-key-register",
+        "verification-packet-record",
+    }.intersection(allowed_commands("main")):
+        raise RuntimeError("Main crossed the verification trust/Host boundary")
+    if not {
+        "verification-plan-prepare",
+        "verification-plan-record",
+        "verification-packet-prepare",
+        "verification-receipt-prepare",
+        "verification-receipt-record",
+        "verification-aggregate",
+        "verification-status",
+    }.issubset(allowed_commands("main")):
+        raise RuntimeError("Main lacks a required verification coordination command")
+    if not {
+        "verification-packet-prepare",
+        "verification-packet-record",
+        "verification-status",
+    }.issubset(allowed_commands("host")) or verification_commands.difference(
+        {
+            "verification-packet-prepare",
+            "verification-packet-record",
+            "verification-status",
+        }
+    ).intersection(allowed_commands("host")):
+        raise RuntimeError("Host crossed the verification dispatch boundary")
+    if allowed_commands_for_workflow("host", 4) != {
+        "pulse-dispatch",
+        "pulse-status",
+        "pulse-audit",
+    }:
+        raise RuntimeError("prospective verification commands leaked into V4 Host")
+    if any(
+        verification_commands.intersection(allowed_commands(role))
+        for role in ("worker", "verifier", "paper-auditor")
+    ):
+        raise RuntimeError("worker/verifier/Paper Auditor gained project verification CLI authority")
+    if verification_commands.intersection(allowed_commands("gateway")) != {
+        "verification-status"
+    }:
+        raise RuntimeError("Gateway verification access must remain read-only status")
+    for command in ("brave-future-enable", "brave-future-disable", "campaign-reassess-decide"):
+        if command not in allowed_commands("operator") or any(
+            command in allowed_commands(role)
+            for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
+        ):
+            raise RuntimeError(f"{command} must remain Operator-only")
+    for command in ("brave-future-status", "brave-future-audit", "campaign-reassess"):
+        if any(command not in allowed_commands(role) for role in ("main", "operator")) or any(
+            command in allowed_commands(role)
+            for role in ("worker", "verifier", "gateway", "host", "paper-auditor")
+        ):
+            raise RuntimeError(f"{command} crossed the Brave Future advisory boundary")
 
     skill_root = Path(__file__).resolve().parents[1]
+    inheritance_lock = json.loads(
+        (skill_root / "INHERITANCE.lock.json").read_text(encoding="utf-8")
+    )
+    validate_runtime_compatibility(
+        skill_root, inheritance_lock["runtime_compatibility"]
+    )
+    validate_public_disclosure_contract(skill_root)
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
     skill_line_count = len(skill_text.splitlines())
     if skill_line_count >= 500:
@@ -169,6 +303,9 @@ def main() -> int:
         skill_root / "references" / "paper_input_contracts.md",
         skill_root / "references" / "v5_worker_return_contract.md",
         skill_root / "references" / "paper_continuation_contract.md",
+        skill_root / "references" / "paper_research_pipeline.md",
+        skill_root / "references" / "brave_future_l3_l4.md",
+        skill_root / "references" / "v5_capability_matrix.md",
         skill_root / "references" / "evidence_plane.md",
         skill_root / "references" / "paper-reading-modes.md",
         skill_root / "references" / "math-grilling.md",
@@ -192,6 +329,13 @@ def main() -> int:
         skill_root / "INHERITANCE.lock.json",
         skill_root / "scripts" / "paperlib",
         skill_root / "scripts" / "paper_library.py",
+        skill_root / "scripts" / "archive_runtime.py",
+        skill_root / "scripts" / "runtime_cutover.py",
+        skill_root / "scripts" / "paper_research_pipeline.py",
+        skill_root / "scripts" / "mathgraph" / "paper_research_pipeline.py",
+        skill_root / "scripts" / "mathgraph" / "paper_research_reliability.py",
+        skill_root / "scripts" / "mathgraph" / "runtime_archive.py",
+        skill_root / "scripts" / "mathgraph" / "runtime_cutover.py",
     )
     policy_texts = {
         path.relative_to(skill_root).as_posix(): path.read_text(
@@ -202,7 +346,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.5.0 — Back to the Future / Paper Continuation",
+            "# Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -211,13 +355,19 @@ def main() -> int:
             "export-reader-html",
             "PROJECT/visualizations/knowledge-map.html",
             "For every Chalxius run started after the 0.4.1 activation boundary",
-            "Project-bound runs store their ledger at `PROJECT/chx-ledgers/`",
+            "Project-bound runs store it at `PROJECT/chx-ledgers/`",
             "If `report_required=false`, say nothing about the CHX ledger",
-            "Mixed 0.4.0 and 0.4.1-or-later bytes",
+            "Record every architecture-caused or materially amplified mechanism first as a stable finding",
             "`attack-report --host-task-scope-id ID`",
             "silence and successful return never activate a",
             "memory-add --current-assurance",
             "fact-graph-inventory --source-root OLD",
+            "verification-aggregate",
+            "one public key registered under multiple identities",
+            "idempotent registration, cache-hit authority, or status/audit drift",
+            "reused nonces",
+            "host-managed, content-addressed runtime",
+            "archive outside skill discovery",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -226,8 +376,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.5.0"',
-            '"release_codename": "Back to the Future — Paper Continuation"',
+            '"version": "0.6.2"',
+            '"release_codename": "Paper Graph Continuity — Brave Future BF-1–3"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -246,8 +396,9 @@ def main() -> int:
             '"network_runtime": "disabled"',
             '"project_background_read_policy": "default_if_present_never_generate"',
             '"aggressive_bug_audit": "release_time_only"',
-            '"contract_revision": "chalxius-chx-run-ledger-2"',
+            '"contract_revision": "chalxius-chx-run-ledger-3"',
             '"chalxius-chx-run-ledger-1"',
+            '"chalxius-chx-run-ledger-2"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
             '"contract_revision": "chalxius-adverse-routing-evolution-3"',
@@ -256,12 +407,21 @@ def main() -> int:
             '"activation": "prospective_default_for_new_v5_tasks_with_lazy_project_materialization"',
             '"proposal_activation": "user_decision_only"',
             '"attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx"',
-            '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_and_manifest_file_hash_fail_closed_at_start"',
+            '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_manifest_file_hash_and_full_manifest_tree_fail_closed_before_ledger_creation"',
             '"automatic_inheritance": false',
             '"admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection"',
             '"contract_revision": "chalxius-v5-campaign-scope-1"',
             '"selection": "explicit_exact_research_campaign_id_only"',
             '"scheduler": "v5_main_four_factor_frontier"',
+            '"preflight_revision": "chalxius-research-draft-admission-preflight-1"',
+            '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
+            '"project_lifecycle_revision": "chalxius-parallel-verification-lifecycle-1"',
+            '"freshness": "durable_project_wide_nonce_uniqueness_across_packet_and_receipt_records"',
+            '"policy_revision": "chalxius-brave-future-policy-1"',
+            '"autonomy_level": "advisory"',
+            '"contract_revision": "chalxius-runtime-archive-2"',
+            '"closure_contract_revision": "chalxius-runtime-compatibility-closure-1"',
+            '"active_and_write_policy": "full_manifest_exact_current_live_runtime_only_archive_forbidden_with_plan_round_preflight_before_project_writes"',
         ),
         "references/reader_html_export.md": (
             "truth_effect=\"none\"",
@@ -273,11 +433,29 @@ def main() -> int:
         ),
         "references/paper_continuation_contract.md": (
             "paper-continuation-plan",
+            "research-draft-plan",
+            "research-draft-disposition-batch",
+            "research-draft-authorize-major-revision",
+            "research_draft_admission_preflight",
+            "project-wide nonrepeating nonces",
             "paper_target_closure",
             "philosophy_semantic_atomicity",
             "philosophy_plain_language_clarity",
             "Clear wording is the default",
             "does not backfill old tasks",
+        ),
+        "references/paper_research_pipeline.md": (
+            "research_draft",
+            "external_finished_publication",
+            "Do not replace a research draft with a small convenience FactBundle",
+            "source_occurrence_ledger",
+            "operator_ledger",
+            "validation_subject.kind=\"paper\"",
+            "compatibility_fact_bundle_substitute=false",
+            "content-addressed objects",
+            "reliability-matrix",
+            "plan_one",
+            '"truth_effect": "none"',
         ),
         "references/paper_input_contracts.md": (
             "paper_logic_minimal_logic_bundle.v1.example.json",
@@ -285,6 +463,24 @@ def main() -> int:
             "paper_revised_writing",
             "philosophy_atomicity",
             "must not be placed in the input",
+            "external_finished_publication",
+            "proposition_inventory",
+            "semantic_direction",
+            "explicit inference mini-DAG",
+        ),
+        "references/v5_capability_matrix.md": (
+            "parallel_verification_lifecycle.py",
+            "project-wide nonrepeating nonces",
+            "Certification and Gateway admission revalidate the same eligible aggregate",
+        ),
+        "references/brave_future_l3_l4.md": (
+            "BF-1 through BF-3",
+            "autonomy_level=advisory",
+            "It cannot create Research",
+            "legacy informational `ACTIVE` pointer",
+            "same-volume atomic directory rename",
+            "plan_one",
+            "execute_one",
         ),
         "references/v5_worker_return_contract.md": (
             "obligation_dispositions",
@@ -313,6 +509,9 @@ def main() -> int:
             "later load some 0.4.1-or-later bytes",
             "Back to the Future field-repair successor",
             "4c2eb4c14605aacf18d4515e4f5515427321fa968f77b9ce2e5b8032dc1f4522",
+            "CHX-020",
+            "CHX-021",
+            "CHX-022",
         ),
         "references/unified_architecture.md": (
             "later load some 0.4.1-or-later bytes",
@@ -332,6 +531,8 @@ def main() -> int:
             "Loading some 0.4.1-or-later bytes",
             "--task-card /exact/card.json",
             "older global Chalxius runtime must fail closed",
+            "host-managed archive outside skill discovery",
+            "not an authority cache",
         ),
         "references/admission_contract.md": (
             "full statement hash",
@@ -357,7 +558,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.5.0 `Back to the Future / Paper Continuation` release artifact",
+            "The 0.6.2 `Paper Graph Continuity / Brave Future BF-1–3` release artifact",
             "standing authorization",
             "attack-report",
             "Never backfill attack cases",
@@ -366,6 +567,36 @@ def main() -> int:
             "V5 `profile-closure-status` computes local process",
             "V5 never activates a V1-V4 root",
             "Candidate Release/Certification/Fact boundary",
+            "Preserve runtime continuity before every global cutover",
+            "archive_runtime.py",
+            "Refuse replacement while any protected round remains active",
+            "runtime_cutover.py",
+            "automatically restores",
+        ),
+        "scripts/archive_runtime.py": (
+            "Archive one exact Chalxius runtime for historical task-card reads.",
+            "--archive-root",
+            "--expected-runtime-identity",
+            "read_json_file_nofollow",
+        ),
+        "scripts/mathgraph/runtime_archive.py": (
+            'RUNTIME_ARCHIVE_REVISION = "chalxius-runtime-archive-2"',
+            'RUNTIME_ARCHIVE_ENV = "CHALXIUS_RUNTIME_ARCHIVE_ROOT"',
+            "content_addressed_historical_archive",
+            "historical_read_and_audit_only",
+            "archived runtime root is not sealed read-only",
+        ),
+        "scripts/runtime_cutover.py": (
+            "Perform one fail-closed Chalxius install or rollback cutover.",
+            "--project-root",
+            "--rollback-root",
+            "--expected-candidate-manifest-sha256",
+        ),
+        "scripts/mathgraph/runtime_cutover.py": (
+            'CUTOVER_CONTRACT_REVISION = "chalxius-runtime-cutover-1"',
+            "cutover requires protected project roots",
+            "automatic rollback also failed",
+            "prior installation was restored",
         ),
         "scripts/paperlib": (
             "exec python3 -B",
@@ -2253,6 +2484,9 @@ def main() -> int:
         "preflight_return=PASS campaign_atomic_create=PASS "
         "paper_logic=PASS paper_review_gate=PASS "
         "reader_html=PASS chx_runtime_ledger=PASS adverse_routing=PASS "
+        "research_draft_roles=PASS verification_lifecycle_roles=PASS "
+        "verification_registry_identity=PASS "
+        "brave_future_roles=PASS chx_public_disclosure=PASS "
         "skill_line_limit=PASS"
     )
     return 0

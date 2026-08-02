@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import unittest
 from pathlib import Path
+
+from mathgraph.runtime_compatibility import validate_runtime_compatibility
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -16,66 +17,20 @@ class V5CapabilityPreservationTests(unittest.TestCase):
             (SKILL_ROOT / "INHERITANCE.lock.json").read_text(encoding="utf-8")
         )
         compatibility = lock["runtime_compatibility"]
-        paths: list[Path] = []
-        for spec in (
-            "scripts/mathgraph",
-            "scripts/mgraph",
-            "scripts/mgraph_cli.py",
-            "scripts/chx_ledger.py",
-            "scripts/notation_inventory.py",
-            "scripts/prepare_verifier_capsule.py",
-            "scripts/learning_graph.py",
-            "scripts/learn",
-            "assets/reader_html_template.html",
-            "assets/reader_html_app.js",
-            "assets/reader_html.css",
-            "assets/vendor",
-        ):
-            path = SKILL_ROOT / spec
-            if path.is_dir():
-                paths.extend(
-                    child
-                    for child in path.rglob("*")
-                    if child.is_file() and "__pycache__" not in child.parts
-                )
-            else:
-                paths.append(path)
-        digest = hashlib.sha256()
-        for path in sorted(set(paths), key=lambda item: item.relative_to(SKILL_ROOT).as_posix()):
-            relative = path.relative_to(SKILL_ROOT).as_posix().encode("utf-8")
-            file_hash = hashlib.sha256(path.read_bytes()).hexdigest().encode("ascii")
-            digest.update(relative + b"\0" + file_hash + b"\n")
+        closure = validate_runtime_compatibility(SKILL_ROOT, compatibility)
         self.assertEqual(compatibility["baseline"], "chalxius-0.4.3")
-        self.assertEqual(compatibility["protected_file_count"], len(set(paths)))
-        self.assertEqual(compatibility["protected_tree_sha256"], digest.hexdigest())
+        self.assertEqual(closure["status"], "current")
         self.assertEqual(
-            compatibility["changed_from_0.4.3_runtime_paths"],
-            [
-                "assets/reader_html_app.js",
-                "assets/reader_html_template.html",
-                "scripts/chx_ledger.py",
-                "scripts/mathgraph/adverse_routing.py",
-                "scripts/mathgraph/cli.py",
-                "scripts/mathgraph/decision_preflight.py",
-                "scripts/mathgraph/evidence.py",
-                "scripts/mathgraph/interfaces.py",
-                "scripts/mathgraph/modes.py",
-                "scripts/mathgraph/paper_continuation.py",
-                "scripts/mathgraph/paper_logic.py",
-                "scripts/mathgraph/paper_logic_contracts.py",
-                "scripts/mathgraph/project_background.py",
-                "scripts/mathgraph/reader_html.py",
-                "scripts/mathgraph/roles.py",
-                "scripts/mathgraph/store.py",
-                "scripts/mathgraph/v5_experiments.py",
-                "scripts/mathgraph/v5_lifecycle.py",
-                "scripts/mathgraph/v5_reader.py",
-                "scripts/mathgraph/verifier_capsule.py",
-            ],
+            closure["changed_path_inventory_sha256"],
+            compatibility["changed_path_inventory_sha256"],
+        )
+        self.assertIn(
+            "scripts/mathgraph/paper_research_reliability.py",
+            closure["protected_file_paths"],
         )
         self.assertEqual(
             compatibility["project_schema_change"],
-            "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_and_explicit_paper_continuation_only",
+            "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
         )
         self.assertEqual(
             compatibility["activation_absent_behavior"],
@@ -84,7 +39,7 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         self.assertFalse(compatibility["fact_admission_change"])
         self.assertEqual(
             compatibility["fact_admission_change_scope"],
-            "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_and_prospective_explicit_paper_continuation_freshness",
+            "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_paper_continuation_freshness_prospective_paper_research_pipeline_preflight_and_strict_research_draft_composable_verification",
         )
         task_context = lock["v5_task_context_surface"]
         self.assertEqual(
@@ -126,6 +81,32 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertIn("ordinary_language", paper["plain_language_gate"])
         self.assertEqual(paper["historical_fact_effect"], "none")
+        draft = lock["research_draft_admission_surface"]
+        self.assertEqual(
+            draft["preflight_revision"],
+            "chalxius-research-draft-admission-preflight-1",
+        )
+        self.assertEqual(
+            draft["disposition"],
+            "one_target_total_all_or_none_batch_with_separate_node_and_many_to_many_successor_mapping",
+        )
+        self.assertEqual(draft["further_research_base"], "admitted_complete_fact_graph_only")
+        parallel = lock["parallel_verification_surface"]
+        self.assertIn("deterministic_monotone", parallel["aggregation"])
+        self.assertEqual(
+            parallel["project_lifecycle_revision"],
+            "chalxius-parallel-verification-lifecycle-1",
+        )
+        self.assertIn("operator_registered", parallel["trust_anchor"])
+        self.assertIn("nonce_uniqueness", parallel["freshness"])
+        self.assertIn("same_eligible_aggregate", parallel["gateway"])
+        brave = lock["brave_future_surface"]
+        self.assertEqual(brave["autonomy_level"], "advisory")
+        self.assertFalse(brave["active_campaign_pointer"])
+        self.assertEqual(brave["scheduler"], "v5_main_four_factor_frontier")
+        self.assertEqual(brave["plan_effect"], "none")
+        self.assertEqual(brave["dispatch_effect"], "none")
+        self.assertEqual(brave["truth_effect"], "none")
 
     def test_every_036_cli_command_is_accounted_for(self) -> None:
         cli_path = SKILL_ROOT / "scripts" / "mathgraph" / "cli.py"

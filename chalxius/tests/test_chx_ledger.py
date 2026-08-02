@@ -15,8 +15,13 @@ from chx_ledger import (
     dispose_issue,
     ledger_status,
     main,
+    record_finding,
     record_issue,
+    reconcile_finding,
     start_ledger,
+    validate_public_disclosure_contract,
+    verify_architecture_report,
+    verify_public_disclosure,
 )
 from mathgraph.store import MathGraphStore
 
@@ -65,7 +70,7 @@ class CHXRunLedgerTests(unittest.TestCase):
         return ledger
 
     def test_current_contract_uses_project_local_revision(self) -> None:
-        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-2")
+        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-3")
 
     def test_project_local_ledger_can_precede_v5_initialization_and_audit(self) -> None:
         ledger = self._started("run-pre-init-001")
@@ -119,6 +124,11 @@ class CHXRunLedgerTests(unittest.TestCase):
         self.assertEqual(closed["state"], "closed")
         self.assertEqual(closed["issue_count"], 0)
         self.assertFalse(closed["report_required"])
+        self.assertEqual(closed["architecture_report"]["status"], "exact")
+        self.assertEqual(
+            verify_architecture_report(ledger),
+            closed["architecture_report"],
+        )
         self.assertEqual(close_ledger(ledger), closed)
 
     def test_qualifying_issue_is_hash_chained_and_reportable(self) -> None:
@@ -138,15 +148,22 @@ class CHXRunLedgerTests(unittest.TestCase):
         ]
         self.assertEqual(
             [event["event"] for event in events],
-            ["run_started", "issue_observed", "run_closed"],
+            [
+                "run_started",
+                "finding_observed",
+                "issue_observed",
+                "finding_reconciled",
+                "run_closed",
+            ],
         )
         self.assertEqual(events[0]["previous_event_sha256"], "")
         self.assertEqual(
             events[1]["previous_event_sha256"], events[0]["event_sha256"]
         )
-        self.assertEqual(
-            events[2]["previous_event_sha256"], events[1]["event_sha256"]
-        )
+        for previous, event in zip(events, events[1:]):
+            self.assertEqual(
+                event["previous_event_sha256"], previous["event_sha256"]
+            )
 
     def test_excluded_noncausal_entry_suppresses_final_feedback(self) -> None:
         ledger = self._started()
@@ -220,8 +237,19 @@ class CHXRunLedgerTests(unittest.TestCase):
 
     def test_concurrent_records_allocate_unique_sequential_ids(self) -> None:
         ledger = self._started("run-concurrent-001")
+        def distinct_issue(index: int) -> dict[str, object]:
+            issue = self._issue()
+            issue["audit_anchors"] = [
+                *issue["audit_anchors"],
+                f"concurrent-finding:{index}",
+            ]
+            return issue
+
         with ThreadPoolExecutor(max_workers=6) as pool:
-            events = list(pool.map(lambda _: record_issue(ledger, self._issue()), range(12)))
+            events = list(pool.map(
+                lambda index: record_issue(ledger, distinct_issue(index)),
+                range(12),
+            ))
         self.assertEqual(
             sorted(event["issue_id"] for event in events),
             [f"CHX-{index:03d}" for index in range(1, 13)],
@@ -324,6 +352,132 @@ class CHXRunLedgerTests(unittest.TestCase):
             "If `report_required=false`, say nothing about the CHX ledger",
         ):
             self.assertIn(marker, policy + "\n" + skill)
+
+    def test_finding_gate_and_derived_report_fail_closed(self) -> None:
+        ledger = self._started("run-finding-gate-001")
+        issue = self._issue()
+        finding = {key: value for key, value in issue.items() if key != "causation"}
+        observed = record_finding(ledger, finding)
+        with self.assertRaisesRegex(ValueError, "unreconciled findings"):
+            close_ledger(ledger)
+        reconcile_finding(
+            ledger,
+            finding_id=observed["finding_id"],
+            status="excluded_with_reason",
+            reason="The mechanism was ruled out by the frozen audit anchor.",
+        )
+        closed = close_ledger(ledger)
+        report = verify_architecture_report(ledger)
+        self.assertEqual(report["status"], "exact")
+        self.assertEqual(closed["unreconciled_finding_ids"], [])
+        report_path = Path(report["report_path"])
+        report_path.write_text(report_path.read_text() + "drift", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "drifted"):
+            ledger_status(ledger)
+
+    def test_closed_ledger_late_finding_uses_hash_bound_successor(self) -> None:
+        predecessor = self._started("run-predecessor-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        issue = self._issue()
+        issue["audit_anchors"] = ["late-finding:CHX-013"]
+        finding = {key: value for key, value in issue.items() if key != "causation"}
+        receipt = start_ledger(
+            project_root=self.project,
+            task="Capture a late finding without reopening history.",
+            run_id="run-successor-001",
+            predecessor_ledger=predecessor,
+            inherited_findings=[finding],
+        )
+        successor = Path(receipt["ledger_path"])
+        self.assertEqual(
+            receipt["predecessor_ledger_sha256"],
+            __import__("hashlib").sha256(predecessor.read_bytes()).hexdigest(),
+        )
+        inherited_id = receipt["unreconciled_finding_ids"][0]
+        promoted = record_issue(successor, issue, finding_id=inherited_id)
+        self.assertEqual(promoted["issue_id"], "CHX-002")
+
+    def test_public_disclosure_binds_ledger_registry_and_documents(self) -> None:
+        ledger = self._started("run-public-disclosure-001")
+        record_issue(ledger, self._issue())
+        skill_root = Path(self.temporary.name) / "public-skill"
+        (skill_root / "references").mkdir(parents=True)
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "1. **CHX-001 — publication disclosure.** research-target continuity\n",
+            encoding="utf-8",
+        )
+        (skill_root / "references" / "v5_release_traceability.md").write_text(
+            "CHX-001 publication disclosure ledger equality\n",
+            encoding="utf-8",
+        )
+        contract = {
+            "contract_revision": "chalxius-chx-public-disclosure-1",
+            "included_issue_ids": ["CHX-001"],
+            "ledger_issue_ids": ["CHX-001"],
+            "ledger_run_id": "run-public-disclosure-001",
+            "latest_issue_id": "CHX-001",
+            "document_contracts": {
+                "KNOWN_LIMITATIONS.md": {
+                    "explicit_issue_enumeration": True,
+                    "required_markers": [
+                        "publication disclosure",
+                        "research-target continuity",
+                    ],
+                },
+                "references/v5_release_traceability.md": {
+                    "explicit_issue_enumeration": False,
+                    "required_markers": [
+                        "CHX-001",
+                        "ledger equality",
+                        "publication disclosure",
+                    ],
+                },
+            },
+            "private_ledger_included": False,
+            "truth_effect": "none",
+        }
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "unresolved included issue"):
+            verify_public_disclosure(ledger, skill_root)
+        dispose_issue(
+            ledger,
+            issue_id="CHX-001",
+            disposition={
+                "status": "resolved",
+                "reason": "The publication contract was implemented.",
+                "regression_evidence": ["test-public-disclosure:PASS"],
+            },
+        )
+        self.assertEqual(
+            validate_public_disclosure_contract(skill_root)["status"],
+            "current",
+        )
+        self.assertEqual(
+            verify_public_disclosure(ledger, skill_root)["status"],
+            "pass",
+        )
+        contract["ledger_run_id"] = "run-public-disclosure-other"
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "run id differs"):
+            verify_public_disclosure(ledger, skill_root)
+        contract["ledger_run_id"] = "run-public-disclosure-001"
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "research-target continuity publication disclosure\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "enumeration drifted"):
+            validate_public_disclosure_contract(skill_root)
 
 
 if __name__ == "__main__":

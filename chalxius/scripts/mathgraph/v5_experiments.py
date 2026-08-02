@@ -379,7 +379,10 @@ class V5ExperimentManager(ExperimentManager):
         selected_paths: list[str],
     ) -> dict[str, Any]:
         with self._mutation_lock():
-            self._validate_bound_task_card(task_card)
+            self._validate_bound_task_card(
+                task_card,
+                require_active_work_unit=True,
+            )
             if not selected_paths:
                 raise ValueError("V5 experiment finalize requires selected outputs")
             directory = self._directory(

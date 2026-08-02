@@ -62,7 +62,7 @@ class EvidencePlaneTests(unittest.TestCase):
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
+            base = Path(temporary).resolve()
             unconfigured = self.helper._store(base / "unconfigured", "UNCONFIGURED")
             text_artifact = unconfigured.root / "paper.txt"
             text_artifact.write_text(
@@ -479,7 +479,7 @@ class EvidencePlaneTests(unittest.TestCase):
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
+            base = Path(temporary).resolve()
             library_root = base / "library"
             self.initialize_library(library_root)
             with patch.dict(
@@ -521,30 +521,34 @@ class EvidencePlaneTests(unittest.TestCase):
                     gateway="source-gateway",
                 )
 
-                current_binding = lifecycle._runtime_binding()
-                legacy_semantic = {
-                    key: value
-                    for key, value in current_binding.items()
-                    if key != "runtime_identity_sha256"
-                }
                 frozen_root = base / "frozen-chalxius-0.4.4"
                 frozen_root.mkdir()
                 frozen_version = frozen_root / "VERSION"
+                frozen_payload = frozen_root / "runtime_payload.txt"
                 frozen_manifest = frozen_root / "MANIFEST.sha256"
                 frozen_version.write_text("0.4.4\n", encoding="utf-8")
-                frozen_manifest.write_text("frozen fixture manifest\n", encoding="utf-8")
-                legacy_semantic.update(
-                    {
-                        "skill_root": str(frozen_root),
-                        "skill_version": "0.4.4",
-                        "version_file_sha256": sha256_bytes(
-                            frozen_version.read_bytes()
-                        ),
-                        "manifest_file_sha256": sha256_bytes(
-                            frozen_manifest.read_bytes()
-                        ),
-                    }
+                frozen_payload.write_text(
+                    "frozen fixture payload\n", encoding="utf-8"
                 )
+                frozen_manifest.write_text(
+                    f"{sha256_bytes(frozen_version.read_bytes())}  VERSION\n"
+                    f"{sha256_bytes(frozen_payload.read_bytes())}  runtime_payload.txt\n",
+                    encoding="utf-8",
+                )
+                legacy_semantic = {
+                    "schema_version": 1,
+                    "skill_root": str(frozen_root),
+                    "skill_version": "0.4.4",
+                    "version_file_sha256": sha256_bytes(
+                        frozen_version.read_bytes()
+                    ),
+                    "manifest_file_sha256": sha256_bytes(
+                        frozen_manifest.read_bytes()
+                    ),
+                    "worker_ledger_contract": (
+                        "exact_task_card_runtime_binding_required"
+                    ),
+                }
                 legacy_binding = {
                     **legacy_semantic,
                     "runtime_identity_sha256": sha256_json(legacy_semantic),

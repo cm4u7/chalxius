@@ -564,18 +564,25 @@ class Chalxius044ContextTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn("requires --task-card", stderr.getvalue())
 
-    def test_host_role_is_unchanged_and_v4_workers_do_not_expand(self) -> None:
+    def test_host_v5_verification_extension_is_additive_and_v4_does_not_expand(self) -> None:
         self.assertEqual(
             allowed_commands_for_workflow("host", 5),
             {
                 "pulse-dispatch",
                 "pulse-status",
                 "pulse-audit",
+                "verification-packet-prepare",
+                "verification-packet-record",
+                "verification-status",
             },
         )
         self.assertEqual(
-            allowed_commands_for_workflow("host", 5),
             allowed_commands_for_workflow("host", 4),
+            {
+                "pulse-dispatch",
+                "pulse-status",
+                "pulse-audit",
+            },
         )
         self.assertNotIn("plan-round", allowed_commands_for_workflow("host", 5))
         self.assertNotIn(

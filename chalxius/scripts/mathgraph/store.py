@@ -746,6 +746,20 @@ class MathGraphStore:
     def v5_lifecycle(self) -> V5LifecycleManager:
         return V5LifecycleManager(self)
 
+    def brave_future(self) -> Any:
+        """Return the optional V5 advisory sidecar without materializing it.
+
+        The manager owns its V5 mutation locking.  Merely asking for the
+        accessor is read-only, which preserves byte-for-byte absent behavior
+        for projects that never opt in.
+        """
+
+        if self.workflow_evidence_version() != V5_WORKFLOW_EVIDENCE_VERSION:
+            raise ValueError("Brave Future is available only for V5 projects")
+        from .brave_future import BraveFutureManager
+
+        return BraveFutureManager(self)
+
     def adverse_routes(self) -> AdverseRoutingManager:
         return AdverseRoutingManager(self)
 

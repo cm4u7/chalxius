@@ -14,6 +14,7 @@ _V4_OBJECT_LIST_FIELDS = (
     "quantifier_ledger",
     "computational_evidence",
     "terminology",
+    "semantic_interface",
 )
 
 
@@ -218,6 +219,7 @@ def parse_fact_markdown(text: str) -> Fact:
         convention_profile_ids=convention_profile_ids,
         computational_evidence=v4_object_lists["computational_evidence"],
         terminology=v4_object_lists["terminology"],
+        semantic_interface=v4_object_lists["semantic_interface"],
         statement=sections["statement"],
         proof=sections["proof"],
         intuition=sections["intuition"],
@@ -298,6 +300,16 @@ def serialize_fact(fact: Fact) -> str:
             "terminology: "
             + json.dumps(
                 fact.terminology,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+    if fact.semantic_interface:
+        lines.append(
+            "semantic_interface: "
+            + json.dumps(
+                fact.semantic_interface,
                 ensure_ascii=False,
                 separators=(",", ":"),
                 sort_keys=True,

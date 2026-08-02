@@ -678,6 +678,7 @@ def validate_worker_return_v4(
     optional: set[str] = set()
     if outcome == "fact_submission":
         required |= _FACT_RETURN_FIELDS
+        optional.add("semantic_interface")
     elif outcome == "fact_bundle_submission":
         required |= _FACT_BUNDLE_RETURN_FIELDS
     elif outcome == "counterexample":
@@ -771,6 +772,8 @@ def validate_worker_return_v4(
             "artifacts",
         ):
             _require_object_list(payload, key)
+        if "semantic_interface" in payload:
+            _require_object_list(payload, "semantic_interface")
         glossary = payload.get("glossary_introduces")
         if not isinstance(glossary, dict) or any(
             not isinstance(key, str) or not isinstance(value, str)
@@ -798,6 +801,7 @@ def validate_worker_return_v4(
             require_exact_keys(
                 fact,
                 required=_BUNDLE_FACT_FIELDS,
+                optional={"semantic_interface"},
                 label=f"fact_bundle_submission facts[{index}]",
             )
             if require_string(fact, "problem_id") != task_card["project_id"]:
@@ -819,6 +823,8 @@ def validate_worker_return_v4(
                 label=f"fact_bundle_submission facts[{index}]",
                 allow_legacy_adoption=allow_legacy_adoption,
             )
+            if "semantic_interface" in fact:
+                _require_object_list(fact, "semantic_interface")
         _require_object_list(payload, "artifacts")
     else:
         for key in {

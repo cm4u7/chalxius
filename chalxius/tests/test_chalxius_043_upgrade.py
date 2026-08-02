@@ -691,7 +691,23 @@ class Chalxius043UpgradeTests(unittest.TestCase):
                     for item in review_card["adverse_routing"]["baseline_rules"]
                 },
             )
-            self.assertNotIn("chx-", json.dumps(review_card).casefold())
+            route_projection = {
+                "adverse_routing": review_card["adverse_routing"],
+                "program_math_contract": review_card["assurance_contract"][
+                    "program_math_contract"
+                ],
+                "source_research_dossier": review_card["mathematical_state"][
+                    "source_research_dossier"
+                ],
+                "narrative_plane": review_card["narrative_plane"],
+            }
+            self.assertNotIn("chx-", json.dumps(route_projection).casefold())
+            self.assertEqual(
+                review_card["assurance_contract"]["program_math_contract"][
+                    "architecture_issue_import"
+                ],
+                "forbidden",
+            )
 
             ordinary = store.v5_lifecycle().add_research(
                 {

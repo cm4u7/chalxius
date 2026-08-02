@@ -113,6 +113,25 @@ ALL_COMMANDS = {
     "paper-continuation-plan",
     "paper-continuation-status",
     "paper-continuation-dispose",
+    "research-draft-plan",
+    "research-draft-authorize-major-revision",
+    "research-draft-disposition-batch",
+    "research-draft-status",
+    "verification-key-register",
+    "verification-plan-prepare",
+    "verification-plan-record",
+    "verification-packet-prepare",
+    "verification-packet-record",
+    "verification-receipt-prepare",
+    "verification-receipt-record",
+    "verification-aggregate",
+    "verification-status",
+    "brave-future-enable",
+    "brave-future-status",
+    "brave-future-audit",
+    "campaign-reassess",
+    "campaign-reassess-decide",
+    "brave-future-disable",
     "evidence-library-status",
     "evidence-query",
     "evidence-sync-retry",
@@ -236,6 +255,19 @@ ROLE_COMMANDS = {
         "paper-continuation-plan",
         "paper-continuation-status",
         "paper-continuation-dispose",
+        "research-draft-plan",
+        "research-draft-disposition-batch",
+        "research-draft-status",
+        "verification-plan-prepare",
+        "verification-plan-record",
+        "verification-packet-prepare",
+        "verification-receipt-prepare",
+        "verification-receipt-record",
+        "verification-aggregate",
+        "verification-status",
+        "brave-future-status",
+        "brave-future-audit",
+        "campaign-reassess",
         "evidence-library-status",
         "evidence-query",
         "evidence-sync-retry",
@@ -249,6 +281,9 @@ ROLE_COMMANDS = {
         "pulse-dispatch",
         "pulse-status",
         "pulse-audit",
+        "verification-packet-prepare",
+        "verification-packet-record",
+        "verification-status",
     },
     # Verifiers are deliberately not project-shell users.  The orchestrator
     # gives each fresh verifier one frozen packet and one review return path.
@@ -267,6 +302,7 @@ ROLE_COMMANDS = {
         "certification-record",
         "certification-decision-check",
         "fact-admit",
+        "verification-status",
     },
     # Paper auditors can inspect exact frozen/staged paper evidence and append
     # one independent review. They receive no blackboard, memory, fact, or
@@ -292,6 +328,12 @@ V4_WORKER_COMMANDS = {
     "experiment-finalize",
 }
 V5_WORKER_COMMANDS = V4_WORKER_COMMANDS | {"project-background-read"}
+V4_HOST_COMMANDS = {"pulse-dispatch", "pulse-status", "pulse-audit"}
+V5_HOST_COMMANDS = V4_HOST_COMMANDS | {
+    "verification-packet-prepare",
+    "verification-packet-record",
+    "verification-status",
+}
 V4_BOUND_WORKER_QUERY_COMMANDS = {
     "claim-show",
     "convention-show",
@@ -315,6 +357,10 @@ def allowed_commands_for_workflow(
         return commands.intersection(V5_WORKER_COMMANDS)
     if role == "worker" and workflow_evidence_version == 4:
         return commands.intersection(V4_WORKER_COMMANDS)
+    if role == "host" and workflow_evidence_version >= 5:
+        return commands.intersection(V5_HOST_COMMANDS)
+    if role == "host" and workflow_evidence_version == 4:
+        return commands.intersection(V4_HOST_COMMANDS)
     return commands
 
 

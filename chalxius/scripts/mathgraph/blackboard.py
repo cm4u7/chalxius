@@ -1395,7 +1395,15 @@ class BlackboardStore:
         }
         return sorted(selected_nodes), sorted(selected_edges), receipt
 
-    def snapshot(self, *, query: dict[str, Any], actor: str) -> dict[str, Any]:
+    def preview_snapshot(self, *, query: dict[str, Any]) -> dict[str, Any]:
+        """Build the exact snapshot payload without publishing any bytes.
+
+        Planning extensions may need to bind the current Blackboard cut while
+        remaining genuinely read-only.  Keeping construction here also makes
+        ``snapshot`` a publisher over the same canonical payload instead of a
+        subtly different second implementation.
+        """
+
         nodes, edges, _ = self._current_objects()
         node_ids, edge_ids, omission = self._bounded_query(
             nodes=nodes, edges=edges, query=query
@@ -1425,6 +1433,38 @@ class BlackboardStore:
         }
         snapshot_id = "bbs-" + sha256_json(manifest_body)
         manifest = {**manifest_body, "snapshot_id": snapshot_id}
+        node_bytes = b"".join(
+            canonical_json_bytes(nodes[node_id]) + b"\n" for node_id in node_ids
+        )
+        edge_bytes = b"".join(
+            canonical_json_bytes(edges[edge_id]) + b"\n" for edge_id in edge_ids
+        )
+        return {
+            "snapshot_id": snapshot_id,
+            "snapshot_sha256": sha256_bytes(
+                (
+                    json.dumps(
+                        manifest,
+                        ensure_ascii=False,
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            ),
+            "query_sha256": manifest["query_sha256"],
+            "omission_receipt": omission,
+            "manifest": manifest,
+            "nodes_bytes": node_bytes,
+            "edges_bytes": edge_bytes,
+            "publication_effect": "none",
+            "truth_effect": "none",
+        }
+
+    def snapshot(self, *, query: dict[str, Any], actor: str) -> dict[str, Any]:
+        preview = self.preview_snapshot(query=query)
+        manifest = preview["manifest"]
+        snapshot_id = preview["snapshot_id"]
         directory = self.snapshots_dir / snapshot_id
         manifest_path = directory / "manifest.json"
         if manifest_path.exists():
@@ -1434,19 +1474,13 @@ class BlackboardStore:
         else:
             directory.mkdir(parents=True, exist_ok=False)
             self._write_json_once(manifest_path, manifest)
-            self._write_once(
-                directory / "nodes.jsonl",
-                b"".join(canonical_json_bytes(nodes[node_id]) + b"\n" for node_id in node_ids),
-            )
-            self._write_once(
-                directory / "edges.jsonl",
-                b"".join(canonical_json_bytes(edges[edge_id]) + b"\n" for edge_id in edge_ids),
-            )
+            self._write_once(directory / "nodes.jsonl", preview["nodes_bytes"])
+            self._write_once(directory / "edges.jsonl", preview["edges_bytes"])
         return {
             "snapshot_id": snapshot_id,
             "snapshot_sha256": sha256_bytes(manifest_path.read_bytes()),
             "query_sha256": manifest["query_sha256"],
-            "omission_receipt": omission,
+            "omission_receipt": preview["omission_receipt"],
             "manifest_path": str(manifest_path),
             "actor": actor,
         }

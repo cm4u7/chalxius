@@ -1,4 +1,4 @@
-Verify Chalxius 0.4.4 — Back to the Future as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3 as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
@@ -11,8 +11,10 @@ immediately before final reporting. Store project-bound ledgers at
 PROJECT/chx-ledgers/ and projectless ledgers in private host state outside the
 skill. The project-local directory has no audit, certification, or truth
 authority. Record only problems caused or materially amplified by Chalxius
-architecture. Report qualifying entries when `report_required=true`; when it
-is false, say nothing about the ledger. Do not backfill, reclassify, invalidate,
+architecture. Under ledger revision 3, record every discovered mechanism first
+as a stable finding and reconcile it transactionally before close; preserve
+typed relations and successor-ledger lineage. Report qualifying entries when
+`report_required=true`; when it is false, say nothing. Do not backfill, reclassify, invalidate,
 or request rework from a task already underway under 0.4.0, even if that task
 later loads some 0.4.1-or-later bytes.
 
@@ -21,6 +23,16 @@ authorization. Never start original Danus, pre-Chalxius Chalk, or the retired
 coordinator as a parallel runtime. Original Danus 0.2.9 and later versions are
 behavioral and performance references only; no source module, writer, receipt,
 review, runtime, or Fact authority is inherited.
+
+Before every authorized global cutover or rollback, use
+scripts/runtime_cutover.py with an explicit protected-project inventory (or the
+explicit no-project assertion), approved candidate manifest hash, rollback
+root, and host archive root. The gate must verify terminal status/audit, archive
+the prior runtime, swap, revalidate and archive the installed runtime, rerun
+project audits, and automatically restore the prior install on failure.
+Historical archives
+are validation data only: never import or execute them, never use them for a
+worker or write, and never rewrite frozen cards or any graph-plane authority.
 
 Initialize new work as workflow-evidence V5. A V5 root starts with an empty
 Fact Graph. V4 projects and predecessor artifacts remain readable but have no
@@ -72,11 +84,20 @@ complete decision template, and standalone preflight. Gateway admission must
 revalidate the exact accepted decision; missing evidence leaves an explicit
 candidate or blocker in every reasoning mode.
 
-For paper-led work, preserve source, reconstruction, Audit, Blackboard,
-Research, Fact, Reader, and Learning labels. Bind current nonsuperseded Paper
-Logic and Audit snapshots and nodewise target coverage. Correct graph mistakes
-append-only through challenge, disposition, replacement, and a new independently
-reviewed snapshot.
+For paper-led work, distinguish a research draft from an external finished
+publication. Decompose a draft into its full proposition-total Paper DAG,
+research and repair it nodewise, preserve its declared stance absent exact
+Operator authorization, publish one atomic target-total disposition batch, and
+admit the complete mapped Candidate DAG before continuing from its Fact Graph.
+External finished publications remain Evidence until explicit bridge and fresh
+admission. Preserve source, reconstruction, Audit, Blackboard, Research, Fact,
+Reader, and Learning labels and correct graph mistakes copy-on-write.
+
+Brave Future is explicit exact-Campaign advisory BF-1 through BF-3 only. It may
+project strict repair lineage over the existing four-factor frontier and write
+one atomic nontruth reassessment transaction. It never reads ACTIVE, creates a
+round or Research, dispatches, closes a Campaign, or affects Candidate,
+Certification, Gateway, Reader, Learner, or Fact. Reject plan_one and execute_one.
 
 For load-bearing computation, retain immutable commands, implementations,
 versions, checkpoints, artifacts, exact output hashes, and independent replay.
@@ -103,7 +124,7 @@ context compaction, reread the card/index and retrieve exact chunks again. If
 the file is absent, continue without synthesizing it. It remains nontruth; every
 load-bearing use returns to the exact cited source.
 
-Preserve Reader packet schema v1 and renderer revision 17. The deterministic V5
+Preserve Reader packet schema v1 and renderer revision 20. The deterministic V5
 projection may show Fact, Research, Certification, current and superseded
 Paper/Audit, Blackboard, and project-background objects with exact native
 authority labels. Only admitted Fact-plane nodes are premises. Export remains

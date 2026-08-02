@@ -41,6 +41,7 @@ Every staging bundle has exactly these fields:
   "paper_id": "SOURCE_SPECIFIC_ID",
   "graph_kind": "logic",
   "domain_profile": "philosophy",
+  "source_role": "research_draft",
   "builder": "ACTOR",
   "builder_context_id": "FRESH_CONTEXT_ID",
   "source": {},
@@ -53,9 +54,97 @@ Every staging bundle has exactly these fields:
 ```
 
 `graph_kind` is `logic` or `audit`; `domain_profile` is `philosophy`,
-`mathematics`, or `mixed`. Logic uses an empty `base_snapshot_id`. Audit uses
-the exact current Logic `pls-*` id. `supersedes_snapshot_id` is empty unless
-this is a copy-on-write replacement of the same paper and graph kind.
+`mathematics`, `empirical`, or `mixed`. `source_role` is mandatory on every new
+feature instance. Use `research_draft` when this artifact is the object to be
+repaired, admitted as a complete Fact Graph, and then researched further. Use
+`external_finished_publication` for an outside finished work; it remains
+Evidence and cannot gain Fact authority from publication or credibility.
+`external_reference` is read compatibility for 0.5.0 bytes and is rejected for
+new strict research-draft work. Logic uses an empty `base_snapshot_id`. Audit
+uses the exact current Logic `pls-*` id and the identical source role.
+`supersedes_snapshot_id` is empty unless this is a copy-on-write replacement of
+the same paper and graph kind.
+
+## Strict research-draft semantic inventory
+
+A new `research_draft` Logic graph is full-artifact and proposition-total; a
+source-unit self-mapping is not semantic coverage. Each `source_unit` adds a
+nonempty `proposition_inventory`. Every component has exactly:
+
+```json
+{
+  "component_id": "source-component-1",
+  "exact_span": {
+    "start": 0,
+    "end": 24,
+    "text": "exact source-local text",
+    "text_sha256": "64hex"
+  },
+  "proposition_kind": "headline_conclusion",
+  "attribution": "author",
+  "speaker": "author",
+  "quotation_status": "author_text",
+  "operator_ledger": [],
+  "qualifiers": [],
+  "challengeability": "independently_challengeable",
+  "expected_graph_roles": ["headline_conclusion"],
+  "mapped_node_ids": ["c1", "t1"],
+  "disposition": "represented",
+  "reason": "Exact source proposition remains load-bearing.",
+  "composition_witness": "One independently challengeable proposition."
+}
+```
+
+The span is relative to that one source unit, is hash-bound, and may not cross
+speaker or attribution boundaries. Proposition kinds include premise,
+intermediate/headline conclusion, definition, objection, reply,
+qualification, method, empirical hypothesis, limitation, mathematical claim,
+and background. Every high-risk operator remains in the component's operator
+ledger. Qualifiers have exact `qualifier_id`, `kind`, `value`, and `scope`;
+kinds include modality, quantifier, temporal, applicability, comparison,
+exception, authorization, and threshold.
+
+Each coverage unit additionally has
+`proposition_component_ids` and `component_dispositions`. The former equals
+the source unit's complete inventory. Every disposition has exactly
+`component_id`, `disposition`, `mapped_node_ids`, and `reason`; its disposition
+is `represented`, `excluded_with_reason`, or `unresolved`. An argumentative,
+independently challengeable represented component must map to a claim,
+inference, or target, not merely its source unit.
+
+Every research-draft claim additionally has all four fields:
+
+```json
+{
+  "semantic_direction": "equivalent",
+  "source_component_ids": ["source-component-1"],
+  "residual_component_dispositions": [],
+  "qualifier_set": []
+}
+```
+
+Directions are `exact_literal`, `equivalent`, `narrowing`, `broadening`,
+`partial`, `reconstruction`, `emendation`, or `erratum`, constrained by the
+representation kind. Exact/equivalent claims must transport the exact source
+operator ledger and qualifier set. A narrowing, broadening, or partial paraphrase must explicitly
+dispose every residual component; it cannot silently shadow a stronger source
+claim. Component-to-claim mappings are reciprocal, source-unit-local, and
+speaker-local. Version-specific generated witness prose such as `V8` cannot be
+used as a semantic binding.
+
+One claim cannot merge two components marked `independently_challengeable`.
+Split them into claim nodes and an explicit inference mini-DAG. This rule is a
+fail-closed structural check over the submitted independent proposition
+inventory, not an assertion that lexical scanning proves philosophical
+atomicity. Fresh reviewers remain responsible for finding an omitted or
+misclassified proposition.
+
+At Candidate Release, every research-draft Fact uses one language-neutral
+schema-6 semantic component. That interface must preserve the plan's domain
+profile and bind the same Candidate component id, exact source-component ids,
+and exact failure-mode ids. All logical source operators and source qualifiers
+must be present in the interface. Additional semantics remain verifier-visible
+and do not acquire authority merely by being declared.
 
 `source` has exactly:
 

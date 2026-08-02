@@ -56,6 +56,56 @@ QUANTIFIER_KINDS = {
     "outside_finite_set",
 }
 WITNESS_KINDS = {"exists", "exists_unique", "choose", "outside_finite_set"}
+SEMANTIC_INTERFACE_REVISION = "chalxius-language-neutral-interface-1"
+SEMANTIC_OPERATOR_KINDS = {
+    "conditional",
+    "negation",
+    "modality",
+    "normative",
+    "quantifier",
+    "comparator",
+    "temporal",
+    "applicability",
+}
+SEMANTIC_OBJECT_KINDS = {
+    "agent",
+    "group",
+    "institutional_role",
+    "intervention",
+    "time",
+    "applicability_domain",
+    "right",
+    "risk",
+    "authorization_condition",
+    "threshold",
+    "comparator_endpoint",
+    "mathematical_object",
+    "empirical_entity",
+}
+SEMANTIC_COMPONENT_KINDS = {
+    "premise",
+    "conclusion",
+    "definition",
+    "application",
+    "objection",
+    "response",
+    "empirical_hypothesis",
+    "method",
+    "mathematical_claim",
+}
+SEMANTIC_QUALIFIER_KINDS = {
+    "modality",
+    "quantifier",
+    "temporal",
+    "applicability",
+    "comparison",
+    "exception",
+    "authorization",
+    "threshold",
+}
+_CJK_CONDITIONAL_SUSPICION_RE = re.compile(
+    r"(?:如果|若|当.+时|只有.+才|除非|在.+条件下)"
+)
 
 
 def clause_is_conditional(text: str) -> bool:
@@ -258,6 +308,269 @@ def validate_quantifier_ledger(
     return normalized
 
 
+def _semantic_string_list(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        raise ValueError(f"{label} must be a list of nonempty strings")
+    if len(value) != len(set(value)):
+        raise ValueError(f"{label} must not contain duplicates")
+    return list(value)
+
+
+def _validate_language_neutral_semantic_interface(
+    value: Any,
+    *,
+    clauses: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Validate author-supplied semantics without using lexical detectors as authority."""
+
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ValueError("semantic_interface must be a list of objects")
+    by_clause = {item["clause_id"]: item for item in clauses}
+    normalized: list[dict[str, Any]] = []
+    seen_clauses: set[str] = set()
+    seen_components: set[str] = set()
+    for index, item in enumerate(value, 1):
+        label = f"semantic_interface[{index}]"
+        require_exact_keys(
+            item,
+            required={
+                "interface_revision",
+                "domain_profile",
+                "clause_id",
+                "component_id",
+                "component_kind",
+                "statement",
+                "statement_sha256",
+                "operators",
+                "hypotheses",
+                "typed_objects",
+                "qualifiers",
+                "comparison",
+                "source_component_ids",
+                "failure_mode_ids",
+            },
+            label=label,
+        )
+        if item["interface_revision"] != SEMANTIC_INTERFACE_REVISION:
+            raise ValueError(f"{label} interface revision is unsupported")
+        domain_profile = require_string(item, "domain_profile")
+        if domain_profile not in {"philosophy", "mathematics", "empirical", "mixed"}:
+            raise ValueError(f"{label} domain_profile is invalid")
+        clause_id = require_string(item, "clause_id")
+        component_id = require_string(item, "component_id")
+        if clause_id not in by_clause or clause_id in seen_clauses:
+            raise ValueError(f"{label} clause is unknown or duplicated")
+        if component_id in seen_components:
+            raise ValueError(f"{label} component id is duplicated")
+        seen_clauses.add(clause_id)
+        seen_components.add(component_id)
+        component_kind = require_string(item, "component_kind")
+        if component_kind not in SEMANTIC_COMPONENT_KINDS:
+            raise ValueError(f"{label} component_kind is invalid")
+        statement = require_string(item, "statement")
+        if statement != by_clause[clause_id]["text"]:
+            raise ValueError(f"{label} statement is not the exact clause text")
+        if item["statement_sha256"] != sha256_bytes(statement.encode("utf-8")):
+            raise ValueError(f"{label} statement hash mismatch")
+        operators = item["operators"]
+        if not isinstance(operators, list) or any(
+            not isinstance(entry, dict) for entry in operators
+        ):
+            raise ValueError(f"{label} operators must be objects")
+        operator_ids: set[str] = set()
+        normalized_operators: list[dict[str, Any]] = []
+        for op_index, operator in enumerate(operators, 1):
+            op_label = f"{label}.operators[{op_index}]"
+            require_exact_keys(
+                operator,
+                required={"operator_id", "kind", "value", "scope", "depends_on"},
+                label=op_label,
+            )
+            operator_id = require_string(operator, "operator_id")
+            if operator_id in operator_ids:
+                raise ValueError(f"{label} operator id is duplicated")
+            operator_ids.add(operator_id)
+            kind = require_string(operator, "kind")
+            if kind not in SEMANTIC_OPERATOR_KINDS:
+                raise ValueError(f"{op_label} kind is invalid")
+            normalized_operators.append(
+                {
+                    "operator_id": operator_id,
+                    "kind": kind,
+                    "value": require_string(operator, "value"),
+                    "scope": require_string(operator, "scope"),
+                    "depends_on": _semantic_string_list(
+                        operator["depends_on"], f"{op_label}.depends_on"
+                    ),
+                }
+            )
+        for operator in normalized_operators:
+            unknown = set(operator["depends_on"]).difference(operator_ids)
+            if unknown or operator["operator_id"] in operator["depends_on"]:
+                raise ValueError(f"{label} operator dependency is invalid")
+        hypotheses = item["hypotheses"]
+        if not isinstance(hypotheses, list) or any(
+            not isinstance(entry, dict) for entry in hypotheses
+        ):
+            raise ValueError(f"{label} hypotheses must be objects")
+        normalized_hypotheses: list[dict[str, str]] = []
+        hypothesis_ids: set[str] = set()
+        for hyp_index, hypothesis in enumerate(hypotheses, 1):
+            hyp_label = f"{label}.hypotheses[{hyp_index}]"
+            require_exact_keys(
+                hypothesis,
+                required={
+                    "hypothesis_id",
+                    "statement",
+                    "modality",
+                    "quantifier_scope",
+                    "temporal_scope",
+                    "applicability_scope",
+                },
+                label=hyp_label,
+            )
+            hypothesis_id = require_string(hypothesis, "hypothesis_id")
+            if hypothesis_id in hypothesis_ids:
+                raise ValueError(f"{label} hypothesis id is duplicated")
+            hypothesis_ids.add(hypothesis_id)
+            normalized_hypotheses.append(
+                {
+                    key: require_string(hypothesis, key)
+                    for key in (
+                        "hypothesis_id",
+                        "statement",
+                        "modality",
+                        "quantifier_scope",
+                        "temporal_scope",
+                        "applicability_scope",
+                    )
+                }
+            )
+        typed_objects = item["typed_objects"]
+        if not isinstance(typed_objects, list) or any(
+            not isinstance(entry, dict) for entry in typed_objects
+        ):
+            raise ValueError(f"{label} typed_objects must be objects")
+        normalized_objects: list[dict[str, str]] = []
+        object_ids: set[str] = set()
+        for object_index, typed_object in enumerate(typed_objects, 1):
+            object_label = f"{label}.typed_objects[{object_index}]"
+            require_exact_keys(
+                typed_object,
+                required={"object_id", "kind", "role", "scope"},
+                label=object_label,
+            )
+            object_id = require_string(typed_object, "object_id")
+            if object_id in object_ids:
+                raise ValueError(f"{label} typed object id is duplicated")
+            object_ids.add(object_id)
+            kind = require_string(typed_object, "kind")
+            if kind not in SEMANTIC_OBJECT_KINDS:
+                raise ValueError(f"{object_label} kind is invalid")
+            normalized_objects.append(
+                {
+                    "object_id": object_id,
+                    "kind": kind,
+                    "role": require_string(typed_object, "role"),
+                    "scope": require_string(typed_object, "scope"),
+                }
+            )
+        qualifiers = item["qualifiers"]
+        if not isinstance(qualifiers, list) or any(
+            not isinstance(entry, dict) for entry in qualifiers
+        ):
+            raise ValueError(f"{label} qualifiers must be objects")
+        normalized_qualifiers: list[dict[str, str]] = []
+        qualifier_ids: set[str] = set()
+        for qualifier_index, qualifier in enumerate(qualifiers, 1):
+            qualifier_label = f"{label}.qualifiers[{qualifier_index}]"
+            require_exact_keys(
+                qualifier,
+                required={"qualifier_id", "kind", "value", "scope"},
+                label=qualifier_label,
+            )
+            qualifier_id = require_string(qualifier, "qualifier_id")
+            if qualifier_id in qualifier_ids:
+                raise ValueError(f"{label} qualifier id is duplicated")
+            qualifier_ids.add(qualifier_id)
+            kind = require_string(qualifier, "kind")
+            if kind not in SEMANTIC_QUALIFIER_KINDS:
+                raise ValueError(f"{qualifier_label} kind is invalid")
+            normalized_qualifiers.append(
+                {
+                    "qualifier_id": qualifier_id,
+                    "kind": kind,
+                    "value": require_string(qualifier, "value"),
+                    "scope": require_string(qualifier, "scope"),
+                }
+            )
+        comparison = item["comparison"]
+        if comparison is not None:
+            if not isinstance(comparison, dict):
+                raise ValueError(f"{label} comparison must be null or an object")
+            require_exact_keys(
+                comparison,
+                required={"relation", "left_object_id", "right_object_id", "standard", "scope"},
+                label=f"{label} comparison",
+            )
+            comparison = {
+                key: require_string(comparison, key)
+                for key in (
+                    "relation",
+                    "left_object_id",
+                    "right_object_id",
+                    "standard",
+                    "scope",
+                )
+            }
+            if comparison["left_object_id"] not in object_ids or comparison[
+                "right_object_id"
+            ] not in object_ids:
+                raise ValueError(f"{label} comparison endpoints are not typed objects")
+        normalized.append(
+            {
+                "interface_revision": SEMANTIC_INTERFACE_REVISION,
+                "domain_profile": domain_profile,
+                "clause_id": clause_id,
+                "component_id": component_id,
+                "component_kind": component_kind,
+                "statement": statement,
+                "statement_sha256": item["statement_sha256"],
+                "operators": normalized_operators,
+                "hypotheses": normalized_hypotheses,
+                "typed_objects": normalized_objects,
+                "qualifiers": normalized_qualifiers,
+                "comparison": comparison,
+                "source_component_ids": _semantic_string_list(
+                    item["source_component_ids"], f"{label}.source_component_ids"
+                ),
+                "failure_mode_ids": _semantic_string_list(
+                    item["failure_mode_ids"], f"{label}.failure_mode_ids"
+                ),
+            }
+        )
+    if seen_clauses != set(by_clause):
+        raise ValueError(
+            "semantic_interface must cover every statement clause exactly once"
+        )
+    return normalized
+
+
+def _lexical_semantic_suspicions(text: str) -> list[str]:
+    """Return nonauthoritative hints; semantic contracts remain decisive."""
+
+    suspicions: list[str] = []
+    if clause_is_conditional(text) or _CJK_CONDITIONAL_SUSPICION_RE.search(text):
+        suspicions.append("possible_conditional_surface")
+    if re.search(r"(?:must|ought|should|必须|应当|有义务)", text, re.IGNORECASE):
+        suspicions.append("possible_normative_surface")
+    if re.search(r"(?:before|after|during|此前|之后|期间|当时)", text, re.IGNORECASE):
+        suspicions.append("possible_temporal_surface")
+    return sorted(suspicions)
+
+
 def build_statement_interface(
     *,
     fact: Fact,
@@ -300,7 +613,36 @@ def build_statement_interface(
         V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     }:
         raise ValueError("statement interface assurance contract is unsupported")
-    if current_assurance:
+    rich_semantics = bool(getattr(fact, "semantic_interface", []))
+    normalized_semantics: list[dict[str, Any]] = []
+    if rich_semantics:
+        if not current_assurance:
+            raise ValueError(
+                "language-neutral semantic_interface requires current assurance"
+            )
+        normalized_semantics = _validate_language_neutral_semantic_interface(
+            fact.semantic_interface,
+            clauses=clauses,
+        )
+        semantics_by_clause = {
+            item["clause_id"]: item for item in normalized_semantics
+        }
+        for clause in clauses:
+            semantic = semantics_by_clause[clause["clause_id"]]
+            clause["hypothesis_labels"] = [
+                item["hypothesis_id"] for item in semantic["hypotheses"]
+            ]
+            clause["conditional"] = any(
+                item["kind"] == "conditional"
+                for item in semantic["operators"]
+            )
+            clause["premise_inventory"] = semantic["hypotheses"]
+            clause["typed_objects"] = semantic["typed_objects"]
+            clause["semantic_contract"] = semantic
+            clause["lexical_suspicions"] = _lexical_semantic_suspicions(
+                clause["text"]
+            )
+    elif current_assurance:
         for clause in clauses:
             explicit_labels = EXPLICIT_HYPOTHESIS_RE.findall(clause["text"])
             if len(explicit_labels) != len(set(explicit_labels)):
@@ -333,12 +675,16 @@ def build_statement_interface(
             clause["typed_objects"] = extract_geometric_objects(clause["text"])
     interface = {
         "schema_version": (
-            5
+            6
+            if rich_semantics
+            else 5
             if current_assurance
             else (4 if workflow_evidence_version >= 4 else 3)
         ),
         "policy_revision": (
-            V5_ASSURANCE_CONTRACT_REVISION
+            SEMANTIC_INTERFACE_REVISION
+            if rich_semantics
+            else V5_ASSURANCE_CONTRACT_REVISION
             if current_assurance
             else (
                 POLICY_REVISION_V4
@@ -401,8 +747,11 @@ def validate_statement_interface(
         raise ValueError("statement interface clauses must be nonempty")
     seen: set[str] = set()
     current_interface = interface.get("schema_version") == 5
+    rich_interface = interface.get("schema_version") == 6
     if current_interface and interface.get("policy_revision") != V5_ASSURANCE_CONTRACT_REVISION:
         raise ValueError("current statement interface assurance revision is invalid")
+    if rich_interface and interface.get("policy_revision") != SEMANTIC_INTERFACE_REVISION:
+        raise ValueError("language-neutral statement interface revision is invalid")
     for index, clause in enumerate(clauses, 1):
         if not isinstance(clause, dict):
             raise ValueError(f"statement interface clause {index} is not an object")
@@ -412,10 +761,12 @@ def validate_statement_interface(
             "hypothesis_labels",
             "quantifier_ids",
         }
-        if current_interface:
+        if current_interface or rich_interface:
             clause_fields.update(
                 {"conditional", "premise_inventory", "typed_objects"}
             )
+        if rich_interface:
+            clause_fields.update({"semantic_contract", "lexical_suspicions"})
         require_exact_keys(
             clause,
             required=clause_fields,
@@ -431,10 +782,10 @@ def validate_statement_interface(
                 not isinstance(item, str) for item in clause[key]
             ):
                 raise ValueError(f"statement interface clause {key} is invalid")
-        if current_interface:
+        if current_interface or rich_interface:
             if not isinstance(clause.get("conditional"), bool):
                 raise ValueError("statement interface conditional flag is invalid")
-            if clause["conditional"] != clause_is_conditional(clause["text"]):
+            if current_interface and clause["conditional"] != clause_is_conditional(clause["text"]):
                 raise ValueError("statement interface conditional projection drifted")
             inventory = clause.get("premise_inventory")
             if not isinstance(inventory, list) or any(
@@ -443,17 +794,35 @@ def validate_statement_interface(
                 raise ValueError("statement interface premise inventory is invalid")
             inventory_labels: list[str] = []
             for premise_index, premise in enumerate(inventory, 1):
-                require_exact_keys(
-                    premise,
-                    required={"hypothesis_label", "anchor"},
-                    label=(
-                        f"statement interface clauses[{index}]."
-                        f"premise_inventory[{premise_index}]"
-                    ),
-                )
-                hypothesis = require_string(premise, "hypothesis_label")
-                if premise.get("anchor") != f"[HYP:{hypothesis}]":
-                    raise ValueError("statement interface premise anchor is noncanonical")
+                if current_interface:
+                    require_exact_keys(
+                        premise,
+                        required={"hypothesis_label", "anchor"},
+                        label=(
+                            f"statement interface clauses[{index}]."
+                            f"premise_inventory[{premise_index}]"
+                        ),
+                    )
+                    hypothesis = require_string(premise, "hypothesis_label")
+                    if premise.get("anchor") != f"[HYP:{hypothesis}]":
+                        raise ValueError("statement interface premise anchor is noncanonical")
+                else:
+                    require_exact_keys(
+                        premise,
+                        required={
+                            "hypothesis_id",
+                            "statement",
+                            "modality",
+                            "quantifier_scope",
+                            "temporal_scope",
+                            "applicability_scope",
+                        },
+                        label=(
+                            f"statement interface clauses[{index}]."
+                            f"premise_inventory[{premise_index}]"
+                        ),
+                    )
+                    hypothesis = require_string(premise, "hypothesis_id")
                 inventory_labels.append(hypothesis)
             if inventory_labels != clause["hypothesis_labels"]:
                 raise ValueError(
@@ -464,8 +833,30 @@ def validate_statement_interface(
                     "current conditional statement interface cannot export zero premises"
                 )
             typed_objects = clause.get("typed_objects")
-            if typed_objects != extract_geometric_objects(clause["text"]):
+            if current_interface and typed_objects != extract_geometric_objects(clause["text"]):
                 raise ValueError("statement interface typed-object projection drifted")
+            if rich_interface:
+                semantic = _validate_language_neutral_semantic_interface(
+                    [clause["semantic_contract"]],
+                    clauses=[
+                        {
+                            "clause_id": clause["clause_id"],
+                            "text": clause["text"],
+                        }
+                    ],
+                )[0]
+                if semantic != clause["semantic_contract"]:
+                    raise ValueError("language-neutral semantic interface drifted")
+                if clause["conditional"] != any(
+                    item["kind"] == "conditional"
+                    for item in semantic["operators"]
+                ):
+                    raise ValueError("explicit conditional operator projection drifted")
+                if typed_objects != semantic["typed_objects"]:
+                    raise ValueError("language-neutral typed-object projection drifted")
+                suspicions = clause.get("lexical_suspicions")
+                if suspicions != _lexical_semantic_suspicions(clause["text"]):
+                    raise ValueError("lexical suspicion projection drifted")
     return interface
 
 
@@ -478,6 +869,7 @@ def validate_predecessor_uses(
     convention_profile_ids: list[str],
     assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     target_typed_objects: list[dict[str, str]] | None = None,
+    target_statement_interface: dict[str, Any] | None = None,
     legacy_premise_resolver: (
         Callable[[str, dict[str, Any]], list[dict[str, str]]] | None
     ) = None,
@@ -501,6 +893,13 @@ def validate_predecessor_uses(
     }
     for index, item in enumerate(uses, 1):
         label = f"predecessor_uses[{index}]"
+        preliminary_fact_id = validate_fact_id(require_string(item, "fact_id"))
+        if preliminary_fact_id not in predecessor_set:
+            raise ValueError(f"{label}.fact_id is not a declared predecessor")
+        interface = validate_statement_interface(
+            interface_lookup(preliminary_fact_id)
+        )
+        rich_source = interface.get("schema_version") == 6
         required_fields = {
             "fact_id",
             "clause_id",
@@ -509,17 +908,16 @@ def validate_predecessor_uses(
             "hypothesis_witnesses",
             "convention_bridge",
         }
-        if current_assurance:
+        if current_assurance and rich_source:
+            required_fields.add("semantic_transport")
+        elif current_assurance:
             required_fields.add("conclusion_transport")
         require_exact_keys(
             item,
             required=required_fields,
             label=label,
         )
-        fact_id = validate_fact_id(require_string(item, "fact_id"))
-        if fact_id not in predecessor_set:
-            raise ValueError(f"{label}.fact_id is not a declared predecessor")
-        interface = validate_statement_interface(interface_lookup(fact_id))
+        fact_id = preliminary_fact_id
         clause_id = require_string(item, "clause_id")
         clauses = {
             clause["clause_id"]: clause for clause in interface["clauses"]
@@ -611,27 +1009,158 @@ def validate_predecessor_uses(
                 f"missing={sorted(missing)} extra={sorted(extra)}"
             )
         if current_assurance:
-            source_objects = source_clause.get("typed_objects")
-            if source_objects is None:
-                source_objects = extract_geometric_objects(source_clause["text"])
-            if (
-                clause_is_stage_sensitive(source_clause["text"])
-                and not source_objects
-            ):
-                raise ValueError(
-                    f"{label} cannot reuse a stage-sensitive predecessor with no typed "
-                    "geometric object interface"
+            if rich_source:
+                if target_statement_interface is None:
+                    raise ValueError(
+                        f"{label} language-neutral predecessor use needs the target statement interface"
+                    )
+                target_interface = validate_statement_interface(
+                    target_statement_interface
                 )
-            transports = item.get("conclusion_transport")
-            if not isinstance(transports, list) or any(
-                not isinstance(entry, dict) for entry in transports
-            ):
-                raise ValueError(f"{label}.conclusion_transport must be a list of objects")
-            source_by_id = {
-                entry["object_id"]: entry for entry in source_objects
-            }
-            seen_source_objects: set[str] = set()
-            allowed_operations = {
+                if target_interface.get("schema_version") != 6:
+                    raise ValueError(
+                        f"{label} cannot transport a language-neutral predecessor into a weaker target interface"
+                    )
+                source_semantic = source_clause["semantic_contract"]
+                target_semantics = [
+                    clause["semantic_contract"]
+                    for clause in target_interface["clauses"]
+                ]
+
+                def dimension_items(
+                    semantic: dict[str, Any], dimension: str
+                ) -> dict[str, dict[str, Any]]:
+                    field_and_id = {
+                        "operator": ("operators", "operator_id"),
+                        "hypothesis": ("hypotheses", "hypothesis_id"),
+                        "typed_object": ("typed_objects", "object_id"),
+                        "qualifier": ("qualifiers", "qualifier_id"),
+                    }
+                    if dimension == "comparison":
+                        return (
+                            {"comparison": semantic["comparison"]}
+                            if semantic["comparison"] is not None
+                            else {}
+                        )
+                    field, id_field = field_and_id[dimension]
+                    return {entry[id_field]: entry for entry in semantic[field]}
+
+                target_dimensions: dict[str, dict[str, dict[str, Any]]] = {}
+                for dimension in (
+                    "operator",
+                    "hypothesis",
+                    "typed_object",
+                    "qualifier",
+                    "comparison",
+                ):
+                    aggregate: dict[str, dict[str, Any]] = {}
+                    for semantic in target_semantics:
+                        for object_id, entry in dimension_items(
+                            semantic, dimension
+                        ).items():
+                            if object_id in aggregate:
+                                raise ValueError(
+                                    f"target semantic interface duplicates {dimension} id {object_id}"
+                                )
+                            aggregate[object_id] = entry
+                    target_dimensions[dimension] = aggregate
+                transports = item.get("semantic_transport")
+                if not isinstance(transports, list) or any(
+                    not isinstance(entry, dict) for entry in transports
+                ):
+                    raise ValueError(
+                        f"{label}.semantic_transport must be a list of objects"
+                    )
+                source_dimensions = {
+                    dimension: dimension_items(source_semantic, dimension)
+                    for dimension in target_dimensions
+                }
+                seen_semantic_sources: set[tuple[str, str]] = set()
+                allowed_relations = {
+                    "preserves",
+                    "instantiates",
+                    "restricts",
+                    "proven_equivalent",
+                    "transforms_with_witness",
+                }
+                for transport_index, transport in enumerate(transports, 1):
+                    transport_label = (
+                        f"{label}.semantic_transport[{transport_index}]"
+                    )
+                    require_exact_keys(
+                        transport,
+                        required={
+                            "dimension",
+                            "source_id",
+                            "target_id",
+                            "relation",
+                            "witness",
+                            "proof_anchor",
+                        },
+                        label=transport_label,
+                    )
+                    dimension = require_string(transport, "dimension")
+                    if dimension not in source_dimensions:
+                        raise ValueError(f"{transport_label} dimension is invalid")
+                    source_id = require_string(transport, "source_id")
+                    target_id = require_string(transport, "target_id")
+                    pair = (dimension, source_id)
+                    if (
+                        source_id not in source_dimensions[dimension]
+                        or target_id not in target_dimensions[dimension]
+                        or pair in seen_semantic_sources
+                    ):
+                        raise ValueError(
+                            f"{transport_label} references an unknown or duplicate semantic object"
+                        )
+                    seen_semantic_sources.add(pair)
+                    relation = require_string(transport, "relation")
+                    if relation not in allowed_relations:
+                        raise ValueError(f"{transport_label} relation is invalid")
+                    require_string(transport, "witness")
+                    semantic_anchor = require_string(transport, "proof_anchor")
+                    if proof.count(semantic_anchor) != 1:
+                        raise ValueError(
+                            f"{transport_label} proof anchor must occur exactly once"
+                        )
+                    source_entry = source_dimensions[dimension][source_id]
+                    target_entry = target_dimensions[dimension][target_id]
+                    if relation == "preserves" and source_entry != target_entry:
+                        raise ValueError(
+                            f"{transport_label} claims preservation across unequal semantic objects"
+                        )
+                expected_semantic_sources = {
+                    (dimension, source_id)
+                    for dimension, entries in source_dimensions.items()
+                    for source_id in entries
+                }
+                if seen_semantic_sources != expected_semantic_sources:
+                    raise ValueError(
+                        f"{label}.semantic_transport does not cover the exact source operator/scope interface; "
+                        f"missing={sorted(expected_semantic_sources.difference(seen_semantic_sources))}"
+                    )
+            else:
+                source_objects = source_clause.get("typed_objects")
+                if source_objects is None:
+                    source_objects = extract_geometric_objects(source_clause["text"])
+                if (
+                    clause_is_stage_sensitive(source_clause["text"])
+                    and not source_objects
+                ):
+                    raise ValueError(
+                        f"{label} cannot reuse a stage-sensitive predecessor with no typed "
+                        "geometric object interface"
+                    )
+                transports = item.get("conclusion_transport")
+                if not isinstance(transports, list) or any(
+                    not isinstance(entry, dict) for entry in transports
+                ):
+                    raise ValueError(f"{label}.conclusion_transport must be a list of objects")
+                source_by_id = {
+                    entry["object_id"]: entry for entry in source_objects
+                }
+                seen_source_objects: set[str] = set()
+                allowed_operations = {
                 "identity",
                 "capping",
                 "normalization",
@@ -643,12 +1172,12 @@ def validate_predecessor_uses(
                 "restriction",
                 "pushforward",
                 "pullback",
-            }
-            for transport_index, transport in enumerate(transports, 1):
-                transport_label = (
-                    f"{label}.conclusion_transport[{transport_index}]"
-                )
-                require_exact_keys(
+                }
+                for transport_index, transport in enumerate(transports, 1):
+                    transport_label = (
+                        f"{label}.conclusion_transport[{transport_index}]"
+                    )
+                    require_exact_keys(
                     transport,
                     required={
                         "source_object_id",
@@ -658,57 +1187,57 @@ def validate_predecessor_uses(
                     },
                     label=transport_label,
                 )
-                source_object_id = require_string(
-                    transport, "source_object_id"
-                )
-                target_object_id = require_string(
-                    transport, "target_object_id"
-                )
-                operation = require_string(transport, "operation")
-                proof_anchor = require_string(transport, "proof_anchor")
-                if (
+                    source_object_id = require_string(
+                        transport, "source_object_id"
+                    )
+                    target_object_id = require_string(
+                        transport, "target_object_id"
+                    )
+                    operation = require_string(transport, "operation")
+                    proof_anchor = require_string(transport, "proof_anchor")
+                    if (
                     source_object_id not in source_by_id
                     or source_object_id in seen_source_objects
                     or target_object_id not in target_objects
-                ):
-                    raise ValueError(
+                    ):
+                        raise ValueError(
                         f"{transport_label} references an unknown or duplicate typed object"
-                    )
-                if operation not in allowed_operations:
-                    raise ValueError(f"{transport_label}.operation is invalid")
-                source_object = source_by_id[source_object_id]
-                target_object = target_objects[target_object_id]
-                if source_object["kind"] != target_object["kind"]:
-                    raise ValueError(
+                        )
+                    if operation not in allowed_operations:
+                        raise ValueError(f"{transport_label}.operation is invalid")
+                    source_object = source_by_id[source_object_id]
+                    target_object = target_objects[target_object_id]
+                    if source_object["kind"] != target_object["kind"]:
+                        raise ValueError(
                         f"{transport_label} changes geometric object kind"
-                    )
-                ownership_fields = {"stage", "ambient", "space", "genus"}
-                ownership_changed = any(
+                        )
+                    ownership_fields = {"stage", "ambient", "space", "genus"}
+                    ownership_changed = any(
                     source_object[field] != target_object[field]
                     for field in ownership_fields
-                )
-                if operation == "identity":
-                    if ownership_changed or proof_anchor != anchor:
-                        raise ValueError(
+                    )
+                    if operation == "identity":
+                        if ownership_changed or proof_anchor != anchor:
+                            raise ValueError(
                             f"{transport_label} identity requires identical stage/ambient/space/genus "
                             "and the predecessor use anchor"
-                        )
-                else:
-                    if not ownership_changed:
-                        raise ValueError(
+                            )
+                    else:
+                        if not ownership_changed:
+                            raise ValueError(
                             f"{transport_label} declares a nonidentity operation without a stage change"
-                        )
-                    if proof_anchor in anchors or proof.count(proof_anchor) != 1:
-                        raise ValueError(
+                            )
+                        if proof_anchor in anchors or proof.count(proof_anchor) != 1:
+                            raise ValueError(
                             f"typed transport proof anchor {proof_anchor} must be unique and exact-once"
-                        )
-                    anchors.add(proof_anchor)
-                seen_source_objects.add(source_object_id)
-            if seen_source_objects != set(source_by_id):
-                raise ValueError(
+                            )
+                        anchors.add(proof_anchor)
+                    seen_source_objects.add(source_object_id)
+                if seen_source_objects != set(source_by_id):
+                    raise ValueError(
                     f"{label}.conclusion_transport does not exactly cover exported typed objects; "
                     f"missing={sorted(set(source_by_id).difference(seen_source_objects))}"
-                )
+                    )
         bridge = item.get("convention_bridge")
         if bridge is not None:
             if not isinstance(bridge, dict):

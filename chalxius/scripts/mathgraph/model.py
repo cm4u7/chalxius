@@ -58,6 +58,7 @@ class Fact:
     convention_profile_ids: list[str] = field(default_factory=list)
     computational_evidence: list[dict[str, Any]] = field(default_factory=list)
     terminology: list[dict[str, Any]] = field(default_factory=list)
+    semantic_interface: list[dict[str, Any]] = field(default_factory=list)
     fact_id: str = ""
 
     def __post_init__(self) -> None:
@@ -116,6 +117,7 @@ class Fact:
             "convention_profile_ids": self.convention_profile_ids,
             "computational_evidence": self.computational_evidence,
             "terminology": self.terminology,
+            "semantic_interface": self.semantic_interface,
             "statement": self.statement,
             "proof": self.proof,
             "intuition": self.intuition,
@@ -179,6 +181,13 @@ class Fact:
             not isinstance(item, dict) for item in terminology
         ):
             raise ValueError("fact field terminology must be a list of objects")
+        semantic_interface = payload.get("semantic_interface", [])
+        if not isinstance(semantic_interface, list) or any(
+            not isinstance(item, dict) for item in semantic_interface
+        ):
+            raise ValueError(
+                "fact field semantic_interface must be a list of objects"
+            )
         intuition = payload.get("intuition", "")
         if not isinstance(intuition, str):
             raise ValueError("fact field intuition must be a string")
@@ -197,6 +206,7 @@ class Fact:
                 dict(item) for item in computational_evidence
             ],
             terminology=[dict(item) for item in terminology],
+            semantic_interface=[dict(item) for item in semantic_interface],
             statement=payload["statement"],
             proof=payload["proof"],
             intuition=intuition,

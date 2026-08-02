@@ -5,7 +5,8 @@
 Current Paper Logic/Audit bundles declare one `source_role`:
 
 - `research_draft` identifies a document produced inside the research process;
-- `external_reference` identifies a separately published or cited source.
+- `external_finished_publication` identifies a separately published or cited
+  finished source. `external_reference` is a read-only 0.5.0 spelling.
 
 The role survives Paper revision, snapshot, Evidence attestation, and query
 projection. An Audit bundle must use the same role as its base Logic snapshot.
@@ -16,9 +17,9 @@ Historical objects without the field remain readable and project as
 remain nontruth Paper/Evidence material, with the fixed permitted uses
 `background`, `citation_source`, `inspiration`, and `research_material`.
 Neither role is premise-eligible without a separately sealed bridge, fresh
-verification, and Fact Gateway admission. This initial contract is a bounded
-compatibility seam and does not claim to close the open research-draft
-lifecycle and cross-plane-preflight issues listed in `KNOWN_LIMITATIONS.md`.
+verification, and Fact Gateway admission. A `research_draft` intended for
+further graph-led research must instead pass the strict whole-draft lifecycle
+and complete Fact admission described in `paper_continuation_contract.md`.
 
 ## Authority invariant
 

@@ -182,6 +182,33 @@ class V5ExperimentTests(unittest.TestCase):
             self.assertTrue(store.experiments().audit_all()["ok"])
             self.assertTrue(store.audit().current_ok, store.audit().errors)
 
+            with store.v5_mutation_lock(command="work-unit-abort"):
+                store.reasoning_modes().abort_work_unit(
+                    round_id=round_status["round_id"],
+                    actor="operator",
+                    reason="Freeze the completed experiment fixture.",
+                )
+            before_retry = {
+                path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
+                for path in root.rglob("*")
+                if path.is_file()
+            }
+            with self.assertRaisesRegex(ValueError, "explicitly aborted"):
+                with store.v5_mutation_lock(command="experiment-finalize"):
+                    store.experiments().finalize(
+                        task_card=card,
+                        experiment_id=started["experiment_id"],
+                        selected_paths=["result.json"],
+                    )
+            self.assertEqual(
+                before_retry,
+                {
+                    path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
+                    for path in root.rglob("*")
+                    if path.is_file()
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
