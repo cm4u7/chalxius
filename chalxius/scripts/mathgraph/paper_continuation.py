@@ -13,6 +13,7 @@ from .contracts import (
     validate_memory_id,
 )
 from .paper_logic_contracts import PAPER_NODE_ID_RE, PAPER_SNAPSHOT_ID_RE
+from .paper_continuation_status import PaperContinuationStatusIndex
 from .v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
 
@@ -45,6 +46,14 @@ _REQUIRED_ANALYSIS_FIELDS = [
     "response_or_revision",
     "independent_failure_surfaces",
     "writing_coverage",
+]
+_STATUS_DETAIL_FIELDS = [
+    "current_disposition_ids",
+    "selected_edge_ids",
+    "selected_reconstruction_node_ids",
+    "selected_source_node_ids",
+    "target_research_bindings",
+    "unresolved_target_node_ids",
 ]
 
 
@@ -92,6 +101,8 @@ def validate_disposition_id(value: str) -> str:
 class PaperContinuationManager:
     """Prospective Paper-led Research adequacy, separate from Fact authority."""
 
+    validate_plan_id = staticmethod(validate_plan_id)
+
     def __init__(self, lifecycle: Any) -> None:
         self.lifecycle = lifecycle
         self.store = lifecycle.store
@@ -102,6 +113,13 @@ class PaperContinuationManager:
         self.writing_artifacts_dir = (
             self.root / "writing-artifacts" / "by-sha256"
         )
+        self._status_index = PaperContinuationStatusIndex(
+            self,
+            continuation_contract_revision=PAPER_CONTINUATION_CONTRACT_REVISION,
+            worker_outcomes=_WORKER_OUTCOMES,
+            writing_statuses=_WRITING_STATUSES,
+            status_detail_fields=_STATUS_DETAIL_FIELDS,
+        )
 
     def initialize(self) -> None:
         for path in (
@@ -111,6 +129,7 @@ class PaperContinuationManager:
             self.writing_artifacts_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
+        self._status_index.initialize()
 
     def _plan_path(self, plan_id: str) -> Path:
         return self.plans_dir / f"{validate_plan_id(plan_id)}.json"
@@ -596,6 +615,7 @@ class PaperContinuationManager:
         *,
         actor: str,
     ) -> dict[str, Any]:
+        self._status_index.require_current_if_declared()
         _exact(
             payload,
             {
@@ -723,6 +743,10 @@ class PaperContinuationManager:
                 record = self.plan(plan_id)
             else:
                 self.store._write_json_once(path, record)
+            self._status_index.index_plan_record(
+                record,
+                source_snapshot_current=True,
+            )
             bindings: list[dict[str, str]] = []
             for unit in record["work_units"]:
                 research = self.lifecycle.add_research(
@@ -768,8 +792,10 @@ class PaperContinuationManager:
                 }
                 if comparable != existing_comparable:
                     raise ValueError("Paper continuation materialization collision")
+                materialization = existing
             else:
                 self.store._write_json_once(materialization_path, materialization)
+            self._status_index.index_materialization(record, materialization)
         return self.status(plan_id)
 
     def _validate_research_binding(
@@ -1335,6 +1361,7 @@ class PaperContinuationManager:
         record = {**without_hash, "record_sha256": sha256_json(without_hash)}
         with self.store.v5_mutation_lock(command="paper-continuation-dispose"):
             self.initialize()
+            self._status_index.require_current_if_declared()
             locked_current = self._current_dispositions(plan_id)
             locked_expected_previous = (
                 locked_current[target_id]["disposition_id"]
@@ -1367,6 +1394,7 @@ class PaperContinuationManager:
                 )
                 return existing
             self.store._write_json_once(path, record)
+            self._status_index.index_disposition(record)
         return record
 
     def status(self, plan_id: str) -> dict[str, Any]:
@@ -1480,6 +1508,11 @@ class PaperContinuationManager:
             "truth_effect": "none",
         }
 
+    def status_summary(self, plan_id: str) -> dict[str, Any]:
+        """Return a bounded indexed view without reconstructing Paper closure."""
+
+        return self._status_index.summary(plan_id)
+
     def status_all(self) -> dict[str, Any]:
         statuses = [self.status(plan["plan_id"]) for plan in self.plans()]
         counts = {
@@ -1513,6 +1546,19 @@ class PaperContinuationManager:
             "plans": statuses,
             "truth_effect": "none",
         }
+
+    def status_all_summary(self) -> dict[str, Any]:
+        """Aggregate indexed per-plan summaries with one shared head read."""
+
+        return self._status_index.all_summary()
+
+    def rebuild_status_index(self) -> dict[str, Any]:
+        """Explicitly pay for full validation and refresh routine status."""
+
+        with self.store.v5_mutation_lock(
+            command="paper-continuation-status-index-rebuild"
+        ):
+            return self._status_index.rebuild()
 
     def _validate_atomicity(
         self,

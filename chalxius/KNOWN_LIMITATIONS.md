@@ -1,13 +1,19 @@
-# Known architecture limitations in Chalxius 0.6.2
+# Known architecture limitations in Chalxius 0.6.3
 
-The numbered entries below use the immutable ledger namespace
-`run-20260801T233737840117Z-a29d00a787c1`. Thus each short `CHX-NNN`
-in this list means
-`run-20260801T233737840117Z-a29d00a787c1/CHX-NNN`; short identifiers from
-another ledger are not the same issue. The qualified current head is
-`run-20260801T233737840117Z-a29d00a787c1/CHX-057`.
+The numbered entries below retain their immutable owner ledger: CHX-001 through
+CHX-017 belong to `run-20260801T072127934348Z-16d73c1b37d5`, CHX-018 through
+CHX-057 belong to `run-20260801T233737840117Z-a29d00a787c1`, CHX-058
+through CHX-060 belong to `run-20260802T190108619281Z-6b046e728879`, and
+CHX-061 belongs to `run-20260802T203525083918Z-e81514efe3c7`, while CHX-062
+belongs to `run-20260802T214123599238Z-d206bd85e676`.
+The qualified current head is
+`run-20260802T214123599238Z-d206bd85e676/CHX-062`; a short identifier never
+changes owner merely because a later release includes it.
+The two immediately preceding qualified heads were
+`run-20260802T203525083918Z-e81514efe3c7/CHX-061` and
+`run-20260802T190108619281Z-6b046e728879/CHX-060`.
 
-Chalxius 0.6.2 retains the 0.6.0/0.6.1 prospective repairs for every architecture mechanism recorded as
+Chalxius 0.6.3 retains the 0.6.0/0.6.1/0.6.2 prospective repairs for every architecture mechanism recorded as
 CHX-001 through CHX-017 in the 2026-08-01 research-draft field run, plus the
 Campaign-lineage and CHX close/status integration issues found while cautiously
 restoring Brave Future L3/L4 and exercising revision-3 accounting. It also repairs
@@ -15,7 +21,7 @@ CHX-020 through CHX-035, including durable stance authorization, cryptographic
 principal coordination, Certification/Gateway integration, registry-wide audit and
 cache authority, complete active-runtime validation, terminal write isolation,
 pre-write planning atomicity, and transactional global-cutover continuity. It
-extends closure through CHX-036 to CHX-057 with the reusable Paper Research
+extends closure through CHX-036 to CHX-062 with the reusable Paper Research
 Pipeline, which preserves inherited Paper topology, separates source
 occurrences from logical operators, validates claim-level literature support,
 requires a Paper-subject atomic preflight before the native admission path,
@@ -251,6 +257,43 @@ successor artifacts to use the stronger path.
     `ledger_run_id`, returns qualified `run_id/CHX-NNN` identities, and
     requires public documentation to state the namespace. A matching short id
     from another historical ledger can no longer satisfy the publication gate.
+58. **CHX-058 — routine continuation status exported the complete Paper
+    closure.** This is the graph-scale applicability extension of CHX-012:
+    `paper-continuation-status` now defaults to a bounded deterministic summary
+    with exact identity, state, currentness, counts, adequacy, and receipt.
+    Topology, bindings, unresolved ids, and dispositions require explicit
+    `--full`; compact and full views share the same receipt and have no truth or
+    admission effect.
+59. **CHX-059 — a single-run public registry requalified predecessor issue
+    identities.** Public disclosure revision 2 now binds an ordered ledger lineage
+    with exact run ids, file digests, contract revisions, predecessor
+    links, and non-overlapping per-run issue ownership. Qualified ids are
+    derived from their actual owner, never the newest run.
+60. **CHX-060 — successor ledgers lost transitive issue lineage.** Ledger
+    revision 4 reads and freezes the complete digest-bound predecessor chain at
+    successor creation, rejects cycles or digest drift, and preserves numbering
+    and typed relations across issue-free intermediate ledgers. Revision 3
+    remains byte-exact readable and is not rewritten.
+61. **CHX-061 — bounded status still reconstructed the complete Paper
+    closure.** The compact serializer introduced for CHX-058 reduced output but
+    still called the full validator, repeating plan, Paper, Research,
+    disposition, and writing scans. Routine status now validates only an atomic
+    content-addressed HEAD plus immutable receipt. Every supported mutation
+    advances the index; directory-generation drift fails closed until an
+    explicit full rebuild proves exact count, adequacy, and receipt equality.
+    On the inherited two-plan field project, the one-time rebuild took 310.45 s;
+    indexed all-plan and current-plan reads then took 0.10 s and 0.12 s. This is
+    an observation-path repair with `truth_effect=none`.
+62. **CHX-062 — exact-runtime host entrypoints self-contaminated before
+    validation.** Ordinary Python invocation imported local runtime modules
+    before validating the candidate, allowing default bytecode generation to
+    create unmanifested `.pyc` files and make the official cutover reject its
+    own otherwise exact tree. `runtime_cutover.py`, `archive_runtime.py`, and
+    `chx_ledger.py` now disable bytecode writes before any local import. A clean
+    copied-tree subprocess regression removes all bytecode-control environment
+    variables and proves that every default entrypoint creates zero cache or
+    bytecode files; three independent mutants guard the three seams. Genuine
+    unexpected files remain rejected, and the repair has `truth_effect=none`.
 
 ## Deliberate residual boundaries
 

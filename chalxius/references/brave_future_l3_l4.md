@@ -1,7 +1,7 @@
 # Brave Future BF-1 through BF-3: cautious L3/L4 recovery
 
 This is the executable boundary for the optional Brave Future sidecar introduced
-in Chalxius 0.6.0 and retained without authority expansion in 0.6.2. The
+in Chalxius 0.6.0 and retained without authority expansion through 0.6.3. The
 runtime-continuity and Paper Graph continuity repairs do not add a planning,
 dispatch, Campaign, Research, or truth seam. The
 sidecar still implements only the safe first slice of the L3/L4 design:
@@ -211,7 +211,7 @@ Historical sidecar objects remain immutable and nontruth. No old task, Paper
 snapshot, Research entry, Candidate Release, decision, admission, or Fact is
 rewritten or invalidated by activation or disablement.
 
-## 0.6.2 finite-recovery acceptance boundary
+## 0.6.3 finite-recovery acceptance boundary
 
 The coordinated recovery is accepted only when the inherited Brave Future and
 Campaign regressions pass together with the full V5 suite and the Paper

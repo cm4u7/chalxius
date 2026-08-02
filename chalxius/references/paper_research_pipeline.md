@@ -1,6 +1,6 @@
 # Paper Research Pipeline: inherited draft research without graph compression
 
-This reference governs prospective Paper-led research in Chalxius 0.6.2. It
+This reference governs prospective Paper-led research in Chalxius 0.6.3. It
 turns the reusable mechanisms recovered from the 2026-08-01/02 field run into a
 domain-general pre-admission pipeline for philosophy, mathematics, empirical
 research, and mixed-domain drafts. Every record produced here is nontruth.

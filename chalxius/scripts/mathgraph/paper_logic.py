@@ -2270,6 +2270,13 @@ class PaperLogicStore:
         actor: str,
     ) -> dict[str, Any]:
         self._feature()
+        continuation = None
+        if (
+            self.owner is not None
+            and self.owner.workflow_evidence_version() == 5
+        ):
+            continuation = self.owner.v5_lifecycle().paper_continuation()
+            continuation._status_index.require_current_if_declared()
         revision = self.revision(revision_id)
         if revision["coverage"]["unresolved_load_bearing_units"]:
             raise ValueError(
@@ -2399,6 +2406,8 @@ class PaperLogicStore:
             nodes=nodes,
             edges=edges,
         )
+        if continuation is not None:
+            continuation._status_index.index_snapshot(snapshot)
         result = {
             "snapshot_id": snapshot_id,
             "revision_id": revision_id,

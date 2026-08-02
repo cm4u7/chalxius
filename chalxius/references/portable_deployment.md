@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.6.2 `Paper Graph Continuity / Brave Future BF-1–3` release artifact contains one self-contained `chalxius`
+The 0.6.3 `Bounded Paper Status / Ledger Lineage` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -63,7 +63,7 @@ To seed a legacy schema-1 identity, use one exact frozen task card and a source
 tree whose VERSION, MANIFEST, and all declared file hashes match that card:
 
 ```bash
-python3 -B /absolute/path/to/0.6.2/scripts/archive_runtime.py \
+python3 -B /absolute/path/to/0.6.3/scripts/archive_runtime.py \
   --source-root /absolute/path/to/exact-historical-runtime \
   --archive-root "$ARCHIVE_ROOT" \
   --task-card /absolute/path/to/frozen-task-card.json \
@@ -177,7 +177,7 @@ The automatic V5 frontier uses the compact four-factor score and projects
 legacy eight-metric Research without rewriting it. It is an ordering aid only,
 has no cutoff, and does not prevent explicit scheduling of a low-scored item.
 
-For new 0.6.2 work, Main compiles task context and Operator retains governance;
+For new 0.6.3 work, Main compiles task context and Operator retains governance;
 the technical Host role remains the unchanged trusted dispatch adapter. One
 origin-bound promoted Blackboard item may seed its exact bounded query as one
 task. Exact enum mode hints apply only across an equal assurance/adverse

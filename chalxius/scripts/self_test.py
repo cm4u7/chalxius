@@ -175,6 +175,7 @@ def main() -> int:
     for command in (
         "paper-continuation-plan",
         "paper-continuation-status",
+        "paper-continuation-status-index-rebuild",
         "paper-continuation-dispose",
     ):
         if any(
@@ -346,7 +347,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3",
+            "# Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -376,8 +377,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.6.2"',
-            '"release_codename": "Paper Graph Continuity — Brave Future BF-1–3"',
+            '"version": "0.6.3"',
+            '"release_codename": "Bounded Paper Status — Ledger Lineage"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -396,9 +397,11 @@ def main() -> int:
             '"network_runtime": "disabled"',
             '"project_background_read_policy": "default_if_present_never_generate"',
             '"aggressive_bug_audit": "release_time_only"',
-            '"contract_revision": "chalxius-chx-run-ledger-3"',
+            '"contract_revision": "chalxius-chx-run-ledger-4"',
             '"chalxius-chx-run-ledger-1"',
             '"chalxius-chx-run-ledger-2"',
+            '"chalxius-chx-run-ledger-3"',
+            '"chalxius-chx-public-disclosure-2"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
             '"contract_revision": "chalxius-adverse-routing-evolution-3"',
@@ -558,7 +561,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.6.2 `Paper Graph Continuity / Brave Future BF-1–3` release artifact",
+            "The 0.6.3 `Bounded Paper Status / Ledger Lineage` release artifact",
             "standing authorization",
             "attack-report",
             "Never backfill attack cases",

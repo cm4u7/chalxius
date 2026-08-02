@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.6.2",
-  "release_codename": "Paper Graph Continuity — Brave Future BF-1–3",
-  "release_display_name": "Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3",
+  "version": "0.6.3",
+  "release_codename": "Bounded Paper Status — Ledger Lineage",
+  "release_display_name": "Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -210,11 +210,12 @@
     "truth_effect": "none"
   },
   "chx_runtime_ledger_surface": {
-    "contract_revision": "chalxius-chx-run-ledger-3",
+    "contract_revision": "chalxius-chx-run-ledger-4",
     "read_compatibility": [
       "chalxius-chx-run-ledger-1",
       "chalxius-chx-run-ledger-2",
-      "chalxius-chx-run-ledger-3"
+      "chalxius-chx-run-ledger-3",
+      "chalxius-chx-run-ledger-4"
     ],
     "activation": "prospective_for_runs_started_after_0.4.1_activation_only",
     "scope": "one_task_scoped_ledger_per_new_chalxius_run",
@@ -222,7 +223,7 @@
     "issue_filter": "architecture_caused_or_materially_amplified_only",
     "finding_gate": "stable_finding_id_before_transactional_promotion_merge_or_exclusion",
     "issue_relations": "typed_related_to_extends_discovered_from_or_supersedes",
-    "successor_ledgers": "append_only_closed_predecessor_hash_and_issue_lineage",
+    "successor_ledgers": "append_only_closed_digest_bound_transitive_predecessor_lineage_with_empty_hop_safe_issue_allocation",
     "architecture_report": "deterministic_semantic_hash_and_independent_verification",
     "final_feedback": "report_only_when_report_required_true",
     "older_run_policy": "no_backfill_reclassification_invalidation_or_redo",
@@ -303,11 +304,16 @@
   },
   "paper_continuation_surface": {
     "contract_revision": "chalxius-v5-paper-continuation-1",
+    "status_index_revision": "chalxius-v5-paper-continuation-status-index-1",
     "philosophy_atomicity_revision": "chalxius-v5-philosophy-semantic-atomicity-1",
     "activation": "prospective_explicit_current_logic_snapshot_plan_only",
     "selection": "all_targets_without_score_cutoff_or_explicit_bounded_targets",
     "research_lineage": "transitive_exact_plan_snapshot_source_target_closure",
     "adequacy_state": "separate_from_fact_truth_and_clean_audit",
+    "routine_status": "content_addressed_atomic_head_plus_receipt_without_full_closure_reconstruction",
+    "status_mutation_policy": "plan_materialization_research_disposition_writing_and_paper_snapshot_writes_advance_or_invalidate_head",
+    "status_stale_policy": "directory_generation_drift_fails_closed_until_explicit_full_index_rebuild",
+    "forensic_status": "explicit_full_revalidates_complete_paper_research_and_disposition_closure",
     "dispositions": "append_only_current_head_with_managed_result_failure_surfaces_and_writing_hash",
     "release_gate": "paper_target_closure_logic_audit_current_adequacy_and_exact_node_coverage",
     "philosophy_fact_shape": "one_declared_independently_falsifiable_conjunct_per_fact_with_fresh_verifier_reconstruction",
@@ -490,6 +496,7 @@
     "scan_deduplication": "one_identical_runtime_identity_per_bounded_phase_only_no_cross_phase_authority_cache",
     "cutover_contract_revision": "chalxius-runtime-cutover-1",
     "cutover_policy": "explicit_project_inventory_exact_candidate_pre_and_post_audit_prior_and_new_archive_same_parent_swap_automatic_restore_on_failure",
+    "host_entrypoint_write_policy": "runtime_cutover_archive_runtime_and_chx_ledger_disable_bytecode_before_local_import_and_do_not_mutate_the_runtime_they_validate",
     "truth_effect": "none",
     "project_effect": "none",
     "brave_future_effect": "none"
@@ -514,8 +521,8 @@
       "assets/reader_html.css",
       "assets/vendor/**"
     ],
-    "protected_file_count": 86,
-    "protected_tree_sha256": "cb1c85340b1e930409710b247ddbce7bf7ac7beb179f26ddb2e92a09fbe80744",
+    "protected_file_count": 87,
+    "protected_tree_sha256": "684140ebdc71d05cdbc4422a5985fcabd3ae33e950b52e2d9839ba1bb3ff380e",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -532,6 +539,7 @@
       "scripts/mathgraph/model.py",
       "scripts/mathgraph/modes.py",
       "scripts/mathgraph/paper_continuation.py",
+      "scripts/mathgraph/paper_continuation_status.py",
       "scripts/mathgraph/paper_logic.py",
       "scripts/mathgraph/paper_logic_contracts.py",
       "scripts/mathgraph/paper_research_pipeline.py",
@@ -555,14 +563,14 @@
       "scripts/paper_research_pipeline.py",
       "scripts/runtime_cutover.py"
     ],
-    "changed_path_inventory_sha256": "aaf5821f3ee3c863205fa4e0cc959a4108f017f3d9d126940a6b257f905a449f",
+    "changed_path_inventory_sha256": "23f70646b2a9f51efcbe9f797b73ea93170b77f4234106615bc4b825f5fb8865",
     "project_schema_change": "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
     "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
     "fact_admission_change": false,
     "fact_admission_change_scope": "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_paper_continuation_freshness_prospective_paper_research_pipeline_preflight_and_strict_research_draft_composable_verification"
   },
   "chx_public_disclosure": {
-    "contract_revision": "chalxius-chx-public-disclosure-1",
+    "contract_revision": "chalxius-chx-public-disclosure-2",
     "included_issue_ids": [
       "CHX-001",
       "CHX-002",
@@ -620,76 +628,152 @@
       "CHX-054",
       "CHX-055",
       "CHX-056",
-      "CHX-057"
+      "CHX-057",
+      "CHX-058",
+      "CHX-059",
+      "CHX-060",
+      "CHX-061",
+      "CHX-062"
     ],
-    "ledger_issue_ids": [
-      "CHX-018",
-      "CHX-019",
-      "CHX-020",
-      "CHX-021",
-      "CHX-022",
-      "CHX-023",
-      "CHX-024",
-      "CHX-025",
-      "CHX-026",
-      "CHX-027",
-      "CHX-028",
-      "CHX-029",
-      "CHX-030",
-      "CHX-031",
-      "CHX-032",
-      "CHX-033",
-      "CHX-034",
-      "CHX-035",
-      "CHX-036",
-      "CHX-037",
-      "CHX-038",
-      "CHX-039",
-      "CHX-040",
-      "CHX-041",
-      "CHX-042",
-      "CHX-043",
-      "CHX-044",
-      "CHX-045",
-      "CHX-046",
-      "CHX-047",
-      "CHX-048",
-      "CHX-049",
-      "CHX-050",
-      "CHX-051",
-      "CHX-052",
-      "CHX-053",
-      "CHX-054",
-      "CHX-055",
-      "CHX-056",
-      "CHX-057"
+    "ledger_lineage": [
+      {
+        "ledger_run_id": "run-20260801T072127934348Z-16d73c1b37d5",
+        "ledger_sha256": "9c6d8633b2f96a3d68d2bc8bf7f3509e5d091fc78356bca261658606ec9ebdf9",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-2",
+        "predecessor_run_id": "",
+        "included_issue_ids": [
+          "CHX-001",
+          "CHX-002",
+          "CHX-003",
+          "CHX-004",
+          "CHX-005",
+          "CHX-006",
+          "CHX-007",
+          "CHX-008",
+          "CHX-009",
+          "CHX-010",
+          "CHX-011",
+          "CHX-012",
+          "CHX-013",
+          "CHX-014",
+          "CHX-015",
+          "CHX-016",
+          "CHX-017"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260801T233737840117Z-a29d00a787c1",
+        "ledger_sha256": "da87696add1ea2671fc829e6f602cba9c5d5048b28c9b3c744d5ed092b81d48d",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-3",
+        "predecessor_run_id": "run-20260801T072127934348Z-16d73c1b37d5",
+        "included_issue_ids": [
+          "CHX-018",
+          "CHX-019",
+          "CHX-020",
+          "CHX-021",
+          "CHX-022",
+          "CHX-023",
+          "CHX-024",
+          "CHX-025",
+          "CHX-026",
+          "CHX-027",
+          "CHX-028",
+          "CHX-029",
+          "CHX-030",
+          "CHX-031",
+          "CHX-032",
+          "CHX-033",
+          "CHX-034",
+          "CHX-035",
+          "CHX-036",
+          "CHX-037",
+          "CHX-038",
+          "CHX-039",
+          "CHX-040",
+          "CHX-041",
+          "CHX-042",
+          "CHX-043",
+          "CHX-044",
+          "CHX-045",
+          "CHX-046",
+          "CHX-047",
+          "CHX-048",
+          "CHX-049",
+          "CHX-050",
+          "CHX-051",
+          "CHX-052",
+          "CHX-053",
+          "CHX-054",
+          "CHX-055",
+          "CHX-056",
+          "CHX-057"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260802T190108619281Z-6b046e728879",
+        "ledger_sha256": "0123a5deabfc6c12ab96ad7ea0f722988ae7fe66a7bd53b8c552a87e328d6bc7",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-3",
+        "predecessor_run_id": "run-20260801T233737840117Z-a29d00a787c1",
+        "included_issue_ids": [
+          "CHX-058",
+          "CHX-059",
+          "CHX-060"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260802T203525083918Z-e81514efe3c7",
+        "ledger_sha256": "4c022541cd64a034ba162ab04bb7905a1040f70c20d056202cfd2ca9d4518146",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260802T190108619281Z-6b046e728879",
+        "included_issue_ids": [
+          "CHX-061"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260802T214123599238Z-d206bd85e676",
+        "ledger_sha256": "b7afc348ce5274c7293c320d2551d5606a27e49713848b43a5eaf8c49606da88",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260802T203525083918Z-e81514efe3c7",
+        "included_issue_ids": [
+          "CHX-062"
+        ]
+      }
     ],
-    "ledger_run_id": "run-20260801T233737840117Z-a29d00a787c1",
-    "latest_issue_id": "CHX-057",
+    "latest_issue_id": "CHX-062",
     "document_contracts": {
       "KNOWN_LIMITATIONS.md": {
         "explicit_issue_enumeration": true,
         "required_markers": [
-          "CHX-055",
-          "CHX-056",
-          "CHX-057",
-          "public CHX short identifiers collided",
-          "research-target continuity",
-          "resolved mechanisms could be omitted",
-          "run-20260801T233737840117Z-a29d00a787c1/CHX-057"
+          "CHX-058",
+          "CHX-059",
+          "CHX-060",
+          "CHX-061",
+          "CHX-062",
+          "bounded deterministic summary",
+          "content-addressed HEAD",
+          "digest-bound predecessor chain",
+          "exact-runtime host entrypoints",
+          "graph-scale applicability extension of CHX-012",
+          "ordered ledger lineage",
+          "run-20260802T214123599238Z-d206bd85e676/CHX-062"
         ]
       },
       "references/v5_release_traceability.md": {
         "explicit_issue_enumeration": false,
         "required_markers": [
-          "CHX-055",
-          "CHX-056",
-          "CHX-057",
+          "CHX-058",
+          "CHX-059",
+          "CHX-060",
+          "CHX-061",
+          "CHX-062",
           "`disproved`",
           "`proved`",
+          "bounded summary",
+          "bytecode",
+          "paper-continuation-status-index-rebuild",
           "publication-disclosure preflight",
           "research-target continuity",
-          "run-20260801T233737840117Z-a29d00a787c1/CHX-057"
+          "run-20260802T214123599238Z-d206bd85e676/CHX-062"
         ]
       }
     },

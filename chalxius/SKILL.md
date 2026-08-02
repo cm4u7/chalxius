@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3
+# Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage
 
 Use the bundled Chalxius research engine as the only research runtime. Fast,
 auto, and deep are execution profiles of that one engine. The Fact Graph
@@ -54,8 +54,8 @@ historical audit bytes.
 
 For every Chalxius run started after the 0.4.1 activation boundary, start one task-scoped CHX runtime ledger before substantive analysis or tool execution.
 Project-bound runs store it at `PROJECT/chx-ledgers/`; projectless runs use private host task state. Its bytes have `truth_effect=none` and `project_effect=none`.
-Record every architecture-caused or materially amplified mechanism first as a stable finding; revision 3 requires transactional promotion, reasoned merge, or reasoned exclusion before close and preserves typed issue relations plus successor-ledger lineage.
-V1/V2 remain byte-exact readable. Never backfill, reclassify, warn about, or redo an older run merely because its original contract lacked the newer ledger.
+Record every architecture-caused or materially amplified mechanism first as a stable finding; revisions 3 and 4 require transactional promotion, reasoned merge, or reasoned exclusion before close and preserve typed issue relations. Revision 4 additionally freezes the complete digest-bound transitive predecessor lineage so issue allocation and relations survive empty intermediate ledgers.
+V1/V2/V3 remain byte-exact readable. Never backfill, reclassify, warn about, or redo an older run merely because its original contract lacked the newer ledger.
 
 ## Choose a reasoning mode
 

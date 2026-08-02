@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.6.2](https://github.com/cm4u7/chalxius/releases/tag/v0.6.2) ·
+[📦 Download v0.6.3](https://github.com/cm4u7/chalxius/releases/tag/v0.6.3) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -53,9 +53,13 @@ structure, not private claims, formulas, names, or source locators.
   `Research → Candidate Release → Certification Decision → Fact`.
 - ♻️ **Correct without losing history.** Challenge, replace, refute, or revoke
   a node while preserving its old bytes and showing downstream impact.
-- 🧾 **Learn from architecture failures.** Revision-3 CHX ledgers record every
-  discovery before classification, preserve typed relations, and now gate
-  public disclosure against one exact `run_id/CHX-NNN` namespace.
+- 🧾 **Learn from architecture failures.** Append-only CHX ledgers record every
+  discovery before classification, preserve typed relations and predecessor
+  runs, and gate public disclosure against the complete ordered ledger lineage.
+- ⚡ **Query large Paper continuations without rescanning them.** Routine status
+  reads one atomic content-addressed HEAD and immutable receipts. Full closure
+  validation is explicit; stale directory generations fail closed instead of
+  silently falling back to an expensive scan.
 - 🛰️ **Use only a cautious slice of Brave Future.** BF-1 through BF-3 provide
   read-only repair-lineage projection, dry-run reassessment, and one bounded
   advisory receipt. They cannot plan rounds, dispatch agents, create Research,
@@ -118,14 +122,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz`
-- `chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256`
+- `chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz`
+- `chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256
-tar -xzf chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz
+shasum -a 256 -c chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz.sha256
+tar -xzf chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -272,7 +276,7 @@ Run `mgraph --help` for the complete parser and
 | Research and frontier | `memory-add`, `memory-update`, `frontier`, `adoption-plan`, `plan-round`, `plan-repair-round`, `round-status`, `work-unit-abort` |
 | Worker boundary | `preflight-return`, `validate-return`, `ingest-return`, `make-verifier-task` |
 | Paper Logic and Audit | `paper-logic-init`, `paper-logic-stage`, `paper-logic-record-review`, `paper-logic-freeze`, `paper-logic-status`, `paper-logic-show`, `paper-logic-query`, `paper-logic-audit`, `paper-logic-link-exploration`, `paper-logic-project-blackboard` |
-| Paper continuation | `paper-continuation-plan`, `paper-continuation-status`, `paper-continuation-dispose` |
+| Paper continuation | `paper-continuation-plan`, `paper-continuation-status` (bounded by default; explicit `--full`), `paper-continuation-status-index-rebuild`, `paper-continuation-dispose` |
 | Cross-project Evidence | `evidence-library-status`, `evidence-query`, `evidence-sync-retry`, `evidence-import-fact-graph`, `evidence-bridge-prepare`, `evidence-bridge-check`, `evidence-mark`, `evidence-impact-report` |
 | Blackboard | `blackboard-type-register`, `blackboard-space-create`, `blackboard-node-add`, `blackboard-edge-add`, `blackboard-show`, `blackboard-query`, `blackboard-snapshot`, `blackboard-snapshot-query`, `blackboard-reindex`, `blackboard-promote-node` |
 | Campaign | `campaign-create`, `campaign-activate`, `campaign-update`, `campaign-status`, `campaign-target-add`, `campaign-target-archive`; scoped `frontier --campaign` and `plan-round --campaign` |
@@ -390,26 +394,27 @@ or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
 
-## v0.6.2: Paper Graph Continuity / Brave Future BF-1–BF-3
+## v0.6.3: Bounded Paper Status / Ledger Lineage
 
-This release turns the research-draft lifecycle into an executable, prospective
-pipeline: exact draft freeze, proposition-total Paper DAG, ordered inherited
-frontier, copy-on-write Research successor, claim-level Evidence review,
-domain-indexed target continuity, Paper-subject atomic preflight, independent
-composable verification, and the unchanged V5 Fact Gateway.
+This release preserves the 0.6.2 research-draft lifecycle and removes a
+graph-scale status defect: routine Paper-continuation status no longer rebuilds
+the complete Paper, Research, disposition, and revised-writing closure. Writes
+advance or invalidate an immutable status index; stale generation fingerprints
+fail closed; only an explicit forensic request or index rebuild pays the full
+validation cost.
 
-It also restores only the bounded advisory slice of Brave Future described as
-BF-1 through BF-3. The same frozen Campaign snapshot can be projected, dry-run
-reassessed, and—after explicit opt-in—produce one nontruth advisory receipt.
-Repeated blockage parks; nothing plans a round, dispatches a worker, changes a
-score, closes a Campaign, or affects Candidate, Certification, Gateway, or Fact.
+CHX ledger inheritance now binds every public issue to an ordered predecessor
+chain rather than one convenient latest ledger. Exact-runtime host entrypoints
+also disable bytecode before importing local modules, so validating the runtime
+cannot mutate the very file set being validated. The bounded advisory BF-1
+through BF-3 slice remains unchanged and non-authoritative.
 
-The field mechanisms CHX-001 through CHX-057 are explicitly disclosed and
-resolved in this prospective package. Their public short ids are bound to the
-exact ledger namespace documented in
-[`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md); a private ledger is not
-shipped. The upgrade performs no migration, backfill, reclassification, forced
-redo, or authority inheritance. See [`RELEASE.md`](RELEASE.md) and
+The field mechanisms CHX-001 through CHX-062 are explicitly disclosed and
+resolved in this prospective package. Their public identities are bound to the
+ordered ledger lineage documented in
+[`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md); private ledgers are not
+shipped. The upgrade performs no Fact migration, backfill, reclassification,
+forced redo, or authority inheritance. See [`RELEASE.md`](RELEASE.md) and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).
 
 ## Scope and acknowledgements

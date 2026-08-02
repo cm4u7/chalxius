@@ -54,6 +54,9 @@ CHX_TEST_MODULE = "tests.test_chx_ledger.CHXRunLedgerTests"
 RUNTIME_ARCHIVE_TEST_MODULE = "tests.test_runtime_archive.RuntimeArchiveTests"
 V5_EXPERIMENT_TEST_MODULE = "tests.test_v5_experiments.V5ExperimentTests"
 RUNTIME_CUTOVER_TEST_MODULE = "tests.test_runtime_cutover.RuntimeCutoverTests"
+HOST_ENTRYPOINT_TEST_MODULE = (
+    "tests.test_host_entrypoint_nonmutation.HostEntrypointNonMutationTests"
+)
 PAPER_RESEARCH_PIPELINE_TEST_MODULE = (
     "tests.test_paper_research_pipeline.PaperResearchPipelineTests"
 )
@@ -922,6 +925,36 @@ MUTANTS = (
         target="mathgraph/runtime_cutover.py",
     ),
     Mutant(
+        name="runtime_cutover_entrypoint_writes_bytecode_before_validation",
+        old="sys.dont_write_bytecode = True\n",
+        new="sys.dont_write_bytecode = False\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_default_python_entrypoints_do_not_create_bytecode"
+        ),
+        target="runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_archive_entrypoint_writes_bytecode_before_validation",
+        old="sys.dont_write_bytecode = True\n",
+        new="sys.dont_write_bytecode = False\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_default_python_entrypoints_do_not_create_bytecode"
+        ),
+        target="archive_runtime.py",
+    ),
+    Mutant(
+        name="chx_ledger_entrypoint_writes_bytecode_before_runtime_validation",
+        old="sys.dont_write_bytecode = True\n",
+        new="sys.dont_write_bytecode = False\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_default_python_entrypoints_do_not_create_bytecode"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
         name="runtime_cutover_project_inventory_confirmation_bypassed",
         old=(
             "    if not normalized_projects and not confirm_no_protected_projects:\n"
@@ -1689,12 +1722,12 @@ MUTANTS = (
     Mutant(
         name="chx_public_disclosure_unresolved_issue_accepted",
         old=(
-            "    if any(item[\"status\"] != \"resolved\" for item in issues):\n"
-            "        raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+            "        if any(item[\"status\"] != \"resolved\" for item in issues):\n"
+            "            raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
         ),
         new=(
-            "    if False and any(item[\"status\"] != \"resolved\" for item in issues):\n"
-            "        raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+            "        if False and any(item[\"status\"] != \"resolved\" for item in issues):\n"
+            "            raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
         ),
         test=(
             f"{CHX_TEST_MODULE}."
@@ -1713,14 +1746,108 @@ MUTANTS = (
         target="chx_ledger.py",
     ),
     Mutant(
-        name="chx_public_disclosure_run_namespace_bypassed",
-        old="    if status[\"run_id\"] != contract[\"ledger_run_id\"]:\n",
-        new="    if False and status[\"run_id\"] != contract[\"ledger_run_id\"]:\n",
+        name="chx_public_disclosure_lineage_equality_bypassed",
+        old="    if actual_lineage != contract[\"ledger_lineage\"]:\n",
+        new="    if False and actual_lineage != contract[\"ledger_lineage\"]:\n",
         test=(
             f"{CHX_TEST_MODULE}."
             "test_public_disclosure_binds_ledger_registry_and_documents"
         ),
         target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_successor_transitive_issue_closure_truncated",
+        old=(
+            "        predecessor_issue_ids = sorted(\n"
+            "            {\n"
+            "                issue_id\n"
+            "                for entry in predecessor_lineage\n"
+            "                for issue_id in entry[\"observed_issue_ids\"]\n"
+        ),
+        new=(
+            "        predecessor_issue_ids = sorted(\n"
+            "            {\n"
+            "                issue_id\n"
+            "                for entry in predecessor_lineage[-1:]\n"
+            "                for issue_id in entry[\"observed_issue_ids\"]\n"
+        ),
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_successor_carries_transitive_issue_lineage_across_empty_hop"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="paper_continuation_default_status_exports_full_topology",
+        old=(
+            "                    if args.full\n"
+            "                    else continuation.status_summary(args.plan_id)\n"
+        ),
+        new=(
+            "                    if True\n"
+            "                    else continuation.status_summary(args.plan_id)\n"
+        ),
+        test=(
+            "tests.test_paper_continuation_status_projection."
+            "PaperContinuationStatusProjectionTests."
+            "test_cli_defaults_to_summary_and_full_is_explicit"
+        ),
+        target="mathgraph/cli.py",
+    ),
+    Mutant(
+        name="paper_continuation_summary_reconstructs_full_status",
+        old="        return self._status_index.summary(plan_id)\n",
+        new="        return self.status(plan_id)\n",
+        test=(
+            "tests.test_paper_continuation_status_projection."
+            "PaperContinuationStatusProjectionTests."
+            "test_summary_is_bounded_and_receipt_identical_to_full_view"
+        ),
+        target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="paper_continuation_all_summary_reconstructs_full_status",
+        old="        return self._status_index.all_summary()\n",
+        new="        return self.status_all()\n",
+        test=(
+            "tests.test_paper_continuation_status_projection."
+            "PaperContinuationStatusProjectionTests."
+            "test_indexed_summary_is_two_json_reads_stale_safe_and_rebuildable"
+        ),
+        target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="paper_continuation_status_stale_head_accepted",
+        old=(
+            "        if require_current and fingerprints != "
+            "self._dependency_fingerprints():\n"
+        ),
+        new=(
+            "        if False and require_current and fingerprints != "
+            "self._dependency_fingerprints():\n"
+        ),
+        test=(
+            "tests.test_paper_continuation_status_projection."
+            "PaperContinuationStatusProjectionTests."
+            "test_indexed_summary_is_two_json_reads_stale_safe_and_rebuildable"
+        ),
+        target="mathgraph/paper_continuation_status.py",
+    ),
+    Mutant(
+        name="v5_top_level_status_reconstructs_full_paper_continuation",
+        old=(
+            "        paper_continuation = "
+            "self.paper_continuation().status_all_summary()\n"
+        ),
+        new=(
+            "        paper_continuation = self.paper_continuation().status_all()\n"
+        ),
+        test=(
+            "tests.test_paper_continuation_status_projection."
+            "PaperContinuationStatusProjectionTests."
+            "test_indexed_summary_is_two_json_reads_stale_safe_and_rebuildable"
+        ),
+        target="mathgraph/v5_lifecycle.py",
     ),
     Mutant(
         name="reader_orbit_off_pinned_collision_yield_bypassed",
@@ -1810,6 +1937,7 @@ def main() -> int:
             "legacy premises, runtime identity, admission recovery, abort, "
             "terminal historical-runtime content objects, identity registry, "
             "component no-follow containment, active/write isolation, bounded-phase "
+            "host exact-runtime entrypoint nonmutation, "
             "runtime-scan deduplication, CHX worker runtime rehash, pre-write round "
             "runtime preflight, fail-closed runtime cutover and automatic rollback, "
             "explicit Campaign exact-match scope and frozen snapshot integrity, "
@@ -1825,7 +1953,9 @@ def main() -> int:
             "project-wide freshness, Certification aggregate enforcement, Campaign "
             "worker-result lineage, Brave Future advisory-only effects, CHX "
             "close/status parity, public-disclosure completeness and run namespace, "
-            "status projection, Reader math projection, multi-center theme-field layout, "
+            "content-addressed Paper-continuation status-head freshness without "
+            "summary-to-full fallback, status projection, Reader math projection, "
+            "multi-center theme-field layout, "
             "orbit-off pinned-card collision repulsion, and "
             "off-by-one critical guards"
         ),

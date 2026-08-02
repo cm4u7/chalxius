@@ -70,7 +70,7 @@ class CHXRunLedgerTests(unittest.TestCase):
         return ledger
 
     def test_current_contract_uses_project_local_revision(self) -> None:
-        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-3")
+        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-4")
 
     def test_project_local_ledger_can_precede_v5_initialization_and_audit(self) -> None:
         ledger = self._started("run-pre-init-001")
@@ -398,9 +398,58 @@ class CHXRunLedgerTests(unittest.TestCase):
         promoted = record_issue(successor, issue, finding_id=inherited_id)
         self.assertEqual(promoted["issue_id"], "CHX-002")
 
+    def test_successor_carries_transitive_issue_lineage_across_empty_hop(self) -> None:
+        predecessor = self._started("run-lineage-predecessor-001")
+        record_issue(predecessor, self._issue())
+        dispose_issue(
+            predecessor,
+            issue_id="CHX-001",
+            disposition={
+                "status": "resolved",
+                "reason": "The first mechanism was repaired.",
+                "regression_evidence": ["lineage-predecessor:PASS"],
+            },
+        )
+        close_ledger(predecessor)
+
+        middle = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Preserve an issue-free lineage hop.",
+                run_id="run-lineage-middle-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        close_ledger(middle)
+        successor_status = start_ledger(
+            project_root=self.project,
+            task="Exercise transitive issue allocation and relations.",
+            run_id="run-lineage-successor-001",
+            predecessor_ledger=middle,
+        )
+        self.assertEqual(successor_status["predecessor_issue_ids"], ["CHX-001"])
+        self.assertEqual(
+            [entry["ledger_run_id"] for entry in successor_status["predecessor_lineage"]],
+            ["run-lineage-predecessor-001", "run-lineage-middle-001"],
+        )
+        successor = Path(successor_status["ledger_path"])
+        issue = self._issue()
+        issue["audit_anchors"] = ["transitive-relation:CHX-001"]
+        recorded = record_issue(
+            successor,
+            issue,
+            relations=[{"relation_type": "extends", "issue_id": "CHX-001"}],
+        )
+        self.assertEqual(recorded["issue_id"], "CHX-002")
+        self.assertEqual(
+            recorded["relations"],
+            [{"relation_type": "extends", "issue_id": "CHX-001"}],
+        )
+
     def test_public_disclosure_binds_ledger_registry_and_documents(self) -> None:
-        ledger = self._started("run-public-disclosure-001")
-        record_issue(ledger, self._issue())
+        unresolved = self._started("run-public-unresolved-001")
+        record_issue(unresolved, self._issue())
+        close_ledger(unresolved)
         skill_root = Path(self.temporary.name) / "public-skill"
         (skill_root / "references").mkdir(parents=True)
         (skill_root / "KNOWN_LIMITATIONS.md").write_text(
@@ -412,10 +461,19 @@ class CHXRunLedgerTests(unittest.TestCase):
             encoding="utf-8",
         )
         contract = {
-            "contract_revision": "chalxius-chx-public-disclosure-1",
+            "contract_revision": "chalxius-chx-public-disclosure-2",
             "included_issue_ids": ["CHX-001"],
-            "ledger_issue_ids": ["CHX-001"],
-            "ledger_run_id": "run-public-disclosure-001",
+            "ledger_lineage": [
+                {
+                    "ledger_run_id": "run-public-unresolved-001",
+                    "ledger_sha256": __import__("hashlib").sha256(
+                        unresolved.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "",
+                    "included_issue_ids": ["CHX-001"],
+                }
+            ],
             "latest_issue_id": "CHX-001",
             "document_contracts": {
                 "KNOWN_LIMITATIONS.md": {
@@ -442,38 +500,140 @@ class CHXRunLedgerTests(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "unresolved included issue"):
-            verify_public_disclosure(ledger, skill_root)
+            verify_public_disclosure(unresolved, skill_root)
+
+        predecessor = self._started("run-public-predecessor-001")
+        record_issue(predecessor, self._issue())
         dispose_issue(
-            ledger,
+            predecessor,
             issue_id="CHX-001",
             disposition={
                 "status": "resolved",
-                "reason": "The publication contract was implemented.",
-                "regression_evidence": ["test-public-disclosure:PASS"],
+                "reason": "The predecessor publication contract was implemented.",
+                "regression_evidence": ["test-public-predecessor:PASS"],
             },
+        )
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Publish a successor CHX disclosure.",
+                run_id="run-public-successor-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        successor_issue = self._issue()
+        successor_issue["audit_anchors"] = ["successor-publication:PASS"]
+        record_issue(successor, successor_issue)
+        dispose_issue(
+            successor,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The successor publication contract was implemented.",
+                "regression_evidence": ["test-public-successor:PASS"],
+            },
+        )
+        close_ledger(successor)
+        contract["included_issue_ids"] = ["CHX-001", "CHX-002"]
+        contract["latest_issue_id"] = "CHX-002"
+        contract["ledger_lineage"] = [
+            {
+                "ledger_run_id": "run-public-predecessor-001",
+                "ledger_sha256": __import__("hashlib").sha256(
+                    predecessor.read_bytes()
+                ).hexdigest(),
+                "ledger_contract_revision": CONTRACT_REVISION,
+                "predecessor_run_id": "",
+                "included_issue_ids": ["CHX-001"],
+            },
+            {
+                "ledger_run_id": "run-public-successor-001",
+                "ledger_sha256": __import__("hashlib").sha256(
+                    successor.read_bytes()
+                ).hexdigest(),
+                "ledger_contract_revision": CONTRACT_REVISION,
+                "predecessor_run_id": "run-public-predecessor-001",
+                "included_issue_ids": ["CHX-002"],
+            },
+        ]
+        contract["document_contracts"]["KNOWN_LIMITATIONS.md"][
+            "required_markers"
+        ].append("lineage ownership")
+        contract["document_contracts"]["KNOWN_LIMITATIONS.md"][
+            "required_markers"
+        ].sort()
+        contract["document_contracts"]["references/v5_release_traceability.md"][
+            "required_markers"
+        ].append("lineage ownership")
+        contract["document_contracts"]["references/v5_release_traceability.md"][
+            "required_markers"
+        ].sort()
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "1. **CHX-001 — publication disclosure.** research-target continuity\n"
+            "2. **CHX-002 — lineage ownership.** exact predecessor namespace\n",
+            encoding="utf-8",
+        )
+        (skill_root / "references" / "v5_release_traceability.md").write_text(
+            "CHX-001 CHX-002 publication disclosure ledger equality lineage ownership\n",
+            encoding="utf-8",
+        )
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
         )
         self.assertEqual(
             validate_public_disclosure_contract(skill_root)["status"],
             "current",
         )
         self.assertEqual(
-            verify_public_disclosure(ledger, skill_root)["status"],
+            verify_public_disclosure(successor, skill_root)["status"],
             "pass",
         )
-        contract["ledger_run_id"] = "run-public-disclosure-other"
+
+        contract["ledger_lineage"][0]["ledger_run_id"] = "run-public-other-001"
+        contract["ledger_lineage"][1]["predecessor_run_id"] = "run-public-other-001"
         (skill_root / "INHERITANCE.lock.json").write_text(
             json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
             encoding="utf-8",
         )
-        with self.assertRaisesRegex(ValueError, "run id differs"):
-            verify_public_disclosure(ledger, skill_root)
-        contract["ledger_run_id"] = "run-public-disclosure-001"
+        with self.assertRaisesRegex(ValueError, "lineage differs"):
+            verify_public_disclosure(successor, skill_root)
+        contract["ledger_lineage"][0]["ledger_run_id"] = (
+            "run-public-predecessor-001"
+        )
+        contract["ledger_lineage"][1]["predecessor_run_id"] = (
+            "run-public-predecessor-001"
+        )
+        contract["ledger_lineage"][0]["ledger_sha256"] = "0" * 64
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "lineage differs"):
+            verify_public_disclosure(successor, skill_root)
+        contract["ledger_lineage"][0]["ledger_sha256"] = __import__(
+            "hashlib"
+        ).sha256(predecessor.read_bytes()).hexdigest()
+        contract["ledger_lineage"][0]["included_issue_ids"] = []
+        contract["ledger_lineage"][1]["included_issue_ids"] = [
+            "CHX-001",
+            "CHX-002",
+        ]
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "lineage differs"):
+            verify_public_disclosure(successor, skill_root)
+        contract["ledger_lineage"][0]["included_issue_ids"] = ["CHX-001"]
+        contract["ledger_lineage"][1]["included_issue_ids"] = ["CHX-002"]
         (skill_root / "INHERITANCE.lock.json").write_text(
             json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
             encoding="utf-8",
         )
         (skill_root / "KNOWN_LIMITATIONS.md").write_text(
-            "research-target continuity publication disclosure\n",
+            "research-target continuity publication disclosure lineage ownership\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "enumeration drifted"):

@@ -977,7 +977,12 @@ class V5LifecycleManager:
                 if existing["semantic_sha256"] != semantic_sha:
                     raise ValueError(f"research id collision at {path}")
                 return existing
+            continuation = self.paper_continuation()
+            prepared_status_index = continuation._status_index.prepare_research(
+                record
+            )
             self.store._write_json_once(path, record)
+            continuation._status_index.commit_research(prepared_status_index)
         return record
 
     def update_research(
@@ -8727,7 +8732,7 @@ class V5LifecycleManager:
             current_state = "Research"
             blocking_issue = None
             next_safe_command = "research-add"
-        paper_continuation = self.paper_continuation().status_all()
+        paper_continuation = self.paper_continuation().status_all_summary()
         return {
             "schema_version": 1,
             "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,

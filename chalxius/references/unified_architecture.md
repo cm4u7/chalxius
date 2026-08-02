@@ -105,7 +105,7 @@ invalidated by the new contract.
 New 0.4.4 cards instead use
 `task_context_revision="chalxius-v5-task-context-0.4.4-1"` and an exact
 `context_selection` receipt. They also bind the canonical candidate skill root,
-expected version, `VERSION` hash, and manifest-file hash. New 0.6.2 schema-2
+expected version, `VERSION` hash, and manifest-file hash. New 0.6.3 schema-2
 bindings additionally carry a path-independent content id and the canonical
 host archive object locator outside skill discovery. The locator is verified
 against host configuration rather than trusted because it appears in the card.

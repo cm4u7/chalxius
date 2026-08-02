@@ -173,6 +173,34 @@ updates fail and must be retried against the new head.
 
 ## Adequacy status
 
+`paper-continuation-status` is a bounded monitoring interface by default. It
+returns identity, state, snapshot currentness, adequacy, target counts, the
+exact adequacy receipt, and an explicit `detail.request`; it does not serialize
+the inherited node, edge, binding, unresolved-id, or disposition arrays. Use
+`paper-continuation-status PLAN_ID --full`, or the no-plan form with `--full`,
+only for an intentional forensic export. The compact view validates an atomic
+content-addressed status HEAD and its immutable receipt; it does not call the
+full status path or rescan plans, Research, dispositions, writing artifacts, or
+Paper snapshots. Plan creation and materialization, managed Research writes,
+disposition and writing publication, and Paper snapshot writes synchronously
+advance the indexed state. Out-of-band directory generation drift fails closed
+instead of silently falling back to the expensive path.
+
+An inherited project without a current index, or a project whose protected
+continuation directories changed out of band, must pay the full validation cost
+explicitly once:
+
+```bash
+mgraph --root PROJECT --role main paper-continuation-status-index-rebuild \
+  --actor main
+```
+
+The rebuild commits a new HEAD only when every indexed count, adequacy result,
+and receipt exactly equals the full forensic status. Compact and full views
+therefore carry the identical adequacy receipt without making routine
+monitoring reconstruct the closure. Neither view nor the index changes
+Research, Candidate, Certification, Gateway, or Fact authority.
+
 Status reports, separately from the ordinary V5 audit:
 
 - total and frontier-materialized targets;

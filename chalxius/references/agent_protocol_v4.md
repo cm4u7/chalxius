@@ -197,7 +197,7 @@ generated card rather than merging the schemas by hand.
 A newly planned 0.4.4 card uses
 `task_context_revision="chalxius-v5-task-context-0.4.4-1"` and adds one exact
 Main-planner context-selection receipt plus an exact candidate-root/version
-runtime binding. In 0.6.2, a newly generated schema-2 binding also freezes a
+runtime binding. In 0.6.3, a newly generated schema-2 binding also freezes a
 path-independent content identity and the canonical object locator under the
 host-managed archive root outside skill discovery. The locator is cross-checked
 against current host configuration; task-card text never chooses the trust root.

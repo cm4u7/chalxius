@@ -13,10 +13,13 @@ Runs already underway under 0.4.0 must not be backfilled, migrated, reopened, or
 reclassified. A missing CHX runtime ledger on such a run is
 never an audit warning, certification blocker, or reason to redo work. Loading some 0.4.1-or-later bytes while an
 older run continues does not change that run's original contract or status.
-Ledger revisions 1 and 2 remain byte-exact readable. Revision 3 is prospective
-for newly started runs and adds a finding gate, typed issue relationships,
-successor-ledger lineage, and deterministic architecture-report verification;
-it never rewrites an older ledger.
+Ledger revisions 1, 2, and 3 remain byte-exact readable. Revision 3 added a
+finding gate, typed issue relationships, direct successor lineage, and
+deterministic architecture-report verification. Revision 4 is prospective for
+newly started runs and additionally freezes the complete digest-bound
+transitive predecessor chain. It preserves issue numbering and typed relations
+across multiple generations and issue-free intermediate ledgers; it never
+rewrites an older ledger.
 
 Project-bound runs store their ledger at `PROJECT/chx-ledgers/`.
 Projectless runs use private host task state outside the skill. The project-local directory
@@ -84,7 +87,7 @@ artificial abort and never rewrites the frozen round.
 
 ## Record every discovery before classifying it
 
-Revision 3 first records every newly discovered candidate mechanism as a stable
+Revisions 3 and 4 first record every newly discovered candidate mechanism as a stable
 content-derived `finding-*` id. This prevents a host from noticing a mechanism
 and then silently omitting it because issue classification or the report is
 performed later. The finding JSON contains exactly `classification`,
@@ -103,7 +106,7 @@ Before close, every finding must be reconciled in exactly one of three ways:
 - `merged_with_reason`: bind it to an already recorded issue with a reason;
 - `excluded_with_reason`: preserve why the causal test failed.
 
-An unreconciled finding blocks close. `record` on a revision-3 ledger performs
+An unreconciled finding blocks close. `record` on a revision-3 or revision-4 ledger performs
 finding creation, issue promotion, and reconciliation in one locked append. It
 may receive `--relations-input` containing typed `related_to`, `extends`,
 `discovered_from`, or `supersedes` links to existing issue ids. A late finding
@@ -162,9 +165,12 @@ python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" verify-public-disclosure \
   --ledger "$LEDGER_PATH" --skill-root "$SKILL_ROOT"
 ```
 
-The gate requires every current release-ledger issue to be resolved, every
-finding to be reconciled, the ledger issue set to equal the public registry,
-the complete public issue range to be contiguous, and
+The gate walks the exact closed private predecessor chain from the supplied
+current ledger and compares it with an ordered public lineage of run ids,
+ledger digests, contract revisions, predecessor links, and per-run issue
+ownership. It requires every included issue in every contributing ledger to be
+resolved, every finding to be reconciled, non-overlapping and contiguous issue
+ownership, and
 `KNOWN_LIMITATIONS.md` plus release traceability to contain their declared
 enumeration and semantic markers. It returns hashes and the current ledger
 event head. It does not copy the private ledger or research content into the
@@ -172,7 +178,7 @@ release and has `truth_effect=none`.
 
 ## Immutable successors and deterministic reports
 
-After a predecessor ledger is closed, start a revision-3 successor when later
+After a predecessor ledger is closed, start a revision-4 successor when later
 work discovers a related mechanism:
 
 ```bash
@@ -182,9 +188,12 @@ python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" start \
   --inherited-finding /absolute/path/to/late-finding.json
 ```
 
-The successor binds the predecessor path, exact SHA-256, and prior issue ids.
-Inherited findings remain visible and must be reconciled. This is append-only
-lineage, not permission to reopen or modify the predecessor.
+The successor reads the chain once, rejects missing, mutable, cyclic, or
+digest-mismatched predecessors, then binds the direct predecessor path/hash and
+the ordered transitive run/digest/contract/issue lineage. Inherited findings
+remain visible and must be reconciled. Routine status does not rescan this
+chain. This is append-only lineage, not permission to reopen or modify a
+predecessor.
 
 After close, render and independently verify the deterministic architecture
 report:
@@ -212,7 +221,7 @@ python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" close --ledger "$LEDGER_PATH"
 
 The close result is authoritative for host feedback:
 
-- Revision-3 close must already contain the exact verified
+- Revision-3 and revision-4 close must already contain the exact verified
   `architecture_report` projection. The first close, an idempotent later close,
   and `status` expose the same durable projection; hosts need no hidden second
   read to discover the report.

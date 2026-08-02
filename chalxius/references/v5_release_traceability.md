@@ -1,4 +1,60 @@
-# Chalxius V5 traceability through 0.6.2 Paper Graph Continuity
+# Chalxius V5 traceability through 0.6.3 Bounded Paper Status
+
+## 0.6.3 bounded status and ledger-lineage overlay
+
+The current public CHX head is
+`run-20260802T214123599238Z-d206bd85e676/CHX-062`. Public disclosure revision 2
+preserves five exact owner namespaces rather than requalifying predecessor
+issues under the newest run.
+The immediately preceding qualified head was
+`run-20260802T203525083918Z-e81514efe3c7/CHX-061`.
+
+- Release version: `0.6.3`; public name **Bounded Paper Status / Ledger
+  Lineage**. It retains the complete 0.6.2 Paper Research Pipeline and Brave
+  Future BF-1 through BF-3 authority boundary.
+- CHX-058 is the graph-scale applicability extension of CHX-012. Ordinary
+  `paper-continuation-status` returns a bounded summary; complete target
+  bindings, selected nodes and edges, dispositions, and unresolved-id arrays
+  are exported only with explicit `--full`. Both views carry the same adequacy
+  receipt, so output reduction cannot change Paper adequacy or Fact authority.
+- CHX-059 replaces the single-run publication-disclosure namespace with an
+  ordered, digest-bound ledger lineage. Every included issue has exactly one
+  owner run; overlaps, gaps, reordered predecessors, run drift, digest drift,
+  ownership drift, unresolved findings, and unresolved issues fail the
+  publication-disclosure preflight.
+- CHX-060 introduces prospective CHX ledger revision 4. Successor creation
+  walks the closed predecessor chain once, freezes all run/digest/contract and
+  issue-owner entries, and retains numbering and relations across empty hops.
+  Routine reads do not rescan the chain; revisions 1 through 3 remain readable.
+- CHX-061 closes the remaining algorithmic defect in CHX-058: compact status no
+  longer constructs full status before serializing it. An atomic
+  content-addressed HEAD selects immutable per-plan receipts; supported plan,
+  materialization, Research, disposition, writing, and Paper-snapshot writes
+  advance that state, while directory-generation drift fails closed. Explicit
+  `paper-continuation-status-index-rebuild` pays the full validation cost and
+  commits only after exact receipt/count/adequacy equality. On the inherited
+  two-plan field project, this changed routine reads from 326.14 s to 0.10 s
+  (all plans) and 0.12 s (current plan) after a 310.45 s one-time rebuild.
+- CHX-062 makes the exact-runtime host entrypoints intrinsically non-writing.
+  `runtime_cutover.py`, `archive_runtime.py`, and `chx_ledger.py` disable
+  bytecode before local imports, so ordinary documented Python invocation does
+  not create an unmanifested cache inside the tree it validates. A clean-tree
+  subprocess test removes relevant environment controls and proves zero
+  `__pycache__` and `.pyc`; genuine unexpected files still fail closed.
+- Candidate acceptance completed with the canonical 628/628 regression suite,
+  119/119 killed release-audit mutants with an unchanged candidate tree, and a
+  passing self-test. The final field-copy repeat measured 0.09 s for all plans
+  and 0.08 s for the current plan. These measurements establish the observation
+  contract only; they add no Paper-adequacy or Fact authority.
+- The change is domain-general. Philosophy keeps the declared argumentative
+  stance, mathematics keeps the exact target, hypotheses, domains,
+  quantifiers, and target ids while permitting `proved`, `disproved`, or
+  `unresolved_with_obstruction`, and empirical or mixed work keeps its declared
+  estimand/scope or component-specific targets. Compact status never licenses
+  topology compression or target substitution.
+- Research, Candidate Release, Certification, Gateway, admitted Facts, Paper
+  snapshots, and the closed 0.6.2 ledger are not rewritten. The repair changes
+  only future observation and CHX/publication lineage mechanisms.
 
 ## 0.6.2 coordinated Paper Graph continuity overlay
 

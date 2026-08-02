@@ -1187,9 +1187,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser(
         "paper-continuation-status",
-        help="report Paper adequacy separately from Fact truth",
+        help=(
+            "report bounded Paper adequacy separately from Fact truth; "
+            "request full topology explicitly"
+        ),
     )
     p.add_argument("plan_id", nargs="?", default="")
+    p.add_argument(
+        "--full",
+        action="store_true",
+        help="include complete inherited topology and target bindings",
+    )
+
+    p = sub.add_parser(
+        "paper-continuation-status-index-rebuild",
+        help=(
+            "explicitly pay for full Paper/Research/disposition validation and "
+            "rebuild the bounded routine-status index"
+        ),
+    )
+    p.add_argument("--actor", required=True)
 
     p = sub.add_parser(
         "paper-continuation-dispose",
@@ -2544,10 +2561,24 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "paper-continuation-status":
             continuation = store.v5_lifecycle().paper_continuation()
+            if args.plan_id:
+                result = (
+                    continuation.status(args.plan_id)
+                    if args.full
+                    else continuation.status_summary(args.plan_id)
+                )
+            else:
+                result = (
+                    continuation.status_all()
+                    if args.full
+                    else continuation.status_all_summary()
+                )
+            _print_json(result)
+        elif args.command == "paper-continuation-status-index-rebuild":
             _print_json(
-                continuation.status(args.plan_id)
-                if args.plan_id
-                else continuation.status_all()
+                store.v5_lifecycle()
+                .paper_continuation()
+                .rebuild_status_index()
             )
         elif args.command == "paper-continuation-dispose":
             _print_json(

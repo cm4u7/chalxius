@@ -1,152 +1,119 @@
-# Chalxius v0.6.2 — Paper Graph Continuity / Brave Future BF-1–BF-3
+# Chalxius v0.6.3 — Bounded Paper Status / Ledger Lineage
 
-Chalxius 0.6.2 makes a research draft—not a compressed convenience summary—the
-continuing research object. It preserves the V5 truth path while adding a
-prospective, domain-general Paper Research Pipeline and a deliberately bounded
-advisory restoration of Brave Future L3/L4.
+Chalxius 0.6.3 permanently fixes two release-blocking architecture defects
+found while continuing a large research draft from its Paper Graph. It keeps
+the 0.6.2 paper-led research model, domain-indexed target continuity,
+composable verification, and cautious BF-1–BF-3 recovery intact.
 
-The release does not rewrite old Paper snapshots, Research, Candidates,
-Certification Decisions, Facts, task cards, Evidence, or CHX ledgers. Stronger
-contracts apply only when an Operator explicitly starts a new strict
-\`research_draft\` plan or opts a Campaign into BF-1 through BF-3.
+No Paper snapshot, Research claim, Candidate, Certification Decision, Fact,
+Evidence object, or historical CHX ledger is rewritten by this release.
 
-## Research drafts and finished external papers
+## Bounded Paper-continuation status (CHX-061)
 
-A research draft is treated as the origin of the project:
+Routine status used to return a compact projection only after reconstructing
+the complete Paper, Research, disposition, and revised-writing closure. That
+made the output small but left the computational cost unbounded.
 
-1. Freeze the exact draft bytes and declared research target.
-2. Decompose the draft into a proposition-total Paper DAG with source
-   occurrences, operators, qualifiers, ordered premises, targets, bridges,
-   objections, and defeaters.
-3. Continue Research from the inherited Paper Graph. Copy-on-write successors
-   keep stable local identities and explicit predecessor relations.
-4. Review literature support claim by claim, with publication identity,
-   locators, witnesses, and an independent support judgement.
-5. Run a Paper-subject atomic preflight, composable verification,
-   Certification Decision, and the ordinary Fact Gateway.
+The permanent mechanism is a content-addressed status index:
 
-The \`auto\` reasoning mode may reduce research cost; it may not compress Paper
-topology, provenance, atomic claims, target closure, or Fact requirements.
+- immutable per-plan states and receipts;
+- one atomic project HEAD with directory-generation fingerprints;
+- synchronous advancement or invalidation at plan, materialization, Research,
+  disposition, writing, and Paper-snapshot mutation boundaries;
+- exactly bounded routine reads, with no summary-to-full fallback;
+- fail-closed stale detection; and
+- an explicit `paper-continuation-status-index-rebuild` command that commits
+  only after indexed counts, adequacy, and receipts equal a full forensic
+  reconstruction.
 
-A finished external paper follows a different route. It may become immutable,
-cross-project Evidence, but neither reputation, peer review, a DOI, a PDF, nor a
-citation grants Fact authority. Its exact claims require an explicit bridge and
-fresh project-local verification before admission.
+`paper-continuation-status --full` remains available when complete topology is
+actually required. `auto` may control research cost, but it still cannot
+compress Paper topology, provenance, atomic claims, or target closure.
 
-## Domain-indexed research continuity
+## Exact-runtime entrypoint nonmutation (CHX-062)
 
-There is no single cross-domain “stance preservation” surrogate:
+The final cutover rehearsal exposed a second defect: the default Python host
+entrypoints could create `__pycache__` before validating the exact runtime file
+set. The entrypoints now disable bytecode before any local import:
 
-| Domain | Frozen continuity object | Valid terminal outcomes |
+- `scripts/runtime_cutover.py`;
+- `scripts/archive_runtime.py`; and
+- `scripts/chx_ledger.py`.
+
+Regression tests clear both `PYTHONDONTWRITEBYTECODE` and
+`PYTHONPYCACHEPREFIX`, invoke every entrypoint with ordinary `python3`, and
+require a byte-for-byte unchanged runtime tree.
+
+## Ordered CHX ledger inheritance
+
+Public disclosure now covers CHX-001 through CHX-062 across five immutable
+ledger runs. Each run binds its exact predecessor, ledger digest, contract
+revision, and included issue ids. The current public head is:
+
+`run-20260802T214123599238Z-d206bd85e676/CHX-062`
+
+A short `CHX-NNN` is never treated as globally unique. Disclosure validation
+compares the complete ordered lineage, explicit issue enumeration, resolved
+dispositions, and required documentation markers. Private ledgers are not
+distributed.
+
+## Research continuity remains domain-indexed
+
+| Domain | Frozen continuity object | Valid outcomes |
 |---|---|---|
-| Philosophy | Argumentative direction, headline thesis, required and forbidden claims | \`preserved\` or \`strengthened\`, unless the Operator authorizes an exact major revision |
-| Mathematics | Exact problem/conjecture, hypotheses, domains, quantifiers, and target claim ids | \`proved\`, \`disproved\`, or \`unresolved_with_obstruction\` |
-| Empirical | Question, estimand, population, exposure/intervention, outcome, and scope | supported, disconfirmed, or inconclusive |
-| Mixed | Explicit component adapters and their shared target ids | Composition of the component outcomes |
+| Philosophy | Argumentative direction, headline thesis, required and forbidden claims | `preserved` or `strengthened`, unless an exact major revision is authorized |
+| Mathematics | Problem/conjecture, hypotheses, domains, quantifiers, and target ids | `proved`, `disproved`, or `unresolved_with_obstruction` |
+| Empirical | Question, estimand, population, intervention/exposure, outcome, and scope | supported, disconfirmed, or inconclusive |
+| Mixed | Explicit component adapters and shared target ids | composed adapter outcomes |
 
-A counterexample to the unchanged conjecture preserves a mathematical target.
-A proof of a weakened or re-quantified statement does not resolve it.
+For a research draft, the draft is frozen and decomposed into a
+proposition-total Paper DAG, then admitted or strengthened node by node. A
+finished external paper remains Evidence and gains no Fact authority from its
+reputation, DOI, PDF, or citations.
 
-## Composable verification
+## Brave Future remains bounded
 
-CHX-014 is resolved with a risk-derived, immutable verification work plan
-rather than one omniscient verifier:
-
-- a planner signs the exact Candidate/capsule-derived shard plan before
-  dispatch;
-- the Host signs immutable role and artifact capabilities;
-- reviewers are project-registered, distinct, scope-bound, and blind to peer
-  results;
-- signed receipts cover claims, targets, predecessors, defeaters, interfaces,
-  transport, and artifacts;
-- a deterministic aggregate fails closed on missing, duplicate, conflicting,
-  stale, or incomplete receipts;
-- adjudication and the Fact Gateway remain separate from shard reviewers.
-
-This is a reusable mechanism for philosophy, mathematics, empirical work, and
-mixed projects. Parallelism changes verification organization, never the truth
-gate.
-
-## Brave Future BF-1 through BF-3
-
-The cautious L3/L4 restoration is advisory and requires an exact, explicitly
-activated Campaign:
-
-- **BF-1:** read-only projection of typed, complete repair lineage from one
-  frozen planning snapshot;
-- **BF-2:** deterministic zero-write reassessment of that same snapshot;
-- **BF-3:** after explicit opt-in, one same-volume atomic nontruth advisory
-  receipt.
-
-Repeated blockage parks and escalates without another write. There is no active
-Campaign pointer selection, second scheduler, background loop, \`plan_one\`,
-\`execute_one\`, round planning, worker dispatch, score writeback, Campaign
-closure, Reader/Learner mutation, or Candidate/Certification/Gateway/Fact
-effect.
-
-## CHX architecture closure and disclosure
-
-The public registry explicitly enumerates CHX-001 through CHX-057. For this
-release, every short id is qualified by ledger namespace
-\`run-20260801T233737840117Z-a29d00a787c1/CHX-NNN\`; a same-numbered issue from
-another immutable ledger is not the same issue.
-
-The prospective mechanisms are documented in
-[\`chalxius/KNOWN_LIMITATIONS.md\`](chalxius/KNOWN_LIMITATIONS.md) and bound into
-\`INHERITANCE.lock.json\`. A publication-disclosure preflight compares the
-public list and required documentation markers with the exact private ledger
-and fails if an issue is missing, unresolved, or assigned to the wrong run.
-Private source content and the private ledger are not distributed.
-
-Resolved field mechanisms are evidence for this release contract, not a claim
-that no future architecture defect can exist. A new discovery opens a new
-append-only CHX issue; it never weakens Fact admission.
-
-## Compatibility and authority
-
-The only truth path remains:
-
-\`\`\`text
-Research -> Candidate Release -> Certification Decision -> Fact
-\`\`\`
-
-The release is prospective. It performs no automatic project migration,
-backfill, reclassification, forced redo, authority inheritance, or global
-runtime replacement. Frozen work remains readable under its exact runtime
-identity. Historical runtime archives are validation data and are never
-executed or used for active writes.
+BF-1 through BF-3 still provide only read-only repair-lineage projection,
+zero-write reassessment, and—after exact opt-in—one bounded nontruth advisory
+receipt. They cannot select an active Campaign implicitly, plan rounds,
+dispatch agents, write Research, change scores, or affect Candidate,
+Certification, Gateway, or Fact.
 
 ## Validation summary
 
-- Complete suite: 622/622 PASS on the final tree and 622/622 PASS after a cold
-  archive extraction.
-- Targeted installed-tree CHX/Paper tests: 37/37 PASS.
-- Release mutation audit: 110/110 killed with
-  \`candidate_unchanged=true\`.
-- Field Paper Pipeline reliability matrix: 1200/1200 semantic mutations killed,
-  with zero surviving mutations and zero harness errors.
-- Manifest: 201/201 entries; cold extracted tree exact; no symlinks, caches,
-  bytecode, or unexpected files.
-- Deterministic archive: 202 regular files; two builds byte-identical.
-- Public examples: 3/3 deterministic/privacy validations PASS.
-- Transactional global-cutover rehearsal and final cutover: all ten audit
-  rounds completed before and after replacement, with rollback preserved.
+- Final candidate: 628/628 tests PASS; 119/119 release mutants killed with
+  `candidate_unchanged=true`; self-test PASS.
+- Cold extracted archive: 628/628 PASS; 119/119 killed; self-test and all
+  204 manifest entries PASS.
+- Installed global tree: 628/628 PASS; 119/119 killed; self-test PASS; no
+  bytecode or cache files; exact tree equals the candidate.
+- Deterministic archive: 205 regular files, 2,004,366 bytes; two independent
+  builds are byte-identical.
+- Transactional cutover: all ten protected rounds and project audit were
+  current before and after replacement; exact rollback remains available.
+- Real inherited Paper-continuation migration: generation 1, two plans,
+  54 targets, 123 Research-lineage records, and content-addressed HEAD
+  `8e7302ee2502cf5c41cdd2af6ca02626d4e41a753440ed4e0400e39d305d9302`.
+  Routine all-plan status measured 0.34 s and current-plan status 0.29 s after
+  the one explicit full rebuild.
 
 These checks establish bounded software and workflow properties only. They do
-not prove a theorem, establish philosophical or empirical truth, establish
-novelty, certify a private graph, or admit a research claim. See
-[\`VALIDATION.md\`](VALIDATION.md).
+not establish philosophical, mathematical, or empirical truth; certify a
+private graph; establish novelty; or admit a Fact. See
+[`VALIDATION.md`](VALIDATION.md).
 
 ## Install
 
-Download the two adjacent release assets and verify before extraction:
+Download the adjacent archive and checksum assets, then run:
 
-\`\`\`sh
-shasum -a 256 -c chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz.sha256
-tar -xzf chalxius-0.6.2-paper-graph-continuity-brave-future-bf1-bf3.tar.gz
+```sh
+shasum -a 256 -c chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz.sha256
+tar -xzf chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
-\`\`\`
+```
 
-Replacing a currently installed skill remains a separate explicit cutover
-decision. Never replace the runtime beneath an already-frozen work unit.
+Replacing an installed skill remains an explicit transactional cutover. A
+project created before the status index should use the explicit rebuild command
+once; routine status then reads only the validated index. Historical work keeps
+its exact runtime identity and authority boundaries.
