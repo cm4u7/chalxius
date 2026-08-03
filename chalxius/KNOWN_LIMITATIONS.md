@@ -1,19 +1,25 @@
-# Known architecture limitations in Chalxius 0.6.3
+# Known architecture limitations in Chalxius 0.6.4
 
 The numbered entries below retain their immutable owner ledger: CHX-001 through
 CHX-017 belong to `run-20260801T072127934348Z-16d73c1b37d5`, CHX-018 through
 CHX-057 belong to `run-20260801T233737840117Z-a29d00a787c1`, CHX-058
 through CHX-060 belong to `run-20260802T190108619281Z-6b046e728879`, and
-CHX-061 belongs to `run-20260802T203525083918Z-e81514efe3c7`, while CHX-062
-belongs to `run-20260802T214123599238Z-d206bd85e676`.
+CHX-061 belongs to `run-20260802T203525083918Z-e81514efe3c7`, CHX-062
+belongs to `run-20260802T214123599238Z-d206bd85e676`, and CHX-063 belongs to
+`run-20260803T050224999419Z-b61fe8ef982a`, while CHX-064 belongs to
+`run-20260803T061517579316Z-67d1a8c570ed`, CHX-065 belongs to
+`run-20260803T063745640293Z-1ebe1ce2cc97`, CHX-066 belongs to
+`run-20260803T080711145538Z-d486dce92032`, CHX-067 belongs to
+`run-20260803T090357863328Z-315775267e7b`, and CHX-068 belongs to
+`run-20260803T094645700515Z-355e835f8fef`.
 The qualified current head is
-`run-20260802T214123599238Z-d206bd85e676/CHX-062`; a short identifier never
+`run-20260803T094645700515Z-355e835f8fef/CHX-068`; a short identifier never
 changes owner merely because a later release includes it.
 The two immediately preceding qualified heads were
-`run-20260802T203525083918Z-e81514efe3c7/CHX-061` and
-`run-20260802T190108619281Z-6b046e728879/CHX-060`.
+`run-20260803T090357863328Z-315775267e7b/CHX-067` and
+`run-20260803T080711145538Z-d486dce92032/CHX-066`.
 
-Chalxius 0.6.3 retains the 0.6.0/0.6.1/0.6.2 prospective repairs for every architecture mechanism recorded as
+Chalxius 0.6.4 retains the 0.6.0/0.6.1/0.6.2/0.6.3 prospective repairs for every architecture mechanism recorded as
 CHX-001 through CHX-017 in the 2026-08-01 research-draft field run, plus the
 Campaign-lineage and CHX close/status integration issues found while cautiously
 restoring Brave Future L3/L4 and exercising revision-3 accounting. It also repairs
@@ -21,12 +27,17 @@ CHX-020 through CHX-035, including durable stance authorization, cryptographic
 principal coordination, Certification/Gateway integration, registry-wide audit and
 cache authority, complete active-runtime validation, terminal write isolation,
 pre-write planning atomicity, and transactional global-cutover continuity. It
-extends closure through CHX-036 to CHX-062 with the reusable Paper Research
+extends closure through CHX-036 to CHX-068 with the reusable Paper Research
 Pipeline, which preserves inherited Paper topology, separates source
 occurrences from logical operators, validates claim-level literature support,
 requires a Paper-subject atomic preflight before the native admission path,
 preserves domain-indexed research-target continuity, and binds public release
-disclosure back to the exact private CHX ledger. Closure is
+disclosure back to the exact CHX ledger. The 0.6.4 goal-driven advisory recovery
+also compiles an explicit user research objective into an exact prospective
+Campaign scope under `auto` or `deep`, without requiring Campaign jargon or expanding
+Brave Future beyond advisory BF-1 through BF-3. Its release audit also uses an
+exact pre/post audit snapshot and intrinsic child-process bytecode suppression,
+so `candidate_unchanged` is measured rather than asserted. Closure is
 based on executable regressions, full inherited-suite
 validation, a frozen independent review matrix, and installed-tree validation;
 package hashes or successful installation alone are not issue evidence.
@@ -292,8 +303,84 @@ successor artifacts to use the stronger path.
     `chx_ledger.py` now disable bytecode writes before any local import. A clean
     copied-tree subprocess regression removes all bytecode-control environment
     variables and proves that every default entrypoint creates zero cache or
-    bytecode files; three independent mutants guard the three seams. Genuine
+    bytecode files, including the bounded cutover-receipt builder. Genuine
     unexpected files remain rejected, and the repair has `truth_effect=none`.
+63. **CHX-063 — research objectives did not trigger advisory recovery without
+    Campaign jargon.** The `auto` router previously exposed only id-bearing
+    Campaign commands, so a complete user objective could enter ordinary
+    research while BF-1 remained dormant and later evidence-qualified BF-2/
+    BF-3 was unreachable without manual translation. Operator-only
+    `research-goal-intake` now normalizes NFC and whitespace, reuses exactly one
+    lexically identical objective or creates one prospective Campaign, and
+    projects BF-1 under the fixed advisory policy. It never reads `ACTIVE`,
+    fuzzy-matches, retags old Research, overrides explicit disablement, plans,
+    dispatches, or changes truth. The exact owner is
+    `run-20260803T050224999419Z-b61fe8ef982a/CHX-063`.
+64. **CHX-064 — aggressive release audit could contaminate the runtime while
+    reporting it unchanged.** Baseline test subprocesses inherited ordinary
+    bytecode behavior, while `candidate_unchanged` was hard-coded rather than
+    derived from the audited tree. A normal audit could therefore create
+    unmanifested cache files and still report success. The entrypoint now
+    suppresses bytecode intrinsically, propagates that policy to every child,
+    computes an exact pre/post audit snapshot over paths, object kinds, modes,
+    and content or link identity, and fails the audit on any drift. Two
+    self-audit mutants guard both seams. The exact owner is
+    `run-20260803T061517579316Z-67d1a8c570ed/CHX-064`.
+65. **CHX-065 — parallel release validators shared one mutable target and had
+    no compatibility schedule.** Running the full suite beside the exact
+    nonmutation audit in one cold tree created bytecode during the audit window;
+    the audit correctly failed, but the high-cost matrix became nondeterministic
+    and unusable. `release_validation.py` now binds one approved manifest,
+    creates canonical no-symlink manifest-only copies at distinct
+    `lane/chalxius` roots, isolates temporary and runtime-archive state, and
+    snapshots every lane plus the source. Compatible baseline lanes may run in
+    parallel; the snapshot-sensitive audit starts only after their phase exits.
+    One aggregate receipt rejects missing lanes, mixed identities, nonzero
+    results, timeouts, any tree drift, or removal of the phase barrier. Three
+    self-audit mutants guard isolation, snapshot comparison, and scheduling.
+    The exact owner is
+    `run-20260803T063745640293Z-1ebe1ce2cc97/CHX-065`.
+66. **CHX-066 — the first goal-intake repair excluded `deep`.** The repair for
+    CHX-063 hard-coded `reasoning_mode=auto`, even though the `deep` profile
+    requires every applicable expensive research feature. A user could state
+    the exact objective in `deep` and still receive an intake rejection unless
+    the host exposed Campaign administration. Goal intake revision 2 now
+    accepts exactly `auto` and `deep`, returns a mode-specific trigger, and
+    continues to reject `fast` before writes. The exact-matching, no-`ACTIVE`,
+    future-only binding, explicit-disablement, advisory BF-1, evidence-gated
+    BF-2/BF-3, and zero-plan/dispatch/Research/truth boundaries are unchanged.
+    The `goal_intake_deep_mode_excluded` mutant is killed. This is the
+    deep-mode applicability extension of CHX-063, owned by
+    `run-20260803T080711145538Z-d486dce92032/CHX-066`.
+67. **CHX-067 — protected-runtime cutover repeated whole-project deep audit.**
+    The old gate ran `audit()` under the candidate and then repeated it after
+    copying the byte-exact candidate to the global alias, even when a complete
+    manifest-bound release matrix and a current protected-project audit already
+    existed. On the inherited 231 MB project, the first duplicate pass alone
+    exceeded ten minutes at sustained CPU. Protected cutover now requires an
+    approved project-validation receipt or an explicit one-time full-audit
+    override. The receipt binds the exact candidate/prior identities, complete
+    runtime diff, full release matrix, prior audit anchor, terminal rounds,
+    historical runtime bindings, and a 1.8-second content digest over 8,536
+    audit-relevant files. A classified non-impacting change reuses the prior
+    audit; an impacting change runs a single deep audit while building the receipt.
+    Cutover and postflight recheck identities and the exact project digest but
+    never repeat semantic reconstruction. Drift fails before mutation or rolls
+    back after swap. This extends CHX-012 and is related to CHX-065; its exact
+    owner is `run-20260803T090357863328Z-315775267e7b/CHX-067`.
+68. **CHX-068 — mutation audit validated stale targets only after its expensive
+    baseline.** A receipt-first cutover refactor removed an old textual target,
+    but the audit discovered the zero-occurrence mutant only after the complete
+    baseline and earlier mutation work. The candidate remained unchanged and
+    every ordinary test passed, yet the matrix lost 130 seconds and could not
+    issue a receipt. The audit now runs a read-only mutant registry preflight
+    before any baseline subprocess. Every target must remain one contained
+    regular file and every old fragment must occur exactly once. Mutation uses
+    the same resolver, the stale target now attacks the current receipt
+    postflight gate, and a self-mutant protects preflight ordering. This is a
+    domain-general validation optimization with no truth effect. It extends
+    CHX-065, is related to CHX-067, and is owned by
+    `run-20260803T094645700515Z-355e835f8fef/CHX-068`.
 
 ## Deliberate residual boundaries
 
@@ -302,6 +389,10 @@ successor artifacts to use the stronger path.
   but cannot plan, dispatch, create Research, mutate Campaign state, close a
   Campaign, or affect truth. `plan_one`, `execute_one`, and
   `plan-round --reassessment` remain unimplemented and rejected.
+- Under `auto` or `deep`, an explicit research objective may automatically establish its
+  exact future Campaign scope and project BF-1. BF-2/BF-3 still require the
+  existing real-attempt blockage evidence gate; goal intake alone cannot
+  fabricate blockage, a plan, a dispatch, or a Research result.
 - Research-draft preflight and composable verification establish structural and
   evidential readiness, not philosophical, mathematical, or empirical truth.
   Fresh independent reviewers and the ordinary Fact Gateway remain mandatory.
@@ -317,5 +408,5 @@ successor artifacts to use the stronger path.
   the normal Candidate, Certification, and Gateway path.
 
 These boundaries are intentional authority separations, not open CHX defects.
-Any newly observed architecture-caused mechanism must enter a new revision-3
+Any newly observed architecture-caused mechanism must enter a new current-contract
 finding ledger before it may be omitted, merged, promoted, reported, or closed.

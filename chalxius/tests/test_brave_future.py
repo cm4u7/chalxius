@@ -5,15 +5,19 @@ import hashlib
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 from mathgraph.brave_future import (
     BF_BLOCKAGE_REVISION,
     BF_DECISION_REVISION,
+    BF_GOAL_INTAKE_REVISION,
     BF_REPAIR_CONTRACT_REVISION,
     _FIXED_POLICY,
 )
 from mathgraph.contracts import sha256_json
+from mathgraph.cli import build_parser, main as cli_main
 from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
@@ -247,11 +251,378 @@ class BraveFutureTests(unittest.TestCase):
                 )
             self.assertIn("campaign-reassess", allowed_commands("main"))
             self.assertIn("brave-future-status", allowed_commands("main"))
+            self.assertIn("research-goal-intake", allowed_commands("operator"))
+            self.assertNotIn("research-goal-intake", allowed_commands("main"))
             self.assertNotIn("brave-future-enable", allowed_commands("main"))
             self.assertNotIn("campaign-reassess-decide", allowed_commands("main"))
             for role in ("worker", "host", "gateway", "paper-auditor"):
                 self.assertNotIn("campaign-reassess", allowed_commands(role))
                 self.assertNotIn("brave-future-enable", allowed_commands(role))
+
+    def test_auto_goal_intake_creates_exact_campaign_enables_bf1_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.brave_future()
+            objective = "Strengthen the draft without changing its exact thesis."
+            result = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": objective,
+                },
+                actor="user",
+            )
+            self.assertTrue(result["campaign_created"])
+            self.assertEqual(result["objective"], objective)
+            self.assertEqual(
+                result["campaign_resolution"], "created_from_exact_user_goal"
+            )
+            self.assertIsNone(store.campaigns().active())
+            self.assertFalse(result["active_campaign_pointer_used"])
+            self.assertFalse(result["fuzzy_objective_matching"])
+            self.assertTrue(result["research_scope"]["bind_future_research"])
+            self.assertFalse(
+                result["research_scope"]["rebind_existing_untagged_research"]
+            )
+            self.assertTrue(
+                manager.status(result["campaign_id"])["enabled"]
+            )
+            self.assertEqual(
+                result["bf1"]["frontier_projection"]["entries"], []
+            )
+            self.assertEqual(
+                result["bf2_bf3_state"],
+                "awaiting_existing_exact_blockage_evidence_gate",
+            )
+            self.assertFalse(result["automatic_plan"])
+            self.assertFalse(result["automatic_dispatch"])
+            self.assertEqual(result["research_write_effect"], "none")
+            self.assertEqual(store.fact_ids(), [])
+            self.assertEqual(store.v5_lifecycle().research_records(), [])
+            self.assertEqual(list(store.rounds_dir.iterdir()), [])
+
+    def test_deep_goal_intake_creates_exact_campaign_enables_bf1_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = MathGraphStore(Path(temporary) / "project")
+            store.initialize(
+                project_id="bf-deep-goal",
+                title="Deep goal fixture",
+                workflow_evidence_version=5,
+                reasoning_mode="deep",
+            )
+            result = store.brave_future().intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Strengthen the inherited Paper Graph in deep mode.",
+                },
+                actor="user",
+            )
+            self.assertEqual(result["reasoning_mode"], "deep")
+            self.assertEqual(
+                result["trigger"], "explicit_user_research_goal_under_deep"
+            )
+            self.assertTrue(result["campaign_created"])
+            self.assertTrue(result["research_scope"]["bind_future_research"])
+            self.assertFalse(
+                result["research_scope"]["rebind_existing_untagged_research"]
+            )
+            self.assertTrue(store.brave_future().status(result["campaign_id"])["enabled"])
+            self.assertEqual(
+                result["bf2_bf3_state"],
+                "awaiting_existing_exact_blockage_evidence_gate",
+            )
+            self.assertFalse(result["automatic_plan"])
+            self.assertFalse(result["automatic_dispatch"])
+            self.assertEqual(result["research_write_effect"], "none")
+            self.assertEqual(store.v5_lifecycle().research_records(), [])
+            self.assertEqual(store.fact_ids(), [])
+            self.assertEqual(list(store.rounds_dir.iterdir()), [])
+
+    def test_auto_goal_intake_is_lexically_exact_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.brave_future()
+            first = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Test Cafe\u0301   scope.",
+                },
+                actor="user",
+            )
+            second = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "  Test Caf\u00e9 scope.  ",
+                },
+                actor="user",
+            )
+            self.assertEqual(first["campaign_id"], second["campaign_id"])
+            self.assertFalse(second["campaign_created"])
+            self.assertEqual(
+                second["campaign_resolution"], "exact_objective_reused"
+            )
+            self.assertTrue(second["brave_future_activation"]["idempotent"])
+            distinct = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Test Caf\u00e9",
+                },
+                actor="user",
+            )
+            self.assertNotEqual(first["campaign_id"], distinct["campaign_id"])
+            self.assertEqual(len(store.campaigns().campaign_ids()), 2)
+            self.assertEqual(manager.status(first["campaign_id"])["event_count"], 1)
+
+    def test_goal_intake_ignores_active_pointer_and_exposes_future_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            unrelated = self._campaign(store, "Unrelated")
+            with store.v5_mutation_lock(command="bf-goal-active-fixture"):
+                store.campaigns().activate(unrelated, actor="operator")
+            manager = store.brave_future()
+            result = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Investigate a distinct exact objective.",
+                },
+                actor="user",
+            )
+            self.assertNotEqual(result["campaign_id"], unrelated)
+            self.assertEqual(store.campaigns().active(), unrelated)
+            research = self._research(
+                store,
+                result["campaign_id"],
+                "One branch bound by the returned internal scope.",
+            )
+            repeated = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Investigate a distinct exact objective.",
+                },
+                actor="user",
+            )
+            self.assertEqual(
+                [
+                    item["research_id"]
+                    for item in repeated["bf1"]["frontier_projection"]["entries"]
+                ],
+                [research["research_id"]],
+            )
+
+    def test_goal_intake_ambiguity_nonauto_and_disablement_fail_zero_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            objective = "One duplicated exact objective."
+            with store.v5_mutation_lock(command="bf-goal-duplicate-fixture"):
+                for label in ("one", "two"):
+                    store.campaigns().create(
+                        {
+                            "name": label,
+                            "objective": objective,
+                            "source_claim_ids": [],
+                            "targets": [],
+                            "constraints": [],
+                            "stop_conditions": [],
+                            "value_definition": "Keep the objective exact.",
+                        },
+                        actor="operator",
+                        fact_exists=lambda _fact_id: False,
+                    )
+            before = self._inventory(store.root)
+            with self.assertRaisesRegex(ValueError, "multiple exact Campaigns"):
+                store.brave_future().intake_research_goal(
+                    goal_input={
+                        "revision": BF_GOAL_INTAKE_REVISION,
+                        "objective": objective,
+                    },
+                    actor="user",
+                )
+            self.assertEqual(before, self._inventory(store.root))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = MathGraphStore(Path(temporary) / "project")
+            store.initialize(
+                project_id="bf-fast-goal",
+                title="Fast goal fixture",
+                workflow_evidence_version=5,
+                reasoning_mode="fast",
+            )
+            before = self._inventory(store.root)
+            with self.assertRaisesRegex(
+                ValueError, "requires reasoning_mode=auto or reasoning_mode=deep"
+            ):
+                store.brave_future().intake_research_goal(
+                    goal_input={
+                        "revision": BF_GOAL_INTAKE_REVISION,
+                        "objective": "A fast-mode objective.",
+                    },
+                    actor="user",
+                )
+            self.assertEqual(before, self._inventory(store.root))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.brave_future()
+            goal = {
+                "revision": BF_GOAL_INTAKE_REVISION,
+                "objective": "An explicitly disabled recovery objective.",
+            }
+            first = manager.intake_research_goal(goal_input=goal, actor="user")
+            manager.disable(
+                campaign_id=first["campaign_id"],
+                actor="operator",
+                reason="The user disabled advisory recovery.",
+            )
+            before = self._inventory(store.root)
+            with self.assertRaisesRegex(ValueError, "cannot override.*disablement"):
+                manager.intake_research_goal(goal_input=goal, actor="user")
+            self.assertEqual(before, self._inventory(store.root))
+
+    def test_goal_intake_cli_needs_objective_but_no_campaign_jargon(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout), self.assertRaises(SystemExit) as raised:
+            build_parser().parse_args(["research-goal-intake", "--help"])
+        self.assertEqual(raised.exception.code, 0)
+        self.assertIn("exact objective", stdout.getvalue())
+        self.assertIn("no Campaign id is required", stdout.getvalue())
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            self._store(root)
+            goal_path = Path(temporary) / "goal.json"
+            goal_path.write_text(
+                json.dumps(
+                    {
+                        "revision": BF_GOAL_INTAKE_REVISION,
+                        "objective": "Route this stated goal without Campaign jargon.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli_main(
+                    [
+                        "--root",
+                        str(root),
+                        "--role",
+                        "operator",
+                        "research-goal-intake",
+                        "--input",
+                        str(goal_path),
+                        "--actor",
+                        "user",
+                    ]
+                )
+            self.assertEqual(code, 0, stderr.getvalue())
+            result = json.loads(stdout.getvalue())
+            self.assertTrue(result["campaign_created"])
+            before = self._inventory(root)
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                denied = cli_main(
+                    [
+                        "--root",
+                        str(root),
+                        "--role",
+                        "main",
+                        "research-goal-intake",
+                        "--input",
+                        str(goal_path),
+                        "--actor",
+                        "user",
+                    ]
+                )
+            self.assertEqual(denied, 3)
+            self.assertIn("not allowed", stderr.getvalue())
+            self.assertEqual(before, self._inventory(root))
+
+    def test_goal_intake_preflights_corrupt_bf_chain_before_campaign_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.brave_future()
+            first = manager.intake_research_goal(
+                goal_input={
+                    "revision": BF_GOAL_INTAKE_REVISION,
+                    "objective": "Seed one valid advisory chain.",
+                },
+                actor="user",
+            )
+            activation_path = (
+                store.root
+                / "governance"
+                / "brave-future"
+                / "activation-events.jsonl"
+            )
+            activation_path.write_bytes(activation_path.read_bytes() + b"{}\n")
+            before = self._inventory(store.root)
+            campaign_ids = store.campaigns().campaign_ids()
+            with self.assertRaisesRegex(ValueError, "fields are not exact"):
+                manager.intake_research_goal(
+                    goal_input={
+                        "revision": BF_GOAL_INTAKE_REVISION,
+                        "objective": "A distinct objective must not be published.",
+                    },
+                    actor="user",
+                )
+            self.assertEqual(before, self._inventory(store.root))
+            self.assertEqual(store.campaigns().campaign_ids(), campaign_ids)
+            self.assertIn(first["campaign_id"], campaign_ids)
+
+    def test_goal_intake_internal_scope_reaches_bf2_bf3_after_real_blockage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.brave_future()
+            goal = {
+                "revision": BF_GOAL_INTAKE_REVISION,
+                "objective": "Recover from a real bounded method blockage.",
+            }
+            intake = manager.intake_research_goal(goal_input=goal, actor="user")
+            campaign_id = intake["campaign_id"]
+            root = self._research(
+                store,
+                campaign_id,
+                "The direct route is the current target.",
+            )
+            self._research(
+                store,
+                campaign_id,
+                "A sibling route remains available.",
+                relation="supports",
+                related_research_ids=[root["research_id"]],
+            )
+            round_status, assignment, receipt = self._ingested_attempt(
+                store, campaign_id, root["research_id"]
+            )
+            refreshed = manager.intake_research_goal(goal_input=goal, actor="user")
+            blockage = self._blockage(
+                campaign_id=refreshed["campaign_id"],
+                planning_snapshot_id=refreshed["bf1"]["planning_snapshot"][
+                    "planning_snapshot_id"
+                ],
+                target_research_id=root["research_id"],
+                round_status=round_status,
+                assignment=assignment,
+                result_research_id=receipt["research_id"],
+            )
+            dry = manager.reassess(
+                campaign_id=refreshed["campaign_id"],
+                blockage_input=blockage,
+                dry_run=True,
+            )
+            persisted = manager.reassess(
+                campaign_id=refreshed["campaign_id"],
+                blockage_input=blockage,
+                dry_run=False,
+            )
+            self.assertEqual(dry["write_effect"], "none")
+            self.assertEqual(
+                persisted["write_effect"], "one_atomic_sidecar_transaction"
+            )
+            self.assertEqual(persisted["plan_effect"], "none")
+            self.assertEqual(persisted["dispatch_effect"], "none")
+            self.assertEqual(store.fact_ids(), [])
 
     def test_l4_collapses_only_complete_typed_repair_and_preserves_invalidator(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

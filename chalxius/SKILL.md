@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage
+# Chalxius 0.6.4 — Goal-Driven Advisory Recovery
 
 Use the bundled Chalxius research engine as the only research runtime. Fast,
 auto, and deep are execution profiles of that one engine. The Fact Graph
@@ -21,7 +21,7 @@ Before substantive work or any project write, read [references/unified_architect
 Read the directly applicable Chalxius reference before acting:
 
 - Paper reconstruction, inherited-draft research, research-draft admission, audit, Evidence archive/bridge, correction, mirroring, or paper-led planning: [references/paper_logic_graph_v1.md](references/paper_logic_graph_v1.md), [references/paper_input_contracts.md](references/paper_input_contracts.md), [references/evidence_plane.md](references/evidence_plane.md), [references/paper_continuation_contract.md](references/paper_continuation_contract.md), and [references/paper_research_pipeline.md](references/paper_research_pipeline.md).
-- V5 Research, lifecycle, retained capabilities, release work, or explicitly enabled L3/L4 advice: [references/v5_capability_matrix.md](references/v5_capability_matrix.md) and [references/brave_future_l3_l4.md](references/brave_future_l3_l4.md).
+- V5 Research, lifecycle, retained capabilities, release work, goal-driven `auto`/`deep` intake, or L3/L4 advice: [references/v5_capability_matrix.md](references/v5_capability_matrix.md) and [references/brave_future_l3_l4.md](references/brave_future_l3_l4.md).
 - Historical V4 memory, routing, or adoption behavior: [references/adoption_policy_v4.md](references/adoption_policy_v4.md).
 - Round creation, worker execution, return validation, or ingestion: [references/agent_protocol_v4.md](references/agent_protocol_v4.md).
 - Adverse-worker counterexample learning, attack reports, or route decisions: [references/adverse_routing_evolution.md](references/adverse_routing_evolution.md).
@@ -122,7 +122,7 @@ receipts, and read-only audit. A fully receipted round becomes `completed` and
 historical without an artificial abort; otherwise `round-status` projects aborted
 unfinished assignments as `frozen_aborted` with no live awaiting count. Audit checks
 exact frozen runtime bytes in either terminal state. A terminal schema-1 or schema-2 card may resolve those bytes only through the host-managed, content-addressed runtime archive outside skill discovery. The resolver rehashes the complete manifest, exact file set, read-only content object, and immutable identity registry record on each bounded read; it never imports or executes archived code.
-Active cards, worker CHX startup, return ingestion, experiments, Pulse, and every mutation still require the exact current live runtime, including every manifest-listed byte. `plan-round` completes that runtime preflight before it writes a Blackboard snapshot, round directory, or task card; worker CHX startup performs the same full-tree check before creating a ledger. Replace or roll back a global runtime only through `scripts/runtime_cutover.py`, with an explicit protected-project inventory, approved manifest, host archive, and rollback root; the gate archives the live identity once, revalidates distinct sealed historical identities without forcing one alias to match several versions, reruns status/audit, and restores the prior install on failure.
+Active cards, worker CHX startup, return ingestion, experiments, Pulse, and every mutation still require the exact current live runtime, including every manifest-listed byte. `plan-round` completes that runtime preflight before it writes a Blackboard snapshot, round directory, or task card; worker CHX startup performs the same full-tree check before creating a ledger. Replace or roll back a global runtime only through `scripts/runtime_cutover.py`, with an explicit protected-project inventory, approved manifest, host archive, and rollback root. For a protected project, first build one approved receipt with `scripts/runtime_cutover_project_validation.py`. The request binds the exact runtime diff, release matrix, prior current audit, and whether changed code requires one fresh deep audit. The builder checks terminal rounds and historical runtime bindings, hashes the audit-relevant project state, and runs at most one deep audit. Cutover reuses that receipt before and after its exact rename; project or identity drift fails closed and restores the prior install. Without a receipt, protected cutover is refused unless the Operator explicitly requests one full audit; even that audit runs once and its exact snapshot is reused after the swap.
 Use whole-pulse abort only to stop future Pulse
 dispatch while retaining accumulated contributions.
 
@@ -156,8 +156,8 @@ projecting historical eight-metric Research without rewriting. The score has no 
 constraints, value, stop conditions, and history head as nontruth context. Without the flag the global
 frontier is unchanged; Campaign never silently schedules, expands, closes, rewrites, or affects Facts.
 
-An explicitly enabled `frontier --campaign ID --brave-future` may project only strict typed repair lineage over that same scheduler. `campaign-reassess` is bounded advice: dry-run writes zero bytes and persistence writes one atomic nontruth sidecar transaction.
-It never reads `ACTIVE`, creates Research or a round, dispatches work, changes Campaign state, or enters Candidate, Certification, Gateway, Reader, Learner, or Fact paths. Operator decisions are still advice; `plan_one` and `execute_one` remain rejected.
+When `reasoning_mode=auto` or `reasoning_mode=deep` and the user states a research objective without Campaign jargon, Operator must run `research-goal-intake` with those exact words before adding or planning new Research. The command lexically exact-matches or creates one Campaign, enables only the fixed advisory policy, computes BF-1, and returns the internal id that the host must bind to future Research; it never fuzzy-matches, consumes `ACTIVE` for selection, or retags existing Research. The user need not say `Campaign`. `fast` retains explicit Campaign/BF activation.
+After a real exact ingested-attempt blockage appears, the host may use that returned id to run BF-2 dry reassessment and BF-3 bounded persistence automatically; absent the blockage evidence gate it must wait. These paths never create Research or a round, dispatch work, close Campaigns, or enter Candidate, Certification, Gateway, Reader, Learner, or Fact authority. Explicit disablement blocks implicit re-enable; Operator decisions remain advice and `plan_one`/`execute_one` remain rejected.
 
 For new 0.4.4 cards, one promoted Blackboard Research item may seed its exact
 bounded query and lineage. Exact enum mode suggestions apply only when their

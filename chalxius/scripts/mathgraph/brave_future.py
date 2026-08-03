@@ -21,6 +21,7 @@ from .contracts import (
     validate_memory_id,
     validate_round_id,
 )
+from .campaigns import canonical_research_objective
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
 from .v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
@@ -34,6 +35,7 @@ BF_CANDIDATE_MANIFEST_REVISION = "chalxius-bf-candidate-manifest-1"
 BF_REASSESSMENT_REVISION = "chalxius-bf-reassessment-1"
 BF_DECISION_REVISION = "chalxius-bf-decision-1"
 BF_ACTIVATION_REVISION = "chalxius-bf-activation-event-1"
+BF_GOAL_INTAKE_REVISION = "chalxius-bf-goal-intake-2"
 
 BF_TRUTH_EFFECT = "none"
 BF_FACT_ADMISSION_EFFECT = "none"
@@ -134,6 +136,20 @@ _FIXED_POLICY = {
     "truth_effect": BF_TRUTH_EFFECT,
     "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
 }
+
+
+def validate_goal_intake(payload: Any) -> dict[str, str]:
+    payload = _exact(
+        payload,
+        {"revision", "objective"},
+        "Brave Future research-goal intake",
+    )
+    if payload.get("revision") != BF_GOAL_INTAKE_REVISION:
+        raise ValueError("Brave Future research-goal intake revision mismatch")
+    return {
+        "revision": BF_GOAL_INTAKE_REVISION,
+        "objective": canonical_research_objective(payload.get("objective")),
+    }
 
 _SNAPSHOT_SEMANTIC_FIELDS = {
     "revision",
@@ -1760,6 +1776,116 @@ class BraveFutureManager:
         return self.policy_store.enable(
             campaign_id=campaign_id, policy=policy, actor=actor
         )
+
+    def intake_research_goal(
+        self,
+        *,
+        goal_input: dict[str, Any],
+        actor: str,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """Compile an ordinary-language research goal into advisory BF scope.
+
+        The user supplies an exact objective, not a Campaign id.  Under
+        ``reasoning_mode=auto`` or ``reasoning_mode=deep`` the compiler reuses
+        one lexical exact match or creates a new Campaign, enables only the
+        fixed advisory policy, and immediately computes BF-1.  It never reads
+        ``ACTIVE`` for selection, performs fuzzy matching, creates Research,
+        plans, or dispatches work.
+        """
+
+        validated = validate_goal_intake(goal_input)
+        actor = _text(actor, "Brave Future goal-intake actor")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("Brave Future goal-intake limit must lie in [1,100]")
+        mode_status = self.store.reasoning_modes().status()
+        reasoning_mode = mode_status.get("reasoning_mode")
+        if reasoning_mode not in {"auto", "deep"}:
+            raise ValueError(
+                "automatic research-goal intake requires reasoning_mode=auto or "
+                "reasoning_mode=deep; use the explicit Campaign and Brave Future "
+                "commands in fast"
+            )
+        objective = validated["objective"]
+        objective_sha256 = sha256_bytes(objective.encode("utf-8"))
+        with self.store.v5_mutation_lock(command="research-goal-intake"):
+            # Validate the global activation chain before a new Campaign can
+            # become visible. A corrupt pre-existing BF sidecar must fail with
+            # a byte-identical Campaign store.
+            self.policy_store._events()
+            campaigns = self.store.campaigns()
+            matches = campaigns.exact_objective_matches(objective)
+            if len(matches) > 1:
+                raise ValueError(
+                    "research objective matches multiple exact Campaigns; "
+                    f"operator resolution is required: {matches}"
+                )
+            if matches:
+                campaign_id = matches[0]
+                campaign_resolution = "exact_objective_reused"
+                campaign_created = False
+            else:
+                campaign_id = campaigns.create(
+                    {
+                        "name": f"Research goal {objective_sha256[:12]}",
+                        "objective": objective,
+                        "source_claim_ids": [],
+                        "targets": [],
+                        "constraints": [
+                            "Preserve the exact research objective unless the "
+                            "Operator authorizes a revision."
+                        ],
+                        "stop_conditions": [
+                            "The user withdraws, replaces, or completes this exact "
+                            "research objective."
+                        ],
+                        "value_definition": (
+                            "Prefer high-information, feasible, low-burden work that "
+                            "advances the exact objective."
+                        ),
+                    },
+                    actor=actor,
+                    fact_exists=set(self.store.fact_ids()).__contains__,
+                )
+                campaign_resolution = "created_from_exact_user_goal"
+                campaign_created = True
+            current = self.policy_store.status(campaign_id)
+            if not current["enabled"] and current["event_count"]:
+                raise ValueError(
+                    "automatic research-goal intake cannot override an explicit "
+                    "Brave Future disablement; obtain a new user re-enable decision"
+                )
+            activation = self.policy_store.enable(
+                campaign_id=campaign_id,
+                policy={**_FIXED_POLICY, "campaign_id": campaign_id},
+                actor=actor,
+            )
+            bf1 = self.frontier(campaign_id=campaign_id, limit=limit)
+        return {
+            "revision": BF_GOAL_INTAKE_REVISION,
+            "trigger": f"explicit_user_research_goal_under_{reasoning_mode}",
+            "reasoning_mode": reasoning_mode,
+            "objective": objective,
+            "objective_sha256": objective_sha256,
+            "campaign_id": campaign_id,
+            "campaign_resolution": campaign_resolution,
+            "campaign_created": campaign_created,
+            "research_scope": {
+                "campaign_id": campaign_id,
+                "bind_future_research": True,
+                "rebind_existing_untagged_research": False,
+            },
+            "brave_future_activation": activation,
+            "bf1": bf1,
+            "bf2_bf3_state": "awaiting_existing_exact_blockage_evidence_gate",
+            "active_campaign_pointer_used": False,
+            "fuzzy_objective_matching": False,
+            "automatic_plan": False,
+            "automatic_dispatch": False,
+            "research_write_effect": "none",
+            "truth_effect": BF_TRUTH_EFFECT,
+            "fact_admission_effect": BF_FACT_ADMISSION_EFFECT,
+        }
 
     def disable(self, *, campaign_id: str, actor: str, reason: str) -> dict[str, Any]:
         return self.policy_store.disable(

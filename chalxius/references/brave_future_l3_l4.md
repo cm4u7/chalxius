@@ -1,7 +1,7 @@
 # Brave Future BF-1 through BF-3: cautious L3/L4 recovery
 
 This is the executable boundary for the optional Brave Future sidecar introduced
-in Chalxius 0.6.0 and retained without authority expansion through 0.6.3. The
+in Chalxius 0.6.0 and retained without authority expansion through 0.6.4. The
 runtime-continuity and Paper Graph continuity repairs do not add a planning,
 dispatch, Campaign, Research, or truth seam. The
 sidecar still implements only the safe first slice of the L3/L4 design:
@@ -211,12 +211,49 @@ Historical sidecar objects remain immutable and nontruth. No old task, Paper
 snapshot, Research entry, Candidate Release, decision, admission, or Fact is
 rewritten or invalidated by activation or disablement.
 
-## 0.6.3 finite-recovery acceptance boundary
+## Goal-driven `auto` and `deep` intake
+
+Version 0.6.4 adds one prospective Operator intake compiler. The user does not need to know or say the internal word `Campaign`. If a user states a
+research objective while the project uses `reasoning_mode=auto` or
+`reasoning_mode=deep`, the host
+freezes those exact words in this minimal input:
+
+```json
+{
+  "revision": "chalxius-bf-goal-intake-2",
+  "objective": "The user's exact research objective."
+}
+```
+
+Then run:
+
+```bash
+mgraph --root PROJECT --role operator research-goal-intake \
+  --input goal.json --actor USER
+```
+
+The compiler performs Unicode-NFC and whitespace normalization only. It reuses
+one lexically exact objective match or creates one new Campaign; it never
+fuzzy-matches, selects through `ACTIVE`, or retags existing Research. The
+returned internal `campaign_id` is a host capability that must be bound to
+future Research derived from that goal. A duplicate exact objective is
+ambiguous and fails before writes. A prior explicit BF disablement also blocks
+implicit re-enable until the user makes a new re-enable decision.
+
+The same bounded transaction enables only the fixed advisory policy and
+computes BF-1. It creates no Research, round, Pulse, dispatch, decision, or
+Fact. BF-2 and BF-3 remain ineligible until the existing blockage validator can
+bind at least one exact ingested attempt. Once that evidence exists, the host
+may use the returned internal Campaign id to run dry and persistent
+`campaign-reassess` without asking the user to repeat Campaign jargon. The
+ordinary blockage, cooldown, audit, and zero-authority gates remain unchanged.
+
+## 0.6.4 finite-recovery acceptance boundary
 
 The coordinated recovery is accepted only when the inherited Brave Future and
 Campaign regressions pass together with the full V5 suite and the Paper
-Research Pipeline matrix. The new pipeline may hand an ordered nontruth Paper
+Research Pipeline and goal-intake matrices. The Paper pipeline may hand an ordered nontruth Paper
 frontier to the existing scheduler, but Brave Future still cannot consume that
-frontier implicitly, create a round, dispatch an agent, write Research, close a
+frontier without an exact goal/Campaign binding, create a round, dispatch an agent, write Research, close a
 Campaign, or affect Candidate, Certification, Gateway, or Fact state. BF-4 and
 all autonomous planning/execution remain deliberately absent.

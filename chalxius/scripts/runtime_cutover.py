@@ -27,6 +27,20 @@ def _parser() -> argparse.ArgumentParser:
         help="Exact SHA-256 of the externally approved candidate MANIFEST.sha256 bytes.",
     )
     parser.add_argument("--expected-installed-runtime-identity")
+    parser.add_argument(
+        "--project-validation-receipt",
+        type=Path,
+        help="Approved reusable project-validation receipt built for this exact cutover.",
+    )
+    parser.add_argument(
+        "--expected-project-validation-receipt-sha256",
+        help="Exact SHA-256 of the approved project-validation receipt bytes.",
+    )
+    parser.add_argument(
+        "--force-full-project-audit",
+        action="store_true",
+        help="Run one full protected-project audit before cutover, then reuse its exact snapshot after swap.",
+    )
     parser.add_argument("--allow-fresh-install", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--operation", choices=("install", "rollback"), default="install")
@@ -44,6 +58,11 @@ def main() -> int:
         confirm_no_protected_projects=args.confirm_no_protected_projects,
         expected_candidate_manifest_sha256=args.expected_candidate_manifest_sha256,
         expected_installed_runtime_identity=args.expected_installed_runtime_identity,
+        project_validation_receipt=args.project_validation_receipt,
+        expected_project_validation_receipt_sha256=(
+            args.expected_project_validation_receipt_sha256
+        ),
+        force_full_project_audit=args.force_full_project_audit,
         allow_fresh_install=args.allow_fresh_install,
         dry_run=args.dry_run,
         operation=args.operation,

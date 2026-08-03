@@ -50,6 +50,8 @@ Research, Evidence, Candidate Release, Certification Decision, Paper/Audit,
 Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,
 novelty records, project background, Reader packets/HTML, expert prose, and
 Learning records are not Fact premises.
+`research-goal-intake`, its internally created Campaign, and every BF-1/BF-2/BF-3
+projection or receipt remain in that nontruth set.
 
 V4 and original Danus Facts are readable historical artifacts but are not
 active V5 predecessors. If their mathematics is needed in V5, it must be

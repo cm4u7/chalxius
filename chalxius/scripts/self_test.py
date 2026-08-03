@@ -268,6 +268,11 @@ def main() -> int:
             for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
         ):
             raise RuntimeError(f"{command} must remain Operator-only")
+    if "research-goal-intake" not in allowed_commands("operator") or any(
+        "research-goal-intake" in allowed_commands(role)
+        for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
+    ):
+        raise RuntimeError("research-goal-intake must remain Operator-only")
     for command in ("brave-future-status", "brave-future-audit", "campaign-reassess"):
         if any(command not in allowed_commands(role) for role in ("main", "operator")) or any(
             command in allowed_commands(role)
@@ -332,6 +337,7 @@ def main() -> int:
         skill_root / "scripts" / "paper_library.py",
         skill_root / "scripts" / "archive_runtime.py",
         skill_root / "scripts" / "runtime_cutover.py",
+        skill_root / "scripts" / "runtime_cutover_project_validation.py",
         skill_root / "scripts" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_reliability.py",
@@ -347,7 +353,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage",
+            "# Chalxius 0.6.4 — Goal-Driven Advisory Recovery",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -369,6 +375,7 @@ def main() -> int:
             "reused nonces",
             "host-managed, content-addressed runtime",
             "archive outside skill discovery",
+            "The user need not say `Campaign`",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -377,8 +384,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.6.3"',
-            '"release_codename": "Bounded Paper Status — Ledger Lineage"',
+            '"version": "0.6.4"',
+            '"release_codename": "Goal-Driven Advisory Recovery"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -414,13 +421,15 @@ def main() -> int:
             '"automatic_inheritance": false',
             '"admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection"',
             '"contract_revision": "chalxius-v5-campaign-scope-1"',
-            '"selection": "explicit_exact_research_campaign_id_only"',
+            '"selection": "explicit_id_or_auto_or_deep_exact_user_objective_compilation"',
             '"scheduler": "v5_main_four_factor_frontier"',
             '"preflight_revision": "chalxius-research-draft-admission-preflight-1"',
             '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
             '"project_lifecycle_revision": "chalxius-parallel-verification-lifecycle-1"',
             '"freshness": "durable_project_wide_nonce_uniqueness_across_packet_and_receipt_records"',
             '"policy_revision": "chalxius-brave-future-policy-1"',
+            '"goal_intake_revision": "chalxius-bf-goal-intake-2"',
+            '"goal_intake_modes": [',
             '"autonomy_level": "advisory"',
             '"contract_revision": "chalxius-runtime-archive-2"',
             '"closure_contract_revision": "chalxius-runtime-compatibility-closure-1"',
@@ -481,6 +490,8 @@ def main() -> int:
             "autonomy_level=advisory",
             "It cannot create Research",
             "legacy informational `ACTIVE` pointer",
+            "research-goal-intake",
+            "does not need to know or say the internal word `Campaign`",
             "same-volume atomic directory rename",
             "plan_one",
             "execute_one",
@@ -561,7 +572,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.6.3 `Bounded Paper Status / Ledger Lineage` release artifact",
+            "The 0.6.4 `Goal-Driven Advisory Recovery` release artifact",
             "standing authorization",
             "attack-report",
             "Never backfill attack cases",
@@ -572,7 +583,9 @@ def main() -> int:
             "Candidate Release/Certification/Fact boundary",
             "Preserve runtime continuity before every global cutover",
             "archive_runtime.py",
-            "Refuse replacement while any protected round remains active",
+            "runtime_cutover_project_validation.py",
+            "rejects every nonterminal protected project",
+            "never authorizes two duplicate audits",
             "runtime_cutover.py",
             "automatically restores",
         ),
@@ -594,9 +607,17 @@ def main() -> int:
             "--project-root",
             "--rollback-root",
             "--expected-candidate-manifest-sha256",
+            "--project-validation-receipt",
+            "--force-full-project-audit",
+        ),
+        "scripts/runtime_cutover_project_validation.py": (
+            "Build one approved, reusable protected-project cutover validation receipt.",
+            "--expected-request-sha256",
+            "--output",
         ),
         "scripts/mathgraph/runtime_cutover.py": (
-            'CUTOVER_CONTRACT_REVISION = "chalxius-runtime-cutover-1"',
+            'CUTOVER_CONTRACT_REVISION = "chalxius-runtime-cutover-2"',
+            'CUTOVER_PROJECT_RECEIPT_REVISION =',
             "cutover requires protected project roots",
             "automatic rollback also failed",
             "prior installation was restored",
@@ -2489,7 +2510,7 @@ def main() -> int:
         "reader_html=PASS chx_runtime_ledger=PASS adverse_routing=PASS "
         "research_draft_roles=PASS verification_lifecycle_roles=PASS "
         "verification_registry_identity=PASS "
-        "brave_future_roles=PASS chx_public_disclosure=PASS "
+        "brave_future_roles=PASS goal_intake=PASS chx_public_disclosure=PASS "
         "skill_line_limit=PASS"
     )
     return 0

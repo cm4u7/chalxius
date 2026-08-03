@@ -430,6 +430,38 @@ adverse shapes, a copyable V5 template, prompt/help pointers, and actionable
 missing/unknown diagnostics. This is an interface-contract repair, not an
 adverse route rule.
 
+The 0.6.4 goal-intake repair closes a similar control-plane gap at the Campaign
+boundary. Previously the user could provide the complete research objective
+while BF-1 through BF-3 remained unreachable unless the host exposed and then
+manually supplied the internal Campaign id. `research-goal-intake` now accepts
+only the exact objective under `auto` or `deep`, performs lexical normalization rather
+than semantic guessing, reuses one exact match or creates one prospective
+Campaign, enables the fixed advisory policy, and computes BF-1. The returned id
+is bound to future Research internally. Duplicate matches, `fast`, and explicit
+disablement fail before writes. BF-2/BF-3 still require the
+original exact ingested-attempt blockage evidence and cannot plan or dispatch.
+This restores the user outcome without reviving `ACTIVE`, fuzzy routing, a
+second scheduler, background autonomy, or any Fact seam.
+
+The final release matrix exposed a separate validation-boundary defect. The
+aggressive mutation audit suppressed writes only when its caller happened to
+provide the right environment, and it asserted `candidate_unchanged=true`
+without measuring unexpected paths. The permanent CHX-064 repair makes ordinary
+entrypoint use intrinsically bytecode-free, propagates that condition to child
+tests, freezes the complete candidate path/kind/mode/content identity before the
+matrix, and recomputes it afterward. Any drift now fails the audit. This changes
+release evidence only and has no research, admission, or truth effect.
+
+That exact snapshot then exposed a coordination defect rather than a reason to
+weaken the check: the full suite and mutation audit had been placed concurrently
+in one cold tree. CHX-065 adds a manifest-bound validation coordinator with
+canonical isolated lane roots, lane-local temporary and archive state, exact
+pre/post snapshots, and compatibility phases. Baseline checks may run in
+parallel, while the snapshot-sensitive audit is barriered afterward. Its single
+receipt fails closed on incomplete results, mixed identities, shared roots,
+timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
+infrastructure and does not depend on philosophical content.
+
 ## Residual risks to test
 
 - deterministic auto triggers may need calibration against real workloads;
@@ -441,6 +473,13 @@ adverse route rule.
 - explicit Campaign scope must reject untagged or cross-Campaign Research before
   round writes, preserve unscoped global ordering, and detect frozen-snapshot
   damage or history truncation without invalidating later legitimate updates;
+- goal intake must preserve the exact normalized objective, reject duplicate
+  exact matches and explicit disablement, ignore `ACTIVE` for selection, bind
+  only future Research, and remain unable to plan, dispatch, or create Facts;
+- the release mutation audit must remain byte-exact under ordinary Python
+  invocation and must derive, rather than assert, its pre/post nonmutation result;
+- release validators may run concurrently only in manifest-bound isolated lanes;
+  snapshot-sensitive checks require an explicit compatibility phase barrier;
 - accepted-idempotent retries and audits must fail after closure-evidence drift;
 - legacy Danus import must preserve assurance without silently recertifying;
 - every pre-V5 project must remain readable and read-only as nontruth lineage;
