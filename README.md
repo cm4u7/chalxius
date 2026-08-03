@@ -18,12 +18,12 @@ These self-contained Reader pages are the quickest way to see the graph model.
 Select cards, inspect exact detail, expand complete paths, and move around the
 topology without changing any source or research authority.
 
-| 🗺️ Working-scale topology | 📚 Philosophy workflow | 🧮 Potential x-y interchange |
+| 🗺️ Working-scale topology | 📚 Philosophy workflow | 🧮 Graph of a proof |
 |---|---|---|
-| [![Open the 175-node anonymized Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html) | [![Open the philosophy workflow Reader](docs/assets/philosophy-case.png)](https://cm4u7.github.io/chalxius/cases/philosophy.html) | [![Open the potential x-y interchange Reader](docs/assets/xy-swap-potential-case.png)](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html) |
-| Real run topology: 175 nodes, 364 edges, 17 targets, and 7 themes; every content-bearing field is anonymized. | Source-bound argument reconstruction, independent audit, correction, and authority separation. | A guarded visualization of computation, blockers, and revocation. **Potential application only; not author-confirmed.** |
+| [![Open the 175-node anonymized Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html) | [![Open the philosophy workflow Reader](docs/assets/philosophy-case.png)](https://cm4u7.github.io/chalxius/cases/philosophy.html) | [![Open the proof Reader](docs/assets/xy-swap-potential-case.png)](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html) |
+| Real run topology: 175 nodes, 364 edges, 17 targets, and 7 themes; every content-bearing field is anonymized. | Source-bound argument reconstruction, independent audit, correction, and authority separation. | A guarded visualization of computation, blockers, and revocation.  |
 
-All three pages have `truth_effect="none"`. The featured graph uses opaque
+The featured graph uses opaque
 HMAC-SHA-256 identifiers produced with a discarded ephemeral key; it preserves
 structure, not private claims, formulas, names, or source locators.
 
@@ -147,22 +147,20 @@ the runtime beneath an already-frozen task card.
 
 <a id="prompt-interface"></a>
 
-## User prompt interface · 用户命令接口
+## User prompt interface
 
 You normally do **not** need to know any CLI command. Invoke the system by naming
 `$chalxius` (most explicit) or `Chalxius`, then describe the object, action,
 boundary, and desired output in ordinary Chinese or English.
 
 ```text
-用 $chalxius + [模式] + [研究对象] + [要做的事] + [边界/交付物]
 Use $chalxius + [mode] + [subject] + [action] + [boundaries/output]
 ```
 
 For example:
 
 ```text
-用 $chalxius 自动模式研究这篇论文，从已审查的 Paper Graph 继续，
-逐节点绑定原文；把没有解决的证明义务留在 Research，最后给我 Attack report。
+Use $chalxius in auto mode to study this paper，continue from established Paper Graph，
 ```
 
 ```text
@@ -170,7 +168,7 @@ Use $chalxius in deep mode to compare independent proof routes, replay the
 load-bearing computation, and prepare only verifier-ready claims for release.
 ```
 
-### Reasoning modes · 思考模式
+### Reasoning modes 
 
 | Say this | Effect |
 |---|---|
@@ -180,7 +178,7 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 | `深度思考` / `deep mode` | Broad source, route, computation, novelty, and specialist planning when applicable |
 | `从现在切换到…` / `switch future work to…` | Changes future work units only; frozen rounds are not restarted |
 
-### What to say for each feature · 各功能如何召唤
+### What to say for each feature 
 
 | You want | Natural-language command examples |
 |---|---|
@@ -195,7 +193,6 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 | Correct a Paper/Evidence graph | `这个 Paper Graph 节点有误：追加修正、标记旧图 stale，并报告所有 bridge 和本地 Fact 的影响；不要静默重写。` |
 | Program–mathematics attack | `对这段公式到代码的投影做数学-程序一致性攻击，检查截断阶数、表示、定义域、误差预算和独立重放。` |
 | Goal-driven advisory scope | `用 Chalxius 自动模式或 deep 模式研究这个目标……`<br>The explicit objective is enough: `auto` or `deep` can establish the exact internal scope and project BF-1 without asking you to say “Campaign”. |
-| Lightweight Campaign | `为这组相关目标建立一个轻量 Campaign；Main 仍按四因子 frontier 排序，不把 Campaign 当完成证明。` |
 | Cautious Brave Future reassessment | `对这个显式激活的 Campaign 做一次 BF-2 dry-run reassessment；若我随后明确批准，只写一份 BF-3 advisory receipt，不要计划轮次或派发 worker。` |
 | Adverse review | `对这个结论做 hostile/refute 审查；任务结束时给我成功或有价值的 Attack report 和规则进化建议，但不要自动采用。` |
 | Philosophy-only attacks | `这是哲学论证。启用普通语言替换、举证责任、最强善意反驳、独立失败面，以及量词/模态/范围/例外等价性攻击。` |
