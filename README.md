@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.6.3](https://github.com/cm4u7/chalxius/releases/tag/v0.6.3) ·
+[📦 Download v0.6.4](https://github.com/cm4u7/chalxius/releases/tag/v0.6.4) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -60,10 +60,17 @@ structure, not private claims, formulas, names, or source locators.
   reads one atomic content-addressed HEAD and immutable receipts. Full closure
   validation is explicit; stale directory generations fail closed instead of
   silently falling back to an expensive scan.
-- 🛰️ **Use only a cautious slice of Brave Future.** BF-1 through BF-3 provide
-  read-only repair-lineage projection, dry-run reassessment, and one bounded
-  advisory receipt. They cannot plan rounds, dispatch agents, create Research,
-  mutate Campaigns, or affect Candidate, Certification, Gateway, or Fact.
+- 🪶 **Reuse expensive validation only when identity is exact.** Release-time
+  mutation plans are checked before their baseline starts, and protected
+  runtime cutover consumes a hash-approved project receipt. Unchanged project
+  state is not audited twice; semantic drift still fails closed or triggers the
+  one necessary deep audit.
+- 🛰️ **Use only a cautious slice of Brave Future.** Under `auto` or `deep`, an explicit
+  research objective can establish or reuse its exact prospective Campaign
+  scope and project BF-1 without requiring Campaign jargon. BF-2/BF-3 still
+  require real blockage evidence. None of these levels can plan rounds,
+  dispatch agents, create Research, or affect Candidate, Certification,
+  Gateway, or Fact.
 - 🎓 **Teach from a frozen graph.** Chalxius Learner can explain, question,
   test, and schedule review without changing research state.
 - 🗺️ **Publish a readable map.** Export one deterministic offline Reader with
@@ -122,14 +129,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz`
-- `chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz.sha256`
+- `chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz`
+- `chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz.sha256
-tar -xzf chalxius-0.6.3-bounded-paper-status-ledger-lineage.tar.gz
+shasum -a 256 -c chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz.sha256
+tar -xzf chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -187,6 +194,7 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 | Bridge Evidence into the current project | `选择这些 Evidence 节点建立 verified bridge，列出所有 stale/correction 风险，再走新的 verifier 和 Fact Gateway。` |
 | Correct a Paper/Evidence graph | `这个 Paper Graph 节点有误：追加修正、标记旧图 stale，并报告所有 bridge 和本地 Fact 的影响；不要静默重写。` |
 | Program–mathematics attack | `对这段公式到代码的投影做数学-程序一致性攻击，检查截断阶数、表示、定义域、误差预算和独立重放。` |
+| Goal-driven advisory scope | `用 Chalxius 自动模式或 deep 模式研究这个目标……`<br>The explicit objective is enough: `auto` or `deep` can establish the exact internal scope and project BF-1 without asking you to say “Campaign”. |
 | Lightweight Campaign | `为这组相关目标建立一个轻量 Campaign；Main 仍按四因子 frontier 排序，不把 Campaign 当完成证明。` |
 | Cautious Brave Future reassessment | `对这个显式激活的 Campaign 做一次 BF-2 dry-run reassessment；若我随后明确批准，只写一份 BF-3 advisory receipt，不要计划轮次或派发 worker。` |
 | Adverse review | `对这个结论做 hostile/refute 审查；任务结束时给我成功或有价值的 Attack report 和规则进化建议，但不要自动采用。` |
@@ -207,6 +215,9 @@ sentence; there is no separate prompt DSL.
 Once `$chalxius` is invoked for a new governed V5 task:
 
 - `auto` is selected unless you say `fast` or `deep`;
+- an explicit research objective under `auto` or `deep` may establish or exactly reuse
+  its prospective internal Campaign scope and project advisory BF-1; this does
+  not plan or dispatch work;
 - a task-scoped CHX ledger is opened and closed; it is reported only if a
   qualifying architecture issue exists;
 - a task-end Attack report is produced, including an explicit zero report when
@@ -219,7 +230,8 @@ The following actions always require explicit language from the user:
 - importing a non-paper Fact Graph into Evidence;
 - activating, changing, approving, rejecting, or disabling an adverse route;
 - generating or refreshing project background;
-- starting Chalxius Learner, a Campaign, or a Reader export;
+- starting Chalxius Learner or a Reader export, and manually activating or
+  changing Campaign state beyond exact `auto`/`deep` goal intake;
 - sealing a Candidate Release or attempting Fact admission;
 - migrating or replacing an active project/runtime.
 
@@ -279,7 +291,7 @@ Run `mgraph --help` for the complete parser and
 | Paper continuation | `paper-continuation-plan`, `paper-continuation-status` (bounded by default; explicit `--full`), `paper-continuation-status-index-rebuild`, `paper-continuation-dispose` |
 | Cross-project Evidence | `evidence-library-status`, `evidence-query`, `evidence-sync-retry`, `evidence-import-fact-graph`, `evidence-bridge-prepare`, `evidence-bridge-check`, `evidence-mark`, `evidence-impact-report` |
 | Blackboard | `blackboard-type-register`, `blackboard-space-create`, `blackboard-node-add`, `blackboard-edge-add`, `blackboard-show`, `blackboard-query`, `blackboard-snapshot`, `blackboard-snapshot-query`, `blackboard-reindex`, `blackboard-promote-node` |
-| Campaign | `campaign-create`, `campaign-activate`, `campaign-update`, `campaign-status`, `campaign-target-add`, `campaign-target-archive`; scoped `frontier --campaign` and `plan-round --campaign` |
+| Campaign and goal intake | `research-goal-intake`, `campaign-create`, `campaign-activate`, `campaign-update`, `campaign-status`, `campaign-target-add`, `campaign-target-archive`; scoped `frontier --campaign` and `plan-round --campaign` |
 | Collaboration Pulse | `pulse-plan`, `pulse-barrier`, `pulse-dispatch`, `pulse-close`, `pulse-status`, `pulse-audit`, `pulse-void`, `pulse-abort` |
 | Replayable experiment | `experiment-start`, `experiment-event`, `experiment-observe`, `experiment-decision`, `experiment-resume`, `experiment-status`, `experiment-finalize` |
 | Adverse governance | `attack-route-enable`, `attack-route-status`, `attack-report`, `attack-route-decide`, `attack-route-disable` |
@@ -394,22 +406,32 @@ or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
 
-## v0.6.3: Bounded Paper Status / Ledger Lineage
+## v0.6.4: Goal-Driven Advisory Recovery
 
-This release preserves the 0.6.2 research-draft lifecycle and removes a
-graph-scale status defect: routine Paper-continuation status no longer rebuilds
-the complete Paper, Research, disposition, and revised-writing closure. Writes
-advance or invalidate an immutable status index; stale generation fingerprints
-fail closed; only an explicit forensic request or index rebuild pays the full
-validation cost.
+This release preserves the 0.6.3 bounded Paper-status and complete research-
+draft lifecycle while repairing the ordinary-language control boundary. Under
+`auto` or `deep`, an explicit user research objective is now sufficient to create or
+exactly reuse one prospective internal Campaign scope and project BF-1. It does
+not require the user to know Campaign terminology, never consults `ACTIVE`, and
+does not fuzzy-match or retag old Research. BF-2/BF-3 remain gated by a real
+ingested-attempt blockage; planning, dispatch, Research creation, and truth
+effects remain absent.
 
-CHX ledger inheritance now binds every public issue to an ordered predecessor
-chain rather than one convenient latest ledger. Exact-runtime host entrypoints
-also disable bytecode before importing local modules, so validating the runtime
-cannot mutate the very file set being validated. The bounded advisory BF-1
-through BF-3 slice remains unchanged and non-authoritative.
+Release verification is now coordinated as well as strict. The mutation audit
+derives nonmutation from a complete pre/post snapshot, and the matrix runner
+copies one approved manifest into canonical isolated lanes. Compatible baseline
+checks may run in parallel; the snapshot-sensitive audit runs after a phase
+barrier. One aggregate receipt rejects missing results, identity mixing,
+timeouts, nonzero exits, or any source/lane drift.
 
-The field mechanisms CHX-001 through CHX-062 are explicitly disclosed and
+The same release now avoids redundant verification. A cheap mutant-registry
+preflight rejects stale attack targets before any baseline subprocess. For a
+protected global install, one content-addressed project-validation receipt binds
+the final release matrix, prior audit, terminal rounds, historical runtimes,
+and exact project digest. Cutover reuses that receipt after the byte-exact swap;
+it never repeats the whole-project audit merely because the install path changed.
+
+The field mechanisms CHX-001 through CHX-068 are explicitly disclosed and
 resolved in this prospective package. Their public identities are bound to the
 ordered ledger lineage documented in
 [`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md); private ledgers are not

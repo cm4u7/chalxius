@@ -7,7 +7,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
+import aggressive_bug_audit as aggressive_bug_audit_module
 import mathgraph.runtime_cutover as runtime_cutover_module
 
 
@@ -15,6 +17,81 @@ SOURCE_SCRIPTS = Path(runtime_cutover_module.__file__).resolve().parents[1]
 
 
 class HostEntrypointNonMutationTests(unittest.TestCase):
+    def test_mutant_registry_preflight_runs_before_any_test_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            scripts = root / "scripts"
+            target = scripts / "mathgraph" / "probe.py"
+            target.parent.mkdir(parents=True)
+            target.write_text("current target\n", encoding="utf-8")
+            stale = aggressive_bug_audit_module.Mutant(
+                name="stale-probe",
+                old="removed target\n",
+                new="mutated\n",
+                test="tests.test_probe.Probe.test_target",
+                target="mathgraph/probe.py",
+            )
+            with self.assertRaisesRegex(
+                SystemExit, "mutant registry preflight: stale-probe.*found 0"
+            ):
+                aggressive_bug_audit_module._validate_mutant_targets(
+                    candidate_root=root,
+                    source_scripts=scripts,
+                    mutants=(stale,),
+                )
+
+        with (
+            mock.patch.object(aggressive_bug_audit_module, "MUTANTS", ()),
+            mock.patch.object(
+                aggressive_bug_audit_module,
+                "_validate_mutant_targets",
+                side_effect=SystemExit("preflight sentinel"),
+            ) as preflight,
+            mock.patch.object(aggressive_bug_audit_module, "_run_test") as run_test,
+        ):
+            with self.assertRaisesRegex(SystemExit, "preflight sentinel"):
+                aggressive_bug_audit_module.main([])
+            preflight.assert_called_once()
+            run_test.assert_not_called()
+
+    def test_aggressive_audit_child_boundary_and_snapshot_are_exact(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scripts = root / "scripts"
+            tests = root / "tests"
+            shutil.copytree(
+                SOURCE_SCRIPTS,
+                scripts,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            tests.mkdir()
+            (tests / "__init__.py").write_text("", encoding="utf-8")
+            (tests / "test_probe.py").write_text(
+                "import unittest\n"
+                "import mathgraph.roles\n"
+                "class BytecodeProbe(unittest.TestCase):\n"
+                "    def test_import(self):\n"
+                "        self.assertIn('research-goal-intake', mathgraph.roles.ALL_COMMANDS)\n",
+                encoding="utf-8",
+            )
+            before = aggressive_bug_audit_module._candidate_snapshot(root)
+            with mock.patch.dict(os.environ, {}, clear=True):
+                outcome = aggressive_bug_audit_module._run_test(
+                    repo=root,
+                    scripts=scripts,
+                    test="tests.test_probe.BytecodeProbe.test_import",
+                )
+            self.assertEqual(outcome.returncode, 0, outcome.stdout)
+            self.assertEqual(list(root.rglob("__pycache__")), [])
+            self.assertEqual(list(root.rglob("*.pyc")), [])
+            self.assertTrue(
+                aggressive_bug_audit_module._candidate_is_unchanged(before, root)
+            )
+            (root / "unexpected.txt").write_text("drift\n", encoding="utf-8")
+            self.assertFalse(
+                aggressive_bug_audit_module._candidate_is_unchanged(before, root)
+            )
+
     def test_default_python_entrypoints_do_not_create_bytecode(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -31,6 +108,7 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
                 "archive_runtime.py",
                 "chx_ledger.py",
                 "runtime_cutover.py",
+                "runtime_cutover_project_validation.py",
             ):
                 outcome = subprocess.run(
                     [sys.executable, str(scripts / name), "--help"],

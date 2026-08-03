@@ -1,8 +1,81 @@
-# Chalxius V5 traceability through 0.6.3 Bounded Paper Status
+# Chalxius V5 traceability through 0.6.4 Goal-Driven Advisory Recovery
+
+## 0.6.4 goal-driven advisory-recovery overlay
+
+The qualified public head is
+`run-20260803T094645700515Z-355e835f8fef/CHX-068`; its digest-bound predecessor is
+`run-20260803T090357863328Z-315775267e7b/CHX-067`.
+The preceding qualified head was
+`run-20260803T080711145538Z-d486dce92032/CHX-066`.
+
+- Candidate version: `0.6.4`; public name **Goal-Driven Advisory Recovery**.
+  It retains the complete 0.6.3 bounded Paper status, CHX lineage, Paper
+  Research Pipeline, and BF-1 through BF-3 authority boundary.
+- CHX-063 records that the user could state a complete research objective while
+  the auto path still required exposed Campaign jargon and a manual id-bearing
+  activation sequence. The repair adds Operator-only `research-goal-intake`.
+- CHX-066 extends that trigger to `deep`, whose contract requires every
+  applicable expensive research feature. `fast` remains explicit. Goal-intake
+  revision 2 exposes this exact two-mode set without broadening autonomy.
+- The input contains only a revision and the user's exact objective. Unicode-NFC
+  and whitespace normalization permit lexical identity without fuzzy semantic
+  substitution. One exact Campaign is reused or one prospective Campaign is
+  created; duplicate exact matches fail before writes.
+- The command is available under `reasoning_mode=auto` and
+  `reasoning_mode=deep`, while `fast` retains explicit Campaign/BF activation.
+  It never selects from
+  `ACTIVE`, never retags old Research, honors an explicit BF disablement, binds
+  its returned internal id only to future host-created Research, enables only
+  the fixed advisory policy, and computes BF-1.
+- BF-2 and BF-3 remain unavailable until the inherited blockage validator binds
+  a real ingested attempt, remaining obligations, and the current planning
+  snapshot. The host may then use the already returned internal id without
+  asking the user to repeat Campaign vocabulary.
+- `automatic_plan=false`, `automatic_dispatch=false`, Research write effect is
+  none, and Campaign close, Pulse, Candidate, Certification, Gateway, Reader,
+  Learner, Fact, and admission effects remain absent. BF-4 remains rejected.
+- Historical Campaigns, Research, Paper/Audit, task cards, Candidate Releases,
+  Decisions, admissions, Facts, CHX ledgers, and runtime archives are not
+  rewritten. Candidate validation and installation receipts are recorded only
+  after the corresponding gates pass.
+- CHX-064 extends the exact-runtime nonmutation boundary to the release mutation
+  audit itself. Every child test receives bytecode suppression, and the audit
+  derives `candidate_unchanged` from an exact pre/post audit snapshot of the
+  complete path set, kind, mode, and content or link identity. Snapshot drift
+  makes `ok=false`; ordinary `python3` execution no longer relies on a caller's
+  environment. The two new self-audit mutants cover both the child environment
+  and the snapshot comparison.
+- CHX-065 extends CHX-014 and CHX-064 from verifier count to verifier
+  coordination. The release matrix binds one manifest identity, creates
+  separate canonical manifest-only lane roots, isolates host temporary and
+  runtime-archive state, and snapshots every lane and the source. Compatible
+  baseline checks may run together, but a phase barrier keeps the
+  snapshot-sensitive mutation audit exclusive after baseline completion. The
+  aggregate receipt refuses missing or duplicate lanes, identity mixing,
+  nonzero exits, timeouts, source or lane drift, and barrier removal.
+- CHX-067 extends CHX-012's repeated-validation mechanism into global runtime
+  cutover. Protected deployment now requires a hash-approved validation request
+  and reusable receipt by default. The builder binds the exact runtime diff,
+  complete release matrix, prior current audit, terminal rounds, historical
+  runtime identities, and content digest of the audit-relevant project state.
+  A non-impacting delta reuses the prior audit; an impacting delta pays for a
+  single deep audit while building the receipt. Cutover validates the receipt before
+  mutation and rechecks the same project digest after the exact swap. An
+  explicit full-audit override also runs the deep audit only once. The old
+  unconditional candidate-plus-postflight double audit is no longer reachable.
+- CHX-068 extends CHX-065's release coordination boundary to mutation-plan
+  applicability. Before any baseline subprocess, one read-only mutant registry preflight
+  resolves every target inside the candidate, requires one regular
+  file and exactly one old-fragment occurrence, and rejects the whole plan on
+  missing, duplicate, escaping, or nonregular targets. The mutation phase uses
+  the same resolver. The former unconditional-postflight mutant now attacks the
+  current receipt postflight gate, while a self-mutant protects the preflight
+  call. Stale registry plans therefore fail in seconds rather than after a
+  high-cost audit, without weakening any mutation or release acceptance gate.
 
 ## 0.6.3 bounded status and ledger-lineage overlay
 
-The current public CHX head is
+The 0.6.3 public CHX head was
 `run-20260802T214123599238Z-d206bd85e676/CHX-062`. Public disclosure revision 2
 preserves five exact owner namespaces rather than requalifying predecessor
 issues under the newest run.

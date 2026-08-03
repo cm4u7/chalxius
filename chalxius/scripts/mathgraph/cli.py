@@ -841,6 +841,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
 
+    p = sub.add_parser("research-goal-intake")
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "JSON object with revision=chalxius-bf-goal-intake-2 and the "
+            "user's exact objective; no Campaign id is required"
+        ),
+    )
+    p.add_argument("--actor", required=True)
+    p.add_argument("--limit", type=int, default=10)
+
     p = sub.add_parser("brave-future-status")
     p.add_argument("--campaign", required=True)
 
@@ -2681,6 +2693,14 @@ def main(argv: list[str] | None = None) -> int:
                     campaign_id=args.campaign,
                     policy=_json_file(args.input),
                     actor=args.actor,
+                )
+            )
+        elif args.command == "research-goal-intake":
+            _print_json(
+                store.brave_future().intake_research_goal(
+                    goal_input=_json_file(args.input),
+                    actor=args.actor,
+                    limit=args.limit,
                 )
             )
         elif args.command == "brave-future-status":

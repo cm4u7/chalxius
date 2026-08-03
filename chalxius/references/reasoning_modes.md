@@ -19,6 +19,15 @@ applicable to the bounded task. `deep` may allocate more exploration, but it
 cannot create Fact authority or require ceremonial evidence for an irrelevant
 feature.
 
+Version 0.6.4 gives `auto` and `deep` one prospective intake trigger: an explicit user
+research objective is sufficient semantic authority for Operator to call
+`research-goal-intake`, even when the user never says `Campaign`. The compiler
+creates or lexically exact-matches one internal Campaign, enables only the fixed
+advisory BF policy, and computes BF-1. This is not an `ACTIVE` default or a
+planner. BF-2/BF-3 still require exact ingested-attempt blockage evidence, and
+all planning or dispatch remains a separate ordinary action. `fast` retains the
+explicit BF activation path.
+
 Current V5 task cards freeze the mode event and their exact assurance contract.
 They do not automatically attach the historical V4 `execution_profile` or
 `profile_obligations`. `adoption-plan` remains available as standalone advice;

@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import shutil
 import tempfile
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -66,6 +68,19 @@ COMPACT_SCORE_WEIGHTS = {
     "feasibility": 0.20,
     "economy": 0.20,
 }
+
+
+def canonical_research_objective(value: Any) -> str:
+    """Return the exact-match key for a user-supplied research objective.
+
+    Normalization is deliberately lexical only: Unicode NFC plus whitespace
+    folding.  It never performs fuzzy or semantic matching and therefore
+    cannot silently bind a user's goal to a different Campaign objective.
+    """
+
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("research objective must be a nonempty string")
+    return unicodedata.normalize("NFC", re.sub(r"\s+", " ", value).strip())
 
 
 def _utc_now() -> str:
@@ -238,6 +253,37 @@ class CampaignStore:
 
     def initialize(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
+
+    def campaign_ids(self) -> list[str]:
+        """Return every exact stored Campaign id without using ``ACTIVE``."""
+
+        if not self.root.exists():
+            return []
+        if self.root.is_symlink() or not self.root.is_dir():
+            raise ValueError("campaign store is not a safe directory")
+        campaign_ids: list[str] = []
+        for path in sorted(self.root.iterdir(), key=lambda item: item.name):
+            if path.name == "ACTIVE":
+                continue
+            if CAMPAIGN_ID_RE.fullmatch(path.name) is None:
+                raise ValueError(
+                    f"unexpected campaign store entry: {path.name}"
+                )
+            if path.is_symlink() or not path.is_dir():
+                raise ValueError(f"campaign path is unsafe: {path.name}")
+            campaign_ids.append(path.name)
+        return campaign_ids
+
+    def exact_objective_matches(self, objective: str) -> list[str]:
+        """Find Campaigns by lexical objective identity, never by ``ACTIVE``."""
+
+        objective_key = canonical_research_objective(objective)
+        matches: list[str] = []
+        for campaign_id in self.campaign_ids():
+            status = self.status(campaign_id)
+            if canonical_research_objective(status["objective"]) == objective_key:
+                matches.append(campaign_id)
+        return matches
 
     def _events_path(self, campaign_id: str) -> Path:
         return self.root / validate_campaign_id(campaign_id) / "events.jsonl"

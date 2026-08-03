@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.6.3",
-  "release_codename": "Bounded Paper Status — Ledger Lineage",
-  "release_display_name": "Chalxius 0.6.3 — Bounded Paper Status / Ledger Lineage",
+  "version": "0.6.4",
+  "release_codename": "Goal-Driven Advisory Recovery",
+  "release_display_name": "Chalxius 0.6.4 — Goal-Driven Advisory Recovery",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -285,8 +285,12 @@
   },
   "v5_campaign_scope_surface": {
     "contract_revision": "chalxius-v5-campaign-scope-1",
-    "activation": "prospective_explicit_campaign_flag_only",
-    "selection": "explicit_exact_research_campaign_id_only",
+    "activation": "prospective_explicit_id_or_auto_or_deep_user_goal",
+    "selection": "explicit_id_or_auto_or_deep_exact_user_objective_compilation",
+    "goal_matching": "unicode_nfc_whitespace_fold_then_lexical_exact_only",
+    "user_campaign_jargon_required": false,
+    "active_campaign_pointer_used_for_goal_selection": false,
+    "goal_scope_application": "future_research_only_no_existing_research_retagging",
     "scheduler": "v5_main_four_factor_frontier",
     "active_campaign_pointer_default": false,
     "unscoped_behavior": "global_frontier_and_passive_campaign_binding_unchanged",
@@ -395,12 +399,20 @@
   },
   "brave_future_surface": {
     "policy_revision": "chalxius-brave-future-policy-1",
+    "goal_intake_revision": "chalxius-bf-goal-intake-2",
     "repair_contract_revision": "chalxius-bf-repair-contract-1",
     "planning_snapshot_revision": "chalxius-bf-planning-snapshot-1",
     "frontier_projection_revision": "chalxius-bf-frontier-projection-1",
     "blockage_revision": "chalxius-bf-blockage-1",
     "reassessment_revision": "chalxius-bf-reassessment-1",
-    "activation": "explicit_exact_campaign_opt_in_only",
+    "activation": "explicit_exact_campaign_or_auto_or_deep_exact_user_goal",
+    "goal_intake_modes": [
+      "auto",
+      "deep"
+    ],
+    "goal_bf1": "immediate_after_exact_campaign_resolve_or_create",
+    "goal_bf2_bf3": "existing_exact_real_blockage_evidence_gate_only",
+    "explicit_disablement_policy": "never_implicitly_reenable",
     "implemented_levels": [
       "BF-1",
       "BF-2",
@@ -494,9 +506,11 @@
     "registry_validation": "immutable_exact_schema_content_identity_tree_digest_and_host_path_revalidated_every_resolution",
     "execution_policy": "archived_code_is_validation_data_never_imported_or_executed",
     "scan_deduplication": "one_identical_runtime_identity_per_bounded_phase_only_no_cross_phase_authority_cache",
-    "cutover_contract_revision": "chalxius-runtime-cutover-1",
-    "cutover_policy": "explicit_project_inventory_exact_candidate_pre_and_post_audit_prior_and_new_archive_same_parent_swap_automatic_restore_on_failure",
-    "host_entrypoint_write_policy": "runtime_cutover_archive_runtime_and_chx_ledger_disable_bytecode_before_local_import_and_do_not_mutate_the_runtime_they_validate",
+    "cutover_contract_revision": "chalxius-runtime-cutover-2",
+    "cutover_project_validation_contract": "chalxius-cutover-project-validation-receipt-1",
+    "cutover_policy": "protected_projects_require_approved_manifest_bound_validation_receipt_or_explicit_single_full_audit_exact_project_digest_reused_after_same_parent_swap_automatic_restore_on_failure",
+    "cutover_deep_audit_policy": "changed_path_classification_selects_prior_current_audit_reuse_or_one_receipt_build_deep_audit_never_duplicate_post_swap_semantic_reconstruction",
+    "host_entrypoint_write_policy": "runtime_cutover_project_validation_archive_runtime_and_chx_ledger_disable_bytecode_before_local_import_and_do_not_mutate_the_runtime_they_validate",
     "truth_effect": "none",
     "project_effect": "none",
     "brave_future_effect": "none"
@@ -511,6 +525,7 @@
       "scripts/chx_ledger.py",
       "scripts/archive_runtime.py",
       "scripts/runtime_cutover.py",
+      "scripts/runtime_cutover_project_validation.py",
       "scripts/paper_research_pipeline.py",
       "scripts/notation_inventory.py",
       "scripts/prepare_verifier_capsule.py",
@@ -521,8 +536,8 @@
       "assets/reader_html.css",
       "assets/vendor/**"
     ],
-    "protected_file_count": 87,
-    "protected_tree_sha256": "684140ebdc71d05cdbc4422a5985fcabd3ae33e950b52e2d9839ba1bb3ff380e",
+    "protected_file_count": 88,
+    "protected_tree_sha256": "6c36904804bf7d0fba03d018aefbc62fa78ed1e020d3a1325f044944622b3faa",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -531,6 +546,7 @@
       "scripts/mathgraph/adverse_routing.py",
       "scripts/mathgraph/blackboard.py",
       "scripts/mathgraph/brave_future.py",
+      "scripts/mathgraph/campaigns.py",
       "scripts/mathgraph/cli.py",
       "scripts/mathgraph/decision_preflight.py",
       "scripts/mathgraph/evidence.py",
@@ -561,9 +577,10 @@
       "scripts/mathgraph/v5_reader.py",
       "scripts/mathgraph/verifier_capsule.py",
       "scripts/paper_research_pipeline.py",
-      "scripts/runtime_cutover.py"
+      "scripts/runtime_cutover.py",
+      "scripts/runtime_cutover_project_validation.py"
     ],
-    "changed_path_inventory_sha256": "23f70646b2a9f51efcbe9f797b73ea93170b77f4234106615bc4b825f5fb8865",
+    "changed_path_inventory_sha256": "bcba05a61267cc03764003fea15e35c998ac37fe2de5e85888c575002dd69a58",
     "project_schema_change": "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
     "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
     "fact_admission_change": false,
@@ -633,7 +650,13 @@
       "CHX-059",
       "CHX-060",
       "CHX-061",
-      "CHX-062"
+      "CHX-062",
+      "CHX-063",
+      "CHX-064",
+      "CHX-065",
+      "CHX-066",
+      "CHX-067",
+      "CHX-068"
     ],
     "ledger_lineage": [
       {
@@ -737,9 +760,63 @@
         "included_issue_ids": [
           "CHX-062"
         ]
+      },
+      {
+        "ledger_run_id": "run-20260803T050224999419Z-b61fe8ef982a",
+        "ledger_sha256": "c6421ae6df8581eae3440a4412e94dd5efcd4e06d5ca06ba9080d4c03fc6a37e",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260802T214123599238Z-d206bd85e676",
+        "included_issue_ids": [
+          "CHX-063"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260803T061517579316Z-67d1a8c570ed",
+        "ledger_sha256": "7eaee222fb7d29829df3faa7fe9899a25e731e150fd0c3f08b74e048b79553a8",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260803T050224999419Z-b61fe8ef982a",
+        "included_issue_ids": [
+          "CHX-064"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260803T063745640293Z-1ebe1ce2cc97",
+        "ledger_sha256": "d05f39551bb319d93ee86d0cb39abad5488948ada237f4de44ea5e245d038748",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260803T061517579316Z-67d1a8c570ed",
+        "included_issue_ids": [
+          "CHX-065"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260803T080711145538Z-d486dce92032",
+        "ledger_sha256": "e675b3a4086a8ffead186d68bf23ea0b76c7cf35a4a38240e48b36175a3c1828",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260803T063745640293Z-1ebe1ce2cc97",
+        "included_issue_ids": [
+          "CHX-066"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260803T090357863328Z-315775267e7b",
+        "ledger_sha256": "74c9bb82615d243dbb62b7a9f27e796530b35f5ccd1829fcc54add13c4021b1d",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260803T080711145538Z-d486dce92032",
+        "included_issue_ids": [
+          "CHX-067"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260803T094645700515Z-355e835f8fef",
+        "ledger_sha256": "7c3ae2734d20cf21536a36409b9696c2d1a1a3cfa7573dc755d1d2e2b5c80d4f",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-4",
+        "predecessor_run_id": "run-20260803T090357863328Z-315775267e7b",
+        "included_issue_ids": [
+          "CHX-068"
+        ]
       }
     ],
-    "latest_issue_id": "CHX-062",
+    "latest_issue_id": "CHX-068",
     "document_contracts": {
       "KNOWN_LIMITATIONS.md": {
         "explicit_issue_enumeration": true,
@@ -749,13 +826,30 @@
           "CHX-060",
           "CHX-061",
           "CHX-062",
+          "CHX-063",
+          "CHX-064",
+          "CHX-065",
+          "CHX-066",
+          "CHX-067",
+          "CHX-068",
+          "before any baseline subprocess",
           "bounded deterministic summary",
           "content-addressed HEAD",
+          "deep-mode applicability extension of CHX-063",
           "digest-bound predecessor chain",
+          "exact pre/post audit snapshot",
           "exact-runtime host entrypoints",
+          "goal-driven advisory recovery",
           "graph-scale applicability extension of CHX-012",
+          "manifest-only copies",
+          "mutant registry preflight",
           "ordered ledger lineage",
-          "run-20260802T214123599238Z-d206bd85e676/CHX-062"
+          "project-validation receipt",
+          "run-20260803T080711145538Z-d486dce92032/CHX-066",
+          "run-20260803T090357863328Z-315775267e7b/CHX-067",
+          "run-20260803T094645700515Z-355e835f8fef/CHX-068",
+          "single deep audit",
+          "snapshot-sensitive audit"
         ]
       },
       "references/v5_release_traceability.md": {
@@ -766,14 +860,28 @@
           "CHX-060",
           "CHX-061",
           "CHX-062",
+          "CHX-063",
+          "CHX-064",
+          "CHX-065",
+          "CHX-066",
+          "CHX-067",
+          "CHX-068",
           "`disproved`",
           "`proved`",
           "bounded summary",
           "bytecode",
+          "exact pre/post audit snapshot",
+          "mutant registry preflight",
           "paper-continuation-status-index-rebuild",
           "publication-disclosure preflight",
+          "release matrix",
+          "research-goal-intake",
           "research-target continuity",
-          "run-20260802T214123599238Z-d206bd85e676/CHX-062"
+          "run-20260803T080711145538Z-d486dce92032/CHX-066",
+          "run-20260803T090357863328Z-315775267e7b/CHX-067",
+          "run-20260803T094645700515Z-355e835f8fef/CHX-068",
+          "single deep audit",
+          "snapshot-sensitive mutation audit"
         ]
       }
     },
@@ -782,6 +890,15 @@
   },
   "release_audit": {
     "aggressive_bug_audit": "release_time_only",
+    "coordinator_contract_revision": "chalxius-release-validation-matrix-1",
+    "coordinator_identity": "one_approved_manifest_with_exact_manifest_only_lane_copies",
+    "coordinator_isolation": "canonical_no_symlink_lane_roots_with_lane_local_temp_and_runtime_archive_state",
+    "coordinator_schedule": "compatible_baseline_parallel_then_snapshot_sensitive_audit_phase_barrier",
+    "coordinator_receipt": "fail_closed_on_incomplete_duplicate_mixed_identity_nonzero_timeout_or_any_drift",
+    "candidate_nonmutation": "exact_pre_post_path_kind_mode_and_content_or_link_snapshot",
+    "child_bytecode_policy": "intrinsic_suppression_without_caller_environment_dependency",
+    "mutant_registry_preflight": "complete_contained_regular_file_exact_single_occurrence_scan_before_any_baseline_subprocess",
+    "mutant_target_resolution": "one_contained_resolver_shared_by_preflight_and_isolated_mutation",
     "normal_runtime_hook": false,
     "series_product_order_rule": "valuation_derived_with_deeper_replay"
   },

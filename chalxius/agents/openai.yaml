@@ -1,6 +1,6 @@
 interface:
   display_name: "Chalxius"
-  short_description: "Research-draft integrity and cautious L3/L4 advice"
-  default_prompt: "Use $chalxius in automatic mode for source-bound Research; when work is explicitly paper-led, preserve the exact Paper target closure, philosophical atomicity, and plain-language clarity; keep Attack and CHX reports separate, and admit Facts only through a fresh verifier and Fact Gateway."
+  short_description: "Goal-driven research integrity and cautious L3/L4 advice"
+  default_prompt: "Use $chalxius in automatic mode for source-bound Research. If the user states a research objective without saying Campaign, route the exact objective through research-goal-intake and retain its returned internal scope for future Research; keep BF-1 through BF-3 advisory-only. For paper-led work preserve the exact Paper target closure, philosophical atomicity, and plain-language clarity; keep Attack and CHX reports separate, and admit Facts only through a fresh verifier and Fact Gateway."
 policy:
   allow_implicit_invocation: true

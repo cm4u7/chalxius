@@ -32,6 +32,13 @@ view over that Main planner. Exact stored associations may filter the same
 frontier and freeze one bounded nontruth Campaign envelope. No flag means no
 Campaign filter, including when an active Campaign exists.
 
+The prospective 0.6.4 goal-intake successor repairs only the human-to-envelope
+entry seam. Under `auto`, an explicit user research objective lets Operator
+lexically exact-match or create one Campaign, enable the fixed advisory BF
+policy, and compute BF-1 without requiring Campaign jargon. It never selects
+through `ACTIVE`, retags old Research, fuzzy-matches goals, plans, dispatches,
+or changes any truth boundary. BF-2/BF-3 remain gated by an exact real blockage.
+
 ## Authority domains and truth path
 
 V5 has four persistent authority domains and one derived presentation surface:
@@ -131,7 +138,9 @@ Main can organize a bounded project queue directly with this frontier. A
 Campaign is therefore not a second scheduler or a per-task gate; it remains an
 optional durable multi-round envelope for an explicit objective, typed targets,
 constraints, value definition, stop conditions, and history. The prospective
-Campaign connection is explicit only: `frontier --campaign ID` and
+Campaign connection is explicit semantically: Main may supply an id, or under
+`auto` Operator may compile the user's exact stated objective through
+`research-goal-intake`. The resulting `frontier --campaign ID` and
 `plan-round --campaign ID` select exact stored `campaign_id` matches and retain
 the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
 Campaign snapshot plus compact task-card envelope. Without the flag, selection

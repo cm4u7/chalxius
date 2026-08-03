@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.6.3 `Bounded Paper Status / Ledger Lineage` release artifact contains one self-contained `chalxius`
+The 0.6.4 `Goal-Driven Advisory Recovery` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -25,11 +25,58 @@ If a separately authorized release archive contains `MANIFEST.sha256`, run
 `INHERITANCE.lock.json` against the named source manifests. A workspace
 candidate without a release manifest must not be represented as packaged.
 
+For a complete release matrix, prefer the manifest-bound coordinator and write
+its receipt outside the candidate:
+
+```bash
+python3 scripts/release_validation.py \
+  --candidate-root "$SKILL_ROOT" \
+  --expected-manifest-sha256 APPROVED_MANIFEST_FILE_SHA256 \
+  --receipt /absolute/path/to/release-validation-receipt.json
+```
+
+It constructs canonical manifest-only lane copies, isolates temporary and
+runtime-archive state, runs compatible baseline checks in parallel, then runs
+the snapshot-sensitive mutation audit behind a phase barrier. Every lane and the
+source must retain one exact identity. Run
+`python3 scripts/aggressive_bug_audit.py` directly only when the narrower
+mutation evidence is required; it independently suppresses bytecode, compares
+one exact pre/post path-kind-mode-content snapshot, and fails on drift. Before
+any baseline subprocess, its mutant registry preflight checks every target and
+old fragment exactly once, so a stale plan fails cheaply rather than consuming
+the full audit budget.
+
 ## Preserve runtime continuity before every global cutover
 
 A global skill path is a mutable discovery alias, not an immutable historical
-runtime locator. An authorized replacement or rollback must use the executable
-cutover gate, with every protected project named explicitly:
+runtime locator. For protected projects, first build one approved validation
+receipt. Its request names the exact candidate manifest, prior runtime
+identity, protected roots, prior current-audit receipt, complete release matrix,
+exact changed-path classification, and whether those changes require one fresh
+deep audit:
+
+```bash
+python3 -B /absolute/path/to/candidate/scripts/runtime_cutover_project_validation.py \
+  --candidate-root /absolute/path/to/candidate \
+  --installed-root /absolute/path/to/.codex/skills/chalxius \
+  --archive-root /absolute/path/to/.codex/skill-runtime-archives/chalxius \
+  --request /absolute/path/to/approved-project-validation-request.json \
+  --expected-request-sha256 APPROVED_REQUEST_SHA256 \
+  --output /absolute/path/to/project-validation-receipt.json
+```
+
+The builder verifies the complete request and matrix hashes, exact runtime
+diff, prior current audit, terminal round states, and every historical runtime
+binding. It hashes all audit-relevant project bytes while excluding only the
+explicit non-authority `work/`, `output/`, lock, desktop metadata, and bytecode
+surfaces. If the approved classification says the runtime delta affects deep
+audit semantics, the builder runs one full audit. Otherwise it reuses the prior
+audit only when no protected byte is newer than that exact anchor. Either path
+emits one write-once receipt; a changed project, matrix, request, runtime, or
+receipt invalidates it.
+
+Then perform the replacement or rollback with every protected project named
+explicitly:
 
 ```bash
 python3 -B /absolute/path/to/candidate/scripts/runtime_cutover.py \
@@ -38,19 +85,24 @@ python3 -B /absolute/path/to/candidate/scripts/runtime_cutover.py \
   --rollback-root /absolute/path/to/.codex/skills/chalxius-prior \
   --archive-root /absolute/path/to/.codex/skill-runtime-archives/chalxius \
   --project-root /absolute/path/to/protected-project \
-  --expected-candidate-manifest-sha256 APPROVED_64_HEX
+  --expected-candidate-manifest-sha256 APPROVED_64_HEX \
+  --project-validation-receipt /absolute/path/to/project-validation-receipt.json \
+  --expected-project-validation-receipt-sha256 APPROVED_RECEIPT_SHA256
 ```
 
 The gate requires either one or more `--project-root` values or the explicit
 `--confirm-no-protected-projects` assertion. It verifies the exact candidate
-file set and self-test, rejects every nonterminal or non-current protected
-project, archives the installed runtime and every matching frozen card identity,
-performs a same-parent rename cutover, archives and self-tests the new install,
-and reruns all project status/audits. Any post-swap failure automatically restores the prior
-installation. An explicit rollback uses the same gate with `--operation
-rollback`, the exact rollback tree as `--candidate-root`, and a new backup root;
-an old runtime incapable of validating protected projects is refused before the
-swap.
+file set and self-test, rejects every nonterminal protected project, archives
+the installed runtime and every matching frozen card identity, performs a
+same-parent rename cutover, archives and self-tests the new install, and
+rechecks the exact receipt identity and project digest. It does not repeat a
+semantic audit after copying identical bytes. Any post-swap failure
+automatically restores the prior installation. A protected-project cutover
+without a receipt is rejected by default. The explicit
+`--force-full-project-audit` escape runs one full pre-swap audit and reuses its
+in-memory exact snapshot post-swap; it never authorizes two duplicate audits.
+An explicit rollback uses the same gate with `--operation rollback`, the exact
+rollback tree as `--candidate-root`, and a new backup root.
 
 The low-level `scripts/archive_runtime.py` command copies only manifest-listed
 regular files, verifies every hash and the exact resulting file set, seals one
@@ -63,7 +115,7 @@ To seed a legacy schema-1 identity, use one exact frozen task card and a source
 tree whose VERSION, MANIFEST, and all declared file hashes match that card:
 
 ```bash
-python3 -B /absolute/path/to/0.6.3/scripts/archive_runtime.py \
+python3 -B /absolute/path/to/0.6.4/scripts/archive_runtime.py \
   --source-root /absolute/path/to/exact-historical-runtime \
   --archive-root "$ARCHIVE_ROOT" \
   --task-card /absolute/path/to/frozen-task-card.json \
@@ -78,8 +130,8 @@ registry drift, or a host-root mismatch fail closed. An optional
 frozen into any new schema-2 card; all processes serving one project must use
 the same value.
 
-The cutover gate runs `round-status` and `audit` before and after replacement.
-Refuse replacement while any protected round remains active; complete it or
+The receipt builder runs the necessary terminal-round checks once. Refuse
+replacement while any protected round remains active; complete it or
 explicitly abort it first. A terminal completed
 or aborted card may use the archive only for read/status/audit interpretation;
 worker CHX startup, returns, ingestion, experiments, Pulse, and every mutation
@@ -156,6 +208,20 @@ Paper/Audit work, computation, campaigns, novelty search, or expert synthesis
 would be useful. Automatic attachment of that legacy plan to V5 rounds is not
 enabled. The Fact-admission contract is invariant in all modes.
 
+Under `auto` or `deep`, a user-stated research objective is enough to provision the
+internal advisory scope; the user does not need to say `Campaign`:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role operator research-goal-intake \
+  --input goal.json --actor USER
+```
+
+`goal.json` contains exactly revision `chalxius-bf-goal-intake-2` and the
+user's objective. The result returns an internal Campaign id for future
+Research and computes BF-1. It does not select `ACTIVE`, retag prior Research,
+plan, or dispatch. BF-2/BF-3 remain unavailable until a real exact blockage
+with an ingested attempt passes the inherited validator.
+
 When the operator adopts that advice, use genuinely distinct callable contexts
 for a panel and produce actual plan, ingestion, barrier, trusted dispatch,
 cross-review, and closure evidence for a Pulse. Each valid Pulse contribution
@@ -177,7 +243,7 @@ The automatic V5 frontier uses the compact four-factor score and projects
 legacy eight-metric Research without rewriting it. It is an ordering aid only,
 has no cutoff, and does not prevent explicit scheduling of a low-scored item.
 
-For new 0.6.3 work, Main compiles task context and Operator retains governance;
+For new 0.6.4 work, Main compiles task context and Operator retains governance;
 the technical Host role remains the unchanged trusted dispatch adapter. One
 origin-bound promoted Blackboard item may seed its exact bounded query as one
 task. Exact enum mode hints apply only across an equal assurance/adverse

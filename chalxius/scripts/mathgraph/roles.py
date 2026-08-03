@@ -128,6 +128,7 @@ ALL_COMMANDS = {
     "verification-aggregate",
     "verification-status",
     "brave-future-enable",
+    "research-goal-intake",
     "brave-future-status",
     "brave-future-audit",
     "campaign-reassess",

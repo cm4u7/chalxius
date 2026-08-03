@@ -8,6 +8,8 @@ must detect it.  It never edits the candidate or an installed skill tree.
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -16,6 +18,8 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+sys.dont_write_bytecode = True
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,9 @@ V5_EXPERIMENT_TEST_MODULE = "tests.test_v5_experiments.V5ExperimentTests"
 RUNTIME_CUTOVER_TEST_MODULE = "tests.test_runtime_cutover.RuntimeCutoverTests"
 HOST_ENTRYPOINT_TEST_MODULE = (
     "tests.test_host_entrypoint_nonmutation.HostEntrypointNonMutationTests"
+)
+RELEASE_VALIDATION_TEST_MODULE = (
+    "tests.test_release_validation.ReleaseValidationTests"
 )
 PAPER_RESEARCH_PIPELINE_TEST_MODULE = (
     "tests.test_paper_research_pipeline.PaperResearchPipelineTests"
@@ -935,6 +942,16 @@ MUTANTS = (
         target="runtime_cutover.py",
     ),
     Mutant(
+        name="runtime_cutover_project_validation_entrypoint_writes_bytecode",
+        old="sys.dont_write_bytecode = True\n",
+        new="sys.dont_write_bytecode = False\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_default_python_entrypoints_do_not_create_bytecode"
+        ),
+        target="runtime_cutover_project_validation.py",
+    ),
+    Mutant(
         name="runtime_archive_entrypoint_writes_bytecode_before_validation",
         old="sys.dont_write_bytecode = True\n",
         new="sys.dont_write_bytecode = False\n",
@@ -965,6 +982,100 @@ MUTANTS = (
         test=(
             f"{RUNTIME_CUTOVER_TEST_MODULE}."
             "test_cutover_requires_an_explicit_protected_project_inventory"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_prevalidated_receipt_bypassed",
+        old=(
+            "    if project_validation_receipt is not None:\n"
+            "        if installed_binding is None:\n"
+        ),
+        new=(
+            "    if False and project_validation_receipt is not None:\n"
+            "        if installed_binding is None:\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_bounded_project_receipt_replaces_duplicate_cutover_audits"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_implicit_duplicate_full_audits_reenabled",
+        old=(
+            "    if (\n"
+            "        normalized_projects\n"
+            "        and project_validation_receipt is None\n"
+            "        and not force_full_project_audit\n"
+            "    ):\n"
+        ),
+        new=(
+            "    if False and (\n"
+            "        normalized_projects\n"
+            "        and project_validation_receipt is None\n"
+            "        and not force_full_project_audit\n"
+            "    ):\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_protected_cutover_refuses_implicit_duplicate_full_audits"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_forced_full_audit_repeated_post_swap",
+        old="        elif in_memory_full_receipt is not None:\n",
+        new="        elif False and in_memory_full_receipt is not None:\n",
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_multiversion_project_uses_sealed_history_instead_of_one_live_alias"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_project_snapshot_drift_bypassed",
+        old=(
+            "        if raw.get(\"project_state\") != snapshot:\n"
+            "            raise ValueError(\"protected project changed after validation receipt\")\n"
+        ),
+        new=(
+            "        if False and raw.get(\"project_state\") != snapshot:\n"
+            "            raise ValueError(\"protected project changed after validation receipt\")\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_bounded_project_receipt_rejects_project_drift_before_swap"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_required_deep_audit_downgraded",
+        old=(
+            "    if not context[\"change_classification\"][\"deep_audit_required\"]:\n"
+        ),
+        new=(
+            "    if True:  # mutant: downgrade an explicitly required deep audit\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_deep_project_validation_runs_once_while_building_receipt"
+        ),
+        target="mathgraph/runtime_cutover.py",
+    ),
+    Mutant(
+        name="runtime_cutover_project_receipt_hash_bypassed",
+        old=(
+            "    if actual != expected_sha256:\n"
+            "        raise ValueError(f\"{label} differs from the approved SHA-256\")\n"
+        ),
+        new=(
+            "    if False and actual != expected_sha256:\n"
+            "        raise ValueError(f\"{label} differs from the approved SHA-256\")\n"
+        ),
+        test=(
+            f"{RUNTIME_CUTOVER_TEST_MODULE}."
+            "test_bounded_project_receipt_hash_is_mandatory_and_exact"
         ),
         target="mathgraph/runtime_cutover.py",
     ),
@@ -1027,20 +1138,24 @@ MUTANTS = (
         target="mathgraph/runtime_cutover.py",
     ),
     Mutant(
-        name="runtime_cutover_postflight_project_gate_bypassed",
+        name="runtime_cutover_receipt_postflight_gate_bypassed",
         old=(
-            "        postflight = project_validator(\n"
-            "            installed,\n"
-            "            normalized_projects,\n"
-            "            archive_root=archive,\n"
-            "        )\n"
+            "            postflight = _validate_cutover_project_receipt_postflight(\n"
+            "                receipt=bounded_receipt,\n"
+            "                receipt_path=project_validation_receipt,\n"
+            "                receipt_sha256=bounded_receipt_sha256,\n"
+            "                installed=installed,\n"
+            "                archive_root=archive,\n"
+            "                project_roots=normalized_projects,\n"
+            "                installed_binding=new_binding,\n"
+            "            )\n"
         ),
         new=(
-            "        postflight = {\"projects\": [], \"runtime_bindings\": []}\n"
+            "            postflight = {\"projects\": [], \"runtime_bindings\": []}\n"
         ),
         test=(
             f"{RUNTIME_CUTOVER_TEST_MODULE}."
-            "test_post_cutover_project_gate_failure_also_restores_the_prior_installation"
+            "test_bounded_project_receipt_post_swap_drift_restores_prior_runtime"
         ),
         target="mathgraph/runtime_cutover.py",
     ),
@@ -1457,6 +1572,86 @@ MUTANTS = (
         target="mathgraph/brave_future.py",
     ),
     Mutant(
+        name="goal_intake_nonauto_mode_gate_bypassed",
+        old='        if reasoning_mode not in {"auto", "deep"}:\n',
+        new='        if False and reasoning_mode not in {"auto", "deep"}:\n',
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_goal_intake_ambiguity_nonauto_and_disablement_fail_zero_write"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
+        name="goal_intake_deep_mode_excluded",
+        old='        if reasoning_mode not in {"auto", "deep"}:\n',
+        new='        if reasoning_mode not in {"auto"}:\n',
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_deep_goal_intake_creates_exact_campaign_enables_bf1_only"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
+        name="goal_intake_active_pointer_becomes_selector",
+        old="            matches = campaigns.exact_objective_matches(objective)\n",
+        new=(
+            "            matches = ([campaigns.active()] if campaigns.active() "
+            "else campaigns.exact_objective_matches(objective))\n"
+        ),
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_goal_intake_ignores_active_pointer_and_exposes_future_scope"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
+        name="goal_intake_exact_objective_degraded_to_substring",
+        old=(
+            '            if canonical_research_objective(status["objective"]) == objective_key:\n'
+        ),
+        new=(
+            '            if objective_key in canonical_research_objective(status["objective"]):\n'
+        ),
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_auto_goal_intake_is_lexically_exact_and_idempotent"
+        ),
+        target="mathgraph/campaigns.py",
+    ),
+    Mutant(
+        name="goal_intake_explicit_disablement_overridden",
+        old='            if not current["enabled"] and current["event_count"]:\n',
+        new=(
+            '            if False and not current["enabled"] and '
+            'current["event_count"]:\n'
+        ),
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_goal_intake_ambiguity_nonauto_and_disablement_fail_zero_write"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
+        name="goal_intake_claims_automatic_plan_effect",
+        old=(
+            '            "fuzzy_objective_matching": False,\n'
+            '            "automatic_plan": False,\n'
+            '            "automatic_dispatch": False,\n'
+            '            "research_write_effect": "none",\n'
+        ),
+        new=(
+            '            "fuzzy_objective_matching": False,\n'
+            '            "automatic_plan": True,\n'
+            '            "automatic_dispatch": False,\n'
+            '            "research_write_effect": "none",\n'
+        ),
+        test=(
+            f"{BRAVE_FUTURE_TEST_MODULE}."
+            "test_auto_goal_intake_creates_exact_campaign_enables_bf1_only"
+        ),
+        target="mathgraph/brave_future.py",
+    ),
+    Mutant(
         name="chx_first_close_status_projection_drift",
         old="        return ledger_status(path)\n    return status\n",
         new="        return status\n    return status\n",
@@ -1862,11 +2057,157 @@ MUTANTS = (
         ),
         target="../assets/reader_html_app.js",
     ),
+    Mutant(
+        name="aggressive_audit_child_bytecode_suppression_removed",
+        old='    environment["PYTHONDONTWRITEBYTECODE"] = "1"\n',
+        new='    environment.pop("PYTHONDONTWRITEBYTECODE", None)\n',
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_aggressive_audit_child_boundary_and_snapshot_are_exact"
+        ),
+        target="aggressive_bug_audit.py",
+    ),
+    Mutant(
+        name="aggressive_audit_candidate_snapshot_comparison_bypassed",
+        old="    return before == _candidate_snapshot(candidate_root)\n",
+        new="    return True\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_aggressive_audit_child_boundary_and_snapshot_are_exact"
+        ),
+        target="aggressive_bug_audit.py",
+    ),
+    Mutant(
+        name="release_validation_lane_isolation_bypassed",
+        old=(
+            "    roots = {\n"
+            '        name: canonical_workspace / name / "chalxius" for name in lane_names\n'
+            "    }\n"
+        ),
+        new=(
+            "    roots = {\n"
+            '        name: canonical_workspace / "shared" / "chalxius"\n'
+            "        for name in lane_names\n"
+            "    }\n"
+        ),
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_manifest_bound_lanes_are_distinct_exact_copies"
+        ),
+        target="release_validation.py",
+    ),
+    Mutant(
+        name="release_validation_lane_snapshot_bypassed",
+        old="    lane_unchanged = before == _snapshot(lane_root)\n",
+        new="    lane_unchanged = True\n",
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_lane_runner_suppresses_bytecode_and_rejects_any_lane_write"
+        ),
+        target="release_validation.py",
+    ),
+    Mutant(
+        name="release_validation_snapshot_sensitive_phase_barrier_removed",
+        old=(
+            '            "aggressive_bug_audit",\n'
+            '            (python, "scripts/aggressive_bug_audit.py"),\n'
+            "            phase=2,\n"
+        ),
+        new=(
+            '            "aggressive_bug_audit",\n'
+            '            (python, "scripts/aggressive_bug_audit.py"),\n'
+            "            phase=1,\n"
+        ),
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_manifest_bound_lanes_are_distinct_exact_copies"
+        ),
+        target="release_validation.py",
+    ),
+    Mutant(
+        name="aggressive_audit_mutant_registry_preflight_bypassed",
+        old=(
+            "    _validate_mutant_targets(\n"
+            "        candidate_root=candidate_root,\n"
+            "        source_scripts=source_scripts,\n"
+            "        mutants=MUTANTS,\n"
+            "    )\n"
+        ),
+        new="    pass  # mutant: skip the cheap complete registry preflight\n",
+        test=(
+            f"{HOST_ENTRYPOINT_TEST_MODULE}."
+            "test_mutant_registry_preflight_runs_before_any_test_subprocess"
+        ),
+        target="aggressive_bug_audit.py",
+    ),
 )
+
+
+def _mutant_target(
+    *, candidate_root: Path, source_scripts: Path, mutant: Mutant
+) -> Path:
+    candidate = candidate_root.resolve()
+    raw_target = source_scripts / mutant.target
+    target = raw_target.resolve()
+    if target == candidate or candidate not in target.parents:
+        raise SystemExit(f"mutant {mutant.name} target escapes the candidate")
+    if raw_target.is_symlink() or not target.is_file():
+        raise SystemExit(f"mutant {mutant.name} target is not one regular file")
+    return target
+
+
+def _validate_mutant_targets(
+    *,
+    candidate_root: Path,
+    source_scripts: Path,
+    mutants: tuple[Mutant, ...],
+) -> None:
+    """Reject a stale mutation plan before spawning any expensive test."""
+
+    for mutant in mutants:
+        target = _mutant_target(
+            candidate_root=candidate_root,
+            source_scripts=source_scripts,
+            mutant=mutant,
+        )
+        occurrences = target.read_text(encoding="utf-8").count(mutant.old)
+        if occurrences != 1:
+            raise SystemExit(
+                f"mutant registry preflight: {mutant.name} expected one target, "
+                f"found {occurrences}"
+            )
+
+
+def _candidate_snapshot(candidate_root: Path) -> tuple[tuple[str, str, str, str], ...]:
+    """Freeze the complete local path, kind, mode, and content/link identity."""
+
+    entries: list[tuple[str, str, str, str]] = []
+    for path in sorted(candidate_root.rglob("*"), key=lambda item: item.as_posix()):
+        relative = path.relative_to(candidate_root).as_posix()
+        mode = f"{path.lstat().st_mode & 0o7777:o}"
+        if path.is_symlink():
+            entries.append((relative, "symlink", mode, os.readlink(path)))
+        elif path.is_file():
+            entries.append(
+                (relative, "file", mode, hashlib.sha256(path.read_bytes()).hexdigest())
+            )
+        elif path.is_dir():
+            entries.append((relative, "directory", mode, ""))
+        else:
+            entries.append((relative, "other", mode, ""))
+    return tuple(entries)
+
+
+def _candidate_is_unchanged(
+    before: tuple[tuple[str, str, str, str], ...], candidate_root: Path
+) -> bool:
+    return before == _candidate_snapshot(candidate_root)
 
 
 def _run_test(*, repo: Path, scripts: Path, test: str) -> subprocess.CompletedProcess[str]:
     environment = dict(os.environ)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    environment.pop("PYTHONPYCACHEPREFIX", None)
     environment["PYTHONPATH"] = os.pathsep.join(
         [str(scripts), environment.get("PYTHONPATH", "")]
     ).rstrip(os.pathsep)
@@ -1881,11 +2222,24 @@ def _run_test(*, repo: Path, scripts: Path, test: str) -> subprocess.CompletedPr
     )
 
 
-def main() -> int:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    _parse_args(argv)
     candidate_root = Path(__file__).resolve().parents[1]
     repo = candidate_root
     source_scripts = candidate_root / "scripts"
+    candidate_before = _candidate_snapshot(candidate_root)
     results: list[dict[str, object]] = []
+
+    _validate_mutant_targets(
+        candidate_root=candidate_root,
+        source_scripts=source_scripts,
+        mutants=MUTANTS,
+    )
 
     baseline_tests = sorted({mutant.test for mutant in MUTANTS})
     for test in baseline_tests:
@@ -1903,7 +2257,11 @@ def main() -> int:
                 shutil.copytree(candidate_root / "assets", copied_root / "assets")
             for identity_name in ("VERSION", "MANIFEST.sha256"):
                 shutil.copy2(candidate_root / identity_name, copied_root / identity_name)
-            target = (copied_scripts / mutant.target).resolve()
+            target = _mutant_target(
+                candidate_root=copied_root,
+                source_scripts=copied_scripts,
+                mutant=mutant,
+            )
             text = target.read_text(encoding="utf-8")
             occurrences = text.count(mutant.old)
             if occurrences != 1:
@@ -1928,6 +2286,8 @@ def main() -> int:
             if not killed:
                 print(outcome.stdout, file=sys.stderr)
 
+    mutants_ok = all(bool(item["killed"]) for item in results)
+    candidate_unchanged = _candidate_is_unchanged(candidate_before, candidate_root)
     report = {
         "schema_version": 1,
         "scope": (
@@ -1951,7 +2311,8 @@ def main() -> int:
             "content-address recomputation, trusted prime-order signature "
             "verification, registry-wide cryptographic-identity, idempotent-registration, and cached-read authority integrity, "
             "project-wide freshness, Certification aggregate enforcement, Campaign "
-            "worker-result lineage, Brave Future advisory-only effects, CHX "
+            "worker-result lineage, exact goal-to-Campaign auto/deep intake, explicit "
+            "disablement and active-pointer isolation, Brave Future advisory-only effects, CHX "
             "close/status parity, public-disclosure completeness and run namespace, "
             "content-addressed Paper-continuation status-head freshness without "
             "summary-to-full fallback, status projection, Reader math projection, "
@@ -1962,8 +2323,8 @@ def main() -> int:
         "mutants": results,
         "killed": sum(bool(item["killed"]) for item in results),
         "total": len(results),
-        "ok": all(bool(item["killed"]) for item in results),
-        "candidate_unchanged": True,
+        "ok": mutants_ok and candidate_unchanged,
+        "candidate_unchanged": candidate_unchanged,
     }
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["ok"] else 1

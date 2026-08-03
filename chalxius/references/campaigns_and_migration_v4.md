@@ -7,6 +7,8 @@
 > empty Fact Graph. Generate `PROJECT_BACKGROUND.md` only on explicit user
 > instruction; once present, read it by default as nontruth context. In current
 > V5, Campaign frontier use is likewise explicit: never infer it from `ACTIVE`.
+> Under `auto` or `deep`, a user's exact research objective may prospectively provision
+> this envelope through `research-goal-intake`; the user need not name it.
 
 Read this reference before changing campaigns, targets, frontier policy, audit behavior, or
 upgrading a v1-v3 project copy.
@@ -45,6 +47,16 @@ campaign.
 
 ## Explicit V5 Campaign envelope
 
+There are two explicit semantic inputs. Main may name an existing Campaign id,
+or a user may state an exact research objective while `reasoning_mode=auto` or
+`reasoning_mode=deep`.
+In the latter case Operator runs `research-goal-intake`; the compiler performs
+only Unicode-NFC and whitespace normalization, reuses one exact objective match
+or creates one Campaign, and returns its internal id to the host. It never
+fuzzy-matches, consults `ACTIVE` for selection, or silently associates existing
+untagged Research. The user's objective is the authorization; knowledge of the
+internal Campaign vocabulary is not required.
+
 Use `frontier --campaign CAMPAIGN_ID` or `plan-round --campaign CAMPAIGN_ID`
 only when Main deliberately chooses that durable objective. V5 accepts only
 Research whose immutable metadata has that exact `campaign_id`; untagged and
@@ -62,7 +74,8 @@ A bound V5 worker may retrieve only that frozen status with
 `campaign-status CAMPAIGN_ID --task-card CARD`; a passive unscoped association
 does not authorize a live Campaign read.
 
-Omitting `--campaign` preserves the global V5 frontier and the earlier passive
+Omitting both an exact Campaign id and a current user research-goal intake
+preserves the global V5 frontier and the earlier passive
 behavior: a selected Research item may still copy its `campaign_id` into a card,
 but no Campaign envelope or implicit active-Campaign filter is attached. The
 Campaign is nontruth context, never a scheduler, expansion loop, task closure,

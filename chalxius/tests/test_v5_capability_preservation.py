@@ -59,8 +59,14 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertEqual(
             campaign_scope["selection"],
-            "explicit_exact_research_campaign_id_only",
+            "explicit_id_or_auto_or_deep_exact_user_objective_compilation",
         )
+        self.assertEqual(
+            campaign_scope["goal_matching"],
+            "unicode_nfc_whitespace_fold_then_lexical_exact_only",
+        )
+        self.assertFalse(campaign_scope["user_campaign_jargon_required"])
+        self.assertFalse(campaign_scope["active_campaign_pointer_used_for_goal_selection"])
         self.assertEqual(
             campaign_scope["scheduler"],
             "v5_main_four_factor_frontier",
@@ -68,6 +74,16 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         self.assertFalse(campaign_scope["active_campaign_pointer_default"])
         self.assertFalse(campaign_scope["fact_admission_change"])
         self.assertEqual(campaign_scope["truth_effect"], "none")
+        brave_future = lock["brave_future_surface"]
+        self.assertEqual(
+            brave_future["goal_intake_revision"], "chalxius-bf-goal-intake-2"
+        )
+        self.assertEqual(
+            brave_future["goal_intake_modes"], ["auto", "deep"]
+        )
+        self.assertEqual(brave_future["plan_effect"], "none")
+        self.assertEqual(brave_future["dispatch_effect"], "none")
+        self.assertEqual(brave_future["truth_effect"], "none")
         paper = lock["paper_continuation_surface"]
         self.assertEqual(
             paper["contract_revision"], "chalxius-v5-paper-continuation-1"
