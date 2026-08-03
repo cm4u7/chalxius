@@ -38,16 +38,15 @@ It demonstrates a method for organizing argument research; it does not establish
 a uniquely correct interpretation, authorial intent, or a philosophical
 position.
 
-## 🧮 Potential application: x-y interchange research
+## 🧮 some math research
 
 > ⚠️ **Potential application only.** The predecessor archive was not produced
-> by Chalxius 0.3.5, does not pass the current Chalxius workflow audit, and has
-> not been confirmed by the relevant authors.
+> by Chalxius 0.3.5, does not pass the current Chalxius workflow audit
 
 **[▶️ Open the guarded Reader](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)** ·
 [📄 Inspect the public source snapshot](docs/cases/xy-swap-potential.source.md)
 
-[![Potential x-y interchange Reader preview](docs/assets/xy-swap-potential-case.png)](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)
+[![Potential proof Reader preview](docs/assets/xy-swap-potential-case.png)](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)
 
 ### 🧰 What this kind of project can use
 
