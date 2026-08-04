@@ -1,0 +1,451 @@
+{
+  "schema_version": 1,
+  "contract_revision": "chalxius-behavioral-feature-registry-3",
+  "truth_effect": "none",
+  "features": {
+    "feature.paper_changed_surface": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A changed Paper node must produce a bounded revalidation surface that continuation consumes.",
+      "production_entry_symbol": "mathgraph.paper_continuation.PaperContinuationManager.create_plan",
+      "producer_symbol": "mathgraph.paper_continuation.PaperContinuationManager._derive_changed_surface",
+      "activation_predicate": {
+        "predicate_id": "paper_snapshot_has_changed_nodes",
+        "domain": ["changed_nodes_present", "no_changed_nodes"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-paper-changed-surface-1",
+        "validator_symbol": "mathgraph.paper_continuation.PaperContinuationManager._validate_plan_record"
+      },
+      "consumer_symbol": "mathgraph.paper_continuation.PaperContinuationManager.plan",
+      "observable_effect": {
+        "effect_id": "changed_surface_attached_to_continuation",
+        "kind": "routing",
+        "description": "The next continuation plan exposes the exact changed dependency and defeater closure."
+      },
+      "probes": {
+        "positive": "tests.test_research_draft_admission.ResearchDraftAdmissionTests.test_changed_surface_continuation_derives_and_consumes_exact_delta",
+        "predicate_false": "tests.test_research_draft_admission.ResearchDraftAdmissionTests.test_unchanged_or_first_snapshot_requires_full_surface",
+        "tamper": "tests.test_research_draft_admission.ResearchDraftAdmissionTests.test_changed_surface_receipt_tamper_fails_closed"
+      }
+    },
+    "feature.paper_continuation_release_capsule": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A continuation-descended Candidate Release must consume one content-addressed scoped capsule and reuse its bounded currentness proof at the verifier boundary.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "producer_symbol": "mathgraph.paper_continuation.prepare_candidate_continuation_release_capsule",
+      "activation_predicate": {
+        "predicate_id": "candidate_research_descends_from_one_continuation_plan",
+        "domain": ["one_continuation_plan", "no_continuation_plan", "mixed_plans"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-paper-continuation-release-capsule-1",
+        "validator_symbol": "mathgraph.paper_continuation.validate_candidate_continuation_release_capsule"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._require_current_paper_continuation_release",
+      "observable_effect": {
+        "effect_id": "scoped_continuation_capsule_visible_to_fresh_verifier",
+        "kind": "validation_gate",
+        "description": "Candidate and verifier capsules expose the exact status generation, Paper closure, artifacts, dispositions, and changed Fact interfaces without replaying the full continuation history."
+      },
+      "probes": {
+        "positive": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_continuation_release_capsule_normal_flow",
+        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_nodewise_release_binds_current_logic_audit_and_coverage",
+        "tamper": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_continuation_release_capsule_tamper_fails_closed"
+      }
+    },
+    "feature.native_successor_topology": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "The public successor entry must produce and later validate the complete native successor topology binding.",
+      "production_entry_symbol": "mathgraph.paper_logic.PaperLogicStore.stage",
+      "producer_symbol": "mathgraph.paper_logic.PaperLogicStore._research_draft_successor_topology_receipt",
+      "activation_predicate": {
+        "predicate_id": "strict_research_draft_logic_staged",
+        "domain": ["strict_research_draft_logic", "external_or_nonlogic_graph"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-paper-successor-topology-1",
+        "validator_symbol": "mathgraph.paper_logic.PaperLogicStore._research_draft_successor_topology_receipt"
+      },
+      "consumer_symbol": "mathgraph.paper_logic.PaperLogicStore.freeze",
+      "observable_effect": {
+        "effect_id": "successor_topology_bound_to_pipeline_receipt",
+        "kind": "validation_gate",
+        "description": "Native stage records and native freeze recomputes the complete predecessor topology and premise order before publication."
+      },
+      "probes": {
+        "positive": "tests.test_research_draft_admission.ResearchDraftAdmissionTests.test_authoritative_successor_topology_is_rechecked_at_stage_and_freeze",
+        "predicate_false": "tests.test_paper_logic_graph.PaperLogicGraphTests.test_public_minimal_logic_fixture_and_edge_diff_are_executable",
+        "tamper": "tests.test_research_draft_admission.ResearchDraftAdmissionTests.test_successor_topology_receipt_tamper_fails_at_native_freeze"
+      }
+    },
+    "feature.evidence_pdf_paper_fact_triad": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Reviewed PDF, Paper Graph, and imported Fact Graph Evidence must associate through the normal Evidence flow.",
+      "production_entry_symbol": "mathgraph.evidence.EvidencePlane.import_fact_graph",
+      "producer_symbol": "mathgraph.evidence.EvidencePlane._execute_association_planning_attempt",
+      "activation_predicate": {
+        "predicate_id": "reviewed_paper_and_matching_fact_import_present",
+        "domain": ["exact_match_present", "exact_match_absent"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-evidence-triad-association-request-1",
+        "validator_symbol": "mathgraph.evidence.EvidencePlane._validate_association_request"
+      },
+      "consumer_symbol": "mathgraph.evidence.EvidencePlane.association_status",
+      "observable_effect": {
+        "effect_id": "evidence_triad_association_visible",
+        "kind": "external_side_effect",
+        "description": "Evidence status exposes one content-addressed nontruth PDF/Paper/Fact association."
+      },
+      "probes": {
+        "positive": "tests.test_evidence_plane.EvidencePlaneTests.test_fact_import_automatically_associates_only_exact_paper_refs",
+        "predicate_false": "tests.test_evidence_plane.EvidencePlaneTests.test_explicit_fact_import_verified_bridge_and_correction_impact",
+        "tamper": "tests.test_evidence_plane.EvidencePlaneTests.test_association_failure_is_pending_tamper_fails_closed_and_retry_is_idempotent"
+      }
+    },
+    "feature.brave_future_goal_intake_binding": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "An ordinary auto/deep research goal must bind the returned internal Campaign id to future Research without Campaign jargon.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
+      "producer_symbol": "mathgraph.goal_intake.build_goal_intake_research_binding",
+      "activation_predicate": {
+        "predicate_id": "user_goal_under_auto_or_deep",
+        "domain": ["auto_or_deep_goal", "fast_or_no_goal"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-bf-goal-intake-research-binding-1",
+        "validator_symbol": "mathgraph.goal_intake.validate_goal_intake_research_binding"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
+      "observable_effect": {
+        "effect_id": "future_research_binds_goal_campaign",
+        "kind": "state_transition",
+        "description": "New Research created after goal intake carries the exact returned Campaign id."
+      },
+      "probes": {
+        "positive": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_public_goal_command_binds_root_research_without_campaign_jargon",
+        "predicate_false": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_plain_research_has_no_spurious_goal_binding",
+        "tamper": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_tampered_or_conflicting_intake_fails_before_research_write"
+      }
+    },
+    "feature.mathematical_target_policy": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Mathematical drafts preserve the exact target, hypotheses, domains, and quantifiers while allowing proof, disproof, or obstruction.",
+      "production_entry_symbol": "mathgraph.paper_research_pipeline.validate_atomic_paper_dag",
+      "producer_symbol": "mathgraph.paper_research_pipeline.validate_research_continuity_contract",
+      "activation_predicate": {
+        "predicate_id": "research_draft_domain_is_mathematics",
+        "domain": ["mathematics", "non_mathematics"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-research-continuity-1",
+        "validator_symbol": "mathgraph.paper_research_pipeline.validate_research_continuity_contract"
+      },
+      "consumer_symbol": "mathgraph.paper_research_pipeline.validate_atomic_paper_dag",
+      "observable_effect": {
+        "effect_id": "mathematical_target_policy_in_preflight",
+        "kind": "validation_gate",
+        "description": "Paper preflight rejects mathematical target substitution and accepts the three declared resolution statuses."
+      },
+      "probes": {
+        "positive": "tests.test_paper_research_pipeline.PaperResearchPipelineTests.test_mathematics_preserves_target_and_allows_proof_or_disproof",
+        "predicate_false": "tests.test_paper_research_pipeline.PaperResearchPipelineTests.test_inherited_pipeline_is_domain_general_across_draft_profiles",
+        "tamper": "tests.test_paper_research_pipeline.PaperResearchPipelineTests.test_atomic_preflight_rejects_theorem_escape_and_target_loss"
+      }
+    },
+    "feature.cross_domain_continuation_adapter": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Normal continuation must select the domain adapter rather than assuming philosophy-style stance preservation.",
+      "production_entry_symbol": "mathgraph.research_draft.ResearchDraftManager.create_plan",
+      "producer_symbol": "mathgraph.research_draft._profile_obligations",
+      "activation_predicate": {
+        "predicate_id": "research_draft_domain_profile_selected",
+        "domain": ["philosophy", "mathematics", "empirical", "mixed", "unsupported"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-research-draft-profile-closure-1",
+        "validator_symbol": "mathgraph.paper_research_pipeline.validate_research_continuity_contract"
+      },
+      "consumer_symbol": "mathgraph.paper_research_pipeline.validate_atomic_paper_dag",
+      "observable_effect": {
+        "effect_id": "domain_specific_continuation_obligations",
+        "kind": "routing",
+        "description": "The continuation plan and preflight expose obligations for the exact declared domain profile."
+      },
+      "probes": {
+        "positive": "tests.test_paper_research_pipeline.PaperResearchPipelineTests.test_inherited_pipeline_is_domain_general_across_draft_profiles",
+        "predicate_false": "tests.test_research_draft_contracts.ResearchDraftContractTests.test_domain_profiles_specialize_one_lifecycle_without_dropping_obligations",
+        "tamper": "tests.test_paper_research_pipeline.PaperResearchPipelineTests.test_reliability_matrix_is_domain_general_and_kills_every_mutation"
+      }
+    },
+    "feature.paired_adverse_proof_philosophy_attack": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Research explicitly marked independent_adverse_required must receive a distinct paired refute worker/context unless its primary is already adverse.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "producer_symbol": "mathgraph.adverse_routing.build_paired_proof_philosophy_attack_handoff",
+      "activation_predicate": {
+        "predicate_id": "exact_independent_adverse_required_and_primary_not_already_adverse",
+        "domain": ["required_primary", "predicate_false", "primary_refute", "primary_challenge"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-paired-adverse-attack-assignment-1",
+        "validator_symbol": "mathgraph.adverse_routing.validate_independent_adverse_pair"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.validate_task_card",
+      "observable_effect": {
+        "effect_id": "paired_attack_assignments_visible",
+        "kind": "routing",
+        "description": "The frozen adverse work unit exposes the applicable proof and philosophy attack assignments separately."
+      },
+      "probes": {
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_philosophy_primary_gets_distinct_rule_bound_adverse_pair",
+        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_false_predicate_and_existing_refute_or_challenge_do_not_double",
+        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_independent_pair_tamper_is_rejected"
+      }
+    },
+    "feature.host_scope_attack_coverage": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Every completed host task must expose a scope-complete attack report, including an explicit zero report.",
+      "production_entry_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.report",
+      "producer_symbol": "mathgraph.adverse_routing.validate_host_scope_attack_report",
+      "activation_predicate": {
+        "predicate_id": "host_task_completion_reached",
+        "domain": ["completion_reached", "task_still_running"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-host-scope-attack-report-1",
+        "validator_symbol": "mathgraph.adverse_routing.validate_host_scope_attack_report"
+      },
+      "consumer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.report",
+      "observable_effect": {
+        "effect_id": "host_scope_attack_report_visible",
+        "kind": "bounded_output",
+        "description": "Host completion status exposes covered cases, pending proposals, and zero/nonzero report state for the exact scope."
+      },
+      "probes": {
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_zero_attack_report_requires_complete_pair_return",
+        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_predicate_false_is_explicitly_not_required",
+        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_tamper_is_rejected_after_hash_recomputation"
+      }
+    },
+    "feature.communication_readiness_normal_flow": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "External research communication must consume current lint readiness in the normal release path.",
+      "production_entry_symbol": "mathgraph.fact_bundles.publish_interpret_communication",
+      "producer_symbol": "mathgraph.fact_bundles.validate_interpret_communication_readiness",
+      "activation_predicate": {
+        "predicate_id": "external_communication_requested",
+        "domain": ["communication_requested", "internal_only"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-interpret-communication-readiness-1",
+        "validator_symbol": "mathgraph.fact_bundles.validate_interpret_communication_readiness_result"
+      },
+      "consumer_symbol": "mathgraph.fact_bundles.publish_interpret_communication",
+      "observable_effect": {
+        "effect_id": "communication_readiness_gate_visible",
+        "kind": "validation_gate",
+        "description": "The communication path reports readiness or fails before emitting the external artifact."
+      },
+      "probes": {
+        "positive": "tests.test_behavioral_communication_readiness.CommunicationReadinessNormalFlowTests.test_public_publish_command_consumes_readiness_before_emission",
+        "predicate_false": "tests.test_behavioral_communication_readiness.CommunicationReadinessNormalFlowTests.test_internal_only_path_skips_readiness_without_emission",
+        "tamper": "tests.test_behavioral_communication_readiness.CommunicationReadinessNormalFlowTests.test_tampered_draft_fails_before_emission"
+      }
+    },
+    "feature.neutral_review_formal_return": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A neutral verifier draft must pass the copied strict preflight before the host can publish an immutable formal review and success receipt.",
+      "production_entry_symbol": "mathgraph.neutral_review_submission.submit_neutral_review",
+      "producer_symbol": "mathgraph.neutral_review_submission.preflight_neutral_review_draft",
+      "activation_predicate": {
+        "predicate_id": "neutral_review_draft_present",
+        "domain": ["draft_present", "draft_absent_or_invalid"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-neutral-review-submission-1",
+        "validator_symbol": "mathgraph.neutral_review_submission.validate_neutral_review_preflight_receipt"
+      },
+      "consumer_symbol": "mathgraph.neutral_review_submission.formal_return_neutral_review",
+      "observable_effect": {
+        "effect_id": "neutral_review_formal_return_visible",
+        "kind": "validation_gate",
+        "description": "The host exposes draft_written, preflight_failed, preflight_passed, and formally_returned without giving a failed draft Candidate, Certification, Gateway, or Fact effect."
+      },
+      "probes": {
+        "positive": "tests.test_neutral_review_submission.NeutralReviewSubmissionTests.test_positive_host_path_exposes_all_stages_and_formal_receipt",
+        "predicate_false": "tests.test_neutral_review_submission.NeutralReviewSubmissionTests.test_predicate_false_missing_draft_has_no_authority_effect",
+        "tamper": "tests.test_neutral_review_submission.NeutralReviewSubmissionTests.test_invalid_enum_is_quarantined_and_tamper_retry_fails_closed_then_recovers"
+      }
+    },
+    "feature.chx_repair_integration_gate": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A revision-5 resolved CHX issue must consume prior reconnaissance, one reusable tactical repair, and latest coordinated integrated coverage.",
+      "production_entry_symbol": "chx_ledger.main",
+      "producer_symbol": "chx_ledger.record_integrated_repair",
+      "activation_predicate": {
+        "predicate_id": "revision_five_issue_resolved",
+        "domain": ["revision_5_resolution", "excluded_or_revision_1_to_4"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-chx-integrated-repair-1",
+        "validator_symbol": "chx_ledger._repair_gate"
+      },
+      "consumer_symbol": "chx_ledger._validate_events",
+      "observable_effect": {
+        "effect_id": "chx_resolved_disposition_gated",
+        "kind": "validation_gate",
+        "description": "Resolution remains unavailable until the latest content-addressed integration covers every resolved issue and binds its regression evidence."
+      },
+      "probes": {
+        "positive": "tests.test_chx_ledger.CHXRunLedgerTests.test_revision_five_resolution_requires_all_three_repair_gates",
+        "predicate_false": "tests.test_chx_ledger.CHXRunLedgerTests.test_revisions_one_through_four_keep_their_original_event_shapes",
+        "tamper": "tests.test_chx_ledger.CHXRunLedgerTests.test_integrated_registry_tamper_fails_beyond_the_event_hash"
+      }
+    },
+    "feature.phx_global_architecture_route_reference": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Architecture-route and cost-reduction semantics consult one host-global nontruth PHX guide; adoption remains unavailable without supporting evidence and prior informed user authorization.",
+      "production_entry_symbol": "phx_ledger.main",
+      "producer_symbol": "phx_ledger.record_route",
+      "activation_predicate": {
+        "predicate_id": "global_architecture_route_semantics_present",
+        "domain": ["architecture_route_signal", "no_architecture_route_signal"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-phx-architecture-route-ledger-1",
+        "validator_symbol": "phx_ledger._validate_events"
+      },
+      "consumer_symbol": "phx_ledger._parse_events",
+      "observable_effect": {
+        "effect_id": "phx_route_search_and_user_authorized_adoption",
+        "kind": "routing",
+        "description": "The global guide preserves current and superseded routes, CHX provenance, bounded evaluations, informed consultation and measured adoption without project or truth authority."
+      },
+      "probes": {
+        "positive": "tests.test_phx_ledger.PHXArchitectureRouteLedgerTests.test_route_measurement_consultation_adoption_close_report_and_verify",
+        "predicate_false": "tests.test_phx_ledger.PHXArchitectureRouteLedgerTests.test_major_architecture_adoption_requires_prior_approved_user_consultation",
+        "tamper": "tests.test_phx_ledger.PHXArchitectureRouteLedgerTests.test_tamper_truncation_and_post_close_mutation_fail_closed"
+      }
+    },
+    "feature.operator_fact_evidence_import": {
+      "classification": "explicit_manual",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Non-paper Fact Graph import remains explicit user plus Operator action.",
+      "boundary_reason": "Automatic import would transfer external scope into Evidence without the required user decision.",
+      "guard_symbol": "mathgraph.evidence.EvidencePlane.import_fact_graph",
+      "boundary_probe": "tests.test_evidence_plane.EvidencePlaneTests.test_explicit_fact_import_verified_bridge_and_correction_impact"
+    },
+    "feature.zotero_snapshot_ingress": {
+      "classification": "external_api",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Zotero snapshot ingestion is an externally supplied library operation.",
+      "boundary_reason": "Its activation depends on an external library snapshot and is not a project normal-flow obligation.",
+      "guard_symbol": "paper_library.cmd_zotero_snapshot",
+      "boundary_probe": "tests.test_paper_library_runtime.PaperLibraryTests.test_zotero_snapshot_is_explicit_external_ingress"
+    },
+    "feature.parallel_verification_machine_receipt_protocol": {
+      "classification": "external_api",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Pure protocol construction of one signed machine-verification receipt remains callable without owning project state.",
+      "boundary_reason": "The V5 capability matrix assigns project persistence to parallel_verification_lifecycle.py; this pure constructor has no project-state or Fact authority and is not an automatic project-flow root.",
+      "guard_symbol": "mathgraph.parallel_verification.build_machine_receipt",
+      "boundary_probe": "tests.test_parallel_verification.ParallelVerificationTests.test_plan_before_dispatch_machine_receipts_and_mechanical_aggregate"
+    },
+    "feature.parallel_verification_aggregate_protocol": {
+      "classification": "external_api",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Pure protocol aggregation of signed verifier receipts remains callable without owning project state.",
+      "boundary_reason": "The V5 capability matrix assigns project persistence to parallel_verification_lifecycle.py; this mechanical aggregate has no project-state or Fact authority and is not an automatic project-flow root.",
+      "guard_symbol": "mathgraph.parallel_verification.aggregate_receipts",
+      "boundary_probe": "tests.test_parallel_verification.ParallelVerificationTests.test_plan_before_dispatch_machine_receipts_and_mechanical_aggregate"
+    },
+    "feature.profile_closure_record": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Profile closure remains a callable V4 compatibility advisory surface.",
+      "boundary_reason": "It must stay outside automatic V5 planning and Fact admission.",
+      "guard_symbol": "mathgraph.profile_closure.ProfileClosureManager.record",
+      "boundary_probe": "tests.test_v5_lifecycle.V5LifecycleTests.test_profile_closure_commands_are_nontruth_repair_advice_in_v5"
+    },
+    "feature.v4_mode_initialization_transition": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "A valid mode-less inherited V4 project may enter current reasoning-mode governance through the explicit public mode-init transition.",
+      "boundary_reason": "The transition is explicit, future-work-only compatibility activation. It must bypass only the ordinary outer lock while ReasoningModeStore retains the dedicated fail-closed transition lock.",
+      "guard_symbol": "mathgraph.cli.main",
+      "boundary_probe": "tests.test_v4_fact_bundles_and_export.V4FactBundleAndExportTests.test_verifier_task_aliases_share_one_v4_behavior"
+    },
+    "feature.v4_execution_profile_auto_attachment": {
+      "classification": "dormant",
+      "lifecycle_decision": "retire",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Automatic V4 execution-profile attachment is retired; individually preserved V4 compatibility surfaces remain explicit and bounded.",
+      "boundary_reason": "No current mechanism covers the old panel, Pulse, Paper/Audit, novelty, Campaign, computation, and synthesis bundle as one equivalent automatic profile. File presence must not reactivate it.",
+      "guard_symbol": "",
+      "boundary_probe": "tests.test_research_draft_contracts.ResearchDraftContractTests.test_domain_profiles_specialize_one_lifecycle_without_dropping_obligations"
+    },
+    "feature.active_campaign_implicit_selection": {
+      "classification": "deprecated",
+      "lifecycle_decision": "retire",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Implicit selection through the historical ACTIVE Campaign pointer is retired.",
+      "boundary_reason": "Current goal intake and planning require exact objective or explicit Campaign identity and must never consume ACTIVE implicitly.",
+      "guard_symbol": "",
+      "boundary_probe": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
+    }
+  }
+}

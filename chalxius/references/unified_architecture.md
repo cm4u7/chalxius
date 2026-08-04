@@ -32,12 +32,21 @@ view over that Main planner. Exact stored associations may filter the same
 frontier and freeze one bounded nontruth Campaign envelope. No flag means no
 Campaign filter, including when an active Campaign exists.
 
-The prospective 0.6.4 goal-intake successor repairs only the human-to-envelope
-entry seam. Under `auto`, an explicit user research objective lets Operator
+The prospective 0.6.4 goal-intake successor repaired the human-to-envelope
+entry seam. Under `auto` or `deep`, an explicit user research objective lets Operator
 lexically exact-match or create one Campaign, enable the fixed advisory BF
 policy, and compute BF-1 without requiring Campaign jargon. It never selects
 through `ACTIVE`, retags old Research, fuzzy-matches goals, plans, dispatches,
 or changes any truth boundary. BF-2/BF-3 remain gated by an exact real blockage.
+
+The 0.6.5 continuity overlay consumes that committed intake by creating or
+reusing exactly one prospective root Research with an exact token/Campaign
+binding; BF-1 through BF-3 themselves still create no Research. The same overlay
+separates deep research effort from necessity-based changed-surface validation,
+adds domain-specific draft targets, paired independent adverse Research, a
+bounded Paper release capsule, host-controlled neutral-review return, revision-5
+CHX integration, and executable behavior-orphan dispositions. None adds a new
+truth path or rewrites historical contracts.
 
 ## Authority domains and truth path
 
@@ -89,6 +98,24 @@ permissions from filesystem visibility. All workers in one planned round share
 the same Blackboard snapshot. A bad return is quarantined locally; other valid
 returns remain independently ingestible and cumulative.
 
+One prospective normal-flow allocation seam is exact and domain-general.
+Research may declare `independent_adverse_required=true`; every selected Paper
+target does so automatically, while a mathematical proof interface may opt in
+without a stance rule. `workers` counts primaries, and an applicable non-refute,
+non-challenge primary receives an extra paired `refute` card with a different
+worker id, different context id, and an explicit no-context-sharing contract.
+The pair is Research-only orchestration. It does not duplicate Candidate
+adverse closure, route governance, Certification, or Gateway authority.
+
+The same prospective round freezes one normalized non-null host-task scope in
+its manifest, assignments, and cards. Explicit input and the two documented
+environment channels take priority; otherwise V5 derives a stable local scope
+from the exact planning request before writing the round. `attack-report`
+enumerates the exact scope's rounds, assignments, cards, return/receipt states,
+pairs, and cases. Zero cases are complete only when dispatch/return coverage is
+complete or no pair was required; missing dispatch and pending returns remain
+separate fail-visible states.
+
 A current 0.4.3 task card also freezes one prospective assurance contract:
 typed per-obligation dispositions, computation-stage count, related-artifact
 capabilities, and risk-specific Research assurance. Historical 0.4.2 cards
@@ -138,9 +165,10 @@ Main can organize a bounded project queue directly with this frontier. A
 Campaign is therefore not a second scheduler or a per-task gate; it remains an
 optional durable multi-round envelope for an explicit objective, typed targets,
 constraints, value definition, stop conditions, and history. The prospective
-Campaign connection is explicit semantically: Main may supply an id, or under
-`auto` Operator may compile the user's exact stated objective through
-`research-goal-intake`. The resulting `frontier --campaign ID` and
+   Campaign connection is explicit semantically: Main may supply an id, or under
+   `auto`/`deep` Operator may compile the user's exact stated objective through
+   `research-goal-intake`, which creates or reuses one token-bound prospective
+   root Research. The resulting `frontier --campaign ID` and
 `plan-round --campaign ID` select exact stored `campaign_id` matches and retain
 the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
 Campaign snapshot plus compact task-card envelope. Without the flag, selection
@@ -201,6 +229,21 @@ The neutral verifier's copied `host/validate_decision.py` and the gateway share
 one `V5_FINDING_CLASSES` enum and the gateway executes that same validator before
 storage. A locally preflighted finding can therefore not fail later merely
 because the gateway used a different class vocabulary.
+
+For V5 the verifier no longer writes the canonical return. It writes only
+`output/review-draft.json`. The copied host program
+`host/submit_review.py` preserves that draft, reports `draft_written`, runs the
+strict validator, and then reports either `preflight_failed` or
+`preflight_passed`. A failed draft is retained under `output/quarantine/` with
+JSON-pointer diagnostics and enumerated allowed values; it creates no Candidate,
+Certification, Gateway, or Fact effect. Only a passed receipt can be consumed to
+atomically expose read-only `output/review.json`. A content-addressed
+`formally_returned` receipt is the visibility switch for gateway handoff, so an
+interruption between the canonical byte write and receipt publication is safely
+completed by rerunning the same host command. The protocol is selected by the
+prospective `neutral_review_submission_revision` sealed into new Candidate
+Releases; historical V5 releases without that marker retain their exact direct
+return capability. V4 capsule behavior is unchanged.
 
 ## Pulse collaboration
 
@@ -356,6 +399,17 @@ caused by the Chalxius architecture or materially amplified by it. The ledger
 has `truth_effect=none` and `project_effect=none`; project-local placement does
 not make it Research, Certification, Fact, Paper/Audit, Blackboard, Reader, or
 Learning data and cannot change a project audit result.
+
+Prospective revision 5 retains the revision-4 transitive lineage and adds a
+repair-control DAG outside every authority plane. A resolved issue must descend
+from a recorded full-candidate architecture-reconnaissance receipt and one
+issue-bound reusable tactical repair. The latest integrated repair derives and
+hash-binds the reusable-mechanism registry, covers every already resolved
+issue, and records coordination decisions plus risk and regression evidence.
+Late issues append a superseding integration rather than modifying the earlier
+one. Revisions 1 through 4 remain exactly readable and appendable under their
+original contracts; none of these operational events has truth or project
+authority.
 
 Final feedback is conditional: qualifying included issues are reported, while
 an empty or wholly excluded ledger is silent. This surface is prospective.

@@ -28,6 +28,11 @@ from .contracts import (
     validate_campaign_id,
     validate_campaign_target_id,
 )
+from .goal_intake import (
+    GoalIntakeTransactionStore,
+    seal_goal_intake_campaign_marker,
+    validate_goal_intake_campaign_marker,
+)
 
 
 CAMPAIGN_TARGET_ROLES = {
@@ -254,6 +259,37 @@ class CampaignStore:
     def initialize(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
 
+    def _goal_intake_marker(self, campaign_id: str) -> dict[str, Any] | None:
+        path = self.root / validate_campaign_id(campaign_id) / "GOAL_INTAKE.json"
+        if not path.exists():
+            if path.is_symlink():
+                raise ValueError("goal-intake Campaign marker is unsafe")
+            return None
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("goal-intake Campaign marker is unsafe")
+        marker = validate_goal_intake_campaign_marker(
+            json.loads(path.read_text(encoding="utf-8"))
+        )
+        if marker["campaign_id"] != campaign_id:
+            raise ValueError("goal-intake Campaign marker id mismatch")
+        return marker
+
+    def _campaign_is_visible(self, campaign_id: str) -> bool:
+        marker = self._goal_intake_marker(campaign_id)
+        if marker is None:
+            return True
+        # This is deliberately a pure read.  A pending marker is invisible;
+        # only an explicit intake retry may finish its transaction.
+        transaction_store = GoalIntakeTransactionStore(self.project_root)
+        if not transaction_store.terminal_exists(marker["intake_token"]):
+            return False
+        transaction_store.terminal_gate(
+            marker["intake_token"],
+            campaign_id=campaign_id,
+            required_effect_ids={"campaign": marker["campaign_effect_id"]},
+        )
+        return True
+
     def campaign_ids(self) -> list[str]:
         """Return every exact stored Campaign id without using ``ACTIVE``."""
 
@@ -271,6 +307,8 @@ class CampaignStore:
                 )
             if path.is_symlink() or not path.is_dir():
                 raise ValueError(f"campaign path is unsafe: {path.name}")
+            if not self._campaign_is_visible(path.name):
+                continue
             campaign_ids.append(path.name)
         return campaign_ids
 
@@ -292,6 +330,8 @@ class CampaignStore:
         self,
         campaign_id: str,
         events: list[dict[str, Any]],
+        *,
+        goal_intake_marker: dict[str, Any] | None = None,
     ) -> None:
         """Publish one complete new-campaign ledger without partial visibility."""
 
@@ -328,6 +368,28 @@ class CampaignStore:
                 except OSError:
                     pass
                 raise
+            if goal_intake_marker is not None:
+                marker = validate_goal_intake_campaign_marker(
+                    goal_intake_marker
+                )
+                if marker["campaign_id"] != campaign_id:
+                    raise ValueError("goal-intake Campaign marker id mismatch")
+                marker_path = temporary / "GOAL_INTAKE.json"
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                if hasattr(os, "O_NOFOLLOW"):
+                    flags |= os.O_NOFOLLOW
+                marker_fd = os.open(marker_path, flags, 0o600)
+                with os.fdopen(marker_fd, "w", encoding="utf-8") as handle:
+                    handle.write(
+                        json.dumps(
+                            marker,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                        )
+                        + "\n"
+                    )
+                    handle.flush()
+                    os.fsync(handle.fileno())
             if os.path.lexists(destination):
                 raise ValueError(f"campaign id collision: {campaign_id}")
             try:
@@ -341,6 +403,112 @@ class CampaignStore:
         except BaseException:
             shutil.rmtree(temporary, ignore_errors=True)
             raise
+
+    def prepare_goal_intake_create(
+        self,
+        payload: dict[str, Any],
+        *,
+        actor: str,
+    ) -> dict[str, Any]:
+        """Purely prepare the exact empty Campaign used by goal intake."""
+
+        validated = self._validate_create(dict(payload))
+        if validated["source_claim_ids"] or validated["targets"]:
+            raise ValueError(
+                "automatic research-goal Campaign preparation cannot carry "
+                "source claims or targets"
+            )
+        if not isinstance(actor, str) or not actor.strip():
+            raise ValueError("campaign actor must be nonempty")
+        normalized_payload = {
+            **validated,
+            "source_claim_ids": [],
+            "targets": [],
+            "constraints": list(validated["constraints"]),
+            "stop_conditions": list(validated["stop_conditions"]),
+        }
+        campaign_id = "campaign-" + sha256_json(
+            ["chalxius-goal-intake-campaign-1", normalized_payload]
+        )[:12]
+        event_body = {
+            "schema_version": 4,
+            "policy_revision": POLICY_REVISION_V4,
+            "event": "created",
+            "campaign_id": campaign_id,
+            "payload": normalized_payload,
+            "actor": actor.strip(),
+        }
+        event = {**event_body, "event_id": sha256_json(event_body)}
+        status = {
+            "campaign_id": campaign_id,
+            "active": False,
+            **normalized_payload,
+            "targets": {},
+            "updates": [],
+            "event_count": 1,
+        }
+        return {
+            "revision": "chalxius-goal-intake-campaign-effect-1",
+            "operation": "create",
+            "campaign_id": campaign_id,
+            "events": [event],
+            "status": status,
+        }
+
+    def publish_goal_intake_create(
+        self,
+        effect: dict[str, Any],
+        *,
+        intake_token: str,
+        campaign_effect_id: str,
+    ) -> None:
+        """Idempotently publish a terminal-gated Campaign ledger."""
+
+        if (
+            not isinstance(effect, dict)
+            or effect.get("revision")
+            != "chalxius-goal-intake-campaign-effect-1"
+            or effect.get("operation") != "create"
+            or not isinstance(effect.get("events"), list)
+            or len(effect["events"]) != 1
+            or not isinstance(effect.get("status"), dict)
+        ):
+            raise ValueError("goal-intake Campaign effect is invalid")
+        campaign_id = validate_campaign_id(effect.get("campaign_id"))
+        event = effect["events"][0]
+        event_semantic = (
+            {key: item for key, item in event.items() if key != "event_id"}
+            if isinstance(event, dict)
+            else {}
+        )
+        if (
+            not isinstance(event, dict)
+            or event.get("campaign_id") != campaign_id
+            or event.get("event") != "created"
+            or event.get("event_id") != sha256_json(event_semantic)
+            or effect["status"].get("campaign_id") != campaign_id
+            or effect["status"].get("event_count") != 1
+            or effect["status"].get("objective")
+            != event.get("payload", {}).get("objective")
+        ):
+            raise ValueError("goal-intake Campaign effect binding is invalid")
+        marker = seal_goal_intake_campaign_marker(
+            token=intake_token,
+            campaign_id=campaign_id,
+            campaign_effect_id=campaign_effect_id,
+        )
+        destination = self.root / campaign_id
+        if destination.exists():
+            existing_marker = self._goal_intake_marker(campaign_id)
+            existing_events = self._read_jsonl(destination / "events.jsonl")
+            if existing_marker != marker or existing_events != effect["events"]:
+                raise ValueError(f"campaign id collision: {campaign_id}")
+            return
+        self._publish_new_ledger(
+            campaign_id,
+            effect["events"],
+            goal_intake_marker=marker,
+        )
 
     @staticmethod
     def _validate_create(payload: dict[str, Any]) -> dict[str, Any]:
@@ -643,6 +811,9 @@ class CampaignStore:
 
     def status(self, campaign_id: str) -> dict[str, Any]:
         campaign_id = validate_campaign_id(campaign_id)
+        campaign_path = self.root / campaign_id
+        if campaign_path.exists() and not self._campaign_is_visible(campaign_id):
+            raise KeyError(f"unknown campaign: {campaign_id}")
         events = self._read_jsonl(self._events_path(campaign_id))
         if not events or events[0].get("event") != "created":
             raise KeyError(f"unknown campaign: {campaign_id}")
@@ -710,16 +881,6 @@ class CampaignStore:
             if target["status"] == "active"
             and target["role"] in {"headline_proof", "supporting_proof"}
         ]
-
-    def sync_targets(
-        self,
-        *,
-        set_targets: Callable[[list[str]], None],
-        campaign_id: str | None = None,
-    ) -> list[str]:
-        targets = self.derived_targets(campaign_id)
-        set_targets(targets)
-        return targets
 
     def promote_blackboard_node(
         self,
@@ -826,8 +987,16 @@ class CampaignStore:
     ) -> dict[str, Any]:
         errors: list[str] = []
         campaigns = 0
-        for path in sorted(self.root.glob("campaign-*/events.jsonl")):
-            campaign_id = path.parent.name
+        try:
+            visible_campaign_ids = self.campaign_ids()
+        except Exception as exc:
+            return {
+                "ok": False,
+                "errors": [f"campaign inventory: {exc}"],
+                "campaigns": 0,
+                "active_campaign": self.active(),
+            }
+        for campaign_id in visible_campaign_ids:
             try:
                 status = self.status(campaign_id)
                 for claim_id in status["source_claim_ids"]:

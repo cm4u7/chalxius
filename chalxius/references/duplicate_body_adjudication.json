@@ -1,0 +1,277 @@
+{
+  "contract_revision": "chalxius-duplicate-body-adjudication-1",
+  "groups": {
+    "07245152636884aa34c19eacfcad807fabe365e5636df4ea808dbf5a70062be5": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "learning_graph:file_sha256",
+        "paper_library:file_hash"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "27c44c6efe159d02d74092a015d0265c7599616006ae3a94c6de31986e2c5ce3": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.computations:_require_string_list",
+        "mathgraph.contracts:require_string_list",
+        "mathgraph.protocol:_require_string_list"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "2e462d30fe331760a26eb2c587c02a62dbfd8383c5772b35a8cecfc7618131b0": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "architecture_reconnaissance:_unique_json_object",
+        "mathgraph.neutral_review_submission:_unique_object"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "3689934331439cff7ea441c4cf4556c9990702f406e8ac06a818b6c7e2b0b36b": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "architecture_reconnaissance:_json_bytes",
+        "mathgraph.neutral_review_submission:_pretty_bytes"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "36ac16365232d4848213d9d41bd734e349e538514f46b00d4537aed03d94b940": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.parallel_verification:_nfc",
+        "mathgraph.research_draft:_nfc"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "3837dd73677a723d7c56c667db072fe6ff15131049bdc33c6879ee69daf46119": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "behavioral_feature_gate:_canonical_bytes",
+        "mathgraph.neutral_review_submission:_canonical_bytes"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "403af484ec812271e7fda3ae38f4685402b158c8d64736731a4cc608ed439600": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.model:AuditReport.ok",
+        "mathgraph.v5_lifecycle:V5AuditReport.ok"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "45196c4fbd6320c26ddc264d784fa32b700029af2e642068bb51bc2c1940417d": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "architecture_reconnaissance:_sha256",
+        "behavioral_feature_gate:_sha256",
+        "mathgraph.contracts:sha256_bytes",
+        "mathgraph.neutral_review_submission:_sha256",
+        "operational_ledger_core:sha256",
+        "release_validation:_sha256_bytes"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "45aaaef92022226d254fd02df613b12c6f788df73789d18deeccfa347dbefe17": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.model:AuditReport.history_clean",
+        "mathgraph.v5_lifecycle:V5AuditReport.history_clean"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "5953cc1fd5ea7a7691dcf5fcefff865e78226e15cf95ead429004e5c482b1174": {
+      "authoritative_owner": "",
+      "category": "state_boundary_local",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.blackboard:BlackboardStore._read_json",
+        "mathgraph.claims:ClaimRegistry._read_json",
+        "mathgraph.computations:ExperimentManager._read_json",
+        "mathgraph.fact_bundles:FactBundleStore._read_json",
+        "mathgraph.store:MathGraphStore._read_json",
+        "mathgraph.verification_bundles:VerificationBundleStore._read_json"
+      ],
+      "reason": "The small helper remains local to state-specific locking, path, and compatibility boundaries; centralizing it would couple owners without removing a duplicate capability."
+    },
+    "5a216ce55f3e2433630dd7f9fb6bc03b333427dc430fd29089c2f942b63ee0d4": {
+      "authoritative_owner": "",
+      "category": "state_boundary_local",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.computations:ExperimentManager._write_json_once",
+        "mathgraph.fact_bundles:FactBundleStore._write_json_once"
+      ],
+      "reason": "The small helper remains local to state-specific locking, path, and compatibility boundaries; centralizing it would couple owners without removing a duplicate capability."
+    },
+    "7bf494de3b0d23c72078fc209c387599325beeaab5f1a90c8aafd7ad187e41ba": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "learning_graph:canonical_bytes",
+        "mathgraph.paper_research_pipeline:canonical_bytes",
+        "paper_library:canonical_bytes"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "7d7a388606b334aac105af4c20db86ddf7c08df4774431c5007f865126c52955": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "architecture_reconnaissance:_atomic_write",
+        "behavioral_feature_gate:_atomic_write"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "88414de5548418421901f07211bec48701e04a267c8efc453c9d598b18ac4433": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.brave_future:BlockageValidator.__init__",
+        "mathgraph.brave_future:PlanningSnapshotBuilder.__init__",
+        "mathgraph.brave_future:RepairLineageProjector.__init__",
+        "mathgraph.brave_future:StepBackPlanner.__init__"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "b1b2cd0889d83cd0e6bbfacd024e0ca1797befd81c75b42be64978e1ae9e39d6": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.model:AuditReport.current_ok",
+        "mathgraph.v5_lifecycle:V5AuditReport.current_ok"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "b6604af527867a80028dde19e271af921663c754cce2cba393e06cf7fb045f98": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.store:MathGraphStore.graph_error",
+        "mathgraph.v5_lifecycle:V5LifecycleManager.graph_error"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "b8217258669dbf23d3af782f83e9129141c456a7f66ce632292602bd5a065559": {
+      "authoritative_owner": "",
+      "category": "standalone_portability",
+      "decision": "retain_local",
+      "definitions": [
+        "learning_graph:canonical_sha256",
+        "paper_library:object_hash"
+      ],
+      "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
+    },
+    "b99da39b6f036c190421a81d8885cf49372dff4b4db4f217d02d71036bef5787": {
+      "authoritative_owner": "",
+      "category": "structural_method_parity",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.store:MathGraphStore.workflow_error",
+        "mathgraph.v5_lifecycle:V5LifecycleManager.workflow_error"
+      ],
+      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
+    },
+    "bb362f8e5fa986d792445f5ac71b48ec83c583764df1c1ccb641b8b9af26a54b": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.adverse_routing:_utc_now",
+        "mathgraph.brave_future:_now",
+        "mathgraph.campaigns:_utc_now",
+        "mathgraph.modes:_utc_now",
+        "mathgraph.paper_continuation_status:_utc_now",
+        "mathgraph.parallel_verification_lifecycle:_utc_now",
+        "mathgraph.profile_closure:_utc_now",
+        "mathgraph.store:utc_now",
+        "mathgraph.v5_collaboration:_utc_now",
+        "mathgraph.v5_lifecycle:_utc_now"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "c45ea4085edc69b1fee58c7b4432ae5ba35b1d74b7ef016ad539aa61944d0175": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.goal_intake:_exact",
+        "mathgraph.paper_continuation_status:_exact",
+        "mathgraph.parallel_verification:_exact",
+        "mathgraph.parallel_verification_lifecycle:_exact",
+        "mathgraph.proof_lineage:_exact",
+        "mathgraph.research_draft:_exact",
+        "mathgraph.research_draft_preflight:_exact"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "c6fe7ccfc0255fa364eab061cd4f41d965375e10183dc018682364de3f8256b4": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.brave_future:_text",
+        "mathgraph.v5_assurance:_text",
+        "mathgraph.v5_collaboration:_text",
+        "mathgraph.v5_lifecycle:_require_nonempty_text"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "dac5206cf0c79c59aa6d85edc94f518986a9191b7c0bb944e4668ed867123bf1": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.paper_research_pipeline:sha256_bytes",
+        "mathgraph.parallel_verification:sha256_bytes"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    },
+    "f1a0a58087b350e8e40efad1ae53e1859938101bcf490720f804c69416edb749": {
+      "authoritative_owner": "",
+      "category": "state_boundary_local",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.blackboard:BlackboardStore._append_jsonl",
+        "mathgraph.campaigns:CampaignStore._append",
+        "mathgraph.claims:ClaimRegistry._append_event",
+        "mathgraph.store:MathGraphStore._append_jsonl",
+        "mathgraph.verification_bundles:VerificationBundleStore._append"
+      ],
+      "reason": "The small helper remains local to state-specific locking, path, and compatibility boundaries; centralizing it would couple owners without removing a duplicate capability."
+    },
+    "f2d66ae02922ef306f615dc04ae640fd82c63890ce8ea5a6e37493c23a87c28a": {
+      "authoritative_owner": "",
+      "category": "package_local_stateless",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.paper_continuation:_exact",
+        "mathgraph.v5_assurance:_exact"
+      ],
+      "reason": "This is a small stateless normalization or validation idiom, not an independently reachable capability or competing state owner; local retention has the smaller regression surface."
+    }
+  },
+  "schema_version": 1,
+  "truth_effect": "none"
+}

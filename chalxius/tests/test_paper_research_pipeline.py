@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.util
 import json
 import random
 import tempfile
@@ -36,6 +37,17 @@ from mathgraph.paper_research_reliability import (
     MUTATION_CATEGORIES,
     run_paper_research_reliability_matrix,
 )
+
+
+_PUBLIC_PIPELINE_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "paper_research_pipeline.py"
+)
+_PUBLIC_PIPELINE_SPEC = importlib.util.spec_from_file_location(
+    "chalxius_public_paper_research_pipeline", _PUBLIC_PIPELINE_PATH
+)
+assert _PUBLIC_PIPELINE_SPEC is not None and _PUBLIC_PIPELINE_SPEC.loader is not None
+_PUBLIC_PIPELINE = importlib.util.module_from_spec(_PUBLIC_PIPELINE_SPEC)
+_PUBLIC_PIPELINE_SPEC.loader.exec_module(_PUBLIC_PIPELINE)
 
 
 def _sha(text: str) -> str:
@@ -262,6 +274,93 @@ def _continuity(domain_profile: str = "philosophy") -> dict:
     }
 
 
+def _mathematical_progress() -> dict:
+    target = "Determine whether C follows from P1 and P2."
+    domain = "All objects in the exact declared class."
+    target_policy = {
+        "contract_revision": "chalxius-mathematical-target-policy-1",
+        "exact_target_statement": target,
+        "exact_target_statement_sha256": _sha(target),
+        "target_claim_ids": ["c1"],
+        "hypothesis_claim_ids": ["p1", "p2"],
+        "domain_bindings": [
+            {
+                "binding_id": "domain-main",
+                "exact_domain": domain,
+                "exact_domain_sha256": _sha(domain),
+                "source_claim_ids": ["p1", "p2"],
+            }
+        ],
+        "quantifier_bindings": [],
+        "permitted_exact_target_outcomes": [
+            "proved",
+            "disproved",
+            "unresolved_with_obstruction",
+        ],
+        "target_revision_requires_operator_authorization": True,
+        "partial_progress_policy": "typed_refinement_dag_keeps_exact_target_open",
+    }
+    added = "Additional compactness hypothesis H."
+    weak_statement = "Under P1, P2, and H, conclusion C holds."
+    refinement = {
+        "schema_version": 1,
+        "contract_revision": "chalxius-mathematical-refinement-dag-1",
+        "root_target": {
+            "root_id": "exact-target-root",
+            "exact_target_statement_sha256": _sha(target),
+            "target_claim_ids": ["c1"],
+            "hypothesis_claim_ids": ["p1", "p2"],
+            "domain_bindings_sha256": sha256_json(target_policy["domain_bindings"]),
+            "quantifier_bindings_sha256": sha256_json([]),
+            "resolution_status": "unresolved_with_obstruction",
+            "resolution_evidence_ids": [],
+            "obstruction": "The proof uses H, which is absent from the exact target.",
+            "original_target_open": True,
+        },
+        "nodes": [
+            {
+                "node_id": "weak-with-H",
+                "node_type": "added_hypothesis_theorem",
+                "statement": weak_statement,
+                "statement_sha256": _sha(weak_statement),
+                "resolution_status": "proved",
+                "evidence_ids": ["proof-weak-with-H"],
+                "obstruction": "",
+                "logical_relation_to_original": "stronger_hypotheses_than_original",
+                "refinement_mapping_relation": "weakened_from",
+                "candidate_fact_id_or_null": "a" * 16,
+                "hypothesis_deltas": [
+                    {
+                        "dimension": "hypothesis",
+                        "binding_id": "hypothesis-H",
+                        "before": "",
+                        "before_sha256": _sha(""),
+                        "after": added,
+                        "after_sha256": _sha(added),
+                        "change_type": "added",
+                        "rationale": "H is exactly the additional sufficient hypothesis.",
+                    }
+                ],
+                "domain_deltas": [],
+                "quantifier_deltas": [],
+                "conclusion_strength_deltas": [],
+                "remaining_gap_to_exact_target": "Remove H without weakening C.",
+                "truth_effect": "none",
+            }
+        ],
+        "edges": [
+            {
+                "parent_id": "exact-target-root",
+                "child_id": "weak-with-H",
+                "relation": "refines_toward_exact_target",
+            }
+        ],
+        "topological_order": ["exact-target-root", "weak-with-H"],
+        "truth_effect": "none",
+    }
+    return {"target_policy": target_policy, "refinement_dag": refinement}
+
+
 def _synthetic_evidence_receipt(frontier_id: str) -> dict:
     semantic = {
         "schema_version": 1,
@@ -290,6 +389,13 @@ def _synthetic_evidence_receipt(frontier_id: str) -> dict:
 
 
 class PaperResearchPipelineTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._project_temporary = tempfile.TemporaryDirectory()
+        self.project_root = Path(self._project_temporary.name)
+
+    def tearDown(self) -> None:
+        self._project_temporary.cleanup()
+
     def test_frontier_preserves_premise_order_and_rejects_position_drift(self) -> None:
         graph = _graph()
         frontier = build_ordered_paper_frontier(graph, headline_claim_ids=["c1"])
@@ -363,6 +469,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
                         "authority_effect": "none",
                         "truth_effect": "none",
                     },
+                    project_root=self.project_root,
                 )
                 self.assertEqual(bundle["domain_profile"], domain_profile)
                 self.assertEqual(receipt["truth_effect"], "none")
@@ -404,6 +511,125 @@ class PaperResearchPipelineTests(unittest.TestCase):
                 continuity_contract=changed_target,
             )
 
+    def test_public_mathematics_preflight_keeps_weaker_result_non_closing(self) -> None:
+        graph = _graph()
+        graph["domain_profile"] = "mathematics"
+        frontier = build_ordered_paper_frontier(graph, headline_claim_ids=["c1"])
+        receipt = _PUBLIC_PIPELINE.build_cli_pipeline_receipt(
+            graph=graph,
+            frontier=frontier,
+            dag=_dag(),
+            continuity_contract=_continuity("mathematics"),
+            mathematical_progress=_mathematical_progress(),
+            evidence_receipt=None,
+            successor_receipt=None,
+        )
+        progress = receipt["domain_progress_binding"]
+        self.assertEqual(
+            receipt["contract_revision"],
+            _PUBLIC_PIPELINE.CLI_PIPELINE_RECEIPT_REVISION,
+        )
+        self.assertTrue(progress["original_target_open"])
+        self.assertEqual(progress["progress_class"], "partial_verified_progress")
+        self.assertFalse(progress["weakening_closes_exact_target"])
+        self.assertFalse(progress["stance_preservation_required"])
+        self.assertTrue(receipt["native_pipeline_receipt_id"].startswith("ppr-"))
+
+    def test_public_mathematics_preflight_requires_progress_and_rejects_wrong_domain(self) -> None:
+        graph = _graph()
+        graph["domain_profile"] = "mathematics"
+        with self.assertRaisesRegex(ValueError, "requires an exact target"):
+            _PUBLIC_PIPELINE.build_cli_pipeline_receipt(
+                graph=graph,
+                frontier=build_ordered_paper_frontier(
+                    graph, headline_claim_ids=["c1"]
+                ),
+                dag=_dag(),
+                continuity_contract=_continuity("mathematics"),
+                mathematical_progress=None,
+                evidence_receipt=None,
+                successor_receipt=None,
+            )
+
+        philosophy = _graph()
+        with self.assertRaisesRegex(ValueError, "not applicable"):
+            _PUBLIC_PIPELINE.build_cli_pipeline_receipt(
+                graph=philosophy,
+                frontier=build_ordered_paper_frontier(
+                    philosophy, headline_claim_ids=["c1"]
+                ),
+                dag=_dag(),
+                continuity_contract=_continuity("philosophy"),
+                mathematical_progress=_mathematical_progress(),
+                evidence_receipt=None,
+                successor_receipt=None,
+            )
+
+    def test_mathematical_progress_tamper_matrix_fails_closed(self) -> None:
+        graph = _graph()
+        graph["domain_profile"] = "mathematics"
+        continuity = _continuity("mathematics")
+        for label, mutate, expected in (
+            (
+                "weak-result-closes-root",
+                lambda value: value["refinement_dag"]["root_target"].update(
+                    {"original_target_open": False}
+                ),
+                "must stay open",
+            ),
+            (
+                "target-substitution",
+                lambda value: value["target_policy"].update(
+                    {
+                        "exact_target_statement": "Resolve a different theorem.",
+                        "exact_target_statement_sha256": _sha(
+                            "Resolve a different theorem."
+                        ),
+                    }
+                ),
+                "drifts from research continuity",
+            ),
+            (
+                "delta-hash-drift",
+                lambda value: value["refinement_dag"]["nodes"][0][
+                    "hypothesis_deltas"
+                ][0].update({"after_sha256": "0" * 64}),
+                "SHA-256 drifted",
+            ),
+        ):
+            with self.subTest(label=label):
+                progress = _mathematical_progress()
+                mutate(progress)
+                with self.assertRaisesRegex(ValueError, expected):
+                    _PUBLIC_PIPELINE.validate_mathematical_progress_input(
+                        graph=graph,
+                        dag=_dag(),
+                        continuity_contract=continuity,
+                        progress_input=progress,
+                    )
+
+    def test_normalized_mathematical_refinement_is_revalidatable_and_tamper_evident(self) -> None:
+        progress = _mathematical_progress()
+        policy = _PUBLIC_PIPELINE.validate_mathematical_target_policy(
+            progress["target_policy"],
+            available_claim_ids={"p1", "p2", "c1"},
+            exact_target_claim_ids={"c1"},
+        )
+        normalized = _PUBLIC_PIPELINE.validate_mathematical_refinement_dag(
+            progress["refinement_dag"], target_policy=policy
+        )
+        self.assertEqual(
+            _PUBLIC_PIPELINE.validate_mathematical_refinement_dag(
+                normalized, target_policy=policy
+            ),
+            normalized,
+        )
+        normalized["progress_class"] = "exact_target_resolved"
+        with self.assertRaisesRegex(ValueError, "summary drifted"):
+            _PUBLIC_PIPELINE.validate_mathematical_refinement_dag(
+                normalized, target_policy=policy
+            )
+
     def test_reliability_matrix_is_domain_general_and_kills_every_mutation(self) -> None:
         for domain_profile in ("philosophy", "mathematics", "empirical", "mixed"):
             with self.subTest(domain_profile=domain_profile):
@@ -422,6 +648,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
                         "authority_effect": "none",
                         "truth_effect": "none",
                     },
+                    project_root=self.project_root,
                 )
                 report = run_paper_research_reliability_matrix(
                     graph=graph,
@@ -453,6 +680,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
                 "authority_effect": "none",
                 "truth_effect": "none",
             },
+            project_root=self.project_root,
         )
         self.assertEqual(graph, original)
         self.assertEqual(
@@ -493,6 +721,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
                 "authority_effect": "none",
                 "truth_effect": "none",
             },
+            project_root=self.project_root,
         )
         source = next(node for node in bundle["nodes"] if node["local_id"] == "s1")
         self.assertEqual(source["payload"]["operator_ledger"], [])
@@ -723,11 +952,13 @@ class PaperResearchPipelineTests(unittest.TestCase):
                     "authority_effect": "none",
                     "truth_effect": "none",
                 },
+                project_root=self.project_root,
             )
             graph_status = validate_paper_graph_semantics(graph)
             validate_successor_receipt(
                 successor_receipt,
                 source_graph_canonical_sha256=graph_status["graph_canonical_sha256"],
+                source_graph=graph,
             )
             pipeline = build_pipeline_receipt(
                 graph=graph,
@@ -819,6 +1050,37 @@ class PaperResearchPipelineTests(unittest.TestCase):
         self.assertIn("plan_one", boundary["forbidden"])
         self.assertIn("execute_one", boundary["forbidden"])
         self.assertIn("second-scheduler", boundary["forbidden"])
+
+    def test_public_successor_example_covers_every_required_parser_option(self) -> None:
+        parser = _PUBLIC_PIPELINE._parser()
+        subparsers = next(
+            action
+            for action in parser._actions
+            if isinstance(getattr(action, "choices", None), dict)
+            and "successor" in action.choices
+        )
+        successor = subparsers.choices["successor"]
+        required_options = {
+            option
+            for action in successor._actions
+            if action.required
+            for option in action.option_strings
+            if option.startswith("--")
+        }
+        guide = (
+            Path(__file__).resolve().parents[1]
+            / "references"
+            / "paper_research_pipeline.md"
+        ).read_text(encoding="utf-8")
+        marker = 'python3 -B "$PIPELINE" successor \\\n'
+        self.assertIn(marker, guide)
+        example = marker + guide.split(marker, 1)[1].split(
+            'python3 -B "$PIPELINE"', 1
+        )[0]
+        self.assertEqual(
+            sorted(option for option in required_options if option not in example),
+            [],
+        )
 
     def test_large_chain_frontier_is_iterative_and_topology_total(self) -> None:
         size = 700

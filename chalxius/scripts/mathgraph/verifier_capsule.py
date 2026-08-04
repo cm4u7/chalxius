@@ -10,6 +10,7 @@ from typing import Any
 
 from .contracts import contained_path, sha256_bytes, sha256_json
 from .decision_preflight import V5_FINDING_CLASSES
+from .neutral_review_submission import NEUTRAL_REVIEW_SUBMISSION_REVISION
 from .verification_bundles import VerificationBundleStore
 
 
@@ -266,6 +267,10 @@ def _prepare_v5_verifier_capsule(
         capsule_json=capsule_json,
     )
     capsule_sha = v5_capsule["capsule_sha256"]
+    host_controlled_review = (
+        v5_capsule.get("neutral_review_submission_revision")
+        == NEUTRAL_REVIEW_SUBMISSION_REVISION
+    )
     authorized = v5_capsule.get("authorized_artifacts")
     if not isinstance(authorized, list) or any(
         not isinstance(item, dict) for item in authorized
@@ -364,6 +369,19 @@ def _prepare_v5_verifier_capsule(
         _write_once(temporary / validator_relpath, validator_bytes, mode=0o500)
         copied_hashes[validator_relpath] = sha256_bytes(validator_bytes)
 
+        submitter_relpath = "host/submit_review.py"
+        if host_controlled_review:
+            submitter_source = Path(__file__).with_name(
+                "neutral_review_submission.py"
+            )
+            submitter_bytes = submitter_source.read_bytes()
+            _write_once(
+                temporary / submitter_relpath,
+                submitter_bytes,
+                mode=0o500,
+            )
+            copied_hashes[submitter_relpath] = sha256_bytes(submitter_bytes)
+
         transport_core = {
             "schema_version": 1,
             "kind": "chalxius-v5-neutral-capsule-transport",
@@ -386,9 +404,10 @@ def _prepare_v5_verifier_capsule(
         _write_once(temporary / transport_relpath, transport_bytes, mode=0o400)
         copied_hashes[transport_relpath] = sha256_bytes(transport_bytes)
 
+        review_draft_relpath = "output/review-draft.json"
         review_relpath = "output/review.json"
         capability = {
-            "schema_version": 2,
+            "schema_version": 3 if host_controlled_review else 2,
             "kind": "chalxius-v5-neutral-verifier-capability",
             "policy_revision": v5_capsule["policy_revision"],
             "project_id": v5_capsule["project_id"],
@@ -398,8 +417,13 @@ def _prepare_v5_verifier_capsule(
             "capsule_sha256": capsule_sha,
             "input_file_sha256s": dict(sorted(copied_hashes.items())),
             "allowed_read_relpaths": allowed_read_relpaths,
-            "allowed_execute_relpaths": [validator_relpath],
-            "allowed_write_relpaths": [review_relpath],
+            "allowed_execute_relpaths": [
+                validator_relpath,
+                *([submitter_relpath] if host_controlled_review else []),
+            ],
+            "allowed_write_relpaths": [
+                review_draft_relpath if host_controlled_review else review_relpath
+            ],
             "allowed_live_queries": v5_capsule.get(
                 "source_query_capabilities", []
             ),
@@ -420,13 +444,46 @@ def _prepare_v5_verifier_capsule(
                 "--capsule",
                 capsule_relpath,
                 "--decision",
-                review_relpath,
+                (
+                    review_draft_relpath
+                    if host_controlled_review
+                    else review_relpath
+                ),
             ],
+            **(
+                {
+                    "review_submission_command": [
+                        "python3",
+                        submitter_relpath,
+                        "--capsule-root",
+                        ".",
+                    ]
+                }
+                if host_controlled_review
+                else {}
+            ),
             "allowed_finding_classes": list(V5_FINDING_CLASSES),
-            "role_boundary": {
-                "verifier": "writes and preflights only output/review.json",
-                "gateway": "records exact returned bytes and admits only after validation",
-            },
+            "role_boundary": (
+                {
+                    "verifier": "writes only output/review-draft.json",
+                    "host": (
+                        "strictly preflights the draft, quarantines failures, and "
+                        "atomically publishes immutable output/review.json plus its "
+                        "content-addressed formal-return receipt"
+                    ),
+                    "gateway": (
+                        "consumes only the formally returned bytes and receipt; it "
+                        "records or admits nothing after a failed preflight"
+                    ),
+                }
+                if host_controlled_review
+                else {
+                    "verifier": "writes and preflights only output/review.json",
+                    "gateway": (
+                        "records exact returned bytes and admits only after validation"
+                    ),
+                }
+            ),
         }
         _write_once(
             host_root / "capability.json",
@@ -446,15 +503,38 @@ def _prepare_v5_verifier_capsule(
         "allowed_read_paths": [
             str(capsule / item) for item in capability["allowed_read_relpaths"]
         ],
+        **(
+            {"review_draft_path": str(capsule / review_draft_relpath)}
+            if host_controlled_review
+            else {}
+        ),
         "review_return_path": str(capsule / review_relpath),
         "host_capability_path": str(capsule / "host" / "capability.json"),
         "transport_manifest_path": str(capsule / transport_relpath),
         "decision_template_path": str(capsule / template_relpath),
         "decision_validator_path": str(capsule / validator_relpath),
+        **(
+            {
+                "review_submission_path": str(capsule / submitter_relpath),
+                "review_handoff_dir": str(capsule / "output" / "handoff"),
+            }
+            if host_controlled_review
+            else {}
+        ),
         "spawn_task": (
-            "Review only the listed frozen inputs, write output/review.json, "
-            "run the local decision preflight, and return the unchanged bytes. "
-            "The gateway, not the verifier, records or admits them."
+            (
+                "Review only the listed frozen inputs and write "
+                "output/review-draft.json. The host runs host/submit_review.py; "
+                "only that preflight gate may publish output/review.json and its "
+                "formal-return receipt. The gateway, not the verifier, records or "
+                "admits the returned review."
+            )
+            if host_controlled_review
+            else (
+                "Review only the listed frozen inputs, write output/review.json, "
+                "run the local decision preflight, and return the unchanged bytes. "
+                "The gateway, not the verifier, records or admits them."
+            )
         ),
     }
 

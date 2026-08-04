@@ -58,6 +58,170 @@ class EvidencePlaneTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return json.loads(completed.stdout)
 
+    def paper_backed_source(self, root: Path):
+        source_store = self.helper._store(root, "PAPER-SOURCE-PROJECT")
+        lifecycle = source_store.v5_lifecycle()
+        artifact = root / "paper.pdf"
+        artifact.write_bytes(
+            b"%PDF-1.4\n"
+            b"The supporting lemma holds.\n"
+            b"The root theorem follows from the supporting lemma.\n"
+            b"%%EOF\n"
+        )
+        artifact_sha = sha256_bytes(artifact.read_bytes())
+        source = {
+            "artifact_sha256": artifact_sha,
+            "artifact_locator": str(artifact),
+            "title": "Exact association fixture",
+            "version": "v1",
+            "mime_type": "application/pdf",
+            "retrieved_at": "2026-08-04T00:00:00Z",
+            "inspection_methods": [
+                "rendered_primary",
+                "text_extraction_secondary",
+            ],
+        }
+        with source_store.v5_mutation_lock(command="paper-logic-init"):
+            source_store.paper_logic().initialize(actor="main")
+        with source_store.v5_mutation_lock(command="paper-logic-freeze"):
+            logic_revision, logic_frozen = self.helper._freeze_paper_bundle(
+                store=source_store,
+                bundle=self.helper._paper_logic_bundle(
+                    store=source_store, source=source
+                ),
+                artifact=artifact,
+            )
+        logic_ids = logic_revision["local_id_map"]
+        with source_store.v5_mutation_lock(command="paper-logic-freeze"):
+            audit_revision, audit_frozen = self.helper._freeze_paper_bundle(
+                store=source_store,
+                bundle=self.helper._paper_audit_bundle(
+                    store=source_store,
+                    source=source,
+                    base_snapshot_id=logic_frozen["snapshot_id"],
+                    target_id=logic_ids["c1"],
+                    evidence_id=logic_ids["s1"],
+                ),
+                artifact=artifact,
+            )
+        audit_ids = audit_revision["local_id_map"]
+        self.assertEqual(logic_frozen["evidence_sync"]["status"], "synced")
+        self.assertEqual(audit_frozen["evidence_sync"]["status"], "synced")
+
+        research = lifecycle.add_research(
+            {
+                "kind": "proof_attempt",
+                "claim": "Validate the exact fixture paper node by node.",
+            },
+            actor="paper-candidate-producer",
+        )
+        lemma = Fact(
+            problem_id=source_store.project_id(),
+            author="paper-candidate-producer",
+            predecessors=[],
+            statement="[CLAIM:LEMMA] The supporting lemma holds.",
+            proof="Direct proof of the supporting lemma.",
+        )
+        use_anchor = f"[USE:{lemma.fact_id}:LEMMA:u1]"
+        root_fact = Fact(
+            problem_id=source_store.project_id(),
+            author="paper-candidate-producer",
+            predecessors=[lemma.fact_id],
+            statement="[CLAIM:ROOT] The bounded paper theorem holds.",
+            proof=f"Apply the supporting lemma {use_anchor}.",
+            predecessor_uses=[
+                {
+                    "fact_id": lemma.fact_id,
+                    "clause_id": "LEMMA",
+                    "use_anchor": use_anchor,
+                    "used_conclusion": "The supporting lemma holds.",
+                    "hypothesis_witnesses": [],
+                    "convention_bridge": None,
+                }
+            ],
+        )
+        payload = self.helper._release_payload(
+            facts=[lemma, root_fact],
+            research_ids=[research["research_id"]],
+            granularity="nodewise_proof_dag",
+        )
+        payload["artifacts"] = [
+            {
+                "path": "paper.pdf",
+                "sha256": artifact_sha,
+                "role": "paper_source",
+            }
+        ]
+        payload["verification_plan"]["authorized_artifact_roles"] = [
+            "paper_source"
+        ]
+        payload["verification_plan"]["required_checks"].extend(
+            [
+                "paper_source_fidelity",
+                "paper_graph_structure",
+                "paper_audit",
+                "paper_target_coverage",
+            ]
+        )
+        load_bearing = [logic_ids["c1"], logic_ids["c-head"]]
+        payload["requested_assurance"] = {
+            "validation_subject": {
+                "kind": "paper",
+                "subject_id": "fixture-paper",
+                "artifact_sha256": artifact_sha,
+                "load_bearing_node_ids": load_bearing,
+            },
+            "validation_granularity": "nodewise_proof_dag",
+            "coverage": [
+                {
+                    "paper_node_id": logic_ids["c1"],
+                    "disposition": "fact_bundle_member",
+                    "fact_id": lemma.fact_id,
+                    "reason": "",
+                },
+                {
+                    "paper_node_id": logic_ids["c-head"],
+                    "disposition": "fact_bundle_member",
+                    "fact_id": root_fact.fact_id,
+                    "reason": "",
+                },
+            ],
+        }
+
+        def paper_ref(frozen, graph_kind: str, node_ids: list[str]):
+            manifest_path = (
+                source_store.paper_logic().snapshots_dir
+                / frozen["snapshot_id"]
+                / "manifest.json"
+            )
+            return {
+                "paper_id": "fixture-paper",
+                "snapshot_id": frozen["snapshot_id"],
+                "snapshot_sha256": sha256_bytes(manifest_path.read_bytes()),
+                "graph_kind": graph_kind,
+                "target_artifact_sha256": artifact_sha,
+                "target_node_ids": node_ids,
+            }
+
+        payload["paper_evidence_refs"] = [
+            paper_ref(logic_frozen, "logic", load_bearing),
+            paper_ref(audit_frozen, "audit", [audit_ids["finding"]]),
+        ]
+        release = lifecycle.candidate_release(
+            payload, producer="paper-candidate-producer"
+        )
+        decision = lifecycle.certification_record(
+            self.helper._correct_decision_payload(
+                lifecycle, release, reviewer="paper-source-verifier"
+            )
+        )
+        lifecycle.fact_admit(
+            release_id=release["release_id"],
+            decision_id=decision["decision_id"],
+            gateway="paper-source-gateway",
+        )
+        return source_store, release, [lemma, root_fact]
+
     def test_reviewed_paper_freeze_auto_archives_exact_pdf_or_leaves_durable_outbox(
         self,
     ) -> None:
@@ -141,6 +305,426 @@ class EvidencePlaneTests(unittest.TestCase):
                 self.assertEqual(verification["evidence_items"], 1)
                 self.assertEqual(verification["paper_evidence_attestations"], 1)
 
+    def test_fact_import_automatically_associates_only_exact_paper_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            library_root = base / "library"
+            self.initialize_library(library_root)
+            with patch.dict(
+                os.environ,
+                self.library_environment(library_root),
+                clear=False,
+            ):
+                source, release, facts = self.paper_backed_source(base / "source")
+                destination = self.helper._store(
+                    base / "destination", "PAPER-DESTINATION"
+                )
+                inventory = _authorized_fact_evidence_inventory(
+                    destination, str(source.root)
+                )
+                plane = destination.evidence()
+                imported = plane.import_fact_graph(
+                    source_root=str(source.root),
+                    inventory=inventory,
+                    actor="operator",
+                    reason="Import the exact paper-derived Fact Graph as Evidence.",
+                )
+                sync = imported["association_sync"]
+                self.assertEqual(sync["status"], "associated")
+                self.assertEqual(sync["exact_paper_evidence_ref_count"], 2)
+                self.assertEqual(sync["unmapped_paper_evidence_ref_count"], 1)
+                self.assertEqual(len(sync["request_ids"]), 1)
+                self.assertEqual(len(sync["completed"]), 1)
+                request_id = sync["request_ids"][0]
+                association_id = sync["completed"][0]["association_id"]
+                request_path = (
+                    destination.root
+                    / "evidence"
+                    / "association-outbox"
+                    / "by-id"
+                    / f"{request_id}.json"
+                )
+                effect_path = (
+                    destination.root
+                    / "evidence"
+                    / "association-effects"
+                    / "by-request"
+                    / f"{request_id}.json"
+                )
+                self.assertTrue(request_path.is_file())
+                self.assertTrue(effect_path.is_file())
+                status = plane.status()
+                self.assertEqual(status["association_effect_count"], 1)
+                self.assertEqual(status["pending_association_request_ids"], [])
+                queried = plane.query(
+                    query=association_id,
+                    limit=10,
+                    include_inactive=False,
+                    associations_only=True,
+                )
+                self.assertEqual(queried["results"], [])
+                self.assertEqual(
+                    [
+                        item["association_id"]
+                        for item in queried["association_results"]
+                    ],
+                    [association_id],
+                )
+                association = queried["association_results"][0]
+                self.assertEqual(
+                    association["derivation"]["source_release_id"],
+                    release["release_id"],
+                )
+                self.assertEqual(
+                    association["associated_fact_ids"],
+                    sorted(fact.fact_id for fact in facts),
+                )
+                linked = plane.query(
+                    query=association_id,
+                    limit=10,
+                    include_inactive=False,
+                )["results"]
+                self.assertEqual(len(linked), 2)
+                self.assertTrue(
+                    all(item["association_ids"] == [association_id] for item in linked)
+                )
+                self.assertEqual(destination.fact_ids(), [])
+
+                duplicate = plane.import_fact_graph(
+                    source_root=str(source.root),
+                    inventory=inventory,
+                    actor="operator",
+                    reason="Import the exact paper-derived Fact Graph as Evidence.",
+                )
+                self.assertEqual(duplicate["evidence_id"], imported["evidence_id"])
+                self.assertEqual(
+                    duplicate["association_sync"]["request_ids"], [request_id]
+                )
+                self.assertTrue(
+                    duplicate["association_sync"]["completed"][0]["idempotent"]
+                )
+                verification = self.verify_library(library_root)
+                self.assertEqual(verification["evidence_associations"], 1)
+
+    def test_association_failure_is_pending_tamper_fails_closed_and_retry_is_idempotent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            library_root = base / "library"
+            self.initialize_library(library_root)
+            with patch.dict(
+                os.environ,
+                self.library_environment(library_root),
+                clear=False,
+            ):
+                source, _, _ = self.paper_backed_source(base / "source")
+                destination = self.helper._store(
+                    base / "destination", "RETRY-DESTINATION"
+                )
+                inventory = _authorized_fact_evidence_inventory(
+                    destination, str(source.root)
+                )
+                plane = destination.evidence()
+                original_run_library = plane._run_library
+
+                def fail_association(binding, *arguments):
+                    if arguments and arguments[0] == "evidence-association-add":
+                        raise ValueError("simulated association library outage")
+                    return original_run_library(binding, *arguments)
+
+                with patch.object(
+                    plane, "_run_library", side_effect=fail_association
+                ):
+                    imported = plane.import_fact_graph(
+                        source_root=str(source.root),
+                        inventory=inventory,
+                        actor="operator",
+                        reason="Exercise durable association retry.",
+                    )
+                self.assertEqual(imported["status"], "imported_as_evidence")
+                self.assertEqual(
+                    imported["association_sync"]["status"], "pending_retry"
+                )
+                self.assertTrue(
+                    imported["association_sync"]["fact_evidence_import_preserved"]
+                )
+                request_id = imported["association_sync"]["request_ids"][0]
+                request_path = plane._association_request_path(request_id)
+                original_request_bytes = request_path.read_bytes()
+                self.assertEqual(
+                    plane.association_status(request_id=request_id)["requests"][0][
+                        "status"
+                    ],
+                    "pending",
+                )
+                self.assertEqual(destination.fact_ids(), [])
+                self.assertEqual(
+                    self.verify_library(library_root)["fact_evidence_capsules"], 1
+                )
+
+                tampered = json.loads(original_request_bytes)
+                tampered["association_policy"][
+                    "inferred_from_title_doi_or_credibility"
+                ] = True
+                request_path.write_text(
+                    json.dumps(tampered, ensure_ascii=False, sort_keys=True, indent=2)
+                    + "\n",
+                    encoding="utf-8",
+                )
+                tampered_status = plane.association_status(request_id=request_id)
+                self.assertEqual(
+                    tampered_status["requests"][0]["status"], "invalid_tampered"
+                )
+                blocked_retry = plane.retry_associations(
+                    request_id=request_id, actor="operator"
+                )
+                self.assertEqual(blocked_retry["status"], "pending")
+                self.assertEqual(
+                    self.verify_library(library_root)["evidence_associations"], 0
+                )
+
+                request_path.write_bytes(original_request_bytes)
+                retried = plane.retry_associations(
+                    request_id=request_id, actor="operator"
+                )
+                self.assertEqual(retried["status"], "associated")
+                association_id = retried["results"][0]["association_id"]
+                repeated = plane.retry_associations(
+                    request_id=request_id, actor="operator"
+                )
+                self.assertEqual(repeated["status"], "associated")
+                self.assertTrue(repeated["results"][0]["idempotent"])
+                self.assertEqual(
+                    repeated["results"][0]["association_id"], association_id
+                )
+                verification = self.verify_library(library_root)
+                self.assertEqual(verification["evidence_associations"], 1)
+                self.assertEqual(verification["fact_evidence_capsules"], 1)
+                self.assertEqual(destination.fact_ids(), [])
+
+    def test_pre_eas_failure_is_durable_visible_and_all_retry_replans_exact_inputs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            library_root = base / "library"
+            self.initialize_library(library_root)
+            with patch.dict(
+                os.environ,
+                self.library_environment(library_root),
+                clear=False,
+            ):
+                source, release, _ = self.paper_backed_source(base / "source")
+                destination = self.helper._store(
+                    base / "destination", "PRE-EAS-DESTINATION"
+                )
+                inventory = _authorized_fact_evidence_inventory(
+                    destination, str(source.root)
+                )
+                plane = destination.evidence()
+                with patch.object(
+                    plane,
+                    "_validated_local_paper_receipt",
+                    side_effect=ValueError("simulated pre-eas planning failure"),
+                ):
+                    imported = plane.import_fact_graph(
+                        source_root=str(source.root),
+                        inventory=inventory,
+                        actor="operator",
+                        reason="Exercise durable pre-eas planning recovery.",
+                    )
+                    exposed = plane.status()
+
+                self.assertEqual(imported["status"], "imported_as_evidence")
+                self.assertEqual(
+                    imported["association_sync"]["status"], "pending_retry"
+                )
+                self.assertFalse(
+                    imported["association_sync"]["planning_complete"]
+                )
+                planning_attempt_id = imported["planning_attempt_id"]
+                planning_path = Path(imported["planning_attempt_path"])
+                self.assertTrue(planning_path.is_file())
+                planning_attempt = json.loads(planning_path.read_text())
+                self.assertEqual(
+                    planning_attempt["attempt_id"], planning_attempt_id
+                )
+                self.assertTrue(
+                    planning_attempt["fact_evidence_import_preserved"]
+                )
+                self.assertFalse(
+                    planning_attempt["cross_project_fact_authority"]
+                )
+                self.assertFalse(planning_attempt["premise_eligible"])
+                self.assertEqual(planning_attempt["truth_effect"], "none")
+                self.assertEqual(
+                    planning_attempt["association_policy"],
+                    {
+                        "derivation": (
+                            "exact_release_paper_evidence_ref_and_local_receipt"
+                        ),
+                        "inferred_from_title_doi_or_credibility": False,
+                    },
+                )
+                for invalid_schema_version in (True, 1.0, "1"):
+                    invalid_attempt = json.loads(
+                        json.dumps(planning_attempt, ensure_ascii=False)
+                    )
+                    invalid_attempt["schema_version"] = invalid_schema_version
+                    invalid_body = {
+                        key: value
+                        for key, value in invalid_attempt.items()
+                        if key != "attempt_id"
+                    }
+                    invalid_attempt["attempt_id"] = (
+                        "eap-" + sha256_json(invalid_body)
+                    )
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "planning attempt identity or authority mismatch",
+                    ):
+                        plane._validate_association_planning_attempt(
+                            invalid_attempt
+                        )
+                self.assertEqual(
+                    list(plane.association_outbox_dir.glob("eas-*.json")), []
+                )
+                self.assertEqual(
+                    exposed["pending_association_planning_attempt_ids"],
+                    [planning_attempt_id],
+                )
+                exposed_row = exposed["association_planning"]["attempts"][0]
+                self.assertEqual(exposed_row["status"], "pending_replan")
+                self.assertIn(
+                    "simulated pre-eas planning failure",
+                    exposed_row["pending"][0]["error"],
+                )
+                self.assertEqual(destination.fact_ids(), [])
+                self.assertEqual(
+                    self.verify_library(library_root)["fact_evidence_capsules"],
+                    1,
+                )
+
+                capsule_path = Path(imported["capsule_path"])
+                original_capsule_bytes = capsule_path.read_bytes()
+                tampered_capsule = json.loads(original_capsule_bytes)
+                tampered_capsule["source_project_id"] = "TAMPERED-SOURCE"
+                capsule_path.write_text(
+                    json.dumps(
+                        tampered_capsule,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                blocked = plane.retry_associations(actor="operator")
+                self.assertEqual(blocked["status"], "pending")
+                self.assertEqual(
+                    blocked["association_planning_status"]["attempts"][0][
+                        "status"
+                    ],
+                    "invalid_tampered",
+                )
+                self.assertEqual(
+                    list(plane.association_outbox_dir.glob("eas-*.json")), []
+                )
+
+                capsule_path.write_bytes(original_capsule_bytes)
+                fact_record_path = (
+                    library_root
+                    / "records"
+                    / "evidence_items"
+                    / "by-id"
+                    / f"{imported['evidence_id']}.json"
+                )
+                original_fact_record_bytes = fact_record_path.read_bytes()
+                tampered_fact_record = json.loads(original_fact_record_bytes)
+                tampered_fact_record["trust_tier"] = "tampered"
+                fact_record_path.write_text(
+                    json.dumps(
+                        tampered_fact_record,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                blocked_fact_record = plane.retry_associations(actor="operator")
+                self.assertEqual(blocked_fact_record["status"], "pending")
+                self.assertEqual(
+                    blocked_fact_record["association_planning_status"][
+                        "attempts"
+                    ][0]["status"],
+                    "invalid_tampered",
+                )
+                self.assertEqual(
+                    list(plane.association_outbox_dir.glob("eas-*.json")), []
+                )
+
+                fact_record_path.write_bytes(original_fact_record_bytes)
+                release_path = (
+                    source.v5_lifecycle().candidate_releases_dir
+                    / f"{release['release_id']}.json"
+                )
+                original_release_bytes = release_path.read_bytes()
+                release_path.write_bytes(original_release_bytes + b" ")
+                blocked_source_ref = plane.retry_associations(actor="operator")
+                self.assertEqual(blocked_source_ref["status"], "pending")
+                self.assertEqual(
+                    blocked_source_ref["association_planning_status"][
+                        "attempts"
+                    ][0]["status"],
+                    "invalid_tampered",
+                )
+                self.assertEqual(
+                    list(plane.association_outbox_dir.glob("eas-*.json")), []
+                )
+
+                release_path.write_bytes(original_release_bytes)
+                retried = plane.retry_associations(actor="operator")
+                self.assertEqual(retried["status"], "associated")
+                self.assertEqual(
+                    retried["association_planning_status"]["counts"][
+                        "associated"
+                    ],
+                    1,
+                )
+                replanned = next(
+                    item
+                    for item in retried["planning_results"]
+                    if item["planning_attempt_id"] == planning_attempt_id
+                )
+                self.assertEqual(replanned["status"], "associated")
+                self.assertEqual(len(replanned["request_ids"]), 1)
+                request = plane._read_json(
+                    plane._association_request_path(replanned["request_ids"][0])
+                )
+                self.assertIn(
+                    request["paper_evidence_ref"], release["paper_evidence_refs"]
+                )
+                self.assertEqual(
+                    request["source_release_sha256"], release["release_sha256"]
+                )
+                self.assertEqual(
+                    request["fact_capsule_id"], imported["capsule_id"]
+                )
+                self.assertEqual(
+                    request["fact_evidence_id"], imported["evidence_id"]
+                )
+                self.assertFalse(
+                    request["association_policy"][
+                        "inferred_from_title_doi_or_credibility"
+                    ]
+                )
+                verification = self.verify_library(library_root)
+                self.assertEqual(verification["evidence_associations"], 1)
+                self.assertEqual(verification["fact_evidence_capsules"], 1)
+                self.assertEqual(destination.fact_ids(), [])
+
     def test_explicit_fact_import_verified_bridge_and_correction_impact(self) -> None:
         self.assertNotIn("evidence-import-fact-graph", allowed_commands("main"))
         self.assertIn("evidence-import-fact-graph", allowed_commands("operator"))
@@ -197,6 +781,16 @@ class EvidencePlaneTests(unittest.TestCase):
                     reason="The user explicitly requested this exact Fact Graph as Evidence.",
                 )
                 self.assertFalse(imported["cross_project_fact_authority"])
+                self.assertEqual(
+                    imported["association_sync"]["status"],
+                    "not_applicable_no_exact_paper_evidence_refs",
+                )
+                self.assertEqual(
+                    imported["association_sync"][
+                        "exact_paper_evidence_ref_count"
+                    ],
+                    0,
+                )
                 self.assertEqual(destination.fact_ids(), [])
 
                 selection = {

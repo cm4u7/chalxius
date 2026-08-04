@@ -251,6 +251,7 @@ def run_paper_research_reliability_matrix(
                 source_graph_canonical_sha256=graph_status[
                     "graph_canonical_sha256"
                 ],
+                source_graph=graph,
             )
         try:
             validator()

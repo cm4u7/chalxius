@@ -19,10 +19,12 @@ import tempfile
 import time
 from typing import Any
 
+from mathgraph.release_contracts import RELEASE_VALIDATION_MATRIX_REVISION
+
 sys.dont_write_bytecode = True
 
 
-CONTRACT_REVISION = "chalxius-release-validation-matrix-1"
+CONTRACT_REVISION = RELEASE_VALIDATION_MATRIX_REVISION
 
 
 @dataclass(frozen=True)
@@ -175,7 +177,38 @@ def _run_lane(
 
 def _default_lanes(python: str) -> tuple[Lane, ...]:
     return (
-        Lane("self_test", (python, "scripts/self_test.py")),
+        Lane(
+            "mutant_registry_preflight",
+            (
+                python,
+                "scripts/aggressive_bug_audit.py",
+                "--preflight-only",
+            ),
+            phase=1,
+        ),
+        Lane(
+            "architecture_reconnaissance",
+            (
+                python,
+                "scripts/architecture_reconnaissance.py",
+                "--root",
+                ".",
+                "--quiet",
+                "--strict",
+            ),
+            phase=1,
+        ),
+        Lane(
+            "behavioral_feature_gate",
+            (
+                python,
+                "scripts/behavioral_feature_gate.py",
+                "--root",
+                ".",
+            ),
+            phase=2,
+        ),
+        Lane("self_test", (python, "scripts/self_test.py"), phase=3),
         Lane(
             "full_suite",
             (
@@ -188,13 +221,34 @@ def _default_lanes(python: str) -> tuple[Lane, ...]:
                 "-p",
                 "test_*.py",
             ),
+            phase=3,
         ),
         Lane(
             "aggressive_bug_audit",
             (python, "scripts/aggressive_bug_audit.py"),
-            phase=2,
+            phase=4,
         ),
     )
+
+
+def _skipped_lane_result(
+    *, lane: Lane, manifest_sha256: str, failed_phase: int
+) -> dict[str, Any]:
+    return {
+        "lane": lane.name,
+        "phase": lane.phase,
+        "manifest_sha256": manifest_sha256,
+        "returncode": 126,
+        "timed_out": False,
+        "duration_seconds": 0.0,
+        "lane_unchanged": True,
+        "output_sha256": _sha256_bytes(
+            f"skipped_after_failed_phase:{failed_phase}".encode("utf-8")
+        ),
+        "output_tail": f"skipped: prior validation phase {failed_phase} failed",
+        "skipped_due_to_prior_phase": True,
+        "ok": False,
+    }
 
 
 def _isolated_lane_roots(
@@ -238,6 +292,34 @@ def _aggregate(
             if lane.name != "aggressive_bug_audit"
         )
     )
+    phase_by_name = {lane.name: lane.phase for lane in expected_lanes}
+    architecture_before_baseline = (
+        "architecture_reconnaissance" in phase_by_name
+        and phase_by_name["architecture_reconnaissance"]
+        < phase_by_name.get("self_test", 0)
+        and phase_by_name["architecture_reconnaissance"]
+        < phase_by_name.get("full_suite", 0)
+    )
+    behavioral_after_architecture_before_baseline = (
+        "behavioral_feature_gate" in phase_by_name
+        and phase_by_name.get("architecture_reconnaissance", 0)
+        < phase_by_name["behavioral_feature_gate"]
+        < phase_by_name.get("self_test", 0)
+        and phase_by_name["behavioral_feature_gate"]
+        < phase_by_name.get("full_suite", 0)
+    )
+    mutant_preflight_before_baseline = (
+        "mutant_registry_preflight" in phase_by_name
+        and phase_by_name["mutant_registry_preflight"]
+        < phase_by_name.get("self_test", 0)
+        and phase_by_name["mutant_registry_preflight"]
+        < phase_by_name.get("full_suite", 0)
+    )
+    skipped = [
+        result.get("lane")
+        for result in results
+        if result.get("skipped_due_to_prior_phase") is True
+    ]
     return {
         "schema_version": 1,
         "contract_revision": CONTRACT_REVISION,
@@ -246,12 +328,29 @@ def _aggregate(
         "isolated_lane_roots": True,
         "phase_order": sorted({lane.phase for lane in expected_lanes}),
         "snapshot_sensitive_audit_exclusive_after_baseline": snapshot_barrier,
+        "architecture_gate_before_baseline": architecture_before_baseline,
+        "behavioral_gate_after_architecture_before_baseline": (
+            behavioral_after_architecture_before_baseline
+        ),
+        "mutant_registry_preflight_before_baseline": (
+            mutant_preflight_before_baseline
+        ),
+        "prior_phase_failure_short_circuit": True,
+        "skipped_lanes": sorted(str(item) for item in skipped),
         "complete_lane_set": complete,
         "one_manifest_identity": one_identity,
         "source_unchanged": source_unchanged,
         "lanes": sorted(results, key=lambda item: str(item.get("lane", ""))),
         "truth_effect": "none",
-        "ok": source_unchanged and one_identity and snapshot_barrier and lanes_ok,
+        "ok": (
+            source_unchanged
+            and one_identity
+            and snapshot_barrier
+            and architecture_before_baseline
+            and behavioral_after_architecture_before_baseline
+            and mutant_preflight_before_baseline
+            and lanes_ok
+        ),
     }
 
 
@@ -317,8 +416,19 @@ def main(argv: list[str] | None = None) -> int:
             for root in lane_roots.values():
                 _copy_manifest_tree(candidate, root, entries)
             results: list[dict[str, Any]] = []
+            failed_phase: int | None = None
             for phase in sorted({lane.phase for lane in lanes}):
                 phase_lanes = [lane for lane in lanes if lane.phase == phase]
+                if failed_phase is not None:
+                    results.extend(
+                        _skipped_lane_result(
+                            lane=lane,
+                            manifest_sha256=manifest_sha256,
+                            failed_phase=failed_phase,
+                        )
+                        for lane in phase_lanes
+                    )
+                    continue
                 with ThreadPoolExecutor(max_workers=len(phase_lanes)) as executor:
                     futures = {
                         executor.submit(
@@ -349,6 +459,11 @@ def main(argv: list[str] | None = None) -> int:
                                     "ok": False,
                                 }
                             )
+                if any(
+                    result.get("phase") == phase and result.get("ok") is not True
+                    for result in results
+                ):
+                    failed_phase = phase
         source_unchanged = source_before == _snapshot(candidate)
         report = _aggregate(
             expected_lanes=lanes,

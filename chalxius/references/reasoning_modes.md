@@ -19,14 +19,24 @@ applicable to the bounded task. `deep` may allocate more exploration, but it
 cannot create Fact authority or require ceremonial evidence for an irrelevant
 feature.
 
-Version 0.6.4 gives `auto` and `deep` one prospective intake trigger: an explicit user
+Research depth and validation scope are independent axes. `deep` explores every
+applicable expensive research feature, but validation follows necessity and the
+exact changed surface. Current content-addressed receipts may be reused for
+unchanged sealed dependencies; changed targets, predecessors, defeaters,
+sources, interfaces, writing, and admission edges are revalidated. Missing,
+stale, drifted, ambiguous, schema-changed, or explicitly forensic state falls
+back to full validation. This never relaxes fresh verification for a new or
+invalidated atomic claim.
+
+Version 0.6.5 gives `auto` and `deep` one prospective intake trigger: an explicit user
 research objective is sufficient semantic authority for Operator to call
 `research-goal-intake`, even when the user never says `Campaign`. The compiler
 creates or lexically exact-matches one internal Campaign, enables only the fixed
-advisory BF policy, and computes BF-1. This is not an `ACTIVE` default or a
-planner. BF-2/BF-3 still require exact ingested-attempt blockage evidence, and
-all planning or dispatch remains a separate ordinary action. `fast` retains the
-explicit BF activation path.
+advisory BF policy, computes BF-1, and the public command creates or reuses one
+prospective root Research bound to the committed intake token and Campaign.
+BF-1 through BF-3 themselves still create no Research. This is not an `ACTIVE`
+default or planner: BF-2/BF-3 require exact ingested-attempt blockage evidence,
+and all planning or dispatch remains separate. `fast` retains explicit BF activation.
 
 Current V5 task cards freeze the mode event and their exact assurance contract.
 They do not automatically attach the historical V4 `execution_profile` or
@@ -43,11 +53,13 @@ An explicitly named Campaign may filter that frontier to exact stored
 associations and freeze nontruth planning context, but never changes the score,
 mode, assurance contract, or Fact gate; no Campaign flag means global selection.
 
-New V5 refutation task cards receive the fixed low-cost attack vocabulary plus matching user-approved
-rules in every reasoning profile. This is worker guidance for an already
-selected refutation assignment, not a requirement to run every attack, spawn an
-extra worker, close exploration, or alter Fact admission. Rule approval and
-disablement remain future-only and profile-independent. The general vocabulary
+New V5 refutation task cards receive the fixed low-cost attack vocabulary plus
+matching user-approved rules in every reasoning profile. That vocabulary does
+not itself spawn work. Separately, an exact `independent_adverse_required=true`
+predicate gives a load-bearing Paper/proof primary one distinct paired `refute`
+worker and context; the result enters Research and does not close exploration or
+alter Fact admission. Rule approval and disablement remain future-only and
+profile-independent. The general vocabulary
 includes hidden-conjunct splitting; the three philosophy attacks require an
 exact frozen `philosophy` or `mixed` domain and cannot be inferred from claim
 wording.

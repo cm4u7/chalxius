@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from .contracts import (
@@ -21,11 +22,20 @@ PAPER_CONTINUATION_CONTRACT_REVISION = "chalxius-v5-paper-continuation-1"
 PHILOSOPHY_ATOMICITY_CONTRACT_REVISION = (
     "chalxius-v5-philosophy-semantic-atomicity-1"
 )
+PAPER_CONTINUATION_RELEASE_CAPSULE_REVISION = (
+    "chalxius-v5-paper-continuation-release-capsule-1"
+)
+PAPER_CONTINUATION_RELEASE_FALLBACK_REVISION = (
+    "chalxius-v5-paper-continuation-release-fallback-1"
+)
 
 _PLAN_ID_RE = re.compile(r"pcp-[0-9a-f]{64}")
 _DISPOSITION_ID_RE = re.compile(r"pcd-[0-9a-f]{64}")
+_RELEASE_CAPSULE_ID_RE = re.compile(r"pcrc-[0-9a-f]{64}")
+_RELEASE_FALLBACK_ID_RE = re.compile(r"pcrf-[0-9a-f]{64}")
+_RELEASE_OPERATION_ID_RE = re.compile(r"pcro-[0-9a-f]{64}")
 _LOCAL_ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.:-]{0,127}")
-_SELECTION_MODES = {"all_targets", "explicit_targets"}
+_SELECTION_MODES = {"all_targets", "explicit_targets", "changed_surface"}
 _OUTCOMES = {"retained", "rejected", "replaced", "out_of_scope"}
 _WRITING_STATUSES = {"covered", "not_applicable"}
 _WORKER_OUTCOMES = {
@@ -98,14 +108,42 @@ def validate_disposition_id(value: str) -> str:
     return value
 
 
+def prepare_candidate_continuation_release_capsule(
+    manager: Any,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Typed normal-flow handoff from Candidate Release to continuation."""
+
+    return manager.prepare_release_capsule(**kwargs)
+
+
+def validate_candidate_continuation_release_capsule(
+    manager: Any,
+    value: Any,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Typed normal-flow consumer gate for a sealed continuation capsule."""
+
+    return manager.validate_release_capsule(value, **kwargs)
+
+
 class PaperContinuationManager:
     """Prospective Paper-led Research adequacy, separate from Fact authority."""
 
     validate_plan_id = staticmethod(validate_plan_id)
 
-    def __init__(self, lifecycle: Any) -> None:
+    def __init__(
+        self,
+        lifecycle: Any,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> None:
         self.lifecycle = lifecycle
         self.store = lifecycle.store
+        self._inspection_context = _inspection_context
+        self._inspection_cache: dict[tuple[Any, ...], Any] | None = (
+            {} if _inspection_context is not None else None
+        )
         self.root = lifecycle.root / "paper-continuations"
         self.plans_dir = self.root / "plans" / "by-id"
         self.materializations_dir = self.root / "materializations" / "by-plan"
@@ -113,12 +151,25 @@ class PaperContinuationManager:
         self.writing_artifacts_dir = (
             self.root / "writing-artifacts" / "by-sha256"
         )
+        self.release_capsules_dir = self.root / "release-capsules" / "by-id"
+        self.release_fallbacks_dir = (
+            self.root / "release-capsules" / "fallbacks" / "by-id"
+        )
+        self.release_operations_dir = (
+            self.root / "release-capsules" / "operations" / "by-id"
+        )
         self._status_index = PaperContinuationStatusIndex(
             self,
             continuation_contract_revision=PAPER_CONTINUATION_CONTRACT_REVISION,
             worker_outcomes=_WORKER_OUTCOMES,
-            writing_statuses=_WRITING_STATUSES,
             status_detail_fields=_STATUS_DETAIL_FIELDS,
+        )
+
+    def _paper_logic(self) -> Any:
+        if self._inspection_context is None:
+            return self.store.paper_logic()
+        return self.lifecycle._inspection_paper_logic(
+            self._inspection_context
         )
 
     def initialize(self) -> None:
@@ -127,6 +178,9 @@ class PaperContinuationManager:
             self.materializations_dir,
             self.dispositions_dir,
             self.writing_artifacts_dir,
+            self.release_capsules_dir,
+            self.release_fallbacks_dir,
+            self.release_operations_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
         self._status_index.initialize()
@@ -156,6 +210,30 @@ class PaperContinuationManager:
                 raise ValueError("Paper continuation snapshot bytes are missing or unsafe")
             result[role] = sha256_bytes(path.read_bytes())
         return result
+
+    def _derive_changed_surface(
+        self,
+        snapshot_id: str,
+        *,
+        require_current: bool,
+    ) -> dict[str, Any]:
+        """Produce the one authoritative successor-delta handoff.
+
+        Both creation and later immutable-plan validation use this exact path;
+        a caller cannot nominate convenient changed nodes or replace semantic
+        comparison with content-addressed object-id churn.
+        """
+
+        paper = self._paper_logic()
+        changed_node_ids = paper.successor_changed_node_ids(
+            snapshot_id,
+            require_current=require_current,
+        )
+        return paper.changed_surface(
+            snapshot_id=snapshot_id,
+            changed_node_ids=changed_node_ids,
+            require_current=require_current,
+        )
 
     @staticmethod
     def _target_closure(
@@ -258,7 +336,7 @@ class PaperContinuationManager:
         return {**semantic, "work_unit_sha256": sha256_json(semantic)}
 
     def _validate_plan_record(self, record: Any, *, path: Path) -> dict[str, Any]:
-        fields = {
+        required_fields = {
             "schema_version",
             "contract_revision",
             "project_id",
@@ -282,7 +360,13 @@ class PaperContinuationManager:
             "created_at",
             "record_sha256",
         }
-        _exact(record, fields, "Paper continuation plan")
+        optional_fields = {"changed_surface_receipt"}
+        if (
+            not isinstance(record, dict)
+            or not required_fields.issubset(record)
+            or set(record).difference(required_fields | optional_fields)
+        ):
+            raise ValueError("Paper continuation plan fields are not exact")
         plan_id = validate_plan_id(record["plan_id"])
         if path.stem != plan_id:
             raise ValueError("Paper continuation plan path/id mismatch")
@@ -309,7 +393,7 @@ class PaperContinuationManager:
         snapshot_id = record["snapshot_id"]
         if PAPER_SNAPSHOT_ID_RE.fullmatch(snapshot_id) is None:
             raise ValueError("Paper continuation snapshot id is invalid")
-        paper = self.store.paper_logic()
+        paper = self._paper_logic()
         manifest = paper.snapshot_manifest(snapshot_id)
         manifest_path = paper.snapshots_dir / snapshot_id / "manifest.json"
         if (
@@ -334,11 +418,60 @@ class PaperContinuationManager:
         ):
             raise ValueError("Paper continuation source artifact drifted")
         nodes, edges = paper.snapshot_objects(snapshot_id)
+        available_targets = sorted(
+            object_id
+            for object_id, node in nodes.items()
+            if node["object_type"] == "paper_target"
+        )
         targets = _strings(
             record["target_node_ids"], "Paper continuation target ids", nonempty=True
         )
         if any(PAPER_NODE_ID_RE.fullmatch(item) is None for item in targets):
             raise ValueError("Paper continuation target id is invalid")
+        selection_mode = record["selection_mode"]
+        if selection_mode not in _SELECTION_MODES:
+            raise ValueError("Paper continuation selection mode drifted")
+        if selection_mode == "all_targets":
+            if "changed_surface_receipt" in record:
+                raise ValueError(
+                    "nonselective Paper continuation plan carries a changed-surface receipt"
+                )
+            if targets != available_targets:
+                raise ValueError("all-target Paper continuation selection drifted")
+        elif selection_mode == "explicit_targets":
+            if "changed_surface_receipt" in record:
+                raise ValueError(
+                    "explicit Paper continuation plan carries a changed-surface receipt"
+                )
+            if not set(targets).issubset(available_targets):
+                raise ValueError("explicit Paper continuation selection drifted")
+        else:
+            receipt = record.get("changed_surface_receipt")
+            if not isinstance(receipt, dict):
+                raise ValueError(
+                    "changed-surface Paper continuation plan lacks its exact receipt"
+                )
+            expected_receipt = self._derive_changed_surface(
+                snapshot_id,
+                require_current=False,
+            )
+            if receipt != expected_receipt:
+                raise ValueError(
+                    "Paper continuation changed-surface receipt drifted"
+                )
+            expected_targets = sorted(
+                set(available_targets).intersection(
+                    expected_receipt["audit_node_ids"]
+                )
+            )
+            if not expected_targets:
+                raise ValueError(
+                    "Paper changed surface reaches no target; full-snapshot audit is required"
+                )
+            if targets != expected_targets:
+                raise ValueError(
+                    "Paper continuation changed-surface target selection drifted"
+                )
         work_units = record["work_units"]
         if not isinstance(work_units, list) or len(work_units) != len(targets):
             raise ValueError("Paper continuation work-unit inventory is invalid")
@@ -370,18 +503,36 @@ class PaperContinuationManager:
         return record
 
     def plan(self, plan_id: str) -> dict[str, Any]:
+        cache_key = ("plan", plan_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         path = self._plan_path(plan_id)
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown Paper continuation plan: {plan_id}")
-        return self._validate_plan_record(self.store._read_json(path), path=path)
+        result = self._validate_plan_record(self.store._read_json(path), path=path)
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def plans(self) -> list[dict[str, Any]]:
+        cache_key = ("plans",)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         if not self.plans_dir.exists():
             return []
-        return [
+        result = [
             self.plan(path.stem)
             for path in sorted(self.plans_dir.glob("pcp-*.json"))
         ]
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def _research_payload(
         self,
@@ -390,7 +541,7 @@ class PaperContinuationManager:
         unit: dict[str, Any],
     ) -> dict[str, Any]:
         snapshot_id = plan["snapshot_id"]
-        snapshot_dir = self.store.paper_logic().snapshots_dir / snapshot_id
+        snapshot_dir = self._paper_logic().snapshots_dir / snapshot_id
         source_path = contained_path(
             self.store.root,
             plan["source_artifact_relpath"],
@@ -525,6 +676,11 @@ class PaperContinuationManager:
                 "paper_target_closure",
                 "philosophy_dialectical_atomicity",
             ],
+            # Every selected Paper target is load-bearing by construction.
+            # The primary keeps its normal work mode; create_round adds one
+            # distinct refute worker/context unless this target is already a
+            # refute/challenge primary.
+            "independent_adverse_required": True,
             "obligations": obligations,
             "stop_conditions": [
                 "Do not claim the whole Paper continuation complete from this target alone.",
@@ -578,8 +734,9 @@ class PaperContinuationManager:
                 {"target_node_id", "research_id", "research_record_sha256"},
                 "Paper continuation Research binding",
             )
-            research = self.lifecycle._research_record(
-                validate_memory_id(item["research_id"])
+            research = self.lifecycle._inspection_research_record(
+                validate_memory_id(item["research_id"]),
+                self._inspection_context,
             )
             if research["record_sha256"] != item["research_record_sha256"]:
                 raise ValueError("Paper continuation Research binding drifted")
@@ -598,15 +755,26 @@ class PaperContinuationManager:
         return record
 
     def materialization(self, plan_id: str) -> dict[str, Any] | None:
+        cache_key = ("materialization", plan_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         plan = self.plan(plan_id)
         path = self._materialization_path(plan_id)
         if not path.exists():
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = None
             return None
         if path.is_symlink() or not path.is_file():
             raise ValueError("Paper continuation materialization path is unsafe")
-        return self._validate_materialization(
+        result = self._validate_materialization(
             self.store._read_json(path), plan=plan, path=path
         )
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def create_plan(
         self,
@@ -629,7 +797,7 @@ class PaperContinuationManager:
         actor = _text(actor, "Paper continuation actor")
         if PAPER_SNAPSHOT_ID_RE.fullmatch(snapshot_id) is None:
             raise ValueError("Paper continuation snapshot id is invalid")
-        paper = self.store.paper_logic()
+        paper = self._paper_logic()
         current = set(paper.status()["current_snapshot_ids"])
         if snapshot_id not in current:
             raise ValueError(
@@ -652,11 +820,12 @@ class PaperContinuationManager:
         requested = _strings(
             payload["target_node_ids"], "Paper continuation requested targets"
         )
+        changed_surface_receipt: dict[str, Any] | None = None
         if selection_mode == "all_targets":
             if requested:
                 raise ValueError("all_targets requires target_node_ids=[]")
             selected_targets = available_targets
-        else:
+        elif selection_mode == "explicit_targets":
             if not requested:
                 raise ValueError("explicit_targets requires at least one target")
             missing = sorted(set(requested).difference(available_targets))
@@ -666,6 +835,22 @@ class PaperContinuationManager:
                     + ", ".join(missing)
                 )
             selected_targets = sorted(requested)
+        else:
+            if requested:
+                raise ValueError("changed_surface requires target_node_ids=[]")
+            changed_surface_receipt = self._derive_changed_surface(
+                snapshot_id,
+                require_current=True,
+            )
+            selected_targets = sorted(
+                set(available_targets).intersection(
+                    changed_surface_receipt["audit_node_ids"]
+                )
+            )
+            if not selected_targets:
+                raise ValueError(
+                    "Paper changed surface reaches no target; full-snapshot audit is required"
+                )
         objective = _text(payload["objective"], "Paper continuation objective")
         source_artifacts = manifest["source_artifacts"]
         requested_source = _text(
@@ -728,6 +913,8 @@ class PaperContinuationManager:
             "created_by": actor,
             "truth_effect": "none",
         }
+        if changed_surface_receipt is not None:
+            semantic["changed_surface_receipt"] = changed_surface_receipt
         plan_id = "pcp-" + sha256_json(semantic)
         created_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
         without_hash = {
@@ -803,6 +990,7 @@ class PaperContinuationManager:
         binding: Any,
         *,
         record: dict[str, Any],
+        _plan_cache: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         fields = {
             "contract_revision",
@@ -823,7 +1011,16 @@ class PaperContinuationManager:
             "required_analysis_fields",
         }
         _exact(binding, fields, "Paper continuation Research binding")
-        plan = self.plan(validate_plan_id(binding["plan_id"]))
+        plan_id = validate_plan_id(binding["plan_id"])
+        plan = (
+            _plan_cache.get(plan_id)
+            if _plan_cache is not None
+            else None
+        )
+        if plan is None:
+            plan = self.plan(plan_id)
+            if _plan_cache is not None:
+                _plan_cache[plan_id] = plan
         if (
             binding["contract_revision"]
             != PAPER_CONTINUATION_CONTRACT_REVISION
@@ -861,11 +1058,20 @@ class PaperContinuationManager:
             raise ValueError("Paper continuation Research lacks current assurance")
         return binding
 
-    def scope_for_research(self, record: dict[str, Any]) -> dict[str, Any] | None:
+    def scope_for_research(
+        self,
+        record: dict[str, Any],
+        *,
+        _plan_cache: dict[str, dict[str, Any]] | None = None,
+    ) -> dict[str, Any] | None:
         binding = record.get("metadata", {}).get("paper_continuation")
         if binding is None:
             return None
-        validated = self._validate_research_binding(binding, record=record)
+        validated = self._validate_research_binding(
+            binding,
+            record=record,
+            _plan_cache=_plan_cache,
+        )
         return {
             **validated,
             "research_id": record["research_id"],
@@ -881,7 +1087,10 @@ class PaperContinuationManager:
         self, records: list[dict[str, Any]]
     ) -> list[str]:
         by_id = {
-            item["research_id"]: item for item in self.lifecycle.research_records()
+            item["research_id"]: item
+            for item in self.lifecycle.research_records(
+                _inspection_context=self._inspection_context
+            )
         }
         result: set[str] = set()
         pending = [record["research_id"] for record in records]
@@ -931,7 +1140,8 @@ class PaperContinuationManager:
             raise ValueError("Paper disposition result lacks assignment provenance")
         self.lifecycle._research_is_adverse_assignment(result)
         round_dir, manifest = self.lifecycle._round_manifest(
-            provenance["round_id"]
+            provenance["round_id"],
+            _inspection_context=self._inspection_context,
         )
         assignment = self.lifecycle._assignment(
             manifest, provenance["assignment_id"]
@@ -1162,8 +1372,9 @@ class PaperContinuationManager:
         }
         if record["record_sha256"] != sha256_json(without_hash):
             raise ValueError("Paper continuation disposition record hash mismatch")
-        result = self.lifecycle._research_record(
-            validate_memory_id(record["result_research_id"])
+        result = self.lifecycle._inspection_research_record(
+            validate_memory_id(record["result_research_id"]),
+            self._inspection_context,
         )
         if result["record_sha256"] != record["result_research_record_sha256"]:
             raise ValueError("Paper continuation disposition result Research drifted")
@@ -1181,7 +1392,9 @@ class PaperContinuationManager:
             raise ValueError("Paper continuation disposition target Research drifted")
         by_id = {
             item["research_id"]: item
-            for item in self.lifecycle.research_records()
+            for item in self.lifecycle.research_records(
+                _inspection_context=self._inspection_context
+            )
         }
         if not self._descends_from(
             result["research_id"], target_binding["research_id"], by_id
@@ -1197,7 +1410,10 @@ class PaperContinuationManager:
             record["successor_research_ids"], "Paper successor Research ids"
         )
         for research_id in successors:
-            self.lifecycle._research_record(validate_memory_id(research_id))
+            self.lifecycle._inspection_research_record(
+                validate_memory_id(research_id),
+                self._inspection_context,
+            )
         if record["outcome"] == "replaced" and not successors:
             raise ValueError("a replaced Paper target requires successor Research")
         if record["outcome"] != "replaced" and successors:
@@ -1222,6 +1438,22 @@ class PaperContinuationManager:
         return record
 
     def dispositions(self, plan_id: str = "") -> list[dict[str, Any]]:
+        cache_key = ("dispositions", plan_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
+        if plan_id:
+            validate_plan_id(plan_id)
+            result = [
+                item
+                for item in self.dispositions()
+                if item["plan_id"] == plan_id
+            ]
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = result
+            return result
         if not self.dispositions_dir.exists():
             return []
         result = [
@@ -1230,12 +1462,17 @@ class PaperContinuationManager:
             )
             for path in sorted(self.dispositions_dir.glob("pcd-*.json"))
         ]
-        if plan_id:
-            validate_plan_id(plan_id)
-            result = [item for item in result if item["plan_id"] == plan_id]
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
         return result
 
     def _current_dispositions(self, plan_id: str) -> dict[str, dict[str, Any]]:
+        cache_key = ("current_dispositions", plan_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         records = self.dispositions(plan_id)
         by_id = {item["disposition_id"]: item for item in records}
         superseded: set[str] = set()
@@ -1263,6 +1500,8 @@ class PaperContinuationManager:
             if target_id in result:
                 raise ValueError("Paper target has multiple current dispositions")
             result[target_id] = item
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
         return result
 
     def record_disposition(
@@ -1298,10 +1537,11 @@ class PaperContinuationManager:
             item["target_node_id"]: item["research_id"]
             for item in materialization["target_research_bindings"]
         }[target_id]
-        result = self.lifecycle._research_record(
+        result = self.lifecycle._inspection_research_record(
             validate_memory_id(
                 _text(payload["result_research_id"], "Paper result Research id")
-            )
+            ),
+            self._inspection_context,
         )
         self._validate_managed_result(result)
         outcome = payload["outcome"]
@@ -1312,7 +1552,10 @@ class PaperContinuationManager:
             payload["successor_research_ids"], "Paper successor Research ids"
         )
         for research_id in successors:
-            self.lifecycle._research_record(validate_memory_id(research_id))
+            self.lifecycle._inspection_research_record(
+                validate_memory_id(research_id),
+                self._inspection_context,
+            )
         if outcome == "replaced" and not successors:
             raise ValueError("a replaced Paper target requires successor Research")
         if outcome != "replaced" and successors:
@@ -1398,6 +1641,12 @@ class PaperContinuationManager:
         return record
 
     def status(self, plan_id: str) -> dict[str, Any]:
+        cache_key = ("status", plan_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         plan = self.plan(plan_id)
         materialization = self.materialization(plan_id)
         target_bindings = (
@@ -1406,7 +1655,10 @@ class PaperContinuationManager:
             else []
         )
         by_id = {
-            item["research_id"]: item for item in self.lifecycle.research_records()
+            item["research_id"]: item
+            for item in self.lifecycle.research_records(
+                _inspection_context=self._inspection_context
+            )
         }
         researched: set[str] = set()
         for binding in target_bindings:
@@ -1432,7 +1684,7 @@ class PaperContinuationManager:
             if item["writing_coverage"]["status"] in _WRITING_STATUSES
         }
         current_snapshots = set(
-            self.store.paper_logic().status()["current_snapshot_ids"]
+            self._paper_logic().status()["current_snapshot_ids"]
         )
         snapshot_current = plan["snapshot_id"] in current_snapshots
         total = len(plan["target_node_ids"])
@@ -1474,7 +1726,7 @@ class PaperContinuationManager:
             "source_snapshot_current": snapshot_current,
             "adequacy_complete": complete,
         }
-        return {
+        result = {
             "schema_version": 1,
             "contract_revision": PAPER_CONTINUATION_CONTRACT_REVISION,
             "plan_id": plan_id,
@@ -1507,6 +1759,9 @@ class PaperContinuationManager:
             "adequacy_receipt_sha256": sha256_json(receipt_semantic),
             "truth_effect": "none",
         }
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def status_summary(self, plan_id: str) -> dict[str, Any]:
         """Return a bounded indexed view without reconstructing Paper closure."""
@@ -1788,6 +2043,437 @@ class PaperContinuationManager:
             },
         }
 
+    @staticmethod
+    def _release_ref_projection(
+        *,
+        plan: dict[str, Any],
+        adequacy_receipt_sha256: str,
+        disposition_ids: list[str],
+    ) -> dict[str, Any]:
+        return {
+            "contract_revision": PAPER_CONTINUATION_CONTRACT_REVISION,
+            "plan_id": plan["plan_id"],
+            "plan_record_sha256": plan["record_sha256"],
+            "adequacy_receipt_sha256": adequacy_receipt_sha256,
+            "disposition_ids": sorted(disposition_ids),
+        }
+
+    def _load_release_dispositions(
+        self,
+        *,
+        plan: dict[str, Any],
+        disposition_ids: list[str],
+        validate_managed_evidence: bool,
+    ) -> dict[str, dict[str, Any]]:
+        requested = _strings(
+            disposition_ids,
+            "Paper continuation release disposition ids",
+            nonempty=True,
+        )
+        dispositions: dict[str, dict[str, Any]] = {}
+        for disposition_id in requested:
+            path = self._disposition_path(disposition_id)
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("Paper continuation disposition is missing or unsafe")
+            item = self._validate_disposition_record(
+                self.store._read_json(path),
+                path=path,
+                validate_managed_evidence=validate_managed_evidence,
+            )
+            if item["plan_id"] != plan["plan_id"]:
+                raise ValueError("Paper continuation disposition belongs to another plan")
+            if item["target_node_id"] in dispositions:
+                raise ValueError("Paper continuation release duplicates a target disposition")
+            dispositions[item["target_node_id"]] = item
+        if set(dispositions) != set(plan["target_node_ids"]):
+            raise ValueError(
+                "Paper continuation release does not cover every selected target"
+            )
+        return dispositions
+
+    @staticmethod
+    def _fallback_projection(status: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "plan_id": status["plan_id"],
+            "paper_id": status["paper_id"],
+            "snapshot_id": status["snapshot_id"],
+            "source_snapshot_current": status["source_snapshot_current"],
+            "adequacy_complete": status["adequacy_complete"],
+            "adequacy_receipt_sha256": status["adequacy_receipt_sha256"],
+            "counts": status["counts"],
+            "current_disposition_ids": status["current_disposition_ids"],
+            "target_research_bindings": status["target_research_bindings"],
+            "selected_reconstruction_node_ids": status[
+                "selected_reconstruction_node_ids"
+            ],
+            "selected_source_node_ids": status["selected_source_node_ids"],
+            "selected_edge_ids": status["selected_edge_ids"],
+            "truth_effect": "none",
+        }
+
+    def _fallback_paths(self, request_id: str) -> tuple[Path, Path]:
+        if (
+            not isinstance(request_id, str)
+            or _RELEASE_FALLBACK_ID_RE.fullmatch(request_id) is None
+        ):
+            raise ValueError("invalid Paper continuation release fallback id")
+        directory = self.release_fallbacks_dir / request_id
+        return directory / "request.json", directory / "completion.json"
+
+    def _validate_fallback_receipt(
+        self,
+        value: Any,
+        *,
+        require_current: bool,
+    ) -> dict[str, Any]:
+        fields = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "request_id",
+            "request_sha256",
+            "plan_id",
+            "plan_record_sha256",
+            "release_ref_sha256",
+            "paper_evidence_refs_sha256",
+            "candidate_interfaces_sha256",
+            "trigger",
+            "generation_surface",
+            "full_status_projection",
+            "full_status_sha256",
+            "phase_timings_ms",
+            "fallback_exception_count",
+            "recovery_action",
+            "completed_at",
+            "truth_effect",
+            "fallback_receipt_sha256",
+        }
+        receipt = _exact(
+            value, fields, "Paper continuation release fallback receipt"
+        )
+        request_id = receipt["request_id"]
+        request_path, completion_path = self._fallback_paths(request_id)
+        if (
+            receipt["schema_version"] != 1
+            or receipt["contract_revision"]
+            != PAPER_CONTINUATION_RELEASE_FALLBACK_REVISION
+            or receipt["project_id"] != self.store.project_id()
+            or not isinstance(receipt["plan_id"], str)
+            or not isinstance(receipt["trigger"], str)
+            or not receipt["trigger"]
+            or not isinstance(receipt["fallback_exception_count"], int)
+            or receipt["fallback_exception_count"] < 1
+            or not isinstance(receipt["recovery_action"], list)
+            or not receipt["recovery_action"]
+            or not isinstance(receipt["completed_at"], str)
+            or not receipt["completed_at"]
+            or receipt["truth_effect"] != "none"
+            or any(
+                not isinstance(receipt[field], str)
+                or SHA256_RE.fullmatch(receipt[field]) is None
+                for field in (
+                    "request_sha256",
+                    "plan_record_sha256",
+                    "release_ref_sha256",
+                    "paper_evidence_refs_sha256",
+                    "candidate_interfaces_sha256",
+                    "full_status_sha256",
+                    "fallback_receipt_sha256",
+                )
+            )
+            or not isinstance(receipt["phase_timings_ms"], dict)
+            or set(receipt["phase_timings_ms"]) != {"full_validation"}
+            or not isinstance(
+                receipt["phase_timings_ms"]["full_validation"], int
+            )
+            or receipt["phase_timings_ms"]["full_validation"] < 0
+        ):
+            raise ValueError("Paper continuation fallback receipt is invalid")
+        if request_path.is_symlink() or not request_path.is_file():
+            raise ValueError("Paper continuation fallback request is missing or unsafe")
+        request = self.store._read_json(request_path)
+        if (
+            not isinstance(request, dict)
+            or request.get("request_id") != request_id
+            or request.get("request_sha256") != receipt["request_sha256"]
+            or request.get("request_sha256")
+            != sha256_json(
+                {
+                    key: item
+                    for key, item in request.items()
+                    if key not in {"request_id", "request_sha256"}
+                }
+            )
+            or request_id
+            != "pcrf-"
+            + sha256_json(
+                {
+                    key: item
+                    for key, item in request.items()
+                    if key not in {"request_id", "request_sha256"}
+                }
+            )
+        ):
+            raise ValueError("Paper continuation fallback request binding drifted")
+        semantic = {
+            key: item
+            for key, item in receipt.items()
+            if key != "fallback_receipt_sha256"
+        }
+        if receipt["fallback_receipt_sha256"] != sha256_json(semantic):
+            raise ValueError("Paper continuation fallback receipt hash mismatch")
+        if completion_path.is_symlink() or not completion_path.is_file():
+            raise ValueError("Paper continuation fallback completion is missing or unsafe")
+        if self.store._read_json(completion_path) != receipt:
+            raise ValueError("Paper continuation fallback completion drifted")
+        projection = receipt["full_status_projection"]
+        if (
+            not isinstance(projection, dict)
+            or projection.get("plan_id") != receipt["plan_id"]
+            or projection.get("adequacy_complete") is not True
+            or projection.get("source_snapshot_current") is not True
+            or projection.get("truth_effect") != "none"
+        ):
+            raise ValueError("Paper continuation fallback status is incomplete")
+        surface = receipt["generation_surface"]
+        if (
+            not isinstance(surface, dict)
+            or surface.get("surface_sha256")
+            != sha256_json(
+                {
+                    key: item
+                    for key, item in surface.items()
+                    if key != "surface_sha256"
+                }
+            )
+        ):
+            raise ValueError("Paper continuation fallback generation surface drifted")
+        if require_current and surface != self._status_index.release_generation_surface():
+            raise ValueError(
+                "Paper continuation release fallback is stale against current generation"
+            )
+        return receipt
+
+    def _full_validation_fallback(
+        self,
+        *,
+        plan: dict[str, Any],
+        ref: dict[str, Any],
+        paper_evidence_refs: list[dict[str, Any]],
+        candidate_interfaces: list[dict[str, Any]],
+        trigger: str,
+    ) -> dict[str, Any]:
+        surface = self._status_index.release_generation_surface()
+        request_semantic = {
+            "schema_version": 1,
+            "contract_revision": PAPER_CONTINUATION_RELEASE_FALLBACK_REVISION,
+            "project_id": self.store.project_id(),
+            "plan_id": plan["plan_id"],
+            "plan_record_sha256": plan["record_sha256"],
+            "release_ref_sha256": sha256_json(ref),
+            "paper_evidence_refs_sha256": sha256_json(paper_evidence_refs),
+            "candidate_interfaces_sha256": sha256_json(candidate_interfaces),
+            "generation_surface": surface,
+            "truth_effect": "none",
+        }
+        request_sha = sha256_json(request_semantic)
+        request_id = "pcrf-" + request_sha
+        request = {
+            **request_semantic,
+            "request_id": request_id,
+            "request_sha256": request_sha,
+        }
+        request_path, completion_path = self._fallback_paths(request_id)
+        request_path.parent.mkdir(parents=True, exist_ok=True)
+        self.store._write_json_once(request_path, request)
+        if completion_path.exists():
+            if completion_path.is_symlink() or not completion_path.is_file():
+                raise ValueError(
+                    "Paper continuation fallback completion is unsafe"
+                )
+            return self._validate_fallback_receipt(
+                self.store._read_json(completion_path), require_current=True
+            )
+        started = perf_counter()
+        status = self.status(plan["plan_id"])
+        elapsed_ms = max(0, round((perf_counter() - started) * 1000))
+        if self._status_index.release_generation_surface() != surface:
+            raise ValueError(
+                "Paper continuation changed during full release validation; retry"
+            )
+        if not status["adequacy_complete"] or not status["source_snapshot_current"]:
+            raise ValueError(
+                "Paper continuation full fallback did not establish current adequacy"
+            )
+        expected_ref = self._release_ref_projection(
+            plan=plan,
+            adequacy_receipt_sha256=status["adequacy_receipt_sha256"],
+            disposition_ids=status["current_disposition_ids"],
+        )
+        if ref != expected_ref:
+            raise ValueError(
+                "Paper continuation release ref is stale or incomplete after full validation"
+            )
+        projection = self._fallback_projection(status)
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": PAPER_CONTINUATION_RELEASE_FALLBACK_REVISION,
+            "project_id": self.store.project_id(),
+            "request_id": request_id,
+            "request_sha256": request_sha,
+            "plan_id": plan["plan_id"],
+            "plan_record_sha256": plan["record_sha256"],
+            "release_ref_sha256": sha256_json(ref),
+            "paper_evidence_refs_sha256": sha256_json(paper_evidence_refs),
+            "candidate_interfaces_sha256": sha256_json(candidate_interfaces),
+            "trigger": trigger,
+            "generation_surface": surface,
+            "full_status_projection": projection,
+            "full_status_sha256": sha256_json(status),
+            "phase_timings_ms": {"full_validation": elapsed_ms},
+            "fallback_exception_count": 1,
+            "recovery_action": [
+                "paper-continuation-status-index-rebuild",
+                "--actor",
+                "main",
+            ],
+            "completed_at": datetime.now(timezone.utc).isoformat(
+                timespec="microseconds"
+            ),
+            "truth_effect": "none",
+        }
+        receipt = {
+            **semantic,
+            "fallback_receipt_sha256": sha256_json(semantic),
+        }
+        self.store._write_json_once(completion_path, receipt)
+        return self._validate_fallback_receipt(receipt, require_current=True)
+
+    def prepare_release_proof(
+        self,
+        *,
+        plan_id: str,
+        ref: dict[str, Any],
+        paper_evidence_refs: list[dict[str, Any]],
+        candidate_interfaces: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], dict[str, int], int]:
+        """Choose indexed proof or an observable full-validation fallback."""
+
+        plan = self.plan(plan_id)
+        _exact(
+            ref,
+            {
+                "contract_revision",
+                "plan_id",
+                "plan_record_sha256",
+                "adequacy_receipt_sha256",
+                "disposition_ids",
+            },
+            "Paper continuation release ref",
+        )
+        if (
+            ref["contract_revision"] != PAPER_CONTINUATION_CONTRACT_REVISION
+            or ref["plan_id"] != plan_id
+            or ref["plan_record_sha256"] != plan["record_sha256"]
+            or not isinstance(ref["adequacy_receipt_sha256"], str)
+            or SHA256_RE.fullmatch(ref["adequacy_receipt_sha256"]) is None
+        ):
+            raise ValueError("Paper continuation release ref is invalid")
+        _strings(
+            ref["disposition_ids"],
+            "Paper continuation release disposition ids",
+            nonempty=True,
+        )
+        if not isinstance(paper_evidence_refs, list) or any(
+            not isinstance(item, dict) for item in paper_evidence_refs
+        ):
+            raise ValueError("Paper continuation EvidenceRefs must be objects")
+        proof_paper_refs: list[dict[str, Any]] = []
+        for item in paper_evidence_refs:
+            normalized = dict(item)
+            if isinstance(normalized.get("target_node_ids"), list):
+                normalized["target_node_ids"] = sorted(
+                    normalized["target_node_ids"]
+                )
+            proof_paper_refs.append(normalized)
+        proof_paper_refs.sort(
+            key=lambda item: (
+                str(item.get("graph_kind", "")),
+                str(item.get("snapshot_id", "")),
+            )
+        )
+        started = perf_counter()
+        try:
+            witness = self._status_index.release_witness(plan_id)
+        except (KeyError, ValueError) as exc:
+            witness_ms = max(0, round((perf_counter() - started) * 1000))
+            fallback = self._full_validation_fallback(
+                plan=plan,
+                ref=ref,
+                paper_evidence_refs=proof_paper_refs,
+                candidate_interfaces=candidate_interfaces,
+                trigger=f"{type(exc).__name__}: {exc}",
+            )
+            return (
+                {"mode": "full_validation_fallback", "receipt": fallback},
+                {
+                    "indexed_witness": witness_ms,
+                    "full_validation": fallback["phase_timings_ms"][
+                        "full_validation"
+                    ],
+                },
+                1,
+            )
+        return (
+            {"mode": "indexed", "witness": witness},
+            {
+                "indexed_witness": max(
+                    0, round((perf_counter() - started) * 1000)
+                ),
+                "full_validation": 0,
+            },
+            0,
+        )
+
+    def _status_from_release_proof(
+        self,
+        proof: Any,
+        *,
+        require_current: bool,
+    ) -> dict[str, Any]:
+        if not isinstance(proof, dict) or set(proof) not in (
+            {"mode", "witness"},
+            {"mode", "receipt"},
+        ):
+            raise ValueError("Paper continuation release proof fields are not exact")
+        if proof["mode"] == "indexed" and set(proof) == {"mode", "witness"}:
+            validated = self._status_index.validate_release_witness(
+                proof["witness"], require_current=require_current
+            )
+            state = validated["state"]
+            receipt = validated["receipt"]
+            return {
+                "plan_id": state["plan_id"],
+                "source_snapshot_current": receipt["source_snapshot_current"],
+                "adequacy_complete": receipt["adequacy_complete"],
+                "adequacy_receipt_sha256": receipt["adequacy_receipt_sha256"],
+                "current_disposition_ids": sorted(
+                    item["disposition_id"]
+                    for item in state["current_dispositions"]
+                ),
+                "counts": receipt["counts"],
+                "truth_effect": "none",
+            }
+        if (
+            proof["mode"] == "full_validation_fallback"
+            and set(proof) == {"mode", "receipt"}
+        ):
+            receipt = self._validate_fallback_receipt(
+                proof["receipt"], require_current=require_current
+            )
+            return receipt["full_status_projection"]
+        raise ValueError("Paper continuation release proof mode is invalid")
+
     def validate_release_binding(
         self,
         *,
@@ -1796,6 +2482,7 @@ class PaperContinuationManager:
         philosophy_atomicity: Any,
         facts: dict[str, Any],
         require_current: bool = True,
+        release_proof: Any | None = None,
     ) -> dict[str, Any]:
         plan = self.plan(plan_id)
         _exact(
@@ -1811,24 +2498,32 @@ class PaperContinuationManager:
         )
         status: dict[str, Any] | None = None
         if require_current:
-            status = self.status(plan_id)
+            status = (
+                self._status_from_release_proof(
+                    release_proof, require_current=True
+                )
+                if release_proof is not None
+                else self.status(plan_id)
+            )
             if not status["adequacy_complete"]:
                 raise ValueError(
                     "Paper continuation Candidate Release requires complete target "
                     "dispositions, current source, and revised-writing coverage"
                 )
-            expected_ref = {
-                "contract_revision": PAPER_CONTINUATION_CONTRACT_REVISION,
-                "plan_id": plan_id,
-                "plan_record_sha256": plan["record_sha256"],
-                "adequacy_receipt_sha256": status["adequacy_receipt_sha256"],
-                "disposition_ids": status["current_disposition_ids"],
-            }
+            expected_ref = self._release_ref_projection(
+                plan=plan,
+                adequacy_receipt_sha256=status["adequacy_receipt_sha256"],
+                disposition_ids=status["current_disposition_ids"],
+            )
             if ref != expected_ref:
                 raise ValueError(
                     "Paper continuation release ref is stale or incomplete"
                 )
-            selected_dispositions = self._current_dispositions(plan_id)
+            selected_dispositions = self._load_release_dispositions(
+                plan=plan,
+                disposition_ids=status["current_disposition_ids"],
+                validate_managed_evidence=True,
+            )
         else:
             if (
                 ref["contract_revision"]
@@ -1838,30 +2533,11 @@ class PaperContinuationManager:
                 or SHA256_RE.fullmatch(ref["adequacy_receipt_sha256"]) is None
             ):
                 raise ValueError("sealed Paper continuation release ref is invalid")
-            disposition_ids = _strings(
-                ref["disposition_ids"],
-                "sealed Paper continuation disposition ids",
-                nonempty=True,
+            selected_dispositions = self._load_release_dispositions(
+                plan=plan,
+                disposition_ids=ref["disposition_ids"],
+                validate_managed_evidence=False,
             )
-            selected_dispositions: dict[str, dict[str, Any]] = {}
-            for disposition_id in disposition_ids:
-                path = self._disposition_path(disposition_id)
-                if path.is_symlink() or not path.is_file():
-                    raise ValueError("sealed Paper disposition is missing or unsafe")
-                item = self._validate_disposition_record(
-                    self.store._read_json(path),
-                    path=path,
-                    validate_managed_evidence=False,
-                )
-                if item["plan_id"] != plan_id:
-                    raise ValueError("sealed Paper disposition belongs to another plan")
-                if item["target_node_id"] in selected_dispositions:
-                    raise ValueError("sealed Paper release duplicates a target disposition")
-                selected_dispositions[item["target_node_id"]] = item
-            if set(selected_dispositions) != set(plan["target_node_ids"]):
-                raise ValueError(
-                    "sealed Paper release does not cover every selected target"
-                )
         normalized_atomicity = None
         if plan["domain_profile"] in {"philosophy", "mixed"}:
             normalized_atomicity = self._validate_atomicity(
@@ -1882,6 +2558,8 @@ class PaperContinuationManager:
             "philosophy_atomicity": normalized_atomicity,
             "plan": plan,
             "status": status,
+            "selected_dispositions": selected_dispositions,
+            "release_proof": release_proof,
         }
 
     def release_evidence(
@@ -1890,16 +2568,28 @@ class PaperContinuationManager:
         plan_id: str,
         disposition_ids: list[str],
         require_current: bool,
+        plan_record: dict[str, Any] | None = None,
+        selected_dispositions: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Materialize exact nontruth evidence for the fresh verifier capsule."""
 
-        plan = self.plan(plan_id)
+        plan = plan_record if plan_record is not None else self.plan(plan_id)
+        if plan.get("plan_id") != plan_id:
+            raise ValueError("Paper continuation verifier plan binding drifted")
         requested_ids = _strings(
             disposition_ids,
             "Paper continuation verifier disposition ids",
             nonempty=True,
         )
-        if require_current:
+        if selected_dispositions is not None:
+            dispositions = dict(selected_dispositions)
+            if sorted(
+                item["disposition_id"] for item in dispositions.values()
+            ) != sorted(requested_ids):
+                raise ValueError(
+                    "Paper continuation verifier disposition projection drifted"
+                )
+        elif require_current:
             dispositions = self._current_dispositions(plan_id)
             if sorted(
                 item["disposition_id"] for item in dispositions.values()
@@ -1932,7 +2622,7 @@ class PaperContinuationManager:
             raise ValueError(
                 "Paper continuation verifier evidence does not cover every target"
             )
-        paper = self.store.paper_logic()
+        paper = self._paper_logic()
         nodes, edges = paper.snapshot_objects(plan["snapshot_id"])
         selected_node_ids = sorted(
             {
@@ -1948,7 +2638,10 @@ class PaperContinuationManager:
         if materialization is None:
             raise ValueError("Paper continuation verifier evidence lacks its frontier")
         result_research = [
-            self.lifecycle._research_record(item["result_research_id"])
+            self.lifecycle._inspection_research_record(
+                item["result_research_id"],
+                self._inspection_context,
+            )
             for item in dispositions.values()
         ]
         semantic = {
@@ -1994,6 +2687,421 @@ class PaperContinuationManager:
             **semantic,
             "evidence_sha256": sha256_json(semantic),
         }
+
+    def _release_capsule_path(self, capsule_id: str) -> Path:
+        if (
+            not isinstance(capsule_id, str)
+            or _RELEASE_CAPSULE_ID_RE.fullmatch(capsule_id) is None
+        ):
+            raise ValueError("invalid Paper continuation release capsule id")
+        return self.release_capsules_dir / f"{capsule_id}.json"
+
+    def _record_release_operation(
+        self,
+        *,
+        capsule_id: str,
+        proof_mode: str,
+        phase_timings_ms: dict[str, int],
+        fallback_exception_count: int,
+    ) -> dict[str, Any]:
+        identity = {
+            "contract_revision": PAPER_CONTINUATION_RELEASE_CAPSULE_REVISION,
+            "project_id": self.store.project_id(),
+            "capsule_id": capsule_id,
+            "proof_mode": proof_mode,
+        }
+        operation_id = "pcro-" + sha256_json(identity)
+        if _RELEASE_OPERATION_ID_RE.fullmatch(operation_id) is None:
+            raise ValueError("invalid Paper continuation release operation id")
+        path = self.release_operations_dir / f"{operation_id}.json"
+        if path.exists():
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("Paper continuation release operation is unsafe")
+            existing = self.store._read_json(path)
+            if (
+                not isinstance(existing, dict)
+                or existing.get("operation_id") != operation_id
+                or existing.get("record_sha256")
+                != sha256_json(
+                    {
+                        key: item
+                        for key, item in existing.items()
+                        if key != "record_sha256"
+                    }
+                )
+            ):
+                raise ValueError("Paper continuation release operation drifted")
+            return existing
+        if (
+            set(phase_timings_ms)
+            != {
+                "indexed_witness",
+                "full_validation",
+                "evidence_materialization",
+                "capsule_persistence",
+                "total",
+            }
+            or any(
+                not isinstance(value, int) or value < 0
+                for value in phase_timings_ms.values()
+            )
+            or not isinstance(fallback_exception_count, int)
+            or fallback_exception_count < 0
+        ):
+            raise ValueError("Paper continuation release timing receipt is invalid")
+        semantic = {
+            "schema_version": 1,
+            **identity,
+            "phase_timings_ms": phase_timings_ms,
+            "fallback_exception_count": fallback_exception_count,
+            "latency_budget_is_advisory": True,
+            "created_at": datetime.now(timezone.utc).isoformat(
+                timespec="microseconds"
+            ),
+            "truth_effect": "none",
+            "operation_id": operation_id,
+        }
+        record = {**semantic, "record_sha256": sha256_json(semantic)}
+        self.release_operations_dir.mkdir(parents=True, exist_ok=True)
+        self.store._write_json_once(path, record)
+        return record
+
+    def prepare_release_capsule(
+        self,
+        *,
+        plan: dict[str, Any],
+        ref: dict[str, Any],
+        release_proof: dict[str, Any],
+        selected_dispositions: dict[str, dict[str, Any]],
+        paper_evidence_refs: list[dict[str, Any]],
+        candidate_interfaces: list[dict[str, Any]],
+        proof_phase_timings_ms: dict[str, int],
+        fallback_exception_count: int,
+    ) -> dict[str, Any]:
+        """Materialize one scoped verifier capsule and persist it by content id."""
+
+        total_started = perf_counter()
+        status = self._status_from_release_proof(
+            release_proof, require_current=True
+        )
+        expected_ref = self._release_ref_projection(
+            plan=plan,
+            adequacy_receipt_sha256=status["adequacy_receipt_sha256"],
+            disposition_ids=status["current_disposition_ids"],
+        )
+        if ref != expected_ref:
+            raise ValueError("Paper continuation release capsule ref is stale")
+        if (
+            not isinstance(candidate_interfaces, list)
+            or not candidate_interfaces
+            or any(not isinstance(item, dict) for item in candidate_interfaces)
+            or len(
+                {
+                    item.get("fact_id")
+                    for item in candidate_interfaces
+                    if isinstance(item.get("fact_id"), str)
+                }
+            )
+            != len(candidate_interfaces)
+        ):
+            raise ValueError("Paper continuation Candidate interfaces are invalid")
+        if (
+            not isinstance(paper_evidence_refs, list)
+            or any(not isinstance(item, dict) for item in paper_evidence_refs)
+        ):
+            raise ValueError("Paper continuation EvidenceRefs are invalid")
+        if release_proof.get("mode") == "full_validation_fallback":
+            fallback_receipt = release_proof.get("receipt")
+            if (
+                not isinstance(fallback_receipt, dict)
+                or fallback_receipt.get("paper_evidence_refs_sha256")
+                != sha256_json(paper_evidence_refs)
+                or fallback_receipt.get("candidate_interfaces_sha256")
+                != sha256_json(candidate_interfaces)
+                or fallback_receipt.get("release_ref_sha256")
+                != sha256_json(ref)
+            ):
+                raise ValueError(
+                    "Paper continuation fallback does not bind capsule inputs"
+                )
+        matching_logic = [
+            item
+            for item in paper_evidence_refs
+            if item.get("graph_kind") == "logic"
+            and item.get("snapshot_id") == plan["snapshot_id"]
+        ]
+        matching_audit = [
+            item
+            for item in paper_evidence_refs
+            if item.get("graph_kind") == "audit"
+            and item.get("paper_id") == plan["paper_id"]
+        ]
+        if len(matching_logic) != 1 or len(matching_audit) != 1:
+            raise ValueError(
+                "Paper continuation release capsule requires one exact Logic and Audit ref"
+            )
+        evidence_started = perf_counter()
+        evidence = self.release_evidence(
+            plan_id=plan["plan_id"],
+            disposition_ids=ref["disposition_ids"],
+            require_current=True,
+            plan_record=plan,
+            selected_dispositions=selected_dispositions,
+        )
+        evidence_ms = max(0, round((perf_counter() - evidence_started) * 1000))
+        closure_semantic = {
+            "target_node_ids": plan["target_node_ids"],
+            "work_unit_sha256": [
+                item["work_unit_sha256"] for item in plan["work_units"]
+            ],
+            "selected_reconstruction_node_ids": plan[
+                "selected_reconstruction_node_ids"
+            ],
+            "selected_source_node_ids": plan["selected_source_node_ids"],
+            "selected_edge_ids": plan["selected_edge_ids"],
+            **(
+                {"changed_surface_receipt": plan["changed_surface_receipt"]}
+                if "changed_surface_receipt" in plan
+                else {}
+            ),
+        }
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": PAPER_CONTINUATION_RELEASE_CAPSULE_REVISION,
+            "project_id": self.store.project_id(),
+            "plan_id": plan["plan_id"],
+            "plan_record_sha256": plan["record_sha256"],
+            "paper_continuation_ref": ref,
+            "status_proof": release_proof,
+            "paper_evidence_refs": paper_evidence_refs,
+            "logic_snapshot_binding": {
+                "snapshot_id": plan["snapshot_id"],
+                "snapshot_sha256": plan["snapshot_sha256"],
+                "snapshot_file_sha256": plan["snapshot_file_sha256"],
+            },
+            "audit_snapshot_bindings": matching_audit,
+            "source_artifact_binding": {
+                "artifact_sha256": plan["source_artifact_sha256"],
+                "artifact_relpath": plan["source_artifact_relpath"],
+            },
+            "target_closure": {
+                **closure_semantic,
+                "closure_sha256": sha256_json(closure_semantic),
+            },
+            "candidate_interfaces": candidate_interfaces,
+            "candidate_interfaces_sha256": sha256_json(candidate_interfaces),
+            "evidence": evidence,
+            "truth_effect": "none",
+        }
+        capsule_sha = sha256_json(semantic)
+        capsule_id = "pcrc-" + capsule_sha
+        without_record_hash = {
+            **semantic,
+            "capsule_id": capsule_id,
+            "capsule_sha256": capsule_sha,
+        }
+        capsule = {
+            **without_record_hash,
+            "record_sha256": sha256_json(without_record_hash),
+        }
+        persistence_started = perf_counter()
+        path = self._release_capsule_path(capsule_id)
+        self.release_capsules_dir.mkdir(parents=True, exist_ok=True)
+        self.store._write_json_once(path, capsule)
+        persisted_ms = max(
+            0, round((perf_counter() - persistence_started) * 1000)
+        )
+        capsule = self.validate_release_capsule(
+            capsule,
+            require_current=True,
+            expected_ref=ref,
+            expected_paper_evidence_refs=paper_evidence_refs,
+            expected_candidate_interfaces=candidate_interfaces,
+        )
+        timings = {
+            "indexed_witness": proof_phase_timings_ms["indexed_witness"],
+            "full_validation": proof_phase_timings_ms["full_validation"],
+            "evidence_materialization": evidence_ms,
+            "capsule_persistence": persisted_ms,
+            "total": max(0, round((perf_counter() - total_started) * 1000))
+            + proof_phase_timings_ms["indexed_witness"]
+            + proof_phase_timings_ms["full_validation"],
+        }
+        operation = self._record_release_operation(
+            capsule_id=capsule_id,
+            proof_mode=release_proof["mode"],
+            phase_timings_ms=timings,
+            fallback_exception_count=fallback_exception_count,
+        )
+        return {"capsule": capsule, "operation": operation}
+
+    def validate_release_capsule(
+        self,
+        value: Any,
+        *,
+        require_current: bool,
+        expected_ref: dict[str, Any] | None = None,
+        expected_paper_evidence_refs: list[dict[str, Any]] | None = None,
+        expected_candidate_interfaces: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        fields = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "plan_id",
+            "plan_record_sha256",
+            "paper_continuation_ref",
+            "status_proof",
+            "paper_evidence_refs",
+            "logic_snapshot_binding",
+            "audit_snapshot_bindings",
+            "source_artifact_binding",
+            "target_closure",
+            "candidate_interfaces",
+            "candidate_interfaces_sha256",
+            "evidence",
+            "truth_effect",
+            "capsule_id",
+            "capsule_sha256",
+            "record_sha256",
+        }
+        capsule = _exact(value, fields, "Paper continuation release capsule")
+        capsule_id = capsule["capsule_id"]
+        if (
+            capsule["schema_version"] != 1
+            or capsule["contract_revision"]
+            != PAPER_CONTINUATION_RELEASE_CAPSULE_REVISION
+            or capsule["project_id"] != self.store.project_id()
+            or _RELEASE_CAPSULE_ID_RE.fullmatch(capsule_id) is None
+            or capsule["truth_effect"] != "none"
+        ):
+            raise ValueError("Paper continuation release capsule binding is invalid")
+        semantic = {
+            key: item
+            for key, item in capsule.items()
+            if key not in {"capsule_id", "capsule_sha256", "record_sha256"}
+        }
+        capsule_sha = sha256_json(semantic)
+        if (
+            capsule_id != "pcrc-" + capsule_sha
+            or capsule["capsule_sha256"] != capsule_sha
+            or capsule["record_sha256"]
+            != sha256_json(
+                {
+                    key: item
+                    for key, item in capsule.items()
+                    if key != "record_sha256"
+                }
+            )
+        ):
+            raise ValueError("Paper continuation release capsule hash mismatch")
+        path = self._release_capsule_path(capsule_id)
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Paper continuation release capsule is missing or unsafe")
+        if self.store._read_json(path) != capsule:
+            raise ValueError("Paper continuation release capsule store drifted")
+        plan = self.plan(capsule["plan_id"])
+        if (
+            capsule["plan_record_sha256"] != plan["record_sha256"]
+            or capsule["paper_continuation_ref"]["plan_id"] != plan["plan_id"]
+            or capsule["paper_continuation_ref"]["plan_record_sha256"]
+            != plan["record_sha256"]
+        ):
+            raise ValueError("Paper continuation release capsule plan drifted")
+        status = self._status_from_release_proof(
+            capsule["status_proof"], require_current=require_current
+        )
+        expected_from_proof = self._release_ref_projection(
+            plan=plan,
+            adequacy_receipt_sha256=status["adequacy_receipt_sha256"],
+            disposition_ids=status["current_disposition_ids"],
+        )
+        if capsule["paper_continuation_ref"] != expected_from_proof:
+            raise ValueError("Paper continuation release capsule status proof drifted")
+        if expected_ref is not None and capsule["paper_continuation_ref"] != expected_ref:
+            raise ValueError("Paper continuation release capsule ref drifted")
+        if (
+            expected_paper_evidence_refs is not None
+            and capsule["paper_evidence_refs"] != expected_paper_evidence_refs
+        ):
+            raise ValueError("Paper continuation release capsule EvidenceRefs drifted")
+        if (
+            expected_candidate_interfaces is not None
+            and capsule["candidate_interfaces"] != expected_candidate_interfaces
+        ):
+            raise ValueError("Paper continuation release capsule interfaces drifted")
+        if capsule["candidate_interfaces_sha256"] != sha256_json(
+            capsule["candidate_interfaces"]
+        ):
+            raise ValueError("Paper continuation release interface hash drifted")
+        evidence = capsule["evidence"]
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("evidence_sha256")
+            != sha256_json(
+                {
+                    key: item
+                    for key, item in evidence.items()
+                    if key != "evidence_sha256"
+                }
+            )
+        ):
+            raise ValueError("Paper continuation release evidence hash drifted")
+        closure = capsule["target_closure"]
+        if (
+            not isinstance(closure, dict)
+            or closure.get("closure_sha256")
+            != sha256_json(
+                {
+                    key: item
+                    for key, item in closure.items()
+                    if key != "closure_sha256"
+                }
+            )
+            or closure.get("target_node_ids") != plan["target_node_ids"]
+            or closure.get("selected_reconstruction_node_ids")
+            != plan["selected_reconstruction_node_ids"]
+            or closure.get("selected_source_node_ids")
+            != plan["selected_source_node_ids"]
+            or closure.get("selected_edge_ids") != plan["selected_edge_ids"]
+        ):
+            raise ValueError("Paper continuation release target closure drifted")
+        return capsule
+
+    def require_current_release_capsule(
+        self,
+        capsule: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Recheck a sealed capsule cheaply or record one full fallback."""
+
+        try:
+            validated = self.validate_release_capsule(
+                capsule, require_current=True
+            )
+            return {
+                "mode": validated["status_proof"]["mode"],
+                "capsule_id": validated["capsule_id"],
+                "fallback_receipt": None,
+                "truth_effect": "none",
+            }
+        except (KeyError, ValueError) as current_error:
+            validated = self.validate_release_capsule(
+                capsule, require_current=False
+            )
+            plan = self.plan(validated["plan_id"])
+            fallback = self._full_validation_fallback(
+                plan=plan,
+                ref=validated["paper_continuation_ref"],
+                paper_evidence_refs=validated["paper_evidence_refs"],
+                candidate_interfaces=validated["candidate_interfaces"],
+                trigger=f"{type(current_error).__name__}: {current_error}",
+            )
+            return {
+                "mode": "full_validation_fallback",
+                "capsule_id": validated["capsule_id"],
+                "fallback_receipt": fallback,
+                "truth_effect": "none",
+            }
 
     def audit(self) -> dict[str, Any]:
         errors: list[str] = []

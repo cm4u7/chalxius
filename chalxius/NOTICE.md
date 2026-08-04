@@ -27,6 +27,15 @@ and does not change project schemas, research-runtime bytes, or Fact admission.
 The rule is prospective: work already running under 0.4.0 is not backfilled,
 reclassified, invalidated, or asked to redo work when 0.4.1 is installed.
 
+Chalxius 0.6.5, **Integrated Research Continuity**, is a prospective coordination
+release. It adds necessity/changed-surface validation scope, domain-specific
+draft continuity, paired independent adverse Research, ordinary-goal-to-root-
+Research lineage, host-controlled neutral-review submission, a bounded Paper
+continuation release capsule, revision-5 CHX repair integration, and executable
+behavior-orphan dispositions. These mechanisms preserve the existing V5 truth
+path and do not grant Paper, Evidence, Research, adverse, CHX, or release-matrix
+artifacts Fact authority. Historical contracts remain readable without backfill.
+
 The static nontruth learning-plane algorithm descends from Grill Me 0.2.0.
 Chalxius now owns that opt-in academic teaching/testing surface under the name
 Chalxius Learner. The standalone Grill Me 0.3.2-code companion, distinguished as
@@ -40,10 +49,11 @@ Exact component versions and manifest-file hashes are recorded in
 lineage only. Installation of this candidate does not migrate, select, or
 modify a research project.
 
-When a user-directed `PROJECT_BACKGROUND.md` exists, substantive V5 work and
-the V5 Reader bind its full body and hash by default as nontruth context. Its
-creation, rebuilding, or refresh still requires an explicit user instruction;
-absence never triggers automatic generation.
+When a user-directed `PROJECT_BACKGROUND.md` exists, new V5 task cards bind its
+complete exact-byte index and selected immutable chunks as nontruth context;
+legacy cards retain their frozen full-body contract and Reader keeps its
+historical projection. Creation, rebuilding, or refresh still requires an
+explicit user instruction; absence never triggers automatic generation.
 
 The optional deterministic reader export vendors Cytoscape.js 3.34.0 and 15
 selected Tabler Icons 3.45.0 SVG assets under the MIT License, plus MathJax

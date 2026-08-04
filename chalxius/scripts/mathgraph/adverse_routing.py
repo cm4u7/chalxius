@@ -5,7 +5,16 @@ from pathlib import Path
 import re
 from typing import Any
 
-from .contracts import SHA256_RE, sha256_json
+from .contracts import (
+    ASSIGNMENT_ID_RE,
+    MEMORY_ID_RE,
+    ROUND_ID_RE,
+    SHA256_RE,
+    contained_path,
+    sha256_bytes,
+    sha256_json,
+)
+from .protocol import normalize_host_task_scope_id
 
 
 ADVERSE_ROUTING_SCHEMA_VERSION = 1
@@ -23,6 +32,10 @@ ADVERSE_ROUTING_CONTRACT_REVISIONS = {
 ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS = frozenset({3, 4})
 ADVERSE_ROUTING_TRUTH_EFFECT = "none"
 ADVERSE_ROUTING_PROJECT_EFFECT = "future_exploration_routing_only"
+INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION = (
+    "chalxius-independent-adverse-pair-1"
+)
+INDEPENDENT_ADVERSE_REQUIREMENT_FIELD = "independent_adverse_required"
 MAX_TEXT_BYTES = 8 * 1024
 MAX_LIST_ITEMS = 32
 MAX_SELECTED_RULES = 24
@@ -224,6 +237,614 @@ PROGRAM_MATH_ATTACK_RULE: dict[str, Any] = {
         "Separate numerical instability from a semantic formula-to-code mismatch.",
     ],
 }
+
+
+def independent_adverse_required(entry: dict[str, Any]) -> bool:
+    """Return the exact prospective Research predicate; never infer from prose."""
+
+    metadata = entry.get("metadata", {})
+    if not isinstance(metadata, dict):
+        raise ValueError("research metadata must be an object")
+    value = metadata.get(INDEPENDENT_ADVERSE_REQUIREMENT_FIELD, False)
+    if not isinstance(value, bool):
+        raise ValueError("Research independent_adverse_required must be boolean")
+    return value
+
+
+def independent_adverse_pair_is_required(
+    entry: dict[str, Any],
+    *,
+    primary_work_mode: str,
+) -> bool:
+    """Decide only whether a second worker is needed for this primary.
+
+    A refutation-mode primary or an explicitly challenge-shaped primary already
+    occupies the adverse slot and is not duplicated.  Domain and stance do not
+    create authority here; the exact Research boolean is the only trigger.
+    """
+
+    return (
+        independent_adverse_required(entry)
+        and primary_work_mode != "refute"
+        and entry.get("kind") != "challenge"
+    )
+
+
+def _independent_context_id(
+    *,
+    round_id: str,
+    assignment_id: str,
+    role: str,
+) -> str:
+    return "hostctx-" + sha256_json(
+        {
+            "namespace": "chalxius-independent-worker-context-1",
+            "round_id": round_id,
+            "assignment_id": assignment_id,
+            "role": role,
+        }
+    )
+
+
+def build_paired_proof_philosophy_attack_handoff(
+    *,
+    research_id: str,
+    round_id: str,
+    primary_assignment_id: str,
+    adverse_assignment_id: str,
+) -> dict[str, Any]:
+    """Build one domain-neutral paired adverse allocation handoff.
+
+    The historical registry name is retained for traceability.  Applicability
+    is now the exact Research predicate, so mathematical proof targets and
+    Paper-continuation targets use the same mechanism without importing a
+    philosophy stance rule into mathematics.
+    """
+
+    if MEMORY_ID_RE.fullmatch(research_id) is None:
+        raise ValueError("independent adverse pair Research id is invalid")
+    if ROUND_ID_RE.fullmatch(round_id) is None:
+        raise ValueError("independent adverse pair round id is invalid")
+    for label, assignment_id in (
+        ("primary", primary_assignment_id),
+        ("adverse", adverse_assignment_id),
+    ):
+        if ASSIGNMENT_ID_RE.fullmatch(assignment_id) is None:
+            raise ValueError(f"independent adverse pair {label} assignment id is invalid")
+    primary_context_id = _independent_context_id(
+        round_id=round_id,
+        assignment_id=primary_assignment_id,
+        role="primary",
+    )
+    adverse_context_id = _independent_context_id(
+        round_id=round_id,
+        assignment_id=adverse_assignment_id,
+        role="paired_adverse",
+    )
+    pair_semantic = {
+        "contract_revision": INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION,
+        "research_id": research_id,
+        "primary_assignment_id": primary_assignment_id,
+        "adverse_assignment_id": adverse_assignment_id,
+        "primary_worker_id": primary_assignment_id,
+        "adverse_worker_id": adverse_assignment_id,
+        "primary_context_id": primary_context_id,
+        "adverse_context_id": adverse_context_id,
+        "adverse_work_mode": "refute",
+        "attack_rules_source": "paired_task_card.adverse_routing",
+        "context_isolation_contract": {
+            "distinct_worker_required": True,
+            "distinct_context_required": True,
+            "primary_context_inheritance_forbidden": True,
+            "cross_worker_context_sharing_forbidden": True,
+        },
+        "authority_contract": {
+            "result_plane": "Research_nontruth",
+            "route_proposal_activation": "operator_decision_only",
+            "candidate_adverse_closure": "sole_release_review_authority",
+            "second_review_authority": False,
+        },
+    }
+    pair_id = "adverse-pair-" + sha256_json(pair_semantic)
+    pair_without_hash = {**pair_semantic, "pair_id": pair_id}
+    pair = {**pair_without_hash, "pair_sha256": sha256_json(pair_without_hash)}
+
+    def binding(*, role: str) -> dict[str, Any]:
+        if role == "primary":
+            assignment_id = primary_assignment_id
+            worker_id = primary_assignment_id
+            context_id = primary_context_id
+            counterpart = adverse_assignment_id
+        else:
+            assignment_id = adverse_assignment_id
+            worker_id = adverse_assignment_id
+            context_id = adverse_context_id
+            counterpart = primary_assignment_id
+        return {
+            "contract_revision": INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION,
+            "pair_id": pair_id,
+            "pair_sha256": pair["pair_sha256"],
+            "role": role,
+            "research_id": research_id,
+            "assignment_id": assignment_id,
+            "worker_id": worker_id,
+            "worker_context_id": context_id,
+            "counterpart_assignment_id": counterpart,
+            "shared_context_forbidden": True,
+            "truth_effect": "none",
+        }
+
+    return {
+        "pair": pair,
+        "primary_binding": binding(role="primary"),
+        "adverse_binding": binding(role="paired_adverse"),
+    }
+
+
+def validate_independent_adverse_pair(
+    value: Any,
+    *,
+    primary_binding: Any | None = None,
+    adverse_binding: Any | None = None,
+) -> dict[str, Any]:
+    fields = {
+        "contract_revision",
+        "research_id",
+        "primary_assignment_id",
+        "adverse_assignment_id",
+        "primary_worker_id",
+        "adverse_worker_id",
+        "primary_context_id",
+        "adverse_context_id",
+        "adverse_work_mode",
+        "attack_rules_source",
+        "context_isolation_contract",
+        "authority_contract",
+        "pair_id",
+        "pair_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError("independent adverse pair fields are not exact")
+    semantic = {key: item for key, item in value.items() if key not in {"pair_id", "pair_sha256"}}
+    expected_id = "adverse-pair-" + sha256_json(semantic)
+    without_hash = {key: item for key, item in value.items() if key != "pair_sha256"}
+    if (
+        value["contract_revision"] != INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION
+        or value["pair_id"] != expected_id
+        or value["pair_sha256"] != sha256_json(without_hash)
+        or value["primary_worker_id"] != value["primary_assignment_id"]
+        or value["adverse_worker_id"] != value["adverse_assignment_id"]
+        or value["primary_assignment_id"] == value["adverse_assignment_id"]
+        or value["primary_context_id"] == value["adverse_context_id"]
+        or value["adverse_work_mode"] != "refute"
+        or value["attack_rules_source"] != "paired_task_card.adverse_routing"
+        or value["context_isolation_contract"]
+        != {
+            "distinct_worker_required": True,
+            "distinct_context_required": True,
+            "primary_context_inheritance_forbidden": True,
+            "cross_worker_context_sharing_forbidden": True,
+        }
+        or value["authority_contract"]
+        != {
+            "result_plane": "Research_nontruth",
+            "route_proposal_activation": "operator_decision_only",
+            "candidate_adverse_closure": "sole_release_review_authority",
+            "second_review_authority": False,
+        }
+    ):
+        raise ValueError("independent adverse pair contract is invalid")
+
+    def validate_binding(binding: Any, role: str) -> None:
+        binding_fields = {
+            "contract_revision",
+            "pair_id",
+            "pair_sha256",
+            "role",
+            "research_id",
+            "assignment_id",
+            "worker_id",
+            "worker_context_id",
+            "counterpart_assignment_id",
+            "shared_context_forbidden",
+            "truth_effect",
+        }
+        if not isinstance(binding, dict) or set(binding) != binding_fields:
+            raise ValueError("independent adverse pair binding fields are not exact")
+        primary = role == "primary"
+        expected = {
+            "contract_revision": INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION,
+            "pair_id": value["pair_id"],
+            "pair_sha256": value["pair_sha256"],
+            "role": role,
+            "research_id": value["research_id"],
+            "assignment_id": value[
+                "primary_assignment_id" if primary else "adverse_assignment_id"
+            ],
+            "worker_id": value[
+                "primary_worker_id" if primary else "adverse_worker_id"
+            ],
+            "worker_context_id": value[
+                "primary_context_id" if primary else "adverse_context_id"
+            ],
+            "counterpart_assignment_id": value[
+                "adverse_assignment_id" if primary else "primary_assignment_id"
+            ],
+            "shared_context_forbidden": True,
+            "truth_effect": "none",
+        }
+        if binding != expected:
+            raise ValueError("independent adverse pair binding drifted")
+
+    if primary_binding is not None:
+        validate_binding(primary_binding, "primary")
+    if adverse_binding is not None:
+        validate_binding(adverse_binding, "paired_adverse")
+    return value
+
+
+def validate_host_scope_attack_report(value: Any) -> dict[str, Any]:
+    """Validate the read-only, scope-complete attack-report projection."""
+
+    required = {
+        "schema_version",
+        "contract_revision",
+        "coverage_contract_revision",
+        "project_id",
+        "host_task_scope_id",
+        "generated_at",
+        "summary",
+        "rounds",
+        "assignments",
+        "cards",
+        "returns",
+        "paired_adverse_coverage",
+        "coverage_status",
+        "scope_complete",
+        "zero_attack_interpretation",
+        "dispatch_semantics",
+        "attacks",
+        "user_decision_required",
+        "allowed_user_actions",
+        "routing_change_policy",
+        "evidence_boundary",
+        "truth_effect",
+        "project_effect",
+        "report_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != required:
+        raise ValueError("host-scope attack report fields are not exact")
+    semantic = {key: item for key, item in value.items() if key != "report_sha256"}
+    if (
+        value["schema_version"] != ADVERSE_ROUTING_SCHEMA_VERSION
+        or value["contract_revision"] != ADVERSE_ROUTING_CONTRACT_REVISION
+        or value["coverage_contract_revision"]
+        != "chalxius-host-scope-attack-report-1"
+        or value["truth_effect"] != ADVERSE_ROUTING_TRUTH_EFFECT
+        or value["project_effect"] != "report_only"
+        or value["report_sha256"] != sha256_json(semantic)
+    ):
+        raise ValueError("host-scope attack report identity/hash is invalid")
+    for field in (
+        "rounds",
+        "assignments",
+        "cards",
+        "returns",
+        "paired_adverse_coverage",
+        "attacks",
+    ):
+        if not isinstance(value[field], list) or any(
+            not isinstance(item, dict) for item in value[field]
+        ):
+            raise ValueError(f"host-scope attack report {field} is invalid")
+    status = value["coverage_status"]
+    if status not in {
+        "attack-recorded",
+        "dispatched-no-surviving-attack",
+        "pending",
+        "missing-dispatch",
+        "not-required",
+    }:
+        raise ValueError("host-scope attack report coverage status is invalid")
+    if not isinstance(value["scope_complete"], bool) or value[
+        "scope_complete"
+    ] != (status not in {"pending", "missing-dispatch"}):
+        raise ValueError("host-scope attack report completion projection is invalid")
+    if value["attacks"]:
+        expected_zero = "nonzero_attack_cases_enumerated"
+    elif status == "dispatched-no-surviving-attack":
+        expected_zero = "complete_dispatch_with_zero_surviving_attack_cases"
+    elif status == "not-required":
+        expected_zero = "no_independent_adverse_dispatch_required_in_scope"
+    else:
+        expected_zero = "zero_cases_does_not_establish_completed_dispatch"
+    if value["zero_attack_interpretation"] != expected_zero:
+        raise ValueError("host-scope attack report zero interpretation is invalid")
+    summary = value.get("summary")
+    if not isinstance(summary, dict):
+        raise ValueError("host-scope attack report summary is invalid")
+    expected_counts = {
+        "round_count": len(value["rounds"]),
+        "assignment_count": len(value["assignments"]),
+        "card_count": len(value["cards"]),
+        "return_count": len(value["returns"]),
+        "paired_adverse_count": len(value["paired_adverse_coverage"]),
+        "worker_reported_success_count": len(value["attacks"]),
+        "surviving_counterexample_count": sum(
+            item.get("attack_result") == "surviving_counterexample"
+            for item in value["attacks"]
+        ),
+        "productive_challenge_count": sum(
+            item.get("attack_result") == "productive_challenge"
+            for item in value["attacks"]
+        ),
+        "pending_user_decision_count": sum(
+            item.get("proposal_status") == "pending_user_decision"
+            for item in value["attacks"]
+        ),
+        "approved_count": sum(
+            item.get("proposal_status") in {"approve", "approve_modified"}
+            for item in value["attacks"]
+        ),
+        "rejected_count": sum(
+            item.get("proposal_status") == "reject"
+            for item in value["attacks"]
+        ),
+        "missing_dispatch_count": sum(
+            item.get("coverage_status") == "missing-dispatch"
+            for item in value["paired_adverse_coverage"]
+        ),
+        "pending_dispatch_count": sum(
+            item.get("coverage_status") == "pending"
+            for item in value["paired_adverse_coverage"]
+        ),
+        "dispatched_no_surviving_attack_count": sum(
+            item.get("coverage_status")
+            == "dispatched-no-surviving-attack"
+            for item in value["paired_adverse_coverage"]
+        ),
+    }
+    if summary != expected_counts:
+        raise ValueError("host-scope attack report summary counts drifted")
+    if value["user_decision_required"] != (
+        expected_counts["pending_user_decision_count"] > 0
+    ):
+        raise ValueError("host-scope attack report decision projection is invalid")
+    scope_id = value.get("host_task_scope_id")
+    if not isinstance(scope_id, str) or not scope_id.strip():
+        raise ValueError("host-scope attack report scope id is invalid")
+    for field in (
+        "rounds",
+        "assignments",
+        "cards",
+        "returns",
+        "paired_adverse_coverage",
+        "attacks",
+    ):
+        if any(item.get("host_task_scope_id") != scope_id for item in value[field]):
+            raise ValueError("host-scope attack report contains mixed scope")
+    pair_ids = [item.get("pair_id") for item in value["paired_adverse_coverage"]]
+    if any(not isinstance(item, str) for item in pair_ids) or len(pair_ids) != len(
+        set(pair_ids)
+    ):
+        raise ValueError("host-scope attack report pair coverage is duplicated")
+    assignment_fields = {
+        "round_id",
+        "assignment_id",
+        "research_id",
+        "worker_id",
+        "worker_context_id",
+        "work_mode",
+        "assignment_role",
+        "pair_id",
+        "state",
+        "host_task_scope_id",
+    }
+    card_fields = {
+        "round_id",
+        "assignment_id",
+        "task_card_sha256",
+        "worker_id",
+        "worker_context_id",
+        "assignment_role",
+        "pair_id",
+        "host_task_scope_id",
+    }
+    return_fields = {
+        "round_id",
+        "assignment_id",
+        "state",
+        "return_present",
+        "return_sha256",
+        "receipt_id",
+        "result_research_id",
+        "host_task_scope_id",
+    }
+    pair_fields = {
+        "pair_id",
+        "round_id",
+        "research_id",
+        "primary_assignment_id",
+        "adverse_assignment_id",
+        "primary_worker_id",
+        "adverse_worker_id",
+        "primary_context_id",
+        "adverse_context_id",
+        "adverse_return_state",
+        "attack_case_ids",
+        "coverage_status",
+        "host_task_scope_id",
+    }
+    round_fields = {
+        "round_id",
+        "manifest_sha256",
+        "primary_worker_count",
+        "assignment_count",
+        "paired_adverse_count",
+        "host_task_scope_id",
+    }
+    attack_fields = {
+        "case_id",
+        "round_id",
+        "assignment_id",
+        "proposal_id",
+        "evidence_status",
+        "attack_result",
+        "worker_outcome",
+        "attack_family",
+        "target_claim",
+        "failure_mechanism",
+        "premise_witnesses",
+        "conclusion_failure_witness",
+        "reproduction_steps",
+        "success_boundary",
+        "value_effects",
+        "proposed_rule",
+        "proposal_status",
+        "decision_id",
+        "active_rule_id",
+        "host_task_scope_id",
+    }
+    if any(set(item) != round_fields for item in value["rounds"]):
+        raise ValueError("host-scope attack report round fields are not exact")
+    if any(set(item) != assignment_fields for item in value["assignments"]):
+        raise ValueError("host-scope attack report assignment fields are not exact")
+    if any(set(item) != card_fields for item in value["cards"]):
+        raise ValueError("host-scope attack report card fields are not exact")
+    if any(set(item) != return_fields for item in value["returns"]):
+        raise ValueError("host-scope attack report return fields are not exact")
+    if any(
+        set(item) != pair_fields for item in value["paired_adverse_coverage"]
+    ):
+        raise ValueError("host-scope attack report pair fields are not exact")
+    if any(set(item) != attack_fields for item in value["attacks"]):
+        raise ValueError("host-scope attack report attack fields are not exact")
+    rounds = {item["round_id"]: item for item in value["rounds"]}
+    if len(rounds) != len(value["rounds"]):
+        raise ValueError("host-scope attack report rounds are duplicated")
+    assignments = {
+        (item["round_id"], item["assignment_id"]): item
+        for item in value["assignments"]
+    }
+    cards = {
+        (item["round_id"], item["assignment_id"]): item
+        for item in value["cards"]
+    }
+    returns = {
+        (item["round_id"], item["assignment_id"]): item
+        for item in value["returns"]
+    }
+    if (
+        len(assignments) != len(value["assignments"])
+        or set(assignments) != set(cards)
+        or set(assignments) != set(returns)
+        or any(key[0] not in rounds for key in assignments)
+    ):
+        raise ValueError("host-scope attack report assignment/card/return closure drifted")
+    for round_id, round_item in rounds.items():
+        round_assignments = [
+            item for item in value["assignments"] if item["round_id"] == round_id
+        ]
+        if (
+            round_item["assignment_count"] != len(round_assignments)
+            or round_item["primary_worker_count"]
+            != sum(item["assignment_role"] == "primary" for item in round_assignments)
+            or round_item["paired_adverse_count"]
+            != sum(
+                item["assignment_role"] == "paired_adverse"
+                for item in round_assignments
+            )
+        ):
+            raise ValueError("host-scope attack report round counts drifted")
+    attack_case_ids = [item.get("case_id") for item in value["attacks"]]
+    if (
+        any(not isinstance(item, str) or not item for item in attack_case_ids)
+        or len(attack_case_ids) != len(set(attack_case_ids))
+        or any(
+            (item["round_id"], item["assignment_id"]) not in assignments
+            for item in value["attacks"]
+        )
+    ):
+        raise ValueError("host-scope attack report case closure drifted")
+    attack_case_id_set = set(attack_case_ids)
+    for pair in value["paired_adverse_coverage"]:
+        primary_key = (pair["round_id"], pair["primary_assignment_id"])
+        if primary_key not in assignments:
+            raise ValueError("host-scope attack report pair primary is missing")
+        if pair["coverage_status"] == "missing-dispatch":
+            if any(
+                pair[field] is not None
+                for field in (
+                    "adverse_assignment_id",
+                    "adverse_worker_id",
+                    "adverse_context_id",
+                )
+            ) or pair["adverse_return_state"] != "not_dispatched":
+                raise ValueError("host-scope missing-dispatch projection is invalid")
+            if pair["attack_case_ids"] != []:
+                raise ValueError("host-scope missing-dispatch case closure is invalid")
+            continue
+        adverse_key = (pair["round_id"], pair["adverse_assignment_id"])
+        adverse_assignment = assignments.get(adverse_key)
+        adverse_card = cards.get(adverse_key)
+        adverse_return = returns.get(adverse_key)
+        if adverse_assignment is None or adverse_card is None or adverse_return is None:
+            raise ValueError("host-scope attack report pair adverse assignment is missing")
+        primary_assignment = assignments[primary_key]
+        primary_card = cards[primary_key]
+        if (
+            primary_assignment["worker_id"] != pair["primary_worker_id"]
+            or adverse_assignment["worker_id"] != pair["adverse_worker_id"]
+            or primary_card["worker_context_id"] != pair["primary_context_id"]
+            or adverse_card["worker_context_id"] != pair["adverse_context_id"]
+            or pair["primary_worker_id"] == pair["adverse_worker_id"]
+            or pair["primary_context_id"] == pair["adverse_context_id"]
+            or adverse_assignment["assignment_role"] != "paired_adverse"
+            or adverse_assignment["work_mode"] != "refute"
+            or adverse_return["state"] != pair["adverse_return_state"]
+        ):
+            raise ValueError("host-scope attack report pair binding drifted")
+        case_ids = pair["attack_case_ids"]
+        expected_case_ids = {
+            item["case_id"]
+            for item in value["attacks"]
+            if item["round_id"] == pair["round_id"]
+            and item["assignment_id"] == pair["adverse_assignment_id"]
+        }
+        if (
+            not isinstance(case_ids, list)
+            or any(not isinstance(item, str) for item in case_ids)
+            or len(case_ids) != len(set(case_ids))
+            or set(case_ids) != expected_case_ids
+            or not set(case_ids).issubset(attack_case_id_set)
+        ):
+            raise ValueError("host-scope attack report pair case closure drifted")
+        expected_pair_status = (
+            "attack-recorded"
+            if adverse_return["state"] == "ingested" and case_ids
+            else "dispatched-no-surviving-attack"
+            if adverse_return["state"] == "ingested"
+            else "pending"
+        )
+        if pair["coverage_status"] != expected_pair_status:
+            raise ValueError("host-scope attack report pair status drifted")
+    pair_statuses = {
+        item["coverage_status"] for item in value["paired_adverse_coverage"]
+    }
+    expected_status = (
+        "missing-dispatch"
+        if not value["rounds"] or "missing-dispatch" in pair_statuses
+        else "pending"
+        if "pending" in pair_statuses
+        else "attack-recorded"
+        if value["attacks"]
+        else "dispatched-no-surviving-attack"
+        if value["paired_adverse_coverage"]
+        else "not-required"
+    )
+    if value["coverage_status"] != expected_status:
+        raise ValueError("host-scope attack report aggregate coverage drifted")
+    return value
 
 
 def _utc_now() -> str:
@@ -1248,6 +1869,7 @@ class AdverseRoutingManager:
         work_mode: str,
         related_artifacts: list[dict[str, str]] | None = None,
         entry: dict[str, Any] | None = None,
+        _stored_rules: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         self.require_enabled()
         legacy_required = {
@@ -1389,7 +2011,14 @@ class AdverseRoutingManager:
             raise ValueError("adverse-routing approved rules are invalid")
         if value["approved_rules_sha256"] != sha256_json(approved):
             raise ValueError("adverse-routing approved-rule hash mismatch")
-        stored = {record["rule_id"]: self._rule_projection(record) for record in self.rules()}
+        stored = (
+            _stored_rules
+            if _stored_rules is not None
+            else {
+                record["rule_id"]: self._rule_projection(record)
+                for record in self.rules()
+            }
+        )
         if any(not isinstance(item, dict) or stored.get(item.get("rule_id")) != item for item in approved):
             raise ValueError("adverse-routing task card names an unapproved or drifted rule")
         expected_learning = (
@@ -1730,7 +2359,17 @@ class AdverseRoutingManager:
 
     def report(self, *, host_task_scope_id: str) -> dict[str, Any]:
         self.require_enabled()
-        scope_id = _require_text(host_task_scope_id, "attack report host task scope id")
+        requested_scope = _require_text(
+            host_task_scope_id, "attack report host task scope id"
+        )
+        normalized_scope = normalize_host_task_scope_id(
+            requested_scope,
+            workflow_evidence_version=self.store.workflow_evidence_version(),
+        )
+        if normalized_scope is None:
+            raise RuntimeError("attack report host scope normalization returned null")
+        scope_id = normalized_scope
+        accepted_scope_ids = {requested_scope, scope_id}
         state = self._validated_state()
         decisions = {item["proposal_id"]: item for item in state["decisions"]}
         rules_by_decision = {
@@ -1738,10 +2377,321 @@ class AdverseRoutingManager:
         }
         disabled = {item["rule_id"] for item in state["disablements"]}
         proposals_by_case = {item["case_id"]: item for item in state["proposals"]}
-        items: list[dict[str, Any]] = []
+        selected_cases = [
+            case
+            for case in state["cases"]
+            if case["host_task_scope_id"] in accepted_scope_ids
+        ]
+        cases_by_assignment: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for case in state["cases"]:
-            if case["host_task_scope_id"] != scope_id:
-                continue
+            cases_by_assignment.setdefault(
+                (case["round_id"], case["assignment_id"]), []
+            ).append(case)
+
+        lifecycle = self.store.v5_lifecycle()
+        round_items: list[dict[str, Any]] = []
+        assignment_items: list[dict[str, Any]] = []
+        card_items: list[dict[str, Any]] = []
+        return_items: list[dict[str, Any]] = []
+        pair_items: list[dict[str, Any]] = []
+        included_assignments: set[tuple[str, str]] = set()
+        quarantines_by_round: dict[str, dict[str, dict[str, Any]]] = {}
+        for item in lifecycle._quarantine_records():
+            round_id = item.get("round_id")
+            assignment_id = item.get("assignment_id")
+            if isinstance(round_id, str) and isinstance(assignment_id, str):
+                quarantines_by_round.setdefault(round_id, {})[
+                    assignment_id
+                ] = item
+        if self.store.rounds_dir.exists():
+            for round_path in sorted(self.store.rounds_dir.glob("round-*")):
+                manifest_path = round_path / "round.json"
+                if manifest_path.is_symlink() or not manifest_path.is_file():
+                    continue
+                raw_manifest = self.store._read_json(manifest_path)
+                if not isinstance(raw_manifest, dict) or raw_manifest.get(
+                    "schema_version"
+                ) != 5:
+                    continue
+                manifest_scope = raw_manifest.get("host_task_scope_id")
+                current_markers = {
+                    "assignment_contract_revision",
+                    "primary_worker_count",
+                    "independent_adverse_pairs",
+                }.intersection(raw_manifest)
+                if manifest_scope is not None:
+                    if manifest_scope not in accepted_scope_ids:
+                        continue
+                elif current_markers:
+                    # A current manifest may never make its scope unknowable.
+                    lifecycle._round_manifest(round_path.name)
+                    raise ValueError("current V5 round manifest host scope is missing")
+                else:
+                    # Historical null-scope cards remain readable but cannot be
+                    # silently attributed to a new host task.  A historical
+                    # non-null unanimous card scope remains reportable.
+                    legacy_scopes: set[str | None] = set()
+                    for assignment in raw_manifest.get("assignments", []):
+                        if not isinstance(assignment, dict):
+                            continue
+                        relpath = assignment.get("task_card_relpath")
+                        if not isinstance(relpath, str):
+                            continue
+                        card_path = contained_path(
+                            self.store.root,
+                            relpath,
+                            "legacy attack-report task card path",
+                        )
+                        if card_path.is_symlink() or not card_path.is_file():
+                            continue
+                        card = self.store._read_json(card_path)
+                        control = card.get("control_plane", {})
+                        legacy_scopes.add(control.get("host_task_scope_id"))
+                    matching = legacy_scopes.intersection(accepted_scope_ids)
+                    if not matching:
+                        continue
+                    if None in legacy_scopes or len(legacy_scopes) != 1:
+                        raise ValueError(
+                            "host-scope attack report found mixed or missing card scope"
+                        )
+                round_dir, manifest = lifecycle._round_manifest(round_path.name)
+                effective_scope = manifest.get("host_task_scope_id")
+                if effective_scope is None:
+                    effective_scope = next(
+                        iter(
+                            {
+                                lifecycle.store._read_json(
+                                    lifecycle.store.root
+                                    / assignment["task_card_relpath"]
+                                )["control_plane"].get("host_task_scope_id")
+                                for assignment in manifest["assignments"]
+                            }
+                        )
+                    )
+                if effective_scope not in accepted_scope_ids:
+                    raise ValueError("host-scope attack report round scope drifted")
+                abort = self.store.reasoning_modes().work_unit_abort(
+                    manifest["round_id"]
+                )
+                quarantined = quarantines_by_round.get(manifest["round_id"], {})
+                status_by_assignment: dict[str, str] = {}
+                card_by_assignment: dict[str, dict[str, Any]] = {}
+                assignment_by_id = {
+                    item["assignment_id"]: item for item in manifest["assignments"]
+                }
+                for assignment in manifest["assignments"]:
+                    assignment_id = assignment["assignment_id"]
+                    included_assignments.add((manifest["round_id"], assignment_id))
+                    assignment_cases = cases_by_assignment.get(
+                        (manifest["round_id"], assignment_id), []
+                    )
+                    if any(
+                        item["host_task_scope_id"] not in accepted_scope_ids
+                        for item in assignment_cases
+                    ):
+                        raise ValueError(
+                            "attack case carries a mixed host task scope"
+                        )
+                    card_path = self.store.root / assignment["task_card_relpath"]
+                    card = self.store._read_json(card_path)
+                    card_by_assignment[assignment_id] = card
+                    control = card["control_plane"]
+                    card_scope = control.get("host_task_scope_id")
+                    if card_scope not in accepted_scope_ids:
+                        raise ValueError(
+                            "host-scope attack report found mixed or missing card scope"
+                        )
+                    role = control.get("assignment_role", "primary")
+                    pair_binding = control.get("independent_adverse_pair")
+                    receipt_path = (
+                        round_dir / "returns" / f"{assignment_id}.receipt.json"
+                    )
+                    return_path = self.store.root / assignment["return_relpath"]
+                    receipt = None
+                    if receipt_path.exists():
+                        receipt = lifecycle._validated_ingest_receipt(
+                            round_dir=round_dir,
+                            assignment=assignment,
+                        )
+                        assignment_state = "ingested"
+                    elif assignment_id in quarantined:
+                        assignment_state = "quarantined"
+                    elif abort is not None:
+                        assignment_state = "frozen_aborted"
+                    elif return_path.exists():
+                        assignment_state = "return_present"
+                    else:
+                        assignment_state = "awaiting_return"
+                    status_by_assignment[assignment_id] = assignment_state
+                    assignment_items.append(
+                        {
+                            "round_id": manifest["round_id"],
+                            "assignment_id": assignment_id,
+                            "research_id": assignment["research_id"],
+                            "worker_id": assignment["worker_id"],
+                            "worker_context_id": control.get("worker_context_id"),
+                            "work_mode": assignment["work_mode"],
+                            "assignment_role": role,
+                            "pair_id": (
+                                pair_binding.get("pair_id")
+                                if isinstance(pair_binding, dict)
+                                else None
+                            ),
+                            "state": assignment_state,
+                            "host_task_scope_id": scope_id,
+                        }
+                    )
+                    card_items.append(
+                        {
+                            "round_id": manifest["round_id"],
+                            "assignment_id": assignment_id,
+                            "task_card_sha256": assignment["task_card_sha256"],
+                            "worker_id": card["worker_id"],
+                            "worker_context_id": control.get("worker_context_id"),
+                            "assignment_role": role,
+                            "pair_id": (
+                                pair_binding.get("pair_id")
+                                if isinstance(pair_binding, dict)
+                                else None
+                            ),
+                            "host_task_scope_id": scope_id,
+                        }
+                    )
+                    return_items.append(
+                        {
+                            "round_id": manifest["round_id"],
+                            "assignment_id": assignment_id,
+                            "state": assignment_state,
+                            "return_present": return_path.is_file()
+                            and not return_path.is_symlink(),
+                            "return_sha256": (
+                                sha256_bytes(return_path.read_bytes())
+                                if return_path.is_file()
+                                and not return_path.is_symlink()
+                                else None
+                            ),
+                            "receipt_id": (
+                                receipt.get("receipt_id")
+                                if isinstance(receipt, dict)
+                                else None
+                            ),
+                            "result_research_id": (
+                                receipt.get("research_id")
+                                if isinstance(receipt, dict)
+                                else None
+                            ),
+                            "host_task_scope_id": scope_id,
+                        }
+                    )
+                pairs = manifest.get("independent_adverse_pairs", [])
+                for pair in pairs:
+                    adverse_id = pair["adverse_assignment_id"]
+                    assignment_cases = cases_by_assignment.get(
+                        (manifest["round_id"], adverse_id), []
+                    )
+                    if any(
+                        item["host_task_scope_id"] not in accepted_scope_ids
+                        for item in assignment_cases
+                    ):
+                        raise ValueError(
+                            "paired adverse case carries a mixed host task scope"
+                        )
+                    case_ids = sorted(item["case_id"] for item in assignment_cases)
+                    adverse_state = status_by_assignment[adverse_id]
+                    if adverse_state == "ingested":
+                        pair_status = (
+                            "attack-recorded"
+                            if case_ids
+                            else "dispatched-no-surviving-attack"
+                        )
+                    else:
+                        pair_status = "pending"
+                    pair_items.append(
+                        {
+                            "pair_id": pair["pair_id"],
+                            "round_id": manifest["round_id"],
+                            "research_id": pair["research_id"],
+                            "primary_assignment_id": pair[
+                                "primary_assignment_id"
+                            ],
+                            "adverse_assignment_id": adverse_id,
+                            "primary_worker_id": pair["primary_worker_id"],
+                            "adverse_worker_id": pair["adverse_worker_id"],
+                            "primary_context_id": pair["primary_context_id"],
+                            "adverse_context_id": pair["adverse_context_id"],
+                            "adverse_return_state": adverse_state,
+                            "attack_case_ids": case_ids,
+                            "coverage_status": pair_status,
+                            "host_task_scope_id": scope_id,
+                        }
+                    )
+                paired_primary_ids = {
+                    item["primary_assignment_id"] for item in pairs
+                }
+                for assignment in manifest["assignments"]:
+                    card = card_by_assignment[assignment["assignment_id"]]
+                    role = card["control_plane"].get(
+                        "assignment_role", "primary"
+                    )
+                    if role != "primary":
+                        continue
+                    source = lifecycle._research_record(assignment["research_id"])
+                    if (
+                        independent_adverse_pair_is_required(
+                            source,
+                            primary_work_mode=assignment["work_mode"],
+                        )
+                        and assignment["assignment_id"] not in paired_primary_ids
+                    ):
+                        pair_items.append(
+                            {
+                                "pair_id": "missing-pair-"
+                                + sha256_json(
+                                    {
+                                        "round_id": manifest["round_id"],
+                                        "assignment_id": assignment[
+                                            "assignment_id"
+                                        ],
+                                    }
+                                ),
+                                "round_id": manifest["round_id"],
+                                "research_id": assignment["research_id"],
+                                "primary_assignment_id": assignment[
+                                    "assignment_id"
+                                ],
+                                "adverse_assignment_id": None,
+                                "primary_worker_id": assignment["worker_id"],
+                                "adverse_worker_id": None,
+                                "primary_context_id": card["control_plane"].get(
+                                    "worker_context_id"
+                                ),
+                                "adverse_context_id": None,
+                                "adverse_return_state": "not_dispatched",
+                                "attack_case_ids": [],
+                                "coverage_status": "missing-dispatch",
+                                "host_task_scope_id": scope_id,
+                            }
+                        )
+                round_items.append(
+                    {
+                        "round_id": manifest["round_id"],
+                        "manifest_sha256": manifest["manifest_sha256"],
+                        "primary_worker_count": manifest.get(
+                            "primary_worker_count",
+                            len(manifest["assignments"]),
+                        ),
+                        "assignment_count": len(manifest["assignments"]),
+                        "paired_adverse_count": len(pairs),
+                        "host_task_scope_id": scope_id,
+                    }
+                )
+
+        items: list[dict[str, Any]] = []
+        for case in selected_cases:
+            if (case["round_id"], case["assignment_id"]) not in included_assignments:
+                raise ValueError(
+                    "attack case scope has no matching validated round assignment"
+                )
             proposal = proposals_by_case[case["case_id"]]
             decision = decisions.get(proposal["proposal_id"])
             rule = rules_by_decision.get(decision["decision_id"]) if decision else None
@@ -1752,6 +2702,8 @@ class AdverseRoutingManager:
             items.append(
                 {
                     "case_id": case["case_id"],
+                    "round_id": case["round_id"],
+                    "assignment_id": case["assignment_id"],
                     "proposal_id": proposal["proposal_id"],
                     "evidence_status": case["evidence_status"],
                     "attack_result": case.get(
@@ -1778,6 +2730,7 @@ class AdverseRoutingManager:
                         if rule is not None and rule["rule_id"] not in disabled
                         else None
                     ),
+                    "host_task_scope_id": scope_id,
                 }
             )
         items.sort(key=lambda item: item["case_id"])
@@ -1786,26 +2739,83 @@ class AdverseRoutingManager:
             item["proposal_status"] in {"approve", "approve_modified"} for item in items
         )
         rejected = sum(item["proposal_status"] == "reject" for item in items)
-        return {
+        pair_statuses = {item["coverage_status"] for item in pair_items}
+        if not round_items or "missing-dispatch" in pair_statuses:
+            coverage_status = "missing-dispatch"
+        elif "pending" in pair_statuses:
+            coverage_status = "pending"
+        elif items:
+            coverage_status = "attack-recorded"
+        elif pair_items:
+            coverage_status = "dispatched-no-surviving-attack"
+        else:
+            coverage_status = "not-required"
+        if items:
+            zero_interpretation = "nonzero_attack_cases_enumerated"
+        elif coverage_status == "dispatched-no-surviving-attack":
+            zero_interpretation = (
+                "complete_dispatch_with_zero_surviving_attack_cases"
+            )
+        elif coverage_status == "not-required":
+            zero_interpretation = (
+                "no_independent_adverse_dispatch_required_in_scope"
+            )
+        else:
+            zero_interpretation = (
+                "zero_cases_does_not_establish_completed_dispatch"
+            )
+        summary = {
+            "round_count": len(round_items),
+            "assignment_count": len(assignment_items),
+            "card_count": len(card_items),
+            "return_count": len(return_items),
+            "paired_adverse_count": len(pair_items),
+            "worker_reported_success_count": len(items),
+            "surviving_counterexample_count": sum(
+                item["attack_result"] == "surviving_counterexample"
+                for item in items
+            ),
+            "productive_challenge_count": sum(
+                item["attack_result"] == "productive_challenge"
+                for item in items
+            ),
+            "pending_user_decision_count": pending,
+            "approved_count": approved,
+            "rejected_count": rejected,
+            "missing_dispatch_count": sum(
+                item["coverage_status"] == "missing-dispatch"
+                for item in pair_items
+            ),
+            "pending_dispatch_count": sum(
+                item["coverage_status"] == "pending" for item in pair_items
+            ),
+            "dispatched_no_surviving_attack_count": sum(
+                item["coverage_status"] == "dispatched-no-surviving-attack"
+                for item in pair_items
+            ),
+        }
+        report_semantic = {
             "schema_version": ADVERSE_ROUTING_SCHEMA_VERSION,
             "contract_revision": ADVERSE_ROUTING_CONTRACT_REVISION,
+            "coverage_contract_revision": "chalxius-host-scope-attack-report-1",
             "project_id": self.store.project_id(),
             "host_task_scope_id": scope_id,
             "generated_at": _utc_now(),
-            "summary": {
-                "worker_reported_success_count": len(items),
-                "surviving_counterexample_count": sum(
-                    item["attack_result"] == "surviving_counterexample"
-                    for item in items
-                ),
-                "productive_challenge_count": sum(
-                    item["attack_result"] == "productive_challenge"
-                    for item in items
-                ),
-                "pending_user_decision_count": pending,
-                "approved_count": approved,
-                "rejected_count": rejected,
-            },
+            "summary": summary,
+            "rounds": round_items,
+            "assignments": assignment_items,
+            "cards": card_items,
+            "returns": return_items,
+            "paired_adverse_coverage": pair_items,
+            "coverage_status": coverage_status,
+            "scope_complete": coverage_status
+            not in {"pending", "missing-dispatch"},
+            "zero_attack_interpretation": zero_interpretation,
+            "dispatch_semantics": (
+                "dispatch means one immutable assignment plus task card; actual host "
+                "process isolation remains a Host attestation, while distinct worker "
+                "and context ids are mandatory frozen contracts"
+            ),
             "attacks": items,
             "user_decision_required": pending > 0,
             "allowed_user_actions": ["approve", "approve_modified", "reject"],
@@ -1818,6 +2828,11 @@ class AdverseRoutingManager:
             "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
             "project_effect": "report_only",
         }
+        report = {
+            **report_semantic,
+            "report_sha256": sha256_json(report_semantic),
+        }
+        return validate_host_scope_attack_report(report)
 
     def status(self) -> dict[str, Any]:
         if not self.enabled():

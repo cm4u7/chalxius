@@ -6,9 +6,10 @@
 2. [Prospective activation](#prospective-activation)
 3. [Case-to-rule lifecycle](#case-to-rule-lifecycle)
 4. [Worker return contract](#worker-return-contract)
-5. [Attack report and user decision](#attack-report-and-user-decision)
-6. [Future task-card routing](#future-task-card-routing)
-7. [Compatibility and recovery](#compatibility-and-recovery)
+5. [Independent paired allocation](#independent-paired-allocation)
+6. [Attack report and user decision](#attack-report-and-user-decision)
+7. [Future task-card routing](#future-task-card-routing)
+8. [Compatibility and recovery](#compatibility-and-recovery)
 
 ## Purpose and authority boundary
 
@@ -199,6 +200,28 @@ from the explicit `logic_signals` list in Research metadata. A universal rule
 must set `universal_refute=true` and leave every filter list empty. Workers may
 propose universal rules, but they never activate them.
 
+## Independent paired allocation
+
+Adverse rules on a possible future `refute` card are not proof that an adverse
+worker was allocated. For current V5 Research, allocation uses only the exact
+boolean metadata predicate `independent_adverse_required`; claim text and
+domain labels cannot infer it. Every Paper-continuation target sets the
+predicate because every selected target is load-bearing. A mathematical proof
+target may set the same boolean without importing a philosophical stance.
+
+`plan-round --workers N` selects exactly `N` primaries. For each applicable
+primary that is not already `refute` and is not itself a `challenge`, the round
+adds one extra `refute` assignment. The immutable pair record binds the same
+source Research, different assignment/worker ids, different context ids, the
+ordinary frozen attack rules, and a prohibition on primary-context inheritance
+or cross-worker context sharing. Philosophy or mixed domain still controls
+only the three philosophy attack families; stance preservation remains a
+separate Paper/research-target contract.
+
+The pair creates no second review authority. A return enters cumulative
+Research, route activation still requires an Operator decision, and the normal
+Candidate adverse closure/disposition remains the sole release gate.
+
 ## Attack report and user decision
 
 At host-task completion, query the exact task scope and present the result to
@@ -211,12 +234,24 @@ the user even when it contains zero attacks:
 
 Report separately:
 
+- every validated scope round, assignment, task card, return/receipt state, and
+  paired adverse coverage record;
+- coverage as `missing-dispatch`, `pending`,
+  `dispatched-no-surviving-attack`, `attack-recorded`, or `not-required`;
 - each case id, result kind, family, target, mechanism, witnesses,
   reproduction steps, exact success boundary, and concrete value effects;
 - the proposed trigger, instruction, guards, and scope;
 - its status: pending, approved, modified-and-approved, rejected, or disabled;
 - the explicit evidence boundary that the case is worker-reported nontruth;
 - whether a user decision is pending.
+
+An empty `attacks` array is never self-interpreting. It establishes a completed
+zero only with `coverage_status=dispatched-no-surviving-attack` and complete
+paired return coverage, or records that no independent pair was required.
+Missing assignment/card dispatch and pending or quarantined returns remain
+explicitly incomplete. A mixed or missing current scope, pair mismatch, or
+card/manifest/return drift fails closed. Historical null-scope cards stay
+readable and are not assigned to a newer scope.
 
 The user chooses one of three exact actions. `approve` copies the proposal and
 requires `rule=null`. `approve_modified` supplies a complete replacement rule.

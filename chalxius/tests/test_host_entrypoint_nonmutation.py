@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import hashlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -90,6 +91,40 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
             (root / "unexpected.txt").write_text("drift\n", encoding="utf-8")
             self.assertFalse(
                 aggressive_bug_audit_module._candidate_is_unchanged(before, root)
+            )
+
+    def test_mutant_runtime_is_complete_canonical_and_manifest_rebound(self) -> None:
+        candidate = SOURCE_SCRIPTS.parent
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = aggressive_bug_audit_module._copy_complete_runtime(
+                candidate_root=candidate,
+                parent=Path(temporary),
+            )
+            self.assertEqual(runtime.name, "chalxius")
+            target = runtime / "scripts" / "mathgraph" / "roles.py"
+            target.write_text(
+                target.read_text(encoding="utf-8") + "\n# deliberate test mutation\n",
+                encoding="utf-8",
+            )
+            manifest_sha256 = (
+                aggressive_bug_audit_module._rebind_mutant_manifest(
+                    runtime_root=runtime,
+                    target=target,
+                )
+            )
+            manifest = runtime / "MANIFEST.sha256"
+            self.assertEqual(
+                manifest_sha256,
+                hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            )
+            row = next(
+                line
+                for line in manifest.read_text(encoding="utf-8").splitlines()
+                if line.endswith("  scripts/mathgraph/roles.py")
+            )
+            self.assertEqual(
+                row.split("  ", 1)[0],
+                hashlib.sha256(target.read_bytes()).hexdigest(),
             )
 
     def test_default_python_entrypoints_do_not_create_bytecode(self) -> None:

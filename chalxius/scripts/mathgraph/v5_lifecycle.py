@@ -13,6 +13,7 @@ from .contracts import (
     ACTIVE_MEMORY_STATUSES,
     CLAIM_RELATIONS,
     FACT_ID_RE,
+    HOST_TASK_SCOPE_ID_RE,
     MEMORY_KINDS,
     MEMORY_ID_RE,
     MEMORY_STATUSES,
@@ -44,9 +45,18 @@ from .decision_preflight import V5_FINDING_CLASSES, validate_decision_against_ca
 from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
 from .graph import DependencyGraph
+from .goal_intake import (
+    build_goal_intake_research_binding,
+    validate_goal_intake_research_binding,
+)
 from .proof_lineage import validate_successor_contracts
+from .paper_continuation import (
+    prepare_candidate_continuation_release_capsule,
+    validate_candidate_continuation_release_capsule,
+)
 from .research_draft_preflight import (
     ASSURANCE_REVISION as RESEARCH_DRAFT_ASSURANCE_REVISION,
+    LEGACY_ASSURANCE_REVISION as LEGACY_RESEARCH_DRAFT_ASSURANCE_REVISION,
     PAPER_TRANSPORT_REVISION,
     PREFLIGHT_REVISION as RESEARCH_DRAFT_PREFLIGHT_REVISION,
     research_draft_admission_preflight,
@@ -81,12 +91,18 @@ from .interfaces import (
 from .markdown import parse_fact_markdown, validate_fact_round_trip
 from .model import Fact
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
+from .neutral_review_submission import NEUTRAL_REVIEW_SUBMISSION_REVISION
 from .adverse_routing import (
     ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS,
     PRODUCTIVE_ATTACK_OUTCOMES,
+    build_paired_proof_philosophy_attack_handoff,
+    independent_adverse_pair_is_required,
+    independent_adverse_required,
+    validate_independent_adverse_pair,
     validate_adverse_domain_profile,
     validate_attack_learning,
 )
+from .protocol import normalize_host_task_scope_id
 from .v5_assurance import (
     V5_ASSURANCE_CONTRACT_REVISION,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
@@ -105,6 +121,10 @@ from .runtime_archive import (
 V5_WORKFLOW_EVIDENCE_VERSION = 5
 V5_POLICY_REVISION = "chalxius-v5-minimal-core-2"
 V5_FACT_EVIDENCE_AUDIT_REVISION = "chalxius-v5-fact-evidence-audit-1"
+V5_CERTIFICATION_REPAIR_OUTBOX_REVISION = (
+    "chalxius-v5-certification-repair-outbox-1"
+)
+V5_CERTIFICATION_REPAIR_ACTOR = "certification-gateway"
 V5_LIFECYCLE_CONTRACT: dict[str, Any] = {
     "schema_version": 1,
     "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -330,6 +350,73 @@ V5_LEGACY_TRUTH_WRITER_COMMANDS = frozenset(
 
 
 @dataclass(slots=True)
+class RoundInspectionContext:
+    """Ephemeral caches for one exact all-round read phase.
+
+    This is deliberately neither persisted nor authoritative.  It only keeps
+    repeated validation work inside one command from reconstructing the same
+    immutable project-wide inputs once per task card or round.
+    """
+
+    owner_project_root: str = ""
+    runtime_validation_cache: set[tuple[bool, str]] = field(default_factory=set)
+    paper_logic_cache: dict[tuple[Any, ...], Any] = field(default_factory=dict)
+    paper_logic_store: Any | None = None
+    paper_continuation_manager: Any | None = None
+    release_records: dict[tuple[str, bool, bool], dict[str, Any]] = field(
+        default_factory=dict
+    )
+    verifier_capsules: dict[str, dict[str, Any]] = field(default_factory=dict)
+    decision_records: dict[tuple[str, bool], dict[str, Any]] = field(
+        default_factory=dict
+    )
+    admission_records: dict[
+        tuple[str, bool],
+        tuple[dict[str, Any], dict[str, Path]],
+    ] = field(default_factory=dict)
+    lineage_snapshots: dict[
+        tuple[str, tuple[str, ...]],
+        tuple[dict[str, Fact], dict[str, Path]],
+    ] = field(default_factory=dict)
+    research_records: dict[str, dict[str, Any]] = field(default_factory=dict)
+    all_research_records: list[dict[str, Any]] | None = None
+    paper_continuation_scopes: dict[str, dict[str, Any] | None] = field(
+        default_factory=dict
+    )
+    paper_continuation_plans: dict[str, dict[str, Any]] = field(
+        default_factory=dict
+    )
+    authority_snapshots: dict[tuple[str, str], dict[str, Any]] = field(
+        default_factory=dict
+    )
+    active_fact_paths: dict[str, Path] | None = None
+    active_facts: dict[str, Fact] | None = None
+    revoked_fact_ids: set[str] | None = None
+    quarantine_records: list[dict[str, Any]] | None = None
+    adverse_cases: dict[str, dict[str, Any]] | None = None
+    adverse_proposals: dict[str, dict[str, Any]] | None = None
+    adverse_rules: dict[str, dict[str, Any]] | None = None
+    campaign_statuses: dict[str, dict[str, Any]] = field(default_factory=dict)
+    campaign_scopes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    round_completed: dict[str, bool] = field(default_factory=dict)
+    round_aborts: dict[str, dict[str, Any] | None] = field(default_factory=dict)
+    round_statuses: dict[str, dict[str, Any]] = field(default_factory=dict)
+    round_manifests: dict[str, tuple[Path, dict[str, Any]]] = field(
+        default_factory=dict
+    )
+
+    def bind_project(self, root: Path | str) -> None:
+        canonical = str(Path(root).resolve())
+        if not self.owner_project_root:
+            self.owner_project_root = canonical
+            return
+        if self.owner_project_root != canonical:
+            raise ValueError(
+                "V5 inspection context belongs to a different project root"
+            )
+
+
+@dataclass(slots=True)
 class V5AuditReport:
     facts: int = 0
     edges: int = 0
@@ -343,6 +430,7 @@ class V5AuditReport:
     candidate_releases: int = 0
     certification_decisions: int = 0
     quarantined_contributions: int = 0
+    round_states: dict[str, str] = field(default_factory=dict)
     graph_errors: list[str] = field(default_factory=list)
     workflow_errors: list[str] = field(default_factory=list)
     blackboard_graph_errors: list[str] = field(default_factory=list)
@@ -396,6 +484,7 @@ class V5AuditReport:
             "candidate_releases": self.candidate_releases,
             "certification_decisions": self.certification_decisions,
             "quarantined_contributions": self.quarantined_contributions,
+            "round_states": dict(sorted(self.round_states.items())),
             "graph_errors": self.graph_errors,
             "workflow_errors": self.workflow_errors,
             "current_workflow_errors": self.workflow_errors,
@@ -429,6 +518,15 @@ class V5AuditReport:
         }
 
 
+def _is_research_draft_assurance_revision(value: Any) -> bool:
+    """Recognize exact historical/current strict-draft assurance revisions."""
+
+    return value in {
+        LEGACY_RESEARCH_DRAFT_ASSURANCE_REVISION,
+        RESEARCH_DRAFT_ASSURANCE_REVISION,
+    }
+
+
 class V5LifecycleManager:
     """Own the V5 authority boundary without importing a retired runtime."""
 
@@ -448,12 +546,31 @@ class V5LifecycleManager:
         self.certification_decisions_dir = (
             store.root / "certification" / "decisions" / "by-id"
         )
+        self.certification_repair_outbox_dir = (
+            store.root / "certification" / "repair-outbox" / "by-decision"
+        )
+        self.certification_repair_effects_dir = (
+            store.root / "certification" / "repair-effects" / "by-decision"
+        )
         self.admissions_dir = (
             store.fact_graph_dir / "v5_admissions" / "by-release"
         )
         self.revocations_dir = (
             store.fact_graph_dir / "v5_revocations" / "by-fact"
         )
+
+    def _bind_inspection_context(
+        self,
+        context: RoundInspectionContext | None,
+        *,
+        create: bool = False,
+    ) -> RoundInspectionContext | None:
+        if context is None:
+            if not create:
+                return None
+            context = RoundInspectionContext()
+        context.bind_project(self.store.root)
+        return context
 
     def initialize(self) -> None:
         for path in (
@@ -463,6 +580,8 @@ class V5LifecycleManager:
             self.candidate_releases_dir,
             self.candidate_artifacts_dir,
             self.certification_decisions_dir,
+            self.certification_repair_outbox_dir,
+            self.certification_repair_effects_dir,
             self.admissions_dir,
             self.revocations_dir,
         ):
@@ -476,10 +595,39 @@ class V5LifecycleManager:
         self.research_draft().initialize()
         self.parallel_verification().initialize()
 
-    def paper_continuation(self) -> Any:
+    def _inspection_paper_logic(
+        self,
+        context: RoundInspectionContext | None,
+    ) -> Any:
+        context = self._bind_inspection_context(context)
+        if context is None:
+            return self.store.paper_logic()
+        if context.paper_logic_store is None:
+            context.paper_logic_store = self.store.paper_logic(
+                _inspection_cache=context.paper_logic_cache
+            )
+        return context.paper_logic_store
+
+    def paper_continuation(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> Any:
         from .paper_continuation import PaperContinuationManager
 
-        return PaperContinuationManager(self)
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if _inspection_context is None:
+            return PaperContinuationManager(self)
+        if _inspection_context.paper_continuation_manager is None:
+            _inspection_context.paper_continuation_manager = (
+                PaperContinuationManager(
+                    self,
+                    _inspection_context=_inspection_context,
+                )
+            )
+        return _inspection_context.paper_continuation_manager
 
     def research_draft(self) -> Any:
         from .research_draft import ResearchDraftManager
@@ -569,8 +717,20 @@ class V5LifecycleManager:
         if not isinstance(record.get("metadata"), dict):
             raise ValueError("research metadata must be an object")
         metadata = record["metadata"]
+        goal_binding = metadata.get("goal_intake_binding")
+        if goal_binding is not None:
+            goal_binding = validate_goal_intake_research_binding(goal_binding)
+            if metadata.get("campaign_id") != goal_binding["campaign_id"]:
+                raise ValueError("Research goal-intake/Campaign binding drifted")
+            current_goal_binding = build_goal_intake_research_binding(
+                self.store,
+                goal_binding["intake_token"],
+            )
+            if current_goal_binding != goal_binding:
+                raise ValueError("Research goal-intake terminal lineage drifted")
         _research_decision_profile(metadata)
         validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
+        independent_adverse_required(record)
         self._research_is_adverse_assignment(record)
         if "workload_profile" in metadata:
             validate_workload_profile(metadata["workload_profile"])
@@ -767,6 +927,7 @@ class V5LifecycleManager:
         *,
         actor: str,
         task_binding: dict[str, str] | None = None,
+        goal_intake_token: str | None = None,
         assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
@@ -831,8 +992,27 @@ class V5LifecycleManager:
         metadata = {
             key: value for key, value in payload.items() if key not in reserved
         }
+        if "goal_intake_binding" in metadata or "goal_intake_token" in metadata:
+            raise ValueError(
+                "goal-intake lineage is host-bound; do not inject it through Research payload metadata"
+            )
+        if goal_intake_token is not None:
+            binding = build_goal_intake_research_binding(
+                self.store,
+                goal_intake_token,
+            )
+            binding = validate_goal_intake_research_binding(binding)
+            explicit_campaign = metadata.get("campaign_id")
+            if explicit_campaign is not None and explicit_campaign != binding["campaign_id"]:
+                raise ValueError(
+                    "Research Campaign metadata conflicts with the committed goal intake"
+                )
+            self.store.campaigns().status(binding["campaign_id"])
+            metadata["campaign_id"] = binding["campaign_id"]
+            metadata["goal_intake_binding"] = binding
         decision_profile = _research_decision_profile(metadata)
         validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
+        independent_adverse_required({"metadata": metadata})
         if "decision_profile" in metadata:
             metadata["decision_profile"] = decision_profile
             metadata["score_model"] = COMPACT_SCORE_MODEL
@@ -976,6 +1156,14 @@ class V5LifecycleManager:
                 existing = self._research_record(research_id)
                 if existing["semantic_sha256"] != semantic_sha:
                     raise ValueError(f"research id collision at {path}")
+                # The immutable Research object is published before the
+                # derived Paper-continuation status update.  A process stop in
+                # that narrow interval must be recoverable by retrying the
+                # same write command; ordinary status/read paths never invoke
+                # this reconciliation.
+                self.paper_continuation()._status_index.reconcile_research(
+                    existing
+                )
                 return existing
             continuation = self.paper_continuation()
             prepared_status_index = continuation._status_index.prepare_research(
@@ -1057,6 +1245,7 @@ class V5LifecycleManager:
                 "obligations",
                 "stop_conditions",
                 "goal_relation",
+                "independent_adverse_required",
             )
             if key in source["metadata"]
         }
@@ -1107,15 +1296,33 @@ class V5LifecycleManager:
             ),
         }
 
-    def research_records(self) -> list[dict[str, Any]]:
+    def research_records(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if (
+            _inspection_context is not None
+            and _inspection_context.all_research_records is not None
+        ):
+            return _inspection_context.all_research_records
         records: list[dict[str, Any]] = []
         if not self.research_entries_dir.exists():
             return records
         for path in sorted(self.research_entries_dir.glob("*.json")):
             if path.is_symlink() or not path.is_file():
                 raise ValueError("research ledger contains an unsafe entry")
-            record = self.store._read_json(path)
-            records.append(self._validate_research_record(record, path=path))
+            records.append(
+                self._inspection_research_record(
+                    path.stem,
+                    _inspection_context,
+                )
+            )
+        if _inspection_context is not None:
+            _inspection_context.all_research_records = records
         return records
 
     def novelty_record(
@@ -1254,12 +1461,26 @@ class V5LifecycleManager:
             and event.get("subject_id") == subject_id
         ]
 
-    def _audit_novelty(self) -> list[str]:
+    def _audit_novelty(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[str]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         errors: list[str] = []
         events = self.store._read_jsonl(self.store.novelty_log)
-        known_facts = set(self.store.fact_ids()).union(self.revoked_fact_ids())
+        known_facts = set(
+            self.store.fact_ids(_inspection_context=_inspection_context)
+        ).union(
+            self.revoked_fact_ids(_inspection_context=_inspection_context)
+        )
         known_research = {
-            record["research_id"] for record in self.research_records()
+            record["research_id"]
+            for record in self.research_records(
+                _inspection_context=_inspection_context
+            )
         }
         for index, event in enumerate(events, 1):
             try:
@@ -1632,7 +1853,19 @@ class V5LifecycleManager:
         scope: Any,
         *,
         round_id: str,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if (
+            _inspection_context is not None
+            and round_id in _inspection_context.campaign_scopes
+        ):
+            cached = _inspection_context.campaign_scopes[round_id]
+            if scope != cached:
+                raise ValueError("V5 Campaign scope changed within one inspection")
+            return cached
         if not isinstance(scope, dict):
             raise ValueError("V5 Campaign scope must be one object")
         expected_fields = {
@@ -1686,9 +1919,17 @@ class V5LifecycleManager:
         )
         if scope != expected_scope:
             raise ValueError("V5 Campaign scope drifted from its frozen snapshot")
-        current = self.store.campaigns().status(campaign_id)
+        if _inspection_context is None:
+            current = self.store.campaigns().status(campaign_id)
+        else:
+            current = _inspection_context.campaign_statuses.get(campaign_id)
+            if current is None:
+                current = self.store.campaigns().status(campaign_id)
+                _inspection_context.campaign_statuses[campaign_id] = current
         if current.get("event_count", 0) < scope["event_count"]:
             raise ValueError("V5 Campaign history was truncated after round freeze")
+        if _inspection_context is not None:
+            _inspection_context.campaign_scopes[round_id] = scope
         return scope
 
     def frontier(
@@ -1697,7 +1938,11 @@ class V5LifecycleManager:
         limit: int = 10,
         include_history: bool = False,
         campaign_id: str | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, Any]]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         if limit < 1:
             raise ValueError("frontier limit must be positive")
         if campaign_id is not None:
@@ -1705,7 +1950,9 @@ class V5LifecycleManager:
             self.store.campaigns().status(campaign_id)
         bases: dict[str, dict[str, Any]] = {}
         dispositions: dict[str, dict[str, Any]] = {}
-        for record in self.research_records():
+        for record in self.research_records(
+            _inspection_context=_inspection_context
+        ):
             if record["kind"] == "disposition":
                 target_id = record["metadata"].get("target_research_id")
                 if isinstance(target_id, str):
@@ -1715,7 +1962,11 @@ class V5LifecycleManager:
                 continue
             bases[record["research_id"]] = record
         route_staleness = self._route_staleness(bases)
-        active_fact_ids = set(self.store.fact_ids())
+        active_fact_ids = set(
+            self.store.fact_ids(
+                _inspection_context=_inspection_context
+            )
+        )
         visible: list[dict[str, Any]] = []
         for research_id, record in bases.items():
             if (
@@ -2324,11 +2575,46 @@ class V5LifecycleManager:
             )
         return dossier
 
+    def _inspection_research_record(
+        self,
+        research_id: str,
+        context: RoundInspectionContext | None,
+    ) -> dict[str, Any]:
+        context = self._bind_inspection_context(context)
+        if context is None:
+            return self._research_record(research_id)
+        cached = context.research_records.get(research_id)
+        if cached is None:
+            cached = self._research_record(research_id)
+            context.research_records[research_id] = cached
+        return cached
+
+    def _inspection_paper_continuation_scope(
+        self,
+        record: dict[str, Any],
+        context: RoundInspectionContext | None,
+    ) -> dict[str, Any] | None:
+        context = self._bind_inspection_context(context)
+        if context is None:
+            return self.paper_continuation().scope_for_research(record)
+        research_id = record["research_id"]
+        if research_id not in context.paper_continuation_scopes:
+            context.paper_continuation_scopes[research_id] = (
+                self.paper_continuation(
+                    _inspection_context=context
+                ).scope_for_research(
+                    record,
+                    _plan_cache=context.paper_continuation_plans,
+                )
+            )
+        return context.paper_continuation_scopes[research_id]
+
     def _task_authority_snapshot(
         self,
         record: dict[str, Any],
         *,
         contract_revision: str = V5_TASK_CONTEXT_REVISION,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Bind only task-referenced V5 authority and exact read capabilities.
 
@@ -2338,6 +2624,16 @@ class V5LifecycleManager:
         explicit Fact references, while an attack receives the exact
         Release/Decision/Admission bundle named in frozen Research metadata.
         """
+
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        cache_key = (record["research_id"], contract_revision)
+        if (
+            _inspection_context is not None
+            and cache_key in _inspection_context.authority_snapshots
+        ):
+            return _inspection_context.authority_snapshots[cache_key]
 
         metadata = record["metadata"]
         related_fact_id = metadata.get("related_fact_id")
@@ -2360,11 +2656,33 @@ class V5LifecycleManager:
         if attack_present and related_fact_id is None:
             raise ValueError("Research attack target requires related_fact_id")
 
-        active_paths = self.active_fact_paths()
-        revoked_fact_ids = self.revoked_fact_ids()
         referenced_fact_ids = set(record["dependencies"])
         if related_fact_id is not None:
             referenced_fact_ids.add(related_fact_id)
+
+        # Empty task authority is a complete, canonical projection.  Derive
+        # applicability before opening the active-Fact lineage so a card that
+        # references no Fact cannot recursively reconstruct every admission,
+        # Candidate Release, and Paper closure merely to prove that it sees
+        # nothing.  Every nonempty reference retains the complete fail-closed
+        # authority path below.
+        if not referenced_fact_ids:
+            active_paths: dict[str, Path] = {}
+            revoked_fact_ids: set[str] = set()
+        elif _inspection_context is None:
+            active_paths = self.active_fact_paths()
+            revoked_fact_ids = self.revoked_fact_ids()
+        else:
+            if _inspection_context.active_fact_paths is None:
+                _inspection_context.active_fact_paths = self.active_fact_paths(
+                    _inspection_context=_inspection_context
+                )
+            if _inspection_context.revoked_fact_ids is None:
+                _inspection_context.revoked_fact_ids = self.revoked_fact_ids(
+                    _inspection_context=_inspection_context
+                )
+            active_paths = _inspection_context.active_fact_paths
+            revoked_fact_ids = _inspection_context.revoked_fact_ids
 
         capabilities: list[dict[str, str]] = []
 
@@ -2390,8 +2708,14 @@ class V5LifecycleManager:
             decision_id = attack_values["attack_target_decision_id"]
             if not isinstance(release_id, str) or not isinstance(decision_id, str):
                 raise ValueError("Research attack target ids must be strings")
-            release = self.release(release_id)
-            decision = self.decision(decision_id)
+            release = self.release(
+                release_id,
+                _inspection_context=_inspection_context,
+            )
+            decision = self.decision(
+                decision_id,
+                _inspection_context=_inspection_context,
+            )
             if (
                 decision["release_id"] != release_id
                 or decision["release_sha256"] != release["release_sha256"]
@@ -2433,7 +2757,10 @@ class V5LifecycleManager:
             marker: dict[str, Any] | None = None
             admitted_paths: dict[str, Path] = {}
             if marker_path.is_symlink() or marker_path.exists():
-                marker, admitted_paths = self._validated_admission(release_id)
+                marker, admitted_paths = self._validated_admission(
+                    release_id,
+                    _inspection_context=_inspection_context,
+                )
                 if marker["decision_id"] != decision_id:
                     raise ValueError(
                         "Research attack target admission used a different Decision"
@@ -2484,6 +2811,7 @@ class V5LifecycleManager:
                 statement_interface = self.store.statement_interface(
                     fact_id,
                     materialize=False,
+                    _inspection_context=_inspection_context,
                 )
             elif fact_id in revoked_fact_ids:
                 fact_sha = candidate_sha256.get(fact_id)
@@ -2523,7 +2851,10 @@ class V5LifecycleManager:
             "attack_target": attack_target,
             "capabilities": capabilities,
         }
-        return {**semantic, "snapshot_sha256": sha256_json(semantic)}
+        snapshot = {**semantic, "snapshot_sha256": sha256_json(semantic)}
+        if _inspection_context is not None:
+            _inspection_context.authority_snapshots[cache_key] = snapshot
+        return snapshot
 
     def _validate_context_selection(
         self,
@@ -2735,7 +3066,11 @@ class V5LifecycleManager:
         expected_path: Path | None = None,
         historical_runtime: bool = False,
         _runtime_validation_cache: set[tuple[bool, str]] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         if not isinstance(card, dict):
             raise ValueError("V5 task card must be one object")
         required = {
@@ -2790,9 +3125,14 @@ class V5LifecycleManager:
                 historical_runtime,
                 normalized_runtime["runtime_identity_sha256"],
             )
+            runtime_validation_cache = (
+                _inspection_context.runtime_validation_cache
+                if _inspection_context is not None
+                else _runtime_validation_cache
+            )
             if (
-                _runtime_validation_cache is None
-                or runtime_cache_key not in _runtime_validation_cache
+                runtime_validation_cache is None
+                or runtime_cache_key not in runtime_validation_cache
             ):
                 self._validate_bound_runtime_binding(
                     normalized_runtime,
@@ -2803,8 +3143,8 @@ class V5LifecycleManager:
                     and normalized_runtime != self._runtime_binding()
                 ):
                     raise ValueError("V5 task-card Chalxius runtime binding drifted")
-                if _runtime_validation_cache is not None:
-                    _runtime_validation_cache.add(runtime_cache_key)
+                if runtime_validation_cache is not None:
+                    runtime_validation_cache.add(runtime_cache_key)
         round_id = validate_round_id(
             _require_nonempty_text(card.get("round_id"), "task-card round id")
         )
@@ -2836,7 +3176,12 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 task card campaign id is invalid")
         if card.get("campaign_id") is not None:
-            self.store.campaigns().status(card["campaign_id"])
+            if _inspection_context is None:
+                self.store.campaigns().status(card["campaign_id"])
+            elif card["campaign_id"] not in _inspection_context.campaign_statuses:
+                _inspection_context.campaign_statuses[card["campaign_id"]] = (
+                    self.store.campaigns().status(card["campaign_id"])
+                )
         if "campaign_scope" in card:
             if card.get("campaign_id") is None:
                 raise ValueError(
@@ -2845,6 +3190,7 @@ class V5LifecycleManager:
             scope = self._validate_campaign_scope_binding(
                 card["campaign_scope"],
                 round_id=round_id,
+                _inspection_context=_inspection_context,
             )
             if scope["campaign_id"] != card["campaign_id"]:
                 raise ValueError("V5 task-card Campaign scope/id mismatch")
@@ -2893,14 +3239,95 @@ class V5LifecycleManager:
             }
             if set(item) != expected_fields:
                 raise ValueError("V5 task card research_context fields are not exact")
-            related = self._research_record(item["research_id"])
+            related = self._inspection_research_record(
+                item["research_id"], _inspection_context
+            )
             expected = {key: related[key] for key in expected_fields}
             if item != expected:
                 raise ValueError("V5 task card research_context bytes/hash mismatch")
             context_ids.append(item["research_id"])
-        source_research = self._research_record(card["research_id"])
-        expected_paper_scope = self.paper_continuation().scope_for_research(
-            source_research
+        source_research = self._inspection_research_record(
+            card["research_id"], _inspection_context
+        )
+        control = card["control_plane"]
+        if "assignment_role" in control:
+            expected_control_fields = {
+                "plane",
+                "prompt_relpath",
+                "allowed_followups",
+                "final_handoff_fields",
+                "host_task_scope_id",
+                "worker_context_id",
+                "assignment_role",
+                "independent_adverse_pair",
+            }
+            if set(control) != expected_control_fields:
+                raise ValueError(
+                    "current V5 control-plane allocation fields are not exact"
+                )
+            host_scope = control.get("host_task_scope_id")
+            if (
+                not isinstance(host_scope, str)
+                or HOST_TASK_SCOPE_ID_RE.fullmatch(host_scope) is None
+            ):
+                raise ValueError("current V5 task card host scope is invalid")
+            worker_context_id = _require_nonempty_text(
+                control.get("worker_context_id"), "V5 worker context id"
+            )
+            assignment_role = control.get("assignment_role")
+            if assignment_role not in {"primary", "paired_adverse"}:
+                raise ValueError("V5 assignment role is invalid")
+            pair_binding = control.get("independent_adverse_pair")
+            if pair_binding is None:
+                if assignment_role != "primary":
+                    raise ValueError(
+                        "paired adverse assignment lacks its immutable pair binding"
+                    )
+                expected_context_id = "hostctx-" + sha256_json(
+                    {
+                        "namespace": "chalxius-v5-worker-context-1",
+                        "round_id": round_id,
+                        "assignment_id": assignment_id,
+                    }
+                )
+                if worker_context_id != expected_context_id:
+                    raise ValueError("V5 primary worker context id drifted")
+            else:
+                if not isinstance(pair_binding, dict):
+                    raise ValueError("independent adverse pair binding is invalid")
+                counterpart = pair_binding.get("counterpart_assignment_id")
+                if assignment_role == "primary":
+                    primary_assignment_id = assignment_id
+                    adverse_assignment_id = counterpart
+                    binding_key = "primary_binding"
+                else:
+                    primary_assignment_id = counterpart
+                    adverse_assignment_id = assignment_id
+                    binding_key = "adverse_binding"
+                handoff = build_paired_proof_philosophy_attack_handoff(
+                    research_id=card["research_id"],
+                    round_id=round_id,
+                    primary_assignment_id=primary_assignment_id,
+                    adverse_assignment_id=adverse_assignment_id,
+                )
+                validate_independent_adverse_pair(
+                    handoff["pair"],
+                    primary_binding=handoff["primary_binding"],
+                    adverse_binding=handoff["adverse_binding"],
+                )
+                if pair_binding != handoff[binding_key]:
+                    raise ValueError("independent adverse pair binding drifted")
+                if worker_context_id != pair_binding["worker_context_id"]:
+                    raise ValueError("independent adverse worker context drifted")
+                if assignment_role == "paired_adverse" and (
+                    card["work_mode"] != "refute" or "adverse_routing" not in card
+                ):
+                    raise ValueError(
+                        "paired adverse card must be a rule-bound refute assignment"
+                    )
+        expected_paper_scope = self._inspection_paper_continuation_scope(
+            source_research,
+            _inspection_context,
         )
         if card.get("paper_continuation_scope") != expected_paper_scope:
             raise ValueError(
@@ -2930,6 +3357,7 @@ class V5LifecycleManager:
             if authority_snapshot != self._task_authority_snapshot(
                 source_research,
                 contract_revision=task_context_revision,
+                _inspection_context=_inspection_context,
             ):
                 raise ValueError(
                     "V5 task-card authority snapshot is stale or incomplete"
@@ -3040,6 +3468,15 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 task card obligations must be objects")
         if "adverse_routing" in card:
+            if (
+                _inspection_context is not None
+                and _inspection_context.adverse_rules is None
+            ):
+                routes = self.store.adverse_routes()
+                _inspection_context.adverse_rules = {
+                    record["rule_id"]: routes._rule_projection(record)
+                    for record in routes.rules()
+                }
             self.store.adverse_routes().validate_task_card_binding(
                 card["adverse_routing"],
                 work_mode=card["work_mode"],
@@ -3047,6 +3484,11 @@ class V5LifecycleManager:
                     "related_artifacts", []
                 ),
                 entry=source_research,
+                _stored_rules=(
+                    _inspection_context.adverse_rules
+                    if _inspection_context is not None
+                    else None
+                ),
             )
         _require_string_list(card.get("stop_conditions"), "task-card stop conditions")
         semantic = {
@@ -3079,6 +3521,26 @@ class V5LifecycleManager:
                 "`attack_learning=null`. A proposal never changes routing without a later "
                 "user/operator decision.\n\n"
             )
+        pair_note = ""
+        pair_binding = card.get("control_plane", {}).get(
+            "independent_adverse_pair"
+        )
+        if pair_binding is not None:
+            if pair_binding["role"] == "paired_adverse":
+                pair_note = (
+                    "This is the independently paired adverse assignment for the exact "
+                    "source Research. Use the distinct worker_context_id frozen in the "
+                    "card. Do not receive, reuse, summarize, or share the primary worker's "
+                    "context. Attack with the frozen adverse_routing rules; the return is "
+                    "nontruth Research and the existing Candidate adverse closure remains "
+                    "the sole release-review authority.\n\n"
+                )
+            else:
+                pair_note = (
+                    "A distinct adverse worker and context are paired with this primary. "
+                    "Do not share active context with that worker; both returns enter "
+                    "Research independently.\n\n"
+                )
         assurance_note = ""
         if "assurance_contract" in card:
             assurance_note = (
@@ -3156,6 +3618,7 @@ class V5LifecycleManager:
             f"and pass `--task-card {self._task_card_path(card['round_id'], card['assignment_id'])}`; "
             "runtime mismatch must fail before the ledger is created.\n\n"
             f"Research claim: {card['narrative_plane']['claim']}\n\n"
+            f"{pair_note}"
             f"{adverse_note}"
             f"{assurance_note}"
             f"{campaign_note}"
@@ -3179,10 +3642,10 @@ class V5LifecycleManager:
             raise ValueError("workers must be positive")
         if mode != "auto" and mode not in WORK_MODES:
             raise ValueError(f"unsupported work mode: {mode}")
-        if host_task_scope_id is not None:
-            host_task_scope_id = _require_nonempty_text(
-                host_task_scope_id, "host task scope id"
-            )
+        host_task_scope_id = normalize_host_task_scope_id(
+            host_task_scope_id,
+            workflow_evidence_version=5,
+        )
         if campaign_id is not None:
             campaign_id = validate_campaign_id(campaign_id)
             # Read-only preflight keeps unknown, malformed, or currently invalid
@@ -3231,6 +3694,19 @@ class V5LifecycleManager:
                 f"requested {workers} workers but only {len(selected)} active "
                 f"V5 Research entries{scope_note} are available"
             )
+        host_task_scope_id = normalize_host_task_scope_id(
+            host_task_scope_id,
+            workflow_evidence_version=5,
+            project_id=self.store.project_id(),
+            local_seed={
+                "research_ids": [item["research_id"] for item in selected],
+                "requested_mode": mode,
+                "campaign_id": campaign_id,
+                "background_chunk_ids": selected_background_chunks,
+            },
+        )
+        if host_task_scope_id is None:
+            raise RuntimeError("V5 local host task scope allocation returned null")
 
         with self.store.v5_mutation_lock(command="plan-round"):
             planned_runtime_binding = validate_runtime_binding(
@@ -3325,6 +3801,75 @@ class V5LifecycleManager:
                 f"{sha256_json([[item['research_id'] for item in selected], time.time_ns()])[:8]}"
             )
             validate_round_id(round_id)
+            primary_specs: list[dict[str, Any]] = []
+            paired_specs: list[dict[str, Any]] = []
+            pair_records: list[dict[str, Any]] = []
+            pair_candidates: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+            for index, entry in enumerate(selected, 1):
+                primary_mode_selection = mode_selections[entry["research_id"]]
+                primary_mode = primary_mode_selection["selected_mode"]
+                primary_assignment_id = (
+                    f"a{index:02d}-{entry['research_id']}-{primary_mode}"
+                )
+                validate_assignment_id(primary_assignment_id)
+                primary_spec = {
+                    "entry": entry,
+                    "mode_selection": primary_mode_selection,
+                    "work_mode": primary_mode,
+                    "assignment_id": primary_assignment_id,
+                    "assignment_role": "primary",
+                    "pair_binding": None,
+                }
+                primary_specs.append(primary_spec)
+                if independent_adverse_pair_is_required(
+                    entry,
+                    primary_work_mode=primary_mode,
+                ):
+                    pair_candidates.append(
+                        (entry, primary_spec, primary_assignment_id)
+                    )
+            if len(primary_specs) + len(pair_candidates) > 99:
+                raise ValueError(
+                    "V5 primary plus paired adverse assignments exceed the two-digit "
+                    "assignment-id capacity"
+                )
+            for pair_index, (
+                entry,
+                primary_spec,
+                primary_assignment_id,
+            ) in enumerate(pair_candidates, len(primary_specs) + 1):
+                adverse_assignment_id = (
+                    f"a{pair_index:02d}-{entry['research_id']}-refute"
+                )
+                validate_assignment_id(adverse_assignment_id)
+                handoff = build_paired_proof_philosophy_attack_handoff(
+                    research_id=entry["research_id"],
+                    round_id=round_id,
+                    primary_assignment_id=primary_assignment_id,
+                    adverse_assignment_id=adverse_assignment_id,
+                )
+                validate_independent_adverse_pair(
+                    handoff["pair"],
+                    primary_binding=handoff["primary_binding"],
+                    adverse_binding=handoff["adverse_binding"],
+                )
+                primary_spec["pair_binding"] = handoff["primary_binding"]
+                pair_records.append(handoff["pair"])
+                paired_specs.append(
+                    {
+                        "entry": entry,
+                        "mode_selection": self._mode_selection(
+                            entry,
+                            requested_mode="refute",
+                            index=pair_index - 1,
+                        ),
+                        "work_mode": "refute",
+                        "assignment_id": adverse_assignment_id,
+                        "assignment_role": "paired_adverse",
+                        "pair_binding": handoff["adverse_binding"],
+                    }
+                )
+            work_specs = [*primary_specs, *paired_specs]
             campaign_scope: dict[str, Any] | None = None
             campaign_snapshot_relpath: str | None = None
             if campaign_snapshot is not None and campaign_snapshot_raw is not None:
@@ -3390,11 +3935,25 @@ class V5LifecycleManager:
                 if node.get("node_type") == "space"
             )[:1]
             assignments: list[dict[str, Any]] = []
-            for index, entry in enumerate(selected, 1):
-                mode_selection = mode_selections[entry["research_id"]]
-                work_mode = mode_selection["selected_mode"]
-                assignment_id = f"a{index:02d}-{entry['research_id']}-{work_mode}"
-                validate_assignment_id(assignment_id)
+            for work_spec in work_specs:
+                entry = work_spec["entry"]
+                mode_selection = work_spec["mode_selection"]
+                work_mode = work_spec["work_mode"]
+                assignment_id = work_spec["assignment_id"]
+                assignment_role = work_spec["assignment_role"]
+                pair_binding = work_spec["pair_binding"]
+                worker_context_id = (
+                    pair_binding["worker_context_id"]
+                    if pair_binding is not None
+                    else "hostctx-"
+                    + sha256_json(
+                        {
+                            "namespace": "chalxius-v5-worker-context-1",
+                            "round_id": round_id,
+                            "assignment_id": assignment_id,
+                        }
+                    )
+                )
                 prompt_relpath = f"rounds/{round_id}/assignments/{assignment_id}.md"
                 task_card_relpath = f"rounds/{round_id}/task-cards/{assignment_id}.json"
                 return_relpath = f"rounds/{round_id}/returns/{assignment_id}.json"
@@ -3568,6 +4127,9 @@ class V5LifecycleManager:
                             "status",
                         ],
                         "host_task_scope_id": host_task_scope_id,
+                        "worker_context_id": worker_context_id,
+                        "assignment_role": assignment_role,
+                        "independent_adverse_pair": pair_binding,
                     },
                     "mathematical_state": {
                         "plane": "mathematical_state",
@@ -3662,6 +4224,10 @@ class V5LifecycleManager:
                     "work_dir_relpath": work_dir_relpath,
                     "blackboard_snapshot_id": snapshot["snapshot_id"],
                     "blackboard_snapshot_sha256": snapshot["snapshot_sha256"],
+                    "host_task_scope_id": host_task_scope_id,
+                    "worker_context_id": worker_context_id,
+                    "assignment_role": assignment_role,
+                    "independent_adverse_pair": pair_binding,
                 }
                 assignment = {
                     **assignment_semantic,
@@ -3681,6 +4247,12 @@ class V5LifecycleManager:
                 "blackboard_snapshot_sha256": snapshot["snapshot_sha256"],
                 "reasoning_mode_binding": reasoning_binding,
                 "contribution_policy": "independent_ingest_local_quarantine",
+                "assignment_contract_revision": (
+                    "chalxius-v5-independent-adverse-allocation-1"
+                ),
+                "host_task_scope_id": host_task_scope_id,
+                "primary_worker_count": workers,
+                "independent_adverse_pairs": pair_records,
                 "assignments": assignments,
             }
             if campaign_scope is not None:
@@ -3692,8 +4264,21 @@ class V5LifecycleManager:
             self.store._write_json_once(round_dir / "round.json", manifest)
         return self.round_status(round_id)
 
-    def _round_manifest(self, round_id: str) -> tuple[Path, dict[str, Any]]:
+    def _round_manifest(
+        self,
+        round_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> tuple[Path, dict[str, Any]]:
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         round_id = validate_round_id(round_id)
+        cached = inspection.round_manifests.get(round_id)
+        if cached is not None:
+            return cached
         round_dir = self.store.rounds_dir / round_id
         path = round_dir / "round.json"
         if path.is_symlink() or not path.is_file():
@@ -3714,6 +4299,14 @@ class V5LifecycleManager:
         }
         if "campaign_scope" in manifest:
             required.add("campaign_scope")
+        current_allocation_fields = {
+            "assignment_contract_revision",
+            "host_task_scope_id",
+            "primary_worker_count",
+            "independent_adverse_pairs",
+        }
+        if set(manifest).intersection(current_allocation_fields):
+            required.update(current_allocation_fields)
         if set(manifest) != required:
             raise ValueError("V5 round manifest fields are not exact")
         if (
@@ -3737,11 +4330,37 @@ class V5LifecycleManager:
             campaign_scope = self._validate_campaign_scope_binding(
                 campaign_scope,
                 round_id=round_id,
+                _inspection_context=inspection,
             )
         abort = self.store.reasoning_modes().work_unit_abort(round_id)
         assignments = manifest.get("assignments")
         if not isinstance(assignments, list) or not assignments:
             raise ValueError("V5 round assignments must be nonempty")
+        current_allocation = "assignment_contract_revision" in manifest
+        pair_records: list[dict[str, Any]] = []
+        if current_allocation:
+            if (
+                manifest["assignment_contract_revision"]
+                != "chalxius-v5-independent-adverse-allocation-1"
+                or not isinstance(manifest["host_task_scope_id"], str)
+                or HOST_TASK_SCOPE_ID_RE.fullmatch(
+                    manifest["host_task_scope_id"]
+                )
+                is None
+                or isinstance(manifest["primary_worker_count"], bool)
+                or not isinstance(manifest["primary_worker_count"], int)
+                or manifest["primary_worker_count"] < 1
+                or manifest["primary_worker_count"] > len(assignments)
+                or not isinstance(manifest["independent_adverse_pairs"], list)
+            ):
+                raise ValueError("V5 round adverse-allocation contract is invalid")
+            seen_pair_ids: set[str] = set()
+            for pair in manifest["independent_adverse_pairs"]:
+                validated_pair = validate_independent_adverse_pair(pair)
+                if validated_pair["pair_id"] in seen_pair_ids:
+                    raise ValueError("V5 round duplicates an independent adverse pair")
+                seen_pair_ids.add(validated_pair["pair_id"])
+                pair_records.append(validated_pair)
         seen: set[str] = set()
         frozen_cards: list[tuple[Path, dict[str, Any]]] = []
         for assignment in assignments:
@@ -3755,6 +4374,40 @@ class V5LifecycleManager:
             if assignment_id in seen:
                 raise ValueError("V5 round assignment ids must be unique")
             seen.add(assignment_id)
+            if current_allocation:
+                assignment_fields = {
+                    "assignment_id",
+                    "research_id",
+                    "worker_id",
+                    "work_mode",
+                    "prompt_relpath",
+                    "prompt_sha256",
+                    "task_card_relpath",
+                    "task_card_sha256",
+                    "return_relpath",
+                    "artifact_dir_relpath",
+                    "work_dir_relpath",
+                    "blackboard_snapshot_id",
+                    "blackboard_snapshot_sha256",
+                    "host_task_scope_id",
+                    "worker_context_id",
+                    "assignment_role",
+                    "independent_adverse_pair",
+                    "assignment_sha256",
+                }
+                if set(assignment) != assignment_fields:
+                    raise ValueError(
+                        "current V5 assignment allocation fields are not exact"
+                    )
+                if (
+                    assignment["host_task_scope_id"]
+                    != manifest["host_task_scope_id"]
+                    or assignment["assignment_role"]
+                    not in {"primary", "paired_adverse"}
+                    or not isinstance(assignment["worker_context_id"], str)
+                    or not assignment["worker_context_id"].strip()
+                ):
+                    raise ValueError("V5 assignment host/context/role binding is invalid")
             assignment_semantic = {
                 key: value
                 for key, value in assignment.items()
@@ -3783,7 +4436,23 @@ class V5LifecycleManager:
                 != assignment["task_card_sha256"]
             ):
                 raise ValueError("V5 task card bytes/hash mismatch")
-            frozen_cards.append((card_path, self.store._read_json(card_path)))
+            frozen_card = self.store._read_json(card_path)
+            if current_allocation:
+                control = frozen_card.get("control_plane", {})
+                if (
+                    control.get("host_task_scope_id")
+                    != assignment["host_task_scope_id"]
+                    or control.get("worker_context_id")
+                    != assignment["worker_context_id"]
+                    or control.get("assignment_role")
+                    != assignment["assignment_role"]
+                    or control.get("independent_adverse_pair")
+                    != assignment["independent_adverse_pair"]
+                ):
+                    raise ValueError(
+                        "V5 assignment/task-card adverse allocation projections disagree"
+                    )
+            frozen_cards.append((card_path, frozen_card))
             prompt_path = contained_path(
                 self.store.root,
                 assignment["prompt_relpath"],
@@ -3796,14 +4465,81 @@ class V5LifecycleManager:
                 != assignment["prompt_sha256"]
             ):
                 raise ValueError("V5 prompt bytes/hash mismatch")
-        completed = self._round_is_completed(round_dir, manifest)
-        runtime_validation_cache: set[tuple[bool, str]] = set()
+        if current_allocation:
+            assignment_by_id = {
+                item["assignment_id"]: item for item in assignments
+            }
+            card_by_assignment = {
+                card["assignment_id"]: card for _, card in frozen_cards
+            }
+            primary_assignments = [
+                item for item in assignments if item["assignment_role"] == "primary"
+            ]
+            paired_assignments = [
+                item
+                for item in assignments
+                if item["assignment_role"] == "paired_adverse"
+            ]
+            if len(primary_assignments) != manifest["primary_worker_count"]:
+                raise ValueError("V5 workers count must count primary assignments only")
+            if len(paired_assignments) != len(pair_records):
+                raise ValueError("V5 paired adverse assignment count drifted")
+            pair_by_id = {item["pair_id"]: item for item in pair_records}
+            for pair in pair_records:
+                primary_assignment = assignment_by_id.get(
+                    pair["primary_assignment_id"]
+                )
+                adverse_assignment = assignment_by_id.get(
+                    pair["adverse_assignment_id"]
+                )
+                if primary_assignment is None or adverse_assignment is None:
+                    raise ValueError("V5 independent adverse pair assignment is missing")
+                validate_independent_adverse_pair(
+                    pair,
+                    primary_binding=primary_assignment[
+                        "independent_adverse_pair"
+                    ],
+                    adverse_binding=adverse_assignment[
+                        "independent_adverse_pair"
+                    ],
+                )
+                if (
+                    primary_assignment["assignment_role"] != "primary"
+                    or adverse_assignment["assignment_role"] != "paired_adverse"
+                    or primary_assignment["research_id"] != pair["research_id"]
+                    or adverse_assignment["research_id"] != pair["research_id"]
+                    or adverse_assignment["work_mode"] != "refute"
+                ):
+                    raise ValueError("V5 independent adverse pair role/mode drifted")
+            for primary_assignment in primary_assignments:
+                card = card_by_assignment[primary_assignment["assignment_id"]]
+                source = self._inspection_research_record(
+                    primary_assignment["research_id"], inspection
+                )
+                required_pair = independent_adverse_pair_is_required(
+                    source,
+                    primary_work_mode=primary_assignment["work_mode"],
+                )
+                binding = primary_assignment["independent_adverse_pair"]
+                if required_pair != (binding is not None):
+                    raise ValueError(
+                        "V5 required independent adverse dispatch is missing or spurious"
+                    )
+                if binding is not None and binding["pair_id"] not in pair_by_id:
+                    raise ValueError("V5 primary names an unknown adverse pair")
+                if card["control_plane"]["independent_adverse_pair"] != binding:
+                    raise ValueError("V5 primary pair card binding drifted")
+        completed = self._round_is_completed(
+            round_dir,
+            manifest,
+            _inspection_context=inspection,
+        )
         for card_path, card in frozen_cards:
             self.validate_task_card(
                 card,
                 expected_path=card_path,
                 historical_runtime=abort is not None or completed,
-                _runtime_validation_cache=runtime_validation_cache,
+                _inspection_context=inspection,
             )
             if card.get("campaign_scope") != campaign_scope:
                 raise ValueError(
@@ -3821,13 +4557,18 @@ class V5LifecycleManager:
             != manifest["blackboard_snapshot_sha256"]
         ):
             raise ValueError("V5 round Blackboard snapshot bytes/hash mismatch")
-        return round_dir, manifest
+        inspection.round_completed[round_id] = completed
+        inspection.round_aborts[round_id] = abort
+        result = (round_dir, manifest)
+        inspection.round_manifests[round_id] = result
+        return result
 
     def _validated_ingest_receipt(
         self,
         *,
         round_dir: Path,
         assignment: dict[str, Any],
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Validate one receipt strongly enough to make its task historical."""
 
@@ -3899,7 +4640,7 @@ class V5LifecycleManager:
                 receipt.get("research_id"), "V5 ingestion receipt research id"
             )
         )
-        self._research_record(research_id)
+        self._inspection_research_record(research_id, _inspection_context)
         return_path = contained_path(
             self.store.root,
             assignment["return_relpath"],
@@ -3934,13 +4675,28 @@ class V5LifecycleManager:
                 or receipt.get("route_activation_policy") != "user_decision_only"
             ):
                 raise ValueError("V5 ingestion receipt attack binding is invalid")
-            cases = {
-                item["case_id"]: item for item in self.store.adverse_routes().cases()
-            }
-            proposals = {
-                item["proposal_id"]: item
-                for item in self.store.adverse_routes().proposals()
-            }
+            if _inspection_context is None:
+                cases = {
+                    item["case_id"]: item
+                    for item in self.store.adverse_routes().cases()
+                }
+                proposals = {
+                    item["proposal_id"]: item
+                    for item in self.store.adverse_routes().proposals()
+                }
+            else:
+                if _inspection_context.adverse_cases is None:
+                    _inspection_context.adverse_cases = {
+                        item["case_id"]: item
+                        for item in self.store.adverse_routes().cases()
+                    }
+                if _inspection_context.adverse_proposals is None:
+                    _inspection_context.adverse_proposals = {
+                        item["proposal_id"]: item
+                        for item in self.store.adverse_routes().proposals()
+                    }
+                cases = _inspection_context.adverse_cases
+                proposals = _inspection_context.adverse_proposals
             case = cases.get(case_id)
             proposal = proposals.get(proposal_id)
             if (
@@ -3971,7 +4727,10 @@ class V5LifecycleManager:
                 != "queued_for_future_multidimensional_frontier"
             ):
                 raise ValueError("V5 ingestion receipt program-math policy is invalid")
-            self._research_record(program_research_id)
+            self._inspection_research_record(
+                program_research_id,
+                _inspection_context,
+            )
             expected_effect += "_plus_nontruth_program_math_adverse_review"
         if receipt.get("effect") != expected_effect:
             raise ValueError("V5 ingestion receipt effect is invalid")
@@ -3988,6 +4747,8 @@ class V5LifecycleManager:
         self,
         round_dir: Path,
         manifest: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> bool:
         """A round is historical only after every assignment has a valid receipt."""
 
@@ -4003,6 +4764,7 @@ class V5LifecycleManager:
             self._validated_ingest_receipt(
                 round_dir=round_dir,
                 assignment=assignment,
+                _inspection_context=_inspection_context,
             )
         return completed
 
@@ -4021,9 +4783,20 @@ class V5LifecycleManager:
             raise KeyError(f"unknown V5 assignment: {assignment_id}")
         return matches[0]
 
-    def _quarantine_records(self) -> list[dict[str, Any]]:
+    def _quarantine_records(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        if (
+            _inspection_context is not None
+            and _inspection_context.quarantine_records is not None
+        ):
+            return _inspection_context.quarantine_records
         records: list[dict[str, Any]] = []
         if not self.quarantine_dir.exists():
+            if _inspection_context is not None:
+                _inspection_context.quarantine_records = records
             return records
         for path in sorted(self.quarantine_dir.glob("*.json")):
             if path.is_symlink() or not path.is_file():
@@ -4047,15 +4820,30 @@ class V5LifecycleManager:
             if payload.get("record_sha256") != sha256_json(without_hash):
                 raise ValueError("V5 quarantine record hash mismatch")
             records.append(payload)
+        if _inspection_context is not None:
+            _inspection_context.quarantine_records = records
         return records
 
-    def round_status(self, round_id: str) -> dict[str, Any]:
-        round_dir, manifest = self._round_manifest(round_id)
-        abort = self.store.reasoning_modes().work_unit_abort(round_id)
-        completed = self._round_is_completed(round_dir, manifest)
+    def _round_status_with_context(
+        self,
+        round_id: str,
+        inspection: RoundInspectionContext,
+    ) -> dict[str, Any]:
+        round_id = validate_round_id(round_id)
+        cached = inspection.round_statuses.get(round_id)
+        if cached is not None:
+            return cached
+        round_dir, manifest = self._round_manifest(
+            round_id,
+            _inspection_context=inspection,
+        )
+        abort = inspection.round_aborts[round_id]
+        completed = inspection.round_completed[round_id]
         quarantined = {
             item["assignment_id"]: item
-            for item in self._quarantine_records()
+            for item in self._quarantine_records(
+                _inspection_context=inspection
+            )
             if item.get("round_id") == round_id
         }
         assignments: list[dict[str, Any]] = []
@@ -4086,7 +4874,7 @@ class V5LifecycleManager:
                     "return_path": str(return_path),
                 }
             )
-        return {
+        status = {
             **manifest,
             "assignments": assignments,
             "ingested_count": sum(
@@ -4111,6 +4899,59 @@ class V5LifecycleManager:
             "abort_id": abort["abort_id"] if abort is not None else None,
             "work_unit_abort": abort,
             "round_closure_required": False,
+        }
+        inspection.round_statuses[round_id] = status
+        return status
+
+    def round_status(
+        self,
+        round_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        """Return the public status projection, optionally sharing one read phase."""
+
+        inspection = (
+            _inspection_context
+            if _inspection_context is not None
+            else RoundInspectionContext()
+        )
+        return self._round_status_with_context(
+            round_id,
+            inspection,
+        )
+
+    def round_statuses(self) -> dict[str, Any]:
+        """Validate and project every V5 round in one ephemeral read phase."""
+
+        rounds_root = self.store.rounds_dir
+        if rounds_root.is_symlink() or not rounds_root.is_dir():
+            raise ValueError("V5 rounds root is missing or unsafe")
+        round_ids: list[str] = []
+        for path in sorted(rounds_root.iterdir(), key=lambda item: item.name):
+            if path.is_symlink() or not path.is_dir():
+                raise ValueError("V5 rounds root contains an unsafe entry")
+            round_ids.append(validate_round_id(path.name))
+        inspection = RoundInspectionContext()
+        round_states = {
+            round_id: self.round_status(
+                round_id,
+                _inspection_context=inspection,
+            )["work_unit_state"]
+            for round_id in round_ids
+        }
+        terminal = sum(
+            state in {"aborted", "completed"}
+            for state in round_states.values()
+        )
+        return {
+            "schema_version": 1,
+            "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
+            "project_id": self.store.project_id(),
+            "round_count": len(round_states),
+            "terminal_round_count": terminal,
+            "round_states": dict(sorted(round_states.items())),
+            "truth_effect": "none",
         }
 
     @staticmethod
@@ -5004,6 +5845,14 @@ class V5LifecycleManager:
             raise ValueError("invalid V5 Certification Decision id")
         return self.certification_decisions_dir / f"{decision_id}.json"
 
+    def _certification_repair_intent_path(self, decision_id: str) -> Path:
+        self._decision_path(decision_id)
+        return self.certification_repair_outbox_dir / f"{decision_id}.json"
+
+    def _certification_repair_effect_path(self, decision_id: str) -> Path:
+        self._decision_path(decision_id)
+        return self.certification_repair_effects_dir / f"{decision_id}.json"
+
     def _normalize_artifacts(
         self,
         artifacts: Any,
@@ -5081,6 +5930,7 @@ class V5LifecycleManager:
         *,
         validation_subject: dict[str, Any],
         require_current: bool = True,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, Any]]:
         if not isinstance(refs, list) or any(not isinstance(item, dict) for item in refs):
             raise ValueError("paper_evidence_refs must be a list of objects")
@@ -5092,7 +5942,7 @@ class V5LifecycleManager:
             return []
         if not refs:
             raise ValueError("paper validation requires Logic and Audit EvidenceRefs")
-        paper = self.store.paper_logic()
+        paper = self._inspection_paper_logic(_inspection_context)
         current = set(paper.status()["current_snapshot_ids"])
         normalized: list[dict[str, Any]] = []
         graph_kinds: set[str] = set()
@@ -5284,8 +6134,9 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         if (
             isinstance(assurance, dict)
-            and assurance.get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
+            and _is_research_draft_assurance_revision(
+                assurance.get("contract_revision")
+            )
         ):
             if candidate_facts is None or set(candidate_facts) != candidate_ids:
                 raise ValueError(
@@ -6200,6 +7051,14 @@ class V5LifecycleManager:
                 "geometric_stage_typing" in research_logic_signals
             ),
         )
+        candidate_interfaces = [
+            self._candidate_interface(
+                facts[fact_id],
+                rendered[fact_id],
+                assurance_contract_revision=assurance_contract_revision,
+            )
+            for fact_id in order
+        ]
         successor_input = payload.get("successor_contracts", [])
         if (
             successor_input
@@ -6263,9 +7122,8 @@ class V5LifecycleManager:
             internal_edges=internal_edges,
             candidate_facts=facts,
         )
-        strict_research_draft = (
+        strict_research_draft = _is_research_draft_assurance_revision(
             assurance.get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         )
         if (
             strict_research_draft
@@ -6286,8 +7144,9 @@ class V5LifecycleManager:
                 "research_draft_ref requires the prospective research-draft assurance"
             )
         if (
-            assurance.get("contract_revision")
-            != RESEARCH_DRAFT_ASSURANCE_REVISION
+            not _is_research_draft_assurance_revision(
+                assurance.get("contract_revision")
+            )
             and assurance["validation_granularity"] in {
             "nodewise_proof_dag",
             "paper_target_closure",
@@ -6318,13 +7177,30 @@ class V5LifecycleManager:
             )
         continuation_binding: dict[str, Any] | None = None
         continuation_evidence: dict[str, Any] | None = None
+        continuation_release_capsule: dict[str, Any] | None = None
+        continuation_release_operation: dict[str, Any] | None = None
+        continuation_release_proof: dict[str, Any] | None = None
+        continuation_proof_timings: dict[str, int] | None = None
+        continuation_fallback_exception_count = 0
         if continuation_plan_ids:
             plan_id = continuation_plan_ids[0]
+            release_proof, proof_timings, fallback_exception_count = (
+                continuation.prepare_release_proof(
+                    plan_id=plan_id,
+                    ref=payload.get("paper_continuation_ref"),
+                    paper_evidence_refs=payload.get("paper_evidence_refs", []),
+                    candidate_interfaces=candidate_interfaces,
+                )
+            )
+            continuation_release_proof = release_proof
+            continuation_proof_timings = proof_timings
+            continuation_fallback_exception_count = fallback_exception_count
             continuation_binding = continuation.validate_release_binding(
                 plan_id=plan_id,
                 ref=payload.get("paper_continuation_ref"),
                 philosophy_atomicity=payload.get("philosophy_atomicity"),
                 facts=facts,
+                release_proof=release_proof,
             )
             plan = continuation_binding["plan"]
             expected_nodes = {
@@ -6362,34 +7238,6 @@ class V5LifecycleManager:
                 raise ValueError(
                     "Paper continuation release omits required certification checks: "
                     + ", ".join(missing_continuation_checks)
-                )
-            continuation_evidence = continuation.release_evidence(
-                plan_id=plan_id,
-                disposition_ids=continuation_binding[
-                    "paper_continuation_ref"
-                ]["disposition_ids"],
-                require_current=True,
-            )
-            required_writing_hashes = {
-                item["artifact_sha256"]
-                for item in continuation_evidence[
-                    "writing_artifact_bindings"
-                ]
-            }
-            authorized_writing_hashes = {
-                item["sha256"]
-                for item in validation_artifacts
-                if item["role"] == "paper_revised_writing"
-                and item["role"] in set(authorized_roles)
-            }
-            missing_writing = sorted(
-                required_writing_hashes.difference(authorized_writing_hashes)
-            )
-            if missing_writing:
-                raise ValueError(
-                    "Paper continuation release must seal and authorize every revised "
-                    "writing artifact as paper_revised_writing: "
-                    + ", ".join(missing_writing)
                 )
         elif (
             "paper_continuation_ref" in payload
@@ -6436,6 +7284,53 @@ class V5LifecycleManager:
             payload.get("paper_evidence_refs"),
             validation_subject=assurance["validation_subject"],
         )
+        if continuation_binding is not None:
+            if (
+                continuation_release_proof is None
+                or continuation_proof_timings is None
+            ):
+                raise ValueError(
+                    "Paper continuation release proof was not prepared"
+                )
+            prepared_continuation = prepare_candidate_continuation_release_capsule(
+                continuation,
+                plan=continuation_binding["plan"],
+                ref=continuation_binding["paper_continuation_ref"],
+                release_proof=continuation_release_proof,
+                selected_dispositions=continuation_binding[
+                    "selected_dispositions"
+                ],
+                paper_evidence_refs=paper_refs,
+                candidate_interfaces=candidate_interfaces,
+                proof_phase_timings_ms=continuation_proof_timings,
+                fallback_exception_count=(
+                    continuation_fallback_exception_count
+                ),
+            )
+            continuation_release_capsule = prepared_continuation["capsule"]
+            continuation_release_operation = prepared_continuation["operation"]
+            continuation_evidence = continuation_release_capsule["evidence"]
+            required_writing_hashes = {
+                item["artifact_sha256"]
+                for item in continuation_evidence[
+                    "writing_artifact_bindings"
+                ]
+            }
+            authorized_writing_hashes = {
+                item["sha256"]
+                for item in validation_artifacts
+                if item["role"] == "paper_revised_writing"
+                and item["role"] in set(authorized_roles)
+            }
+            missing_writing = sorted(
+                required_writing_hashes.difference(authorized_writing_hashes)
+            )
+            if missing_writing:
+                raise ValueError(
+                    "Paper continuation release must seal and authorize every revised "
+                    "writing artifact as paper_revised_writing: "
+                    + ", ".join(missing_writing)
+                )
         if assurance["validation_subject"]["kind"] == "paper":
             subject_sha = assurance["validation_subject"]["artifact_sha256"]
             if subject_sha not in authorized_artifact_hashes:
@@ -6458,6 +7353,14 @@ class V5LifecycleManager:
                     + ", ".join(missing_paper_checks)
                 )
         if strict_research_draft:
+            if "stance_preservation" in assurance:
+                domain_continuity_check = "stance_preservation"
+            elif "mathematical_target_preservation" in assurance:
+                domain_continuity_check = (
+                    "mathematical_target_and_refinement_continuity"
+                )
+            else:
+                domain_continuity_check = "domain_target_continuity"
             research_draft_checks = {
                 "composable_parallel_verification",
                 "research_draft_admission_preflight",
@@ -6465,7 +7368,7 @@ class V5LifecycleManager:
                 "validated_dependency_receipt",
                 "language_neutral_statement_interfaces",
                 "semantic_component_atomicity",
-                "stance_preservation",
+                domain_continuity_check,
             }
             missing_research_draft_checks = sorted(
                 research_draft_checks.difference(normalized_plan["required_checks"])
@@ -6595,14 +7498,6 @@ class V5LifecycleManager:
             }
             for fact_id in order
         ]
-        candidate_interfaces = [
-            self._candidate_interface(
-                facts[fact_id],
-                rendered[fact_id],
-                assurance_contract_revision=assurance_contract_revision,
-            )
-            for fact_id in order
-        ]
         research_draft_preflight: dict[str, Any] | None = None
         if research_draft_context is not None:
             research_draft_preflight = research_draft_admission_preflight(
@@ -6688,7 +7583,9 @@ class V5LifecycleManager:
                     "paper_continuation_ref": continuation_binding[
                         "paper_continuation_ref"
                     ],
-                    "paper_continuation_evidence": continuation_evidence,
+                    "paper_continuation_release_capsule": (
+                        continuation_release_capsule
+                    ),
                     **(
                         {
                             "philosophy_atomicity": continuation_binding[
@@ -6710,6 +7607,9 @@ class V5LifecycleManager:
             ),
             "excluded_verifier_ids": excluded_verifier_ids,
             "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
+            "neutral_review_submission_revision": (
+                NEUTRAL_REVIEW_SUBMISSION_REVISION
+            ),
             "assurance_contract_revision": assurance_contract_revision,
             **(
                 {
@@ -6745,6 +7645,15 @@ class V5LifecycleManager:
                 "assurance_contract_revision": assurance_contract_revision,
                 "applicable_assurance_checks": applicable_assurance_checks,
                 "successor_contract_count": len(successor_contracts),
+                **(
+                    {
+                        "paper_continuation_release_validation": (
+                            continuation_release_operation
+                        )
+                    }
+                    if continuation_release_operation is not None
+                    else {}
+                ),
                 "project_effect": "none",
                 "truth_effect": "none",
             }
@@ -6778,7 +7687,23 @@ class V5LifecycleManager:
         _lineage_paths: dict[str, Path] | None = None,
         _skip_successor_validation: bool = False,
         _deep_dependencies: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        cache_key = (
+            release_id,
+            _skip_successor_validation,
+            _deep_dependencies,
+        )
+        cacheable = _lineage_facts is None and _lineage_paths is None
+        if (
+            cacheable
+            and _inspection_context is not None
+            and cache_key in _inspection_context.release_records
+        ):
+            return _inspection_context.release_records[cache_key]
         path = self._release_path(release_id)
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown V5 Candidate Release: {release_id}")
@@ -6810,9 +7735,16 @@ class V5LifecycleManager:
         )
         if record.get("fact_admission_contract_sha256") != FACT_ADMISSION_CONTRACT_SHA256:
             raise ValueError("Candidate Release Fact contract mismatch")
-        strict_research_draft = (
+        neutral_review_revision = record.get("neutral_review_submission_revision")
+        if (
+            neutral_review_revision is not None
+            and neutral_review_revision != NEUTRAL_REVIEW_SUBMISSION_REVISION
+        ):
+            raise ValueError(
+                "Candidate Release neutral review submission revision is unsupported"
+            )
+        strict_research_draft = _is_research_draft_assurance_revision(
             record.get("requested_assurance", {}).get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         )
         candidates = record.get("candidates")
         if not isinstance(candidates, list) or not candidates:
@@ -6849,7 +7781,9 @@ class V5LifecycleManager:
                 ):
                     raise ValueError("sealed Candidate Release artifact drifted")
             for binding in record.get("research_bindings", []):
-                research = self._research_record(binding["research_id"])
+                research = self._inspection_research_record(
+                    binding["research_id"], _inspection_context
+                )
                 if research["record_sha256"] != binding["record_sha256"]:
                     raise ValueError("Candidate Release research binding drifted")
         assurance_revision = record.get(
@@ -6908,6 +7842,7 @@ class V5LifecycleManager:
                     _lineage_facts, _lineage_paths = self._lineage_snapshot(
                         admitted_before=created_at,
                         exclude_release_ids={release_id},
+                        _inspection_context=_inspection_context,
                     )
                 expected_successors = validate_successor_contracts(
                     reconstructed_successor_input,
@@ -6931,7 +7866,9 @@ class V5LifecycleManager:
                 record["research_draft_evidence"]["research_records"]
                 if strict_research_draft
                 else [
-                    self._research_record(binding["research_id"])
+                    self._inspection_research_record(
+                        binding["research_id"], _inspection_context
+                    )
                     for binding in record["research_bindings"]
                 ]
             )
@@ -6984,10 +7921,14 @@ class V5LifecycleManager:
             ]
         else:
             bound_research = [
-                self._research_record(binding["research_id"])
+                self._inspection_research_record(
+                    binding["research_id"], _inspection_context
+                )
                 for binding in record["research_bindings"]
             ]
-        continuation = self.paper_continuation()
+        continuation = self.paper_continuation(
+            _inspection_context=_inspection_context
+        )
         continuation_plan_ids = continuation.plan_ids_for_research(
             bound_research
         )
@@ -7015,23 +7956,39 @@ class V5LifecycleManager:
                 or set(subject["load_bearing_node_ids"]) != expected_nodes
             ):
                 raise ValueError("Candidate Release Paper continuation scope drifted")
-            expected_continuation_evidence = continuation.release_evidence(
-                plan_id=continuation_plan_ids[0],
-                disposition_ids=record["paper_continuation_ref"][
-                    "disposition_ids"
-                ],
-                require_current=False,
-            )
-            if record.get("paper_continuation_evidence") != (
-                expected_continuation_evidence
-            ):
-                raise ValueError(
-                    "Candidate Release Paper continuation verifier evidence drifted"
+            if "paper_continuation_release_capsule" in record:
+                continuation.validate_release_capsule(
+                    record["paper_continuation_release_capsule"],
+                    require_current=False,
+                    expected_ref=record["paper_continuation_ref"],
+                    expected_paper_evidence_refs=record["paper_evidence_refs"],
+                    expected_candidate_interfaces=record.get(
+                        "candidate_interfaces", []
+                    ),
                 )
+                if "paper_continuation_evidence" in record:
+                    raise ValueError(
+                        "Candidate Release duplicates continuation capsule evidence"
+                    )
+            else:
+                expected_continuation_evidence = continuation.release_evidence(
+                    plan_id=continuation_plan_ids[0],
+                    disposition_ids=record["paper_continuation_ref"][
+                        "disposition_ids"
+                    ],
+                    require_current=False,
+                )
+                if record.get("paper_continuation_evidence") != (
+                    expected_continuation_evidence
+                ):
+                    raise ValueError(
+                        "Candidate Release Paper continuation verifier evidence drifted"
+                    )
         elif (
             "paper_continuation_ref" in record
             or "philosophy_atomicity" in record
             or "paper_continuation_evidence" in record
+            or "paper_continuation_release_capsule" in record
         ):
             raise ValueError(
                 "Candidate Release has unbound Paper continuation fields"
@@ -7045,6 +8002,7 @@ class V5LifecycleManager:
                     "validation_subject"
                 ],
                 require_current=False,
+                _inspection_context=_inspection_context,
             )
         )
         if continuation_binding is not None:
@@ -7074,49 +8032,83 @@ class V5LifecycleManager:
                 sealed_record=True,
                 require_current=False,
             )
+        if cacheable and _inspection_context is not None:
+            _inspection_context.release_records[cache_key] = record
         return record
 
-    def releases(self) -> list[dict[str, Any]]:
+    def releases(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         if not self.candidate_releases_dir.exists():
             return []
         return [
-            self.release(path.stem)
+            self.release(
+                path.stem,
+                _inspection_context=_inspection_context,
+            )
             for path in sorted(self.candidate_releases_dir.glob("release-*.json"))
         ]
 
     def _require_current_paper_continuation_release(
         self,
         release: dict[str, Any],
-    ) -> None:
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any] | None:
         bound_research = [
-            self._research_record(binding["research_id"])
+            self._inspection_research_record(
+                binding["research_id"], _inspection_context
+            )
             for binding in release["research_bindings"]
         ]
-        continuation = self.paper_continuation()
+        continuation = self.paper_continuation(
+            _inspection_context=_inspection_context
+        )
         plan_ids = continuation.plan_ids_for_research(bound_research)
         if not plan_ids:
-            return
+            return None
         if len(plan_ids) != 1:
             raise ValueError("Candidate Release mixes Paper continuation plans")
-        facts = {
-            item["fact_id"]: parse_fact_markdown(item["fact_markdown"])
-            for item in release["candidates"]
-        }
-        binding = continuation.validate_release_binding(
-            plan_id=plan_ids[0],
-            ref=release.get("paper_continuation_ref"),
-            philosophy_atomicity=release.get("philosophy_atomicity"),
-            facts=facts,
-            require_current=True,
-        )
+        current_proof: dict[str, Any] | None = None
+        if "paper_continuation_release_capsule" in release:
+            capsule = validate_candidate_continuation_release_capsule(
+                continuation,
+                release["paper_continuation_release_capsule"],
+                require_current=False,
+                expected_ref=release.get("paper_continuation_ref"),
+                expected_paper_evidence_refs=release["paper_evidence_refs"],
+                expected_candidate_interfaces=release.get(
+                    "candidate_interfaces", []
+                ),
+            )
+            current_proof = continuation.require_current_release_capsule(capsule)
+            plan = continuation.plan(plan_ids[0])
+        else:
+            facts = {
+                item["fact_id"]: parse_fact_markdown(item["fact_markdown"])
+                for item in release["candidates"]
+            }
+            binding = continuation.validate_release_binding(
+                plan_id=plan_ids[0],
+                ref=release.get("paper_continuation_ref"),
+                philosophy_atomicity=release.get("philosophy_atomicity"),
+                facts=facts,
+                require_current=True,
+            )
+            plan = binding["plan"]
         paper_refs = self._validate_paper_evidence_refs(
             release["paper_evidence_refs"],
             validation_subject=release["requested_assurance"][
                 "validation_subject"
             ],
             require_current=True,
+            _inspection_context=_inspection_context,
         )
-        plan = binding["plan"]
         expected_nodes = {
             *plan["selected_reconstruction_node_ids"],
             *plan["selected_source_node_ids"],
@@ -7133,6 +8125,7 @@ class V5LifecycleManager:
             != expected_nodes
         ):
             raise ValueError("Candidate Release Paper continuation is stale")
+        return current_proof
 
     def release_for_fact(self, fact_id: str) -> dict[str, Any]:
         fact_id = validate_fact_id(fact_id)
@@ -7269,28 +8262,65 @@ class V5LifecycleManager:
                 }
                 for item in source_nonpass
             ]
-        if (
+        if _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         ):
             template["parallel_verification_aggregate_id"] = (
                 "COPY_EXACT_ELIGIBLE_AGGREGATE_ID_FROM_PROJECT"
             )
         return template
 
-    def verifier_capsule(self, release_id: str) -> dict[str, Any]:
-        release = self.release(release_id)
-        self._require_current_paper_continuation_release(release)
+    def verifier_capsule(
+        self,
+        release_id: str,
+        *,
+        _release: dict[str, Any] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if (
+            _inspection_context is not None
+            and release_id in _inspection_context.verifier_capsules
+        ):
+            return _inspection_context.verifier_capsules[release_id]
+        release = (
+            _release
+            if _release is not None
+            else (
+                self.release(release_id)
+                if _inspection_context is None
+                else self.release(
+                    release_id,
+                    _inspection_context=_inspection_context,
+                )
+            )
+        )
+        if release.get("release_id") != release_id:
+            raise ValueError("verifier capsule supplied Release id mismatch")
+        self._require_current_paper_continuation_release(
+            release,
+            _inspection_context=_inspection_context,
+        )
         predecessor_packets = []
         for fact_id in release["external_predecessors"]:
-            fact_path = self.store.active_fact_path(fact_id)
+            fact_path = self.store.active_fact_path(
+                fact_id,
+                _inspection_context=_inspection_context,
+            )
             predecessor_packets.append(
                 {
                     "fact_id": fact_id,
                     "fact_sha256": sha256_bytes(fact_path.read_bytes()),
-                    "statement": self.store.get_fact(fact_id).statement,
+                    "statement": self.store.get_fact(
+                        fact_id,
+                        _inspection_context=_inspection_context,
+                    ).statement,
                     "statement_interface": self.store.statement_interface(
-                        fact_id, materialize=False
+                        fact_id,
+                        materialize=False,
+                        _inspection_context=_inspection_context,
                     ),
                 }
             )
@@ -7331,6 +8361,14 @@ class V5LifecycleManager:
                 "truth_effect": "none_until_gateway_admission",
             },
         }
+        host_controlled_review = (
+            release.get("neutral_review_submission_revision")
+            == NEUTRAL_REVIEW_SUBMISSION_REVISION
+        )
+        if host_controlled_review:
+            semantic["neutral_review_submission_revision"] = (
+                NEUTRAL_REVIEW_SUBMISSION_REVISION
+            )
         if "paper_continuation_ref" in release:
             semantic["paper_continuation_ref"] = release[
                 "paper_continuation_ref"
@@ -7339,9 +8377,14 @@ class V5LifecycleManager:
                 semantic["philosophy_atomicity"] = release[
                     "philosophy_atomicity"
                 ]
-            semantic["paper_continuation_evidence"] = release[
-                "paper_continuation_evidence"
-            ]
+            if "paper_continuation_release_capsule" in release:
+                semantic["paper_continuation_release_capsule"] = release[
+                    "paper_continuation_release_capsule"
+                ]
+            else:
+                semantic["paper_continuation_evidence"] = release[
+                    "paper_continuation_evidence"
+                ]
             semantic["instructions"]["paper_continuation_boundary"] = (
                 "verify exact target-closure adequacy separately from Fact truth; "
                 "for philosophy, independently reconstruct the conjunct inventory and "
@@ -7350,9 +8393,8 @@ class V5LifecycleManager:
                 "language paraphrase with the formal claim and reject undefined or "
                 "unnecessary jargon that conceals a premise, burden, or inferential step"
             )
-        if (
+        if _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         ):
             semantic.update(
                 {
@@ -7371,11 +8413,27 @@ class V5LifecycleManager:
                     ],
                 }
             )
+            if "stance_preservation" in release["requested_assurance"]:
+                domain_boundary = (
+                    "preserve the declared philosophical stance unless an exact "
+                    "Operator authorization is sealed"
+                )
+            elif "mathematical_target_preservation" in release["requested_assurance"]:
+                domain_boundary = (
+                    "keep the original mathematical target, hypotheses, domains, and "
+                    "quantifiers explicit; a typed weaker result is intermediate progress "
+                    "and cannot close or replace the exact target"
+                )
+            else:
+                domain_boundary = (
+                    "preserve the declared empirical or mixed target through its exact "
+                    "domain adapter"
+                )
             semantic["instructions"]["research_draft_boundary"] = (
                 "reconstruct the complete Paper target closure from the sealed transport; "
                 "check node dispositions separately from many-to-many Paper-Fact mappings; "
                 "check every source-derived atomic component and qualified failure surface; "
-                "preserve the declared stance unless an exact Operator authorization is sealed"
+                + domain_boundary
             )
         if "evidence_bridge_refs" in release:
             current_bridge_refs = self._validate_evidence_bridge_refs(
@@ -7398,9 +8456,15 @@ class V5LifecycleManager:
             successor_predecessor_packets = []
             for contract in release.get("successor_contracts", []):
                 predecessor_id = contract["predecessor_fact_id"]
-                predecessor_path = self.store.active_fact_path(predecessor_id)
+                predecessor_path = self.store.active_fact_path(
+                    predecessor_id,
+                    _inspection_context=_inspection_context,
+                )
                 predecessor_raw = predecessor_path.read_bytes()
-                predecessor = self.store.get_fact(predecessor_id)
+                predecessor = self.store.get_fact(
+                    predecessor_id,
+                    _inspection_context=_inspection_context,
+                )
                 successor_predecessor_packets.append(
                     {
                         "fact_id": predecessor_id,
@@ -7468,23 +8532,56 @@ class V5LifecycleManager:
                             ],
                         },
                         "verifier_action": (
-                            "write and locally preflight output/review.json only; "
-                            "do not record into the project"
+                            "write output/review-draft.json only; do not write the "
+                            "canonical review or record into the project"
+                            if host_controlled_review
+                            else (
+                                "write and locally preflight output/review.json only; "
+                                "do not record into the project"
+                            )
+                        ),
+                        **(
+                            {
+                                "host_action": (
+                                    "run host/submit_review.py so a strict preflight "
+                                    "either quarantines the draft or atomically "
+                                    "publishes immutable output/review.json plus a "
+                                    "formal-return receipt"
+                                )
+                            }
+                            if host_controlled_review
+                            else {}
                         ),
                         "gateway_action": (
-                            "after byte-preserving handoff, the gateway runs "
-                            "certification-record and fact-admit"
+                            (
+                                "only after the formally_returned receipt and exact "
+                                "review bytes validate, run certification-record and "
+                                "fact-admit"
+                            )
+                            if host_controlled_review
+                            else (
+                                "after byte-preserving handoff, the gateway runs "
+                                "certification-record and fact-admit"
+                            )
                         ),
                         "local_validator": "host/validate_decision.py",
+                        **(
+                            {"host_submission_program": "host/submit_review.py"}
+                            if host_controlled_review
+                            else {}
+                        ),
                     },
                 }
             )
         capsule_sha = sha256_json(semantic)
-        return {
+        capsule = {
             **semantic,
             "capsule_id": "capsule-" + capsule_sha,
             "capsule_sha256": capsule_sha,
         }
+        if _inspection_context is not None:
+            _inspection_context.verifier_capsules[release_id] = capsule
+        return capsule
 
     def _validate_finding(self, finding: Any, *, label: str) -> dict[str, str]:
         finding = _require_exact_object_fields(
@@ -7505,6 +8602,257 @@ class V5LifecycleManager:
         if not isinstance(repair_hint, str):
             raise ValueError(f"{label} repair_hint must be a string")
         return {**normalized, "repair_hint": repair_hint}
+
+    def _certification_repair_payload(
+        self,
+        decision: dict[str, Any],
+    ) -> dict[str, Any]:
+        if decision.get("verdict") != "reject":
+            raise ValueError(
+                "Certification repair effects are allowed only for rejection decisions"
+            )
+        findings = decision.get("findings")
+        if not isinstance(findings, list) or not findings:
+            raise ValueError("rejecting Certification Decision lacks repair findings")
+        return {
+            "kind": "repair",
+            "claim": (
+                "Repair rejected Candidate Release " + decision["release_id"]
+            ),
+            "content": "; ".join(item["description"] for item in findings),
+            "release_id": decision["release_id"],
+            "decision_id": decision["decision_id"],
+            "finding_ids": [item["id"] for item in findings],
+        }
+
+    def _certification_repair_intent(
+        self,
+        decision: dict[str, Any],
+    ) -> dict[str, Any]:
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": V5_CERTIFICATION_REPAIR_OUTBOX_REVISION,
+            "project_id": self.store.project_id(),
+            "decision_id": decision["decision_id"],
+            "decision_sha256": decision["decision_sha256"],
+            "release_id": decision["release_id"],
+            "release_sha256": decision["release_sha256"],
+            "repair_actor": V5_CERTIFICATION_REPAIR_ACTOR,
+            "repair_payload": self._certification_repair_payload(decision),
+            "assurance_contract_revision": (
+                V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+            ),
+            "effect": "materialize_nontruth_repair_research",
+            "truth_effect": "none",
+            "premise_eligible": False,
+        }
+        return {
+            **semantic,
+            "intent_id": "cert-repair-intent-" + sha256_json(semantic),
+        }
+
+    def _validate_certification_repair_intent_record(
+        self,
+        intent: Any,
+    ) -> dict[str, Any]:
+        intent = _require_exact_object_fields(
+            intent,
+            {
+                "schema_version",
+                "contract_revision",
+                "project_id",
+                "decision_id",
+                "decision_sha256",
+                "release_id",
+                "release_sha256",
+                "repair_actor",
+                "repair_payload",
+                "assurance_contract_revision",
+                "effect",
+                "truth_effect",
+                "premise_eligible",
+                "intent_id",
+            },
+            label="Certification repair intent",
+            pointer="/",
+        )
+        self._decision_path(intent["decision_id"])
+        self._release_path(intent["release_id"])
+        for key in ("decision_sha256", "release_sha256"):
+            if (
+                not isinstance(intent[key], str)
+                or SHA256_RE.fullmatch(intent[key]) is None
+            ):
+                raise ValueError(f"Certification repair intent {key} is invalid")
+        payload = _require_exact_object_fields(
+            intent["repair_payload"],
+            {
+                "kind",
+                "claim",
+                "content",
+                "release_id",
+                "decision_id",
+                "finding_ids",
+            },
+            label="Certification repair payload",
+            pointer="/repair_payload",
+        )
+        if (
+            intent["schema_version"] != 1
+            or intent["contract_revision"]
+            != V5_CERTIFICATION_REPAIR_OUTBOX_REVISION
+            or intent["project_id"] != self.store.project_id()
+            or intent["decision_id"]
+            != "decision-" + intent["decision_sha256"]
+            or intent["repair_actor"] != V5_CERTIFICATION_REPAIR_ACTOR
+            or intent["assurance_contract_revision"]
+            != V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+            or intent["effect"] != "materialize_nontruth_repair_research"
+            or intent["truth_effect"] != "none"
+            or intent["premise_eligible"] is not False
+            or payload["kind"] != "repair"
+            or payload["release_id"] != intent["release_id"]
+            or payload["decision_id"] != intent["decision_id"]
+        ):
+            raise ValueError("Certification repair intent semantics are invalid")
+        _require_nonempty_text(payload["claim"], "Certification repair claim")
+        if not isinstance(payload["content"], str):
+            raise ValueError("Certification repair content must be a string")
+        finding_ids = _require_string_list(
+            payload["finding_ids"],
+            "Certification repair finding ids",
+        )
+        if (
+            not finding_ids
+            or any(not item for item in finding_ids)
+            or len(finding_ids) != len(set(finding_ids))
+        ):
+            raise ValueError("Certification repair finding ids are invalid")
+        semantic = {
+            key: value for key, value in intent.items() if key != "intent_id"
+        }
+        if intent["intent_id"] != "cert-repair-intent-" + sha256_json(semantic):
+            raise ValueError("Certification repair intent id/hash mismatch")
+        return intent
+
+    def _load_certification_repair_intent(
+        self,
+        decision: dict[str, Any],
+    ) -> dict[str, Any]:
+        path = self._certification_repair_intent_path(decision["decision_id"])
+        if path.is_symlink() or not path.is_file():
+            raise KeyError(
+                "missing Certification rejection repair intent: "
+                + decision["decision_id"]
+            )
+        intent = self._validate_certification_repair_intent_record(
+            self.store._read_json(path)
+        )
+        expected = self._certification_repair_intent(decision)
+        if intent != expected:
+            raise ValueError("Certification rejection repair intent drifted")
+        return intent
+
+    def _certification_repair_effect_receipt(
+        self,
+        *,
+        decision: dict[str, Any],
+        intent: dict[str, Any],
+        research: dict[str, Any],
+    ) -> dict[str, Any]:
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": V5_CERTIFICATION_REPAIR_OUTBOX_REVISION,
+            "project_id": self.store.project_id(),
+            "intent_id": intent["intent_id"],
+            "decision_id": decision["decision_id"],
+            "decision_record_sha256": decision["record_sha256"],
+            "release_id": decision["release_id"],
+            "repair_research_id": research["research_id"],
+            "repair_research_semantic_sha256": research["semantic_sha256"],
+            "repair_research_record_sha256": research["record_sha256"],
+            "effect": "nontruth_repair_research_materialized",
+            "truth_effect": "none",
+            "premise_eligible": False,
+        }
+        return {
+            **semantic,
+            "receipt_id": "cert-repair-effect-" + sha256_json(semantic),
+        }
+
+    def _load_certification_repair_effect(
+        self,
+        *,
+        decision: dict[str, Any],
+        intent: dict[str, Any],
+    ) -> dict[str, Any]:
+        path = self._certification_repair_effect_path(decision["decision_id"])
+        if path.is_symlink() or not path.is_file():
+            raise KeyError(
+                "missing Certification rejection repair effect: "
+                + decision["decision_id"]
+            )
+        receipt = self.store._read_json(path)
+        research_id = receipt.get("repair_research_id")
+        if not isinstance(research_id, str):
+            raise ValueError(
+                "Certification rejection repair effect lacks a Research id"
+            )
+        research = self._research_record(research_id)
+        expected = self._certification_repair_effect_receipt(
+            decision=decision,
+            intent=intent,
+            research=research,
+        )
+        if receipt != expected:
+            raise ValueError("Certification rejection repair effect drifted")
+        return receipt
+
+    def _write_certification_repair_effect(
+        self,
+        receipt: dict[str, Any],
+    ) -> None:
+        self.store._write_json_once(
+            self._certification_repair_effect_path(receipt["decision_id"]),
+            receipt,
+        )
+
+    def _ensure_certification_repair_effect(
+        self,
+        decision: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Finish the durable rejection side effect on an explicit write retry."""
+
+        intent = self._certification_repair_intent(decision)
+        self.store._write_json_once(
+            self._certification_repair_intent_path(decision["decision_id"]),
+            intent,
+        )
+        effect_path = self._certification_repair_effect_path(
+            decision["decision_id"]
+        )
+        if effect_path.exists():
+            receipt = self._load_certification_repair_effect(
+                decision=decision,
+                intent=intent,
+            )
+            research = self._research_record(receipt["repair_research_id"])
+            self.paper_continuation()._status_index.reconcile_research(research)
+            return receipt
+        research = self.add_research(
+            intent["repair_payload"],
+            actor=intent["repair_actor"],
+            assurance_contract_revision=intent[
+                "assurance_contract_revision"
+            ],
+        )
+        receipt = self._certification_repair_effect_receipt(
+            decision=decision,
+            intent=intent,
+            research=research,
+        )
+        self._write_certification_repair_effect(receipt)
+        return receipt
 
     def _expected_assurance_matrix(
         self,
@@ -7560,9 +8908,8 @@ class V5LifecycleManager:
                 "Certification Decision fields are not exact: missing=/release_id"
             )
         release = self.release(release_id)
-        strict_research_draft = (
+        strict_research_draft = _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         )
         if strict_research_draft:
             required.add("parallel_verification_aggregate_id")
@@ -7838,11 +9185,6 @@ class V5LifecycleManager:
         # before storage.  Gateway-specific diagnostics above remain stable, while
         # no locally preflighted shape or finding class can diverge at admission.
         validate_decision_against_capsule(payload, capsule)
-        existing_for_release = [
-            decision
-            for decision in self.decisions()
-            if decision["release_id"] == release["release_id"]
-        ]
         semantic = {
             "schema_version": 5,
             "policy_revision": V5_POLICY_REVISION,
@@ -7905,14 +9247,6 @@ class V5LifecycleManager:
                 "project_effect": "none",
                 "truth_effect": "none",
             }
-        if existing_for_release:
-            existing = existing_for_release[0]
-            if existing["decision_id"] == decision_id:
-                return existing
-            raise ValueError(
-                "Candidate Release already has a Certification Decision; "
-                "repair Research and seal a new release"
-            )
         reviewed_at = _utc_now()
         without_hash = {
             **semantic,
@@ -7922,21 +9256,49 @@ class V5LifecycleManager:
         }
         record = {**without_hash, "record_sha256": sha256_json(without_hash)}
         with self.store.v5_mutation_lock(command="certification-record"):
+            # Recheck under the publication lock.  Besides making concurrent
+            # submissions single-writer, this is the explicit retry boundary
+            # that may finish a previously interrupted repair side effect.
+            existing_for_release: list[dict[str, Any]] = []
+            for path in sorted(
+                self.certification_decisions_dir.glob("decision-*.json")
+            ):
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError(
+                        "Certification Decision store contains an unsafe entry"
+                    )
+                existing = self.decision(
+                    path.stem,
+                    validate_bindings=False,
+                )
+                if existing["release_id"] == release["release_id"]:
+                    existing_for_release.append(existing)
+            if existing_for_release:
+                if len(existing_for_release) != 1:
+                    raise ValueError(
+                        "Candidate Release has multiple Certification Decisions"
+                    )
+                existing = existing_for_release[0]
+                if existing["decision_id"] != decision_id:
+                    raise ValueError(
+                        "Candidate Release already has a Certification Decision; "
+                        "repair Research and seal a new release"
+                    )
+                if existing["verdict"] == "reject":
+                    self._ensure_certification_repair_effect(existing)
+                return existing
+            if verdict == "reject":
+                # The durable intent is published before the Decision so there
+                # is no visible new rejection without an exact recoverable
+                # description of its required nontruth side effect.
+                intent = self._certification_repair_intent(record)
+                self.store._write_json_once(
+                    self._certification_repair_intent_path(decision_id),
+                    intent,
+                )
             self.store._write_json_once(self._decision_path(decision_id), record)
             if verdict == "reject":
-                self.add_research(
-                    {
-                        "kind": "repair",
-                        "claim": f"Repair rejected Candidate Release {release['release_id']}",
-                        "content": "; ".join(
-                            item["description"] for item in findings
-                        ),
-                        "release_id": release["release_id"],
-                        "decision_id": decision_id,
-                        "finding_ids": [item["id"] for item in findings],
-                    },
-                    actor="certification-gateway",
-                )
+                self._ensure_certification_repair_effect(record)
         return record
 
     def decision(
@@ -7944,7 +9306,17 @@ class V5LifecycleManager:
         decision_id: str,
         *,
         validate_bindings: bool = True,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        cache_key = (decision_id, validate_bindings)
+        if (
+            _inspection_context is not None
+            and cache_key in _inspection_context.decision_records
+        ):
+            return _inspection_context.decision_records[cache_key]
         path = self._decision_path(decision_id)
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown V5 Certification Decision: {decision_id}")
@@ -7977,16 +9349,26 @@ class V5LifecycleManager:
         if record.get("record_sha256") != sha256_json(without_hash):
             raise ValueError("Certification Decision record hash mismatch")
         if validate_bindings:
-            release = self.release(record["release_id"])
-            capsule = self.verifier_capsule(release["release_id"])
+            release = (
+                self.release(record["release_id"])
+                if _inspection_context is None
+                else self.release(
+                    record["release_id"],
+                    _inspection_context=_inspection_context,
+                )
+            )
+            capsule = self.verifier_capsule(
+                release["release_id"],
+                _release=release,
+                _inspection_context=_inspection_context,
+            )
             if (
                 record["release_sha256"] != release["release_sha256"]
                 or record["capsule_sha256"] != capsule["capsule_sha256"]
             ):
                 raise ValueError("Certification Decision binding drifted")
-            strict_research_draft = (
+            strict_research_draft = _is_research_draft_assurance_revision(
                 release["requested_assurance"].get("contract_revision")
-                == RESEARCH_DRAFT_ASSURANCE_REVISION
             )
             if strict_research_draft:
                 aggregate_id = record.get("parallel_verification_aggregate_id")
@@ -8014,13 +9396,25 @@ class V5LifecycleManager:
                 raise ValueError(
                     "non-research-draft Certification Decision has parallel aggregate fields"
                 )
+        if _inspection_context is not None:
+            _inspection_context.decision_records[cache_key] = record
         return record
 
-    def decisions(self) -> list[dict[str, Any]]:
+    def decisions(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         if not self.certification_decisions_dir.exists():
             return []
         return [
-            self.decision(path.stem)
+            self.decision(
+                path.stem,
+                _inspection_context=_inspection_context,
+            )
             for path in sorted(self.certification_decisions_dir.glob("decision-*.json"))
         ]
 
@@ -8035,7 +9429,19 @@ class V5LifecycleManager:
         _lineage_facts: dict[str, Fact] | None = None,
         _lineage_paths: dict[str, Path] | None = None,
         _skip_successor_validation: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> tuple[dict[str, Any], dict[str, Path]]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        cache_key = (release_id, _skip_successor_validation)
+        cacheable = _lineage_facts is None and _lineage_paths is None
+        if (
+            cacheable
+            and _inspection_context is not None
+            and cache_key in _inspection_context.admission_records
+        ):
+            return _inspection_context.admission_records[cache_key]
         directory = self._admission_dir(release_id)
         marker_path = directory / "ACCEPTED.json"
         if marker_path.is_symlink() or not marker_path.is_file():
@@ -8046,10 +9452,10 @@ class V5LifecycleManager:
             _lineage_facts=_lineage_facts,
             _lineage_paths=_lineage_paths,
             _skip_successor_validation=_skip_successor_validation,
+            _inspection_context=_inspection_context,
         )
-        strict_research_draft = (
+        strict_research_draft = _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         )
         required = {
             "schema_version",
@@ -8092,7 +9498,9 @@ class V5LifecycleManager:
             marker.get("accepted_at"), label="V5 admission accepted_at"
         )
         decision = self.decision(
-            marker["decision_id"], validate_bindings=False
+            marker["decision_id"],
+            validate_bindings=False,
+            _inspection_context=_inspection_context,
         )
         if (
             decision["verdict"] != "correct"
@@ -8141,13 +9549,17 @@ class V5LifecycleManager:
             expected_sha[fact_id] = digest
         if marker["fact_sha256"] != expected_sha:
             raise ValueError("V5 admission marker Fact hash map mismatch")
-        return marker, paths
+        result = (marker, paths)
+        if cacheable and _inspection_context is not None:
+            _inspection_context.admission_records[cache_key] = result
+        return result
 
     def _lineage_snapshot(
         self,
         *,
         admitted_before: datetime | str | None = None,
         exclude_release_ids: set[str] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> tuple[dict[str, Fact], dict[str, Path]]:
         """Build an immutable active-Fact snapshot without recursive lineage reads.
 
@@ -8157,6 +9569,9 @@ class V5LifecycleManager:
         to serve as their own historical active predecessors.
         """
 
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         cutoff = (
             _parse_utc_timestamp(admitted_before, label="lineage admission cutoff")
             if isinstance(admitted_before, str)
@@ -8167,7 +9582,18 @@ class V5LifecycleManager:
                 raise ValueError("lineage admission cutoff must be timezone-aware")
             cutoff = cutoff.astimezone(timezone.utc)
         excluded = exclude_release_ids or set()
-        revoked = self.revoked_fact_ids()
+        cache_key = (
+            cutoff.isoformat() if cutoff is not None else "",
+            tuple(sorted(excluded)),
+        )
+        if (
+            _inspection_context is not None
+            and cache_key in _inspection_context.lineage_snapshots
+        ):
+            return _inspection_context.lineage_snapshots[cache_key]
+        revoked = self.revoked_fact_ids(
+            _inspection_context=_inspection_context
+        )
         paths: dict[str, Path] = {}
         if not self.admissions_dir.exists():
             return {}, paths
@@ -8182,6 +9608,7 @@ class V5LifecycleManager:
             marker, admitted_paths = self._validated_admission(
                 directory.name,
                 _skip_successor_validation=True,
+                _inspection_context=_inspection_context,
             )
             if cutoff is not None and _parse_utc_timestamp(
                 marker["accepted_at"], label="V5 admission accepted_at"
@@ -8206,7 +9633,10 @@ class V5LifecycleManager:
             if fact.fact_id != fact_id or fact.problem_id != self.store.project_id():
                 raise ValueError("admitted V5 Fact id/project binding mismatch")
             facts[fact_id] = fact
-        return facts, paths
+        result = (facts, paths)
+        if _inspection_context is not None:
+            _inspection_context.lineage_snapshots[cache_key] = result
+        return result
 
     def _validate_lineage_snapshot(
         self,
@@ -8214,6 +9644,7 @@ class V5LifecycleManager:
         paths: dict[str, Path],
         *,
         exclude_release_ids: set[str] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
         excluded = exclude_release_ids or set()
         if not self.admissions_dir.exists():
@@ -8225,27 +9656,52 @@ class V5LifecycleManager:
             release = self.release(
                 directory.name,
                 _skip_successor_validation=True,
+                _inspection_context=_inspection_context,
             )
             _, own_paths = self._validated_admission(
                 directory.name,
                 _skip_successor_validation=True,
+                _inspection_context=_inspection_context,
             )
             own_fact_ids = set(own_paths)
             historical_facts, historical_paths = self._lineage_snapshot(
                 admitted_before=release["created_at"],
                 exclude_release_ids={directory.name},
+                _inspection_context=_inspection_context,
             )
             _, admitted_paths = self._validated_admission(
                 directory.name,
                 _lineage_facts=historical_facts,
                 _lineage_paths=historical_paths,
+                _inspection_context=_inspection_context,
             )
             if set(admitted_paths) != own_fact_ids:
                 raise ValueError("V5 admission Fact set drifted between validation phases")
 
-    def active_fact_paths(self) -> dict[str, Path]:
-        facts, paths = self._lineage_snapshot()
-        self._validate_lineage_snapshot(facts, paths)
+    def active_fact_paths(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Path]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if (
+            _inspection_context is not None
+            and _inspection_context.active_fact_paths is not None
+        ):
+            return _inspection_context.active_fact_paths
+        facts, paths = self._lineage_snapshot(
+            _inspection_context=_inspection_context
+        )
+        self._validate_lineage_snapshot(
+            facts,
+            paths,
+            _inspection_context=_inspection_context,
+        )
+        if _inspection_context is not None:
+            _inspection_context.active_fact_paths = paths
+            _inspection_context.active_facts = facts
         return paths
 
     def _preflight_post_admission_history(
@@ -8302,8 +9758,7 @@ class V5LifecycleManager:
             self._materialize_admission_projections(marker)
             return marker
         release = self.release(release_id, _deep_dependencies=True)
-        self._require_current_paper_continuation_release(release)
-        decision = self.decision(decision_id)
+        decision = self.decision(decision_id, validate_bindings=False)
         capsule = self.verifier_capsule(release_id)
         if (
             decision["release_id"] != release_id
@@ -8314,9 +9769,8 @@ class V5LifecycleManager:
             raise ValueError(
                 "V5 admission requires the clean exact Certification Decision"
             )
-        strict_research_draft = (
+        strict_research_draft = _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            == RESEARCH_DRAFT_ASSURANCE_REVISION
         )
         parallel_aggregate: dict[str, Any] | None = None
         if strict_research_draft:
@@ -8380,9 +9834,8 @@ class V5LifecycleManager:
             or external_predecessors != release["external_predecessors"]
         ):
             raise ValueError("Candidate Release mathematical graph binding drifted")
-        if (
+        if not _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
-            != RESEARCH_DRAFT_ASSURANCE_REVISION
         ):
             self._validate_paper_evidence_refs(
                 release["paper_evidence_refs"],
@@ -8622,8 +10075,23 @@ class V5LifecycleManager:
                 item["interface"],
             )
 
-    def revoked_fact_ids(self) -> set[str]:
+    def revoked_fact_ids(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> set[str]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
+        if (
+            _inspection_context is not None
+            and _inspection_context.revoked_fact_ids is not None
+        ):
+            return _inspection_context.revoked_fact_ids
         if not self.revocations_dir.exists():
+            if _inspection_context is not None:
+                _inspection_context.revoked_fact_ids = set()
+                return _inspection_context.revoked_fact_ids
             return set()
         result: set[str] = set()
         for path in sorted(self.revocations_dir.glob("*.json")):
@@ -8639,6 +10107,8 @@ class V5LifecycleManager:
             if record.get("record_sha256") != sha256_json(semantic):
                 raise ValueError("V5 revocation record hash mismatch")
             result.add(fact_id)
+        if _inspection_context is not None:
+            _inspection_context.revoked_fact_ids = result
         return result
 
     def revoke(
@@ -8700,17 +10170,44 @@ class V5LifecycleManager:
             if path.is_file() and not path.is_symlink()
         )
 
-    def status(self) -> dict[str, Any]:
+    def status(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context
+        )
         research_entries = self._json_count(self.research_entries_dir)
         quarantined = self._json_count(self.quarantine_dir)
         releases = self._json_count(self.candidate_releases_dir)
         decisions = self._json_count(self.certification_decisions_dir)
-        facts = len(self.store.fact_ids())
-        decision_records = self.decisions() if decisions else []
+        facts = len(
+            self.store.fact_ids(
+                _inspection_context=_inspection_context
+            )
+        )
+        decision_records = (
+            self.decisions(_inspection_context=_inspection_context)
+            if decisions
+            else []
+        )
         latest_decision = (
             max(decision_records, key=lambda item: item["reviewed_at"])
             if decision_records
             else None
+        )
+        pending_repair_effect = (
+            latest_decision is not None
+            and latest_decision["verdict"] == "reject"
+            and (
+                self._certification_repair_effect_path(
+                    latest_decision["decision_id"]
+                ).is_symlink()
+                or not self._certification_repair_effect_path(
+                    latest_decision["decision_id"]
+                ).is_file()
+            )
         )
         if facts:
             current_state = "Fact"
@@ -8720,6 +10217,13 @@ class V5LifecycleManager:
             current_state = "Certification Decision"
             blocking_issue = "accepted decision has not been gateway-admitted"
             next_safe_command = "fact-admit"
+        elif pending_repair_effect:
+            current_state = "Certification Decision"
+            blocking_issue = (
+                "rejecting decision has a pending nontruth repair effect; "
+                "retry the exact certification-record input"
+            )
+            next_safe_command = "certification-record"
         elif decisions:
             current_state = "Research"
             blocking_issue = "latest Candidate Release was rejected"
@@ -8732,7 +10236,9 @@ class V5LifecycleManager:
             current_state = "Research"
             blocking_issue = None
             next_safe_command = "research-add"
-        paper_continuation = self.paper_continuation().status_all_summary()
+        paper_continuation = self.paper_continuation(
+            _inspection_context=_inspection_context
+        ).status_all_summary()
         return {
             "schema_version": 1,
             "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -8752,6 +10258,10 @@ class V5LifecycleManager:
         }
 
     def fact_evidence_audit(self) -> dict[str, Any]:
+        with self.store.snapshot_lock():
+            return self._fact_evidence_audit_snapshot_bound()
+
+    def _fact_evidence_audit_snapshot_bound(self) -> dict[str, Any]:
         """Audit only the V5 authority bytes required for Fact Evidence.
 
         External Evidence capture must remain readable across Chalxius runtime
@@ -8761,6 +10271,8 @@ class V5LifecycleManager:
         makes it visible remain fully validated.
         """
 
+        inspection = self._bind_inspection_context(None, create=True)
+        assert inspection is not None
         authority_errors: list[str] = []
         graph_errors: list[str] = []
         warnings: list[str] = []
@@ -8820,7 +10332,9 @@ class V5LifecycleManager:
                 authority_error(f"V5 {label} directory is missing or unsafe")
 
         try:
-            active_paths = self.active_fact_paths()
+            active_paths = self.active_fact_paths(
+                _inspection_context=inspection
+            )
         except Exception as exc:
             authority_error(f"active V5 Fact lineage failed: {exc}")
 
@@ -8835,7 +10349,10 @@ class V5LifecycleManager:
                 )
                 continue
             try:
-                marker, paths = self._validated_admission(directory.name)
+                marker, paths = self._validated_admission(
+                    directory.name,
+                    _inspection_context=inspection,
+                )
                 for fact_id in paths:
                     if fact_id in admitted_fact_markers:
                         raise ValueError(
@@ -8846,7 +10363,9 @@ class V5LifecycleManager:
                 authority_error(f"V5 admission {directory.name}: {exc}")
 
         try:
-            revoked_ids = self.revoked_fact_ids()
+            revoked_ids = self.revoked_fact_ids(
+                _inspection_context=inspection
+            )
         except Exception as exc:
             authority_error(f"invalid V5 revocation store: {exc}")
             revoked_ids = set()
@@ -8987,7 +10506,13 @@ class V5LifecycleManager:
         }
 
     def audit(self) -> V5AuditReport:
+        with self.store.snapshot_lock():
+            return self._audit_snapshot_bound()
+
+    def _audit_snapshot_bound(self) -> V5AuditReport:
         report = V5AuditReport()
+        inspection = self._bind_inspection_context(None, create=True)
+        assert inspection is not None
 
         def workflow_error(message: str) -> None:
             report.workflow_errors.append(message)
@@ -9037,38 +10562,159 @@ class V5LifecycleManager:
                 workflow_error(f"V5 {label} directory is missing or unsafe")
 
         try:
-            report.research_entries = len(self.research_records())
+            report.research_entries = len(
+                self.research_records(_inspection_context=inspection)
+            )
         except Exception as exc:
             workflow_error(f"invalid V5 Research Ledger: {exc}")
         try:
             novelty_events = self.store._read_jsonl(self.store.novelty_log)
             report.novelty_entries = len(novelty_events)
-            for message in self._audit_novelty():
+            for message in self._audit_novelty(
+                _inspection_context=inspection
+            ):
                 workflow_error(f"novelty: {message}")
         except Exception as exc:
             workflow_error(f"invalid V5 novelty ledger: {exc}")
         try:
             report.quarantined_contributions = len(
-                self._quarantine_records()
+                self._quarantine_records(
+                    _inspection_context=inspection
+                )
             )
         except Exception as exc:
             workflow_error(f"invalid V5 research quarantine: {exc}")
         releases: list[dict[str, Any]] = []
         try:
-            releases = self.releases()
+            releases = self.releases(_inspection_context=inspection)
             report.candidate_releases = len(releases)
             report.candidates = sum(len(item["fact_ids"]) for item in releases)
         except Exception as exc:
             workflow_error(f"invalid V5 Candidate Release store: {exc}")
         decisions: list[dict[str, Any]] = []
         try:
-            decisions = self.decisions()
+            decisions = self.decisions(_inspection_context=inspection)
             report.certification_decisions = len(decisions)
         except Exception as exc:
             workflow_error(f"invalid V5 Certification Ledger: {exc}")
         decision_release_ids = [item["release_id"] for item in decisions]
         if len(decision_release_ids) != len(set(decision_release_ids)):
             workflow_error("a Candidate Release has multiple Certification Decisions")
+
+        decisions_by_id = {
+            item["decision_id"]: item for item in decisions
+        }
+        for label, directory in (
+            (
+                "Certification repair outbox",
+                self.certification_repair_outbox_dir,
+            ),
+            (
+                "Certification repair effects",
+                self.certification_repair_effects_dir,
+            ),
+        ):
+            # These stores are prospective.  Their absence is compatible with
+            # projects initialized before the recovery protocol existed.
+            if directory.exists() and (
+                directory.is_symlink() or not directory.is_dir()
+            ):
+                workflow_error(f"V5 {label} directory is unsafe")
+        if (
+            self.certification_repair_outbox_dir.is_dir()
+            and not self.certification_repair_outbox_dir.is_symlink()
+        ):
+            for path in sorted(
+                self.certification_repair_outbox_dir.glob("decision-*.json")
+            ):
+                if path.is_symlink() or not path.is_file():
+                    workflow_error(
+                        "Certification repair outbox contains an unsafe entry: "
+                        + path.name
+                    )
+                    continue
+                decision = decisions_by_id.get(path.stem)
+                if decision is None:
+                    try:
+                        intent = self._validate_certification_repair_intent_record(
+                            self.store._read_json(path)
+                        )
+                        if intent.get("decision_id") != path.stem:
+                            raise ValueError("path/decision binding mismatch")
+                    except Exception as exc:
+                        workflow_error(
+                            f"Certification repair intent {path.stem}: {exc}"
+                        )
+                    else:
+                        report.warnings.append(
+                            "Certification repair intent has no visible Decision; "
+                            "retry the exact certification-record input: "
+                            + path.stem
+                        )
+                    continue
+                if decision["verdict"] != "reject":
+                    workflow_error(
+                        "correct Certification Decision has a repair intent: "
+                        + path.stem
+                    )
+                    continue
+                try:
+                    self._load_certification_repair_intent(decision)
+                except Exception as exc:
+                    workflow_error(
+                        f"Certification repair intent {path.stem}: {exc}"
+                    )
+        if (
+            self.certification_repair_effects_dir.is_dir()
+            and not self.certification_repair_effects_dir.is_symlink()
+        ):
+            for path in sorted(
+                self.certification_repair_effects_dir.glob("decision-*.json")
+            ):
+                if path.is_symlink() or not path.is_file():
+                    workflow_error(
+                        "Certification repair effects contain an unsafe entry: "
+                        + path.name
+                    )
+                    continue
+                decision = decisions_by_id.get(path.stem)
+                if decision is None or decision["verdict"] != "reject":
+                    workflow_error(
+                        "Certification repair effect has no rejecting Decision: "
+                        + path.stem
+                    )
+                    continue
+                try:
+                    intent = self._load_certification_repair_intent(decision)
+                    self._load_certification_repair_effect(
+                        decision=decision,
+                        intent=intent,
+                    )
+                except Exception as exc:
+                    workflow_error(
+                        f"Certification repair effect {path.stem}: {exc}"
+                    )
+        for decision in decisions:
+            if decision["verdict"] != "reject":
+                continue
+            intent_path = self._certification_repair_intent_path(
+                decision["decision_id"]
+            )
+            effect_path = self._certification_repair_effect_path(
+                decision["decision_id"]
+            )
+            if not intent_path.is_file() or intent_path.is_symlink():
+                report.warnings.append(
+                    "rejecting Certification Decision has no durable repair intent; "
+                    "retry the exact certification-record input: "
+                    + decision["decision_id"]
+                )
+            elif not effect_path.is_file() or effect_path.is_symlink():
+                report.warnings.append(
+                    "rejecting Certification Decision has a pending repair effect; "
+                    "retry the exact certification-record input: "
+                    + decision["decision_id"]
+                )
 
         for manifest_path in sorted(self.store.rounds_dir.glob("*/round.json")):
             try:
@@ -9077,14 +10723,20 @@ class V5LifecycleManager:
                     raise ValueError(
                         "V5 root contains a non-V5 mutable round"
                     )
-                self._round_manifest(manifest_path.parent.name)
+                status = self.round_status(
+                    manifest_path.parent.name,
+                    _inspection_context=inspection,
+                )
+                report.round_states[manifest_path.parent.name] = status[
+                    "work_unit_state"
+                ]
             except Exception as exc:
                 workflow_error(
                     f"V5 round {manifest_path.parent.name}: {exc}"
                 )
 
         try:
-            facts = self.store.facts()
+            facts = self.store.facts(_inspection_context=inspection)
         except Exception as exc:
             graph_error(f"active Fact visibility failed: {exc}")
             facts = {}
@@ -9114,7 +10766,10 @@ class V5LifecycleManager:
                 )
                 continue
             try:
-                marker, paths = self._validated_admission(directory.name)
+                marker, paths = self._validated_admission(
+                    directory.name,
+                    _inspection_context=inspection,
+                )
                 admission_markers[directory.name] = marker
                 for fact_id in paths:
                     if fact_id in admitted_fact_markers:
@@ -9126,7 +10781,9 @@ class V5LifecycleManager:
                 workflow_error(f"V5 admission {directory.name}: {exc}")
 
         try:
-            revoked_ids = self.revoked_fact_ids()
+            revoked_ids = self.revoked_fact_ids(
+                _inspection_context=inspection
+            )
         except Exception as exc:
             workflow_error(f"invalid V5 revocation store: {exc}")
             revoked_ids = set()
@@ -9186,7 +10843,11 @@ class V5LifecycleManager:
 
         for fact_id in sorted(facts):
             try:
-                self.store.statement_interface(fact_id, materialize=False)
+                self.store.statement_interface(
+                    fact_id,
+                    materialize=False,
+                    _inspection_context=inspection,
+                )
             except Exception as exc:
                 workflow_error(f"V5 statement interface {fact_id}: {exc}")
 
@@ -9217,7 +10878,7 @@ class V5LifecycleManager:
             )
 
         try:
-            paper_report = self.store.paper_logic().audit(
+            paper_report = self._inspection_paper_logic(inspection).audit(
                 blackboard=self.store.blackboard()
             )
         except Exception as exc:
@@ -9237,7 +10898,9 @@ class V5LifecycleManager:
             )
 
         try:
-            continuation_report = self.paper_continuation().audit()
+            continuation_report = self.paper_continuation(
+                _inspection_context=inspection
+            ).audit()
         except Exception as exc:
             workflow_error(f"Paper continuation audit failed: {exc}")
         else:
@@ -9319,7 +10982,9 @@ class V5LifecycleManager:
                 workflow_error(f"V5 pulse: {message}")
 
         try:
-            experiment_report = self.store.experiments().audit_all()
+            experiment_report = self.store.experiments().audit_all(
+                _inspection_context=inspection
+            )
         except Exception as exc:
             workflow_error(f"V5 experiment audit failed: {exc}")
         else:
@@ -9346,7 +11011,10 @@ class V5LifecycleManager:
             for abort in abort_records:
                 round_id = abort["round_id"]
                 try:
-                    status = self.round_status(round_id)
+                    status = self.round_status(
+                        round_id,
+                        _inspection_context=inspection,
+                    )
                 except Exception as exc:
                     workflow_error(
                         f"work-unit abort/status projection failed for {round_id}: {exc}"

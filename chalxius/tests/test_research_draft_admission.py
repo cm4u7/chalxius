@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from mathgraph import parallel_verification as pv
 from mathgraph.contracts import sha256_bytes
+from mathgraph.contracts import sha256_json
 from mathgraph.interfaces import SEMANTIC_INTERFACE_REVISION
 from mathgraph.model import Fact
 from mathgraph.paper_logic import PaperLogicStore
@@ -261,7 +262,9 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             ],
         }
 
-    def _logic_bundle(self) -> dict[str, object]:
+    def _logic_bundle(
+        self, domain_profile: str = "philosophy"
+    ) -> dict[str, object]:
         span_sha = sha256_bytes(self.source_text.encode("utf-8"))
         source_qualifiers = [
             {
@@ -358,7 +361,7 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             "project_id": self.store.project_id(),
             "paper_id": "draft-paper",
             "graph_kind": "logic",
-            "domain_profile": "philosophy",
+            "domain_profile": domain_profile,
             "source_role": "research_draft",
             "builder": "paper-builder",
             "builder_context_id": "paper-builder-context",
@@ -395,12 +398,87 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             "edges": PaperLogicStore._expected_logic_edges(local_nodes),
         }
 
+    def _logic_bundle_with_inference(self) -> dict[str, object]:
+        bundle = self._logic_bundle()
+
+        def reconstructed(
+            local_id: str,
+            statement: str,
+            discourse_role: str,
+        ) -> dict[str, object]:
+            return {
+                "local_id": local_id,
+                "object_type": "claim",
+                "payload": {
+                    "representation_kind": "researcher_reconstruction",
+                    "attribution": "researcher",
+                    "discourse_role": discourse_role,
+                    "content_type": "conceptual",
+                    "statement": statement,
+                    "statement_sha256": sha256_bytes(statement.encode("utf-8")),
+                    "source_unit_ids": [],
+                    "semantic_diff": (
+                        "This explicit test-only reconstruction is not attributed "
+                        "to the source author."
+                    ),
+                    "modality": "asserted",
+                    "scope_notes": "Bounded successor-topology fixture.",
+                    "operator_ledger": _operators(statement),
+                    "definition_ids": [],
+                    "parent_claim_id": "",
+                    "semantic_direction": "reconstruction",
+                    "source_component_ids": [],
+                    "residual_component_dispositions": [],
+                    "qualifier_set": [],
+                },
+            }
+
+        bundle["nodes"].extend(
+            [
+                reconstructed("p2", "A second premise holds.", "premise"),
+                reconstructed(
+                    "c-head",
+                    "The two premises support a secondary conclusion.",
+                    "intermediate_conclusion",
+                ),
+                {
+                    "local_id": "i1",
+                    "object_type": "inference",
+                    "payload": {
+                        "premise_ids": ["c1", "p2"],
+                        "conclusion_id": "c-head",
+                        "inference_kind": "deductive",
+                        "strength": "strict",
+                        "authorial_status": "researcher_reconstructed",
+                        "source_unit_ids": [],
+                        "bridge_claim_ids": [],
+                        "defeater_claim_ids": [],
+                        "rationale": "The order is deliberately load-bearing.",
+                        "semantic_operation": "argumentative_inference",
+                    },
+                },
+                {
+                    "local_id": "t2",
+                    "object_type": "paper_target",
+                    "payload": {
+                        "target_role": "supporting",
+                        "claim_id": "c-head",
+                        "rationale": "Supporting successor-topology target.",
+                    },
+                },
+            ]
+        )
+        local_nodes = {item["local_id"]: item for item in bundle["nodes"]}
+        bundle["edges"] = PaperLogicStore._expected_logic_edges(local_nodes)
+        return bundle
+
     def _audit_bundle(
         self,
         *,
         base_snapshot_id: str,
         target_id: str,
         source_id: str,
+        domain_profile: str = "philosophy",
     ) -> dict[str, object]:
         nodes = [
             {
@@ -427,7 +505,7 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             "project_id": self.store.project_id(),
             "paper_id": "draft-paper",
             "graph_kind": "audit",
-            "domain_profile": "philosophy",
+            "domain_profile": domain_profile,
             "source_role": "research_draft",
             "builder": "audit-builder",
             "builder_context_id": "audit-builder-context",
@@ -464,41 +542,304 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
                 actor=str(bundle["builder"]),
             )
             revision = paper.revision(staged["revision_id"])
-            for index, profile in enumerate(revision["required_review_profiles"], 1):
-                object_ids = paper._expected_review_object_ids(revision, profile)
-                paper.record_review({
-                    "schema_version": 1,
-                    "feature_revision": PAPER_LOGIC_FEATURE_REVISION,
-                    "project_id": self.store.project_id(),
-                    "revision_id": revision["revision_id"],
-                    "bundle_sha256": revision["bundle_sha256"],
-                    "profile": profile,
-                    "verdict": "correct",
-                    "reviewer": f"reviewer-{index}-{profile}",
-                    "reviewer_context_id": f"fresh-{index}-{profile}",
-                    "fresh_context_contract": "fresh-context-v1",
-                    "object_checks": [
-                        {
-                            "object_id": object_id,
-                            "status": "pass",
-                            "finding": "Independently checked.",
-                        }
-                        for object_id in sorted(object_ids)
-                    ],
-                    "global_checks": [
-                        {
-                            "kind": kind,
-                            "status": "pass",
-                            "finding": "Required global check passed.",
-                        }
-                        for kind in sorted(REVIEW_GLOBAL_CHECKS[profile])
-                    ],
-                    "critical_errors": [],
-                    "gaps": [],
-                    "truth_effect": "none",
-                })
+            self._review_revision(revision)
             frozen = paper.freeze(revision["revision_id"], actor="main")
         return revision, frozen
+
+    def _review_revision(self, revision: dict[str, object]) -> None:
+        paper = self.store.paper_logic()
+        for index, profile in enumerate(revision["required_review_profiles"], 1):
+            object_ids = paper._expected_review_object_ids(revision, profile)
+            paper.record_review({
+                "schema_version": 1,
+                "feature_revision": PAPER_LOGIC_FEATURE_REVISION,
+                "project_id": self.store.project_id(),
+                "revision_id": revision["revision_id"],
+                "bundle_sha256": revision["bundle_sha256"],
+                "profile": profile,
+                "verdict": "correct",
+                "reviewer": f"reviewer-{revision['revision_id'][-8:]}-{index}-{profile}",
+                "reviewer_context_id": (
+                    f"fresh-{revision['revision_id'][-8:]}-{index}-{profile}"
+                ),
+                "fresh_context_contract": "fresh-context-v1",
+                "object_checks": [
+                    {
+                        "object_id": object_id,
+                        "status": "pass",
+                        "finding": "Independently checked.",
+                    }
+                    for object_id in sorted(object_ids)
+                ],
+                "global_checks": [
+                    {
+                        "kind": kind,
+                        "status": "pass",
+                        "finding": "Required global check passed.",
+                    }
+                    for kind in sorted(REVIEW_GLOBAL_CHECKS[profile])
+                ],
+                "critical_errors": [],
+                "gaps": [],
+                "truth_effect": "none",
+            })
+
+    def test_authoritative_successor_topology_is_rechecked_at_stage_and_freeze(
+        self,
+    ) -> None:
+        paper = self.store.paper_logic()
+        _, first = self._freeze(self._logic_bundle_with_inference())
+
+        renamed = self._logic_bundle_with_inference()
+        renamed["supersedes_snapshot_id"] = first["snapshot_id"]
+        renamed["builder"] = "rename-builder"
+        renamed["builder_context_id"] = "rename-context"
+        target = next(
+            item for item in renamed["nodes"] if item["local_id"] == "t1"
+        )
+        target["local_id"] = "t-renamed"
+        component = renamed["nodes"][0]["payload"]["proposition_inventory"][0]
+        component["mapped_node_ids"] = [
+            "t-renamed" if item == "t1" else item
+            for item in component["mapped_node_ids"]
+        ]
+        unit = renamed["coverage"]["units"][0]
+        unit["mapped_node_ids"] = [
+            "t-renamed" if item == "t1" else item
+            for item in unit["mapped_node_ids"]
+        ]
+        unit["component_dispositions"][0]["mapped_node_ids"] = [
+            "t-renamed" if item == "t1" else item
+            for item in unit["component_dispositions"][0]["mapped_node_ids"]
+        ]
+        renamed_nodes = {
+            item["local_id"]: item for item in renamed["nodes"]
+        }
+        renamed["edges"] = PaperLogicStore._expected_logic_edges(
+            renamed_nodes
+        )
+        with self.store.v5_mutation_lock(command="paper-logic-stage"):
+            with self.assertRaisesRegex(ValueError, "drops or retypes"):
+                paper.stage(
+                    renamed,
+                    artifact_path=self.source,
+                    actor="rename-builder",
+                )
+
+        reordered = self._logic_bundle_with_inference()
+        reordered["supersedes_snapshot_id"] = first["snapshot_id"]
+        reordered["builder"] = "reorder-builder"
+        reordered["builder_context_id"] = "reorder-context"
+        inference = next(
+            item for item in reordered["nodes"] if item["local_id"] == "i1"
+        )
+        inference["payload"]["premise_ids"] = ["p2", "c1"]
+        reordered_nodes = {
+            item["local_id"]: item for item in reordered["nodes"]
+        }
+        reordered["edges"] = PaperLogicStore._expected_logic_edges(
+            reordered_nodes
+        )
+        with self.store.v5_mutation_lock(command="paper-logic-stage"):
+            with self.assertRaisesRegex(ValueError, "premise order"):
+                paper.stage(
+                    reordered,
+                    artifact_path=self.source,
+                    actor="reorder-builder",
+                )
+
+        successor_a = self._logic_bundle_with_inference()
+        successor_a["supersedes_snapshot_id"] = first["snapshot_id"]
+        successor_a["builder"] = "successor-a-builder"
+        successor_a["builder_context_id"] = "successor-a-context"
+        successor_b = copy.deepcopy(successor_a)
+        successor_b["builder"] = "successor-b-builder"
+        successor_b["builder_context_id"] = "successor-b-context"
+        with self.store.v5_mutation_lock(command="paper-logic-stage"):
+            staged_a = paper.stage(
+                successor_a,
+                artifact_path=self.source,
+                actor="successor-a-builder",
+            )
+            staged_b = paper.stage(
+                successor_b,
+                artifact_path=self.source,
+                actor="successor-b-builder",
+            )
+            revision_a = paper.revision(staged_a["revision_id"])
+            revision_b = paper.revision(staged_b["revision_id"])
+            self.assertEqual(
+                revision_a["successor_topology_receipt"]["resolution"],
+                "exact_current_logic_successor",
+            )
+            self._review_revision(revision_a)
+            self._review_revision(revision_b)
+            frozen_a = paper.freeze(revision_a["revision_id"], actor="main")
+            self.assertTrue(frozen_a["snapshot_id"].startswith("pls-"))
+            with self.assertRaisesRegex(ValueError, "unique current Logic head"):
+                paper.freeze(revision_b["revision_id"], actor="main")
+
+    def test_successor_topology_receipt_tamper_fails_at_native_freeze(self) -> None:
+        paper = self.store.paper_logic()
+        _, first = self._freeze(self._logic_bundle_with_inference())
+        successor = self._logic_bundle_with_inference()
+        successor["supersedes_snapshot_id"] = first["snapshot_id"]
+        successor["builder"] = "topology-tamper-builder"
+        successor["builder_context_id"] = "topology-tamper-context"
+        with self.store.v5_mutation_lock(command="paper-logic-stage"):
+            staged = paper.stage(
+                successor,
+                artifact_path=self.source,
+                actor="topology-tamper-builder",
+            )
+            revision = paper.revision(staged["revision_id"])
+            tampered = copy.deepcopy(revision)
+            receipt = tampered["successor_topology_receipt"]
+            receipt["predecessor_relations_sha256"] = "0" * 64
+            receipt["receipt_id"] = "pst-" + sha256_json(
+                {
+                    key: value
+                    for key, value in receipt.items()
+                    if key != "receipt_id"
+                }
+            )
+            tampered["revision_id"] = "plr-" + sha256_json(
+                {
+                    key: value
+                    for key, value in tampered.items()
+                    if key != "revision_id"
+                }
+            )
+            paper._write_json_once(
+                paper._revision_path(tampered["revision_id"]),
+                tampered,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "successor topology receipt does not match immutable revision bytes",
+            ):
+                paper.freeze(tampered["revision_id"], actor="main")
+
+    def _changed_surface_successor(
+        self,
+        *,
+        change_premise: bool,
+    ) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+        paper = self.store.paper_logic()
+        _, first = self._freeze(self._logic_bundle_with_inference())
+        successor = self._logic_bundle_with_inference()
+        successor["supersedes_snapshot_id"] = first["snapshot_id"]
+        successor["builder"] = "changed-surface-builder"
+        successor["builder_context_id"] = "changed-surface-context"
+        if change_premise:
+            changed_premise = next(
+                item for item in successor["nodes"] if item["local_id"] == "p2"
+            )
+            changed_statement = "A more explicit second premise holds."
+            changed_premise["payload"]["statement"] = changed_statement
+            changed_premise["payload"]["statement_sha256"] = sha256_bytes(
+                changed_statement.encode("utf-8")
+            )
+        local_nodes = {item["local_id"]: item for item in successor["nodes"]}
+        successor["edges"] = PaperLogicStore._expected_logic_edges(local_nodes)
+        successor_revision, second = self._freeze(successor)
+        return first, successor_revision, second
+
+    @staticmethod
+    def _changed_surface_plan_input(source_sha: str) -> dict[str, object]:
+        return {
+            "selection_mode": "changed_surface",
+            "target_node_ids": [],
+            "objective": "Revalidate only targets reached by the exact successor delta.",
+            "source_artifact_sha256": source_sha,
+        }
+
+    def test_changed_surface_continuation_derives_and_consumes_exact_delta(
+        self,
+    ) -> None:
+        _, successor_revision, second = self._changed_surface_successor(
+            change_premise=True
+        )
+        continuation = self.lifecycle.paper_continuation()
+        local_ids = successor_revision["local_id_map"]
+        status = continuation.create_plan(
+            second["snapshot_id"],
+            self._changed_surface_plan_input(self.source_sha),
+            actor="main",
+        )
+        plan = continuation.plan(status["plan_id"])
+        receipt = plan["changed_surface_receipt"]
+        self.assertEqual(receipt["changed_node_ids"], [local_ids["p2"]])
+        self.assertIn(local_ids["t2"], receipt["audit_node_ids"])
+        self.assertNotIn(local_ids["t1"], receipt["audit_node_ids"])
+        self.assertEqual(plan["target_node_ids"], [local_ids["t2"]])
+        self.assertEqual(status["counts"]["total"], 1)
+        self.assertEqual(
+            continuation.materialization(plan["plan_id"])[
+                "target_research_bindings"
+            ][0]["target_node_id"],
+            local_ids["t2"],
+        )
+
+    def test_unchanged_or_first_snapshot_requires_full_surface(self) -> None:
+        paper = self.store.paper_logic()
+        _, first = self._freeze(self._logic_bundle_with_inference())
+        continuation = self.lifecycle.paper_continuation()
+        plan_input = self._changed_surface_plan_input(self.source_sha)
+        with self.assertRaisesRegex(ValueError, "no predecessor.*full-snapshot audit"):
+            continuation.create_plan(
+                first["snapshot_id"],
+                plan_input,
+                actor="main",
+            )
+
+        unchanged = self._logic_bundle_with_inference()
+        unchanged["supersedes_snapshot_id"] = first["snapshot_id"]
+        unchanged["builder"] = "unchanged-surface-builder"
+        unchanged["builder_context_id"] = "unchanged-surface-context"
+        _, successor = self._freeze(unchanged)
+        with self.assertRaisesRegex(ValueError, "no semantic graph delta"):
+            continuation.create_plan(
+                successor["snapshot_id"],
+                plan_input,
+                actor="main",
+            )
+
+    def test_changed_surface_receipt_tamper_fails_closed(self) -> None:
+        _, successor_revision, second = self._changed_surface_successor(
+            change_premise=True
+        )
+        continuation = self.lifecycle.paper_continuation()
+        local_ids = successor_revision["local_id_map"]
+        status = continuation.create_plan(
+            second["snapshot_id"],
+            self._changed_surface_plan_input(self.source_sha),
+            actor="main",
+        )
+        plan = continuation.plan(status["plan_id"])
+
+        tampered = copy.deepcopy(plan)
+        tampered["changed_surface_receipt"]["changed_node_ids"] = [
+            local_ids["t2"]
+        ]
+        semantic = {
+            key: value
+            for key, value in tampered.items()
+            if key not in {"plan_id", "created_at", "record_sha256"}
+        }
+        tampered["plan_id"] = "pcp-" + sha256_json(semantic)
+        tampered["record_sha256"] = sha256_json(
+            {
+                key: value
+                for key, value in tampered.items()
+                if key != "record_sha256"
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "changed-surface receipt drifted"):
+            continuation._validate_plan_record(
+                tampered,
+                path=continuation._plan_path(tampered["plan_id"]),
+            )
 
     def test_source_unit_cannot_count_as_its_own_proposition_coverage(self) -> None:
         bundle = self._logic_bundle()
@@ -631,12 +972,14 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
         )
 
     @staticmethod
-    def _semantic_interface(statement: str) -> list[dict[str, object]]:
+    def _semantic_interface(
+        statement: str, domain_profile: str = "philosophy"
+    ) -> list[dict[str, object]]:
         clause = statement.removeprefix("[CLAIM:C1] ")
         return [
             {
                 "interface_revision": SEMANTIC_INTERFACE_REVISION,
-                "domain_profile": "philosophy",
+                "domain_profile": domain_profile,
                 "clause_id": "C1",
                 "component_id": "component-defense",
                 "component_kind": "conclusion",
@@ -674,38 +1017,86 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             }
         ]
 
-    def _build_payload(self) -> tuple[dict[str, object], Path]:
-        logic_revision, logic_frozen = self._freeze(self._logic_bundle())
+    def _build_payload(
+        self, domain_profile: str = "philosophy"
+    ) -> tuple[dict[str, object], Path]:
+        logic_revision, logic_frozen = self._freeze(
+            self._logic_bundle(domain_profile=domain_profile)
+        )
         logic_ids = logic_revision["local_id_map"]
         audit_revision, audit_frozen = self._freeze(
             self._audit_bundle(
                 base_snapshot_id=logic_frozen["snapshot_id"],
                 target_id=logic_ids["c1"],
                 source_id=logic_ids["s1"],
+                domain_profile=domain_profile,
             )
         )
         audit_ids = audit_revision["local_id_map"]
         research = self._current_research()
         manager = self.lifecycle.research_draft()
-        plan = manager.create_plan(
-            logic_frozen["snapshot_id"],
-            {
-                "objective": "Strengthen the draft while preserving its constrained defense.",
-                "source_artifact_sha256": self.source_sha,
+        if domain_profile == "philosophy":
+            plan_domain_policy = {
                 "stance_policy": {
                     "policy": "steelman_headline",
                     "headline_target_ids": [logic_ids["t1"]],
                     "declared_stance": self.declared_stance,
                     "major_revision_requires_operator_authorization": True,
-                },
+                }
+            }
+        elif domain_profile == "mathematics":
+            exact_target = "Determine whether C follows under the declared conditions."
+            exact_domain = "All objects in the exact declared class."
+            plan_domain_policy = {
+                "mathematical_target_policy": {
+                    "contract_revision": "chalxius-mathematical-target-policy-1",
+                    "exact_target_statement": exact_target,
+                    "exact_target_statement_sha256": sha256_bytes(
+                        exact_target.encode("utf-8")
+                    ),
+                    "target_claim_ids": [logic_ids["c1"]],
+                    "hypothesis_claim_ids": [],
+                    "domain_bindings": [
+                        {
+                            "binding_id": "domain-main",
+                            "exact_domain": exact_domain,
+                            "exact_domain_sha256": sha256_bytes(
+                                exact_domain.encode("utf-8")
+                            ),
+                            "source_claim_ids": [logic_ids["c1"]],
+                        }
+                    ],
+                    "quantifier_bindings": [],
+                    "permitted_exact_target_outcomes": [
+                        "proved",
+                        "disproved",
+                        "unresolved_with_obstruction",
+                    ],
+                    "target_revision_requires_operator_authorization": True,
+                    "partial_progress_policy": (
+                        "typed_refinement_dag_keeps_exact_target_open"
+                    ),
+                }
+            }
+        else:
+            raise AssertionError("fixture supports philosophy or mathematics only")
+        plan = manager.create_plan(
+            logic_frozen["snapshot_id"],
+            {
+                "objective": "Strengthen the draft while preserving its constrained defense.",
+                "source_artifact_sha256": self.source_sha,
+                **plan_domain_policy,
                 "term_registry": [],
             },
             actor="main",
         )
-        self.assertEqual(
-            plan["stance_policy"]["declared_stance"],
-            self.declared_stance,
-        )
+        if domain_profile == "philosophy":
+            self.assertEqual(
+                plan["stance_policy"]["declared_stance"],
+                self.declared_stance,
+            )
+        else:
+            self.assertNotIn("stance_policy", plan)
         statement = f"[CLAIM:C1] {self.source_text}"
         fact = Fact(
             problem_id=self.store.project_id(),
@@ -713,7 +1104,7 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             predecessors=[],
             statement=statement,
             proof="The exact scoped source component supports this bounded conclusion.",
-            semantic_interface=self._semantic_interface(statement),
+            semantic_interface=self._semantic_interface(statement, domain_profile),
         )
         surface_statement = "The intervention is not justified outside the constrained scope."
         surface = {
@@ -746,6 +1137,91 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             }
             for kind in plan["required_profile_obligations"]
         ]
+        if domain_profile == "philosophy":
+            domain_entry_fields = {
+                "stance_impact": "preserves_headline",
+                "major_revision_authorization": None,
+            }
+            successor_relation = "directly_reconstructs"
+            successor_reason = "The atomic Fact reconstructs the headline target."
+        else:
+            target_policy = plan["mathematical_target_policy"]
+            added_hypothesis = "Additional hypothesis H."
+            mathematical_progress = {
+                "schema_version": 1,
+                "contract_revision": "chalxius-mathematical-refinement-dag-1",
+                "root_target": {
+                    "root_id": "exact-target-root",
+                    "exact_target_statement_sha256": target_policy[
+                        "exact_target_statement_sha256"
+                    ],
+                    "target_claim_ids": target_policy["target_claim_ids"],
+                    "hypothesis_claim_ids": target_policy["hypothesis_claim_ids"],
+                    "domain_bindings_sha256": sha256_json(
+                        target_policy["domain_bindings"]
+                    ),
+                    "quantifier_bindings_sha256": sha256_json(
+                        target_policy["quantifier_bindings"]
+                    ),
+                    "resolution_status": "unresolved_with_obstruction",
+                    "resolution_evidence_ids": [],
+                    "obstruction": (
+                        "The verified refinement uses H, absent from the exact target."
+                    ),
+                    "original_target_open": True,
+                },
+                "nodes": [
+                    {
+                        "node_id": "weak-with-H",
+                        "node_type": "added_hypothesis_theorem",
+                        "statement": fact.statement,
+                        "statement_sha256": sha256_bytes(
+                            fact.statement.encode("utf-8")
+                        ),
+                        "resolution_status": "proved",
+                        "evidence_ids": ["proof-weak-with-H"],
+                        "obstruction": "",
+                        "logical_relation_to_original": (
+                            "stronger_hypotheses_than_original"
+                        ),
+                        "refinement_mapping_relation": "weakened_from",
+                        "candidate_fact_id_or_null": fact.fact_id,
+                        "hypothesis_deltas": [
+                            {
+                                "dimension": "hypothesis",
+                                "binding_id": "hypothesis-H",
+                                "before": "",
+                                "before_sha256": sha256_bytes(b""),
+                                "after": added_hypothesis,
+                                "after_sha256": sha256_bytes(
+                                    added_hypothesis.encode("utf-8")
+                                ),
+                                "change_type": "added",
+                                "rationale": "H is the exact added hypothesis.",
+                            }
+                        ],
+                        "domain_deltas": [],
+                        "quantifier_deltas": [],
+                        "conclusion_strength_deltas": [],
+                        "remaining_gap_to_exact_target": "Remove H without weakening C.",
+                        "truth_effect": "none",
+                    }
+                ],
+                "edges": [
+                    {
+                        "parent_id": "exact-target-root",
+                        "child_id": "weak-with-H",
+                        "relation": "refines_toward_exact_target",
+                    }
+                ],
+                "topological_order": ["exact-target-root", "weak-with-H"],
+                "truth_effect": "none",
+            }
+            domain_entry_fields = {"mathematical_progress": mathematical_progress}
+            successor_relation = "weakened_from"
+            successor_reason = (
+                "The verified added-hypothesis theorem is non-closing progress."
+            )
         batch_result = manager.record_batch(
             plan["plan_id"],
             {
@@ -756,13 +1232,12 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
                         "node_disposition": "repaired",
                         "disposition_reason": "The exact qualifier is made explicit.",
                         "research_record_ids": [research["research_id"]],
-                        "stance_impact": "preserves_headline",
-                        "major_revision_authorization": None,
+                        **domain_entry_fields,
                         "successor_mappings": [
                             {
                                 "successor_id": fact.fact_id,
-                                "relation_kind": "directly_reconstructs",
-                                "reason": "The atomic Fact reconstructs the headline target.",
+                                "relation_kind": successor_relation,
+                                "reason": successor_reason,
                             }
                         ],
                         "term_sense_refs": [],
@@ -834,10 +1309,65 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
                 "source_grounded"
                 if logic_nodes[node_id]["object_type"]
                 in {"source_artifact", "source_unit"}
+                else "weakened_from"
+                if domain_profile == "mathematics" and node_id == logic_ids["t1"]
                 else "directly_reconstructs"
             )
             for node_id in load_bearing
         }
+        if domain_profile == "philosophy":
+            domain_assurance = {
+                "stance_preservation": {
+                    "policy": "steelman_headline",
+                    "declared_stance_sha256": sha256_bytes(
+                        self.declared_stance.encode("utf-8")
+                    ),
+                    "headline_target_ids": [logic_ids["t1"]],
+                    "headline_impacts": [
+                        {
+                            "target_node_id": logic_ids["t1"],
+                            "impact": "preserves_headline",
+                            "reason": (
+                                "The Candidate strengthens rather than reverses "
+                                "the thesis."
+                            ),
+                        }
+                    ],
+                    "major_revision_authorization_ids": [],
+                }
+            }
+        else:
+            normalized_progress = batch["entries"][0]["mathematical_progress"]
+            root = normalized_progress["root_target"]
+            domain_assurance = {
+                "mathematical_target_preservation": {
+                    "target_policy_sha256": sha256_json(
+                        plan["mathematical_target_policy"]
+                    ),
+                    "exact_target_root_sha256": sha256_json(root),
+                    "target_claim_ids": plan["mathematical_target_policy"][
+                        "target_claim_ids"
+                    ],
+                    "hypothesis_claim_ids": plan["mathematical_target_policy"][
+                        "hypothesis_claim_ids"
+                    ],
+                    "root_resolution_status": root["resolution_status"],
+                    "root_resolution_evidence_ids": root[
+                        "resolution_evidence_ids"
+                    ],
+                    "original_target_open": root["original_target_open"],
+                    "target_progress": [
+                        {
+                            "target_node_id": logic_ids["t1"],
+                            "progress_class": normalized_progress["progress_class"],
+                            "refinement_dag_sha256": normalized_progress[
+                                "refinement_dag_sha256"
+                            ],
+                        }
+                    ],
+                    "weakening_closes_exact_target": False,
+                }
+            }
         assurance = {
             "contract_revision": ASSURANCE_REVISION,
             "validation_subject": {
@@ -886,21 +1416,7 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
                     ),
                 }
             ],
-            "stance_preservation": {
-                "policy": "steelman_headline",
-                "declared_stance_sha256": sha256_bytes(
-                    self.declared_stance.encode("utf-8")
-                ),
-                "headline_target_ids": [logic_ids["t1"]],
-                "headline_impacts": [
-                    {
-                        "target_node_id": logic_ids["t1"],
-                        "impact": "preserves_headline",
-                        "reason": "The Candidate strengthens rather than reverses the thesis.",
-                    }
-                ],
-                "major_revision_authorization_ids": [],
-            },
+            **domain_assurance,
         }
         closure = derive_paper_transport_closure(self.store, paper_refs)
         artifacts: list[dict[str, str]] = []
@@ -945,7 +1461,11 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
             "validated_dependency_receipt",
             "language_neutral_statement_interfaces",
             "semantic_component_atomicity",
-            "stance_preservation",
+            (
+                "stance_preservation"
+                if domain_profile == "philosophy"
+                else "mathematical_target_and_refinement_continuity"
+            ),
         }
         payload = {
             "schema_version": 5,
@@ -1247,6 +1767,45 @@ class ResearchDraftAdmissionTests(unittest.TestCase):
         dependency_path.write_text("Drifted source bytes.", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "file key changed"):
             self.lifecycle.release(release["release_id"])
+
+    def test_mathematical_candidate_release_keeps_weaker_fact_non_closing(self) -> None:
+        payload, _ = self._build_payload("mathematics")
+        self.assertNotIn("stance_preservation", payload["requested_assurance"])
+        target = payload["requested_assurance"][
+            "mathematical_target_preservation"
+        ]
+        self.assertTrue(target["original_target_open"])
+        self.assertFalse(target["weakening_closes_exact_target"])
+        checked = self.lifecycle.candidate_release(
+            payload, producer="producer", preflight_only=True
+        )
+        self.assertTrue(checked["valid"])
+        release = self.lifecycle.candidate_release(payload, producer="producer")
+        self.assertEqual(
+            release["research_draft_admission_preflight"]["structural_status"],
+            "PASS",
+        )
+        self.assertIn(
+            "mathematical_target_and_refinement_continuity",
+            release["verification_plan"]["required_checks"],
+        )
+        self.assertNotIn(
+            "stance_preservation", release["verification_plan"]["required_checks"]
+        )
+        capsule = self.lifecycle.verifier_capsule(release["release_id"])
+        self.assertIn(
+            "typed weaker result is intermediate progress",
+            capsule["instructions"]["research_draft_boundary"],
+        )
+
+        drifted = copy.deepcopy(payload)
+        drifted["requested_assurance"]["mathematical_target_preservation"][
+            "weakening_closes_exact_target"
+        ] = True
+        with self.assertRaisesRegex(ValueError, "cannot close the exact target"):
+            self.lifecycle.candidate_release(
+                drifted, producer="producer", preflight_only=True
+            )
 
     def test_strict_release_rejects_mapping_component_and_stance_seam_drift(self) -> None:
         payload, _ = self._build_payload()

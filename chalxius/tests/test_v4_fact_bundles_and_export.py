@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from pathlib import Path
 
+from mathgraph.cli import main as cli_main
 from mathgraph.fact_bundles import (
     DOMAIN_CLAUSES,
     FactBundleStore,
@@ -93,6 +97,48 @@ class V4FactBundleAndExportTests(unittest.TestCase):
         self.assertFalse(
             (self.bundles.root / bundle_id / "ACCEPTED.json").exists()
         )
+
+    def test_verifier_task_aliases_share_one_v4_behavior(self) -> None:
+        bundle_id = self._submit()
+        review_id = self._record_clean_review(bundle_id)
+        self.store.admit_fact_bundle(bundle_id, review_id=review_id)
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            code = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "operator",
+                    "mode-init",
+                    "--mode",
+                    "auto",
+                    "--actor",
+                    "operator",
+                    "--reason",
+                    "Explicitly activate the inherited V4 compatibility runtime.",
+                ]
+            )
+        self.assertEqual(code, 0)
+        payloads = []
+        for command in (
+            "make-bundle-verifier-task",
+            "fact-bundle-verifier-task",
+        ):
+            stdout = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(StringIO()):
+                code = cli_main(
+                    [
+                        "--root",
+                        str(self.root),
+                        "--role",
+                        "operator",
+                        command,
+                        bundle_id,
+                    ]
+                )
+            self.assertEqual(code, 0, command)
+            payloads.append(json.loads(stdout.getvalue()))
+        self.assertEqual(payloads[0], payloads[1])
 
     def test_fact_bundle_becomes_visible_all_at_once(self) -> None:
         bundle_id = self._submit()

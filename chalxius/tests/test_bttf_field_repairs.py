@@ -939,8 +939,17 @@ class BTTFFieldRepairTests(unittest.TestCase):
 
             real_round_status = lifecycle.round_status
 
-            def stale_round_status(round_id: str) -> dict[str, object]:
-                stale = copy.deepcopy(real_round_status(round_id))
+            def stale_round_status(
+                round_id: str,
+                *,
+                _inspection_context: object | None = None,
+            ) -> dict[str, object]:
+                stale = copy.deepcopy(
+                    real_round_status(
+                        round_id,
+                        _inspection_context=_inspection_context,
+                    )
+                )
                 stale["work_unit_state"] = "active"
                 stale["abort_id"] = None
                 stale["work_unit_abort"] = None

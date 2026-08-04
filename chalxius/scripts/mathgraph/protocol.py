@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from .adoption import feature_required, validate_adoption_binding
@@ -31,6 +32,57 @@ from .contracts import (
 
 
 PROTOCOL_V4 = "mathgraph-agent-v4"
+
+
+def normalize_host_task_scope_id(
+    value: str | None,
+    *,
+    workflow_evidence_version: int,
+    project_id: str | None = None,
+    local_seed: Any | None = None,
+) -> str | None:
+    """Normalize one host task scope for both V4 and V5 planning.
+
+    Explicit input wins over the two host environment channels.  V4 keeps its
+    external-scope requirement.  V5 may defer local allocation until the
+    lifecycle has an exact, deterministic planning seed; once that seed is
+    supplied the result is a non-null project-local scope shared by every card
+    in the new round.
+    """
+
+    raw = value
+    if raw is None:
+        raw = (
+            os.environ.get("MATHGRAPH_HOST_TASK_SCOPE_ID")
+            or os.environ.get("CODEX_THREAD_ID")
+        )
+    if isinstance(raw, str) and raw.strip():
+        raw = raw.strip()
+        if HOST_TASK_SCOPE_ID_RE.fullmatch(raw):
+            return raw
+        return "hosttask-" + sha256_json(
+            {
+                "namespace": "mathgraph-host-task-scope-v1",
+                "host_value": raw,
+            }
+        )[:32]
+    if workflow_evidence_version < 5:
+        raise ValueError(
+            "new V4 planning requires a stable host task scope via "
+            "--host-task-scope-id, MATHGRAPH_HOST_TASK_SCOPE_ID, or "
+            "CODEX_THREAD_ID"
+        )
+    if local_seed is None:
+        return None
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise ValueError("V5 local host scope allocation requires a project id")
+    return "hosttask-" + sha256_json(
+        {
+            "namespace": "chalxius-v5-local-host-task-scope-1",
+            "project_id": project_id,
+            "planning_seed": local_seed,
+        }
+    )[:32]
 CONTROL_FOLLOWUP_ACTIONS = {
     "clarify",
     "stop",

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
@@ -52,8 +55,103 @@ class ReleaseValidationTests(unittest.TestCase):
             self.assertFalse((second / "unexpected.txt").exists())
             lanes = release_validation._default_lanes(release_validation.sys.executable)
             phases = {lane.name: lane.phase for lane in lanes}
+            self.assertLess(
+                phases["architecture_reconnaissance"], phases["full_suite"]
+            )
+            self.assertLess(
+                phases["architecture_reconnaissance"], phases["self_test"]
+            )
+            self.assertLess(
+                phases["architecture_reconnaissance"],
+                phases["behavioral_feature_gate"],
+            )
+            self.assertLess(
+                phases["behavioral_feature_gate"], phases["full_suite"]
+            )
+            self.assertLess(
+                phases["behavioral_feature_gate"], phases["self_test"]
+            )
             self.assertGreater(phases["aggressive_bug_audit"], phases["full_suite"])
             self.assertGreater(phases["aggressive_bug_audit"], phases["self_test"])
+            self.assertLess(
+                phases["mutant_registry_preflight"], phases["full_suite"]
+            )
+            self.assertLess(
+                phases["mutant_registry_preflight"], phases["self_test"]
+            )
+
+    def test_current_mutant_registry_preflight_is_cheap_read_only_lane(self) -> None:
+        candidate = Path(release_validation.__file__).resolve().parents[1]
+        before = release_validation._snapshot(candidate)
+        environment = dict(os.environ)
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        outcome = subprocess.run(
+            [
+                release_validation.sys.executable,
+                "scripts/aggressive_bug_audit.py",
+                "--preflight-only",
+            ],
+            cwd=candidate,
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=30,
+        )
+        self.assertEqual(outcome.returncode, 0, outcome.stdout)
+        receipt = json.loads(outcome.stdout)
+        self.assertTrue(receipt["ok"])
+        self.assertEqual(
+            receipt["mutant_count"], receipt["exact_single_target_count"]
+        )
+        self.assertEqual(before, release_validation._snapshot(candidate))
+
+    def test_failed_architecture_phase_has_explicit_bounded_skip_records(self) -> None:
+        manifest_sha256 = "a" * 64
+        lanes = release_validation._default_lanes(release_validation.sys.executable)
+        architecture = next(
+            lane for lane in lanes if lane.name == "architecture_reconnaissance"
+        )
+        results = [
+            {
+                "lane": architecture.name,
+                "phase": architecture.phase,
+                "manifest_sha256": manifest_sha256,
+                "lane_unchanged": True,
+                "ok": False,
+            }
+        ]
+        results.extend(
+            release_validation._skipped_lane_result(
+                lane=lane,
+                manifest_sha256=manifest_sha256,
+                failed_phase=architecture.phase,
+            )
+            for lane in lanes
+            if lane is not architecture
+        )
+        report = release_validation._aggregate(
+            expected_lanes=lanes,
+            manifest_sha256=manifest_sha256,
+            results=results,
+            source_unchanged=True,
+        )
+        self.assertFalse(report["ok"])
+        self.assertTrue(report["architecture_gate_before_baseline"])
+        self.assertTrue(
+            report["behavioral_gate_after_architecture_before_baseline"]
+        )
+        self.assertEqual(
+            report["skipped_lanes"],
+            sorted(lane.name for lane in lanes if lane is not architecture),
+        )
+        self.assertTrue(
+            all(
+                result.get("skipped_due_to_prior_phase") is True
+                for result in results[1:]
+            )
+        )
 
     def test_lane_runner_suppresses_bytecode_and_rejects_any_lane_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

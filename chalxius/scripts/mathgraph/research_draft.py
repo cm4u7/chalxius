@@ -4,10 +4,12 @@ from __future__ import annotations
 
 Historical Paper continuation v1 objects remain readable by their original
 manager.  This module is the strict path for a new or explicitly upgraded
-``research_draft``: it binds the whole Paper target set, preserves a declared
-stance, publishes dispositions as an all-or-none batch, qualifies failure
-surfaces globally, and keeps node disposition distinct from many-to-many
-Candidate mapping.
+``research_draft``: it binds the whole Paper target set, applies one explicit
+domain continuity adapter, publishes dispositions as an all-or-none batch,
+qualifies failure surfaces globally, and keeps node disposition distinct from
+many-to-many Candidate mapping.  Only philosophy has a stance adapter.
+Mathematics keeps an immutable exact target while admitting a typed refinement
+DAG as non-closing intermediate progress.
 """
 
 import json
@@ -24,13 +26,20 @@ from .paper_continuation import PaperContinuationManager
 from .paper_logic_contracts import PAPER_SNAPSHOT_ID_RE
 
 
-RESEARCH_DRAFT_PLAN_REVISION = "chalxius-research-draft-plan-1"
-RESEARCH_DRAFT_BATCH_REVISION = "chalxius-research-draft-disposition-batch-1"
-RESEARCH_DRAFT_ADEQUACY_REVISION = "chalxius-research-draft-adequacy-1"
+LEGACY_RESEARCH_DRAFT_PLAN_REVISION = "chalxius-research-draft-plan-1"
+RESEARCH_DRAFT_PLAN_REVISION = "chalxius-research-draft-plan-2"
+LEGACY_RESEARCH_DRAFT_BATCH_REVISION = (
+    "chalxius-research-draft-disposition-batch-1"
+)
+RESEARCH_DRAFT_BATCH_REVISION = "chalxius-research-draft-disposition-batch-2"
+LEGACY_RESEARCH_DRAFT_ADEQUACY_REVISION = "chalxius-research-draft-adequacy-1"
+RESEARCH_DRAFT_ADEQUACY_REVISION = "chalxius-research-draft-adequacy-2"
 RESEARCH_DRAFT_STANCE_AUTHORIZATION_REVISION = (
     "chalxius-research-draft-major-revision-authorization-1"
 )
 PROFILE_CLOSURE_REVISION = "chalxius-research-draft-profile-closure-1"
+MATHEMATICAL_TARGET_POLICY_REVISION = "chalxius-mathematical-target-policy-1"
+MATHEMATICAL_REFINEMENT_DAG_REVISION = "chalxius-mathematical-refinement-dag-1"
 PLAN_ID_RE = re.compile(r"rdp-[0-9a-f]{64}")
 BATCH_ID_RE = re.compile(r"rdb-[0-9a-f]{64}")
 AUTHORIZATION_ID_RE = re.compile(r"rda-[0-9a-f]{64}")
@@ -49,6 +58,11 @@ MAPPING_RELATIONS = frozenset(
         "splits_into",
         "supported_through_predecessor",
         "source_grounded",
+        "weakened_from",
+        "special_case_of",
+        "strengthens_toward",
+        "counterexample_candidate_for",
+        "obstruction_to",
     }
 )
 STANCE_IMPACTS = frozenset(
@@ -65,6 +79,49 @@ MAJOR_STANCE_EFFECTS = {
     "narrows_headline": "narrow_headline",
     "reverses_headline": "reverse_headline",
     "withdraws_headline": "withdraw_headline",
+}
+
+MATHEMATICAL_EXACT_OUTCOMES = frozenset(
+    {"proved", "disproved", "unresolved_with_obstruction"}
+)
+MATHEMATICAL_REFINEMENT_TYPES = frozenset(
+    {
+        "weaker_theorem",
+        "stronger_theorem",
+        "special_case",
+        "added_hypothesis_theorem",
+        "weakened_conclusion_theorem",
+        "counterexample",
+        "obstruction",
+    }
+)
+MATHEMATICAL_REFINEMENT_RELATIONS = {
+    "weaker_theorem": ("logically_weaker_than_original", "weakened_from"),
+    "stronger_theorem": ("logically_stronger_than_original", "strengthens_toward"),
+    "special_case": ("special_case_of_original", "special_case_of"),
+    "added_hypothesis_theorem": (
+        "stronger_hypotheses_than_original",
+        "weakened_from",
+    ),
+    "weakened_conclusion_theorem": (
+        "weaker_conclusion_than_original",
+        "weakened_from",
+    ),
+    "counterexample": (
+        "counterexample_candidate_for_original",
+        "counterexample_candidate_for",
+    ),
+    "obstruction": ("obstructs_resolution_of_original", "obstruction_to"),
+}
+MATHEMATICAL_DELTA_TYPES = {
+    "hypothesis": frozenset({"added", "removed", "weakened", "strengthened", "changed"}),
+    "domain": frozenset({"restricted", "expanded", "changed"}),
+    "quantifier": frozenset({"weakened", "strengthened", "reordered", "changed"}),
+    "conclusion_strength": frozenset({"weakened", "strengthened", "changed"}),
+}
+DOMAIN_TARGET_ADAPTERS = {
+    "empirical": "empirical_target",
+    "mixed": "mixed_target",
 }
 
 PROFILE_OBLIGATIONS = {
@@ -205,6 +262,524 @@ def _profile_obligations(domain_profile: str) -> list[str]:
     return list(PROFILE_OBLIGATIONS[domain_profile])
 
 
+def _hash_bound_text(value: Any, digest: Any, label: str, *, allow_empty: bool = False) -> str:
+    normalized = _text(value, label, allow_empty=allow_empty)
+    if not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
+        raise ValueError(f"{label} SHA-256 is invalid")
+    if digest != sha256_bytes(normalized.encode("utf-8")):
+        raise ValueError(f"{label} SHA-256 drifted")
+    return normalized
+
+
+def _domain_binding(value: Any, *, available_claim_ids: set[str]) -> dict[str, Any]:
+    value = _exact(
+        value,
+        {
+            "binding_id",
+            "exact_domain",
+            "exact_domain_sha256",
+            "source_claim_ids",
+        },
+        "mathematical domain binding",
+    )
+    binding_id = _text(value["binding_id"], "mathematical domain binding id")
+    source_claim_ids = _strings(
+        value["source_claim_ids"],
+        "mathematical domain source claim ids",
+        nonempty=True,
+    )
+    if not set(source_claim_ids).issubset(available_claim_ids):
+        raise ValueError("mathematical domain binding escapes the Paper closure")
+    exact_domain = _hash_bound_text(
+        value["exact_domain"],
+        value["exact_domain_sha256"],
+        "mathematical exact domain",
+    )
+    return {
+        "binding_id": binding_id,
+        "exact_domain": exact_domain,
+        "exact_domain_sha256": value["exact_domain_sha256"],
+        "source_claim_ids": source_claim_ids,
+    }
+
+
+def _quantifier_binding(value: Any, *, available_claim_ids: set[str]) -> dict[str, Any]:
+    value = _exact(
+        value,
+        {
+            "binding_id",
+            "exact_quantifier",
+            "exact_scope",
+            "binding_sha256",
+            "source_claim_ids",
+        },
+        "mathematical quantifier binding",
+    )
+    binding_id = _text(value["binding_id"], "mathematical quantifier binding id")
+    exact_quantifier = _text(
+        value["exact_quantifier"], "mathematical exact quantifier"
+    )
+    exact_scope = _text(value["exact_scope"], "mathematical quantifier scope")
+    source_claim_ids = _strings(
+        value["source_claim_ids"],
+        "mathematical quantifier source claim ids",
+        nonempty=True,
+    )
+    if not set(source_claim_ids).issubset(available_claim_ids):
+        raise ValueError("mathematical quantifier binding escapes the Paper closure")
+    semantic = {
+        "binding_id": binding_id,
+        "exact_quantifier": exact_quantifier,
+        "exact_scope": exact_scope,
+        "source_claim_ids": source_claim_ids,
+    }
+    if value["binding_sha256"] != sha256_json(semantic):
+        raise ValueError("mathematical quantifier binding hash drifted")
+    return {**semantic, "binding_sha256": value["binding_sha256"]}
+
+
+def validate_mathematical_target_policy(
+    value: Any,
+    *,
+    available_claim_ids: set[str],
+    exact_target_claim_ids: set[str],
+) -> dict[str, Any]:
+    """Validate an immutable mathematical root target without presuming truth."""
+
+    value = _exact(
+        value,
+        {
+            "contract_revision",
+            "exact_target_statement",
+            "exact_target_statement_sha256",
+            "target_claim_ids",
+            "hypothesis_claim_ids",
+            "domain_bindings",
+            "quantifier_bindings",
+            "permitted_exact_target_outcomes",
+            "target_revision_requires_operator_authorization",
+            "partial_progress_policy",
+        },
+        "mathematical target policy",
+    )
+    if value["contract_revision"] != MATHEMATICAL_TARGET_POLICY_REVISION:
+        raise ValueError("mathematical target policy revision is invalid")
+    target_claim_ids = _strings(
+        value["target_claim_ids"], "mathematical exact target claim ids", nonempty=True
+    )
+    if set(target_claim_ids) != exact_target_claim_ids:
+        raise ValueError("mathematical target policy does not bind the exact Paper targets")
+    hypothesis_claim_ids = _strings(
+        value["hypothesis_claim_ids"], "mathematical hypothesis claim ids"
+    )
+    if not set(hypothesis_claim_ids).issubset(available_claim_ids):
+        raise ValueError("mathematical hypothesis binding escapes the Paper closure")
+    exact_target = _hash_bound_text(
+        value["exact_target_statement"],
+        value["exact_target_statement_sha256"],
+        "mathematical exact target statement",
+    )
+    raw_domains = value["domain_bindings"]
+    if not isinstance(raw_domains, list) or not raw_domains:
+        raise ValueError("mathematical target requires at least one exact domain binding")
+    domains = [
+        _domain_binding(item, available_claim_ids=available_claim_ids)
+        for item in raw_domains
+    ]
+    raw_quantifiers = value["quantifier_bindings"]
+    if not isinstance(raw_quantifiers, list):
+        raise ValueError("mathematical quantifier bindings must be a list")
+    quantifiers = [
+        _quantifier_binding(item, available_claim_ids=available_claim_ids)
+        for item in raw_quantifiers
+    ]
+    for label, rows in (("domain", domains), ("quantifier", quantifiers)):
+        ids = [item["binding_id"] for item in rows]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"mathematical {label} binding id is duplicated")
+    outcomes = _strings(
+        value["permitted_exact_target_outcomes"],
+        "mathematical exact target outcomes",
+        nonempty=True,
+    )
+    if set(outcomes) != MATHEMATICAL_EXACT_OUTCOMES:
+        raise ValueError("mathematical exact target outcome policy drifted")
+    if value["target_revision_requires_operator_authorization"] is not True:
+        raise ValueError("mathematical exact target substitution must require Operator authorization")
+    if value["partial_progress_policy"] != "typed_refinement_dag_keeps_exact_target_open":
+        raise ValueError("mathematical partial-progress policy is invalid")
+    return {
+        "contract_revision": MATHEMATICAL_TARGET_POLICY_REVISION,
+        "exact_target_statement": exact_target,
+        "exact_target_statement_sha256": value["exact_target_statement_sha256"],
+        "target_claim_ids": target_claim_ids,
+        "hypothesis_claim_ids": hypothesis_claim_ids,
+        "domain_bindings": sorted(domains, key=lambda item: item["binding_id"]),
+        "quantifier_bindings": sorted(
+            quantifiers, key=lambda item: item["binding_id"]
+        ),
+        "permitted_exact_target_outcomes": sorted(outcomes),
+        "target_revision_requires_operator_authorization": True,
+        "partial_progress_policy": "typed_refinement_dag_keeps_exact_target_open",
+    }
+
+
+def _mathematical_delta(value: Any, *, dimension: str) -> dict[str, Any]:
+    value = _exact(
+        value,
+        {
+            "dimension",
+            "binding_id",
+            "before",
+            "before_sha256",
+            "after",
+            "after_sha256",
+            "change_type",
+            "rationale",
+        },
+        f"mathematical {dimension} delta",
+    )
+    if value["dimension"] != dimension:
+        raise ValueError("mathematical refinement delta dimension drifted")
+    before = _hash_bound_text(
+        value["before"], value["before_sha256"], f"mathematical {dimension} before", allow_empty=True
+    )
+    after = _hash_bound_text(
+        value["after"], value["after_sha256"], f"mathematical {dimension} after", allow_empty=True
+    )
+    if before == after:
+        raise ValueError("mathematical refinement delta must change an exact value")
+    change_type = value["change_type"]
+    if change_type not in MATHEMATICAL_DELTA_TYPES[dimension]:
+        raise ValueError("mathematical refinement delta type is invalid")
+    return {
+        "dimension": dimension,
+        "binding_id": _text(value["binding_id"], f"mathematical {dimension} binding id"),
+        "before": before,
+        "before_sha256": value["before_sha256"],
+        "after": after,
+        "after_sha256": value["after_sha256"],
+        "change_type": change_type,
+        "rationale": _text(value["rationale"], f"mathematical {dimension} delta rationale"),
+    }
+
+
+def validate_mathematical_refinement_dag(
+    value: Any,
+    *,
+    target_policy: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate typed partial progress while keeping the exact root explicit."""
+
+    base_fields = {
+        "schema_version",
+        "contract_revision",
+        "root_target",
+        "nodes",
+        "edges",
+        "topological_order",
+        "truth_effect",
+    }
+    normalized_fields = base_fields | {
+        "progress_class",
+        "refinement_dag_sha256",
+    }
+    if not isinstance(value, dict):
+        raise ValueError("mathematical refinement DAG must be an object")
+    if frozenset(value) not in {frozenset(base_fields), frozenset(normalized_fields)}:
+        raise ValueError(
+            "mathematical refinement DAG fields are not exact for either "
+            "producer input or normalized stored state"
+        )
+    supplied_progress_class = value.get("progress_class")
+    supplied_refinement_dag_sha256 = value.get("refinement_dag_sha256")
+    value = _exact(
+        {field: value[field] for field in base_fields},
+        base_fields,
+        "mathematical refinement DAG",
+    )
+    if (
+        value["schema_version"] != 1
+        or value["contract_revision"] != MATHEMATICAL_REFINEMENT_DAG_REVISION
+        or value["truth_effect"] != "none"
+    ):
+        raise ValueError("mathematical refinement DAG contract binding is invalid")
+    root = _exact(
+        value["root_target"],
+        {
+            "root_id",
+            "exact_target_statement_sha256",
+            "target_claim_ids",
+            "hypothesis_claim_ids",
+            "domain_bindings_sha256",
+            "quantifier_bindings_sha256",
+            "resolution_status",
+            "resolution_evidence_ids",
+            "obstruction",
+            "original_target_open",
+        },
+        "mathematical exact target root",
+    )
+    if root["root_id"] != "exact-target-root":
+        raise ValueError("mathematical refinement DAG root id is invalid")
+    if (
+        root["exact_target_statement_sha256"]
+        != target_policy["exact_target_statement_sha256"]
+        or _strings(root["target_claim_ids"], "mathematical root target ids", nonempty=True)
+        != target_policy["target_claim_ids"]
+        or _strings(root["hypothesis_claim_ids"], "mathematical root hypothesis ids")
+        != target_policy["hypothesis_claim_ids"]
+        or root["domain_bindings_sha256"] != sha256_json(target_policy["domain_bindings"])
+        or root["quantifier_bindings_sha256"]
+        != sha256_json(target_policy["quantifier_bindings"])
+    ):
+        raise ValueError("mathematical refinement root drifts from the immutable exact target")
+    root_status = root["resolution_status"]
+    if root_status not in MATHEMATICAL_EXACT_OUTCOMES:
+        raise ValueError("mathematical exact target resolution status is invalid")
+    root_evidence = _strings(
+        root["resolution_evidence_ids"], "mathematical exact target evidence ids"
+    )
+    obstruction = _text(
+        root["obstruction"], "mathematical exact target obstruction", allow_empty=True
+    )
+    root_open = root["original_target_open"]
+    if root_status in {"proved", "disproved"}:
+        if not root_evidence or obstruction or root_open is not False:
+            raise ValueError("only an evidenced exact proof or disproof may close the mathematical target")
+    elif not obstruction or root_open is not True:
+        raise ValueError("an unresolved mathematical target must stay open with an exact obstruction")
+
+    raw_nodes = value["nodes"]
+    if not isinstance(raw_nodes, list):
+        raise ValueError("mathematical refinement nodes must be a list")
+    nodes: list[dict[str, Any]] = []
+    node_ids: set[str] = set()
+    candidate_fact_ids: set[str] = set()
+    for raw in raw_nodes:
+        raw = _exact(
+            raw,
+            {
+                "node_id",
+                "node_type",
+                "statement",
+                "statement_sha256",
+                "resolution_status",
+                "evidence_ids",
+                "obstruction",
+                "logical_relation_to_original",
+                "refinement_mapping_relation",
+                "candidate_fact_id_or_null",
+                "hypothesis_deltas",
+                "domain_deltas",
+                "quantifier_deltas",
+                "conclusion_strength_deltas",
+                "remaining_gap_to_exact_target",
+                "truth_effect",
+            },
+            "mathematical refinement node",
+        )
+        node_id = _text(raw["node_id"], "mathematical refinement node id")
+        if LOCAL_ID_RE.fullmatch(node_id) is None or node_id == "exact-target-root" or node_id in node_ids:
+            raise ValueError("mathematical refinement node id is invalid or duplicated")
+        node_ids.add(node_id)
+        node_type = raw["node_type"]
+        if node_type not in MATHEMATICAL_REFINEMENT_TYPES:
+            raise ValueError("mathematical refinement node type is invalid")
+        expected_logical, expected_mapping = MATHEMATICAL_REFINEMENT_RELATIONS[node_type]
+        if (
+            raw["logical_relation_to_original"] != expected_logical
+            or raw["refinement_mapping_relation"] != expected_mapping
+        ):
+            raise ValueError("mathematical refinement relation/type pairing drifted")
+        statement = _hash_bound_text(
+            raw["statement"], raw["statement_sha256"], "mathematical refinement statement"
+        )
+        resolution_status = raw["resolution_status"]
+        if resolution_status not in MATHEMATICAL_EXACT_OUTCOMES:
+            raise ValueError("mathematical refinement resolution status is invalid")
+        evidence_ids = _strings(raw["evidence_ids"], "mathematical refinement evidence ids")
+        node_obstruction = _text(
+            raw["obstruction"], "mathematical refinement obstruction", allow_empty=True
+        )
+        candidate_fact_id = raw["candidate_fact_id_or_null"]
+        if candidate_fact_id is not None:
+            if not isinstance(candidate_fact_id, str) or re.fullmatch(r"[0-9a-f]{16}", candidate_fact_id) is None:
+                raise ValueError("mathematical refinement Candidate Fact id is invalid")
+            if candidate_fact_id in candidate_fact_ids:
+                raise ValueError("mathematical refinement Candidate Fact id is duplicated")
+            candidate_fact_ids.add(candidate_fact_id)
+        if resolution_status in {"proved", "disproved"}:
+            if not evidence_ids or node_obstruction or candidate_fact_id is None:
+                raise ValueError("verified mathematical refinement requires evidence and an exact Candidate Fact id")
+        elif not node_obstruction:
+            raise ValueError("unresolved mathematical refinement requires an obstruction")
+        if node_type == "obstruction" and (
+            resolution_status != "unresolved_with_obstruction" or candidate_fact_id is not None
+        ):
+            raise ValueError("an obstruction node cannot masquerade as a proved Candidate Fact")
+        deltas: dict[str, list[dict[str, Any]]] = {}
+        for dimension, field in (
+            ("hypothesis", "hypothesis_deltas"),
+            ("domain", "domain_deltas"),
+            ("quantifier", "quantifier_deltas"),
+            ("conclusion_strength", "conclusion_strength_deltas"),
+        ):
+            if not isinstance(raw[field], list):
+                raise ValueError(f"mathematical {dimension} deltas must be a list")
+            deltas[field] = [
+                _mathematical_delta(item, dimension=dimension) for item in raw[field]
+            ]
+        delta_count = sum(len(items) for items in deltas.values())
+        if node_type in {
+            "weaker_theorem",
+            "stronger_theorem",
+            "special_case",
+            "added_hypothesis_theorem",
+            "weakened_conclusion_theorem",
+        } and delta_count == 0:
+            raise ValueError("theorem refinement must expose its exact target delta")
+        if node_type == "added_hypothesis_theorem" and not any(
+            item["change_type"] == "added" for item in deltas["hypothesis_deltas"]
+        ):
+            raise ValueError("added-hypothesis theorem lacks an added hypothesis delta")
+        if node_type == "weakened_conclusion_theorem" and not any(
+            item["change_type"] == "weakened"
+            for item in deltas["conclusion_strength_deltas"]
+        ):
+            raise ValueError("weakened-conclusion theorem lacks a weakened conclusion delta")
+        nodes.append(
+            {
+                "node_id": node_id,
+                "node_type": node_type,
+                "statement": statement,
+                "statement_sha256": raw["statement_sha256"],
+                "resolution_status": resolution_status,
+                "evidence_ids": evidence_ids,
+                "obstruction": node_obstruction,
+                "logical_relation_to_original": expected_logical,
+                "refinement_mapping_relation": expected_mapping,
+                "candidate_fact_id_or_null": candidate_fact_id,
+                **{
+                    field: sorted(items, key=lambda item: (item["binding_id"], item["before_sha256"], item["after_sha256"]))
+                    for field, items in deltas.items()
+                },
+                "remaining_gap_to_exact_target": _text(
+                    raw["remaining_gap_to_exact_target"],
+                    "mathematical refinement remaining exact-target gap",
+                ),
+                "truth_effect": "none",
+            }
+        )
+
+    raw_edges = value["edges"]
+    if not isinstance(raw_edges, list):
+        raise ValueError("mathematical refinement edges must be a list")
+    all_ids = {"exact-target-root", *node_ids}
+    edges: list[dict[str, str]] = []
+    seen_edges: set[tuple[str, str, str]] = set()
+    children: dict[str, set[str]] = {item: set() for item in all_ids}
+    indegree: dict[str, int] = {item: 0 for item in all_ids}
+    for raw in raw_edges:
+        raw = _exact(
+            raw,
+            {"parent_id", "child_id", "relation"},
+            "mathematical refinement edge",
+        )
+        parent = _text(raw["parent_id"], "mathematical refinement parent")
+        child = _text(raw["child_id"], "mathematical refinement child")
+        relation = raw["relation"]
+        if (
+            parent not in all_ids
+            or child not in node_ids
+            or parent == child
+            or relation not in {"refines_toward_exact_target", "depends_on_refinement"}
+            or (parent == "exact-target-root" and relation != "refines_toward_exact_target")
+            or (parent != "exact-target-root" and relation != "depends_on_refinement")
+        ):
+            raise ValueError("mathematical refinement edge is invalid")
+        key = (parent, child, relation)
+        if key in seen_edges:
+            raise ValueError("mathematical refinement edge is duplicated")
+        seen_edges.add(key)
+        children[parent].add(child)
+        indegree[child] += 1
+        edges.append({"parent_id": parent, "child_id": child, "relation": relation})
+    if any(indegree[node_id] == 0 for node_id in node_ids):
+        raise ValueError("every mathematical refinement must descend from the exact target root")
+    ready = sorted(node_id for node_id, degree in indegree.items() if degree == 0)
+    canonical_order: list[str] = []
+    while ready:
+        current = ready.pop(0)
+        canonical_order.append(current)
+        for child in sorted(children[current]):
+            indegree[child] -= 1
+            if indegree[child] == 0:
+                ready.append(child)
+        ready.sort()
+    if len(canonical_order) != len(all_ids):
+        raise ValueError("mathematical refinement DAG contains a cycle")
+    declared_order = _strings(
+        value["topological_order"], "mathematical refinement topological order", nonempty=True
+    )
+    if set(declared_order) != all_ids:
+        raise ValueError("mathematical refinement topological order inventory drifted")
+    positions = {node_id: index for index, node_id in enumerate(declared_order)}
+    if any(positions[edge["parent_id"]] >= positions[edge["child_id"]] for edge in edges):
+        raise ValueError("mathematical refinement topological order violates an edge")
+    reachable = {"exact-target-root"}
+    queue = ["exact-target-root"]
+    while queue:
+        current = queue.pop(0)
+        for child in children[current]:
+            if child not in reachable:
+                reachable.add(child)
+                queue.append(child)
+    if reachable != all_ids:
+        raise ValueError("mathematical refinement DAG contains an orphan node")
+    normalized_root = {
+        "root_id": "exact-target-root",
+        "exact_target_statement_sha256": root["exact_target_statement_sha256"],
+        "target_claim_ids": target_policy["target_claim_ids"],
+        "hypothesis_claim_ids": target_policy["hypothesis_claim_ids"],
+        "domain_bindings_sha256": root["domain_bindings_sha256"],
+        "quantifier_bindings_sha256": root["quantifier_bindings_sha256"],
+        "resolution_status": root_status,
+        "resolution_evidence_ids": root_evidence,
+        "obstruction": obstruction,
+        "original_target_open": root_open,
+    }
+    normalized = {
+        "schema_version": 1,
+        "contract_revision": MATHEMATICAL_REFINEMENT_DAG_REVISION,
+        "root_target": normalized_root,
+        "nodes": sorted(nodes, key=lambda item: item["node_id"]),
+        "edges": sorted(edges, key=lambda item: (item["parent_id"], item["child_id"], item["relation"])),
+        "topological_order": declared_order,
+        "truth_effect": "none",
+    }
+    verified_partial = any(
+        item["resolution_status"] in {"proved", "disproved"} for item in nodes
+    )
+    result = {
+        **normalized,
+        "progress_class": (
+            "exact_target_resolved"
+            if not root_open
+            else "partial_verified_progress"
+            if verified_partial
+            else "unresolved_with_obstruction"
+        ),
+        "refinement_dag_sha256": sha256_json(normalized),
+    }
+    if supplied_progress_class is not None and (
+        supplied_progress_class != result["progress_class"]
+        or supplied_refinement_dag_sha256 != result["refinement_dag_sha256"]
+    ):
+        raise ValueError("normalized mathematical refinement DAG summary drifted")
+    return result
+
+
 class ResearchDraftManager:
     def __init__(self, lifecycle: Any) -> None:
         self.lifecycle = lifecycle
@@ -255,6 +830,50 @@ class ResearchDraftManager:
             raise ValueError("research-draft intake requires explicit source_role=research_draft")
         return role
 
+    @staticmethod
+    def _stance_policy(plan: dict[str, Any]) -> dict[str, Any]:
+        if plan.get("contract_revision") == RESEARCH_DRAFT_PLAN_REVISION and plan.get(
+            "domain_profile"
+        ) != "philosophy":
+            raise ValueError("stance preservation is available only for philosophy")
+        stance = plan.get("stance_policy")
+        if not isinstance(stance, dict):
+            raise ValueError("research-draft plan has no philosophical stance policy")
+        return stance
+
+    @staticmethod
+    def _canonical_mathematical_target_claim_ids(
+        *,
+        nodes: dict[str, dict[str, Any]],
+        edges: dict[str, dict[str, Any]],
+        target_ids: list[str],
+    ) -> tuple[set[str], set[str]]:
+        """Resolve Paper targets through canonical frozen graph edges."""
+
+        available_claim_ids = {
+            object_id
+            for object_id, node in nodes.items()
+            if node["object_type"] == "claim"
+        }
+        target_claim_edges = {
+            target_id: sorted(
+                edge["target_id"]
+                for edge in edges.values()
+                if edge["relation_type"] == "targets"
+                and edge["source_id"] == target_id
+                and edge["target_id"] in available_claim_ids
+            )
+            for target_id in target_ids
+        }
+        if any(len(claim_ids) != 1 for claim_ids in target_claim_edges.values()):
+            raise ValueError(
+                "mathematical Paper target must resolve through exactly one "
+                "canonical targets edge"
+            )
+        return available_claim_ids, {
+            claim_ids[0] for claim_ids in target_claim_edges.values()
+        }
+
     def create_plan(
         self,
         snapshot_id: str,
@@ -262,16 +881,6 @@ class ResearchDraftManager:
         *,
         actor: str,
     ) -> dict[str, Any]:
-        _exact(
-            payload,
-            {
-                "objective",
-                "source_artifact_sha256",
-                "stance_policy",
-                "term_registry",
-            },
-            "research-draft plan input",
-        )
         actor = _text(actor, "research-draft plan actor")
         if PAPER_SNAPSHOT_ID_RE.fullmatch(snapshot_id) is None:
             raise ValueError("research-draft snapshot id is invalid")
@@ -282,6 +891,25 @@ class ResearchDraftManager:
         if manifest["graph_kind"] != "logic":
             raise ValueError("research-draft plan requires a Logic snapshot")
         source_role = self._source_role(manifest)
+        domain_profile = manifest["domain_profile"]
+        if domain_profile == "philosophy":
+            policy_field = "stance_policy"
+        elif domain_profile == "mathematics":
+            policy_field = "mathematical_target_policy"
+        elif domain_profile in DOMAIN_TARGET_ADAPTERS:
+            policy_field = "domain_target_policy"
+        else:
+            raise ValueError("research-draft domain profile is unsupported")
+        _exact(
+            payload,
+            {
+                "objective",
+                "source_artifact_sha256",
+                policy_field,
+                "term_registry",
+            },
+            "research-draft plan input",
+        )
         nodes, edges = paper.snapshot_objects(snapshot_id)
         targets = sorted(
             object_id
@@ -296,36 +924,83 @@ class ResearchDraftManager:
             )
             for target_id in targets
         ]
-        stance = _exact(
-            payload["stance_policy"],
-            {
-                "policy",
-                "headline_target_ids",
-                "declared_stance",
-                "major_revision_requires_operator_authorization",
-            },
-            "research-draft stance policy",
-        )
-        policy = stance["policy"]
-        if policy not in STANCE_POLICIES:
-            raise ValueError("research-draft stance policy is invalid")
-        headline_ids = _strings(
-            stance["headline_target_ids"],
-            "research-draft headline targets",
-            nonempty=True,
-        )
-        if not set(headline_ids).issubset(targets):
-            raise ValueError("research-draft headline target is outside the Paper Graph")
-        if stance["major_revision_requires_operator_authorization"] is not True:
-            raise ValueError("research-draft major stance revision must require Operator authorization")
-        normalized_stance = {
-            "policy": policy,
-            "headline_target_ids": headline_ids,
-            "declared_stance": _text(
-                stance["declared_stance"], "research-draft declared stance"
-            ),
-            "major_revision_requires_operator_authorization": True,
-        }
+        normalized_policy: dict[str, Any]
+        if domain_profile == "philosophy":
+            stance = _exact(
+                payload["stance_policy"],
+                {
+                    "policy",
+                    "headline_target_ids",
+                    "declared_stance",
+                    "major_revision_requires_operator_authorization",
+                },
+                "research-draft stance policy",
+            )
+            policy = stance["policy"]
+            if policy not in STANCE_POLICIES:
+                raise ValueError("research-draft stance policy is invalid")
+            headline_ids = _strings(
+                stance["headline_target_ids"],
+                "research-draft headline targets",
+                nonempty=True,
+            )
+            if not set(headline_ids).issubset(targets):
+                raise ValueError("research-draft headline target is outside the Paper Graph")
+            if stance["major_revision_requires_operator_authorization"] is not True:
+                raise ValueError("research-draft major stance revision must require Operator authorization")
+            normalized_policy = {
+                "policy": policy,
+                "headline_target_ids": headline_ids,
+                "declared_stance": _text(
+                    stance["declared_stance"], "research-draft declared stance"
+                ),
+                "major_revision_requires_operator_authorization": True,
+            }
+        elif domain_profile == "mathematics":
+            available_claim_ids, exact_target_claim_ids = (
+                self._canonical_mathematical_target_claim_ids(
+                    nodes=nodes,
+                    edges=edges,
+                    target_ids=targets,
+                )
+            )
+            normalized_policy = validate_mathematical_target_policy(
+                payload["mathematical_target_policy"],
+                available_claim_ids=available_claim_ids,
+                exact_target_claim_ids=exact_target_claim_ids,
+            )
+        else:
+            policy = _exact(
+                payload["domain_target_policy"],
+                {
+                    "adapter",
+                    "declared_target",
+                    "target_node_ids",
+                    "domain_invariants",
+                    "target_revision_requires_operator_authorization",
+                },
+                "research-draft domain target policy",
+            )
+            if policy["adapter"] != DOMAIN_TARGET_ADAPTERS[domain_profile]:
+                raise ValueError("research-draft domain target adapter/profile drifted")
+            policy_targets = _strings(
+                policy["target_node_ids"], "research-draft domain target ids", nonempty=True
+            )
+            if set(policy_targets) != set(targets):
+                raise ValueError("research-draft domain policy does not bind every Paper target")
+            if not isinstance(policy["domain_invariants"], dict) or not policy["domain_invariants"]:
+                raise ValueError("research-draft domain invariants must be a nonempty object")
+            if policy["target_revision_requires_operator_authorization"] is not True:
+                raise ValueError("research-draft target revision must require Operator authorization")
+            normalized_policy = {
+                "adapter": policy["adapter"],
+                "declared_target": _text(
+                    policy["declared_target"], "research-draft declared domain target"
+                ),
+                "target_node_ids": policy_targets,
+                "domain_invariants": policy["domain_invariants"],
+                "target_revision_requires_operator_authorization": True,
+            }
         term_registry = validate_term_registry(payload["term_registry"])
         source_artifacts = {
             item["artifact_sha256"]: item["artifact_relpath"]
@@ -359,7 +1034,7 @@ class ResearchDraftManager:
             "source_role": source_role,
             "source_artifact_sha256": source_sha256,
             "source_artifact_relpath": source_artifacts[source_sha256],
-            "domain_profile": manifest["domain_profile"],
+            "domain_profile": domain_profile,
             "profile_closure_revision": PROFILE_CLOSURE_REVISION,
             "required_profile_obligations": _profile_obligations(
                 manifest["domain_profile"]
@@ -384,7 +1059,7 @@ class ResearchDraftManager:
                 {edge_id for unit in work_units for edge_id in unit["edge_ids"]}
             ),
             "objective": _text(payload["objective"], "research-draft objective"),
-            "stance_policy": normalized_stance,
+            policy_field: normalized_policy,
             "term_registry": term_registry,
             "auto_topology_effect": "none",
             "created_by": actor,
@@ -410,7 +1085,7 @@ class ResearchDraftManager:
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown research-draft plan: {plan_id}")
         record = self.store._read_json(path)
-        fields = {
+        common_fields = {
             "schema_version",
             "contract_revision",
             "project_id",
@@ -429,7 +1104,6 @@ class ResearchDraftManager:
             "selected_source_node_ids",
             "selected_edge_ids",
             "objective",
-            "stance_policy",
             "term_registry",
             "auto_topology_effect",
             "created_by",
@@ -438,10 +1112,24 @@ class ResearchDraftManager:
             "created_at",
             "record_sha256",
         }
+        revision = record.get("contract_revision")
+        if revision == LEGACY_RESEARCH_DRAFT_PLAN_REVISION:
+            fields = {*common_fields, "stance_policy"}
+        elif revision == RESEARCH_DRAFT_PLAN_REVISION:
+            profile = record.get("domain_profile")
+            if profile == "philosophy":
+                fields = {*common_fields, "stance_policy"}
+            elif profile == "mathematics":
+                fields = {*common_fields, "mathematical_target_policy"}
+            elif profile in DOMAIN_TARGET_ADAPTERS:
+                fields = {*common_fields, "domain_target_policy"}
+            else:
+                raise ValueError("research-draft plan domain profile is unsupported")
+        else:
+            raise ValueError("research-draft plan revision is unsupported")
         _exact(record, fields, "research-draft plan")
         if (
             record["schema_version"] != 1
-            or record["contract_revision"] != RESEARCH_DRAFT_PLAN_REVISION
             or record["project_id"] != self.store.project_id()
             or record["source_role"] != "research_draft"
             or record["truth_effect"] != "none"
@@ -461,6 +1149,37 @@ class ResearchDraftManager:
             raise ValueError("research-draft plan record hash mismatch")
         if validate_term_registry(record["term_registry"]) != record["term_registry"]:
             raise ValueError("research-draft term registry normalization drifted")
+        if revision == RESEARCH_DRAFT_PLAN_REVISION and record["domain_profile"] == "philosophy":
+            stance = _exact(
+                record["stance_policy"],
+                {
+                    "policy",
+                    "headline_target_ids",
+                    "declared_stance",
+                    "major_revision_requires_operator_authorization",
+                },
+                "research-draft stance policy",
+            )
+            if (
+                stance["policy"] not in STANCE_POLICIES
+                or stance["major_revision_requires_operator_authorization"] is not True
+                or _strings(
+                    stance["headline_target_ids"],
+                    "research-draft headline targets",
+                    nonempty=True,
+                )
+                != stance["headline_target_ids"]
+            ):
+                raise ValueError("research-draft stance policy normalization drifted")
+            _text(stance["declared_stance"], "research-draft declared stance")
+        elif revision == RESEARCH_DRAFT_PLAN_REVISION and record["domain_profile"] in DOMAIN_TARGET_ADAPTERS:
+            policy = record["domain_target_policy"]
+            if (
+                not isinstance(policy, dict)
+                or policy.get("adapter")
+                != DOMAIN_TARGET_ADAPTERS[record["domain_profile"]]
+            ):
+                raise ValueError("research-draft domain target policy drifted")
         if deep:
             paper = self.store.paper_logic()
             if record["snapshot_id"] not in set(paper.status()["current_snapshot_ids"]):
@@ -472,6 +1191,21 @@ class ResearchDraftManager:
             }
             if observed != record["snapshot_file_sha256"]:
                 raise ValueError("research-draft plan snapshot bytes drifted")
+            if revision == RESEARCH_DRAFT_PLAN_REVISION and record["domain_profile"] == "mathematics":
+                nodes, edges = paper.snapshot_objects(record["snapshot_id"])
+                available_claim_ids, exact_target_claim_ids = (
+                    self._canonical_mathematical_target_claim_ids(
+                        nodes=nodes,
+                        edges=edges,
+                        target_ids=record["target_node_ids"],
+                    )
+                )
+                if validate_mathematical_target_policy(
+                    record["mathematical_target_policy"],
+                    available_claim_ids=available_claim_ids,
+                    exact_target_claim_ids=exact_target_claim_ids,
+                ) != record["mathematical_target_policy"]:
+                    raise ValueError("mathematical target policy normalization drifted")
             source_path = contained_path(
                 self.store.root,
                 record["source_artifact_relpath"],
@@ -507,10 +1241,11 @@ class ResearchDraftManager:
                 "research-draft major revision authorization requires the Operator role"
             )
         plan = self.plan(plan_id, deep=True)
+        stance_policy = self._stance_policy(plan)
         target_id = _text(
             payload["target_node_id"], "research-draft authorization target"
         )
-        if target_id not in plan["stance_policy"]["headline_target_ids"]:
+        if target_id not in stance_policy["headline_target_ids"]:
             raise ValueError(
                 "research-draft major revision authorization must name a headline target"
             )
@@ -527,7 +1262,7 @@ class ResearchDraftManager:
             "plan_record_sha256": plan["record_sha256"],
             "target_node_id": target_id,
             "declared_stance_sha256": sha256_bytes(
-                plan["stance_policy"]["declared_stance"].encode("utf-8")
+                stance_policy["declared_stance"].encode("utf-8")
             ),
             "authorized_stance_impact": stance_impact,
             "authorized_effect": MAJOR_STANCE_EFFECTS[stance_impact],
@@ -608,13 +1343,14 @@ class ResearchDraftManager:
         _text(record["reason"], "research-draft authorization reason")
         if deep:
             plan = self.plan(record["plan_id"], deep=True)
+            stance_policy = self._stance_policy(plan)
             if (
                 record["plan_record_sha256"] != plan["record_sha256"]
                 or record["target_node_id"]
-                not in plan["stance_policy"]["headline_target_ids"]
+                not in stance_policy["headline_target_ids"]
                 or record["declared_stance_sha256"]
                 != sha256_bytes(
-                    plan["stance_policy"]["declared_stance"].encode("utf-8")
+                    stance_policy["declared_stance"].encode("utf-8")
                 )
             ):
                 raise ValueError("research-draft authorization plan binding drifted")
@@ -641,9 +1377,8 @@ class ResearchDraftManager:
         record = self.authorization(decision_id, deep=True)
         if value["decision_record_sha256"] != record["record_sha256"]:
             raise ValueError("research-draft authorization record hash mismatch")
-        expected_declared = sha256_bytes(
-            plan["stance_policy"]["declared_stance"].encode("utf-8")
-        )
+        stance_policy = self._stance_policy(plan)
+        expected_declared = sha256_bytes(stance_policy["declared_stance"].encode("utf-8"))
         if (
             record["plan_id"] != plan["plan_id"]
             or record["plan_record_sha256"] != plan["record_sha256"]
@@ -717,19 +1452,31 @@ class ResearchDraftManager:
         plan: dict[str, Any],
         research_index: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
-        fields = {
+        common_fields = {
             "target_node_id",
             "node_disposition",
             "disposition_reason",
             "research_record_ids",
-            "stance_impact",
-            "major_revision_authorization",
             "successor_mappings",
             "term_sense_refs",
             "profile_obligations",
             "failure_surfaces",
             "writing_coverage",
         }
+        current_domain_adapter = (
+            plan.get("contract_revision") == RESEARCH_DRAFT_PLAN_REVISION
+        )
+        profile = plan["domain_profile"]
+        if current_domain_adapter and profile == "mathematics":
+            fields = {*common_fields, "mathematical_progress"}
+        elif current_domain_adapter and profile in DOMAIN_TARGET_ADAPTERS:
+            fields = {*common_fields, "domain_outcome"}
+        else:
+            fields = {
+                *common_fields,
+                "stance_impact",
+                "major_revision_authorization",
+            }
         value = _exact(value, fields, "research-draft disposition entry")
         target_id = _text(value["target_node_id"], "research-draft target id")
         if target_id not in plan["target_node_ids"]:
@@ -742,34 +1489,79 @@ class ResearchDraftManager:
         )
         if not set(research_ids).issubset(research_index):
             raise ValueError("research-draft disposition names unknown Research")
-        stance_impact = value["stance_impact"]
-        if stance_impact not in STANCE_IMPACTS:
-            raise ValueError("research-draft stance impact is invalid")
-        headline = target_id in plan["stance_policy"]["headline_target_ids"]
-        authorization = self._authorization(
-            value["major_revision_authorization"],
-            plan=plan,
-            target_id=target_id,
-            stance_impact=stance_impact,
-        )
-        major_impact = stance_impact in MAJOR_STANCE_EFFECTS
-        if headline:
-            if stance_impact == "not_headline":
-                raise ValueError("research-draft headline target cannot be marked non-headline")
-            if major_impact and authorization is None:
-                raise ValueError(
-                    "research-draft headline narrowing/reversal requires explicit Operator authorization"
-                )
-            if not major_impact and authorization is not None:
-                raise ValueError(
-                    "research-draft non-major stance impact cannot consume a major-revision authorization"
-                )
-        elif stance_impact != "not_headline":
-            raise ValueError("non-headline target must use stance_impact=not_headline")
-        elif authorization is not None:
-            raise ValueError(
-                "research-draft non-headline target cannot consume a major-revision authorization"
+        normalized_domain_outcome: dict[str, Any]
+        stance_impact: str | None = None
+        authorization: dict[str, Any] | None = None
+        if current_domain_adapter and profile == "mathematics":
+            progress = validate_mathematical_refinement_dag(
+                value["mathematical_progress"],
+                target_policy=plan["mathematical_target_policy"],
             )
+            normalized_domain_outcome = {
+                "adapter": "mathematical_target",
+                "mathematical_progress": progress,
+            }
+        elif current_domain_adapter and profile in DOMAIN_TARGET_ADAPTERS:
+            outcome = _exact(
+                value["domain_outcome"],
+                {"adapter", "outcome", "evidence_ids", "remaining_gap"},
+                "research-draft domain outcome",
+            )
+            adapter = DOMAIN_TARGET_ADAPTERS[profile]
+            permitted = (
+                {"supported", "disconfirmed", "inconclusive"}
+                if profile == "empirical"
+                else {"componentwise_resolved", "partially_resolved", "unresolved"}
+            )
+            if outcome["adapter"] != adapter or outcome["outcome"] not in permitted:
+                raise ValueError("research-draft domain outcome/adapter drifted")
+            normalized_domain_outcome = {
+                "adapter": adapter,
+                "outcome": outcome["outcome"],
+                "evidence_ids": _strings(
+                    outcome["evidence_ids"], "research-draft domain outcome evidence ids"
+                ),
+                "remaining_gap": _text(
+                    outcome["remaining_gap"],
+                    "research-draft domain outcome remaining gap",
+                    allow_empty=outcome["outcome"] in {"supported", "disconfirmed", "componentwise_resolved"},
+                ),
+            }
+        else:
+            stance_impact = value["stance_impact"]
+            if stance_impact not in STANCE_IMPACTS:
+                raise ValueError("research-draft stance impact is invalid")
+            stance_policy = self._stance_policy(plan)
+            headline = target_id in stance_policy["headline_target_ids"]
+            authorization = self._authorization(
+                value["major_revision_authorization"],
+                plan=plan,
+                target_id=target_id,
+                stance_impact=stance_impact,
+            )
+            major_impact = stance_impact in MAJOR_STANCE_EFFECTS
+            if headline:
+                if stance_impact == "not_headline":
+                    raise ValueError("research-draft headline target cannot be marked non-headline")
+                if major_impact and authorization is None:
+                    raise ValueError(
+                        "research-draft headline narrowing/reversal requires explicit Operator authorization"
+                    )
+                if not major_impact and authorization is not None:
+                    raise ValueError(
+                        "research-draft non-major stance impact cannot consume a major-revision authorization"
+                    )
+            elif stance_impact != "not_headline":
+                raise ValueError("non-headline target must use stance_impact=not_headline")
+            elif authorization is not None:
+                raise ValueError(
+                    "research-draft non-headline target cannot consume a major-revision authorization"
+                )
+            normalized_domain_outcome = {
+                "adapter": "philosophy_stance",
+                "stance_impact": stance_impact,
+                "major_revision_authorization": authorization,
+            }
         mappings = value["successor_mappings"]
         if not isinstance(mappings, list):
             raise ValueError("research-draft successor mappings must be a list")
@@ -798,6 +1590,27 @@ class ResearchDraftManager:
             )
         if disposition in {"retained", "repaired", "replaced"} and not normalized_mappings:
             raise ValueError("a live research-draft target requires successor mappings")
+        if current_domain_adapter and profile == "mathematics":
+            progress = normalized_domain_outcome["mathematical_progress"]
+            expected_progress_mappings = {
+                (
+                    node["candidate_fact_id_or_null"],
+                    node["refinement_mapping_relation"],
+                )
+                for node in progress["nodes"]
+                if node["candidate_fact_id_or_null"] is not None
+            }
+            actual_mappings = {
+                (item["successor_id"], item["relation_kind"])
+                for item in normalized_mappings
+            }
+            if not expected_progress_mappings.issubset(actual_mappings):
+                raise ValueError("mathematical refinement Candidate mappings are incomplete")
+            if progress["root_target"]["original_target_open"] and any(
+                item["relation_kind"] in {"directly_reconstructs", "repairs"}
+                for item in normalized_mappings
+            ):
+                raise ValueError("a weaker mathematical result cannot masquerade as the exact target")
         term_refs = _strings(value["term_sense_refs"], "research-draft term-sense refs")
         registry_senses = {item["sense_id"] for item in plan["term_registry"]}
         if not set(term_refs).issubset(registry_senses):
@@ -865,15 +1678,13 @@ class ResearchDraftManager:
             or sha256_bytes(artifact_path.read_bytes()) != artifact_sha256
         ):
             raise ValueError("research-draft writing artifact drifted")
-        return {
+        normalized_entry = {
             "target_node_id": target_id,
             "node_disposition": disposition,
             "disposition_reason": _text(
                 value["disposition_reason"], "research-draft disposition reason"
             ),
             "research_record_ids": research_ids,
-            "stance_impact": stance_impact,
-            "major_revision_authorization": authorization,
             "successor_mappings": sorted(
                 normalized_mappings,
                 key=lambda item: (item["successor_id"], item["relation_kind"]),
@@ -894,6 +1705,16 @@ class ResearchDraftManager:
                 "reason": _text(writing["reason"], "research-draft writing reason"),
             },
         }
+        if current_domain_adapter and profile == "mathematics":
+            normalized_entry["mathematical_progress"] = normalized_domain_outcome[
+                "mathematical_progress"
+            ]
+        elif current_domain_adapter and profile in DOMAIN_TARGET_ADAPTERS:
+            normalized_entry["domain_outcome"] = normalized_domain_outcome
+        else:
+            normalized_entry["stance_impact"] = stance_impact
+            normalized_entry["major_revision_authorization"] = authorization
+        return normalized_entry
 
     def record_batch(
         self,
@@ -942,9 +1763,20 @@ class ResearchDraftManager:
             ]
             if len(all_surface_uids) != len(set(all_surface_uids)):
                 raise ValueError("research-draft batch has a cross-target surface collision")
+            current_revision = plan["contract_revision"] == RESEARCH_DRAFT_PLAN_REVISION
+            batch_revision = (
+                RESEARCH_DRAFT_BATCH_REVISION
+                if current_revision
+                else LEGACY_RESEARCH_DRAFT_BATCH_REVISION
+            )
+            adequacy_revision = (
+                RESEARCH_DRAFT_ADEQUACY_REVISION
+                if current_revision
+                else LEGACY_RESEARCH_DRAFT_ADEQUACY_REVISION
+            )
             semantic = {
                 "schema_version": 1,
-                "contract_revision": RESEARCH_DRAFT_BATCH_REVISION,
+                "contract_revision": batch_revision,
                 "project_id": self.store.project_id(),
                 "plan_id": plan_id,
                 "plan_record_sha256": plan["record_sha256"],
@@ -973,28 +1805,65 @@ class ResearchDraftManager:
             record["record_sha256"] = sha256_json(record)
             adequacy_semantic = {
                 "schema_version": 1,
-                "contract_revision": RESEARCH_DRAFT_ADEQUACY_REVISION,
+                "contract_revision": adequacy_revision,
                 "plan_id": plan_id,
                 "batch_id": batch_id,
                 "target_node_ids": plan["target_node_ids"],
                 "term_registry_sha256": semantic["term_registry_sha256"],
                 "failure_surface_uids": sorted(all_surface_uids),
-                "headline_stance_impacts": {
-                    item["target_node_id"]: item["stance_impact"]
-                    for item in entries
-                    if item["target_node_id"]
-                    in plan["stance_policy"]["headline_target_ids"]
-                },
                 "adequacy_complete": True,
                 "truth_effect": "none",
             }
+            if not current_revision or plan["domain_profile"] == "philosophy":
+                stance_policy = self._stance_policy(plan)
+                adequacy_semantic["headline_stance_impacts"] = {
+                    item["target_node_id"]: item["stance_impact"]
+                    for item in entries
+                    if item["target_node_id"] in stance_policy["headline_target_ids"]
+                }
+            elif plan["domain_profile"] == "mathematics":
+                root_bindings = {
+                    sha256_json(item["mathematical_progress"]["root_target"])
+                    for item in entries
+                }
+                if len(root_bindings) != 1:
+                    raise ValueError("mathematical disposition batch has inconsistent exact target roots")
+                adequacy_semantic["mathematical_target_progress"] = {
+                    "target_policy_sha256": sha256_json(
+                        plan["mathematical_target_policy"]
+                    ),
+                    "root_target_sha256": next(iter(root_bindings)),
+                    "target_progress": [
+                        {
+                            "target_node_id": item["target_node_id"],
+                            "root_resolution_status": item["mathematical_progress"][
+                                "root_target"
+                            ]["resolution_status"],
+                            "original_target_open": item["mathematical_progress"][
+                                "root_target"
+                            ]["original_target_open"],
+                            "progress_class": item["mathematical_progress"][
+                                "progress_class"
+                            ],
+                            "refinement_dag_sha256": item["mathematical_progress"][
+                                "refinement_dag_sha256"
+                            ],
+                        }
+                        for item in entries
+                    ],
+                    "weakening_closes_exact_target": False,
+                }
+            else:
+                adequacy_semantic["domain_target_outcomes"] = {
+                    item["target_node_id"]: item["domain_outcome"] for item in entries
+                }
             adequacy = {
                 **adequacy_semantic,
                 "adequacy_receipt_sha256": sha256_json(adequacy_semantic),
             }
             summary = {
                 "schema_version": 1,
-                "contract_revision": RESEARCH_DRAFT_ADEQUACY_REVISION,
+                "contract_revision": adequacy_revision,
                 "plan_id": plan_id,
                 "batch_id": batch_id,
                 "batch_record_sha256": record["record_sha256"],
@@ -1025,7 +1894,7 @@ class ResearchDraftManager:
                     raise
             head = {
                 "schema_version": 1,
-                "contract_revision": RESEARCH_DRAFT_BATCH_REVISION,
+                "contract_revision": batch_revision,
                 "plan_id": plan_id,
                 "batch_id": batch_id,
                 "batch_record_sha256": record["record_sha256"],
@@ -1081,7 +1950,11 @@ class ResearchDraftManager:
         record = self.store._read_json(path)
         if (
             record.get("batch_id") != batch_id
-            or record.get("contract_revision") != RESEARCH_DRAFT_BATCH_REVISION
+            or record.get("contract_revision")
+            not in {
+                LEGACY_RESEARCH_DRAFT_BATCH_REVISION,
+                RESEARCH_DRAFT_BATCH_REVISION,
+            }
             or record.get("truth_effect") != "none"
         ):
             raise ValueError("research-draft batch binding is invalid")
@@ -1111,6 +1984,13 @@ class ResearchDraftManager:
             if record["plan_record_sha256"] != plan["record_sha256"]:
                 raise ValueError("research-draft batch plan drifted")
             for entry in record["entries"]:
+                if "stance_impact" not in entry:
+                    if plan["domain_profile"] == "mathematics":
+                        validate_mathematical_refinement_dag(
+                            entry["mathematical_progress"],
+                            target_policy=plan["mathematical_target_policy"],
+                        )
+                    continue
                 authorization = entry["major_revision_authorization"]
                 if authorization is None:
                     if entry["stance_impact"] in MAJOR_STANCE_EFFECTS:
@@ -1155,11 +2035,17 @@ class ResearchDraftManager:
         )
         if (
             head["plan_id"] != plan_id
-            or head["contract_revision"] != RESEARCH_DRAFT_BATCH_REVISION
+            or head["contract_revision"]
+            not in {
+                LEGACY_RESEARCH_DRAFT_BATCH_REVISION,
+                RESEARCH_DRAFT_BATCH_REVISION,
+            }
             or head["truth_effect"] != "none"
         ):
             raise ValueError("research-draft batch head binding is invalid")
         batch = self.batch(head["batch_id"], deep=False)
+        if batch["contract_revision"] != head["contract_revision"]:
+            raise ValueError("research-draft batch head revision drifted")
         if batch["record_sha256"] != head["batch_record_sha256"]:
             raise ValueError("research-draft batch head hash drifted")
         summary_path = self._batch_dir(head["batch_id"]) / "summary.json"

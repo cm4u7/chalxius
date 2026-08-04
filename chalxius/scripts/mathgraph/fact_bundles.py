@@ -133,6 +133,12 @@ INTERPRET_CARD_FIELDS = {
 }
 INTERPRET_LINT_RECEIPT_KIND = "interpretation_communication_lint"
 INTERPRET_LINTER_REVISION = "interpretation-communication-lint-v1"
+INTERPRET_COMMUNICATION_READINESS_REVISION = (
+    "chalxius-interpret-communication-readiness-1"
+)
+INTERPRET_COMMUNICATION_PUBLICATION_REVISION = (
+    "chalxius-interpret-communication-publication-1"
+)
 _INHERITED_CHALK_FIXTURE_AUTHORITY = object()
 INTERPRET_LINT_SCOPE = (
     "mechanism identity, exact source/domain/convention references, "
@@ -1196,11 +1202,13 @@ def validate_interpret_communication_readiness(
                 "terminology_export_lint is required; a valid "
                 "interpretation receipt must precede communication"
             )
-        return {
+        semantic = {
+            "revision": INTERPRET_COMMUNICATION_READINESS_REVISION,
             "ready": True,
             "requirement": "not_required",
             "truth_effect": "none",
         }
+        return {**semantic, "readiness_sha256": sha256_json(semantic)}
     receipt = validate_interpret_lint_receipt(
         lint_receipt,
         draft_bytes=draft_bytes,
@@ -1211,7 +1219,8 @@ def validate_interpret_communication_readiness(
             "interpret communication lint failed: "
             + "; ".join(receipt["errors"])
         )
-    return {
+    semantic = {
+        "revision": INTERPRET_COMMUNICATION_READINESS_REVISION,
         "ready": True,
         "requirement": (
             "satisfied" if required else "validated_optional"
@@ -1219,6 +1228,135 @@ def validate_interpret_communication_readiness(
         "lint_receipt_sha256": receipt["lint_receipt_sha256"],
         "truth_effect": "none",
     }
+    return {**semantic, "readiness_sha256": sha256_json(semantic)}
+
+
+def validate_interpret_communication_readiness_result(
+    value: Any,
+) -> dict[str, Any]:
+    """Validate the typed nontruth handoff consumed by publication."""
+
+    if not isinstance(value, dict):
+        raise ValueError("interpret communication readiness must be one object")
+    requirement = value.get("requirement")
+    fields = {
+        "revision",
+        "ready",
+        "requirement",
+        "truth_effect",
+        "readiness_sha256",
+    }
+    if requirement in {"satisfied", "validated_optional"}:
+        fields.add("lint_receipt_sha256")
+    if set(value) != fields:
+        raise ValueError("interpret communication readiness fields are not exact")
+    if (
+        value["revision"] != INTERPRET_COMMUNICATION_READINESS_REVISION
+        or value["ready"] is not True
+        or requirement
+        not in {"not_required", "satisfied", "validated_optional"}
+        or value["truth_effect"] != "none"
+    ):
+        raise ValueError("interpret communication readiness contract is invalid")
+    if "lint_receipt_sha256" in value and (
+        not isinstance(value["lint_receipt_sha256"], str)
+        or SHA256_RE.fullmatch(value["lint_receipt_sha256"]) is None
+    ):
+        raise ValueError("interpret communication readiness lint binding is invalid")
+    semantic = {
+        key: item for key, item in value.items() if key != "readiness_sha256"
+    }
+    if value["readiness_sha256"] != sha256_json(semantic):
+        raise ValueError("interpret communication readiness hash mismatch")
+    return value
+
+
+def publish_interpret_communication(
+    *,
+    store: Any,
+    external_communication_requested: bool,
+    adoption_binding: dict[str, Any] | None = None,
+    lint_receipt: dict[str, Any] | None = None,
+    draft_bytes: bytes | None = None,
+    interpret_card_bytes: bytes | None = None,
+) -> dict[str, Any]:
+    """Publish one interpretation only after consuming current readiness.
+
+    The predicate-false branch is deliberately a zero-write internal path.
+    The published artifact remains nontruth exposition and cannot create a
+    Candidate Release, Certification decision, or Fact.
+    """
+
+    if not isinstance(external_communication_requested, bool):
+        raise ValueError("external communication predicate must be boolean")
+    if not external_communication_requested:
+        semantic = {
+            "revision": INTERPRET_COMMUNICATION_PUBLICATION_REVISION,
+            "project_id": store.project_id(),
+            "published": False,
+            "reason": "internal_only",
+            "write_effect": "none",
+            "truth_effect": "none",
+            "fact_admission_effect": "none",
+        }
+        return {**semantic, "publication_sha256": sha256_json(semantic)}
+    if not isinstance(adoption_binding, dict):
+        raise ValueError("interpret publication requires an adoption binding")
+    if not isinstance(draft_bytes, bytes) or not isinstance(
+        interpret_card_bytes, bytes
+    ):
+        raise ValueError("interpret publication requires exact draft and card bytes")
+
+    readiness = validate_interpret_communication_readiness(
+        adoption_binding=adoption_binding,
+        lint_receipt=lint_receipt,
+        draft_bytes=draft_bytes,
+        interpret_card_bytes=interpret_card_bytes,
+    )
+    readiness = validate_interpret_communication_readiness_result(readiness)
+    card = validate_interpret_card(
+        json.loads(interpret_card_bytes.decode("utf-8"))
+    )
+    if card["project_id"] != store.project_id():
+        raise ValueError("interpret publication card belongs to another project")
+    semantic_binding = {
+        "revision": INTERPRET_COMMUNICATION_PUBLICATION_REVISION,
+        "project_id": store.project_id(),
+        "node_id": card["node_id"],
+        "audience": card["audience"],
+        "draft_sha256": sha256_bytes(draft_bytes),
+        "interpret_card_bytes_sha256": sha256_bytes(interpret_card_bytes),
+        "interpret_card_sha256": card["interpret_card_sha256"],
+        "readiness_sha256": readiness["readiness_sha256"],
+        "truth_effect": "none",
+        "fact_admission_effect": "none",
+    }
+    communication_id = "icm-" + sha256_json(semantic_binding)
+    relative_document = f"interpret-communications/{communication_id}.md"
+    relative_receipt = f"interpret-communications/{communication_id}.json"
+    document_path = store.report_output_path(relative_document)
+    receipt_path = store.report_output_path(relative_receipt)
+    receipt_semantic = {
+        **semantic_binding,
+        "communication_id": communication_id,
+        "published": True,
+        "document_relpath": document_path.relative_to(store.root).as_posix(),
+        "receipt_relpath": receipt_path.relative_to(store.root).as_posix(),
+        "readiness": readiness,
+        "write_effect": "communication_artifact_only",
+    }
+    receipt = {
+        **receipt_semantic,
+        "publication_sha256": sha256_json(receipt_semantic),
+    }
+    if document_path.exists():
+        if document_path.is_symlink() or document_path.read_bytes() != draft_bytes:
+            raise ValueError("interpret communication document collision")
+    else:
+        document_path.parent.mkdir(parents=True, exist_ok=True)
+        store._write_bytes_atomic(document_path, draft_bytes)
+    store._write_json_once(receipt_path, receipt)
+    return receipt
 
 
 class FactBundleStore:

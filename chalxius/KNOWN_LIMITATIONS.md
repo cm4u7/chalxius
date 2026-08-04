@@ -1,4 +1,4 @@
-# Known architecture limitations in Chalxius 0.6.4
+# Known architecture limitations in Chalxius 0.6.5
 
 The numbered entries below retain their immutable owner ledger: CHX-001 through
 CHX-017 belong to `run-20260801T072127934348Z-16d73c1b37d5`, CHX-018 through
@@ -11,15 +11,32 @@ belongs to `run-20260802T214123599238Z-d206bd85e676`, and CHX-063 belongs to
 `run-20260803T063745640293Z-1ebe1ce2cc97`, CHX-066 belongs to
 `run-20260803T080711145538Z-d486dce92032`, CHX-067 belongs to
 `run-20260803T090357863328Z-315775267e7b`, and CHX-068 belongs to
-`run-20260803T094645700515Z-355e835f8fef`.
+`run-20260803T094645700515Z-355e835f8fef`. CHX-069 through CHX-081 belong to
+`run-20260803T101737542592Z-da3f0e67c7d5`; the range begins at
+`run-20260803T101737542592Z-da3f0e67c7d5/CHX-069`. CHX-082 and CHX-083 belong
+to `run-20260804T091736232364Z-fd5af65fa476`. CHX-084 through CHX-097 belong
+to `run-20260804T101357275432Z-fe96e6220e8d`; the range begins at
+`run-20260804T101357275432Z-fe96e6220e8d/CHX-084`. CHX-098 belongs to
+`run-20260804T124618704949Z-389acc2a516b`, CHX-099 belongs to
+`run-20260804T130621976451Z-645ae424af5b`, CHX-100 through CHX-101 belong
+to `run-20260804T154129250431Z-b6d8c2a010ba`, ending at
+`run-20260804T154129250431Z-b6d8c2a010ba/CHX-101`, and CHX-102 through CHX-109
+belong to the closing successor
+`run-20260804T161234526251Z-380819388733`.
 The qualified current head is
-`run-20260803T094645700515Z-355e835f8fef/CHX-068`; a short identifier never
+`run-20260804T161234526251Z-380819388733/CHX-109`; a short identifier never
 changes owner merely because a later release includes it.
 The two immediately preceding qualified heads were
-`run-20260803T090357863328Z-315775267e7b/CHX-067` and
-`run-20260803T080711145538Z-d486dce92032/CHX-066`.
+`run-20260804T130621976451Z-645ae424af5b/CHX-099` and
+`run-20260804T124618704949Z-389acc2a516b/CHX-098`.
+The preceding consolidation head was
+`run-20260804T101357275432Z-fe96e6220e8d/CHX-097`.
+The preceding closed release-audit ledger spans
+`run-20260804T091736232364Z-fd5af65fa476/CHX-082` through
+`run-20260804T091736232364Z-fd5af65fa476/CHX-083` and follows
+`run-20260803T101737542592Z-da3f0e67c7d5/CHX-081`.
 
-Chalxius 0.6.4 retains the 0.6.0/0.6.1/0.6.2/0.6.3 prospective repairs for every architecture mechanism recorded as
+Chalxius 0.6.5 retains the 0.6.0/0.6.1/0.6.2/0.6.3/0.6.4 prospective repairs for every architecture mechanism recorded as
 CHX-001 through CHX-017 in the 2026-08-01 research-draft field run, plus the
 Campaign-lineage and CHX close/status integration issues found while cautiously
 restoring Brave Future L3/L4 and exercising revision-3 accounting. It also repairs
@@ -27,17 +44,23 @@ CHX-020 through CHX-035, including durable stance authorization, cryptographic
 principal coordination, Certification/Gateway integration, registry-wide audit and
 cache authority, complete active-runtime validation, terminal write isolation,
 pre-write planning atomicity, and transactional global-cutover continuity. It
-extends closure through CHX-036 to CHX-068 with the reusable Paper Research
+extends closure through CHX-036 to CHX-083 with the reusable Paper Research
 Pipeline, which preserves inherited Paper topology, separates source
 occurrences from logical operators, validates claim-level literature support,
 requires a Paper-subject atomic preflight before the native admission path,
 preserves domain-indexed research-target continuity, and binds public release
-disclosure back to the exact CHX ledger. The 0.6.4 goal-driven advisory recovery
+disclosure back to the exact CHX ledger. The inherited 0.6.4 goal-driven advisory recovery
 also compiles an explicit user research objective into an exact prospective
 Campaign scope under `auto` or `deep`, without requiring Campaign jargon or expanding
 Brave Future beyond advisory BF-1 through BF-3. Its release audit also uses an
 exact pre/post audit snapshot and intrinsic child-process bytecode suppression,
-so `candidate_unchanged` is measured rather than asserted. Closure is
+so `candidate_unchanged` is measured rather than asserted. The 0.6.5 overlay
+adds integrated changed-surface continuity, domain-specific target preservation,
+paired adverse Research, bounded release/neutral-review handoffs, revision-5
+CHX repair integration, executable behavior-orphan dispositions, exact mutation
+successor binding, valid manifest-rebound mutant runtimes, command-scoped
+validated inspection reuse, and explicit routine-versus-forensic status scope.
+Closure is
 based on executable regressions, full inherited-suite
 validation, a frozen independent review matrix, and installed-tree validation;
 package hashes or successful installation alone are not issue evidence.
@@ -381,18 +404,269 @@ successor artifacts to use the stronger path.
     domain-general validation optimization with no truth effect. It extends
     CHX-065, is related to CHX-067, and is owned by
     `run-20260803T094645700515Z-355e835f8fef/CHX-068`.
+69. **CHX-069 — deep research implied unconditional whole-history validation.**
+    Research effort and validation scope are now separate. `deep` expands every
+    applicable research feature, while continuation computes a content-addressed
+    changed surface over the exact target, predecessors, defeaters, sources,
+    downstream targets, interfaces, writing, and admission edges. Current sealed
+    dependencies reuse exact receipts; missing, stale, drifted, ambiguous,
+    schema-changed, or forensic state falls back to full validation. Every new or
+    invalidated atomic claim still receives fresh verification.
+70. **CHX-070 — large-project goal intake failed after partial advisory writes.**
+    Campaign, activation, bounded planning snapshot, and bounded frontier window
+    are preflighted as one intent/effect/receipt transaction whose terminal
+    receipt is the only normal visibility gate. Interrupted writes are hidden
+    until explicit idempotent retry. The public command also creates or reuses
+    exactly one prospective root Research bound to the committed intake token and
+    Campaign; BF-1 through BF-3 themselves remain advisory and create no Research,
+    plan, dispatch, Candidate, Certification, Gateway, or Fact.
+71. **CHX-071 — CHX work had no tactical-then-integrated repair contract.**
+    Prospective ledger revision 5 requires a prior full-tree reconnaissance
+    receipt, exactly one reusable fail-closed tactical repair per resolved issue,
+    and the latest integrated repair covering every resolved issue through one
+    derived reusable-mechanism registry plus coordination, risk, and regression
+    evidence. A late issue requires superseding complete coverage. Revisions 1–4
+    retain their exact event shapes and original append semantics.
+72. **CHX-072 — native Paper successors could detach from the current head.**
+    Authoritative stage and freeze now bind the unique exact current predecessor,
+    same paper/kind/source identity, complete stable local-node and relation set,
+    and exact ordered premises. Stale/foreign heads, dropped nodes or edges,
+    premise permutations, and receipt tampering fail closed; a genuine first
+    Logic graph retains the legacy empty-predecessor boundary.
+73. **CHX-073 — reviewed PDF/Paper Evidence did not bind its associated Fact
+    Evidence.** Exact certified Fact imports derive association requests only
+    from their source releases' exact Paper Evidence refs. One nontruth outbox and
+    effect receipt bind PDF, reviewed Paper Graph, and imported Fact Graph under
+    the same paper/version identity. Failure stays pending and retry is
+    idempotent; no Evidence association transfers Fact authority.
+74. **CHX-074 — mathematics reused stance machinery and forbade useful weaker
+    progress.** Only philosophy carries stance preservation. Mathematics freezes
+    the exact target, hypotheses, domains, and quantifiers, and records a typed
+    refinement DAG for weaker theorems, special cases, added hypotheses, weakened
+    conclusions, counterexamples, and obstructions. Every node exposes its exact
+    delta and remaining root gap. Only proof or disproof of the unchanged root may
+    nominate exact-target resolution; a weaker result never masquerades as one.
+75. **CHX-075 — managed return ingestion repeatedly invalidated Paper status.**
+    Return, Research, receipt, optional adverse/program-review side records, and
+    continuation-status delta now use a resumable transaction with one head-last
+    generation transition. Interrupted boundaries preserve the old HEAD, readers
+    perform zero implicit repair, explicit retry completes the next generation,
+    and a second retry is byte-stable. Valid peers retain independent quarantine
+    semantics.
+76. **CHX-076 — small Paper releases repeated full continuation validation and
+    evidence materialization.** Candidate Release now materializes one
+    content-addressed capsule binding status generation/HEAD, plan, Logic/Audit
+    refs, source/writing artifacts, target and changed-surface closure,
+    dispositions, managed Research, and Candidate interfaces. Verifier,
+    Certification, and Gateway reuse those exact bytes. Stale or ambiguous state
+    emits one observable full-validation fallback plus phase timings; timings are
+    diagnostics, not research or truth gates.
+77. **CHX-077 — a neutral verifier could write an invalid canonical review.**
+    Current V5 capsules accept only `output/review-draft.json` from the verifier.
+    Host-controlled `host/submit_review.py` preserves and strictly preflights it,
+    quarantines invalid bytes with JSON-pointer/enum diagnostics, and atomically
+    publishes immutable `output/review.json` plus content-addressed preflight and
+    formal-return receipts only on success. Interrupted publication is
+    idempotently recoverable; V4 capsule behavior is unchanged.
+78. **CHX-078 — final load-bearing targets could omit independent adverse
+    work.** Every selected Paper target sets `independent_adverse_required`; a
+    mathematical proof target may opt in without importing a stance. Each
+    applicable non-adverse primary receives a distinct paired `refute` worker,
+    assignment, context, and no-context-sharing contract. The result enters
+    Research and ordinary adverse disposition; it adds no second verifier,
+    Certification, Gateway, or Fact authority.
+79. **CHX-079 — null Host scope could hide work from the attack report.**
+    Prospective planning now freezes one normalized non-null scope from explicit
+    input, documented environment binding, or a deterministic local derivation.
+    Scope-complete reports enumerate rounds, assignments, cards, return/receipt
+    state, pairs, and cases. An empty attack list is a completed zero only when
+    dispatch/return coverage is complete or no pair was required; historical
+    null-scope cards remain readable without reassignment.
+80. **CHX-080 — repair could begin before inspecting existing architecture.**
+    Revision-5 resolution consumes one full candidate-tree reconnaissance receipt
+    recorded before any tactical repair. It binds canonical root/version, file
+    inventory, component topology, and capability/behavior registry hashes. Later
+    status, disposition, and close reuse that receipt rather than rerunning the
+    administrative scan.
+81. **CHX-081 — component reachability hid orphaned or duplicate behavior.**
+    A normal-flow capability now needs a real production entry, satisfiable
+    predicate, typed handoff, validating consumer, observable effect, and
+    positive/predicate-false/tamper probes. Each discovered orphan receives one
+    executable lifecycle disposition: `retain_and_integrate`, `retain_bounded`,
+    `replace_with_authoritative_mechanism`, or `retire`. Imports, registrations,
+    scanner edges, and tests alone do not establish operational reachability;
+    replacement cycles, competing state owners, and generated release artifacts
+    fail the architecture gate.
+82. **CHX-082 — the release mutation registry retained stale attack targets.**
+    The complete registry is now preflighted as one bounded inventory, and each
+    attack must match exactly one current authoritative source seam before any
+    baseline subprocess. Three stale attacks were migrated to the continuation
+    capsule projection, nested headline-authorization guard, and phase-4 release
+    barrier; all 141 entries now have exact-one-target closure.
+83. **CHX-083 — invalid mutant runtimes could create false semantic kills.**
+    Every baseline and mutant now runs from a complete isolated directory named
+    `chalxius`. The unmutated isolated regression must pass first; after exactly
+    one source mutation, that copy's manifest binds the changed file before the
+    regression reruns. Unsafe paths, incomplete identity, a surviving mutant,
+    bytecode, or source drift keeps the release failed.
+84. **CHX-084 — protected-project cutover reconstructed every round in a fresh
+    process.** One authoritative all-round projection now validates the complete
+    terminal map and runtime bindings with shared in-process caches. A required
+    deep audit supplies its own map; cutover never performs N preliminary round
+    reconstructions and then repeats them inside the audit.
+85. **CHX-085 — an administrative latency objective became a correctness
+    timeout.** The one-to-two-minute target and uncommon four-minute target are
+    telemetry only. A separate finite configurable watchdog detects genuinely
+    lost work; crossing the SLO never terminates, downgrades, retries, or
+    authorizes a necessary validation.
+86. **CHX-086 — prior audit reuse lacked the exact audited project snapshot.**
+    Project-validation receipt v2 binds a versioned audit-relevant snapshot,
+    terminal round map, historical runtime bindings, runtime content, and
+    nontruth authority boundary. Non-impacting reuse performs local exact checks
+    with zero candidate subprocesses; a legacy timestamp anchor requires one
+    explicit deep audit.
+87. **CHX-087 — Brave Future changed a planning-snapshot shape without changing
+    its revision.** Revision 2 writes compact dictionaries. An exact read-only
+    revision-1 projector reconstructs and validates the old list representation;
+    mixed same-revision shapes and unknown revisions fail without rewriting any
+    advisory record.
+88. **CHX-088 — the behavior gate could not see a public writer missing from its
+    registry.** Reconnaissance now derives every public persistent-state writer
+    independently, resolves owner-aware writes and typed handlers, and requires
+    normal-flow or explicit lifecycle coverage. The unused direct Evidence
+    writer was retired; pure verification constructors remain bounded external
+    protocols with no project-state authority.
+89. **CHX-089 — a public successor example omitted a parser-required project
+    root.** The example now supplies every required long option, and a regression
+    derives that set from the real parser. Documentation drift fails without
+    weakening or inferring the explicit project binding.
+90. **CHX-090 — approved JSON was hashed and parsed from separate reads.** One
+    helper now hashes and duplicate-key-parses the same single in-memory byte
+    string. Replacement between approval and consumption can no longer change a
+    request, anchor, matrix receipt, or cutover receipt.
+91. **CHX-091 — Python booleans crossed integer receipt fields.** Version and
+    subprocess-count fields require exact non-boolean integers. The same reusable
+    rule protects the new Evidence planning attempt even when an invalid object
+    recomputes its own content address.
+92. **CHX-092 — v2 receipt fields and reuse ancestry were only superficially
+    exact.** One semantic validator checks canonical paths, SHA grammar,
+    nonfuture timestamps, snapshot revision, modes, provenance, bindings, and
+    project witnesses. Exact-reuse ancestry is read once per immutable receipt,
+    remains project-snapshot continuous, rejects cycles or excessive depth, and
+    must terminate at a valid single-deep-audit receipt without rerunning it.
+93. **CHX-093 — a replaceable bounded callback could contradict an approval
+    receipt.** Approval-bearing exact reuse has one canonical internal executor.
+    Projects, runtime bindings, and zero-process evidence are derived and
+    compared rather than accepted from an injected callback.
+94. **CHX-094 — a receipt bound candidate-path identity and failed after exact
+    installation.** Candidate identity remains provenance, while inherited audit
+    applicability uses the installed runtime's exact path-independent content
+    and manifest hashes. The next release generation can reuse identical bytes;
+    any content or manifest drift fails.
+95. **CHX-095 — Evidence association failures before ordinary request creation
+    disappeared.** EvidencePlane first writes one immutable content-addressed
+    planning attempt. Status and all-associations retry revalidate the capsule,
+    library Fact Evidence record/copy, source release, and exact Paper refs before
+    materializing the ordinary effect request; no title or DOI inference occurs.
+96. **CHX-096 — capability and behavior registries could each pass without total
+    closure.** Every public command, standalone entrypoint, and public state
+    writer now maps to an exact executable feature or a reasoned bounded,
+    replacement, or retirement decision. Raw-name matches, imports, and tests
+    alone cannot hide an orphan.
+97. **CHX-097 — batched audit bypassed the public round-status projection.**
+    `round_status` remains the single public projection and accepts only a
+    keyword-only ephemeral inspection context for an owning aggregate call.
+    Aggregate status and audit reuse that context through the public entrypoint,
+    so a stale public projection fails strict audit without restoring repeated
+    runtime, quarantine, or manifest scans. The context is never persisted and
+    grants no workflow or truth authority.
+98. **CHX-098 — architecture contract revisions drifted across release
+    owners.** One runtime-neutral shared source now binds the reconnaissance
+    revision and capability-registry revision used by the scanner, prospective
+    CHX receipt admission, registry file, inheritance lock, self-test, and
+    protected runtime closure. Strict reconnaissance and targeted mutation
+    regressions reject each stale owner; historical CHX bytes remain unchanged.
+99. **CHX-099 — mutation applicability was checked after expensive release
+    baselines.** Matrix revision 4 runs the complete exact-one-target registry
+    check as a manifest-bound phase-one lane. Missing, duplicate, escaping,
+    nonregular, or stale targets now skip later phases; the full mutation audit
+    remains isolated behind the phase-four barrier. Prospective 0.6.5 cutover
+    requires the new receipt, while historical matrix revisions retain their
+    original read boundary.
+100. **CHX-100 — the shared inspection context stopped before top-level audit
+    closures.** One locally owned ephemeral context now spans Research,
+    Candidate Release, verifier capsule, Decision, admission, active-Fact
+    lineage, statement interface, Paper Logic, and Paper continuation reads.
+    Every immutable object is still fully validated on first access; only an
+    identical successful projection is reused inside the same owning command.
+    The context is never persisted and carries no workflow or truth authority.
+101. **CHX-101 — routine status implicitly paid for a complete forensic audit.**
+    `status` is now a bounded read-only dashboard and explicitly reports that no
+    audit was performed. `status --with-audit` preserves the prior complete
+    forensic payload and fail-closed validator. A dashboard cannot claim
+    `current_ok`, history cleanliness, release readiness, or Fact authority.
+102. **CHX-102 — the novelty subaudit escaped its aggregate inspection
+    context.** Novelty validation now receives the same locally owned context as
+    its parent V5 audit. Its first Fact, revocation, Research, Release, admission,
+    Paper, and task-card access remains exact and fail-closed; later identical
+    reads in that aggregate reuse only the successful in-memory projection.
+103. **CHX-103 — empty task authority opened the complete Fact closure.** Task
+    validation now derives explicit Fact dependencies, `related_fact_id`, and an
+    attack target before reading active Facts or revocations. An exact empty
+    reference set produces the canonical empty authority snapshot without
+    entering admission, Release, Paper, or interface validation; every nonempty
+    or malformed case retains the complete authority path.
+104. **CHX-104 — plan-filtered disposition reads rebuilt the whole collection.**
+    One Paper-continuation manager now validates the canonical immutable
+    disposition collection once per aggregate inspection and derives plan and
+    current-disposition projections by filtering that successful result. The
+    cache is command-local, and standalone reads retain complete collection and
+    supersession validation.
+105. **CHX-105 — Experiment audit validated task authority before discovering
+    that no Experiment state existed.** This issue supplied the applicability-
+    first requirement; CHX-106 corrected its first implementation. The final
+    gate derives the Experiment root only from the canonical frozen assignment
+    binding, checks every existing component without following symlinks, and
+    skips the optional subaudit only for exact canonical absence.
+106. **CHX-106 — the first Experiment applicability gate trusted an unvalidated
+    card path and resolved away symlink evidence.** Standalone Experiment audit
+    now establishes the frozen round/task binding once, derives the canonical
+    work root from it, and performs component-wise no-follow inspection before
+    deciding absence. Canonical presence retains complete context-bound task-card
+    validation; drifted, escaping, symlinked, or malformed state fails closed.
+107. **CHX-107 — aggregate reuse was not mechanically owned by one project
+    snapshot.** Every `RoundInspectionContext` now binds its canonical project
+    root and rejects cross-project use. Complete aggregate reads acquire a shared
+    project snapshot lock that excludes ordinary writer commits while remaining
+    reentrant under an already-held mutation lock. Cutover retains its stronger
+    independent pre/post full-tree snapshot and no reader gains project or truth
+    authority.
+108. **CHX-108 — PHX standalone CLI cross-wired a search-only option into
+    `start` and dropped it from `search`.** Each dispatch branch now consumes
+    only arguments owned by its subparser. Public subprocess regressions prove
+    that `start` creates a valid ledger and `search --write-receipt` persists the
+    exact returned receipt. Behavioral reachability therefore includes parser-
+    to-handler option ownership rather than parser and handler presence alone.
+109. **CHX-109 — canonical Experiment applicability did not materialize the
+    validated task-card view before reading present state.** Frozen-assignment
+    byte/hash validation and derived-view construction now live in one helper.
+    Ordinary validation and present-root audit share it; audit reuses the round
+    binding already established by the applicability gate. Exact absence still
+    avoids full view construction, while the first valid present experiment now
+    passes manifest, hard-cap, event-ledger, receipt, and complete lifecycle audit.
 
 ## Deliberate residual boundaries
 
 - Brave Future implements only BF-1 through BF-3 in advisory mode. It can
   project strict L4 repair lineage and persist one bounded reassessment receipt,
-  but cannot plan, dispatch, create Research, mutate Campaign state, close a
-  Campaign, or affect truth. `plan_one`, `execute_one`, and
+  but cannot plan, dispatch, create Research itself, close a Campaign, or affect
+  truth. `plan_one`, `execute_one`, and
   `plan-round --reassessment` remain unimplemented and rejected.
 - Under `auto` or `deep`, an explicit research objective may automatically establish its
-  exact future Campaign scope and project BF-1. BF-2/BF-3 still require the
-  existing real-attempt blockage evidence gate; goal intake alone cannot
-  fabricate blockage, a plan, a dispatch, or a Research result.
+  exact Campaign scope, project BF-1, and create/reuse one token-bound prospective
+  root Research. BF-2/BF-3 still require the existing real-attempt blockage
+  evidence gate; goal intake cannot fabricate blockage, a plan, a dispatch, or a
+  substantive research result.
 - Research-draft preflight and composable verification establish structural and
   evidential readiness, not philosophical, mathematical, or empirical truth.
   Fresh independent reviewers and the ordinary Fact Gateway remain mandatory.
@@ -406,6 +680,35 @@ successor artifacts to use the stronger path.
   projections, Learner records, Blackboard nodes, CHX findings, Brave Future
   receipts, and prose remain nontruth unless their exact claims separately pass
   the normal Candidate, Certification, and Gateway path.
+- One-to-two-minute administrative latency, with rare explained cases near four,
+  is an optimization target rather than a hard timeout. It does not constrain
+  substantive research, proof, computation, or required full validation.
+- PHX is a private host-global, nontruth route reference for major reusable
+  architecture proposals distilled from CHX and other architecture evidence.
+  It does not duplicate concrete CHX problems, and route recording, search,
+  evaluation, or reporting never authorizes implementation. Any adoption that
+  changes active architecture requires an informed user consultation recorded
+  before implementation plus digest-bound evaluation and regression evidence.
+- A PHX consultation currently records the host task locator, exact user response,
+  response digest, scope, constraints, alternatives, risks, and rollback. This
+  is a fail-closed auditable assertion, not a host-authenticated or cryptographically
+  signed approval receipt: the locator and response are supplied by the agent.
+  External mutation and cutover tools do not yet consume a host-signed decision
+  token. A stronger authorization gate therefore requires a future host-issued
+  receipt and a separately user-approved architecture change.
+- Cost reduction follows a fixed order: eliminate unnecessary work first by
+  narrowing the projection, testing applicability before authority, skipping an
+  absent optional subsystem, and validating one canonical collection before
+  filtering it; then reuse successful validation through one aggregate
+  inspection context; then measure the remaining real path; only after that may
+  a persistent index or genuinely independent parallel lanes be considered.
+  Persistent caches require a measured cross-command workload and an explicit
+  invalidation contract. Parallelizing duplicate reconstruction is not a repair.
+- The principal adverse operating condition for this cost policy is agent
+  misoperation: accidental broad commands, hallucinated retries, and repeated
+  calls to an already validated projection. It does not assume a hostile external
+  attacker and must not add security ceremony that costs more than the work it
+  prevents.
 
 These boundaries are intentional authority separations, not open CHX defects.
 Any newly observed architecture-caused mechanism must enter a new current-contract

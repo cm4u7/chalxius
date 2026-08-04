@@ -118,6 +118,31 @@ object, and new snapshot; historical bytes are never rewritten.
 Research may mirror Paper material onto the Blackboard for exploration, but the
 mirror preserves its nontruth authority and exact receipt.
 
+An active research draft follows the Paper-first lifecycle: freeze its exact
+source, decompose it into a proposition-total DAG, bind targets and dependencies,
+perform nodewise Research and admission work, and reconstruct a copy-on-write
+successor Paper. A finished external publication instead enters the Evidence
+plane with its exact PDF and reviewed Paper Graph. Neither route silently
+inherits Fact authority.
+
+Continuity is domain-indexed. Philosophy can preserve an explicitly declared
+argumentative stance. Mathematics preserves the exact target, hypotheses,
+domains, and quantifiers, and allows proof, disproof, obstruction, or separately
+typed weaker progress. Empirical and mixed work use their own exact target
+adapters rather than borrowing the philosophy stance rule.
+
+## Architecture learning: CHX and PHX
+
+CHX is the append-only issue and repair ledger. A finding is recorded before it
+is classified; a reusable tactical repair is followed by a coordinated
+integrated repair and an explicit disposition.
+
+PHX is the host-global, project-independent route guide. It distills reusable
+major architecture proposals and measured tradeoffs from CHX and other evidence
+without duplicating concrete problems. PHX search, evaluation, and reporting
+are advisory. A recorded route grants no implementation authority; changing the
+active architecture requires a separate, informed user consultation.
+
 ## Historical projects and project background
 
 A new V5 root starts with an empty Fact Graph. V1-V4 and Danus roots remain
@@ -153,6 +178,10 @@ Certification, Fact, Blackboard, or Learning data.
 6. Modes change exploration cost, not Fact strength.
 7. Paper/Audit corrections and Fact revocations preserve history.
 8. Learner and Reader have no truth effect.
+9. Research drafts continue from complete Paper DAGs; finished publications
+   remain Evidence.
+10. CHX records problems and repairs; PHX advises routes and never authorizes a
+    cutover by itself.
 
 For exact contracts, see
 [`unified_architecture.md`](chalxius/references/unified_architecture.md),

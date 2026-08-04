@@ -13,8 +13,13 @@ from mathgraph.brave_future import (
     BF_BLOCKAGE_REVISION,
     BF_DECISION_REVISION,
     BF_GOAL_INTAKE_REVISION,
+    BF_PLANNING_SNAPSHOT_LEGACY_REVISION,
+    BF_PLANNING_SNAPSHOT_REVISION,
     BF_REPAIR_CONTRACT_REVISION,
+    _SNAPSHOT_SEMANTIC_FIELDS,
     _FIXED_POLICY,
+    _sealed_record,
+    _validate_planning_snapshot,
 )
 from mathgraph.contracts import sha256_json
 from mathgraph.cli import build_parser, main as cli_main
@@ -235,6 +240,58 @@ class BraveFutureTests(unittest.TestCase):
                     campaign_id=campaign_id, include_history=True, limit=20
                 ),
             )
+
+    def test_planning_snapshot_v2_writer_and_exact_v1_reader(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store)
+            self._research(store, campaign_id, "Keep one exact planning route.")
+            manager = store.brave_future()
+            manager.enable(
+                campaign_id=campaign_id,
+                policy=self._policy(campaign_id),
+                actor="operator",
+            )
+            policy_status = manager.policy_store.status(campaign_id)
+
+            current = manager.snapshot_builder.preview(
+                campaign_id=campaign_id,
+                policy_status=policy_status,
+            )
+            self.assertEqual(current["revision"], BF_PLANNING_SNAPSHOT_REVISION)
+            self.assertIsInstance(current["research_manifest"], dict)
+            self.assertTrue(manager.snapshot_builder.revalidate(current, policy_status))
+
+            legacy = manager.snapshot_builder.preview(
+                campaign_id=campaign_id,
+                policy_status=policy_status,
+                revision=BF_PLANNING_SNAPSHOT_LEGACY_REVISION,
+            )
+            self.assertEqual(
+                legacy["revision"], BF_PLANNING_SNAPSHOT_LEGACY_REVISION
+            )
+            for key in (
+                "research_manifest",
+                "disposition_heads",
+                "repair_lineage_manifest",
+                "program_math_projection",
+            ):
+                self.assertIsInstance(legacy[key], list)
+            self.assertEqual(_validate_planning_snapshot(legacy), legacy)
+            self.assertTrue(manager.snapshot_builder.revalidate(legacy, policy_status))
+
+            mixed_semantic = {
+                key: legacy[key] for key in _SNAPSHOT_SEMANTIC_FIELDS
+            }
+            mixed_semantic["research_manifest"] = current["research_manifest"]
+            mixed = _sealed_record(
+                mixed_semantic,
+                id_key="planning_snapshot_id",
+                prefix="bfps-",
+                created_at=legacy["created_at"],
+            )
+            with self.assertRaisesRegex(ValueError, "exact list"):
+                _validate_planning_snapshot(mixed)
 
     def test_policy_and_role_boundaries_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

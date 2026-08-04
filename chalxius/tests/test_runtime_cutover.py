@@ -5,10 +5,15 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
+from mathgraph import runtime_cutover
 from mathgraph.contracts import sha256_bytes
 from mathgraph.runtime_archive import archive_runtime, runtime_binding_from_root
 from mathgraph.runtime_cutover import (
+    _project_state_snapshot,
+    _round_bindings,
+    _validate_release_matrix_evidence,
     build_cutover_project_validation_receipt,
     perform_cutover,
 )
@@ -54,18 +59,18 @@ class RuntimeCutoverTests(unittest.TestCase):
         installed: Path,
         project: Path,
         archive: Path,
-        validator: object,
         deep_audit_required: bool = False,
         deep_validator: object | None = None,
     ) -> tuple[Path, str]:
-        prior_identity = runtime_binding_from_root(
+        prior_binding = runtime_binding_from_root(
             installed,
             archive_root=archive,
-        )["runtime_identity_sha256"]
+        )
+        prior_identity = prior_binding["runtime_identity_sha256"]
         anchor_path = base / "prior-audit.json"
-        anchor_sha256 = self._write_json(
-            anchor_path,
-            {
+        captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        if deep_audit_required:
+            anchor_payload: dict[str, object] = {
                 "captured_at": datetime.now(timezone.utc)
                 .isoformat()
                 .replace("+00:00", "Z"),
@@ -75,8 +80,70 @@ class RuntimeCutoverTests(unittest.TestCase):
                     "postflight_audit_current_ok": True,
                     "protected_project": str(project),
                 },
-            },
-        )
+            }
+        else:
+            round_states = {
+                round_id: "completed"
+                for round_id in sorted(
+                    child.name
+                    for child in (project / "rounds").iterdir()
+                    if child.is_dir() and not child.is_symlink()
+                )
+            } if (project / "rounds").is_dir() else {}
+            anchor_payload = {
+                "schema_version": 1,
+                "contract_revision": "chalxius-cutover-project-validation-receipt-2",
+                "request_path": str(base / "prior-request.json"),
+                "request_sha256": "1" * 64,
+                "candidate_root": str(installed),
+                "installed_root": str(installed),
+                "archive_root": str(archive),
+                "candidate_manifest_sha256": self._approved_manifest(installed),
+                "candidate_runtime_identity": prior_identity,
+                "candidate_runtime_content_sha256": prior_binding[
+                    "runtime_content_sha256"
+                ],
+                "prior_runtime_identity": prior_identity,
+                "changed_runtime_paths": [],
+                "deep_audit_required": True,
+                "change_classification_rationale": "Exact prior deep-audit fixture.",
+                "prior_audit_anchor": {
+                    "path": str(base / "legacy-prior-audit.json"),
+                    "sha256": "2" * 64,
+                    "captured_at": captured_at,
+                    "anchor_kind": "legacy_current_ok_report",
+                    "contract_revision": "legacy_current_ok_report",
+                },
+                "release_validation_evidence": [
+                    {
+                        "path": str(base / "prior-release-matrix.json"),
+                        "sha256": "3" * 64,
+                    }
+                ],
+                "projects": [
+                    {
+                        "project_root": str(project),
+                        "project_state": _project_state_snapshot(project),
+                        "round_states": round_states,
+                        "audit_evidence_mode": "single_prevalidated_deep_audit",
+                        "audit_current_ok": True,
+                    }
+                ],
+                "runtime_bindings": sorted(
+                    {
+                        item["runtime_identity_sha256"]: item
+                        for item in _round_bindings(project)
+                    }.values(),
+                    key=lambda item: item["runtime_identity_sha256"],
+                ),
+                "anchor_contract_revision": "chalxius-prior-project-audit-anchor-2",
+                "validation_mode": "single_deep_audit",
+                "candidate_subprocess_count": 1,
+                "project_effect": "validation_only",
+                "truth_effect": "none",
+                "premise_eligible": False,
+            }
+        anchor_sha256 = self._write_json(anchor_path, anchor_payload)
         manifest_sha256 = self._approved_manifest(candidate)
         matrix_path = base / "release-matrix.json"
         matrix_sha256 = self._write_json(
@@ -136,12 +203,132 @@ class RuntimeCutoverTests(unittest.TestCase):
             request_path=request_path,
             expected_request_sha256=request_sha256,
             output_path=receipt_path,
-            bounded_project_validator=validator,  # type: ignore[arg-type]
-            deep_project_validator=(
-                deep_validator if deep_validator is not None else validator
-            ),  # type: ignore[arg-type]
+            deep_project_validator=deep_validator,  # type: ignore[arg-type]
         )
         return receipt_path, sha256_bytes(receipt_path.read_bytes())
+
+    def test_065_requires_behavioral_gate_matrix_and_preserves_legacy_readability(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            manifest_sha256 = "d" * 64
+
+            def evidence(revision: str, lanes: tuple[tuple[str, int], ...]) -> list[dict[str, str]]:
+                path = root / f"{revision}.json"
+                payload: dict[str, object] = {
+                    "contract_revision": revision,
+                    "manifest_sha256": manifest_sha256,
+                    "ok": True,
+                    "complete_lane_set": True,
+                    "one_manifest_identity": True,
+                    "source_unchanged": True,
+                    "lanes": [
+                        {
+                            "lane": name,
+                            "phase": phase,
+                            "manifest_sha256": manifest_sha256,
+                            "ok": True,
+                            "lane_unchanged": True,
+                        }
+                        for name, phase in lanes
+                    ],
+                }
+                if revision.endswith("-2"):
+                    payload.update(
+                        {
+                            "architecture_gate_before_baseline": True,
+                            "prior_phase_failure_short_circuit": True,
+                            "skipped_lanes": [],
+                            "phase_order": [1, 2, 3],
+                        }
+                    )
+                if revision.endswith("-3"):
+                    payload.update(
+                        {
+                            "architecture_gate_before_baseline": True,
+                            "behavioral_gate_after_architecture_before_baseline": True,
+                            "prior_phase_failure_short_circuit": True,
+                            "skipped_lanes": [],
+                            "phase_order": [1, 2, 3, 4],
+                        }
+                    )
+                if revision.endswith("-4"):
+                    payload.update(
+                        {
+                            "architecture_gate_before_baseline": True,
+                            "behavioral_gate_after_architecture_before_baseline": True,
+                            "mutant_registry_preflight_before_baseline": True,
+                            "prior_phase_failure_short_circuit": True,
+                            "skipped_lanes": [],
+                            "phase_order": [1, 2, 3, 4],
+                        }
+                    )
+                digest = self._write_json(path, payload)
+                return [{"path": str(path), "sha256": digest}]
+
+            matrix2 = evidence(
+                "chalxius-release-validation-matrix-2",
+                (
+                    ("architecture_reconnaissance", 1),
+                    ("self_test", 2),
+                    ("full_suite", 2),
+                    ("aggressive_bug_audit", 3),
+                ),
+            )
+            self.assertEqual(
+                len(
+                    _validate_release_matrix_evidence(
+                        matrix2,
+                        candidate_manifest_sha256=manifest_sha256,
+                        candidate_skill_version="0.6.4",
+                    )
+                ),
+                1,
+            )
+            with self.assertRaisesRegex(ValueError, "release-validation evidence"):
+                _validate_release_matrix_evidence(
+                    matrix2,
+                    candidate_manifest_sha256=manifest_sha256,
+                    candidate_skill_version="0.6.5",
+                )
+
+            matrix3 = evidence(
+                "chalxius-release-validation-matrix-3",
+                (
+                    ("architecture_reconnaissance", 1),
+                    ("behavioral_feature_gate", 2),
+                    ("self_test", 3),
+                    ("full_suite", 3),
+                    ("aggressive_bug_audit", 4),
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "release-validation evidence"):
+                _validate_release_matrix_evidence(
+                    matrix3,
+                    candidate_manifest_sha256=manifest_sha256,
+                    candidate_skill_version="0.6.5",
+                )
+
+            matrix4 = evidence(
+                "chalxius-release-validation-matrix-4",
+                (
+                    ("architecture_reconnaissance", 1),
+                    ("mutant_registry_preflight", 1),
+                    ("behavioral_feature_gate", 2),
+                    ("self_test", 3),
+                    ("full_suite", 3),
+                    ("aggressive_bug_audit", 4),
+                ),
+            )
+            self.assertEqual(
+                len(
+                    _validate_release_matrix_evidence(
+                        matrix4,
+                        candidate_manifest_sha256=manifest_sha256,
+                        candidate_skill_version="0.6.5",
+                    )
+                ),
+                1,
+            )
 
     def test_cutover_requires_an_explicit_protected_project_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -393,30 +580,19 @@ class RuntimeCutoverTests(unittest.TestCase):
             project = base / "protected-project"
             project.mkdir()
             archive = base / "skill-runtime-archives" / "chalxius"
-            validation_calls: list[str] = []
-
-            def bounded_validator(
-                runtime_root: Path,
-                projects: object,
-                **_kwargs: object,
-            ) -> dict[str, object]:
-                validation_calls.append(str(runtime_root))
-                return {
-                    "projects": [
-                        {"project_root": str(project), "round_states": {}}
-                    ],
-                    "runtime_bindings": [],
-                }
-
-            receipt_path, receipt_sha256 = self._bounded_receipt(
-                base=base,
-                candidate=candidate,
-                installed=installed,
-                project=project,
-                archive=archive,
-                validator=bounded_validator,
-            )
-            self.assertEqual(validation_calls, [str(candidate)])
+            with patch.object(
+                runtime_cutover,
+                "_run_json_command",
+                side_effect=AssertionError("bounded receipt must not launch mgraph"),
+            ) as candidate_audit:
+                receipt_path, receipt_sha256 = self._bounded_receipt(
+                    base=base,
+                    candidate=candidate,
+                    installed=installed,
+                    project=project,
+                    archive=archive,
+                )
+            candidate_audit.assert_not_called()
 
             def duplicate_audit_forbidden(
                 _runtime_root: Path,
@@ -447,13 +623,12 @@ class RuntimeCutoverTests(unittest.TestCase):
             )
             self.assertEqual(
                 result["preflight_projects"][0]["audit_evidence_mode"],
-                "bounded_reuse_of_prior_deep_audit",
+                "exact_prior_deep_audit_snapshot_reuse",
             )
             self.assertEqual(
                 result["postflight_projects"][0]["audit_evidence_mode"],
-                "bounded_reuse_of_prior_deep_audit",
+                "exact_prior_deep_audit_snapshot_reuse",
             )
-            self.assertEqual(validation_calls, [str(candidate)])
 
     def test_deep_project_validation_runs_once_while_building_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -491,6 +666,7 @@ class RuntimeCutoverTests(unittest.TestCase):
                         }
                     ],
                     "runtime_bindings": [],
+                    "candidate_subprocess_count": 1,
                 }
 
             receipt_path, receipt_sha256 = self._bounded_receipt(
@@ -499,7 +675,6 @@ class RuntimeCutoverTests(unittest.TestCase):
                 installed=installed,
                 project=project,
                 archive=archive,
-                validator=bounded_forbidden,
                 deep_audit_required=True,
                 deep_validator=deep_validator,
             )
@@ -523,6 +698,157 @@ class RuntimeCutoverTests(unittest.TestCase):
             )
             self.assertEqual(deep_calls, [str(candidate)])
 
+    def test_real_receipt_survives_cutover_and_anchors_next_bounded_receipt(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            first_candidate = self._runtime(
+                base / "candidate" / "chalxius-first", "0.6.1", "first"
+            )
+            installed = self._runtime(
+                base / "skills" / "chalxius", "0.6.0", "old"
+            )
+            project = base / "protected-project"
+            project.mkdir()
+            archive = base / "skill-runtime-archives" / "chalxius"
+
+            def deep_validator(
+                _runtime_root: Path,
+                _projects: object,
+                **_kwargs: object,
+            ) -> dict[str, object]:
+                return {
+                    "projects": [
+                        {
+                            "project_root": str(project),
+                            "round_states": {},
+                            "audit_current_ok": True,
+                        }
+                    ],
+                    "runtime_bindings": [],
+                    "candidate_subprocess_count": 1,
+                }
+
+            first_receipt_path, first_receipt_sha256 = self._bounded_receipt(
+                base=base,
+                candidate=first_candidate,
+                installed=installed,
+                project=project,
+                archive=archive,
+                deep_audit_required=True,
+                deep_validator=deep_validator,
+            )
+            first_receipt = json.loads(
+                first_receipt_path.read_text(encoding="utf-8")
+            )
+            perform_cutover(
+                candidate_root=first_candidate,
+                installed_root=installed,
+                rollback_root=base / "skills" / "chalxius-old",
+                archive_root=archive,
+                project_roots=[project],
+                expected_candidate_manifest_sha256=self._approved_manifest(
+                    first_candidate
+                ),
+                project_validation_receipt=first_receipt_path,
+                expected_project_validation_receipt_sha256=first_receipt_sha256,
+                self_test_runner=self._no_self_test,
+            )
+            installed_binding = runtime_binding_from_root(
+                installed,
+                archive_root=archive,
+            )
+            self.assertNotEqual(
+                first_receipt["candidate_runtime_identity"],
+                installed_binding["runtime_identity_sha256"],
+            )
+            self.assertEqual(
+                first_receipt["candidate_runtime_content_sha256"],
+                installed_binding["runtime_content_sha256"],
+            )
+
+            next_candidate = self._runtime(
+                base / "candidate" / "chalxius-next", "0.6.2", "next"
+            )
+            next_manifest_sha256 = self._approved_manifest(next_candidate)
+            matrix_path = base / "next-release-matrix.json"
+            matrix_sha256 = self._write_json(
+                matrix_path,
+                {
+                    "contract_revision": "chalxius-release-validation-matrix-1",
+                    "manifest_sha256": next_manifest_sha256,
+                    "ok": True,
+                    "complete_lane_set": True,
+                    "one_manifest_identity": True,
+                    "source_unchanged": True,
+                    "lanes": [
+                        {
+                            "lane": lane,
+                            "manifest_sha256": next_manifest_sha256,
+                            "ok": True,
+                            "lane_unchanged": True,
+                        }
+                        for lane in (
+                            "self_test",
+                            "full_suite",
+                            "aggressive_bug_audit",
+                        )
+                    ],
+                },
+            )
+            request_path = base / "next-project-validation-request.json"
+            request_sha256 = self._write_json(
+                request_path,
+                {
+                    "schema_version": 1,
+                    "contract_revision": (
+                        "chalxius-cutover-project-validation-request-1"
+                    ),
+                    "candidate_manifest_sha256": next_manifest_sha256,
+                    "prior_runtime_identity": installed_binding[
+                        "runtime_identity_sha256"
+                    ],
+                    "project_roots": [str(project)],
+                    "prior_audit_anchor": {
+                        "path": str(first_receipt_path),
+                        "sha256": first_receipt_sha256,
+                    },
+                    "release_validation_evidence": [
+                        {"path": str(matrix_path), "sha256": matrix_sha256}
+                    ],
+                    "change_classification": {
+                        "classification_revision": (
+                            "chalxius-cutover-change-classification-1"
+                        ),
+                        "deep_audit_required": False,
+                        "changed_paths": ["VERSION", "runtime_payload.txt"],
+                        "rationale": "The second toy change is non-impacting.",
+                    },
+                    "truth_effect": "none",
+                },
+            )
+            next_receipt_path = base / "next-project-validation-receipt.json"
+            with patch.object(
+                runtime_cutover,
+                "_run_json_command",
+                side_effect=AssertionError("next bounded receipt must not audit"),
+            ) as candidate_audit:
+                next_receipt = build_cutover_project_validation_receipt(
+                    candidate_root=next_candidate,
+                    installed_root=installed,
+                    archive_root=archive,
+                    request_path=request_path,
+                    expected_request_sha256=request_sha256,
+                    output_path=next_receipt_path,
+                )
+            candidate_audit.assert_not_called()
+            self.assertEqual(
+                next_receipt["validation_mode"],
+                "exact_prior_receipt_reuse",
+            )
+            self.assertEqual(next_receipt["candidate_subprocess_count"], 0)
+
     def test_bounded_project_receipt_rejects_project_drift_before_swap(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
@@ -536,25 +862,12 @@ class RuntimeCutoverTests(unittest.TestCase):
             project.mkdir()
             archive = base / "skill-runtime-archives" / "chalxius"
 
-            def bounded_validator(
-                _runtime_root: Path,
-                _projects: object,
-                **_kwargs: object,
-            ) -> dict[str, object]:
-                return {
-                    "projects": [
-                        {"project_root": str(project), "round_states": {}}
-                    ],
-                    "runtime_bindings": [],
-                }
-
             receipt_path, receipt_sha256 = self._bounded_receipt(
                 base=base,
                 candidate=candidate,
                 installed=installed,
                 project=project,
                 archive=archive,
-                validator=bounded_validator,
             )
             (project / "project.json").write_text("{}\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "changed after validation receipt"):
@@ -586,25 +899,12 @@ class RuntimeCutoverTests(unittest.TestCase):
             project.mkdir()
             archive = base / "skill-runtime-archives" / "chalxius"
 
-            def bounded_validator(
-                _runtime_root: Path,
-                _projects: object,
-                **_kwargs: object,
-            ) -> dict[str, object]:
-                return {
-                    "projects": [
-                        {"project_root": str(project), "round_states": {}}
-                    ],
-                    "runtime_bindings": [],
-                }
-
             receipt_path, receipt_sha256 = self._bounded_receipt(
                 base=base,
                 candidate=candidate,
                 installed=installed,
                 project=project,
                 archive=archive,
-                validator=bounded_validator,
             )
 
             def mutate_only_after_swap(runtime_root: Path) -> None:
@@ -641,25 +941,12 @@ class RuntimeCutoverTests(unittest.TestCase):
             project.mkdir()
             archive = base / "skill-runtime-archives" / "chalxius"
 
-            def bounded_validator(
-                _runtime_root: Path,
-                _projects: object,
-                **_kwargs: object,
-            ) -> dict[str, object]:
-                return {
-                    "projects": [
-                        {"project_root": str(project), "round_states": {}}
-                    ],
-                    "runtime_bindings": [],
-                }
-
             receipt_path, _ = self._bounded_receipt(
                 base=base,
                 candidate=candidate,
                 installed=installed,
                 project=project,
                 archive=archive,
-                validator=bounded_validator,
             )
             with self.assertRaisesRegex(ValueError, "approved SHA-256"):
                 perform_cutover(

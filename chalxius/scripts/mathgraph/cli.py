@@ -13,6 +13,7 @@ from .adoption import build_adoption_plan
 from .fact_bundles import (
     build_expert_lint_receipt,
     build_interpret_lint_receipt,
+    publish_interpret_communication,
     validate_claim_card,
     validate_interpret_card,
 )
@@ -49,12 +50,14 @@ from .roles import (
 )
 from .store import MathGraphStore
 from .modes import REASONING_MODES
+from .protocol import normalize_host_task_scope_id
 from .reader_html import export_reader_html, export_reader_payload
 from .v5_reader import build_v5_reader_packet
 from .v5_assurance import (
     V5_ASSURANCE_CONTRACT_REVISION,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
 )
+from .v5_lifecycle import RoundInspectionContext
 
 
 V5_COMPATIBILITY_MUTATION_COMMANDS = {
@@ -73,6 +76,47 @@ def _json_file(path: str) -> dict[str, Any]:
 
 def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def _goal_root_research(
+    store: MathGraphStore,
+    intake: dict[str, Any],
+    *,
+    actor: str,
+) -> tuple[dict[str, Any], str]:
+    """Create or reuse the one Research root for an ordinary goal."""
+
+    matches = []
+    for record in store.v5_lifecycle().research_records():
+        metadata = record.get("metadata", {})
+        marker = metadata.get("goal_intake_root") if isinstance(metadata, dict) else None
+        if marker == {
+            "campaign_id": intake["campaign_id"],
+            "objective_sha256": intake["objective_sha256"],
+        }:
+            matches.append(record)
+    if len(matches) > 1:
+        raise ValueError("ordinary research goal has multiple bound Research roots")
+    if matches:
+        return matches[0], "none_existing_root_reused"
+    record = store.v5_lifecycle().add_research(
+        {
+            "kind": "direction",
+            "claim": intake["objective"],
+            "content": (
+                "Root Research for the exact user goal; Brave Future remains "
+                "advisory-only and creates no automatic plan or dispatch."
+            ),
+            "source": f"goal-intake:{intake['intake_token']}",
+            "goal_intake_root": {
+                "campaign_id": intake["campaign_id"],
+                "objective_sha256": intake["objective_sha256"],
+            },
+        },
+        actor=actor,
+        goal_intake_token=intake["intake_token"],
+    )
+    return record, "goal_intake_root_research_bound"
 
 
 def _v5_fact_bundle_release(
@@ -431,7 +475,10 @@ def _command_requires_mutation_lock(args: argparse.Namespace) -> bool:
     destination must not exist before the staging transaction begins.
     """
 
-    if args.command == "upgrade-project-copy":
+    if args.command in {"upgrade-project-copy", "mode-init"}:
+        # ReasoningModeStore.initialize owns the only valid transition lock for
+        # a mode-less V4/V5 project.  Acquiring the ordinary outer lock first
+        # would invoke the very guard that mode-init exists to satisfy.
         return False
     if args.command == "upgrade-workflow" and args.dry_run:
         return False
@@ -701,7 +748,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--actor", required=True)
     p.add_argument("--reason", required=True)
 
-    sub.add_parser("status")
+    p = sub.add_parser("status")
+    p.add_argument(
+        "--with-audit",
+        action="store_true",
+        help=(
+            "include the complete forensic audit; routine status is otherwise "
+            "a bounded read-only dashboard"
+        ),
+    )
     p = sub.add_parser("audit")
     p.add_argument("--strict-history", action="store_true")
 
@@ -801,6 +856,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("memory-add")
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
+    p.add_argument(
+        "--goal-intake-token",
+        help=(
+            "host-propagated bfit token returned by research-goal-intake; "
+            "binds Research without requiring Campaign jargon"
+        ),
+    )
     p.add_argument(
         "--current-assurance",
         action="store_true",
@@ -917,7 +979,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source-root", required=True)
     p.add_argument("--expected-project-id", required=True)
     p = sub.add_parser("round-status")
-    p.add_argument("round_id")
+    p.add_argument("round_id", nargs="?")
+    p.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_rounds",
+        help="validate and project every round in one shared read phase",
+    )
 
     p = sub.add_parser("profile-closure-status")
     p.add_argument("round_id")
@@ -1295,15 +1363,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("verification-status")
     p.add_argument("release_id")
 
-    sub.add_parser("evidence-library-status")
+    p = sub.add_parser("evidence-library-status")
+    p.add_argument("--association-request-id", default="")
 
     p = sub.add_parser("evidence-query")
     p.add_argument("--query", default="")
     p.add_argument("--limit", type=int, default=20)
     p.add_argument("--include-inactive", action="store_true")
+    p.add_argument("--associations-only", action="store_true")
 
     p = sub.add_parser("evidence-sync-retry")
-    p.add_argument("snapshot_id")
+    p.add_argument("snapshot_id", nargs="?")
+    p.add_argument("--association-request-id", default="")
+    p.add_argument("--all-associations", action="store_true")
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("evidence-import-fact-graph")
@@ -1472,6 +1544,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    p = sub.add_parser("publish-interpret-document")
+    p.add_argument("--input", required=True)
+    p.add_argument("--interpret-card", required=True)
+    p.add_argument("--lint-receipt", required=True)
+    p.add_argument("--adoption-binding", required=True)
+
     return parser
 
 
@@ -1613,19 +1691,40 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "status":
             workflow_version = store.workflow_evidence_version()
+            lifecycle = (
+                store.v5_lifecycle() if workflow_version == 5 else None
+            )
+            inspection = (
+                RoundInspectionContext() if lifecycle is not None else None
+            )
             result = {
                 "project": store.project(),
                 "reasoning_mode": store.reasoning_modes().status(),
-                "audit": store.audit().as_dict(),
                 "targets": store.targets(),
                 "frontier": (
-                    store.v5_lifecycle().frontier(limit=5)
-                    if workflow_version == 5
+                    lifecycle.frontier(
+                        limit=5,
+                        _inspection_context=inspection,
+                    )
+                    if lifecycle is not None
                     else store.frontier(limit=5)
                 ),
             }
-            if workflow_version == 5:
-                result["lifecycle"] = store.v5_lifecycle().status()
+            result["audit"] = (
+                store.audit().as_dict()
+                if args.with_audit
+                else {
+                    "performed": False,
+                    "current_ok": None,
+                    "history_clean": None,
+                    "next_safe_command": "audit",
+                    "truth_effect": "none",
+                }
+            )
+            if lifecycle is not None:
+                result["lifecycle"] = lifecycle.status(
+                    _inspection_context=inspection
+                )
             _print_json(result)
         elif args.command == "audit":
             report = store.audit()
@@ -1881,6 +1980,7 @@ def main(argv: list[str] | None = None) -> int:
                 record = store.v5_lifecycle().add_research(
                     _json_file(args.input),
                     actor=args.actor,
+                    goal_intake_token=args.goal_intake_token,
                     assurance_contract_revision=(
                         V5_ASSURANCE_CONTRACT_REVISION
                         if args.current_assurance
@@ -1985,6 +2085,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "adoption-plan":
             _print_json(build_adoption_plan(_json_file(args.input)))
         elif args.command == "plan-round":
+            normalized_host_scope = normalize_host_task_scope_id(
+                args.host_task_scope_id,
+                workflow_evidence_version=store.workflow_evidence_version(),
+            )
             if store.workflow_evidence_version() == 5:
                 _print_json(
                     store.v5_lifecycle().create_round(
@@ -1992,7 +2096,7 @@ def main(argv: list[str] | None = None) -> int:
                         mode=args.mode,
                         research_ids=args.memory_ids,
                         campaign_id=args.campaign,
-                        host_task_scope_id=args.host_task_scope_id,
+                        host_task_scope_id=normalized_host_scope,
                         background_chunk_ids=args.background_chunk_ids,
                     )
                 )
@@ -2012,7 +2116,7 @@ def main(argv: list[str] | None = None) -> int:
                         workers=args.workers,
                         mode=args.mode,
                         memory_ids=args.memory_ids,
-                        host_task_scope_id=args.host_task_scope_id,
+                        host_task_scope_id=normalized_host_scope,
                     )
                 )
         elif args.command == "project-background-index":
@@ -2059,10 +2163,53 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "round-status":
+            if bool(args.round_id) == bool(args.all_rounds):
+                raise ValueError(
+                    "round-status requires exactly one ROUND_ID or --all"
+                )
             if store.workflow_evidence_version() == 5:
-                _print_json(store.v5_lifecycle().round_status(args.round_id))
+                if args.all_rounds:
+                    _print_json(store.v5_lifecycle().round_statuses())
+                else:
+                    _print_json(
+                        store.v5_lifecycle().round_status(args.round_id)
+                    )
             else:
-                _print_json(round_status(store, args.round_id))
+                if args.all_rounds:
+                    round_ids = sorted(
+                        path.parent.name
+                        for path in store.rounds_dir.glob("*/round.json")
+                        if path.is_file() and not path.is_symlink()
+                    )
+                    statuses = {
+                        round_id: round_status(store, round_id)["status"]
+                        for round_id in round_ids
+                    }
+                    _print_json(
+                        {
+                            "schema_version": 1,
+                            "workflow_evidence_version": (
+                                store.workflow_evidence_version()
+                            ),
+                            "project_id": store.project_id(),
+                            "round_count": len(statuses),
+                            "terminal_round_count": sum(
+                                state == "complete"
+                                for state in statuses.values()
+                            ),
+                            "round_states": {
+                                round_id: (
+                                    "completed"
+                                    if state == "complete"
+                                    else "active"
+                                )
+                                for round_id, state in statuses.items()
+                            },
+                            "truth_effect": "none",
+                        }
+                    )
+                else:
+                    _print_json(round_status(store, args.round_id))
         elif args.command == "profile-closure-status":
             if store.workflow_evidence_version() == 5:
                 _print_json(
@@ -2696,12 +2843,30 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "research-goal-intake":
+            intake = store.brave_future().intake_research_goal(
+                goal_input=_json_file(args.input),
+                actor=args.actor,
+                limit=args.limit,
+            )
+            root_research, research_write_effect = _goal_root_research(
+                store,
+                intake,
+                actor=args.actor,
+            )
+            root_binding = root_research["metadata"]["goal_intake_binding"]
             _print_json(
-                store.brave_future().intake_research_goal(
-                    goal_input=_json_file(args.input),
-                    actor=args.actor,
-                    limit=args.limit,
-                )
+                {
+                    **intake,
+                    "root_research_id": root_research["research_id"],
+                    "root_research_record_sha256": root_research["record_sha256"],
+                    "root_intake_token": root_binding["intake_token"],
+                    "research_write_effect": research_write_effect,
+                    "research_scope": {
+                        **intake["research_scope"],
+                        "root_research_id": root_research["research_id"],
+                        "intake_token_bound": True,
+                    },
+                }
             )
         elif args.command == "brave-future-status":
             _print_json(store.brave_future().status(args.campaign))
@@ -2743,22 +2908,49 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "evidence-library-status":
-            _print_json(store.evidence().status())
+            _print_json(
+                store.evidence().association_status(
+                    request_id=args.association_request_id
+                )
+                if args.association_request_id
+                else store.evidence().status()
+            )
         elif args.command == "evidence-query":
             _print_json(
                 store.evidence().query(
                     query=args.query,
                     limit=args.limit,
                     include_inactive=args.include_inactive,
+                    associations_only=args.associations_only,
                 )
             )
         elif args.command == "evidence-sync-retry":
-            _print_json(
-                store.evidence().paper_snapshot_frozen(
-                    args.snapshot_id,
-                    actor=args.actor,
+            if args.association_request_id and args.all_associations:
+                raise ValueError(
+                    "choose one association request or --all-associations"
                 )
-            )
+            if args.association_request_id or args.all_associations:
+                if args.snapshot_id:
+                    raise ValueError(
+                        "Paper snapshot retry and association retry are mutually exclusive"
+                    )
+                _print_json(
+                    store.evidence().retry_associations(
+                        request_id=args.association_request_id,
+                        actor=args.actor,
+                    )
+                )
+            elif args.snapshot_id:
+                _print_json(
+                    store.evidence().paper_snapshot_frozen(
+                        args.snapshot_id,
+                        actor=args.actor,
+                    )
+                )
+            else:
+                raise ValueError(
+                    "provide snapshot_id, --association-request-id, or --all-associations"
+                )
         elif args.command == "evidence-import-fact-graph":
             inventory = _authorized_fact_evidence_inventory(
                 store, args.source_root
@@ -3210,6 +3402,16 @@ def main(argv: list[str] | None = None) -> int:
             store._write_json_once(output, receipt)
             _print_json(receipt)
             return 0 if receipt["ok"] else 2
+        elif args.command == "publish-interpret-document":
+            publication = publish_interpret_communication(
+                store=store,
+                external_communication_requested=True,
+                adoption_binding=_json_file(args.adoption_binding),
+                lint_receipt=_json_file(args.lint_receipt),
+                draft_bytes=Path(args.input).read_bytes(),
+                interpret_card_bytes=Path(args.interpret_card).read_bytes(),
+            )
+            _print_json(publication)
         else:
             raise AssertionError(args.command)
     except (KeyError, ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:

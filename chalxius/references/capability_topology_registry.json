@@ -1,0 +1,3125 @@
+{
+  "schema_version": 3,
+  "contract_revision": "chalxius-capability-topology-registry-3",
+  "truth_effect": "none",
+  "capabilities": {
+    "cap.core_project_graph": {
+      "summary": "Core project identity, legacy graph storage, shared contracts, search and the mgraph command surface.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "project.json",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "TARGETS.txt",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "fact_graph",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "reports",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/architecture.md",
+        "references/data_contracts.md",
+        "references/v5_capability_matrix.md"
+      ],
+      "tests": [
+        "tests/test_mathgraph.py",
+        "tests/test_v5_capability_preservation.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "launcher",
+          "path": "scripts/mgraph"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:init"
+        }
+      ],
+      "authority_effects": [
+        "fact",
+        "none",
+        "source"
+      ]
+    },
+    "cap.fact_certification": {
+      "summary": "V5 Research, Candidate Release, independent Certification, Gateway admission and verifier-capsule authority path.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/v5",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "canonical"
+        },
+        {
+          "path": "submissions",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "reviews",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "review_inbox",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "verification_queue",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "verification_queue/bundles",
+          "owner_module": "mathgraph.verification_bundles",
+          "relationship": "delegated_child",
+          "parent_path": "verification_queue"
+        },
+        {
+          "path": "candidate_releases",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "canonical"
+        },
+        {
+          "path": "certification",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "canonical"
+        },
+        {
+          "path": "fact_graph/v5_admissions",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "delegated_child",
+          "parent_path": "fact_graph"
+        },
+        {
+          "path": "fact_graph/v5_revocations",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "delegated_child",
+          "parent_path": "fact_graph"
+        }
+      ],
+      "documents": [
+        "references/admission_contract.md",
+        "references/data_contracts.md"
+      ],
+      "tests": [
+        "tests/test_v5_lifecycle.py",
+        "tests/test_bttf_field_repairs.py",
+        "tests/test_research_draft_admission.py",
+        "tests/test_neutral_review_submission.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:candidate-release"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-admit"
+        },
+        {
+          "kind": "standalone",
+          "module": "submit_neutral_review"
+        },
+        {
+          "kind": "standalone",
+          "module": "prepare_verifier_capsule"
+        }
+      ],
+      "authority_effects": [
+        "candidate",
+        "certification",
+        "fact",
+        "none"
+      ]
+    },
+    "cap.fact_bundle": {
+      "summary": "Atomic multi-Fact bundle compatibility and communication surface over the invariant admission path.",
+      "status": "compatibility",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "fact_graph/bundles",
+          "owner_module": "mathgraph.fact_bundles",
+          "relationship": "delegated_child",
+          "parent_path": "fact_graph"
+        }
+      ],
+      "documents": [
+        "references/data_contracts.md",
+        "references/expert_export_and_interpretation_v4.md"
+      ],
+      "tests": [
+        "tests/test_v4_fact_bundles_and_export.py",
+        "tests/test_v4_computation_and_bundles.py",
+        "tests/test_behavioral_communication_readiness.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-bundle-submit"
+        }
+      ],
+      "authority_effects": [
+        "candidate",
+        "certification",
+        "fact",
+        "none"
+      ]
+    },
+    "cap.research_execution": {
+      "summary": "Round planning, frozen task cards, worker returns, ingestion and bounded repair execution.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "research",
+          "owner_module": "mathgraph.v5_lifecycle",
+          "relationship": "canonical"
+        },
+        {
+          "path": "memory",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "rounds",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/agent_protocol_v4.md",
+        "references/v5_worker_return_contract.md"
+      ],
+      "tests": [
+        "tests/test_v5_lifecycle.py",
+        "tests/test_v4_preflight_return.py",
+        "tests/test_v4_protocol.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-round"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:ingest-return"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.adverse_routing": {
+      "summary": "Prospective nontruth adverse cases, proof attacks, route proposals, operator decisions and attack reports.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/adverse-routing",
+          "owner_module": "mathgraph.adverse_routing",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/adverse_routing_evolution.md"
+      ],
+      "tests": [
+        "tests/test_adverse_routing.py",
+        "tests/test_chalxius_043_upgrade.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:attack-report"
+        },
+        {
+          "kind": "automatic",
+          "module": "mathgraph.adverse_routing",
+          "consumer_module": "mathgraph.v5_lifecycle"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.novelty": {
+      "summary": "Nontruth novelty evidence and status retained in the core store without a second scheduler.",
+      "status": "advisory",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "novelty",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/adoption_policy_v4.md",
+        "references/v5_capability_matrix.md"
+      ],
+      "tests": [
+        "tests/test_mathgraph.py",
+        "tests/test_profile_closure.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:novelty-record"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.reasoning_profiles": {
+      "summary": "Reasoning modes, adoption advice and profile-closure repair advice for future work units.",
+      "status": "advisory",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/unified-mode",
+          "owner_module": "mathgraph.modes",
+          "relationship": "canonical"
+        },
+        {
+          "path": "governance/unified-mode/profile-closures/by-round",
+          "owner_module": "mathgraph.profile_closure",
+          "relationship": "delegated_child",
+          "parent_path": "governance/unified-mode"
+        }
+      ],
+      "documents": [
+        "references/reasoning_modes.md",
+        "references/adoption_policy_v4.md"
+      ],
+      "tests": [
+        "tests/test_unified_modes.py",
+        "tests/test_profile_closure.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:mode-status"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.campaign_bf": {
+      "summary": "Campaign envelopes and advisory-only BF-1 through BF-3 goal-driven recovery.",
+      "status": "advisory",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "campaigns",
+          "owner_module": "mathgraph.campaigns",
+          "relationship": "canonical"
+        },
+        {
+          "path": "governance/brave-future",
+          "owner_module": "mathgraph.brave_future",
+          "relationship": "canonical"
+        },
+        {
+          "path": "governance/brave-future/goal-intakes",
+          "owner_module": "mathgraph.goal_intake",
+          "relationship": "delegated_child",
+          "parent_path": "governance/brave-future"
+        }
+      ],
+      "documents": [
+        "references/campaigns_and_migration_v4.md",
+        "references/brave_future_l3_l4.md"
+      ],
+      "tests": [
+        "tests/test_brave_future.py",
+        "tests/test_goal_intake_transaction.py",
+        "tests/test_goal_intake_research_binding.py",
+        "tests/test_v5_campaign_envelope.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:research-goal-intake"
+        },
+        {
+          "kind": "automatic",
+          "module": "mathgraph.goal_intake",
+          "consumer_module": "mathgraph.v5_lifecycle"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.project_background": {
+      "summary": "Read-only exact-byte project-background indexing and round-local chunk binding.",
+      "status": "active",
+      "stateful": false,
+      "state_roots": [],
+      "documents": [
+        "references/behavioral_feature_registry.json",
+        "references/duplicate_body_adjudication.json",
+        "references/portable_deployment.md",
+        "references/unified_architecture.md"
+      ],
+      "tests": [
+        "tests/test_chalxius_044_context.py",
+        "tests/test_v5_lifecycle.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:project-background-index"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.blackboard": {
+      "summary": "Typed cumulative Blackboard objects, transactions, snapshots, projections and explicit indices.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "blackboard",
+          "owner_module": "mathgraph.blackboard",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/blackboard_graph_v4.md"
+      ],
+      "tests": [
+        "tests/test_v4_blackboard_projection_and_opaque.py",
+        "tests/test_v4_bound_worker_queries.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:blackboard-snapshot"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.pulse": {
+      "summary": "Optional V4 and V5 multi-worker Pulse coordination with immutable commitments and receipts.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "blackboard/pulses",
+          "owner_module": "mathgraph.collaboration",
+          "relationship": "delegated_child",
+          "parent_path": "blackboard"
+        },
+        {
+          "path": "governance/v5/pulses",
+          "owner_module": "mathgraph.v5_collaboration",
+          "relationship": "delegated_child",
+          "parent_path": "governance/v5"
+        }
+      ],
+      "documents": [
+        "references/agent_protocol_v4.md",
+        "references/blackboard_graph_v4.md"
+      ],
+      "tests": [
+        "tests/test_v4_collaboration_pulse.py",
+        "tests/test_v5_collaboration.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:pulse-plan"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.experiments": {
+      "summary": "Replayable computation, experiment governance, append-only event ledgers and rebuildable indices.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "experiments",
+          "owner_module": "mathgraph.computations",
+          "relationship": "canonical"
+        },
+        {
+          "path": "rounds/{round_id}/work/experiments",
+          "owner_module": "mathgraph.v5_experiments",
+          "relationship": "delegated_child",
+          "parent_path": "rounds"
+        }
+      ],
+      "documents": [
+        "references/computational_verification_v4.md"
+      ],
+      "tests": [
+        "tests/test_v4_experiment_governance.py",
+        "tests/test_v5_experiments.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:experiment-start"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.claims_exposition": {
+      "summary": "Claims, conventions, notation inventory and expert or interpretation communication lint.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "claims",
+          "owner_module": "mathgraph.claims",
+          "relationship": "canonical"
+        },
+        {
+          "path": "conventions",
+          "owner_module": "mathgraph.claims",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/expert_export_and_interpretation_v4.md",
+        "references/exposition_quality.md"
+      ],
+      "tests": [
+        "tests/test_v4_claims_and_interfaces.py",
+        "tests/test_v4_interpret_export_lint.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:claim-add"
+        },
+        {
+          "kind": "standalone",
+          "module": "notation_inventory"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.paper_logic": {
+      "summary": "Immutable Paper Logic and Audit DAGs, current reviewed snapshots, correction and Blackboard projection.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "paper_logic",
+          "owner_module": "mathgraph.paper_logic",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/paper_logic_graph_v1.md",
+        "references/paper_input_contracts.md"
+      ],
+      "tests": [
+        "tests/test_paper_logic_graph.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:paper-logic-freeze"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "source"
+      ]
+    },
+    "cap.paper_continuation": {
+      "summary": "Paper-derived research plans, materializations, dispositions, writing artifacts and bounded status.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/v5/paper-continuations",
+          "owner_module": "mathgraph.paper_continuation",
+          "relationship": "delegated_child",
+          "parent_path": "governance/v5"
+        },
+        {
+          "path": "governance/v5/paper-continuations/status-index",
+          "owner_module": "mathgraph.paper_continuation_status",
+          "relationship": "derived_index",
+          "parent_path": "governance/v5/paper-continuations"
+        }
+      ],
+      "documents": [
+        "references/paper_continuation_contract.md",
+        "references/paper_input_contracts.md"
+      ],
+      "tests": [
+        "tests/test_paper_continuation_status_projection.py",
+        "tests/test_v5_lifecycle.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:paper-continuation-plan"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.research_draft": {
+      "summary": "Research-draft target-total planning, stance or exact-target continuity, authorization and atomic dispositions.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/v5/research-draft-admission",
+          "owner_module": "mathgraph.research_draft",
+          "relationship": "delegated_child",
+          "parent_path": "governance/v5"
+        }
+      ],
+      "documents": [
+        "references/paper_continuation_contract.md",
+        "references/paper_research_pipeline.md"
+      ],
+      "tests": [
+        "tests/test_research_draft_contracts.py",
+        "tests/test_research_draft_admission.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:research-draft-plan"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.composable_verification": {
+      "summary": "Trusted-key, signed-plan, packet, receipt and aggregate lifecycle for independent parallel verification.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "governance/v5/parallel-verification",
+          "owner_module": "mathgraph.parallel_verification_lifecycle",
+          "relationship": "delegated_child",
+          "parent_path": "governance/v5"
+        }
+      ],
+      "documents": [
+        "references/v5_capability_matrix.md",
+        "references/paper_continuation_contract.md"
+      ],
+      "tests": [
+        "tests/test_parallel_verification.py",
+        "tests/test_research_draft_admission.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:verification-plan-prepare"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.evidence": {
+      "summary": "Project Evidence adapter and cross-project library for exact PDF, Paper Graph, Fact Graph and explicit associations.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "evidence",
+          "owner_module": "mathgraph.evidence",
+          "relationship": "canonical"
+        },
+        {
+          "path": "@evidence-library",
+          "owner_module": "paper_library",
+          "relationship": "external_host"
+        }
+      ],
+      "documents": [
+        "references/evidence_plane.md"
+      ],
+      "tests": [
+        "tests/test_evidence_plane.py",
+        "tests/test_paper_library_runtime.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:evidence-library-status"
+        },
+        {
+          "kind": "launcher",
+          "path": "scripts/paperlib"
+        },
+        {
+          "kind": "cli",
+          "command": "paperlib:index"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "source"
+      ]
+    },
+    "cap.reader": {
+      "summary": "Deterministic presentation-only Reader packet projection and self-contained HTML export.",
+      "status": "presentation",
+      "stateful": false,
+      "state_roots": [],
+      "documents": [
+        "references/reader_html_export.md"
+      ],
+      "tests": [
+        "tests/test_reader_html.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:export-reader-html"
+        }
+      ],
+      "authority_effects": [
+        "presentation"
+      ]
+    },
+    "cap.migration": {
+      "summary": "Copy-on-write legacy import and isolated project upgrade without inherited Fact authority.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "imports",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        },
+        {
+          "path": "migrations",
+          "owner_module": "mathgraph.store",
+          "relationship": "canonical"
+        }
+      ],
+      "documents": [
+        "references/campaigns_and_migration_v4.md",
+        "references/portable_deployment.md"
+      ],
+      "tests": [
+        "tests/test_unified_modes.py",
+        "tests/test_v4_campaigns_and_audit.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:upgrade-project-copy"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.source_assurance": {
+      "summary": "External-theorem applicability, source reliability and controlled elementary-result validation.",
+      "status": "active",
+      "stateful": false,
+      "state_roots": [],
+      "documents": [
+        "references/external_theorem_applicability.md",
+        "references/external_source_reliability.md",
+        "references/elementary_result_exemption.md"
+      ],
+      "tests": [
+        "tests/test_chalxius_043_upgrade.py",
+        "tests/test_bttf_field_repairs.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "automatic",
+          "module": "mathgraph.applicability",
+          "consumer_module": "mathgraph.v5_lifecycle"
+        },
+        {
+          "kind": "automatic",
+          "module": "mathgraph.elementary",
+          "consumer_module": "mathgraph.v5_lifecycle"
+        }
+      ],
+      "authority_effects": [
+        "certification"
+      ]
+    },
+    "cap.paper_research_pipeline": {
+      "summary": "Order-preserving Paper frontier, identity evidence, native successor, preflight and reliability matrix.",
+      "status": "active",
+      "stateful": false,
+      "state_roots": [],
+      "documents": [
+        "references/paper_research_pipeline.md"
+      ],
+      "tests": [
+        "tests/test_paper_research_pipeline.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "paper-research:frontier"
+        },
+        {
+          "kind": "standalone",
+          "module": "paper_research_pipeline"
+        }
+      ],
+      "authority_effects": [
+        "none",
+        "research"
+      ]
+    },
+    "cap.runtime_continuity": {
+      "summary": "Sealed historical runtime archive, compatibility closure, protected-project validation and atomic cutover.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "@runtime-archive",
+          "owner_module": "mathgraph.runtime_archive",
+          "relationship": "external_host"
+        },
+        {
+          "path": "@installed-skill",
+          "owner_module": "mathgraph.runtime_cutover",
+          "relationship": "external_host"
+        }
+      ],
+      "documents": [
+        "references/portable_deployment.md",
+        "references/agent_protocol_v4.md"
+      ],
+      "tests": [
+        "tests/test_runtime_archive.py",
+        "tests/test_runtime_cutover.py",
+        "tests/test_runtime_compatibility.py",
+        "tests/test_host_entrypoint_nonmutation.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "standalone",
+          "module": "archive_runtime"
+        },
+        {
+          "kind": "standalone",
+          "module": "runtime_cutover"
+        },
+        {
+          "kind": "standalone",
+          "module": "runtime_cutover_project_validation"
+        }
+      ],
+      "authority_effects": [
+        "runtime"
+      ]
+    },
+    "cap.learner": {
+      "summary": "Explicitly requested nontruth Chalxius Learner over frozen Fact, Paper and Blackboard snapshots.",
+      "status": "learner",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "@learner-graph",
+          "owner_module": "learning_graph",
+          "relationship": "external_host"
+        }
+      ],
+      "documents": [
+        "references/unified_learning_plane.md",
+        "references/fact-graph-grilling.md"
+      ],
+      "tests": [
+        "tests/test_learning_graph.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "launcher",
+          "path": "scripts/learn"
+        },
+        {
+          "kind": "cli",
+          "command": "learn:init"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.chx_runtime_ledger": {
+      "summary": "Task-scoped append-only CHX finding, issue, reconnaissance, reusable tactical repair, integrated repair, disposition and public-disclosure ledger.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "@chx-ledger",
+          "owner_module": "chx_ledger",
+          "relationship": "external_host"
+        }
+      ],
+      "documents": [
+        "references/chx_runtime_ledger.md"
+      ],
+      "tests": [
+        "tests/test_chx_ledger.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "chx:start"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.phx_architecture_routes": {
+      "summary": "Host-global append-only PHX reference for reusable architecture routes, evidence, user consultation, adoption and cross-run route evolution.",
+      "status": "active",
+      "stateful": true,
+      "state_roots": [
+        {
+          "path": "@global-phx-ledger",
+          "owner_module": "phx_ledger",
+          "relationship": "external_host"
+        }
+      ],
+      "documents": [
+        "references/phx_architecture_routes.md",
+        "references/administrative_cost_playbook.md"
+      ],
+      "tests": [
+        "tests/test_phx_ledger.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "phx:start"
+        },
+        {
+          "kind": "cli",
+          "command": "phx:search"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "cap.release_assurance": {
+      "summary": "Read-only architecture and executable normal-flow behavior gates, isolated baseline suite and mutation audit over one manifest identity.",
+      "status": "release_validation",
+      "stateful": false,
+      "state_roots": [],
+      "documents": [
+        "references/portable_deployment.md",
+        "references/v5_release_traceability.md"
+      ],
+      "tests": [
+        "tests/test_release_validation.py",
+        "tests/test_architecture_reconnaissance.py",
+        "tests/test_behavioral_feature_gate.py"
+      ],
+      "activation_paths": [
+        {
+          "kind": "standalone",
+          "module": "release_validation"
+        },
+        {
+          "kind": "subprocess",
+          "module": "architecture_reconnaissance",
+          "consumer_module": "release_validation",
+          "command_path": "scripts/architecture_reconnaissance.py"
+        },
+        {
+          "kind": "subprocess",
+          "module": "behavioral_feature_gate",
+          "consumer_module": "release_validation",
+          "command_path": "scripts/behavioral_feature_gate.py"
+        },
+        {
+          "kind": "subprocess",
+          "module": "self_test",
+          "consumer_module": "release_validation",
+          "command_path": "scripts/self_test.py"
+        },
+        {
+          "kind": "subprocess",
+          "module": "aggressive_bug_audit",
+          "consumer_module": "release_validation",
+          "command_path": "scripts/aggressive_bug_audit.py"
+        }
+      ],
+      "authority_effects": [
+        "none"
+      ]
+    }
+  },
+  "modules": {
+    "mathgraph": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/__init__.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_reason": "Public Python package facade; it is intentionally loaded by external consumers rather than by another in-repository production module."
+    },
+    "mathgraph.__main__": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/__main__.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_reason": "Python module entrypoint for python -m mathgraph."
+    },
+    "mathgraph.cli": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/cli.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.contracts": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/contracts.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.graph": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/graph.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.markdown": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/markdown.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.model": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/model.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.roles": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/roles.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.search": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/search.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.store": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mathgraph/store.py",
+      "roles": [
+        "authority_gate",
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mgraph_cli": {
+      "capability_id": "cap.core_project_graph",
+      "path": "scripts/mgraph_cli.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "mathgraph.cli.main"
+      ],
+      "standalone_reason": "Compatibility and bootstrap CLI loader that dispatches to mathgraph.cli."
+    },
+    "mathgraph.decision_preflight": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/decision_preflight.py",
+      "roles": [
+        "authority_gate",
+        "domain_service"
+      ]
+    },
+    "mathgraph.interfaces": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/interfaces.py",
+      "roles": [
+        "authority_gate",
+        "domain_service"
+      ]
+    },
+    "mathgraph.neutral_review_submission": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/neutral_review_submission.py",
+      "roles": [
+        "adapter",
+        "authority_gate",
+        "domain_service"
+      ]
+    },
+    "mathgraph.proof_lineage": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/proof_lineage.py",
+      "roles": [
+        "authority_gate",
+        "domain_service"
+      ]
+    },
+    "mathgraph.v5_lifecycle": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/v5_lifecycle.py",
+      "roles": [
+        "authority_gate",
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.verification_bundles": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/verification_bundles.py",
+      "roles": [
+        "authority_gate",
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.verifier_capsule": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/verifier_capsule.py",
+      "roles": [
+        "authority_gate",
+        "domain_service"
+      ]
+    },
+    "prepare_verifier_capsule": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/prepare_verifier_capsule.py",
+      "roles": [
+        "adapter",
+        "authority_gate",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "prepare_verifier_capsule.main"
+      ],
+      "standalone_reason": "Canonical host entrypoint for preparing the sealed neutral-verifier capsule."
+    },
+    "submit_neutral_review": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/submit_neutral_review.py",
+      "roles": [
+        "adapter",
+        "authority_gate",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "mathgraph.neutral_review_submission.main"
+      ],
+      "standalone_reason": "Public host wrapper for the copied neutral-review draft preflight and formal-return gate."
+    },
+    "mathgraph.fact_bundles": {
+      "capability_id": "cap.fact_bundle",
+      "path": "scripts/mathgraph/fact_bundles.py",
+      "roles": [
+        "authority_gate",
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.orchestrator": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/orchestrator.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.protocol": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/protocol.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.v5_assurance": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/v5_assurance.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.worker_returns": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/worker_returns.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.adverse_routing": {
+      "capability_id": "cap.adverse_routing",
+      "path": "scripts/mathgraph/adverse_routing.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.adoption": {
+      "capability_id": "cap.reasoning_profiles",
+      "path": "scripts/mathgraph/adoption.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.modes": {
+      "capability_id": "cap.reasoning_profiles",
+      "path": "scripts/mathgraph/modes.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.profile_closure": {
+      "capability_id": "cap.reasoning_profiles",
+      "path": "scripts/mathgraph/profile_closure.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.brave_future": {
+      "capability_id": "cap.campaign_bf",
+      "path": "scripts/mathgraph/brave_future.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.goal_intake": {
+      "capability_id": "cap.campaign_bf",
+      "path": "scripts/mathgraph/goal_intake.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.campaigns": {
+      "capability_id": "cap.campaign_bf",
+      "path": "scripts/mathgraph/campaigns.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.project_background": {
+      "capability_id": "cap.project_background",
+      "path": "scripts/mathgraph/project_background.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.blackboard": {
+      "capability_id": "cap.blackboard",
+      "path": "scripts/mathgraph/blackboard.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.collaboration": {
+      "capability_id": "cap.pulse",
+      "path": "scripts/mathgraph/collaboration.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.v5_collaboration": {
+      "capability_id": "cap.pulse",
+      "path": "scripts/mathgraph/v5_collaboration.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.computations": {
+      "capability_id": "cap.experiments",
+      "path": "scripts/mathgraph/computations.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.event_ledger": {
+      "capability_id": "cap.experiments",
+      "path": "scripts/mathgraph/event_ledger.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.v5_experiments": {
+      "capability_id": "cap.experiments",
+      "path": "scripts/mathgraph/v5_experiments.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.claims": {
+      "capability_id": "cap.claims_exposition",
+      "path": "scripts/mathgraph/claims.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "notation_inventory": {
+      "capability_id": "cap.claims_exposition",
+      "path": "scripts/notation_inventory.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "notation_inventory.main"
+      ],
+      "standalone_reason": "Standalone notation and exposition inventory invoked explicitly against documents."
+    },
+    "mathgraph.paper_logic": {
+      "capability_id": "cap.paper_logic",
+      "path": "scripts/mathgraph/paper_logic.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.paper_logic_contracts": {
+      "capability_id": "cap.paper_logic",
+      "path": "scripts/mathgraph/paper_logic_contracts.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.paper_continuation": {
+      "capability_id": "cap.paper_continuation",
+      "path": "scripts/mathgraph/paper_continuation.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.paper_continuation_status": {
+      "capability_id": "cap.paper_continuation",
+      "path": "scripts/mathgraph/paper_continuation_status.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.research_draft": {
+      "capability_id": "cap.research_draft",
+      "path": "scripts/mathgraph/research_draft.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.research_draft_preflight": {
+      "capability_id": "cap.research_draft",
+      "path": "scripts/mathgraph/research_draft_preflight.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.parallel_verification": {
+      "capability_id": "cap.composable_verification",
+      "path": "scripts/mathgraph/parallel_verification.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.parallel_verification_lifecycle": {
+      "capability_id": "cap.composable_verification",
+      "path": "scripts/mathgraph/parallel_verification_lifecycle.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.evidence": {
+      "capability_id": "cap.evidence",
+      "path": "scripts/mathgraph/evidence.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "paper_library": {
+      "capability_id": "cap.evidence",
+      "path": "scripts/paper_library.py",
+      "roles": [
+        "domain_service",
+        "entrypoint",
+        "state_owner"
+      ],
+      "standalone_entry_symbols": [
+        "paper_library.main"
+      ],
+      "standalone_reason": "Cross-project Evidence library CLI launched through scripts/paperlib; it owns its external repository contract."
+    },
+    "mathgraph.reader_html": {
+      "capability_id": "cap.reader",
+      "path": "scripts/mathgraph/reader_html.py",
+      "roles": [
+        "domain_service",
+        "presentation"
+      ]
+    },
+    "mathgraph.v5_reader": {
+      "capability_id": "cap.reader",
+      "path": "scripts/mathgraph/v5_reader.py",
+      "roles": [
+        "domain_service",
+        "presentation"
+      ]
+    },
+    "mathgraph.migration": {
+      "capability_id": "cap.migration",
+      "path": "scripts/mathgraph/migration.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.applicability": {
+      "capability_id": "cap.source_assurance",
+      "path": "scripts/mathgraph/applicability.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.elementary": {
+      "capability_id": "cap.source_assurance",
+      "path": "scripts/mathgraph/elementary.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.paper_research_pipeline": {
+      "capability_id": "cap.paper_research_pipeline",
+      "path": "scripts/mathgraph/paper_research_pipeline.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "mathgraph.paper_research_reliability": {
+      "capability_id": "cap.paper_research_pipeline",
+      "path": "scripts/mathgraph/paper_research_reliability.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "paper_research_pipeline": {
+      "capability_id": "cap.paper_research_pipeline",
+      "path": "scripts/paper_research_pipeline.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "paper_research_pipeline.main"
+      ],
+      "standalone_reason": "CLI adapter for the importable Paper Research Pipeline and reliability checks."
+    },
+    "mathgraph.runtime_archive": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/mathgraph/runtime_archive.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "mathgraph.runtime_compatibility": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/mathgraph/runtime_compatibility.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_reason": "Release compatibility validator intentionally exercised by the isolated self-test and external cutover validation surfaces."
+    },
+    "mathgraph.runtime_cutover": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/mathgraph/runtime_cutover.py",
+      "roles": [
+        "domain_service",
+        "state_owner"
+      ]
+    },
+    "archive_runtime": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/archive_runtime.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "archive_runtime.main"
+      ],
+      "standalone_reason": "Installed host CLI wrapper for mathgraph.runtime_archive; invoked directly rather than imported."
+    },
+    "runtime_cutover": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/runtime_cutover.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint"
+      ],
+      "standalone_entry_symbols": [
+        "runtime_cutover.main"
+      ],
+      "standalone_reason": "Host cutover CLI wrapper around mathgraph.runtime_cutover."
+    },
+    "runtime_cutover_project_validation": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/runtime_cutover_project_validation.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "runtime_cutover_project_validation.main"
+      ],
+      "standalone_reason": "Independent protected-project validation receipt builder; it is a standalone validation surface, not a runtime-cutover subprocess."
+    },
+    "learning_graph": {
+      "capability_id": "cap.learner",
+      "path": "scripts/learning_graph.py",
+      "roles": [
+        "domain_service",
+        "entrypoint",
+        "learner",
+        "state_owner"
+      ],
+      "standalone_entry_symbols": [
+        "learning_graph.main"
+      ],
+      "standalone_reason": "Independent nontruth Chalxius Learner CLI, launched through scripts/learn and kept outside Fact authority."
+    },
+    "chx_ledger": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "path": "scripts/chx_ledger.py",
+      "roles": [
+        "domain_service",
+        "entrypoint",
+        "state_owner"
+      ],
+      "standalone_reason": "Independent CHX runtime-ledger CLI launched through its public command surface."
+    },
+    "operational_ledger_core": {
+      "capability_id": "cap.phx_architecture_routes",
+      "path": "scripts/operational_ledger_core.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "phx_ledger": {
+      "capability_id": "cap.phx_architecture_routes",
+      "path": "scripts/phx_ledger.py",
+      "roles": [
+        "domain_service",
+        "entrypoint",
+        "state_owner"
+      ],
+      "standalone_entry_symbols": [
+        "phx_ledger.main"
+      ],
+      "standalone_reason": "Independent host-global PHX architecture-route reference CLI."
+    },
+    "aggressive_bug_audit": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/aggressive_bug_audit.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "aggressive_bug_audit.main"
+      ],
+      "standalone_reason": "Isolated mutation and transactional release audit executed by the release matrix; intentionally not a production library import."
+    },
+    "architecture_reconnaissance": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/architecture_reconnaissance.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "architecture_reconnaissance.main"
+      ],
+      "standalone_reason": "Read-only full-tree capability, import, CLI, state and duplicate inventory used as the phase-one release gate."
+    },
+    "mathgraph.release_contracts": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/mathgraph/release_contracts.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
+    "behavioral_feature_gate": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/behavioral_feature_gate.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "behavioral_feature_gate.main"
+      ],
+      "standalone_reason": "Executes the registry-bound positive, predicate-false, and tamper probes after static architecture closure and before the baseline suite."
+    },
+    "release_validation": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/release_validation.py",
+      "roles": [
+        "domain_service",
+        "release_tool"
+      ],
+      "standalone_entry_symbols": [
+        "release_validation.main"
+      ],
+      "standalone_reason": "Top-level isolated release-validation matrix orchestrator."
+    },
+    "self_test": {
+      "capability_id": "cap.release_assurance",
+      "path": "scripts/self_test.py",
+      "roles": [
+        "domain_service",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "self_test.main"
+      ],
+      "standalone_reason": "Portable integrated smoke and regression executable used as a release-baseline lane."
+    }
+  },
+  "launchers": {
+    "scripts/learn": {
+      "capability_id": "cap.learner",
+      "target_module": "learning_graph",
+      "target_path": "scripts/learning_graph.py"
+    },
+    "scripts/mgraph": {
+      "capability_id": "cap.core_project_graph",
+      "target_module": "mgraph_cli",
+      "target_path": "scripts/mgraph_cli.py"
+    },
+    "scripts/paperlib": {
+      "capability_id": "cap.evidence",
+      "target_module": "paper_library",
+      "target_path": "scripts/paper_library.py"
+    }
+  },
+  "commands": {
+    "mgraph:init": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:status": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:audit": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:show": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:search": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:closure": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:context": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:targets": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:set-targets": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:export-mermaid": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-graph-inventory": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-graph-append-target": {
+      "capability_id": "cap.core_project_graph",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:submit": {
+      "capability_id": "cap.fact_certification",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "candidate"
+      ]
+    },
+    "mgraph:packet": {
+      "capability_id": "cap.fact_certification",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:record-review": {
+      "capability_id": "cap.fact_certification",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "certification"
+      ]
+    },
+    "mgraph:admit": {
+      "capability_id": "cap.fact_certification",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "fact"
+      ]
+    },
+    "mgraph:revoke": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "fact"
+      ]
+    },
+    "mgraph:candidate-release": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "candidate"
+      ]
+    },
+    "mgraph:candidate-release-check": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verifier-capsule": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:certification-record": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "certification"
+      ]
+    },
+    "mgraph:certification-decision-check": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-admit": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "fact"
+      ]
+    },
+    "mgraph:make-verifier-task": {
+      "capability_id": "cap.fact_certification",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-bundle-submit": {
+      "capability_id": "cap.fact_bundle",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "candidate"
+      ]
+    },
+    "mgraph:make-bundle-verifier-task": {
+      "capability_id": "cap.fact_bundle",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-bundle-verifier-task": {
+      "capability_id": "cap.fact_bundle",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-bundle-record-review": {
+      "capability_id": "cap.fact_bundle",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "certification"
+      ]
+    },
+    "mgraph:fact-bundle-admit": {
+      "capability_id": "cap.fact_bundle",
+      "status": "compatibility_surface",
+      "authority_effects": [
+        "fact"
+      ]
+    },
+    "mgraph:memory-add": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:memory-update": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:frontier": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:plan-round": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:round-status": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:preflight-return": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:validate-return": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:ingest-return": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:plan-repair-round": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:work-unit-abort": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:attack-route-enable": {
+      "capability_id": "cap.adverse_routing",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:attack-route-status": {
+      "capability_id": "cap.adverse_routing",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:attack-report": {
+      "capability_id": "cap.adverse_routing",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:attack-route-decide": {
+      "capability_id": "cap.adverse_routing",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:attack-route-disable": {
+      "capability_id": "cap.adverse_routing",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:novelty-record": {
+      "capability_id": "cap.novelty",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:novelty-status": {
+      "capability_id": "cap.novelty",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:mode-init": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:mode-status": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:mode-switch": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:adoption-plan": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:profile-closure-status": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:profile-closure-record": {
+      "capability_id": "cap.reasoning_profiles",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-create": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-activate": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-update": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-status": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-target-add": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-target-archive": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:research-goal-intake": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:brave-future-enable": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:brave-future-status": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:brave-future-audit": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-reassess": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:campaign-reassess-decide": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:brave-future-disable": {
+      "capability_id": "cap.campaign_bf",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:project-background-index": {
+      "capability_id": "cap.project_background",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:project-background-read": {
+      "capability_id": "cap.project_background",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-type-register": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-space-create": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-node-add": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-edge-add": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-show": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-query": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-snapshot": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-snapshot-query": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-reindex": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:blackboard-promote-node": {
+      "capability_id": "cap.blackboard",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:pulse-plan": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-barrier": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-void": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-abort": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-dispatch": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-close": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:pulse-status": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:pulse-audit": {
+      "capability_id": "cap.pulse",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:experiment-start": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:experiment-event": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:experiment-observe": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:experiment-decision": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:experiment-resume": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:experiment-status": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:experiment-finalize": {
+      "capability_id": "cap.experiments",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:claim-add": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:claim-variant": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:claim-show": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:convention-add": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:convention-show": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:export-claim-card": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:lint-expert-document": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:export-interpret-card": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:lint-interpret-document": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:publish-interpret-document": {
+      "capability_id": "cap.claims_exposition",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-logic-init": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-stage": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-record-review": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-freeze": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-status": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-logic-show": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-logic-query": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-logic-link-exploration": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-project-blackboard": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:paper-logic-audit": {
+      "capability_id": "cap.paper_logic",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-continuation-plan": {
+      "capability_id": "cap.paper_continuation",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:paper-continuation-status": {
+      "capability_id": "cap.paper_continuation",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:paper-continuation-status-index-rebuild": {
+      "capability_id": "cap.paper_continuation",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:paper-continuation-dispose": {
+      "capability_id": "cap.paper_continuation",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:research-draft-plan": {
+      "capability_id": "cap.research_draft",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:research-draft-disposition-batch": {
+      "capability_id": "cap.research_draft",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:research-draft-authorize-major-revision": {
+      "capability_id": "cap.research_draft",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:research-draft-status": {
+      "capability_id": "cap.research_draft",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-key-register": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-plan-prepare": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-plan-record": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-packet-prepare": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-packet-record": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-receipt-prepare": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-receipt-record": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-aggregate": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:verification-status": {
+      "capability_id": "cap.composable_verification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:evidence-library-status": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:evidence-query": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:evidence-sync-retry": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:evidence-import-fact-graph": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:evidence-bridge-prepare": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:evidence-bridge-check": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:evidence-mark": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "mgraph:evidence-impact-report": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:export-reader-html": {
+      "capability_id": "cap.reader",
+      "status": "canonical",
+      "authority_effects": [
+        "presentation"
+      ]
+    },
+    "mgraph:import-danus": {
+      "capability_id": "cap.migration",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:upgrade-workflow": {
+      "capability_id": "cap.migration",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:upgrade-project-copy": {
+      "capability_id": "cap.migration",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:init": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:import": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:mount-paper": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:mount-blackboard": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:teach": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:add-teaching-node": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:record": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:record-source-concern": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:resolve-source-concern": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:context": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:verify": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "learn:summary": {
+      "capability_id": "cap.learner",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:start": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:finding": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:reconcile-finding": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record-reconnaissance": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record-tactical-repair": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record-integrated-repair": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:dispose": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:status": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:close": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:report": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:verify-report": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:verify-public-disclosure": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "phx:start": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:record-route": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:record-measurement": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:record-consultation": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:record-adoption": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:status": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:close": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:report": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:verify-report": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "phx:search": {
+      "capability_id": "cap.phx_architecture_routes",
+      "status": "canonical",
+      "authority_effects": ["none"]
+    },
+    "paperlib:init": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:zotero-snapshot": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:paper-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:version-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:arxiv-check": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:arxiv-capture": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:graph-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:correction-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:evidence-paper-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:evidence-fact-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:evidence-disposition-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:evidence-association-add": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:bridge-prepare": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "source"
+      ]
+    },
+    "paperlib:bridge-check": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paperlib:evidence-query": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paperlib:index": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paperlib:verify": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paperlib:context-export": {
+      "capability_id": "cap.evidence",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:frontier": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:frontier-verify": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:successor": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "paper-research:evidence": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:preflight": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:delta-normalize": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "paper-research:reliability-matrix": {
+      "capability_id": "cap.paper_research_pipeline",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    }
+  },
+  "compatibility_aliases": {
+    "mgraph:submit": {
+      "canonical_command": "mgraph:candidate-release",
+      "relation": "v5_compatibility_surface",
+      "reason": "Legacy single-Fact submit remains readable and maps V5 work to Candidate Release."
+    },
+    "mgraph:packet": {
+      "canonical_command": "mgraph:verifier-capsule",
+      "relation": "v5_compatibility_surface",
+      "reason": "Legacy packet maps V5 work to the sealed verifier capsule."
+    },
+    "mgraph:make-verifier-task": {
+      "canonical_command": "mgraph:verifier-capsule",
+      "relation": "v5_compatibility_surface",
+      "reason": "Legacy verifier-task entry maps V5 work to the sealed verifier capsule."
+    },
+    "mgraph:record-review": {
+      "canonical_command": "mgraph:certification-record",
+      "relation": "v5_compatibility_surface",
+      "reason": "Legacy review entry maps V5 work to immutable Certification."
+    },
+    "mgraph:admit": {
+      "canonical_command": "mgraph:fact-admit",
+      "relation": "v5_compatibility_surface",
+      "reason": "Legacy admit maps V5 work to the invariant Gateway admission."
+    },
+    "mgraph:fact-bundle-submit": {
+      "canonical_command": "mgraph:candidate-release",
+      "relation": "v5_compatibility_surface",
+      "reason": "V4 FactBundle convenience maps V5 work to one Candidate Release."
+    },
+    "mgraph:make-bundle-verifier-task": {
+      "canonical_command": "mgraph:verifier-capsule",
+      "relation": "v5_compatibility_surface",
+      "reason": "V4 FactBundle verifier task maps V5 work to one sealed verifier capsule."
+    },
+    "mgraph:fact-bundle-verifier-task": {
+      "canonical_command": "mgraph:verifier-capsule",
+      "relation": "v5_compatibility_surface",
+      "reason": "The exact legacy parser alias maps directly to the current sealed verifier-capsule authority path without a second compatibility hop."
+    },
+    "mgraph:fact-bundle-record-review": {
+      "canonical_command": "mgraph:certification-record",
+      "relation": "v5_compatibility_surface",
+      "reason": "V4 FactBundle review maps V5 work to immutable Certification."
+    },
+    "mgraph:fact-bundle-admit": {
+      "canonical_command": "mgraph:fact-admit",
+      "relation": "v5_compatibility_surface",
+      "reason": "V4 FactBundle admission maps V5 work to the invariant Gateway."
+    }
+  }
+}

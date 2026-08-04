@@ -8,6 +8,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from mathgraph.cli import main as cli_main
 from mathgraph.blackboard import make_node
@@ -18,6 +19,7 @@ from mathgraph.paper_logic import PaperLogicStore
 from mathgraph.paper_continuation import (
     PAPER_CONTINUATION_CONTRACT_REVISION,
     PHILOSOPHY_ATOMICITY_CONTRACT_REVISION,
+    PaperContinuationManager,
 )
 from mathgraph.paper_logic_contracts import (
     PAPER_LOGIC_FEATURE_REVISION,
@@ -30,6 +32,7 @@ from mathgraph.v5_lifecycle import (
     V5_LIFECYCLE_CONTRACT_SHA256,
     V5_POLICY_REVISION,
     V5_TASK_CONTEXT_REVISION,
+    V5LifecycleManager,
 )
 from mathgraph.v5_reader import build_v5_reader_packet
 
@@ -1596,6 +1599,7 @@ class V5LifecycleTests(unittest.TestCase):
                 release["requested_assurance"]["validation_granularity"],
                 "nodewise_proof_dag",
             )
+            self.assertNotIn("paper_continuation_release_capsule", release)
             decision = lifecycle.certification_record(
                 self._correct_decision_payload(lifecycle, release)
             )
@@ -1657,6 +1661,45 @@ class V5LifecycleTests(unittest.TestCase):
                 {node["id"] for node in packet_with_background["nodes"]},
             )
             self.assertTrue(store.audit().current_ok, store.audit().errors)
+
+    def test_paper_continuation_release_capsule_normal_flow(self) -> None:
+        # Runtime-manifest identity has its own release-matrix probes.  This
+        # behavioral probe isolates the continuation-capsule handoff while the
+        # candidate tree is intentionally ahead of its final MANIFEST.
+        with patch.object(
+            V5LifecycleManager,
+            "_validate_bound_runtime_binding",
+            return_value=None,
+        ):
+            self.test_philosophy_paper_continuation_is_complete_atomic_and_current()
+
+    def test_paper_continuation_release_capsule_tamper_fails_closed(self) -> None:
+        original = PaperContinuationManager.prepare_release_capsule
+
+        def tampered_prepare(
+            manager: PaperContinuationManager, *args: object, **kwargs: object
+        ) -> dict[str, object]:
+            prepared = copy.deepcopy(original(manager, *args, **kwargs))
+            prepared["capsule"]["status_proof"]["witness"][
+                "head_sha256"
+            ] = "0" * 64
+            return prepared
+
+        with patch.object(
+            V5LifecycleManager,
+            "_validate_bound_runtime_binding",
+            return_value=None,
+        ):
+            with patch.object(
+                PaperContinuationManager,
+                "prepare_release_capsule",
+                tampered_prepare,
+            ):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "release capsule hash mismatch|release witness hash mismatch",
+                ):
+                    self.test_philosophy_paper_continuation_is_complete_atomic_and_current()
 
     def test_atomic_fact_dag_appears_all_or_none_and_revokes_cascade(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1786,6 +1829,31 @@ class V5LifecycleTests(unittest.TestCase):
             self.assertEqual(
                 release["requested_assurance"]["validation_granularity"],
                 "atomic_fact_dag",
+            )
+
+            capsules = []
+            for command, subject_id in (
+                ("verifier-capsule", release_id),
+                ("make-verifier-task", theorem.fact_id),
+                ("make-bundle-verifier-task", release_id),
+                ("fact-bundle-verifier-task", release_id),
+            ):
+                stdout = StringIO()
+                with redirect_stdout(stdout), redirect_stderr(StringIO()):
+                    code = cli_main(
+                        [
+                            "--root",
+                            str(root),
+                            "--role",
+                            "operator",
+                            command,
+                            subject_id,
+                        ]
+                    )
+                self.assertEqual(code, 0, command)
+                capsules.append(json.loads(stdout.getvalue()))
+            self.assertTrue(
+                all(capsule == capsules[0] for capsule in capsules[1:])
             )
 
             decision_payload = self._correct_decision_payload(
@@ -2165,13 +2233,31 @@ class V5LifecycleTests(unittest.TestCase):
                 item["research_id"]
                 for item in plan_status["target_research_bindings"]
             ]
+            self.assertTrue(
+                all(
+                    lifecycle._research_record(research_id)["metadata"][
+                        "independent_adverse_required"
+                    ]
+                    is True
+                    for research_id in research_ids
+                )
+            )
             round_status = lifecycle.create_round(
                 workers=2,
                 research_ids=research_ids,
             )
+            primary_assignments = [
+                item
+                for item in round_status["assignments"]
+                if item["assignment_role"] == "primary"
+            ]
+            self.assertEqual(len(primary_assignments), 2)
+            self.assertGreaterEqual(
+                len(round_status["independent_adverse_pairs"]), 1
+            )
             result_ids: dict[str, str] = {}
             analysis_artifacts: list[dict[str, str]] = []
-            for index, assignment in enumerate(round_status["assignments"], 1):
+            for index, assignment in enumerate(primary_assignments, 1):
                 card = json.loads(
                     Path(str(assignment["task_card_path"])).read_text(
                         encoding="utf-8"
@@ -2618,20 +2704,52 @@ class V5LifecycleTests(unittest.TestCase):
                     producer="paper-candidate-producer",
                 )
 
-            release = lifecycle.candidate_release(
-                payload, producer="paper-candidate-producer"
-            )
+            release_evidence_calls: list[str] = []
+            original_release_evidence = PaperContinuationManager.release_evidence
+
+            def counted_release_evidence(
+                manager: PaperContinuationManager,
+                *args: object,
+                **kwargs: object,
+            ) -> dict[str, object]:
+                release_evidence_calls.append(manager.store.project_id())
+                return original_release_evidence(manager, *args, **kwargs)
+
+            with patch.object(
+                PaperContinuationManager,
+                "release_evidence",
+                counted_release_evidence,
+            ):
+                release = lifecycle.candidate_release(
+                    payload, producer="paper-candidate-producer"
+                )
+                capsule = lifecycle.verifier_capsule(release["release_id"])
+            self.assertEqual(len(release_evidence_calls), 1)
             self.assertIn("paper_continuation_ref", release)
-            self.assertIn("paper_continuation_evidence", release)
+            self.assertIn("paper_continuation_release_capsule", release)
+            self.assertNotIn("paper_continuation_evidence", release)
+            continuation_capsule = release[
+                "paper_continuation_release_capsule"
+            ]
             self.assertEqual(
-                len(release["paper_continuation_evidence"]["dispositions"]),
+                continuation_capsule["status_proof"]["mode"], "indexed"
+            )
+            self.assertEqual(
+                continuation_capsule["candidate_interfaces"],
+                release["candidate_interfaces"],
+            )
+            self.assertEqual(
+                len(continuation_capsule["evidence"]["dispositions"]),
                 2,
             )
             self.assertEqual(
                 release["requested_assurance"]["validation_granularity"],
                 "paper_target_closure",
             )
-            capsule = lifecycle.verifier_capsule(release["release_id"])
+            self.assertEqual(
+                capsule["paper_continuation_release_capsule"]["capsule_id"],
+                continuation_capsule["capsule_id"],
+            )
             self.assertIn(
                 "independently reconstruct the conjunct inventory",
                 capsule["instructions"]["paper_continuation_boundary"],
@@ -2647,6 +2765,23 @@ class V5LifecycleTests(unittest.TestCase):
                     if artifact["role"] == "paper_revised_writing"
                 },
                 {writing_sha},
+            )
+            operation_files_before_retry = sorted(
+                continuation.release_operations_dir.glob("pcro-*.json")
+            )
+            repeated_release = lifecycle.candidate_release(
+                payload, producer="paper-candidate-producer"
+            )
+            self.assertEqual(repeated_release["release_id"], release["release_id"])
+            self.assertEqual(
+                repeated_release["paper_continuation_release_capsule"][
+                    "capsule_id"
+                ],
+                continuation_capsule["capsule_id"],
+            )
+            self.assertEqual(
+                sorted(continuation.release_operations_dir.glob("pcro-*.json")),
+                operation_files_before_retry,
             )
 
             corrected_target = plan["target_node_ids"][0]
@@ -2713,8 +2848,37 @@ class V5LifecycleTests(unittest.TestCase):
                 "adequacy_receipt_sha256": refreshed["adequacy_receipt_sha256"],
                 "disposition_ids": refreshed["current_disposition_ids"],
             }
+            continuation._status_index.head_path.unlink()
             fresh_release = lifecycle.candidate_release(
                 fresh_payload, producer="paper-candidate-producer"
+            )
+            fallback_proof = fresh_release[
+                "paper_continuation_release_capsule"
+            ]["status_proof"]
+            self.assertEqual(fallback_proof["mode"], "full_validation_fallback")
+            self.assertEqual(
+                fallback_proof["receipt"]["fallback_exception_count"], 1
+            )
+            self.assertTrue(
+                fallback_proof["receipt"]["phase_timings_ms"][
+                    "full_validation"
+                ]
+                >= 0
+            )
+            repeated_fallback_release = lifecycle.candidate_release(
+                fresh_payload, producer="paper-candidate-producer"
+            )
+            self.assertEqual(
+                repeated_fallback_release["release_id"],
+                fresh_release["release_id"],
+            )
+            self.assertEqual(
+                repeated_fallback_release[
+                    "paper_continuation_release_capsule"
+                ]["capsule_id"],
+                fresh_release["paper_continuation_release_capsule"][
+                    "capsule_id"
+                ],
             )
             decision = lifecycle.certification_record(
                 self._correct_decision_payload(lifecycle, fresh_release)
@@ -2725,6 +2889,7 @@ class V5LifecycleTests(unittest.TestCase):
                 gateway="independent-gateway",
             )
             self.assertEqual(set(store.fact_ids()), {lemma.fact_id, root_fact.fact_id})
+            continuation.rebuild_status_index()
             self.assertTrue(store.audit().current_ok, store.audit().errors)
 
     def test_candidate_release_exact_field_error_is_publicly_actionable(self) -> None:

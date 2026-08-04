@@ -146,6 +146,49 @@ and exact failure-mode ids. All logical source operators and source qualifiers
 must be present in the interface. Additional semantics remain verifier-visible
 and do not acquire authority merely by being declared.
 
+## Domain-specific strict plan and mathematics progress
+
+The current strict plan accepts exactly one policy key selected by the frozen
+`domain_profile`. Only philosophy accepts `stance_policy`. Mathematics instead
+requires `mathematical_target_policy` with exactly:
+
+```json
+{
+  "contract_revision": "chalxius-mathematical-target-policy-1",
+  "exact_target_statement": "exact unchanged problem",
+  "exact_target_statement_sha256": "64hex",
+  "target_claim_ids": ["canonical frozen claim object id"],
+  "hypothesis_claim_ids": [],
+  "domain_bindings": [{
+    "binding_id": "domain-main",
+    "exact_domain": "exact domain",
+    "exact_domain_sha256": "64hex",
+    "source_claim_ids": ["canonical frozen claim object id"]
+  }],
+  "quantifier_bindings": [],
+  "permitted_exact_target_outcomes": [
+    "proved", "disproved", "unresolved_with_obstruction"
+  ],
+  "target_revision_requires_operator_authorization": true,
+  "partial_progress_policy": "typed_refinement_dag_keeps_exact_target_open"
+}
+```
+
+Each mathematics disposition replaces philosophy stance fields with one
+`mathematical_progress` object. Its `root_target` repeats the exact policy
+hashes and records one exact outcome. `proved` or `disproved` closes the root
+only with exact evidence ids; `unresolved_with_obstruction` requires a nonempty
+obstruction and `original_target_open=true`. Every refinement node has a typed
+logical relation, statement/evidence, optional Candidate Fact id, four explicit
+delta arrays (`hypothesis_deltas`, `domain_deltas`, `quantifier_deltas`, and
+`conclusion_strength_deltas`), and a nonempty
+`remaining_gap_to_exact_target`. Edges form a root-connected acyclic graph.
+After validation Chalxius adds `progress_class` and
+`refinement_dag_sha256`; later reads recompute and verify both rather than
+trusting stored summaries. A Candidate mapping for a partial theorem uses its
+typed relation such as `weakened_from` or `special_case_of`, never
+`directly_reconstructs` while the exact root remains open.
+
 `source` has exactly:
 
 ```json
@@ -578,7 +621,21 @@ ledgers. The independent verifier must still find omitted terms, hidden
 conjuncts, lost modality, scope, quantifiers, burdens, exceptions, and
 conclusions; JSON shape is only preflight.
 
-`paper_continuation_evidence` is computed by the runtime and must not be placed in the input.
-The sealed release and verifier capsule embed it after validating
-the current plan, dispositions, Research records, selected Paper objects, and
-authorized `paper_source` and `paper_revised_writing` bytes.
+`paper_continuation_release_capsule` is computed by the runtime and must not be placed in the input.
+A newly sealed continuation release and its neutral
+verifier capsule embed the same exact
+`chalxius-v5-paper-continuation-release-capsule-1`; they do not also carry a
+duplicate top-level `paper_continuation_evidence`. Historical sealed releases
+with only the older evidence field remain readable.
+
+The content-addressed capsule binds the current indexed status witness (or one
+observable full-validation fallback receipt), exact plan/ref and current
+dispositions, Logic/Audit and Paper EvidenceRefs, source and revised-writing
+artifacts, target closure, complete Candidate statement interfaces, and the
+single runtime-materialized verifier evidence. Missing, stale, ambiguous, or
+hash-mismatched index state triggers a request/completion receipt below
+`paper-continuations/release-capsules/fallbacks/by-id/`; an unchanged retry
+reuses it, while generation drift makes it stale. The receipt exposes phase
+timing, exception count, and the explicit status-index rebuild action. Capsule,
+fallback, and operation receipts all have `truth_effect=none`; no field weakens
+the ordinary fresh-verifier, Certification, Gateway, or Fact-admission gates.

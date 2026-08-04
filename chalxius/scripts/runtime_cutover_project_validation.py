@@ -10,7 +10,10 @@ import sys
 
 sys.dont_write_bytecode = True
 
-from mathgraph.runtime_cutover import build_cutover_project_validation_receipt
+from mathgraph.runtime_cutover import (
+    PROJECT_VALIDATION_TIMEOUT_SECONDS,
+    build_cutover_project_validation_receipt,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -21,6 +24,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--expected-request-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=PROJECT_VALIDATION_TIMEOUT_SECONDS,
+        help=(
+            "finite fail-closed watchdog; the 2-4 minute administrative target "
+            "is telemetry, not this correctness cutoff"
+        ),
+    )
     return parser
 
 
@@ -33,6 +45,7 @@ def main() -> int:
         request_path=args.request,
         expected_request_sha256=args.expected_request_sha256,
         output_path=args.output,
+        validation_timeout_seconds=args.timeout_seconds,
     )
     print(json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
