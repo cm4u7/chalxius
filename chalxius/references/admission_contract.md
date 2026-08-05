@@ -23,7 +23,9 @@ Admission requires all of the following:
 6. for series-product coefficient computations, a machine-derived valuation
    order budget plus a bound deeper truncation replay;
 7. exact Paper Logic/Audit snapshot and nodewise coverage bindings when the
-   validation subject is a paper;
+   validation subject is a paper; a continuation-descended release also carries
+   one content-addressed currentness capsule over the status generation, changed
+   closure, dispositions, source/writing artifacts, and Candidate interfaces;
 8. for any Evidence use, one exact destination-bound bridge capsule whose
    Evidence record hashes and disposition heads are current, sealed under the
    authorized `evidence_bridge_capsule` role, and covered by the
@@ -37,7 +39,10 @@ Admission requires all of the following:
    proof changes reviewed separately;
 11. a fresh independent verifier restricted to the neutral frozen capsule,
    using the complete decision template and standalone preflight, with exact
-   candidate and edge panels and every requested check covered once;
+   candidate and edge panels and every requested check covered once; for V5 the
+   verifier writes a draft only, while the copied host submission program
+   quarantines invalid drafts and is the sole producer of the immutable formal
+   review plus its content-addressed success receipt;
 12. one immutable Certification Decision bound to the release and capsule;
 13. gateway revalidation of the accepted decision followed by all-or-none Fact
    visibility; active lineage validation uses a two-phase immutable snapshot so
@@ -51,7 +56,17 @@ Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,
 novelty records, project background, Reader packets/HTML, expert prose, and
 Learning records are not Fact premises.
 `research-goal-intake`, its internally created Campaign, and every BF-1/BF-2/BF-3
-projection or receipt remain in that nontruth set.
+projection or receipt remain in that nontruth set. The command's one token-bound
+prospective root Research is likewise nontruth and supplies lineage only; BF
+itself still creates no Research, plan, dispatch, or Fact.
+
+Reasoning depth does not define the validation blast radius. Current receipts
+may cover unchanged sealed dependencies, but every new or invalidated atomic
+claim and the necessity-derived changed predecessor/defeater/source/interface/
+writing/admission closure must be freshly checked. Missing, drifted, ambiguous,
+schema-changed, or forensic state fails closed to full validation. Paired
+adverse workers add Research pressure to load-bearing targets, not a second
+Certification or Fact gate.
 
 V4 and original Danus Facts are readable historical artifacts but are not
 active V5 predecessors. If their mathematics is needed in V5, it must be

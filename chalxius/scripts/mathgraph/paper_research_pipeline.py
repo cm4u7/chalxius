@@ -17,7 +17,8 @@ from typing import Any, Iterable
 
 PAPER_RESEARCH_PIPELINE_REVISION = "chalxius-paper-research-pipeline-2"
 ORDERED_FRONTIER_REVISION = "chalxius-ordered-paper-frontier-1"
-SUCCESSOR_MATERIALIZATION_REVISION = "chalxius-research-draft-successor-1"
+LEGACY_SUCCESSOR_MATERIALIZATION_REVISION = "chalxius-research-draft-successor-1"
+SUCCESSOR_MATERIALIZATION_REVISION = "chalxius-research-draft-successor-2"
 EVIDENCE_GATE_REVISION = "chalxius-paper-evidence-gate-1"
 ATOMIC_PREFLIGHT_REVISION = "chalxius-paper-atomic-preflight-2"
 RESEARCH_CONTINUITY_REVISION = "chalxius-research-continuity-1"
@@ -67,7 +68,7 @@ EVIDENCE_RECEIPT_FIELDS = frozenset(
         "evidence_receipt_id",
     }
 )
-SUCCESSOR_RECEIPT_FIELDS = frozenset(
+LEGACY_SUCCESSOR_RECEIPT_FIELDS = frozenset(
     {
         "schema_version",
         "contract_revision",
@@ -88,6 +89,28 @@ SUCCESSOR_RECEIPT_FIELDS = frozenset(
         "fact_effect",
         "truth_effect",
         "receipt_id",
+    }
+)
+SUCCESSOR_RECEIPT_FIELDS = frozenset(
+    {
+        *LEGACY_SUCCESSOR_RECEIPT_FIELDS,
+        "lineage_binding",
+        "topology_binding_sha256",
+        "premise_order_binding_sha256",
+    }
+)
+SUCCESSOR_LINEAGE_FIELDS = frozenset(
+    {
+        "resolution",
+        "supersedes_snapshot_id",
+        "predecessor_manifest_sha256",
+        "predecessor_source_artifact_sha256",
+        "predecessor_local_node_count",
+        "predecessor_relation_count",
+        "predecessor_local_node_ids_sha256",
+        "predecessor_relation_signatures_sha256",
+        "predecessor_premise_order_sha256",
+        "same_paper_kind_domain_source_role",
     }
 )
 
@@ -216,17 +239,30 @@ def validate_evidence_receipt(
 
 
 def validate_successor_receipt(
-    receipt: dict[str, Any], *, source_graph_canonical_sha256: str
+    receipt: dict[str, Any],
+    *,
+    source_graph_canonical_sha256: str,
+    source_graph: dict[str, Any] | None = None,
 ) -> dict[str, str]:
+    revision = receipt.get("contract_revision")
+    allowed_fields = (
+        SUCCESSOR_RECEIPT_FIELDS
+        if revision == SUCCESSOR_MATERIALIZATION_REVISION
+        else LEGACY_SUCCESSOR_RECEIPT_FIELDS
+    )
     status = validate_content_addressed_receipt(
         receipt,
         id_field="receipt_id",
         id_prefix="rds-",
-        allowed_fields=SUCCESSOR_RECEIPT_FIELDS,
+        allowed_fields=allowed_fields,
         label="native successor",
     )
     _require(
-        receipt.get("contract_revision") == SUCCESSOR_MATERIALIZATION_REVISION,
+        revision
+        in {
+            LEGACY_SUCCESSOR_MATERIALIZATION_REVISION,
+            SUCCESSOR_MATERIALIZATION_REVISION,
+        },
         "native successor receipt contract mismatch",
     )
     _require(
@@ -243,6 +279,77 @@ def validate_successor_receipt(
         receipt.get("fact_effect") == "none" and receipt.get("truth_effect") == "none",
         "native successor receipt claims authority",
     )
+    if revision == SUCCESSOR_MATERIALIZATION_REVISION:
+        binding = receipt.get("lineage_binding")
+        _require(
+            isinstance(binding, dict) and set(binding) == SUCCESSOR_LINEAGE_FIELDS,
+            "native successor lineage binding fields are not exact",
+        )
+        _require(
+            binding.get("resolution")
+            in {"true_first_graph", "exact_current_logic_successor"},
+            "native successor lineage resolution is invalid",
+        )
+        _require(
+            binding.get("same_paper_kind_domain_source_role") is True,
+            "native successor exact Paper identity is not conserved",
+        )
+        for key in ("predecessor_local_node_count", "predecessor_relation_count"):
+            _require(
+                isinstance(binding.get(key), int)
+                and not isinstance(binding.get(key), bool)
+                and binding[key] >= 0,
+                f"native successor {key} is invalid",
+            )
+        if binding["resolution"] == "exact_current_logic_successor":
+            _require(
+                isinstance(binding.get("supersedes_snapshot_id"), str)
+                and binding["supersedes_snapshot_id"].startswith("pls-"),
+                "native successor lacks an exact predecessor snapshot",
+            )
+            for key in (
+                "predecessor_manifest_sha256",
+                "predecessor_local_node_ids_sha256",
+                "predecessor_relation_signatures_sha256",
+                "predecessor_premise_order_sha256",
+            ):
+                _require(
+                    isinstance(binding.get(key), str)
+                    and re.fullmatch(r"[0-9a-f]{64}", binding[key]) is not None,
+                    f"native successor {key} is invalid",
+                )
+        else:
+            _require(
+                binding["supersedes_snapshot_id"] == ""
+                and binding["predecessor_manifest_sha256"] == ""
+                and binding["predecessor_source_artifact_sha256"] == []
+                and binding["predecessor_local_node_count"] == 0
+                and binding["predecessor_relation_count"] == 0
+                and binding["predecessor_local_node_ids_sha256"] == sha256_json([])
+                and binding["predecessor_relation_signatures_sha256"]
+                == sha256_json([])
+                and binding["predecessor_premise_order_sha256"]
+                == sha256_json([]),
+                "true-first native successor carries predecessor state",
+            )
+        _require(
+            source_graph is not None,
+            "current native successor validation requires the exact source graph",
+        )
+        native_nodes, _ = _materialize_native_node_extensions(
+            source_graph.get("nodes", [])
+        )
+        topology = _successor_topology(native_nodes, source_graph.get("edges", []))
+        _require(
+            receipt.get("topology_binding_sha256")
+            == sha256_json(topology),
+            "native successor topology binding drifted",
+        )
+        _require(
+            receipt.get("premise_order_binding_sha256")
+            == sha256_json(topology["premise_order"]),
+            "native successor premise order binding drifted",
+        )
     return status
 
 
@@ -1134,12 +1241,151 @@ def _materialize_native_node_extensions(
     }
 
 
+def _successor_topology(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+) -> dict[str, Any]:
+    local_nodes = sorted(
+        {
+            (str(item.get("local_id")), str(item.get("object_type")))
+            for item in nodes
+            if isinstance(item, dict)
+        }
+    )
+    relation_signatures = sorted(
+        canonical_bytes(
+            {
+                "relation_type": item.get("relation_type"),
+                "source": item.get("source"),
+                "target": item.get("target"),
+                "payload": item.get("payload"),
+            }
+        ).decode("utf-8")
+        for item in edges
+        if isinstance(item, dict)
+    )
+    premise_order = sorted(
+        {
+            (
+                str(item.get("local_id")),
+                tuple(item.get("payload", {}).get("premise_ids", [])),
+            )
+            for item in nodes
+            if isinstance(item, dict) and item.get("object_type") == "inference"
+        }
+    )
+    return {
+        "local_nodes": [
+            {"local_id": local_id, "object_type": object_type}
+            for local_id, object_type in local_nodes
+        ],
+        "relation_signatures": relation_signatures,
+        "premise_order": [
+            {"local_id": local_id, "premise_ids": list(premises)}
+            for local_id, premises in premise_order
+        ],
+    }
+
+
+def _current_logic_predecessor(
+    project_root: Path,
+    *,
+    paper_id: str,
+    domain_profile: str,
+    source_role: str,
+) -> dict[str, Any] | None:
+    paper_root = project_root / "paper_logic"
+    if not paper_root.exists():
+        return None
+    _require(
+        paper_root.is_dir()
+        and not paper_root.is_symlink()
+        and (paper_root / "store.json").is_file(),
+        "Paper store exists without an authoritative feature manifest",
+    )
+    from .paper_logic import PaperLogicStore
+
+    paper = PaperLogicStore(project_root)
+    heads = paper.current_snapshot_heads(
+        paper_id=paper_id,
+        graph_kind="logic",
+        domain_profile=domain_profile,
+        source_role=source_role,
+    )
+    _require(
+        len(heads) <= 1,
+        "research-draft successor has ambiguous current Logic heads",
+    )
+    if not heads:
+        return None
+    manifest = heads[0]
+    snapshot_id = manifest["snapshot_id"]
+    path = paper.snapshots_dir / snapshot_id / "manifest.json"
+    nodes, edges = paper.snapshot_objects(snapshot_id)
+    local_to_object: dict[str, str] = {}
+    for local_map in manifest["local_id_maps"].values():
+        for local_id, object_id in local_map.items():
+            previous = local_to_object.get(local_id)
+            _require(
+                previous is None or previous == object_id,
+                "Paper predecessor local identity is ambiguous",
+            )
+            local_to_object[local_id] = object_id
+    object_to_local = {value: key for key, value in local_to_object.items()}
+    _require(
+        len(object_to_local) == len(local_to_object),
+        "Paper predecessor local identity is not one-to-one",
+    )
+    local_nodes = sorted(
+        (
+            local_id,
+            nodes[object_id]["object_type"],
+        )
+        for local_id, object_id in local_to_object.items()
+        if local_id != "__source__"
+    )
+    relation_signatures = sorted(
+        canonical_bytes(
+            {
+                "relation_type": edge["relation_type"],
+                "source": object_to_local[edge["source_id"]],
+                "target": object_to_local[edge["target_id"]],
+                "payload": edge["payload"],
+            }
+        ).decode("utf-8")
+        for edge in edges.values()
+    )
+    premise_order = sorted(
+        {
+            (
+                local_id,
+                tuple(nodes[object_id]["payload"].get("premise_ids", [])),
+            )
+            for local_id, object_id in local_to_object.items()
+            if local_id != "__source__"
+            and nodes[object_id]["object_type"] == "inference"
+        }
+    )
+    return {
+        "snapshot_id": snapshot_id,
+        "manifest_sha256": sha256_bytes(path.read_bytes()),
+        "source_artifact_sha256": sorted(
+            item["artifact_sha256"]
+            for item in manifest["source_artifacts"]
+        ),
+        "local_nodes": local_nodes,
+        "relation_signatures": relation_signatures,
+        "premise_order": premise_order,
+    }
+
+
 def materialize_native_research_draft_successor(
     graph: dict[str, Any],
     *,
     actor: str,
     builder_context_id: str,
     activation_record: dict[str, Any],
+    project_root: Path | str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Create a prospective native bundle while retaining dropped metadata hashes.
 
@@ -1198,6 +1444,99 @@ def materialize_native_research_draft_successor(
             "pending native review and freeze. predecessor_coverage_sha256="
             + sha256_json(original_coverage)
         )
+    lineage_binding: dict[str, Any]
+    supersedes_snapshot_id = ""
+    requested_root = Path(project_root).expanduser()
+    _require(not requested_root.is_symlink(), "project root must not be a symlink")
+    resolved_root = requested_root.resolve()
+    predecessor = _current_logic_predecessor(
+        resolved_root,
+        paper_id=str(graph.get("paper_id")),
+        domain_profile=str(graph.get("domain_profile")),
+        source_role="research_draft",
+    )
+    successor_topology = _successor_topology(
+        native_nodes, graph.get("edges", [])
+    )
+    if predecessor is None:
+        lineage_binding = {
+            "resolution": "true_first_graph",
+            "supersedes_snapshot_id": "",
+            "predecessor_manifest_sha256": "",
+            "predecessor_source_artifact_sha256": [],
+            "predecessor_local_node_count": 0,
+            "predecessor_relation_count": 0,
+            "predecessor_local_node_ids_sha256": sha256_json([]),
+            "predecessor_relation_signatures_sha256": sha256_json([]),
+            "predecessor_premise_order_sha256": sha256_json([]),
+            "same_paper_kind_domain_source_role": True,
+        }
+    else:
+        predecessor_local_nodes = predecessor["local_nodes"]
+        predecessor_relations = predecessor["relation_signatures"]
+        predecessor_premise_order = predecessor["premise_order"]
+        successor_local_nodes = {
+            (item["local_id"], item["object_type"])
+            for item in successor_topology["local_nodes"]
+        }
+        missing_nodes = sorted(
+            set(predecessor_local_nodes).difference(successor_local_nodes)
+        )
+        missing_relations = sorted(
+            set(predecessor_relations).difference(
+                successor_topology["relation_signatures"]
+            )
+        )
+        missing_premise_order = sorted(
+            set(predecessor_premise_order).difference(
+                {
+                    (
+                        item["local_id"],
+                        tuple(item["premise_ids"]),
+                    )
+                    for item in successor_topology["premise_order"]
+                }
+            )
+        )
+        _require(
+            not missing_nodes,
+            "native successor drops or retypes predecessor local nodes",
+        )
+        _require(
+            not missing_relations,
+            "native successor drops predecessor relations",
+        )
+        _require(
+            not missing_premise_order,
+            "native successor changes predecessor premise order",
+        )
+        supersedes_snapshot_id = predecessor["snapshot_id"]
+        lineage_binding = {
+            "resolution": "exact_current_logic_successor",
+            "supersedes_snapshot_id": supersedes_snapshot_id,
+            "predecessor_manifest_sha256": predecessor["manifest_sha256"],
+            "predecessor_source_artifact_sha256": predecessor[
+                "source_artifact_sha256"
+            ],
+            "predecessor_local_node_count": len(predecessor_local_nodes),
+            "predecessor_relation_count": len(predecessor_relations),
+            "predecessor_local_node_ids_sha256": sha256_json(
+                predecessor_local_nodes
+            ),
+            "predecessor_relation_signatures_sha256": sha256_json(
+                predecessor_relations
+            ),
+            "predecessor_premise_order_sha256": sha256_json(
+                [
+                    {
+                        "local_id": local_id,
+                        "premise_ids": list(premises),
+                    }
+                    for local_id, premises in predecessor_premise_order
+                ]
+            ),
+            "same_paper_kind_domain_source_role": True,
+        }
     bundle = {
         "schema_version": graph.get("schema_version"),
         "feature_revision": graph.get("feature_revision"),
@@ -1210,7 +1549,7 @@ def materialize_native_research_draft_successor(
         "source": copy.deepcopy(graph.get("source")),
         "source_role": "research_draft",
         "base_snapshot_id": "",
-        "supersedes_snapshot_id": "",
+        "supersedes_snapshot_id": supersedes_snapshot_id,
         "coverage": successor_coverage,
         "nodes": native_nodes,
         "edges": copy.deepcopy(graph.get("edges")),
@@ -1226,7 +1565,11 @@ def materialize_native_research_draft_successor(
     }
     semantic_receipt = {
         "schema_version": 1,
-        "contract_revision": SUCCESSOR_MATERIALIZATION_REVISION,
+        "contract_revision": (
+            SUCCESSOR_MATERIALIZATION_REVISION
+            if lineage_binding is not None
+            else LEGACY_SUCCESSOR_MATERIALIZATION_REVISION
+        ),
         "project_id": graph.get("project_id"),
         "paper_id": graph.get("paper_id"),
         "source_graph_canonical_sha256": status["graph_canonical_sha256"],
@@ -1244,6 +1587,16 @@ def materialize_native_research_draft_successor(
         "fact_effect": "none",
         "truth_effect": "none",
     }
+    if lineage_binding is not None:
+        semantic_receipt.update(
+            {
+                "lineage_binding": lineage_binding,
+                "topology_binding_sha256": sha256_json(successor_topology),
+                "premise_order_binding_sha256": sha256_json(
+                    successor_topology["premise_order"]
+                ),
+            }
+        )
     receipt = {
         **semantic_receipt,
         "receipt_id": "rds-" + sha256_json(semantic_receipt),
@@ -1865,6 +2218,7 @@ def build_pipeline_receipt(
         validate_successor_receipt(
             successor_receipt,
             source_graph_canonical_sha256=graph_status["graph_canonical_sha256"],
+            source_graph=graph,
         )
         if successor_receipt is not None
         else None

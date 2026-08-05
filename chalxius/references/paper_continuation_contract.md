@@ -28,6 +28,13 @@ The new contract adds three linked but separate gates:
 targets. A target remains unresolved until a managed worker result and Main
 disposition exist.
 
+Research depth does not force full-history validation. A changed-surface plan
+binds the exact changed Paper nodes and their necessity-derived predecessor,
+defeater, source, downstream-target, and writing closure. Unchanged sealed
+dependencies may reuse current receipts; missing, stale, drifted, ambiguous,
+schema-changed, or forensic state falls back to full validation. New or
+invalidated Candidate Facts still receive fresh verification.
+
 ## Strict research-draft successor path
 
 The legacy continuation commands remain readable and usable for their original
@@ -42,9 +49,14 @@ mgraph --root PROJECT --role main research-draft-disposition-batch PLAN_ID \
 mgraph --root PROJECT --role main research-draft-status PLAN_ID --deep
 ```
 
-The plan input has exactly `objective`, `source_artifact_sha256`,
-`stance_policy`, and `term_registry`. `stance_policy` has exactly `policy`,
-`headline_target_ids`, `declared_stance`, and
+Current plan revision 2 always has `objective`, `source_artifact_sha256`, and
+`term_registry`, plus exactly one policy selected from the frozen domain:
+`stance_policy` for philosophy, `mathematical_target_policy` for mathematics,
+or `domain_target_policy` for empirical/mixed work. Historical revision-1
+plans retain their original `stance_policy` bytes and remain readable.
+
+Philosophy `stance_policy` has exactly `policy`, `headline_target_ids`,
+`declared_stance`, and
 `major_revision_requires_operator_authorization=true`. The default policy for
 strengthening an existing argument is `steelman_headline`; narrowing, reversing,
 or withdrawing a headline requires an immutable Operator authorization record.
@@ -53,6 +65,15 @@ its exact `decision_id` and `decision_record_sha256`. The stored decision binds
 the project, plan id/hash, headline target, declared-stance hash, exact impact,
 actor, role, and reason. A producer-supplied actor, key, or authorization story
 cannot substitute for that record.
+
+Mathematics has no stance field. `mathematical_target_policy` hash-binds the
+exact target statement, canonical target and hypothesis claim ids, at least one
+exact domain binding, every quantifier/scope binding, the exact root outcomes
+`proved`, `disproved`, and `unresolved_with_obstruction`, and the rule that
+target substitution requires Operator authorization. Canonical target claim
+ids are resolved through the frozen graph's `targets` edges, not through
+source-local payload aliases. This prevents local/global identifier drift from
+making the normal production path unusable.
 `term_registry` is sense-aware: each entry binds `term`, `sense_id`,
 `exact_definition`, and `necessity`, and one sense id cannot carry conflicting
 definitions across targets.
@@ -64,9 +85,15 @@ research cheaply but cannot omit or merge Paper nodes.
 
 One disposition batch covers the exact complete target set and supersedes the
 exact current batch. Every entry separately records its Paper-node disposition,
-Research ids, stance impact, successor mappings, term senses, complete
-profile-specific obligation dispositions, target-qualified failure surfaces,
-and revised-writing bytes/sections. Node disposition is not a one-to-one Fact
+Research ids, its applicable domain outcome, successor mappings, term senses,
+complete profile-specific obligation dispositions, target-qualified failure
+surfaces, and revised-writing bytes/sections. A philosophy entry records stance
+impact and any exact major-revision authorization. A mathematics entry instead
+records the exact-root/typed-refinement DAG; a verified weaker theorem, special
+case, added hypothesis, weakened conclusion, counterexample, or obstruction
+must expose its exact deltas and remaining gap and cannot close or directly
+reconstruct an open root. Empirical and mixed entries retain their own outcome
+adapters. Node disposition is not a one-to-one Fact
 mapping: one Paper node may split into several Candidate components and one
 Candidate may be supported through several Paper predecessors. Publication is
 all-or-none under one V5 mutation lock and one atomic batch-directory rename;
@@ -85,7 +112,8 @@ the required checks `research_draft_admission_preflight`,
 `composable_parallel_verification`, and `validated_dependency_receipt`. The
 native preflight recomputes Paper closure, source-derived atomic components,
 many-to-many Paper/Fact mappings, semantic interfaces and edge transports,
-stance preservation, revised-writing authorization, release-relative Paper
+the applicable philosophy stance, mathematical exact-target/refinement, or
+empirical/mixed target adapter, revised-writing authorization, release-relative Paper
 transport closure, active/revoked Fact authority, and verifier shard coverage.
 It seals a content-addressed dependency receipt; unchanged reads use the
 validated fingerprint cache, while any changed dependency is revalidated.
@@ -144,6 +172,16 @@ frontier without a score cutoff. Each Research item freezes:
 - obligations for dialectical salience, burden, charitable objection, response,
   independent failure surfaces, clear ordinary-language explanation, technical
   term definitions, terminal disposition, and revised-writing coverage.
+
+Every materialized Paper target also freezes
+`independent_adverse_required=true`. `workers` still counts only the selected
+primary targets. Planning adds one independent `refute` worker/context for each
+applicable primary, except when that primary is already refutation-mode or the
+target Research is itself a challenge. The adverse card retains the complete
+same Paper target closure and source capabilities. Philosophy controls only
+its additional attack vocabulary and stance continuity; mathematics uses the
+same allocation predicate while preserving its exact target, hypotheses,
+domain, and quantifiers and may prove, disprove, or return an obstruction.
 
 The worker return remains Research only. It cannot decide adequacy, activate a
 route rule, certify a Fact, or modify the Paper graph.
@@ -230,9 +268,11 @@ A bound release must include:
   EvidenceRef;
 - a current `paper_continuation_ref` binding the plan, adequacy receipt, and
   current disposition ids;
-- verifier-visible `paper_continuation_evidence` containing the selected node
-  and edge objects, exact target task scopes, managed Research results,
-  dispositions, and revised-writing bindings rather than only their ids;
+- one runtime-computed, content-addressed
+  `paper_continuation_release_capsule` containing verifier-visible evidence:
+  the selected node and edge objects, exact target task scopes, managed
+  Research results, dispositions, and revised-writing bindings rather than
+  only their ids;
 - the exact Paper source as an authorized `paper_source` artifact and every
   covered revision as an authorized `paper_revised_writing` artifact;
 - the `paper_continuation_adequacy` certification check.
@@ -241,6 +281,61 @@ The theorem-mode, empty-coverage, and empty-Paper-ref escape paths are rejected.
 Historical sealed releases validate their exact old disposition ids without
 claiming those ids are still current. Verifier-capsule creation, certification,
 and admission recheck current state and reject a superseded disposition.
+
+### Scoped continuation release capsule
+
+For a newly sealed continuation-descended release, Candidate Release computes
+exactly one `chalxius-v5-paper-continuation-release-capsule-1`. The producer
+cannot supply this object in its input. The runtime persists it by its `pcrc-*`
+content id below
+`paper-continuations/release-capsules/by-id/` and embeds the same exact object
+in the Candidate Release and neutral verifier capsule. It replaces the former
+duplicate top-level `paper_continuation_evidence`; carrying both forms is
+rejected. Historical releases that already contain only the former evidence
+shape remain byte-exact readable through the compatibility validator.
+
+The capsule binds, without becoming a second continuation-state owner:
+
+- the exact continuation plan and `paper_continuation_ref`;
+- one bounded status proof over the current status-index generation, HEAD,
+  immutable plan state, status receipt, and adequacy receipt;
+- the current Logic snapshot id plus manifest and file hashes, one exact Audit
+  EvidenceRef binding, and the normalized complete Paper EvidenceRef set;
+- the exact source-artifact path/hash, selected targets, work-unit hashes,
+  reconstruction/source/edge closure, and any changed-surface receipt;
+- the complete Candidate statement interfaces and their aggregate hash; and
+- one evidence hash covering the exact Paper objects, managed Research,
+  current dispositions, and immutable revised-writing bindings exposed to the
+  verifier.
+
+Candidate validates that bounded proof and materializes the evidence once.
+Release reread, neutral verifier preparation, Certification, and Gateway reuse
+the sealed capsule; they do not reconstruct the same Paper evidence a second
+time. Current Paper EvidenceRefs and the ordinary V5 fresh-verifier and Gateway
+checks remain independent gates. The capsule and every timing/fallback receipt
+have `truth_effect=none` and cannot relax Fact admission.
+
+### Observable full-validation fallback
+
+If the indexed witness is missing, stale, ambiguous, corrupt, or hash/CAS
+mismatched, release preparation does not silently trust it and does not fail
+with an opaque cache error. It records one content-addressed request under
+`paper-continuations/release-capsules/fallbacks/by-id/pcrf-*/`, runs the full
+continuation validation once, and writes one immutable completion receipt. The
+request binds the exact raw status-generation surface, plan/ref, normalized
+Paper EvidenceRefs, and Candidate interfaces. The completion binds the full
+status projection and hash, adequacy/currentness result, exception count,
+full-validation timing, and the explicit recovery command
+`paper-continuation-status-index-rebuild --actor main`.
+
+An unchanged retry reuses that completion. Any generation-surface change makes
+it stale and requires a new bounded request, so a prior fallback is never a
+cross-generation authority cache. Candidate also records one idempotent
+operation receipt with indexed-witness, full-validation,
+evidence-materialization, persistence, and total phase timings. These timings
+are operational diagnostics only; they do not impose a research-time limit or
+convert the fallback into Fact evidence. A rebuilt index restores the normal
+bounded path without rewriting the sealed capsule or historical release.
 
 ## Philosophy semantic atomicity
 

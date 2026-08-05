@@ -33,6 +33,10 @@ EVIDENCE_ATTESTATION_REVISION = "chalxius-paper-evidence-attestation-2"
 FACT_EVIDENCE_CAPSULE_REVISION = "chalxius-external-fact-evidence-capsule-1"
 FACT_EVIDENCE_SOURCE_AUDIT_REVISION = "chalxius-v5-fact-evidence-audit-1"
 BRIDGE_CAPSULE_REVISION = "chalxius-evidence-bridge-capsule-1"
+EVIDENCE_ASSOCIATION_REVISION = "chalxius-evidence-triad-association-1"
+EVIDENCE_ASSOCIATION_REQUEST_REVISION = (
+    "chalxius-evidence-triad-association-request-1"
+)
 COLLECTION_PREFIXES = {
     "zotero_exports": "zex",
     "papers": "zpr",
@@ -42,6 +46,7 @@ COLLECTION_PREFIXES = {
     "source_checks": "psc",
     "evidence_items": "evd",
     "evidence_dispositions": "evs",
+    "evidence_associations": "eva",
     "bridge_capsules": "evb",
 }
 EVIDENCE_KINDS = {"reviewed_paper_graph", "external_fact_graph"}
@@ -833,6 +838,7 @@ def cmd_init(args: argparse.Namespace) -> dict[str, Any]:
             "objects/evidence-attestations/by-sha256",
             "objects/fact-evidence/by-sha256",
             "objects/evidence-dispositions/by-sha256",
+            "objects/evidence-associations/by-sha256",
             "index",
         ):
             (root / directory).mkdir(parents=True, exist_ok=True)
@@ -1992,6 +1998,374 @@ def cmd_evidence_fact_add(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def evidence_association_state_map(root: Path) -> dict[str, dict[str, Any]]:
+    evidence = load_collection(root, "evidence_items")
+    evidence_states = evidence_state_map(root)
+    associations = load_collection(root, "evidence_associations")
+    superseded = {
+        prior
+        for record in associations.values()
+        for prior in record["supersedes_association_ids"]
+    }
+    states: dict[str, dict[str, Any]] = {}
+    for association_id, record in sorted(associations.items()):
+        member_ids = [
+            record["members"]["reviewed_paper_graph_evidence_id"],
+            record["members"]["external_fact_graph_evidence_id"],
+        ]
+        missing = sorted(set(member_ids).difference(evidence))
+        if missing:
+            status = "invalid_missing_member"
+        elif association_id in superseded:
+            status = "superseded"
+        elif any(
+            evidence_states[item]["status"] != "active"
+            or not evidence_states[item]["bridge_eligible"]
+            for item in member_ids
+        ):
+            status = "stale_member"
+        else:
+            status = "active"
+        states[association_id] = {
+            "status": status,
+            "current": status == "active",
+            "member_evidence_states": {
+                item: evidence_states.get(item, {"status": "missing"})["status"]
+                for item in member_ids
+            },
+        }
+    return states
+
+
+def validate_evidence_association_request(
+    root: Path,
+    request: dict[str, Any],
+    *,
+    paper: dict[str, Any],
+    fact: dict[str, Any],
+    destination_project_id: str,
+    fact_ids: list[str],
+    actor: str,
+    reason: str,
+) -> None:
+    """Validate an exact release/receipt-derived association request.
+
+    This deliberately reconstructs the link from the captured Candidate
+    Release.  Bibliographic resemblance, title, DOI, and publication trust do
+    not participate in the decision.
+    """
+
+    required = {
+        "schema_version",
+        "contract_revision",
+        "destination_project_id",
+        "source_project_id",
+        "source_root_locator",
+        "source_release_id",
+        "source_release_sha256",
+        "paper_evidence_ref",
+        "paper_evidence_ref_sha256",
+        "paper_sync_request",
+        "paper_sync_request_file_sha256",
+        "paper_evidence_receipt",
+        "paper_evidence_receipt_file_sha256",
+        "fact_evidence_id",
+        "fact_evidence_record_sha256",
+        "fact_capsule_id",
+        "fact_capsule_sha256",
+        "associated_fact_ids",
+        "authorization",
+        "association_policy",
+        "cross_project_fact_authority",
+        "premise_eligible",
+        "truth_effect",
+        "request_id",
+    }
+    if set(request) != required:
+        raise LibraryError("Evidence association request fields are not exact")
+    core = {key: value for key, value in request.items() if key != "request_id"}
+    if (
+        request["schema_version"] != 1
+        or request["contract_revision"] != EVIDENCE_ASSOCIATION_REQUEST_REVISION
+        or request["request_id"] != "eas-" + object_hash(core)
+        or request["destination_project_id"] != destination_project_id
+        or request["source_project_id"] != fact["source_project_id"]
+        or request["fact_evidence_id"] != fact["object_id"]
+        or request["fact_evidence_record_sha256"] != fact["record_sha256"]
+        or request["associated_fact_ids"] != fact_ids
+        or request["authorization"] != {"actor": actor, "reason": reason}
+        or request["association_policy"]
+        != {
+            "derivation": "exact_release_paper_evidence_ref_and_local_receipt",
+            "inferred_from_title_doi_or_credibility": False,
+        }
+        or request["cross_project_fact_authority"] is not False
+        or request["premise_eligible"] is not False
+        or request["truth_effect"] != "none"
+    ):
+        raise LibraryError("Evidence association request identity or boundary mismatch")
+    require_text(request["source_root_locator"], "source_root_locator")
+    require_text(request["source_release_id"], "source_release_id")
+    require_sha256(request["source_release_sha256"], "source release sha256")
+    for field in (
+        "paper_evidence_ref_sha256",
+        "paper_sync_request_file_sha256",
+        "paper_evidence_receipt_file_sha256",
+        "fact_evidence_record_sha256",
+        "fact_capsule_sha256",
+    ):
+        require_sha256(request[field], field)
+
+    ref = request["paper_evidence_ref"]
+    ref_fields = {
+        "paper_id",
+        "snapshot_id",
+        "snapshot_sha256",
+        "graph_kind",
+        "target_artifact_sha256",
+        "target_node_ids",
+    }
+    if (
+        not isinstance(ref, dict)
+        or set(ref) != ref_fields
+        or request["paper_evidence_ref_sha256"] != object_hash(ref)
+        or ref["graph_kind"] not in {"logic", "audit"}
+    ):
+        raise LibraryError("Evidence association Paper EvidenceRef is invalid")
+    require_sha256(ref["snapshot_sha256"], "Paper snapshot sha256")
+    require_sha256(ref["target_artifact_sha256"], "Paper artifact sha256")
+    target_node_ids = ref["target_node_ids"]
+    if (
+        not isinstance(target_node_ids, list)
+        or not target_node_ids
+        or target_node_ids != sorted(set(target_node_ids))
+        or any(not isinstance(item, str) or not item.strip() for item in target_node_ids)
+    ):
+        raise LibraryError("Evidence association Paper node ids are invalid")
+
+    sync_request = request["paper_sync_request"]
+    if not isinstance(sync_request, dict) or "request_id" not in sync_request:
+        raise LibraryError("Evidence association Paper sync request is invalid")
+    sync_core = {
+        key: value for key, value in sync_request.items() if key != "request_id"
+    }
+    if (
+        sync_request["request_id"] != "pes-" + object_hash(sync_core)
+        or sync_request.get("contract_revision")
+        != "chalxius-paper-evidence-sync-1"
+        or sync_request.get("project_id") != request["source_project_id"]
+        or sync_request.get("paper_id") != ref["paper_id"]
+        or sync_request.get("snapshot_id") != ref["snapshot_id"]
+        or sync_request.get("snapshot_manifest_sha256")
+        != ref["snapshot_sha256"]
+        or sync_request.get("source_artifact_sha256")
+        != ref["target_artifact_sha256"]
+        or sync_request.get("truth_effect") != "none"
+        or sync_request.get("premise_eligible") is not False
+    ):
+        raise LibraryError("Evidence association Paper sync binding mismatch")
+
+    receipt = request["paper_evidence_receipt"]
+    if not isinstance(receipt, dict) or "receipt_id" not in receipt:
+        raise LibraryError("Evidence association Paper receipt is invalid")
+    receipt_core = {
+        key: value for key, value in receipt.items() if key != "receipt_id"
+    }
+    config = assert_repository(root)
+    graph = get_record(root, "graphs", paper["source"]["graph_id"])
+    if (
+        receipt["receipt_id"] != "per-" + object_hash(receipt_core)
+        or receipt.get("contract_revision")
+        != "chalxius-paper-evidence-sync-1"
+        or receipt.get("request_id") != sync_request["request_id"]
+        or receipt.get("snapshot_id") != ref["snapshot_id"]
+        or receipt.get("evidence_id") != paper["object_id"]
+        or receipt.get("paper_id") != paper["source"]["paper_id"]
+        or receipt.get("version_id") != paper["source"]["version_id"]
+        or receipt.get("graph_id") != paper["source"]["graph_id"]
+        or receipt.get("library_id") != config["library_id"]
+        or Path(str(receipt.get("library_root", ""))).expanduser().resolve()
+        != root
+        or receipt.get("truth_effect") != "none"
+        or receipt.get("premise_eligible") is not False
+        or paper["source_project_id"] != request["source_project_id"]
+        or paper["source"]["paper_snapshot_id"] != ref["snapshot_id"]
+        or paper["source"]["pdf_sha256"] != ref["target_artifact_sha256"]
+        or graph["graph_kind"] != (
+            "paper_logic" if ref["graph_kind"] == "logic" else "paper_audit"
+        )
+    ):
+        raise LibraryError("Evidence association Paper receipt/member binding mismatch")
+
+    capsule_relpath = PurePosixPath(fact["source"]["capsule_path"])
+    if capsule_relpath.is_absolute() or ".." in capsule_relpath.parts:
+        raise LibraryError("Fact Evidence capsule path is unsafe")
+    capsule_path = root.joinpath(*capsule_relpath.parts)
+    if capsule_path.is_symlink() or not capsule_path.is_file():
+        raise LibraryError("Fact Evidence capsule is missing or unsafe")
+    if (
+        file_hash(capsule_path) != fact["source"]["capsule_sha256"]
+        or request["fact_capsule_sha256"] != fact["source"]["capsule_sha256"]
+    ):
+        raise LibraryError("Fact Evidence capsule hash drifted")
+    capsule = read_json(capsule_path)
+    if not isinstance(capsule, dict):
+        raise LibraryError("Fact Evidence capsule must be an object")
+    validate_fact_evidence_capsule(capsule)
+    if request["fact_capsule_id"] != capsule["capsule_id"]:
+        raise LibraryError("Fact Evidence capsule id binding mismatch")
+    active_for_release = {
+        item["fact_id"]
+        for item in capsule["active_facts"]
+        if item["release_id"] == request["source_release_id"]
+        and item["release_sha256"] == request["source_release_sha256"]
+    }
+    if not set(fact_ids).issubset(active_for_release):
+        raise LibraryError("association Facts do not belong to the exact source release")
+    release_objects = [
+        item
+        for item in capsule["objects"]
+        if item["role"] == "release"
+        and item["object_id"] == request["source_release_id"]
+    ]
+    if len(release_objects) != 1:
+        raise LibraryError("association exact source release object is missing")
+    try:
+        release = json.loads(
+            base64.b64decode(
+                release_objects[0]["bytes_base64"], validate=True
+            ).decode("utf-8")
+        )
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise LibraryError("association source release object is invalid") from exc
+    if (
+        not isinstance(release, dict)
+        or release.get("release_id") != request["source_release_id"]
+        or release.get("release_sha256") != request["source_release_sha256"]
+        or ref not in release.get("paper_evidence_refs", [])
+    ):
+        raise LibraryError("association Paper EvidenceRef is absent from exact release")
+    assurance = release.get("requested_assurance")
+    coverage = assurance.get("coverage") if isinstance(assurance, dict) else None
+    if not isinstance(coverage, list):
+        raise LibraryError("association source release has no exact Paper coverage")
+    mapped_fact_ids = sorted(
+        {
+            item.get("fact_id")
+            for item in coverage
+            if isinstance(item, dict)
+            and item.get("paper_node_id") in set(target_node_ids)
+            and item.get("disposition") == "fact_bundle_member"
+            and item.get("fact_id") in active_for_release
+        }
+    )
+    if mapped_fact_ids != fact_ids:
+        raise LibraryError("association Fact selection does not match exact Paper coverage")
+
+
+def cmd_evidence_association_add(args: argparse.Namespace) -> dict[str, Any]:
+    """Explicitly associate exact Paper Evidence with exact admitted Fact Evidence."""
+
+    root = root_path(args.root)
+    assert_repository(root)
+    paper = get_record(root, "evidence_items", args.paper_evidence_id)
+    fact = get_record(root, "evidence_items", args.fact_evidence_id)
+    if paper["evidence_kind"] != "reviewed_paper_graph":
+        raise LibraryError("association Paper member is not reviewed_paper_graph")
+    if fact["evidence_kind"] != "external_fact_graph":
+        raise LibraryError("association Fact member is not external_fact_graph")
+    states = evidence_state_map(root)
+    for member in (paper, fact):
+        state = states[member["object_id"]]
+        if state["status"] != "active" or not state["bridge_eligible"]:
+            raise LibraryError("association requires current bridge-eligible members")
+    fact_ids = sorted(set(args.fact_id))
+    if not fact_ids or any(not isinstance(item, str) or not item.strip() for item in fact_ids):
+        raise LibraryError("association requires at least one exact --fact-id")
+    available = set(fact["source"]["active_fact_ids"])
+    if not set(fact_ids).issubset(available):
+        raise LibraryError("association names Facts absent from the exact Fact Evidence")
+    supersedes = sorted(set(args.supersedes_association_id))
+    for prior_id in supersedes:
+        prior = get_record(root, "evidence_associations", prior_id)
+        if (
+            prior["destination_project_id"] != args.destination_project_id
+            or prior["members"]["reviewed_paper_graph_evidence_id"]
+            != paper["object_id"]
+        ):
+            raise LibraryError("superseded association belongs to another destination/Paper")
+    actor = require_text(args.actor, "actor")
+    reason = require_text(args.reason, "reason")
+    derivation_request: dict[str, Any] | None = None
+    if args.request:
+        request_path = Path(args.request).expanduser().resolve()
+        if request_path.is_symlink() or not request_path.is_file():
+            raise LibraryError("Evidence association request is missing or unsafe")
+        loaded = read_json(request_path)
+        if not isinstance(loaded, dict):
+            raise LibraryError("Evidence association request must be an object")
+        validate_evidence_association_request(
+            root,
+            loaded,
+            paper=paper,
+            fact=fact,
+            destination_project_id=args.destination_project_id,
+            fact_ids=fact_ids,
+            actor=actor,
+            reason=reason,
+        )
+        derivation_request = loaded
+    payload = {
+        **base_payload("evidence_association"),
+        "contract_revision": EVIDENCE_ASSOCIATION_REVISION,
+        "association_kind": "explicit_claim_derivation_from_reviewed_paper",
+        "destination_project_id": require_text(
+            args.destination_project_id, "destination_project_id"
+        ),
+        "members": {
+            "reviewed_paper_graph_evidence_id": paper["object_id"],
+            "reviewed_paper_graph_record_sha256": paper["record_sha256"],
+            "external_fact_graph_evidence_id": fact["object_id"],
+            "external_fact_graph_record_sha256": fact["record_sha256"],
+        },
+        "associated_fact_ids": fact_ids,
+        "authorization": {
+            "actor": actor,
+            "reason": reason,
+            "inferred_from_title_doi_or_credibility": False,
+        },
+        **(
+            {"derivation_request": derivation_request}
+            if derivation_request is not None
+            else {}
+        ),
+        "supersedes_association_ids": supersedes,
+        "cross_project_fact_authority": False,
+        "premise_eligible": False,
+    }
+    candidate = make_record("evidence_associations", payload)
+    candidate_path = record_path(root, "evidence_associations", candidate["object_id"])
+    if candidate_path.is_file() and not candidate_path.is_symlink():
+        record = read_json(candidate_path)
+        validate_record("evidence_associations", record)
+        if record != candidate:
+            raise LibraryError("immutable Evidence association collision")
+    else:
+        record = write_record(
+            root,
+            "evidence_associations",
+            payload,
+            "evidence_triad_associated",
+        )
+    state = evidence_association_state_map(root)[record["object_id"]]
+    return {
+        "ok": True,
+        "association_id": record["object_id"],
+        "status": state["status"],
+        "record": {**record, **state},
+    }
+
+
 def cmd_evidence_disposition_add(args: argparse.Namespace) -> dict[str, Any]:
     root = root_path(args.root)
     assert_repository(root)
@@ -2262,15 +2636,109 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
     assert_repository(root)
     evidence_items = load_collection(root, "evidence_items")
     states = evidence_state_map(root)
+    associations = load_collection(root, "evidence_associations")
+    association_states = evidence_association_state_map(root)
     papers = load_collection(root, "papers")
     query = normalized_whitespace(args.query or "").casefold()
     terms = query.split()
     limit = args.limit
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
         raise LibraryError("Evidence query limit must be between 1 and 100")
+
+    def association_summary(
+        association_id: str,
+        record: dict[str, Any],
+    ) -> dict[str, Any]:
+        state = association_states[association_id]
+        request = record.get("derivation_request")
+        derivation = (
+            {
+                "request_id": request["request_id"],
+                "source_project_id": request["source_project_id"],
+                "source_release_id": request["source_release_id"],
+                "source_release_sha256": request["source_release_sha256"],
+                "paper_snapshot_id": request["paper_evidence_ref"][
+                    "snapshot_id"
+                ],
+                "paper_snapshot_sha256": request["paper_evidence_ref"][
+                    "snapshot_sha256"
+                ],
+                "paper_evidence_ref_sha256": request[
+                    "paper_evidence_ref_sha256"
+                ],
+                "paper_receipt_id": request["paper_evidence_receipt"][
+                    "receipt_id"
+                ],
+                "fact_capsule_id": request["fact_capsule_id"],
+                "inferred_from_title_doi_or_credibility": False,
+            }
+            if isinstance(request, dict)
+            else None
+        )
+        return {
+            "association_id": association_id,
+            "association_kind": record["association_kind"],
+            "destination_project_id": record["destination_project_id"],
+            "status": state["status"],
+            "current": state["current"],
+            "paper_evidence_id": record["members"][
+                "reviewed_paper_graph_evidence_id"
+            ],
+            "fact_evidence_id": record["members"][
+                "external_fact_graph_evidence_id"
+            ],
+            "associated_fact_ids": record["associated_fact_ids"],
+            "derivation": derivation,
+            "cross_project_fact_authority": False,
+            "premise_eligible": False,
+            "truth_effect": "none",
+        }
+
+    visible_associations: dict[str, dict[str, Any]] = {}
+    association_results: list[dict[str, Any]] = []
+    for association_id, record in sorted(associations.items()):
+        state = association_states[association_id]
+        if not args.include_inactive and not state["current"]:
+            continue
+        summary = association_summary(association_id, record)
+        visible_associations[association_id] = summary
+        paper_evidence = evidence_items.get(summary["paper_evidence_id"], {})
+        fact_evidence = evidence_items.get(summary["fact_evidence_id"], {})
+        paper_record = (
+            papers.get(paper_evidence.get("source", {}).get("paper_id", ""), {})
+            if isinstance(paper_evidence, dict)
+            else {}
+        )
+        searchable = json.dumps(
+            {
+                "association": record,
+                "state": state,
+                "paper_evidence": paper_evidence,
+                "fact_evidence": fact_evidence,
+                "paper": paper_record,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ).casefold()
+        if any(term not in searchable for term in terms):
+            continue
+        association_results.append(summary)
+
+    links_by_evidence: dict[str, list[dict[str, Any]]] = {}
+    for summary in visible_associations.values():
+        for evidence_id in (
+            summary["paper_evidence_id"],
+            summary["fact_evidence_id"],
+        ):
+            links_by_evidence.setdefault(evidence_id, []).append(summary)
+    for linked in links_by_evidence.values():
+        linked.sort(key=lambda item: item["association_id"])
+
     rank = {"external_fact_graph": 0, "reviewed_paper_graph": 1}
     results: list[dict[str, Any]] = []
-    for evidence_id, record in sorted(evidence_items.items()):
+    for evidence_id, record in (
+        [] if args.associations_only else sorted(evidence_items.items())
+    ):
         state = states[evidence_id]
         if not args.include_inactive and not state["bridge_eligible"]:
             continue
@@ -2278,7 +2746,12 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
         if record["evidence_kind"] == "reviewed_paper_graph":
             paper = papers.get(record["source"]["paper_id"])
         searchable = json.dumps(
-            {"evidence": record, "state": state, "paper": paper or {}},
+            {
+                "evidence": record,
+                "state": state,
+                "paper": paper or {},
+                "associations": links_by_evidence.get(evidence_id, []),
+            },
             ensure_ascii=False,
             sort_keys=True,
         ).casefold()
@@ -2317,6 +2790,11 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
                     if record["evidence_kind"] == "reviewed_paper_graph"
                     else []
                 ),
+                "association_ids": [
+                    item["association_id"]
+                    for item in links_by_evidence.get(evidence_id, [])
+                ],
+                "associations": links_by_evidence.get(evidence_id, []),
                 "premise_eligible": False,
             }
         )
@@ -2327,6 +2805,7 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
         )
     )
     selected = results[:limit]
+    selected_associations = association_results[:limit]
     return {
         "ok": True,
         "query": query,
@@ -2335,6 +2814,10 @@ def cmd_evidence_query(args: argparse.Namespace) -> dict[str, Any]:
         "matched_count": len(results),
         "returned_count": len(selected),
         "results": selected,
+        "associations_only": bool(args.associations_only),
+        "association_matched_count": len(association_results),
+        "association_returned_count": len(selected_associations),
+        "association_results": selected_associations,
         "truth_effect": "none",
         "premise_eligible": False,
     }
@@ -2348,8 +2831,10 @@ def build_catalog(root: Path) -> dict[str, Any]:
     source_checks = load_collection(root, "source_checks")
     evidence_items = load_collection(root, "evidence_items")
     evidence_dispositions = load_collection(root, "evidence_dispositions")
+    evidence_associations = load_collection(root, "evidence_associations")
     bridge_capsules = load_collection(root, "bridge_capsules")
     evidence_states = evidence_state_map(root)
+    association_states = evidence_association_state_map(root)
     version_superseded = {
         item
         for record in versions.values()
@@ -2445,6 +2930,10 @@ def build_catalog(root: Path) -> dict[str, Any]:
         ],
         "evidence_dispositions": [
             record for _, record in sorted(evidence_dispositions.items())
+        ],
+        "evidence_associations": [
+            {**record, **association_states[association_id]}
+            for association_id, record in sorted(evidence_associations.items())
         ],
         "bridge_capsules": [
             {**record, "current": bridge_check(root, record)["current"]}
@@ -2552,6 +3041,15 @@ def build_sqlite_index(root: Path, catalog: dict[str, Any]) -> Path:
                 reason TEXT NOT NULL,
                 record_json TEXT NOT NULL
             );
+            CREATE TABLE evidence_associations (
+                association_id TEXT PRIMARY KEY,
+                paper_evidence_id TEXT NOT NULL REFERENCES evidence_items(evidence_id),
+                fact_evidence_id TEXT NOT NULL REFERENCES evidence_items(evidence_id),
+                destination_project_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                is_current INTEGER NOT NULL CHECK(is_current IN (0, 1)),
+                record_json TEXT NOT NULL
+            );
             CREATE TABLE bridge_capsules (
                 bridge_id TEXT PRIMARY KEY,
                 destination_project_id TEXT NOT NULL,
@@ -2565,6 +3063,7 @@ def build_sqlite_index(root: Path, catalog: dict[str, Any]) -> Path:
             CREATE INDEX source_checks_by_paper ON source_checks(paper_id, checked_at);
             CREATE INDEX evidence_by_kind ON evidence_items(evidence_kind, status);
             CREATE INDEX evidence_dispositions_by_item ON evidence_dispositions(evidence_id, status);
+            CREATE INDEX evidence_associations_by_members ON evidence_associations(paper_evidence_id, fact_evidence_id, is_current);
             CREATE INDEX bridges_by_destination ON bridge_capsules(destination_project_id, is_current);
             """
         )
@@ -2693,6 +3192,19 @@ def build_sqlite_index(root: Path, catalog: dict[str, Any]) -> Path:
                     canonical_bytes(disposition).decode("utf-8"),
                 ),
             )
+        for association in catalog["evidence_associations"]:
+            connection.execute(
+                """INSERT INTO evidence_associations VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    association["object_id"],
+                    association["members"]["reviewed_paper_graph_evidence_id"],
+                    association["members"]["external_fact_graph_evidence_id"],
+                    association["destination_project_id"],
+                    association["status"],
+                    int(association["current"]),
+                    canonical_bytes(association).decode("utf-8"),
+                ),
+            )
         for bridge in catalog["bridge_capsules"]:
             connection.execute(
                 """INSERT INTO bridge_capsules VALUES (?, ?, ?, ?, ?)""",
@@ -2753,6 +3265,7 @@ def verify_sqlite_index(path: Path, catalog: dict[str, Any]) -> None:
             ),
             "evidence_items": len(catalog["evidence"]),
             "evidence_dispositions": len(catalog["evidence_dispositions"]),
+            "evidence_associations": len(catalog["evidence_associations"]),
             "bridge_capsules": len(catalog["bridge_capsules"]),
         }
         for table, expected_count in expected_counts.items():
@@ -2791,6 +3304,7 @@ def validate_references(root: Path) -> dict[str, int]:
     source_checks = load_collection(root, "source_checks")
     evidence_items = load_collection(root, "evidence_items")
     evidence_dispositions = load_collection(root, "evidence_dispositions")
+    evidence_associations = load_collection(root, "evidence_associations")
     bridge_capsules = load_collection(root, "bridge_capsules")
     for version in versions.values():
         if version["paper_id"] not in papers:
@@ -2872,6 +3386,58 @@ def validate_references(root: Path) -> dict[str, int]:
         if len(evidence_disposition_heads(evidence_dispositions, evidence_id)) > 1:
             raise LibraryError("Evidence disposition history has multiple current heads")
     evidence_state_map(root)
+    for association_id, association in evidence_associations.items():
+        if (
+            association.get("contract_revision") != EVIDENCE_ASSOCIATION_REVISION
+            or association.get("association_kind")
+            != "explicit_claim_derivation_from_reviewed_paper"
+            or association.get("cross_project_fact_authority") is not False
+            or association.get("premise_eligible") is not False
+        ):
+            raise LibraryError("Evidence association contract or authority boundary is invalid")
+        members = association.get("members")
+        if not isinstance(members, dict):
+            raise LibraryError("Evidence association members are invalid")
+        paper_id = members.get("reviewed_paper_graph_evidence_id")
+        fact_id = members.get("external_fact_graph_evidence_id")
+        if paper_id not in evidence_items or fact_id not in evidence_items:
+            raise LibraryError("Evidence association references missing Evidence")
+        paper = evidence_items[paper_id]
+        fact = evidence_items[fact_id]
+        if (
+            paper["evidence_kind"] != "reviewed_paper_graph"
+            or fact["evidence_kind"] != "external_fact_graph"
+            or members.get("reviewed_paper_graph_record_sha256")
+            != paper["record_sha256"]
+            or members.get("external_fact_graph_record_sha256")
+            != fact["record_sha256"]
+        ):
+            raise LibraryError("Evidence association member binding drifted")
+        associated_fact_ids = association.get("associated_fact_ids")
+        if (
+            not isinstance(associated_fact_ids, list)
+            or not associated_fact_ids
+            or associated_fact_ids != sorted(set(associated_fact_ids))
+            or not set(associated_fact_ids).issubset(fact["source"]["active_fact_ids"])
+        ):
+            raise LibraryError("Evidence association Fact selection is invalid")
+        derivation_request = association.get("derivation_request")
+        if derivation_request is not None:
+            authorization = association.get("authorization", {})
+            validate_evidence_association_request(
+                root,
+                derivation_request,
+                paper=paper,
+                fact=fact,
+                destination_project_id=association["destination_project_id"],
+                fact_ids=associated_fact_ids,
+                actor=authorization.get("actor", ""),
+                reason=authorization.get("reason", ""),
+            )
+        for prior_id in association.get("supersedes_association_ids", []):
+            if prior_id not in evidence_associations or prior_id == association_id:
+                raise LibraryError("Evidence association supersession is invalid")
+    evidence_association_state_map(root)
     for bridge in bridge_capsules.values():
         for binding in bridge["selection"]["items"]:
             if binding["evidence_id"] not in evidence_items:
@@ -2884,6 +3450,7 @@ def validate_references(root: Path) -> dict[str, int]:
         "source_checks": len(source_checks),
         "evidence_items": len(evidence_items),
         "evidence_dispositions": len(evidence_dispositions),
+        "evidence_associations": len(evidence_associations),
         "bridge_capsules": len(bridge_capsules),
     }
 
@@ -3271,6 +3838,26 @@ def parser() -> argparse.ArgumentParser:
     evidence_disposition.add_argument("--artifact")
     evidence_disposition.set_defaults(function=cmd_evidence_disposition_add)
 
+    evidence_association = commands.add_parser("evidence-association-add")
+    evidence_association.add_argument("--root", required=True)
+    evidence_association.add_argument("--destination-project-id", required=True)
+    evidence_association.add_argument("--paper-evidence-id", required=True)
+    evidence_association.add_argument("--fact-evidence-id", required=True)
+    evidence_association.add_argument("--fact-id", action="append", default=[])
+    evidence_association.add_argument("--actor", required=True)
+    evidence_association.add_argument("--reason", required=True)
+    evidence_association.add_argument(
+        "--request",
+        help=(
+            "exact project-local content-addressed association request; "
+            "never inferred from bibliographic identity"
+        ),
+    )
+    evidence_association.add_argument(
+        "--supersedes-association-id", action="append", default=[]
+    )
+    evidence_association.set_defaults(function=cmd_evidence_association_add)
+
     bridge_prepare_parser = commands.add_parser("bridge-prepare")
     bridge_prepare_parser.add_argument("--root", required=True)
     bridge_prepare_parser.add_argument("--destination-project-id", required=True)
@@ -3290,6 +3877,7 @@ def parser() -> argparse.ArgumentParser:
     evidence_query.add_argument("--query", default="")
     evidence_query.add_argument("--limit", type=int, default=20)
     evidence_query.add_argument("--include-inactive", action="store_true")
+    evidence_query.add_argument("--associations-only", action="store_true")
     evidence_query.set_defaults(function=cmd_evidence_query)
 
     index = commands.add_parser("index")

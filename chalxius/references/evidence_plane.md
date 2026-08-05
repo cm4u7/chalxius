@@ -47,6 +47,13 @@ project owns only its adapter state under `PROJECT/evidence/`:
 - `outbox/by-id/pes-*.json`: immutable Paper sync requests;
 - `receipts/by-snapshot/*.json`: immutable successful sync receipts;
 - `fact-capsules/by-id/efc-*.json`: explicit external Fact captures;
+- `association-planning/by-id/eap-*.json`: content-addressed, immutable
+  attempts to derive exact Paper/Fact Evidence associations after a Fact
+  capture has entered the shared library;
+- `association-outbox/by-id/eas-*.json`: immutable association requests
+  derived only from exact release Paper Evidence refs and local receipts;
+- `association-effects/by-request/eas-*.json`: immutable successful
+  association effects;
 - an optional exact `library-binding.json`.
 
 The binding contract is `chalxius-evidence-library-binding-1`. Resolution order
@@ -115,6 +122,20 @@ bridges, import also validates the exact library/bridge bindings and records
 the selected upstream Evidence ids; it rejects stale or foreign-library
 dependencies. Repository verification independently re-derives the dependency
 set from the frozen capsule and cross-checks the same immutable bridge records.
+
+After the shared library accepts that Fact capture, the destination
+EvidencePlane writes the `eap-*` planning attempt before it inspects any Paper
+receipt or creates an `eas-*` request. A failure in that pre-request interval is
+therefore visible in `evidence-library-status`. An all-associations retry first
+rehashes the original local capsule, checks the library's exact Fact Evidence
+record and stored capsule copy, and compares every source Candidate Release
+with the release bytes frozen in the capsule. It then revalidates the exact
+Paper Evidence refs, snapshots, sync requests, and receipts before deriving and
+executing any missing `eas-*`. A changed or missing bound object fails closed;
+the retry never substitutes a title, DOI, bibliographic similarity, or source
+credibility inference. Planning attempts, requests, and effects remain
+nontruth, premise-ineligible Evidence state and never import source-project
+Fact authority.
 
 ## Retrieval order
 

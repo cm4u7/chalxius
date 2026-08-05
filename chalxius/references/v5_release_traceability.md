@@ -1,4 +1,180 @@
-# Chalxius V5 traceability through 0.6.4 Goal-Driven Advisory Recovery
+# Chalxius V5 traceability through 0.6.5 Integrated Research Continuity
+
+## 0.6.5 integrated-research-continuity overlay
+
+- Candidate version: `0.6.5`; public name **Integrated Research Continuity**.
+  It preserves the 0.6.4 goal-intake/BF authority boundary and every historical
+  contract. The main continuity issues are owned by
+  `run-20260803T101737542592Z-da3f0e67c7d5/CHX-069` through
+  `run-20260803T101737542592Z-da3f0e67c7d5/CHX-081`; the final release-audit
+  successors are `run-20260804T091736232364Z-fd5af65fa476/CHX-082` and
+  `run-20260804T091736232364Z-fd5af65fa476/CHX-083`. The consolidation run owns
+  `run-20260804T101357275432Z-fe96e6220e8d/CHX-084` through
+  `run-20260804T101357275432Z-fe96e6220e8d/CHX-097`; the exact-revision
+  successor is `run-20260804T124618704949Z-389acc2a516b/CHX-098`, followed by
+  the early-preflight repair
+  `run-20260804T130621976451Z-645ae424af5b/CHX-099`. The administrative-cost
+  successor owns `run-20260804T154129250431Z-b6d8c2a010ba/CHX-100` through
+  `run-20260804T154129250431Z-b6d8c2a010ba/CHX-101`. The subsequent
+  canary-derived successor owns CHX-102 through CHX-109 at
+  `run-20260804T161234526251Z-380819388733`, ending at
+  `run-20260804T161234526251Z-380819388733/CHX-109`; final public-disclosure
+  bytes bind its digest only after the ledger closes.
+- CHX-069 separates applicable research depth from validation scope. `deep`
+  expands research, while current unchanged receipts are reusable and exact
+  target/predecessor/defeater/source/interface/writing/admission changes are
+  revalidated. Drift, ambiguity, schema change, missing evidence, or explicit
+  forensic use falls back to full validation.
+- CHX-070 makes ordinary goal intake bounded and terminal-receipt visible before
+  normal reads. `research-goal-intake` creates or reuses one prospective root
+  Research with an exact intake-token/Campaign binding. BF-1 through BF-3 remain
+  advisory and themselves create no Research, round, dispatch, or Fact.
+- CHX-071 and CHX-080 add prospective CHX ledger revision 5. Resolution requires
+  a prior content-addressed full-tree reconnaissance receipt, exactly one
+  reusable tactical repair per issue, and the latest integrated repair covering
+  all resolved issues through a derived mechanism registry plus coordination,
+  risk, and regression evidence. Revisions 1–4 remain byte-exact readable with
+  their original event and append semantics.
+- CHX-072 binds an exact current predecessor and complete node/edge/premise-order
+  conservation at native Paper successor stage and freeze. CHX-073 binds reviewed
+  PDF, Paper Graph, and explicitly imported associated Fact Graph Evidence through
+  one nontruth outbox/effect-receipt flow without transferring Fact authority.
+- CHX-074 makes draft continuity domain-specific. Philosophy alone has stance
+  preservation. Mathematics freezes the exact target, hypotheses, domains, and
+  quantifiers, and may record a typed weaker theorem, special case, added
+  hypothesis, weakened conclusion, counterexample, or obstruction with its exact
+  remaining root gap. Only proof or disproof of the unchanged root can nominate
+  exact-target resolution.
+- CHX-075 makes managed return/index publication resumable and head-last.
+  CHX-076 seals one content-addressed Paper continuation release capsule over the
+  current status generation, Logic/Audit refs, source/writing artifacts, changed
+  closure, dispositions, and Candidate interfaces. Candidate, neutral verifier,
+  Certification, and Gateway reuse it; stale or ambiguous state produces one
+  observable content-addressed full-validation fallback and timing receipt.
+- CHX-077 replaces direct canonical neutral-review writes with
+  `output/review-draft.json` plus host-controlled `host/submit_review.py`.
+  Invalid drafts are quarantined with structured diagnostics; only strict
+  preflight can atomically publish immutable `output/review.json` and the
+  content-addressed formal-return receipt. V4 capsule behavior is unchanged.
+- CHX-078 pairs every load-bearing Paper target, and every proof target explicitly
+  marked `independent_adverse_required`, with a distinct refute worker/context.
+  CHX-079 binds each prospective round to one normalized non-null Host scope and
+  makes zero/nonzero attack reports coverage-complete. Paired results remain
+  Research; they add no second Certification or Fact gate.
+- CHX-081 treats behavior as reachable only when a normal production entry,
+  satisfiable predicate, typed handoff, validating consumer, observable effect,
+  and positive/predicate-false/tamper probes agree. Orphans receive one executable
+  disposition: `retain_and_integrate`, `retain_bounded`,
+  `replace_with_authoritative_mechanism`, or `retire`. Imports, registrations,
+  and tests are not operational reachability by themselves.
+- CHX-082 enumerates the complete release mutation registry before baselines and
+  requires every attack to match exactly one current authoritative source seam.
+  CHX-083 runs baselines and mutants only in complete canonical `chalxius`
+  copies, requires the isolated baseline to pass, and rebinds exactly one source
+  mutation into the copy's manifest before counting a semantic kill. The attack
+  report cannot substitute an unsafe path, incomplete identity, or post-build
+  manifest drift for the defect it claims to exercise.
+- CHX-084, CHX-085, and CHX-086 make protected-project validation single-pass and
+  receipt-first. One all-round projection or one necessary deep audit supplies
+  the terminal map. Receipt v2 binds a versioned project snapshot and supports
+  zero-process exact reuse. Administrative latency SLOs remain telemetry; a
+  separate finite watchdog fails genuinely lost work without imposing a
+  four-minute correctness cutoff.
+- CHX-087 preserves exact read compatibility for the original Brave Future
+  planning-snapshot representation while writing revision 2. CHX-089 binds the
+  public Paper successor example to the parser's complete required-option set.
+- CHX-088 and CHX-096 close the registry universe itself. Reconnaissance derives
+  public persistent-state writers independently, resolves exact argparse,
+  standalone, callback, constructor, and typed-factory paths, and requires every
+  command and writer to reach executable normal flow or an explicit bounded,
+  replacement, or retirement decision. Raw same-name matches cannot hide an
+  orphan. Pure parallel-verification constructors remain bounded external APIs
+  with no project-state authority.
+- CHX-090, CHX-091, CHX-092, CHX-093, and CHX-094 harden approval-bearing cutover evidence. Approved
+  JSON is hashed and parsed from one read; version/count scalars exclude booleans;
+  v2 paths, hashes, timestamps, snapshot revisions, modes, bindings, project
+  witnesses, and provenance are exact; bounded callback injection is absent;
+  reuse ancestry is finite, acyclic, snapshot-continuous, and deep-genesis
+  terminating; and path-independent runtime content plus manifest identity lets
+  an installed byte-exact copy anchor the next generation.
+- CHX-095 makes pre-effect Evidence association planning durable. One immutable
+  `eap-*` attempt survives failure before an `eas-*` request, remains visible to
+  status, and lets all-associations retry revalidate exact capsule, Fact Evidence,
+  source release, Paper refs, and receipts without title, DOI, or credibility
+  inference. It remains nontruth and premise-ineligible.
+- CHX-097 keeps the public V5 `round_status` projection inside the optimized
+  batch path. Audit and aggregate status pass one locally owned ephemeral read
+  context through that same public entrypoint, so stale public output fails
+  closed while runtime, quarantine, manifest, completion, and abort validation
+  remain single-pass. The context is nonpersistent and nonauthorizing.
+- CHX-098 makes release-assurance revision metadata executable rather than a
+  set of independent literals. The scanner, prospective CHX reconnaissance
+  admission, capability registry, inheritance lock, self-test, and protected
+  runtime closure share and verify the same contract source. Each stale owner
+  now fails before publication while historical ledger events remain byte-exact.
+- CHX-099 promotes the complete exact-one-target mutation-registry check into a
+  manifest-bound phase-one lane. It exposed four stale targets in about a tenth
+  of a second and now skips behavior and expensive baselines on any future
+  registry failure. This mutant registry preflight is read-only; the full
+  mutation audit remains snapshot-isolated in phase
+  4, and prospective 0.6.5 cutover requires the revision-4 matrix receipt.
+- CHX-100 extends the locally owned inspection context through complete
+  top-level Research, Candidate Release, Decision, admission, active-Fact,
+  statement-interface, Paper Logic, and Paper-continuation audit projections.
+  First access still performs exact validation; only an identical successful
+  projection is reused inside the same command, and no persistent authority or
+  cross-command cache exists.
+- CHX-101 separates routine monitoring from forensic reconstruction. `status`
+  is a bounded dashboard that explicitly reports no audit judgment, while
+  `status --with-audit` preserves the complete historical validator and payload.
+  Its output remains nontruth and cannot substitute for release or Fact gates.
+- CHX-102 keeps novelty validation inside the same aggregate inspection context
+  as the complete V5 audit, so first access still validates the full closure and
+  later top-level phases can reuse that exact successful projection. CHX-103
+  applies applicability-before-authority: an exact task with no Fact or attack
+  references receives the canonical empty authority snapshot without opening
+  the active-Fact, admission, Release, Paper, or interface closure.
+- CHX-104 validates the complete immutable Paper-continuation disposition
+  collection once per manager inspection and derives plan-specific/current views
+  by filtering it. CHX-105 established the optional Experiment applicability
+  requirement; CHX-106 corrects the first gate by deriving the root from the
+  canonical frozen assignment and checking existing components without following
+  symlinks. Exact canonical absence skips only that subaudit; presence retains
+  full validation through the owning context, and unsafe state fails closed.
+- CHX-107 binds every aggregate inspection context to one canonical project root
+  and holds the shared project snapshot lock across the complete read. Ordinary
+  writers use the same lock exclusively, preventing mixed-time projections and
+  cross-project context reuse without adding per-reader full-tree hashing.
+- CHX-108 makes PHX standalone command reachability executable. `start` consumes
+  only its own arguments, `search` forwards `--write-receipt`, and public
+  subprocess regressions cover both effects. Parser and handler registration
+  without a compatible call contract no longer suffices for this surface.
+- CHX-109 closes the valid-present Experiment normal-flow gap found by the first
+  post-manifest full matrix. One frozen-assignment helper validates the exact card
+  and materializes its derived Experiment view. Present-root audit consumes it
+  from the already loaded round binding; exact absence still avoids full card
+  validation and no second round scan is introduced.
+- One local protected philosophy-project canary recorded an incomplete formal
+  audit after more than seven minutes, followed by successive complete runs of
+  approximately 30 seconds, 11.17 seconds, and 6.02 seconds as CHX-102 through
+  CHX-105 removed duplicate work. These are same-machine canary observations,
+  not a benchmark, cross-machine performance guarantee, truth result, release
+  receipt, or permission to bypass validation.
+- Administrative reconnaissance, hashing, indexing, and routine audit are
+  optimized toward one to two minutes; an uncommon explained case may approach
+  four. This is an operational target, never a time limit on substantive research,
+  proof, computation, or fail-closed validation.
+- Administrative optimization proceeds by eliminating work, reusing one
+  successful projection within one aggregate inspection, and measuring the
+  remaining path before persistent indexing or parallelism. This order is aimed
+  chiefly at accidental broad or duplicate agent calls; parallel duplicate work
+  and unmeasured indexes are not accepted optimizations.
+- PHX supplies the private host-global route guide for major reusable architecture
+  proposals distilled from CHX and other evidence. Concrete defects remain in
+  CHX; PHX search and recording have no implementation authority. Every active-
+  architecture adoption requires prior informed user consultation and supporting
+  digest-bound evaluation. The current response/hash/task-locator consultation
+  record is auditable but is not a host-signed cryptographic approval receipt.
 
 ## 0.6.4 goal-driven advisory-recovery overlay
 
@@ -64,8 +240,9 @@ The preceding qualified head was
   explicit full-audit override also runs the deep audit only once. The old
   unconditional candidate-plus-postflight double audit is no longer reachable.
 - CHX-068 extends CHX-065's release coordination boundary to mutation-plan
-  applicability. Before any baseline subprocess, one read-only mutant registry preflight
-  resolves every target inside the candidate, requires one regular
+  applicability inside the aggressive audit. CHX-099 further schedules that
+  same read-only check as a release-matrix phase-one lane before any expensive
+  baseline. It resolves every target inside the candidate, requires one regular
   file and exactly one old-fragment occurrence, and rejects the whole plan on
   missing, duplicate, escaping, or nonregular targets. The mutation phase uses
   the same resolver. The former unconditional-postflight mutant now attacks the
@@ -579,7 +756,13 @@ CHX-058, CHX-061, CHX-068, and CHX-070 are addressed by a complete
 machine-copyable Certification Decision template, a standalone field-level
 preflight validator, and neutral V5 capsule materialization from a release id,
 capsule id, or exact capsule JSON. The verifier receives only authorized bytes,
-writes and preflights one review, and never assumes the gateway role.
+writes one draft, and never assumes the host or gateway role. CHX-077 adds the
+copied host submission program: it preserves `draft_written`, quarantines
+`preflight_failed` bytes with JSON-pointer and enum diagnostics, validates a
+content-addressed `preflight_passed` handoff, and uses a
+`formally_returned` receipt as the canonical review visibility switch. Invalid
+and interrupted attempts are retryable without Candidate, Certification,
+Gateway, or Fact effects.
 
 CHX-059 and CHX-060 are addressed by exact per-obligation artifact witnesses,
 typed computation-stage manifests, and capability-bound related Research

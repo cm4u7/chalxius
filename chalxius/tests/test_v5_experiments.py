@@ -179,7 +179,8 @@ class V5ExperimentTests(unittest.TestCase):
                 task_card=card, experiment_id=started["experiment_id"]
             )
             self.assertEqual(status["status"], "finalized")
-            self.assertTrue(store.experiments().audit_all()["ok"])
+            experiment_audit = store.experiments().audit_all()
+            self.assertTrue(experiment_audit["ok"], experiment_audit["errors"])
             self.assertTrue(store.audit().current_ok, store.audit().errors)
 
             with store.v5_mutation_lock(command="work-unit-abort"):

@@ -335,13 +335,21 @@ MUTANTS = (
         target="mathgraph/paper_continuation.py",
     ),
     Mutant(
-        name="paper_verifier_evidence_omitted",
-        old="                    \"paper_continuation_evidence\": continuation_evidence,\n",
-        new="                    # mutant: omit verifier-visible continuation evidence\n",
+        name="paper_verifier_continuation_capsule_omitted",
+        old=(
+            "                semantic[\"paper_continuation_release_capsule\"] = release[\n"
+            "                    \"paper_continuation_release_capsule\"\n"
+            "                ]\n"
+        ),
+        new=(
+            "                # mutant: omit verifier-visible continuation release capsule\n"
+            "                pass\n"
+        ),
         test=(
             f"{TEST_MODULE}."
             "test_philosophy_paper_continuation_is_complete_atomic_and_current"
         ),
+        target="mathgraph/v5_lifecycle.py",
     ),
     Mutant(
         name="coverage_allows_n_plus_one",
@@ -691,8 +699,11 @@ MUTANTS = (
     Mutant(
         name="completed_round_historical_runtime_boundary_bypassed",
         old=(
-            "        completed = self._round_is_completed(round_dir, manifest)\n"
-            "        runtime_validation_cache: set[tuple[bool, str]] = set()\n"
+            "        completed = self._round_is_completed(\n"
+            "            round_dir,\n"
+            "            manifest,\n"
+            "            _inspection_context=inspection,\n"
+            "        )\n"
             "        for card_path, card in frozen_cards:\n"
         ),
         new=(
@@ -711,6 +722,7 @@ MUTANTS = (
             "            self._validated_ingest_receipt(\n"
             "                round_dir=round_dir,\n"
             "                assignment=assignment,\n"
+            "                _inspection_context=_inspection_context,\n"
             "            )\n"
         ),
         new="            pass\n",
@@ -847,11 +859,11 @@ MUTANTS = (
     Mutant(
         name="runtime_validation_bounded_phase_dedup_removed",
         old=(
-            "                if _runtime_validation_cache is not None:\n"
-            "                    _runtime_validation_cache.add(runtime_cache_key)\n"
+            "                if runtime_validation_cache is not None:\n"
+            "                    runtime_validation_cache.add(runtime_cache_key)\n"
         ),
         new=(
-            "                if _runtime_validation_cache is not None:\n"
+            "                if runtime_validation_cache is not None:\n"
             "                    pass  # mutant: rescan each identical card\n"
         ),
         test=(
@@ -1036,11 +1048,11 @@ MUTANTS = (
     Mutant(
         name="runtime_cutover_project_snapshot_drift_bypassed",
         old=(
-            "        if raw.get(\"project_state\") != snapshot:\n"
+            "        if raw.get(\"project_state\") != comparable_snapshot:\n"
             "            raise ValueError(\"protected project changed after validation receipt\")\n"
         ),
         new=(
-            "        if False and raw.get(\"project_state\") != snapshot:\n"
+            "        if False and raw.get(\"project_state\") != comparable_snapshot:\n"
             "            raise ValueError(\"protected project changed after validation receipt\")\n"
         ),
         test=(
@@ -1052,7 +1064,7 @@ MUTANTS = (
     Mutant(
         name="runtime_cutover_required_deep_audit_downgraded",
         old=(
-            "    if not context[\"change_classification\"][\"deep_audit_required\"]:\n"
+            "    if not deep_audit_required:\n"
         ),
         new=(
             "    if True:  # mutant: downgrade an explicitly required deep audit\n"
@@ -1206,18 +1218,18 @@ MUTANTS = (
     Mutant(
         name="research_draft_headline_reversal_authorization_bypassed",
         old=(
-            "            if major_impact and authorization is None:\n"
-            "                raise ValueError(\n"
-            "                    \"research-draft headline narrowing/reversal "
+            "                if major_impact and authorization is None:\n"
+            "                    raise ValueError(\n"
+            "                        \"research-draft headline narrowing/reversal "
             "requires explicit Operator authorization\"\n"
-            "                )\n"
+            "                    )\n"
         ),
         new=(
-            "            if False and major_impact and authorization is None:\n"
-            "                raise ValueError(\n"
-            "                    \"research-draft headline narrowing/reversal "
+            "                if False and major_impact and authorization is None:\n"
+            "                    raise ValueError(\n"
+            "                        \"research-draft headline narrowing/reversal "
             "requires explicit Operator authorization\"\n"
-            "                )\n"
+            "                    )\n"
         ),
         test=(
             f"{RESEARCH_DRAFT_CONTRACT_TEST_MODULE}."
@@ -1662,6 +1674,50 @@ MUTANTS = (
         target="chx_ledger.py",
     ),
     Mutant(
+        name="chx_revision5_missing_tactical_repair_accepted",
+        old=(
+            "    if tactical is None:\n"
+            "        raise ValueError(\n"
+            "            \"resolved CHX issue requires one reusable tactical repair\"\n"
+            "        )\n"
+        ),
+        new=(
+            "    if False and tactical is None:\n"
+            "        raise ValueError(\n"
+            "            \"resolved CHX issue requires one reusable tactical repair\"\n"
+            "        )\n"
+        ),
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_revision_five_resolution_requires_all_three_repair_gates"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_revision5_reusable_registry_tamper_accepted",
+        old=(
+            "            if event.get(\"reusable_mechanism_registry\") != expected_registry:\n"
+        ),
+        new=(
+            "            if False and event.get(\"reusable_mechanism_registry\") != expected_registry:\n"
+        ),
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_integrated_registry_tamper_fails_beyond_the_event_hash"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_revision5_late_issue_drops_prior_resolved_coverage",
+        old="            if not prior_resolved.issubset(set(included)):\n",
+        new="            if False and not prior_resolved.issubset(set(included)):\n",
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_late_issue_requires_a_superseding_integrated_full_coverage"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
         name="paper_research_premise_order_reduced_to_set_equality",
         old=(
             "            _require(\n"
@@ -2031,11 +2087,14 @@ MUTANTS = (
     Mutant(
         name="v5_top_level_status_reconstructs_full_paper_continuation",
         old=(
-            "        paper_continuation = "
-            "self.paper_continuation().status_all_summary()\n"
+            "        paper_continuation = self.paper_continuation(\n"
+            "            _inspection_context=_inspection_context\n"
+            "        ).status_all_summary()\n"
         ),
         new=(
-            "        paper_continuation = self.paper_continuation().status_all()\n"
+            "        paper_continuation = self.paper_continuation(\n"
+            "            _inspection_context=_inspection_context\n"
+            "        ).status_all()\n"
         ),
         test=(
             "tests.test_paper_continuation_status_projection."
@@ -2111,12 +2170,38 @@ MUTANTS = (
         old=(
             '            "aggressive_bug_audit",\n'
             '            (python, "scripts/aggressive_bug_audit.py"),\n'
-            "            phase=2,\n"
+            "            phase=4,\n"
         ),
         new=(
             '            "aggressive_bug_audit",\n'
             '            (python, "scripts/aggressive_bug_audit.py"),\n'
+            "            phase=3,\n"
+        ),
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_manifest_bound_lanes_are_distinct_exact_copies"
+        ),
+        target="release_validation.py",
+    ),
+    Mutant(
+        name="release_validation_mutant_registry_preflight_delayed",
+        old=(
+            '            "mutant_registry_preflight",\n'
+            "            (\n"
+            "                python,\n"
+            '                "scripts/aggressive_bug_audit.py",\n'
+            '                "--preflight-only",\n'
+            "            ),\n"
             "            phase=1,\n"
+        ),
+        new=(
+            '            "mutant_registry_preflight",\n'
+            "            (\n"
+            "                python,\n"
+            '                "scripts/aggressive_bug_audit.py",\n'
+            '                "--preflight-only",\n'
+            "            ),\n"
+            "            phase=3,\n"
         ),
         test=(
             f"{RELEASE_VALIDATION_TEST_MODULE}."
@@ -2204,6 +2289,50 @@ def _candidate_is_unchanged(
     return before == _candidate_snapshot(candidate_root)
 
 
+def _copy_complete_runtime(*, candidate_root: Path, parent: Path) -> Path:
+    """Create one complete isolated runtime with the canonical root name."""
+
+    runtime_root = parent / "chalxius"
+    if runtime_root.exists():
+        raise ValueError("isolated mutant runtime already exists")
+    shutil.copytree(
+        candidate_root,
+        runtime_root,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    if runtime_root.name != "chalxius":
+        raise RuntimeError("isolated mutant runtime has a noncanonical name")
+    return runtime_root
+
+
+def _rebind_mutant_manifest(*, runtime_root: Path, target: Path) -> str:
+    """Bind one deliberate source mutation as part of a valid built runtime."""
+
+    root = runtime_root.resolve()
+    resolved_target = target.resolve()
+    if resolved_target == root or root not in resolved_target.parents:
+        raise ValueError("mutant manifest target escapes the isolated runtime")
+    if target.is_symlink() or not resolved_target.is_file():
+        raise ValueError("mutant manifest target is not one regular file")
+    relative = resolved_target.relative_to(root).as_posix()
+    if relative == "MANIFEST.sha256":
+        raise ValueError("the release manifest cannot be a mutation target")
+    manifest = root / "MANIFEST.sha256"
+    if manifest.is_symlink() or not manifest.is_file():
+        raise ValueError("isolated mutant runtime lacks a regular manifest")
+    lines = manifest.read_text(encoding="utf-8").splitlines()
+    suffix = f"  {relative}"
+    matching = [index for index, line in enumerate(lines) if line.endswith(suffix)]
+    if len(matching) != 1:
+        raise ValueError("mutant manifest target is absent or duplicated")
+    lines[matching[0]] = (
+        f"{hashlib.sha256(resolved_target.read_bytes()).hexdigest()}{suffix}"
+    )
+    payload = ("\n".join(lines) + "\n").encode("utf-8")
+    manifest.write_bytes(payload)
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _run_test(*, repo: Path, scripts: Path, test: str) -> subprocess.CompletedProcess[str]:
     environment = dict(os.environ)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -2224,11 +2353,16 @@ def _run_test(*, repo: Path, scripts: Path, test: str) -> subprocess.CompletedPr
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="validate the complete mutation registry without running baselines",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
-    _parse_args(argv)
+    args = _parse_args(argv)
     candidate_root = Path(__file__).resolve().parents[1]
     repo = candidate_root
     source_scripts = candidate_root / "scripts"
@@ -2240,23 +2374,50 @@ def main(argv: list[str] | None = None) -> int:
         source_scripts=source_scripts,
         mutants=MUTANTS,
     )
+    if args.preflight_only:
+        candidate_unchanged = _candidate_is_unchanged(
+            candidate_before, candidate_root
+        )
+        report = {
+            "schema_version": 1,
+            "contract_revision": "chalxius-mutant-registry-preflight-1",
+            "mutant_count": len(MUTANTS),
+            "exact_single_target_count": len(MUTANTS),
+            "candidate_unchanged": candidate_unchanged,
+            "truth_effect": "none",
+            "ok": candidate_unchanged,
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0 if report["ok"] else 1
 
     baseline_tests = sorted({mutant.test for mutant in MUTANTS})
-    for test in baseline_tests:
-        baseline = _run_test(repo=repo, scripts=source_scripts, test=test)
-        if baseline.returncode != 0:
-            print(baseline.stdout, file=sys.stderr)
-            raise SystemExit(f"baseline regression failed before mutation: {test}")
+    with tempfile.TemporaryDirectory(
+        prefix="chalxius-v5-mutant-baseline-"
+    ) as temporary:
+        baseline_root = _copy_complete_runtime(
+            candidate_root=candidate_root,
+            parent=Path(temporary),
+        )
+        baseline_scripts = baseline_root / "scripts"
+        for test in baseline_tests:
+            baseline = _run_test(
+                repo=baseline_root,
+                scripts=baseline_scripts,
+                test=test,
+            )
+            if baseline.returncode != 0:
+                print(baseline.stdout, file=sys.stderr)
+                raise SystemExit(
+                    f"isolated baseline regression failed before mutation: {test}"
+                )
 
     for mutant in MUTANTS:
         with tempfile.TemporaryDirectory(prefix="chalxius-v5-mutant-") as temporary:
-            copied_root = Path(temporary)
+            copied_root = _copy_complete_runtime(
+                candidate_root=candidate_root,
+                parent=Path(temporary),
+            )
             copied_scripts = copied_root / "scripts"
-            shutil.copytree(source_scripts, copied_scripts)
-            if mutant.target.startswith("../assets/"):
-                shutil.copytree(candidate_root / "assets", copied_root / "assets")
-            for identity_name in ("VERSION", "MANIFEST.sha256"):
-                shutil.copy2(candidate_root / identity_name, copied_root / identity_name)
             target = _mutant_target(
                 candidate_root=copied_root,
                 source_scripts=copied_scripts,
@@ -2269,8 +2430,12 @@ def main(argv: list[str] | None = None) -> int:
                     f"mutant {mutant.name} expected one target, found {occurrences}"
                 )
             target.write_text(text.replace(mutant.old, mutant.new), encoding="utf-8")
+            mutant_manifest_sha256 = _rebind_mutant_manifest(
+                runtime_root=copied_root,
+                target=target,
+            )
             outcome = _run_test(
-                repo=repo,
+                repo=copied_root,
                 scripts=copied_scripts,
                 test=mutant.test,
             )
@@ -2281,6 +2446,12 @@ def main(argv: list[str] | None = None) -> int:
                     "test": mutant.test,
                     "killed": killed,
                     "returncode": outcome.returncode,
+                    "isolated_runtime_name": copied_root.name,
+                    "mutant_manifest_sha256": mutant_manifest_sha256,
+                    "output_sha256": hashlib.sha256(
+                        outcome.stdout.encode("utf-8")
+                    ).hexdigest(),
+                    "output_tail": outcome.stdout[-1200:],
                 }
             )
             if not killed:
@@ -2313,6 +2484,7 @@ def main(argv: list[str] | None = None) -> int:
             "project-wide freshness, Certification aggregate enforcement, Campaign "
             "worker-result lineage, exact goal-to-Campaign auto/deep intake, explicit "
             "disablement and active-pointer isolation, Brave Future advisory-only effects, CHX "
+            "revision-5 reconnaissance/tactical/integrated repair coverage and reusable-registry integrity, "
             "close/status parity, public-disclosure completeness and run namespace, "
             "content-addressed Paper-continuation status-head freshness without "
             "summary-to-full fallback, status projection, Reader math projection, "

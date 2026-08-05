@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -9,14 +10,19 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+import chx_ledger
 from chx_ledger import (
+    ARCHITECTURE_RECONNAISSANCE_CONTRACT_REVISION,
     CONTRACT_REVISION,
     close_ledger,
     dispose_issue,
     ledger_status,
     main,
     record_finding,
+    record_architecture_reconnaissance,
+    record_integrated_repair,
     record_issue,
+    record_tactical_repair,
     reconcile_finding,
     start_ledger,
     validate_public_disclosure_contract,
@@ -69,8 +75,96 @@ class CHXRunLedgerTests(unittest.TestCase):
         self.assertEqual(ledger.parent, self.project / "chx-ledgers")
         return ledger
 
+    def _reconnaissance_report(self) -> dict[str, object]:
+        candidate_root = Path(chx_ledger.__file__).resolve().parents[1]
+        report: dict[str, object] = {
+            "schema_version": 1,
+            "contract_revision": ARCHITECTURE_RECONNAISSANCE_CONTRACT_REVISION,
+            "root": str(candidate_root),
+            "version": (candidate_root / "VERSION").read_text(
+                encoding="utf-8"
+            ).strip(),
+            "counts": {"files": 1},
+            "generated_artifacts": [],
+            "manifest": {},
+            "modules": {},
+            "unreferenced_modules": [],
+            "production_unreferenced_modules": [],
+            "orphan_modules": [],
+            "exact_duplicate_files": [],
+            "duplicate_function_bodies": [],
+            "duplicate_body_adjudication": {
+                "registry_sha256": "3" * 64,
+                "ok": True,
+            },
+            "commands": {},
+            "capability_registry": {"registry_sha256": "1" * 64},
+            "behavioral_features": {"registry_sha256": "2" * 64},
+            "baseline_comparison": None,
+            "installed_comparison": None,
+            "errors": [],
+            "warnings": [],
+            "truth_effect": "none",
+        }
+        report["inventory_sha256"] = hashlib.sha256(
+            json.dumps(
+                report,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        return report
+
+    @staticmethod
+    def _tactical(mechanism_id: str = "mechanism.chx_repair_gate") -> dict[str, object]:
+        return {
+            "mechanism_id": mechanism_id,
+            "summary": "Bind a reusable repair before resolution.",
+            "applicability": "Any repair-aware CHX issue with this failure mode.",
+            "implementation": "Record a typed, fail-closed repair handoff.",
+            "fail_closed_boundary": "Resolution is unavailable when the handoff is missing.",
+            "reusable_domains": ["cross_domain"],
+            "implementation_anchors": ["scripts/chx_ledger.py"],
+            "bounded_validation_evidence": ["tests/test_chx_ledger.py:PASS"],
+        }
+
+    @staticmethod
+    def _integration(issue_ids: list[str]) -> dict[str, object]:
+        return {
+            "included_issue_ids": issue_ids,
+            "coordination_decisions": [
+                {
+                    "decision_id": "decision.coordinated_gate",
+                    "affected_issue_ids": issue_ids,
+                    "decision": "Use one coordinated repair gate.",
+                    "rationale": "The selected mechanisms must compose without bypass.",
+                }
+            ],
+            "risk_evidence": ["risk-matrix:PASS"],
+            "regression_evidence": [
+                "lineage-predecessor:PASS",
+                "test-public-predecessor:PASS",
+                "test-public-successor:PASS",
+                "tests/test_chx_ledger.py:PASS",
+            ],
+        }
+
+    def _repair_chain(self, ledger: Path, issue_ids: list[str]) -> dict[str, object]:
+        reconnaissance = record_architecture_reconnaissance(
+            ledger, self._reconnaissance_report()
+        )
+        for issue_id in issue_ids:
+            record_tactical_repair(
+                ledger,
+                issue_id=issue_id,
+                reconnaissance_id=reconnaissance["reconnaissance_id"],
+                repair=self._tactical(),
+            )
+        return record_integrated_repair(ledger, self._integration(issue_ids))
+
     def test_current_contract_uses_project_local_revision(self) -> None:
-        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-4")
+        self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-5")
 
     def test_project_local_ledger_can_precede_v5_initialization_and_audit(self) -> None:
         ledger = self._started("run-pre-init-001")
@@ -195,6 +289,7 @@ class CHXRunLedgerTests(unittest.TestCase):
                     "regression_evidence": [],
                 },
             )
+        self._repair_chain(ledger, ["CHX-001"])
         dispose_issue(
             ledger,
             issue_id="CHX-001",
@@ -207,6 +302,187 @@ class CHXRunLedgerTests(unittest.TestCase):
         closed = close_ledger(ledger)
         self.assertTrue(closed["report_required"])
         self.assertEqual(closed["issues"][0]["status"], "resolved")
+
+    def test_revision_five_resolution_requires_all_three_repair_gates(self) -> None:
+        ledger = self._started("run-repair-gates-001")
+        record_issue(ledger, self._issue())
+        disposition = {
+            "status": "resolved",
+            "reason": "Exercise the prospective repair gates.",
+            "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+        }
+        with self.assertRaisesRegex(ValueError, "tactical repair"):
+            dispose_issue(ledger, issue_id="CHX-001", disposition=disposition)
+
+        with self.assertRaisesRegex(ValueError, "prior architecture reconnaissance"):
+            record_tactical_repair(
+                ledger,
+                issue_id="CHX-001",
+                reconnaissance_id="reconnaissance-" + "0" * 64,
+                repair=self._tactical(),
+            )
+        reconnaissance = record_architecture_reconnaissance(
+            ledger, self._reconnaissance_report()
+        )
+        tactical = record_tactical_repair(
+            ledger,
+            issue_id="CHX-001",
+            reconnaissance_id=reconnaissance["reconnaissance_id"],
+            repair=self._tactical(),
+        )
+        self.assertEqual(tactical["issue_id"], "CHX-001")
+        with self.assertRaisesRegex(ValueError, "integrated repair"):
+            dispose_issue(ledger, issue_id="CHX-001", disposition=disposition)
+
+        integrated = record_integrated_repair(
+            ledger, self._integration(["CHX-001"])
+        )
+        self.assertEqual(
+            integrated["reusable_mechanism_registry"]["mechanisms"][0][
+                "issue_bindings"
+            ][0]["tactical_repair_id"],
+            tactical["tactical_repair_id"],
+        )
+        unbound = {**disposition, "regression_evidence": ["unbound:PASS"]}
+        with self.assertRaisesRegex(ValueError, "not bound"):
+            dispose_issue(ledger, issue_id="CHX-001", disposition=unbound)
+        dispose_issue(ledger, issue_id="CHX-001", disposition=disposition)
+        status = close_ledger(ledger)
+        self.assertTrue(status["repair_gate"]["all_resolved_covered"])
+        self.assertEqual(close_ledger(ledger), status)
+        self.assertEqual(ledger_status(ledger), status)
+
+    def test_integrated_registry_tamper_fails_beyond_the_event_hash(self) -> None:
+        ledger = self._started("run-repair-tamper-001")
+        record_issue(ledger, self._issue())
+        self._repair_chain(ledger, ["CHX-001"])
+        lines = ledger.read_text(encoding="utf-8").splitlines()
+        event = json.loads(lines[-1])
+        event["reusable_mechanism_registry"]["mechanisms"][0]["summary"] = (
+            "tampered reusable mechanism"
+        )
+        semantic = {
+            key: value for key, value in event.items() if key != "event_sha256"
+        }
+        event["event_sha256"] = hashlib.sha256(
+            json.dumps(
+                semantic,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        lines[-1] = json.dumps(
+            event,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "registry drifted"):
+            ledger_status(ledger)
+
+    def test_late_issue_requires_a_superseding_integrated_full_coverage(self) -> None:
+        ledger = self._started("run-late-repair-001")
+        record_issue(ledger, self._issue())
+        first = self._repair_chain(ledger, ["CHX-001"])
+        dispose_issue(
+            ledger,
+            issue_id="CHX-001",
+            disposition={
+                "status": "resolved",
+                "reason": "First repair is complete.",
+                "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+            },
+        )
+        second_issue = self._issue()
+        second_issue["audit_anchors"] = ["late-repair:CHX-002"]
+        record_issue(ledger, second_issue)
+        reconnaissance_id = ledger_status(ledger)[
+            "architecture_reconnaissance_receipts"
+        ][0]["reconnaissance_id"]
+        record_tactical_repair(
+            ledger,
+            issue_id="CHX-002",
+            reconnaissance_id=reconnaissance_id,
+            repair=self._tactical(),
+        )
+        with self.assertRaisesRegex(ValueError, "previously resolved"):
+            record_integrated_repair(ledger, self._integration(["CHX-002"]))
+        second = record_integrated_repair(
+            ledger, self._integration(["CHX-001", "CHX-002"])
+        )
+        self.assertEqual(
+            second["supersedes_integrated_repair_id"],
+            first["integrated_repair_id"],
+        )
+        dispose_issue(
+            ledger,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "Late repair is coordinated with the prior repair.",
+                "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+            },
+        )
+        status = close_ledger(ledger)
+        self.assertEqual(
+            status["repair_gate"]["latest_covered_issue_ids"],
+            ["CHX-001", "CHX-002"],
+        )
+
+    def test_revisions_one_through_four_keep_their_original_event_shapes(self) -> None:
+        revisions = [
+            "chalxius-chx-run-ledger-1",
+            "chalxius-chx-run-ledger-2",
+            "chalxius-chx-run-ledger-3",
+            "chalxius-chx-run-ledger-4",
+        ]
+        for index, revision in enumerate(revisions, 1):
+            with self.subTest(revision=revision), patch(
+                "chx_ledger.CONTRACT_REVISION", revision
+            ):
+                ledger = Path(
+                    start_ledger(
+                        root=self.root,
+                        task="Preserve historical append semantics.",
+                        run_id=f"run-historical-{index:03d}",
+                    )["ledger_path"]
+                )
+            record_issue(ledger, self._issue())
+            dispose_issue(
+                ledger,
+                issue_id="CHX-001",
+                disposition={
+                    "status": "resolved",
+                    "reason": "Historical semantics remain appendable.",
+                    "regression_evidence": ["historical-round-trip:PASS"],
+                },
+            )
+            status = close_ledger(ledger)
+            self.assertEqual(status["contract_revision"], revision)
+            self.assertNotIn("repair_gate", status)
+            events = [
+                json.loads(line)
+                for line in ledger.read_text(encoding="utf-8").splitlines()
+            ]
+            expected = (
+                ["run_started", "issue_observed", "issue_disposition", "run_closed"]
+                if index <= 2
+                else [
+                    "run_started",
+                    "finding_observed",
+                    "issue_observed",
+                    "finding_reconciled",
+                    "issue_disposition",
+                    "run_closed",
+                ]
+            )
+            self.assertEqual([event["event"] for event in events], expected)
+            self.assertEqual(
+                "predecessor_lineage" in events[0],
+                revision == "chalxius-chx-run-ledger-4",
+            )
 
     def test_schema_rejects_ordinary_or_unanchored_error_notes(self) -> None:
         ledger = self._started()
@@ -284,6 +560,81 @@ class CHXRunLedgerTests(unittest.TestCase):
                 task="Forbidden placement",
                 run_id="run-forbidden-001",
             )
+
+    def test_revision_five_repair_cli_round_trip(self) -> None:
+        ledger = self._started("run-repair-cli-001")
+        record_issue(ledger, self._issue())
+        inputs = Path(self.temporary.name) / "repair-inputs"
+        inputs.mkdir()
+        reconnaissance_path = inputs / "reconnaissance.json"
+        tactical_path = inputs / "tactical.json"
+        integrated_path = inputs / "integrated.json"
+        reconnaissance_path.write_text(
+            json.dumps(self._reconnaissance_report(), sort_keys=True),
+            encoding="utf-8",
+        )
+        tactical_path.write_text(
+            json.dumps(self._tactical(), sort_keys=True),
+            encoding="utf-8",
+        )
+        integrated_path.write_text(
+            json.dumps(self._integration(["CHX-001"]), sort_keys=True),
+            encoding="utf-8",
+        )
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                main(
+                    [
+                        "record-reconnaissance",
+                        "--ledger",
+                        str(ledger),
+                        "--input",
+                        str(reconnaissance_path),
+                    ]
+                ),
+                0,
+            )
+        reconnaissance_id = json.loads(output.getvalue())[
+            "reconnaissance_id"
+        ]
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                main(
+                    [
+                        "record-tactical-repair",
+                        "--ledger",
+                        str(ledger),
+                        "--issue-id",
+                        "CHX-001",
+                        "--reconnaissance-id",
+                        reconnaissance_id,
+                        "--input",
+                        str(tactical_path),
+                    ]
+                ),
+                0,
+            )
+        self.assertEqual(json.loads(output.getvalue())["issue_id"], "CHX-001")
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                main(
+                    [
+                        "record-integrated-repair",
+                        "--ledger",
+                        str(ledger),
+                        "--input",
+                        str(integrated_path),
+                    ]
+                ),
+                0,
+            )
+        self.assertEqual(
+            json.loads(output.getvalue())["included_issue_ids"],
+            ["CHX-001"],
+        )
 
     def test_symlink_paths_are_rejected(self) -> None:
         real_root = Path(self.temporary.name) / "real-host-state"
@@ -401,6 +752,7 @@ class CHXRunLedgerTests(unittest.TestCase):
     def test_successor_carries_transitive_issue_lineage_across_empty_hop(self) -> None:
         predecessor = self._started("run-lineage-predecessor-001")
         record_issue(predecessor, self._issue())
+        self._repair_chain(predecessor, ["CHX-001"])
         dispose_issue(
             predecessor,
             issue_id="CHX-001",
@@ -504,6 +856,7 @@ class CHXRunLedgerTests(unittest.TestCase):
 
         predecessor = self._started("run-public-predecessor-001")
         record_issue(predecessor, self._issue())
+        self._repair_chain(predecessor, ["CHX-001"])
         dispose_issue(
             predecessor,
             issue_id="CHX-001",
@@ -525,6 +878,7 @@ class CHXRunLedgerTests(unittest.TestCase):
         successor_issue = self._issue()
         successor_issue["audit_anchors"] = ["successor-publication:PASS"]
         record_issue(successor, successor_issue)
+        self._repair_chain(successor, ["CHX-002"])
         dispose_issue(
             successor,
             issue_id="CHX-002",

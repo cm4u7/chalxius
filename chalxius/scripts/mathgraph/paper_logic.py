@@ -54,6 +54,11 @@ from .paper_logic_contracts import (
 )
 
 
+PAPER_SUCCESSOR_TOPOLOGY_CONTRACT_REVISION = (
+    "chalxius-paper-successor-topology-1"
+)
+
+
 _FEATURE_FIELDS = {
     "schema_version",
     "feature_revision",
@@ -108,6 +113,7 @@ _REVISION_FIELDS = {
     "required_review_profiles",
     "truth_effect",
 }
+_REVISION_OPTIONAL_FIELDS = {"source_role", "successor_topology_receipt"}
 _REVIEW_FIELDS = {
     "schema_version",
     "feature_revision",
@@ -181,9 +187,19 @@ class PaperLogicStore:
     explicit mirror projection; neither changes this store's authority.
     """
 
-    def __init__(self, project_root: Path | str, *, owner: Any | None = None) -> None:
+    def __init__(
+        self,
+        project_root: Path | str,
+        *,
+        owner: Any | None = None,
+        _inspection_cache: dict[tuple[Any, ...], Any] | None = None,
+    ) -> None:
         self.project_root = Path(project_root).resolve()
         self.owner = owner
+        # A caller may supply this only for one read-only inspection command.
+        # Nothing is persisted and a normal mutable PaperLogicStore never
+        # retains validation results across operations.
+        self._inspection_cache = _inspection_cache
         self.root = self.project_root / "paper_logic"
         self.feature_path = self.root / "store.json"
         self.artifacts_dir = self.root / "artifacts" / "by-sha256"
@@ -195,6 +211,17 @@ class PaperLogicStore:
         self.snapshots_dir = self.root / "snapshots" / "by-id"
         self.bridges_dir = self.root / "bridges" / "by-id"
         self.projections_dir = self.root / "projections" / "by-id"
+
+    def _inspection_view(self) -> "PaperLogicStore":
+        """Return this read view or a one-command ephemeral cached view."""
+
+        if self._inspection_cache is not None:
+            return self
+        return PaperLogicStore(
+            self.project_root,
+            owner=self.owner,
+            _inspection_cache={},
+        )
 
     @staticmethod
     def _write_bytes_once(path: Path, payload: bytes) -> None:
@@ -264,6 +291,12 @@ class PaperLogicStore:
         return list(value)
 
     def _project(self) -> dict[str, Any]:
+        cache_key = ("project",)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         path = self.project_root / "project.json"
         if path.is_symlink() or not path.is_file():
             raise ValueError("paper-logic project.json is missing or unsafe")
@@ -272,9 +305,17 @@ class PaperLogicStore:
             raise ValueError(
                 "Paper Logic Graph requires a workflow-evidence V4 or V5 project"
             )
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = payload
         return payload
 
     def _feature(self) -> dict[str, Any]:
+        cache_key = ("feature",)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         payload = self._read_json(self.feature_path)
         if set(payload) not in (
             _FEATURE_FIELDS,
@@ -302,6 +343,8 @@ class PaperLogicStore:
         ] != PAPER_RESEARCH_DRAFT_CONTRACT_REVISION:
             raise ValueError("paper-logic research-draft contract mismatch")
         require_string(payload, "initialized_by")
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = payload
         return payload
 
     def initialize(self, *, actor: str) -> dict[str, Any]:
@@ -1552,6 +1595,271 @@ class PaperLogicStore:
             return value
         raise ValueError(f"paper edge endpoint is unknown: {value}")
 
+    def _research_draft_successor_topology_receipt(
+        self,
+        *,
+        paper_id: str,
+        domain_profile: str,
+        source_role: str,
+        supersedes_snapshot_id: str,
+        local_nodes: dict[str, dict[str, Any]],
+        input_edges: list[dict[str, Any]],
+        bundle_sha256: str,
+    ) -> dict[str, Any]:
+        """Validate one exact current successor and seal its retained topology.
+
+        This is the authoritative Paper Logic check.  Standalone pipeline
+        receipts may help construct the bundle, but stage and freeze both call
+        this method over their own immutable bytes.  It therefore closes the
+        stage/freeze race without transferring any Fact authority.
+        """
+
+        heads = self.current_snapshot_heads(
+            paper_id=paper_id,
+            graph_kind="logic",
+            domain_profile=domain_profile,
+            source_role=source_role,
+        )
+        head_ids = [item["snapshot_id"] for item in heads]
+        successor_local_nodes = sorted(
+            (local_id, item["object_type"])
+            for local_id, item in local_nodes.items()
+        )
+        successor_relations = sorted(
+            canonical_json_bytes(item).decode("utf-8")
+            for item in input_edges
+        )
+        successor_premise_order = sorted(
+            (
+                local_id,
+                tuple(item["payload"].get("premise_ids", [])),
+            )
+            for local_id, item in local_nodes.items()
+            if item["object_type"] == "inference"
+        )
+
+        predecessor_manifest_sha256 = ""
+        predecessor_local_nodes: list[tuple[str, str]] = []
+        predecessor_relations: list[str] = []
+        predecessor_premise_order: list[tuple[str, tuple[str, ...]]] = []
+        if supersedes_snapshot_id:
+            if head_ids != [supersedes_snapshot_id]:
+                raise ValueError(
+                    "research-draft successor must bind the unique current "
+                    "Logic head: " + ", ".join(head_ids)
+                )
+            predecessor_manifest = self.snapshot_manifest(
+                supersedes_snapshot_id
+            )
+            predecessor_path = (
+                self.snapshots_dir / supersedes_snapshot_id / "manifest.json"
+            )
+            predecessor_manifest_sha256 = sha256_bytes(
+                predecessor_path.read_bytes()
+            )
+            predecessor_nodes, predecessor_edges = self.snapshot_objects(
+                supersedes_snapshot_id
+            )
+            predecessor_local_to_object: dict[str, str] = {}
+            for local_map in predecessor_manifest["local_id_maps"].values():
+                for local_id, object_id in local_map.items():
+                    previous = predecessor_local_to_object.get(local_id)
+                    if previous is not None and previous != object_id:
+                        raise ValueError(
+                            "research-draft predecessor local identity is ambiguous"
+                        )
+                    predecessor_local_to_object[local_id] = object_id
+            object_to_local = {
+                object_id: local_id
+                for local_id, object_id in predecessor_local_to_object.items()
+            }
+            if len(object_to_local) != len(predecessor_local_to_object):
+                raise ValueError(
+                    "research-draft predecessor local identity is not one-to-one"
+                )
+            predecessor_local_nodes = sorted(
+                (
+                    local_id,
+                    predecessor_nodes[object_id]["object_type"],
+                )
+                for local_id, object_id in predecessor_local_to_object.items()
+                if local_id != "__source__"
+            )
+            missing_nodes = sorted(
+                set(predecessor_local_nodes).difference(successor_local_nodes)
+            )
+            if missing_nodes:
+                raise ValueError(
+                    "research-draft successor drops or retypes predecessor "
+                    "local nodes: "
+                    + ", ".join(local_id for local_id, _ in missing_nodes)
+                )
+            predecessor_relations = []
+            for edge in predecessor_edges.values():
+                if (
+                    edge["source_id"] not in object_to_local
+                    or edge["target_id"] not in object_to_local
+                ):
+                    raise ValueError(
+                        "research-draft predecessor relation lacks local identity"
+                    )
+                predecessor_relations.append(
+                    canonical_json_bytes(
+                        {
+                            "relation_type": edge["relation_type"],
+                            "source": object_to_local[edge["source_id"]],
+                            "target": object_to_local[edge["target_id"]],
+                            "payload": edge["payload"],
+                        }
+                    ).decode("utf-8")
+                )
+            predecessor_relations.sort()
+            missing_relations = sorted(
+                set(predecessor_relations).difference(successor_relations)
+            )
+            predecessor_premise_order = sorted(
+                (
+                    local_id,
+                    tuple(
+                        predecessor_nodes[object_id]["payload"].get(
+                            "premise_ids", []
+                        )
+                    ),
+                )
+                for local_id, object_id in predecessor_local_to_object.items()
+                if local_id != "__source__"
+                and predecessor_nodes[object_id]["object_type"] == "inference"
+            )
+            missing_premise_order = sorted(
+                set(predecessor_premise_order).difference(
+                    successor_premise_order
+                )
+            )
+            if missing_premise_order:
+                raise ValueError(
+                    "research-draft successor changes predecessor premise order: "
+                    + ", ".join(
+                        local_id for local_id, _ in missing_premise_order
+                    )
+                )
+            if missing_relations:
+                raise ValueError(
+                    "research-draft successor drops or reorders predecessor "
+                    f"relations: {len(missing_relations)} missing"
+                )
+            resolution = "exact_current_logic_successor"
+        else:
+            if head_ids:
+                raise ValueError(
+                    "research-draft Logic is not a true first graph; bind the "
+                    "unique current predecessor: " + ", ".join(head_ids)
+                )
+            resolution = "true_first_graph"
+
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": PAPER_SUCCESSOR_TOPOLOGY_CONTRACT_REVISION,
+            "project_id": self._feature()["project_id"],
+            "paper_id": paper_id,
+            "graph_kind": "logic",
+            "domain_profile": domain_profile,
+            "source_role": source_role,
+            "resolution": resolution,
+            "supersedes_snapshot_id": supersedes_snapshot_id,
+            "predecessor_manifest_sha256": predecessor_manifest_sha256,
+            "predecessor_local_nodes_sha256": sha256_json(
+                predecessor_local_nodes
+            ),
+            "predecessor_relations_sha256": sha256_json(
+                predecessor_relations
+            ),
+            "predecessor_premise_order_sha256": sha256_json(
+                [
+                    {"local_id": local_id, "premise_ids": list(premises)}
+                    for local_id, premises in predecessor_premise_order
+                ]
+            ),
+            "successor_local_nodes_sha256": sha256_json(
+                successor_local_nodes
+            ),
+            "successor_relations_sha256": sha256_json(successor_relations),
+            "successor_premise_order_sha256": sha256_json(
+                [
+                    {"local_id": local_id, "premise_ids": list(premises)}
+                    for local_id, premises in successor_premise_order
+                ]
+            ),
+            "bundle_sha256": bundle_sha256,
+            "historical_rewrite": False,
+            "truth_effect": "none",
+        }
+        return {
+            **semantic,
+            "receipt_id": "pst-" + sha256_json(semantic),
+        }
+
+    @staticmethod
+    def _validate_successor_topology_receipt(
+        receipt: Any,
+        *,
+        revision: dict[str, Any],
+    ) -> dict[str, Any]:
+        required = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "paper_id",
+            "graph_kind",
+            "domain_profile",
+            "source_role",
+            "resolution",
+            "supersedes_snapshot_id",
+            "predecessor_manifest_sha256",
+            "predecessor_local_nodes_sha256",
+            "predecessor_relations_sha256",
+            "predecessor_premise_order_sha256",
+            "successor_local_nodes_sha256",
+            "successor_relations_sha256",
+            "successor_premise_order_sha256",
+            "bundle_sha256",
+            "historical_rewrite",
+            "truth_effect",
+            "receipt_id",
+        }
+        require_exact_keys(
+            receipt,
+            required=required,
+            label="paper successor topology receipt",
+        )
+        semantic = {
+            key: value for key, value in receipt.items() if key != "receipt_id"
+        }
+        if (
+            receipt["schema_version"] != 1
+            or receipt["contract_revision"]
+            != PAPER_SUCCESSOR_TOPOLOGY_CONTRACT_REVISION
+            or receipt["project_id"] != revision["project_id"]
+            or receipt["paper_id"] != revision["paper_id"]
+            or receipt["graph_kind"] != "logic"
+            or receipt["domain_profile"] != revision["domain_profile"]
+            or receipt["source_role"] != "research_draft"
+            or receipt["supersedes_snapshot_id"]
+            != revision["supersedes_snapshot_id"]
+            or receipt["bundle_sha256"] != revision["bundle_sha256"]
+            or receipt["historical_rewrite"] is not False
+            or receipt["truth_effect"] != "none"
+            or receipt["receipt_id"] != "pst-" + sha256_json(semantic)
+        ):
+            raise ValueError("paper successor topology receipt binding drifted")
+        expected_resolution = (
+            "exact_current_logic_successor"
+            if revision["supersedes_snapshot_id"]
+            else "true_first_graph"
+        )
+        if receipt["resolution"] != expected_resolution:
+            raise ValueError("paper successor topology resolution drifted")
+        return receipt
+
     def stage(
         self,
         bundle: dict[str, Any],
@@ -1646,6 +1954,14 @@ class PaperLogicStore:
                 raise ValueError(
                     "superseded snapshot kind/paper binding mismatch"
                 )
+            if strict_research_draft and (
+                superseded["domain_profile"] != domain_profile
+                or superseded.get("source_role", "legacy_unspecified")
+                != source_role
+            ):
+                raise ValueError(
+                    "research-draft successor changes domain or source role"
+                )
         artifact = Path(artifact_path).expanduser().resolve()
         if artifact.is_symlink() or not artifact.is_file():
             raise ValueError("paper source artifact is missing or unsafe")
@@ -1693,6 +2009,19 @@ class PaperLogicStore:
             graph_kind=graph_kind,
         )
         bundle_sha256 = sha256_json(bundle)
+        successor_topology_receipt: dict[str, Any] | None = None
+        if strict_research_draft and graph_kind == "logic":
+            successor_topology_receipt = (
+                self._research_draft_successor_topology_receipt(
+                    paper_id=paper_id,
+                    domain_profile=domain_profile,
+                    source_role=source_role,
+                    supersedes_snapshot_id=supersedes_snapshot_id,
+                    local_nodes=local_nodes,
+                    input_edges=input_edges,
+                    bundle_sha256=bundle_sha256,
+                )
+            )
         provenance = {
             "builder": builder,
             "builder_context_id": builder_context_id,
@@ -1804,6 +2133,11 @@ class PaperLogicStore:
             "required_review_profiles": list(
                 REVIEW_PROFILES_BY_GRAPH_KIND[graph_kind]
             ),
+            **(
+                {"successor_topology_receipt": successor_topology_receipt}
+                if successor_topology_receipt is not None
+                else {}
+            ),
             "truth_effect": "none",
         }
         revision_id = "plr-" + sha256_json(revision_body)
@@ -1827,11 +2161,17 @@ class PaperLogicStore:
         }
 
     def revision(self, revision_id: str) -> dict[str, Any]:
+        cache_key = ("revision", revision_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         revision = self._read_json(self._revision_path(revision_id))
         require_exact_keys(
             revision,
             required=_REVISION_FIELDS,
-            optional={"source_role"},
+            optional=_REVISION_OPTIONAL_FIELDS,
             label="paper graph revision",
         )
         if (
@@ -1880,11 +2220,40 @@ class PaperLogicStore:
             raise ValueError("paper graph revision local_id_map is invalid")
         if revision["truth_effect"] != "none":
             raise ValueError("paper graph revision truth_effect must be none")
+        strict_research_draft_logic = (
+            self._feature().get("research_draft_contract_revision")
+            == PAPER_RESEARCH_DRAFT_CONTRACT_REVISION
+            and revision["graph_kind"] == "logic"
+            and revision.get("source_role") == "research_draft"
+        )
+        if strict_research_draft_logic:
+            if "successor_topology_receipt" not in revision:
+                raise ValueError(
+                    "strict research-draft revision lacks authoritative "
+                    "successor topology receipt; restage it"
+                )
+            self._validate_successor_topology_receipt(
+                revision["successor_topology_receipt"],
+                revision=revision,
+            )
+        elif "successor_topology_receipt" in revision:
+            raise ValueError(
+                "successor topology receipt is valid only for strict "
+                "research-draft Logic"
+            )
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = revision
         return revision
 
     def _revision_objects(
         self, revision: dict[str, Any]
     ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+        cache_key = ("revision_objects", revision["revision_id"])
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         nodes: dict[str, dict[str, Any]] = {}
         edges: dict[str, dict[str, Any]] = {}
         for entry in revision["node_entries"]:
@@ -1919,13 +2288,26 @@ class PaperLogicStore:
                 raise ValueError(
                     f"paper edge {edge['object_id']} has a dangling endpoint"
                 )
-        return nodes, edges
+        result = (nodes, edges)
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def _expected_review_object_ids(
         self,
         revision: dict[str, Any],
         profile: str,
     ) -> set[str]:
+        cache_key = (
+            "expected_review_object_ids",
+            revision["revision_id"],
+            profile,
+        )
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         nodes, edges = self._revision_objects(revision)
         if profile == "source_fidelity":
             result = {
@@ -1944,9 +2326,11 @@ class PaperLogicStore:
                 for edge_id, edge in edges.items()
                 if edge["relation_type"] in {"contains", "anchors"}
             )
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = result
             return result
         if profile == "graph_structure":
-            return {
+            result = {
                 object_id
                 for object_id, node in nodes.items()
                 if node["plane"] == "paper_reconstruction"
@@ -1955,10 +2339,19 @@ class PaperLogicStore:
                 for object_id, edge in edges.items()
                 if edge["plane"] == "paper_reconstruction"
             }
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = result
+            return result
         if profile == "target_binding":
-            return set(nodes) | set(edges)
+            result = set(nodes) | set(edges)
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = result
+            return result
         if profile == "audit_reasoning":
-            return set(nodes)
+            result = set(nodes)
+            if self._inspection_cache is not None:
+                self._inspection_cache[cache_key] = result
+            return result
         raise ValueError(f"unknown paper review profile: {profile}")
 
     def _validate_review_payload(
@@ -2126,16 +2519,43 @@ class PaperLogicStore:
         }
 
     def review(self, review_id: str) -> dict[str, Any]:
+        cache_key = ("review", review_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         payload = self._read_json(self._review_path(review_id))
-        return self._validate_review_payload(payload, require_id=True)
+        validated = self._validate_review_payload(payload, require_id=True)
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = validated
+        return validated
 
     def reviews_for_revision(self, revision_id: str) -> list[dict[str, Any]]:
         validate_paper_revision_id(revision_id)
-        result: list[dict[str, Any]] = []
-        for path in sorted(self.reviews_dir.glob("plv-*.json")):
-            review = self.review(path.stem)
-            if review["revision_id"] == revision_id:
-                result.append(review)
+        cache_key = ("reviews_for_revision", revision_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
+        if self._inspection_cache is None:
+            result: list[dict[str, Any]] = []
+            for path in sorted(self.reviews_dir.glob("plv-*.json")):
+                review = self.review(path.stem)
+                if review["revision_id"] == revision_id:
+                    result.append(review)
+            return result
+        grouped_key = ("reviews_grouped",)
+        grouped = self._inspection_cache.get(grouped_key)
+        if grouped is None:
+            grouped = {}
+            for path in sorted(self.reviews_dir.glob("plv-*.json")):
+                review = self.review(path.stem)
+                grouped.setdefault(review["revision_id"], []).append(review)
+            self._inspection_cache[grouped_key] = grouped
+        result = list(grouped.get(revision_id, []))
+        self._inspection_cache[cache_key] = result
         return result
 
     def _selected_reviews(
@@ -2282,8 +2702,63 @@ class PaperLogicStore:
             raise ValueError(
                 "paper graph has unresolved load-bearing coverage units"
             )
-        selected_reviews = self._selected_reviews(revision)
         new_nodes, new_edges = self._revision_objects(revision)
+        strict_research_draft_logic = (
+            self._feature().get("research_draft_contract_revision")
+            == PAPER_RESEARCH_DRAFT_CONTRACT_REVISION
+            and revision["graph_kind"] == "logic"
+            and revision.get("source_role") == "research_draft"
+        )
+        if strict_research_draft_logic:
+            reverse_local_map = {
+                object_id: local_id
+                for local_id, object_id in revision["local_id_map"].items()
+            }
+            if len(reverse_local_map) != len(revision["local_id_map"]):
+                raise ValueError(
+                    "research-draft revision local identity is not one-to-one"
+                )
+            local_nodes = {
+                local_id: {
+                    "local_id": local_id,
+                    "object_type": new_nodes[object_id]["object_type"],
+                    "payload": new_nodes[object_id]["payload"],
+                }
+                for object_id, local_id in reverse_local_map.items()
+                if local_id != "__source__"
+            }
+            input_edges: list[dict[str, Any]] = []
+            for edge in new_edges.values():
+                if (
+                    edge["source_id"] not in reverse_local_map
+                    or edge["target_id"] not in reverse_local_map
+                ):
+                    raise ValueError(
+                        "research-draft revision relation lacks local identity"
+                    )
+                input_edges.append(
+                    {
+                        "relation_type": edge["relation_type"],
+                        "source": reverse_local_map[edge["source_id"]],
+                        "target": reverse_local_map[edge["target_id"]],
+                        "payload": edge["payload"],
+                    }
+                )
+            expected_receipt = self._research_draft_successor_topology_receipt(
+                paper_id=revision["paper_id"],
+                domain_profile=revision["domain_profile"],
+                source_role=revision["source_role"],
+                supersedes_snapshot_id=revision["supersedes_snapshot_id"],
+                local_nodes=local_nodes,
+                input_edges=input_edges,
+                bundle_sha256=revision["bundle_sha256"],
+            )
+            if revision["successor_topology_receipt"] != expected_receipt:
+                raise ValueError(
+                    "paper successor topology receipt does not match immutable "
+                    "revision bytes"
+                )
+        selected_reviews = self._selected_reviews(revision)
         nodes: dict[str, dict[str, Any]] = {}
         edges: dict[str, dict[str, Any]] = {}
         revision_ids: list[str] = []
@@ -2423,6 +2898,12 @@ class PaperLogicStore:
         return result
 
     def snapshot_manifest(self, snapshot_id: str) -> dict[str, Any]:
+        cache_key = ("snapshot_manifest", snapshot_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         directory = self._snapshot_path(snapshot_id)
         if directory.is_symlink() or not directory.is_dir():
             raise ValueError("paper snapshot is missing or unsafe")
@@ -2469,6 +2950,8 @@ class PaperLogicStore:
             and manifest["source_role"] not in PAPER_SOURCE_ROLES
         ):
             raise ValueError("paper snapshot source_role is invalid")
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = manifest
         return manifest
 
     def snapshot_source_role(self, snapshot_id: str) -> str:
@@ -2477,6 +2960,389 @@ class PaperLogicStore:
         return self.snapshot_manifest(snapshot_id).get(
             "source_role", "legacy_unspecified"
         )
+
+    def current_snapshot_heads(
+        self,
+        *,
+        paper_id: str,
+        graph_kind: str,
+        domain_profile: str | None = None,
+        source_role: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return exact current heads for one Paper graph identity.
+
+        This is the sole public head resolver for Paper succession.  Callers
+        must not reproduce snapshot-directory scans with subtly different
+        filtering or supersession semantics.
+        """
+
+        if not isinstance(paper_id, str) or not paper_id.strip():
+            raise ValueError("Paper head lookup paper_id must be nonempty")
+        if graph_kind not in GRAPH_KINDS:
+            raise ValueError("Paper head lookup graph_kind is invalid")
+        if domain_profile is not None and domain_profile not in DOMAIN_PROFILES:
+            raise ValueError("Paper head lookup domain_profile is invalid")
+        if source_role is not None and source_role not in {
+            *PAPER_SOURCE_ROLES,
+            "legacy_unspecified",
+        }:
+            raise ValueError("Paper head lookup source_role is invalid")
+        manifests: dict[str, dict[str, Any]] = {}
+        for path in sorted(self.snapshots_dir.glob("pls-*")):
+            if path.is_symlink() or not path.is_dir():
+                raise ValueError(f"unsafe Paper snapshot entry: {path}")
+            manifest = self.snapshot_manifest(path.name)
+            if (
+                manifest["paper_id"] != paper_id
+                or manifest["graph_kind"] != graph_kind
+                or (
+                    domain_profile is not None
+                    and manifest["domain_profile"] != domain_profile
+                )
+                or (
+                    source_role is not None
+                    and manifest.get("source_role", "legacy_unspecified")
+                    != source_role
+                )
+            ):
+                continue
+            manifests[manifest["snapshot_id"]] = manifest
+        superseded = {
+            manifest["supersedes_snapshot_id"]
+            for manifest in manifests.values()
+            if manifest["supersedes_snapshot_id"]
+        }
+        unknown = sorted(superseded.difference(manifests))
+        if unknown:
+            raise ValueError(
+                "Paper head lineage leaves the exact paper/kind/domain/source "
+                "identity: " + ", ".join(unknown)
+            )
+        return [
+            manifests[snapshot_id]
+            for snapshot_id in sorted(set(manifests).difference(superseded))
+        ]
+
+    def require_current_snapshot(
+        self,
+        snapshot_id: str,
+    ) -> dict[str, Any]:
+        """Require one snapshot to be the unique current exact-identity head."""
+
+        manifest = self.snapshot_manifest(snapshot_id)
+        heads = self.current_snapshot_heads(
+            paper_id=manifest["paper_id"],
+            graph_kind=manifest["graph_kind"],
+            domain_profile=manifest["domain_profile"],
+            source_role=manifest.get("source_role", "legacy_unspecified"),
+        )
+        if [item["snapshot_id"] for item in heads] != [snapshot_id]:
+            raise ValueError(
+                "Paper snapshot is not the unique current exact-identity head: "
+                + ", ".join(item["snapshot_id"] for item in heads)
+            )
+        return manifest
+
+    def successor_changed_node_ids(
+        self,
+        snapshot_id: str,
+        *,
+        require_current: bool = True,
+    ) -> list[str]:
+        """Derive the exact semantic delta from a snapshot's predecessor.
+
+        Content-addressed object ids include staging provenance, so an object-id
+        comparison would mark every retained node as changed.  This resolver
+        instead compares local identity, object type, payload and local
+        relation signatures.  Deleted predecessor topology is ambiguous for a
+        selective audit and therefore fails closed to the caller's full-audit
+        route.
+        """
+
+        manifest = (
+            self.require_current_snapshot(snapshot_id)
+            if require_current
+            else self.snapshot_manifest(snapshot_id)
+        )
+        if manifest["graph_kind"] != "logic":
+            raise ValueError("Paper semantic delta supports Logic only")
+        predecessor_id = manifest["supersedes_snapshot_id"]
+        if not predecessor_id:
+            raise ValueError(
+                "Paper snapshot has no predecessor; use full-snapshot audit"
+            )
+        predecessor = self.snapshot_manifest(predecessor_id)
+        if (
+            predecessor["paper_id"] != manifest["paper_id"]
+            or predecessor["graph_kind"] != "logic"
+            or predecessor["domain_profile"] != manifest["domain_profile"]
+            or predecessor.get("source_role", "legacy_unspecified")
+            != manifest.get("source_role", "legacy_unspecified")
+        ):
+            raise ValueError(
+                "Paper predecessor identity is ambiguous; use full-snapshot audit"
+            )
+
+        current_nodes, current_edges = self.snapshot_objects(snapshot_id)
+        predecessor_nodes, predecessor_edges = self.snapshot_objects(
+            predecessor_id
+        )
+
+        def local_maps(
+            snapshot: dict[str, Any],
+        ) -> tuple[dict[str, str], dict[str, str]]:
+            local_to_object: dict[str, str] = {}
+            for local_map in snapshot["local_id_maps"].values():
+                for local_id, object_id in local_map.items():
+                    previous = local_to_object.get(local_id)
+                    if previous is not None and previous != object_id:
+                        raise ValueError(
+                            "Paper local identity is ambiguous; use full-snapshot audit"
+                        )
+                    local_to_object[local_id] = object_id
+            object_to_local = {
+                object_id: local_id
+                for local_id, object_id in local_to_object.items()
+            }
+            if len(object_to_local) != len(local_to_object):
+                raise ValueError(
+                    "Paper local identity is not one-to-one; use full-snapshot audit"
+                )
+            return local_to_object, object_to_local
+
+        current_local, current_reverse = local_maps(manifest)
+        predecessor_local, predecessor_reverse = local_maps(predecessor)
+        missing_local_ids = sorted(
+            set(predecessor_local).difference(current_local).difference(
+                {"__source__"}
+            )
+        )
+        if missing_local_ids:
+            raise ValueError(
+                "Paper successor deletes predecessor nodes; use full-snapshot audit: "
+                + ", ".join(missing_local_ids)
+            )
+
+        changed_local_ids: set[str] = set()
+        for local_id, object_id in current_local.items():
+            if local_id == "__source__":
+                continue
+            prior_id = predecessor_local.get(local_id)
+            if prior_id is None:
+                changed_local_ids.add(local_id)
+                continue
+            current_semantic = {
+                "object_type": current_nodes[object_id]["object_type"],
+                "payload": current_nodes[object_id]["payload"],
+            }
+            prior_semantic = {
+                "object_type": predecessor_nodes[prior_id]["object_type"],
+                "payload": predecessor_nodes[prior_id]["payload"],
+            }
+            if current_semantic != prior_semantic:
+                changed_local_ids.add(local_id)
+
+        def relation_map(
+            edges: dict[str, dict[str, Any]],
+            reverse: dict[str, str],
+        ) -> dict[str, tuple[str, str]]:
+            result: dict[str, tuple[str, str]] = {}
+            for edge in edges.values():
+                if (
+                    edge["source_id"] not in reverse
+                    or edge["target_id"] not in reverse
+                ):
+                    raise ValueError(
+                        "Paper relation lacks local identity; use full-snapshot audit"
+                    )
+                source = reverse[edge["source_id"]]
+                target = reverse[edge["target_id"]]
+                signature = canonical_json_bytes(
+                    {
+                        "relation_type": edge["relation_type"],
+                        "source": source,
+                        "target": target,
+                        "payload": edge["payload"],
+                    }
+                ).decode("utf-8")
+                result[signature] = (source, target)
+            return result
+
+        current_relations = relation_map(current_edges, current_reverse)
+        predecessor_relations = relation_map(
+            predecessor_edges, predecessor_reverse
+        )
+        deleted_relations = sorted(
+            set(predecessor_relations).difference(current_relations)
+        )
+        if deleted_relations:
+            raise ValueError(
+                "Paper successor deletes predecessor relations; use full-snapshot audit"
+            )
+        for signature in set(current_relations).difference(
+            predecessor_relations
+        ):
+            source, target = current_relations[signature]
+            if source != "__source__":
+                changed_local_ids.add(source)
+            if target != "__source__":
+                changed_local_ids.add(target)
+        changed_ids = sorted(
+            current_local[local_id] for local_id in changed_local_ids
+        )
+        if not changed_ids:
+            raise ValueError(
+                "Paper successor has no semantic graph delta; no selective audit is needed"
+            )
+        return changed_ids
+
+    def changed_surface(
+        self,
+        *,
+        snapshot_id: str,
+        changed_node_ids: list[str] | None = None,
+        require_current: bool = True,
+    ) -> dict[str, Any]:
+        """Derive the minimal directional revalidation surface for a Logic DAG.
+
+        The surface contains changed nodes, their downstream conclusions and
+        targets, every load-bearing premise/defeater/definition needed by those
+        conclusions, and exact source anchors.  It never certifies the surface.
+        Unknown or ambiguous local identities fail closed so the caller can
+        request a full-snapshot audit.
+        """
+
+        manifest = (
+            self.require_current_snapshot(snapshot_id)
+            if require_current
+            else self.snapshot_manifest(snapshot_id)
+        )
+        if manifest["graph_kind"] != "logic":
+            raise ValueError(
+                "selective changed-surface audit supports Logic only; use full audit"
+            )
+        if changed_node_ids is None:
+            changed_node_ids = self.successor_changed_node_ids(
+                snapshot_id,
+                require_current=require_current,
+            )
+        if (
+            not isinstance(changed_node_ids, list)
+            or not changed_node_ids
+            or any(
+                not isinstance(item, str) or not item
+                for item in changed_node_ids
+            )
+            or len(changed_node_ids) != len(set(changed_node_ids))
+        ):
+            raise ValueError("changed Paper node ids must be a unique nonempty list")
+        nodes, edges = self.snapshot_objects(snapshot_id)
+        local_to_object: dict[str, str] = {}
+        ambiguous_local_ids: set[str] = set()
+        for local_map in manifest["local_id_maps"].values():
+            for local_id, object_id in local_map.items():
+                previous = local_to_object.get(local_id)
+                if previous is not None and previous != object_id:
+                    ambiguous_local_ids.add(local_id)
+                else:
+                    local_to_object[local_id] = object_id
+        resolved_changed: set[str] = set()
+        for supplied in changed_node_ids:
+            if supplied in ambiguous_local_ids:
+                raise ValueError(
+                    f"changed Paper local id is ambiguous; use full audit: {supplied}"
+                )
+            object_id = supplied if supplied in nodes else local_to_object.get(supplied)
+            if object_id not in nodes:
+                raise ValueError(
+                    f"changed Paper node is unknown; use full audit: {supplied}"
+                )
+            resolved_changed.add(str(object_id))
+
+        by_source: dict[str, list[dict[str, Any]]] = {}
+        by_target: dict[str, list[dict[str, Any]]] = {}
+        for edge in edges.values():
+            by_source.setdefault(edge["source_id"], []).append(edge)
+            by_target.setdefault(edge["target_id"], []).append(edge)
+
+        selected = set(resolved_changed)
+        downstream = set(resolved_changed)
+        pending = list(sorted(resolved_changed))
+        while pending:
+            current = pending.pop()
+            candidates: list[str] = []
+            for edge in by_source.get(current, []):
+                if edge["relation_type"] in {
+                    "premise_of",
+                    "concludes",
+                    "defeats",
+                }:
+                    candidates.append(edge["target_id"])
+            for edge in by_target.get(current, []):
+                if edge["relation_type"] in {
+                    "uses_definition",
+                    "variant_of",
+                    "targets",
+                }:
+                    candidates.append(edge["source_id"])
+            for candidate in candidates:
+                if candidate not in downstream:
+                    downstream.add(candidate)
+                    selected.add(candidate)
+                    pending.append(candidate)
+
+        # Close the exact support surface backwards from every affected
+        # conclusion/inference, then attach its definitions and source anchors.
+        pending = list(sorted(downstream))
+        while pending:
+            current = pending.pop()
+            candidates: list[str] = []
+            for edge in by_target.get(current, []):
+                if edge["relation_type"] in {
+                    "premise_of",
+                    "concludes",
+                    "defeats",
+                }:
+                    candidates.append(edge["source_id"])
+            for edge in by_source.get(current, []):
+                if edge["relation_type"] in {
+                    "anchors",
+                    "uses_definition",
+                    "variant_of",
+                }:
+                    candidates.append(edge["target_id"])
+            for candidate in candidates:
+                if candidate not in selected:
+                    selected.add(candidate)
+                    pending.append(candidate)
+
+        selected_edges = sorted(
+            edge_id
+            for edge_id, edge in edges.items()
+            if edge["source_id"] in selected and edge["target_id"] in selected
+        )
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": "chalxius-paper-changed-surface-1",
+            "project_id": manifest["project_id"],
+            "paper_id": manifest["paper_id"],
+            "snapshot_id": snapshot_id,
+            "snapshot_manifest_sha256": sha256_bytes(
+                (self._snapshot_path(snapshot_id) / "manifest.json").read_bytes()
+            ),
+            "changed_node_ids": sorted(resolved_changed),
+            "downstream_node_ids": sorted(downstream),
+            "audit_node_ids": sorted(selected),
+            "audit_edge_ids": selected_edges,
+            "reused_node_ids": sorted(set(nodes).difference(selected)),
+            "scope_mode": "minimal_dependency_defeater_downstream_closure",
+            "fallback_policy": "full_snapshot_on_unknown_or_ambiguous_identity",
+            "truth_effect": "none",
+        }
+        return {
+            **semantic,
+            "surface_id": "pcs-" + sha256_json(semantic),
+        }
 
     @staticmethod
     def _read_jsonl_objects(
@@ -2512,6 +3378,12 @@ class PaperLogicStore:
     def snapshot_objects(
         self, snapshot_id: str
     ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+        cache_key = ("snapshot_objects", snapshot_id)
+        if (
+            self._inspection_cache is not None
+            and cache_key in self._inspection_cache
+        ):
+            return self._inspection_cache[cache_key]
         manifest = self.snapshot_manifest(snapshot_id)
         directory = self._snapshot_path(snapshot_id)
         nodes = self._read_jsonl_objects(directory / "nodes.jsonl", kind="node")
@@ -2540,7 +3412,10 @@ class PaperLogicStore:
                 raise ValueError(
                     f"paper snapshot edge has dangling endpoint: {object_id}"
                 )
-        return nodes, edges
+        result = (nodes, edges)
+        if self._inspection_cache is not None:
+            self._inspection_cache[cache_key] = result
+        return result
 
     def show(
         self,
@@ -2700,6 +3575,11 @@ class PaperLogicStore:
         }
 
     def status(self, revision_id: str = "") -> dict[str, Any]:
+        if self._inspection_cache is None:
+            return self._inspection_view().status(revision_id)
+        cache_key = ("status", revision_id)
+        if cache_key in self._inspection_cache:
+            return self._inspection_cache[cache_key]
         if revision_id:
             revisions = [self.revision(revision_id)]
         else:
@@ -2761,7 +3641,7 @@ class PaperLogicStore:
                     "snapshot_ids": frozen,
                 }
             )
-        return {
+        result = {
             "feature_revision": PAPER_LOGIC_FEATURE_REVISION,
             "revisions": results,
             "current_snapshot_ids": sorted(
@@ -2772,6 +3652,8 @@ class PaperLogicStore:
             "superseded_snapshot_ids": sorted(superseded),
             "truth_effect": "none",
         }
+        self._inspection_cache[cache_key] = result
+        return result
 
     def link_exploration(
         self,
@@ -3069,6 +3951,8 @@ class PaperLogicStore:
             )
 
     def audit(self, *, blackboard: Any | None = None) -> dict[str, Any]:
+        if self._inspection_cache is None:
+            return self._inspection_view().audit(blackboard=blackboard)
         errors: list[str] = []
         warnings: list[str] = []
         if not self.root.exists():

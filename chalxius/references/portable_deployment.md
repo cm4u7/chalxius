@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.6.4 `Goal-Driven Advisory Recovery` release artifact contains one self-contained `chalxius`
+The 0.6.5 `Integrated Research Continuity` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -36,9 +36,11 @@ python3 scripts/release_validation.py \
 ```
 
 It constructs canonical manifest-only lane copies, isolates temporary and
-runtime-archive state, runs compatible baseline checks in parallel, then runs
-the snapshot-sensitive mutation audit behind a phase barrier. Every lane and the
-source must retain one exact identity. Run
+runtime-archive state, runs the complete mutation-registry applicability check
+beside architecture reconnaissance in phase 1, runs compatible baseline checks
+in parallel only after the cheap gates pass, then runs the snapshot-sensitive
+mutation audit behind a phase barrier. Every lane and the source must retain one
+exact identity. Run
 `python3 scripts/aggressive_bug_audit.py` directly only when the narrower
 mutation evidence is required; it independently suppresses bytecode, compares
 one exact pre/post path-kind-mode-content snapshot, and fails on drift. Before
@@ -74,6 +76,53 @@ audit semantics, the builder runs one full audit. Otherwise it reuses the prior
 audit only when no protected byte is newer than that exact anchor. Either path
 emits one write-once receipt; a changed project, matrix, request, runtime, or
 receipt invalidates it.
+
+Current receipt v2 is stricter than a timestamp anchor. The approved JSON helper
+hashes and parses one byte read; booleans cannot substitute for integer version
+or process-count fields. Every path, digest, timestamp, snapshot revision,
+validation mode, project witness, and runtime binding is checked centrally.
+Exact reuse follows immutable predecessor receipts with a fixed depth limit and
+cycle detection, requires the same project snapshots and terminal maps at every
+link, and must terminate at one valid `single_deep_audit` receipt. It reads that
+lineage only; it never reruns an ancestral audit. Candidate-path identity is
+retained as provenance, while the live installed runtime must match the prior
+receipt's path-independent content and manifest hashes. This is what permits the
+next release generation to reuse a byte-identical installed copy.
+
+The normal one-to-two-minute and uncommon four-minute administrative targets
+are telemetry, not receipt semantics. Crossing either target emits diagnostics
+without termination, downgrade, retry, or approval. A separate explicit finite
+watchdog stops genuinely lost work and produces no receipt.
+
+Administrative cost is reduced in this order:
+
+1. eliminate work at its source: choose the smallest public projection, derive
+   applicability before opening authority, skip an exactly absent optional
+   subsystem, and validate one canonical immutable collection before deriving
+   filtered views; routine `mgraph status` is a bounded dashboard, while
+   `mgraph status --with-audit` explicitly requests the forensic payload;
+2. thread one locally owned aggregate inspection context through every subaudit
+   and reuse only successful projections under the same exact command and
+   snapshot;
+3. measure the remaining real path with bounded timing or profiling before
+   selecting another optimization;
+4. consider a persistent index or genuinely independent isolated parallel lanes
+   only after measurement establishes that command-local elimination and reuse
+   are insufficient. A persistent index requires an explicit invalidation,
+   rebuild, and recovery contract.
+
+This ordering targets agent misoperation, hallucinated retries, accidental broad
+commands, and duplicate call paths rather than hostile external attack.
+Parallelizing duplicate reconstruction is not a repair. The policy does not cache
+failed validation, cross a command or snapshot boundary, relax a release lane,
+or replace a required audit. When profiling a new large project, inspect
+Blackboard graph projection, parallel-verification and research-draft deep reads,
+Paper Evidence Library collection rebuilds, mode/Pulse/experiment summaries, and
+Reader aggregation as possible duplicate-work surfaces; treat them as profiling
+targets until measured, not as authority or defect claims.
+The complete prospective route register, measurement protocol, and fail-closed
+boundaries are maintained in
+[`administrative_cost_playbook.md`](administrative_cost_playbook.md).
 
 Then perform the replacement or rollback with every protected project named
 explicitly:
@@ -149,6 +198,24 @@ the skill. This operational file has no project-audit or truth effect. Close it
 after applicable audits and immediately before final reporting. Report it only when close returns
 `report_required=true`; when false, emit no ledger message at all. See
 `chx_runtime_ledger.md` for the exact commands and causal schema.
+
+## Consult the global PHX route guide
+
+PHX is a private host-global, nontruth reference guide for significant reusable
+architecture routes distilled from CHX and other evidence. Concrete problems
+remain in CHX. A cost or performance CHX repair must persist a PHX search receipt
+before selecting its mechanism and bind that receipt in tactical or integrated
+evidence. Route recording, retrieval, evaluation, and reporting do not authorize
+implementation. Any route that would change active architecture requires an
+informed user consultation recorded before implementation, supporting digest-
+bound evaluation, exact scope and constraints, alternatives, risks, and rollback.
+
+The default ledger root is `~/.codex/chalxius/phx-ledgers/`, owned by the current
+user with private permissions; reports and search receipts remain below that
+root and never enter a research project. A custom root is expert-only and must be
+explicitly authorized. The present consultation record is an auditable agent-
+supplied assertion, not a host-signed approval token, so deployment and cutover
+must continue to obtain explicit user authorization through their own boundary.
 
 This requirement is prospective. A task already running under 0.4.0 keeps its
 original status even if the installed skill changes or it loads some 0.4.1-or-later
@@ -285,10 +352,20 @@ python3 -B "$SKILL_ROOT/scripts/prepare_verifier_capsule.py" \
 
 The materializer recomputes the release and capsule from the project, rejects
 an explicit capsule that differs from those bytes, copies only authorized
-artifacts, and writes a decision template and standalone validator. Run the
-validator inside the neutral capsule before returning `output/review.json`.
-The verifier never records a decision or admits a Fact; those remain gateway
-operations.
+artifacts, and writes a decision template, standalone validator, and host
+submission program. The verifier writes only `output/review-draft.json`. The
+host then runs:
+
+```bash
+python3 -B /absolute/external/verifier-capsule/host/submit_review.py \
+  --capsule-root /absolute/external/verifier-capsule
+```
+
+An invalid draft remains under `output/quarantine/` with structured
+JSON-pointer diagnostics and creates no project effect. The gateway may consume
+`output/review.json` only after the host command returns `formally_returned`
+with its content-addressed receipt. The verifier never records a decision or
+admits a Fact; those remain gateway operations.
 
 ## Optional offline reader page
 

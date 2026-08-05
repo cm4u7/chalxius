@@ -9,11 +9,14 @@ from unittest.mock import patch
 
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.research_draft import (
+    MATHEMATICAL_REFINEMENT_DAG_REVISION,
+    MATHEMATICAL_TARGET_POLICY_REVISION,
     PROFILE_OBLIGATIONS,
     RESEARCH_DRAFT_PLAN_REVISION,
     ResearchDraftManager,
     _profile_obligations,
     failure_surface_uid,
+    validate_mathematical_target_policy,
     validate_term_registry,
 )
 from mathgraph.roles import allowed_commands
@@ -161,6 +164,156 @@ class ResearchDraftContractTests(unittest.TestCase):
                 "reason": "The revised section states the constrained defense explicitly.",
             },
         }
+
+    def _mathematical_plan_and_entry(self) -> tuple[dict, dict]:
+        target = "Determine whether C follows from P1 and P2."
+        domain = "All objects in the exact declared class."
+        policy = validate_mathematical_target_policy(
+            {
+                "contract_revision": MATHEMATICAL_TARGET_POLICY_REVISION,
+                "exact_target_statement": target,
+                "exact_target_statement_sha256": sha256_bytes(
+                    target.encode("utf-8")
+                ),
+                "target_claim_ids": ["c1"],
+                "hypothesis_claim_ids": ["p1", "p2"],
+                "domain_bindings": [
+                    {
+                        "binding_id": "domain-main",
+                        "exact_domain": domain,
+                        "exact_domain_sha256": sha256_bytes(
+                            domain.encode("utf-8")
+                        ),
+                        "source_claim_ids": ["p1", "p2"],
+                    }
+                ],
+                "quantifier_bindings": [],
+                "permitted_exact_target_outcomes": [
+                    "proved",
+                    "disproved",
+                    "unresolved_with_obstruction",
+                ],
+                "target_revision_requires_operator_authorization": True,
+                "partial_progress_policy": (
+                    "typed_refinement_dag_keeps_exact_target_open"
+                ),
+            },
+            available_claim_ids={"p1", "p2", "c1"},
+            exact_target_claim_ids={"c1"},
+        )
+        added_hypothesis = "Additional compactness hypothesis H."
+        weak_statement = "Under P1, P2, and H, conclusion C holds."
+        progress = {
+            "schema_version": 1,
+            "contract_revision": MATHEMATICAL_REFINEMENT_DAG_REVISION,
+            "root_target": {
+                "root_id": "exact-target-root",
+                "exact_target_statement_sha256": policy[
+                    "exact_target_statement_sha256"
+                ],
+                "target_claim_ids": ["c1"],
+                "hypothesis_claim_ids": ["p1", "p2"],
+                "domain_bindings_sha256": sha256_json(policy["domain_bindings"]),
+                "quantifier_bindings_sha256": sha256_json([]),
+                "resolution_status": "unresolved_with_obstruction",
+                "resolution_evidence_ids": [],
+                "obstruction": "The proof uses H, absent from the exact target.",
+                "original_target_open": True,
+            },
+            "nodes": [
+                {
+                    "node_id": "weak-with-H",
+                    "node_type": "added_hypothesis_theorem",
+                    "statement": weak_statement,
+                    "statement_sha256": sha256_bytes(
+                        weak_statement.encode("utf-8")
+                    ),
+                    "resolution_status": "proved",
+                    "evidence_ids": ["proof-weak-with-H"],
+                    "obstruction": "",
+                    "logical_relation_to_original": (
+                        "stronger_hypotheses_than_original"
+                    ),
+                    "refinement_mapping_relation": "weakened_from",
+                    "candidate_fact_id_or_null": "a" * 16,
+                    "hypothesis_deltas": [
+                        {
+                            "dimension": "hypothesis",
+                            "binding_id": "hypothesis-H",
+                            "before": "",
+                            "before_sha256": sha256_bytes(b""),
+                            "after": added_hypothesis,
+                            "after_sha256": sha256_bytes(
+                                added_hypothesis.encode("utf-8")
+                            ),
+                            "change_type": "added",
+                            "rationale": (
+                                "H is exactly the added sufficient hypothesis."
+                            ),
+                        }
+                    ],
+                    "domain_deltas": [],
+                    "quantifier_deltas": [],
+                    "conclusion_strength_deltas": [],
+                    "remaining_gap_to_exact_target": "Remove H without weakening C.",
+                    "truth_effect": "none",
+                }
+            ],
+            "edges": [
+                {
+                    "parent_id": "exact-target-root",
+                    "child_id": "weak-with-H",
+                    "relation": "refines_toward_exact_target",
+                }
+            ],
+            "topological_order": ["exact-target-root", "weak-with-H"],
+            "truth_effect": "none",
+        }
+        plan = {
+            **{
+                key: value
+                for key, value in self.plan.items()
+                if key not in {"stance_policy", "required_profile_obligations"}
+            },
+            "domain_profile": "mathematics",
+            "required_profile_obligations": _profile_obligations("mathematics"),
+            "mathematical_target_policy": policy,
+            "term_registry": [],
+        }
+        entry = {
+            "target_node_id": "pn-target-headline",
+            "node_disposition": "repaired",
+            "disposition_reason": (
+                "A verified weaker theorem is retained without closing the root."
+            ),
+            "research_record_ids": ["mem-research-1"],
+            "mathematical_progress": progress,
+            "successor_mappings": [
+                {
+                    "successor_id": "a" * 16,
+                    "relation_kind": "weakened_from",
+                    "reason": "The added-hypothesis theorem is weaker progress only.",
+                }
+            ],
+            "term_sense_refs": [],
+            "profile_obligations": [
+                {
+                    "obligation_kind": kind,
+                    "status": "satisfied",
+                    "evidence_ids": [f"evidence-{kind}"],
+                    "reason": f"Exact {kind} evidence is bound.",
+                }
+                for kind in plan["required_profile_obligations"]
+            ],
+            "failure_surfaces": [],
+            "writing_coverage": {
+                "artifact_relpath": self.writing.relative_to(self.root).as_posix(),
+                "artifact_sha256": sha256_bytes(self.writing.read_bytes()),
+                "section_ids": ["mathematical-progress"],
+                "reason": "The exact target and remaining gap are explicit.",
+            },
+        }
+        return plan, entry
 
     def test_term_registry_is_sense_aware_and_unicode_normalized(self) -> None:
         registry = validate_term_registry(
@@ -320,6 +473,59 @@ class ResearchDraftContractTests(unittest.TestCase):
         self.assertEqual(_profile_obligations("mixed"), expected_mixed)
         with self.assertRaisesRegex(ValueError, "unsupported"):
             _profile_obligations("generic")
+
+    def test_mathematics_entry_has_no_stance_and_keeps_weaker_result_open(self) -> None:
+        plan, entry = self._mathematical_plan_and_entry()
+        normalized = self.manager._entry(
+            entry,
+            plan=plan,
+            research_index={"mem-research-1": self.lifecycle._records[0]},
+        )
+        self.assertNotIn("stance_impact", normalized)
+        self.assertNotIn("major_revision_authorization", normalized)
+        progress = normalized["mathematical_progress"]
+        self.assertTrue(progress["root_target"]["original_target_open"])
+        self.assertEqual(progress["progress_class"], "partial_verified_progress")
+        self.assertEqual(
+            normalized["successor_mappings"][0]["relation_kind"],
+            "weakened_from",
+        )
+
+    def test_mathematics_batch_publishes_target_progress_without_substitution(self) -> None:
+        plan, entry = self._mathematical_plan_and_entry()
+        with patch.object(self.manager, "plan", return_value=plan), patch.object(
+            self.manager, "current_batch", return_value=None
+        ):
+            result = self.manager.record_batch(
+                plan["plan_id"],
+                {"supersedes_batch_id": "", "entries": [entry]},
+                actor="main",
+            )
+        adequacy = result["adequacy_receipt"]["mathematical_target_progress"]
+        self.assertFalse(adequacy["weakening_closes_exact_target"])
+        self.assertTrue(adequacy["target_progress"][0]["original_target_open"])
+        self.assertEqual(
+            adequacy["target_progress"][0]["progress_class"],
+            "partial_verified_progress",
+        )
+        stored = self.manager.batch(result["batch"]["batch_id"], deep=False)
+        self.assertEqual(stored, result["batch"])
+
+    def test_mathematics_weaker_result_cannot_directly_reconstruct_root(self) -> None:
+        plan, entry = self._mathematical_plan_and_entry()
+        entry["successor_mappings"].append(
+            {
+                "successor_id": "b" * 16,
+                "relation_kind": "directly_reconstructs",
+                "reason": "Forbidden exact-target substitution probe.",
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "cannot masquerade as the exact target"):
+            self.manager._entry(
+                entry,
+                plan=plan,
+                research_index={"mem-research-1": self.lifecycle._records[0]},
+            )
 
     def test_headline_reversal_without_authorization_fails_before_publish(self) -> None:
         entry = self._entry()

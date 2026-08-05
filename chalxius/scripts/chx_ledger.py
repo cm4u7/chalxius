@@ -21,6 +21,21 @@ from mathgraph.runtime_archive import (
     validate_bound_runtime_at,
     validate_runtime_binding,
 )
+from mathgraph.release_contracts import (
+    ARCHITECTURE_RECONNAISSANCE_REVISION as ARCHITECTURE_RECONNAISSANCE_CONTRACT_REVISION,
+)
+from operational_ledger_core import (
+    canonical_bytes as _core_canonical_bytes,
+    canonical_nfc_bytes as _core_canonical_nfc_bytes,
+    event_sha256 as _core_event_sha256,
+    new_run_id as _core_new_run_id,
+    normalize_unicode as _core_normalize_unicode,
+    require_text as _core_require_text,
+    sha256 as _core_sha256,
+    utc_now as _core_utc_now,
+    with_hash as _core_with_hash,
+    write_new_ledger_events as _core_write_new_ledger_events,
+)
 
 
 SCHEMA_VERSION = 1
@@ -28,16 +43,26 @@ LEGACY_CONTRACT_REVISION = "chalxius-chx-run-ledger-1"
 PLACEMENT_CONTRACT_REVISION = "chalxius-chx-run-ledger-2"
 FINDING_CONTRACT_REVISION = "chalxius-chx-run-ledger-3"
 LINEAGE_CONTRACT_REVISION = "chalxius-chx-run-ledger-4"
-CONTRACT_REVISION = LINEAGE_CONTRACT_REVISION
+REPAIR_CONTRACT_REVISION = "chalxius-chx-run-ledger-5"
+CONTRACT_REVISION = REPAIR_CONTRACT_REVISION
 FINDING_CONTRACT_REVISIONS = frozenset(
-    {FINDING_CONTRACT_REVISION, LINEAGE_CONTRACT_REVISION}
+    {
+        FINDING_CONTRACT_REVISION,
+        LINEAGE_CONTRACT_REVISION,
+        REPAIR_CONTRACT_REVISION,
+    }
 )
+LINEAGE_CONTRACT_REVISIONS = frozenset(
+    {LINEAGE_CONTRACT_REVISION, REPAIR_CONTRACT_REVISION}
+)
+REPAIR_CONTRACT_REVISIONS = frozenset({REPAIR_CONTRACT_REVISION})
 SUPPORTED_CONTRACT_REVISIONS = frozenset(
     {
         LEGACY_CONTRACT_REVISION,
         PLACEMENT_CONTRACT_REVISION,
         FINDING_CONTRACT_REVISION,
         LINEAGE_CONTRACT_REVISION,
+        REPAIR_CONTRACT_REVISION,
     }
 )
 DEFAULT_PROJECT_LEDGER_DIR = "chx-ledgers"
@@ -63,21 +88,24 @@ ISSUE_RELATION_TYPES = frozenset(
 RUN_ID_RE = re.compile(r"run-[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 ISSUE_ID_RE = re.compile(r"CHX-[0-9]{3,}")
 FINDING_ID_RE = re.compile(r"finding-[0-9a-f]{64}")
+RECONNAISSANCE_ID_RE = re.compile(r"reconnaissance-[0-9a-f]{64}")
+TACTICAL_REPAIR_ID_RE = re.compile(r"tactical-repair-[0-9a-f]{64}")
+INTEGRATED_REPAIR_ID_RE = re.compile(r"integrated-repair-[0-9a-f]{64}")
+MECHANISM_ID_RE = re.compile(r"mechanism\.[a-z][a-z0-9._-]{0,127}")
+DECISION_ID_RE = re.compile(r"decision\.[a-z][a-z0-9._-]{0,127}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
 PUBLIC_DISCLOSURE_CONTRACT_REVISION = "chalxius-chx-public-disclosure-2"
+REUSABLE_MECHANISM_REGISTRY_REVISION = (
+    "chalxius-chx-reusable-mechanism-registry-1"
+)
 
 
 def _canonical_bytes(payload: Any) -> bytes:
-    return json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    return _core_canonical_bytes(payload)
 
 
 def _canonical_nfc_bytes(payload: Any) -> bytes:
-    return _canonical_bytes(_normalize_unicode(payload))
+    return _core_canonical_nfc_bytes(payload)
 
 
 def _normalize_unicode(value: Any) -> Any:
@@ -88,44 +116,23 @@ def _normalize_unicode(value: Any) -> Any:
     visually identical findings from acquiring different ids.
     """
 
-    if isinstance(value, str):
-        return unicodedata.normalize("NFC", value)
-    if isinstance(value, list):
-        return [_normalize_unicode(item) for item in value]
-    if isinstance(value, dict):
-        return {
-            _normalize_unicode(key): _normalize_unicode(item)
-            for key, item in value.items()
-        }
-    return value
+    return _core_normalize_unicode(value)
 
 
 def _sha256(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
+    return _core_sha256(payload)
 
 
 def _event_sha256(event: dict[str, Any]) -> str:
-    return _sha256(
-        _canonical_bytes(
-            {key: value for key, value in event.items() if key != "event_sha256"}
-        )
-    )
+    return _core_event_sha256(event)
 
 
 def _utc_now() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="microseconds")
-        .replace("+00:00", "Z")
-    )
+    return _core_utc_now()
 
 
 def _require_text(value: Any, label: str, *, maximum: int = 8_192) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{label} must be nonempty text")
-    if len(value) > maximum:
-        raise ValueError(f"{label} exceeds {maximum} code points")
-    return value
+    return _core_require_text(value, label, maximum=maximum)
 
 
 def _require_string_list(
@@ -143,6 +150,484 @@ def _require_string_list(
     if len(value) > 128:
         raise ValueError(f"{label} exceeds 128 entries")
     return list(value)
+
+
+def _require_canonical_string_list(
+    value: Any,
+    label: str,
+    *,
+    nonempty: bool,
+) -> list[str]:
+    result = _require_string_list(value, label, nonempty=nonempty)
+    if result != sorted(set(result)):
+        raise ValueError(f"{label} must be sorted and duplicate-free")
+    return result
+
+
+def _validate_architecture_reconnaissance_report(
+    report: Any,
+) -> dict[str, Any]:
+    """Validate one full-tree reconnaissance artifact without rerunning it.
+
+    The architecture scanner owns the full inventory.  CHX records its
+    content-addressed result once so later tactical and integrated events do
+    not repeat an administrative scan or silently replace the inspected tree.
+    A pre-repair report may legitimately contain errors and warnings.
+    """
+
+    if not isinstance(report, dict):
+        raise ValueError("CHX architecture reconnaissance input must be an object")
+    expected_fields = {
+        "schema_version",
+        "contract_revision",
+        "root",
+        "version",
+        "counts",
+        "manifest",
+        "modules",
+        "generated_artifacts",
+        "unreferenced_modules",
+        "production_unreferenced_modules",
+        "orphan_modules",
+        "exact_duplicate_files",
+        "duplicate_function_bodies",
+        "duplicate_body_adjudication",
+        "commands",
+        "capability_registry",
+        "behavioral_features",
+        "baseline_comparison",
+        "installed_comparison",
+        "errors",
+        "warnings",
+        "truth_effect",
+        "inventory_sha256",
+    }
+    if set(report) != expected_fields:
+        raise ValueError(
+            "CHX architecture reconnaissance fields are not exact"
+        )
+    if report.get("schema_version") != 1:
+        raise ValueError("CHX architecture reconnaissance schema is invalid")
+    if (
+        report.get("contract_revision")
+        != ARCHITECTURE_RECONNAISSANCE_CONTRACT_REVISION
+    ):
+        raise ValueError("CHX architecture reconnaissance revision is invalid")
+    if report.get("truth_effect") != "none":
+        raise ValueError("CHX architecture reconnaissance authority is invalid")
+    root_text = _require_text(
+        report.get("root"), "CHX architecture reconnaissance root", maximum=4_096
+    )
+    root = Path(root_text).expanduser()
+    if not root.is_absolute() or root.is_symlink() or not root.is_dir():
+        raise ValueError("CHX architecture reconnaissance root is unsafe")
+    if str(root.resolve(strict=True)) != root_text:
+        raise ValueError("CHX architecture reconnaissance root is not canonical")
+    _require_text(
+        report.get("version"),
+        "CHX architecture reconnaissance version",
+        maximum=64,
+    )
+    counts = report.get("counts")
+    if (
+        not isinstance(counts, dict)
+        or not isinstance(counts.get("files"), int)
+        or isinstance(counts.get("files"), bool)
+        or counts["files"] < 1
+    ):
+        raise ValueError("CHX architecture reconnaissance file count is invalid")
+    if (
+        not isinstance(report.get("manifest"), dict)
+        or not isinstance(report.get("modules"), dict)
+        or not isinstance(report.get("commands"), dict)
+    ):
+        raise ValueError("CHX architecture reconnaissance inventory is incomplete")
+    for field in (
+        "generated_artifacts",
+        "unreferenced_modules",
+        "production_unreferenced_modules",
+        "orphan_modules",
+        "exact_duplicate_files",
+        "duplicate_function_bodies",
+    ):
+        if not isinstance(report.get(field), list):
+            raise ValueError(
+                f"CHX architecture reconnaissance {field} is invalid"
+            )
+    for field in ("baseline_comparison", "installed_comparison"):
+        if report.get(field) is not None and not isinstance(report.get(field), dict):
+            raise ValueError(
+                f"CHX architecture reconnaissance {field} is invalid"
+            )
+    capability = report.get("capability_registry")
+    behavioral = report.get("behavioral_features")
+    if not isinstance(capability, dict) or not isinstance(behavioral, dict):
+        raise ValueError("CHX architecture reconnaissance registries are missing")
+    capability_sha256 = capability.get("registry_sha256")
+    behavioral_sha256 = behavioral.get("registry_sha256")
+    if (
+        not isinstance(capability_sha256, str)
+        or SHA256_RE.fullmatch(capability_sha256) is None
+        or not isinstance(behavioral_sha256, str)
+        or SHA256_RE.fullmatch(behavioral_sha256) is None
+    ):
+        raise ValueError("CHX architecture reconnaissance registry hash is invalid")
+    errors = _require_canonical_string_list(
+        report.get("errors"),
+        "CHX architecture reconnaissance errors",
+        nonempty=False,
+    )
+    warnings = _require_canonical_string_list(
+        report.get("warnings"),
+        "CHX architecture reconnaissance warnings",
+        nonempty=False,
+    )
+    inventory_sha256 = report.get("inventory_sha256")
+    if not isinstance(inventory_sha256, str) or SHA256_RE.fullmatch(
+        inventory_sha256
+    ) is None:
+        raise ValueError("CHX architecture reconnaissance digest is invalid")
+    semantic = {
+        key: value for key, value in report.items() if key != "inventory_sha256"
+    }
+    expected = _sha256(
+        json.dumps(
+            semantic,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    if inventory_sha256 != expected:
+        raise ValueError("CHX architecture reconnaissance digest mismatch")
+    return {
+        "candidate_root": root_text,
+        "candidate_version": report["version"],
+        "candidate_file_count": counts["files"],
+        "inventory_sha256": inventory_sha256,
+        "report_sha256": _sha256(_canonical_nfc_bytes(report)),
+        "capability_registry_sha256": capability_sha256,
+        "behavioral_registry_sha256": behavioral_sha256,
+        "scan_errors": errors,
+        "scan_warnings": warnings,
+    }
+
+
+def _reconnaissance_semantic(receipt: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: receipt[key]
+        for key in (
+            "candidate_root",
+            "candidate_version",
+            "candidate_file_count",
+            "inventory_sha256",
+            "report_sha256",
+            "capability_registry_sha256",
+            "behavioral_registry_sha256",
+            "scan_errors",
+            "scan_warnings",
+            "scope",
+            "truth_effect",
+        )
+    }
+
+
+def _reconnaissance_id(receipt: dict[str, Any]) -> str:
+    return "reconnaissance-" + _sha256(
+        _canonical_nfc_bytes(_reconnaissance_semantic(receipt))
+    )
+
+
+def _validate_tactical_repair_input(value: Any) -> dict[str, Any]:
+    expected = {
+        "mechanism_id",
+        "summary",
+        "applicability",
+        "implementation",
+        "fail_closed_boundary",
+        "reusable_domains",
+        "implementation_anchors",
+        "bounded_validation_evidence",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError("CHX tactical repair input fields are not exact")
+    mechanism_id = value.get("mechanism_id")
+    if not isinstance(mechanism_id, str) or MECHANISM_ID_RE.fullmatch(
+        mechanism_id
+    ) is None:
+        raise ValueError("CHX tactical repair mechanism_id is invalid")
+    normalized = {
+        "mechanism_id": mechanism_id,
+        "summary": _require_text(value.get("summary"), "CHX tactical summary"),
+        "applicability": _require_text(
+            value.get("applicability"), "CHX tactical applicability"
+        ),
+        "implementation": _require_text(
+            value.get("implementation"), "CHX tactical implementation"
+        ),
+        "fail_closed_boundary": _require_text(
+            value.get("fail_closed_boundary"),
+            "CHX tactical fail-closed boundary",
+        ),
+        "reusable_domains": _require_canonical_string_list(
+            value.get("reusable_domains"),
+            "CHX tactical reusable_domains",
+            nonempty=True,
+        ),
+        "implementation_anchors": _require_canonical_string_list(
+            value.get("implementation_anchors"),
+            "CHX tactical implementation_anchors",
+            nonempty=True,
+        ),
+        "bounded_validation_evidence": _require_canonical_string_list(
+            value.get("bounded_validation_evidence"),
+            "CHX tactical bounded_validation_evidence",
+            nonempty=True,
+        ),
+    }
+    return _normalize_unicode(normalized)
+
+
+def _tactical_repair_semantic(event: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "issue_id": event["issue_id"],
+        "reconnaissance_id": event["reconnaissance_id"],
+        **{
+            key: event[key]
+            for key in (
+                "mechanism_id",
+                "summary",
+                "applicability",
+                "implementation",
+                "fail_closed_boundary",
+                "reusable_domains",
+                "implementation_anchors",
+                "bounded_validation_evidence",
+            )
+        },
+        "truth_effect": event["truth_effect"],
+    }
+
+
+def _tactical_repair_id(event: dict[str, Any]) -> str:
+    return "tactical-repair-" + _sha256(
+        _canonical_nfc_bytes(_tactical_repair_semantic(event))
+    )
+
+
+def _validate_coordination_decisions(
+    value: Any,
+    *,
+    included_issue_ids: list[str],
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("CHX coordination_decisions must be a nonempty list")
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    covered: set[str] = set()
+    included = set(included_issue_ids)
+    for index, item in enumerate(value, 1):
+        if not isinstance(item, dict) or set(item) != {
+            "decision_id",
+            "affected_issue_ids",
+            "decision",
+            "rationale",
+        }:
+            raise ValueError(
+                f"CHX coordination decision {index} fields are not exact"
+            )
+        decision_id = item.get("decision_id")
+        if not isinstance(decision_id, str) or DECISION_ID_RE.fullmatch(
+            decision_id
+        ) is None:
+            raise ValueError("CHX coordination decision id is invalid")
+        if decision_id in seen:
+            raise ValueError("CHX coordination decision id is duplicated")
+        affected = _require_canonical_string_list(
+            item.get("affected_issue_ids"),
+            "CHX coordination affected_issue_ids",
+            nonempty=True,
+        )
+        if any(ISSUE_ID_RE.fullmatch(issue_id) is None for issue_id in affected):
+            raise ValueError("CHX coordination issue id is invalid")
+        if not set(affected).issubset(included):
+            raise ValueError("CHX coordination decision escaped included issues")
+        normalized.append(
+            {
+                "decision_id": decision_id,
+                "affected_issue_ids": affected,
+                "decision": _require_text(
+                    item.get("decision"), "CHX coordination decision"
+                ),
+                "rationale": _require_text(
+                    item.get("rationale"), "CHX coordination rationale"
+                ),
+            }
+        )
+        seen.add(decision_id)
+        covered.update(affected)
+    if covered != included:
+        raise ValueError("CHX coordination decisions do not cover every issue")
+    normalized = sorted(normalized, key=lambda item: item["decision_id"])
+    if value != normalized:
+        raise ValueError(
+            "CHX coordination decisions must be canonical and decision-id sorted"
+        )
+    return _normalize_unicode(normalized)
+
+
+def _validate_integrated_repair_input(value: Any) -> dict[str, Any]:
+    expected = {
+        "included_issue_ids",
+        "coordination_decisions",
+        "risk_evidence",
+        "regression_evidence",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError("CHX integrated repair input fields are not exact")
+    included = _require_canonical_string_list(
+        value.get("included_issue_ids"),
+        "CHX integrated included_issue_ids",
+        nonempty=True,
+    )
+    if any(ISSUE_ID_RE.fullmatch(issue_id) is None for issue_id in included):
+        raise ValueError("CHX integrated repair issue id is invalid")
+    return _normalize_unicode(
+        {
+            "included_issue_ids": included,
+            "coordination_decisions": _validate_coordination_decisions(
+                value.get("coordination_decisions"),
+                included_issue_ids=included,
+            ),
+            "risk_evidence": _require_canonical_string_list(
+                value.get("risk_evidence"),
+                "CHX integrated risk_evidence",
+                nonempty=True,
+            ),
+            "regression_evidence": _require_canonical_string_list(
+                value.get("regression_evidence"),
+                "CHX integrated regression_evidence",
+                nonempty=True,
+            ),
+        }
+    )
+
+
+def _reusable_mechanism_registry(
+    tactical_events: Sequence[dict[str, Any]],
+    *,
+    included_issue_ids: Sequence[str],
+) -> dict[str, Any]:
+    selected = {
+        event["issue_id"]: event
+        for event in tactical_events
+        if event["issue_id"] in set(included_issue_ids)
+    }
+    if set(selected) != set(included_issue_ids):
+        raise ValueError("CHX integrated repair lacks a tactical issue binding")
+    groups: dict[str, dict[str, Any]] = {}
+    definition_fields = (
+        "summary",
+        "applicability",
+        "implementation",
+        "fail_closed_boundary",
+        "reusable_domains",
+    )
+    for issue_id in sorted(selected):
+        event = selected[issue_id]
+        mechanism_id = event["mechanism_id"]
+        definition = {
+            key: event[key]
+            for key in definition_fields
+        }
+        existing = groups.get(mechanism_id)
+        if existing is None:
+            existing = {
+                "mechanism_id": mechanism_id,
+                **definition,
+                "issue_bindings": [],
+            }
+            groups[mechanism_id] = existing
+        elif any(existing[key] != value for key, value in definition.items()):
+            raise ValueError(
+                "CHX reusable mechanism id has inconsistent definitions"
+            )
+        existing["issue_bindings"].append(
+            {
+                "issue_id": issue_id,
+                "tactical_repair_id": event["tactical_repair_id"],
+                "reconnaissance_id": event["reconnaissance_id"],
+                "implementation_anchors": event["implementation_anchors"],
+                "bounded_validation_evidence": event[
+                    "bounded_validation_evidence"
+                ],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "contract_revision": REUSABLE_MECHANISM_REGISTRY_REVISION,
+        "mechanisms": [groups[key] for key in sorted(groups)],
+        "truth_effect": "none",
+    }
+
+
+def _integrated_repair_semantic(event: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: event[key]
+        for key in (
+            "included_issue_ids",
+            "tactical_repair_ids",
+            "supersedes_integrated_repair_id",
+            "reusable_mechanism_registry",
+            "reusable_mechanism_registry_sha256",
+            "coordination_decisions",
+            "risk_evidence",
+            "regression_evidence",
+            "truth_effect",
+        )
+    }
+
+
+def _integrated_repair_id(event: dict[str, Any]) -> str:
+    return "integrated-repair-" + _sha256(
+        _canonical_nfc_bytes(_integrated_repair_semantic(event))
+    )
+
+
+def _repair_gate(
+    *,
+    issue_id: str,
+    resolved_issue_ids: set[str],
+    reconnaissance_events: dict[str, dict[str, Any]],
+    tactical_by_issue: dict[str, dict[str, Any]],
+    integrated_events: Sequence[dict[str, Any]],
+    disposition_evidence: Sequence[str],
+) -> None:
+    tactical = tactical_by_issue.get(issue_id)
+    if tactical is None:
+        raise ValueError(
+            "resolved CHX issue requires one reusable tactical repair"
+        )
+    if tactical["reconnaissance_id"] not in reconnaissance_events:
+        raise ValueError(
+            "resolved CHX issue lacks a prior architecture reconnaissance"
+        )
+    if not integrated_events:
+        raise ValueError("resolved CHX issue requires an integrated repair")
+    latest = integrated_events[-1]
+    required = resolved_issue_ids | {issue_id}
+    if not required.issubset(set(latest["included_issue_ids"])):
+        raise ValueError(
+            "latest CHX integrated repair does not cover all resolved issues"
+        )
+    if tactical["tactical_repair_id"] not in latest["tactical_repair_ids"]:
+        raise ValueError("CHX integrated repair omitted the issue tactical repair")
+    if not set(disposition_evidence).issubset(
+        set(latest["regression_evidence"])
+    ):
+        raise ValueError(
+            "CHX disposition evidence is not bound by the integrated repair"
+        )
 
 
 def _skill_root() -> Path:
@@ -210,8 +695,7 @@ def _assert_outside_projects(path: Path, project_roots: Sequence[Path | str]) ->
 
 
 def _new_run_id() -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    return f"run-{stamp}-{secrets.token_hex(6)}"
+    return _core_new_run_id()
 
 
 def _validate_run_id(run_id: Any) -> str:
@@ -221,8 +705,7 @@ def _validate_run_id(run_id: Any) -> str:
 
 
 def _with_hash(payload: dict[str, Any], previous: str) -> dict[str, Any]:
-    record = {**payload, "previous_event_sha256": previous}
-    return {**record, "event_sha256": _event_sha256(record)}
+    return _core_with_hash(payload, previous)
 
 
 def _write_new_ledger(path: Path, event: dict[str, Any]) -> None:
@@ -230,19 +713,7 @@ def _write_new_ledger(path: Path, event: dict[str, Any]) -> None:
 
 
 def _write_new_ledger_events(path: Path, events: list[dict[str, Any]]) -> None:
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    descriptor = os.open(path, flags, 0o600)
-    try:
-        with os.fdopen(descriptor, "wb", closefd=True) as handle:
-            for event in events:
-                handle.write(_canonical_bytes(event) + b"\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-    except BaseException:
-        try:
-            path.unlink(missing_ok=True)
-        finally:
-            raise
+    _core_write_new_ledger_events(path, events)
 
 
 def _parse_events(raw: str, *, ledger_path: Path) -> list[dict[str, Any]]:
@@ -494,7 +965,7 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         "inherited_finding_ids",
     }
     v4_start_keys = v3_start_keys | {"predecessor_lineage"}
-    if contract_revision == LINEAGE_CONTRACT_REVISION:
+    if contract_revision in LINEAGE_CONTRACT_REVISIONS:
         expected_start_keys = v4_start_keys
     elif contract_revision == FINDING_CONTRACT_REVISION:
         expected_start_keys = v3_start_keys
@@ -543,7 +1014,7 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         )
         if any(FINDING_ID_RE.fullmatch(item) is None for item in inherited_finding_ids):
             raise ValueError("CHX inherited finding id is invalid")
-        if contract_revision == LINEAGE_CONTRACT_REVISION:
+        if contract_revision in LINEAGE_CONTRACT_REVISIONS:
             predecessor_lineage = _validate_predecessor_lineage(
                 start["predecessor_lineage"]
             )
@@ -569,6 +1040,9 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
     dispositions: dict[str, dict[str, Any]] = {}
     findings: dict[str, dict[str, Any]] = {}
     reconciliations: dict[str, dict[str, Any]] = {}
+    reconnaissance_events: dict[str, dict[str, Any]] = {}
+    tactical_by_issue: dict[str, dict[str, Any]] = {}
+    integrated_events: list[dict[str, Any]] = []
     closed = False
     for index, event in enumerate(events):
         _validate_common_event(
@@ -719,6 +1193,255 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                 ):
                     raise ValueError("CHX finding promotion binding mismatch")
             reconciliations[finding_id] = event
+        elif (
+            event_type == "architecture_reconnaissance_recorded"
+            and contract_revision in REPAIR_CONTRACT_REVISIONS
+        ):
+            keys = {
+                "schema_version",
+                "contract_revision",
+                "event",
+                "run_id",
+                "reconnaissance_id",
+                "candidate_root",
+                "candidate_version",
+                "candidate_file_count",
+                "inventory_sha256",
+                "report_sha256",
+                "capability_registry_sha256",
+                "behavioral_registry_sha256",
+                "scan_errors",
+                "scan_warnings",
+                "scope",
+                "truth_effect",
+                "occurred_at",
+                "previous_event_sha256",
+                "event_sha256",
+            }
+            if set(event) != keys:
+                raise ValueError(
+                    "CHX architecture_reconnaissance_recorded fields are not exact"
+                )
+            reconnaissance_id = event.get("reconnaissance_id")
+            if not isinstance(
+                reconnaissance_id, str
+            ) or RECONNAISSANCE_ID_RE.fullmatch(reconnaissance_id) is None:
+                raise ValueError("CHX reconnaissance id is invalid")
+            for field in (
+                "candidate_root",
+                "candidate_version",
+            ):
+                _require_text(event.get(field), f"CHX reconnaissance {field}")
+            if (
+                not isinstance(event.get("candidate_file_count"), int)
+                or isinstance(event.get("candidate_file_count"), bool)
+                or event["candidate_file_count"] < 1
+            ):
+                raise ValueError("CHX reconnaissance file count is invalid")
+            for field in (
+                "inventory_sha256",
+                "report_sha256",
+                "capability_registry_sha256",
+                "behavioral_registry_sha256",
+            ):
+                value = event.get(field)
+                if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+                    raise ValueError(f"CHX reconnaissance {field} is invalid")
+            _require_canonical_string_list(
+                event.get("scan_errors"),
+                "CHX reconnaissance scan_errors",
+                nonempty=False,
+            )
+            _require_canonical_string_list(
+                event.get("scan_warnings"),
+                "CHX reconnaissance scan_warnings",
+                nonempty=False,
+            )
+            if (
+                event.get("scope") != "full_candidate_tree"
+                or event.get("truth_effect") != "none"
+            ):
+                raise ValueError("CHX reconnaissance scope or authority is invalid")
+            if reconnaissance_id != _reconnaissance_id(event):
+                raise ValueError("CHX reconnaissance content id mismatch")
+            if reconnaissance_id in reconnaissance_events:
+                raise ValueError("CHX reconnaissance receipt is duplicated")
+            reconnaissance_events[reconnaissance_id] = event
+        elif (
+            event_type == "tactical_repair_recorded"
+            and contract_revision in REPAIR_CONTRACT_REVISIONS
+        ):
+            keys = {
+                "schema_version",
+                "contract_revision",
+                "event",
+                "run_id",
+                "tactical_repair_id",
+                "issue_id",
+                "reconnaissance_id",
+                "mechanism_id",
+                "summary",
+                "applicability",
+                "implementation",
+                "fail_closed_boundary",
+                "reusable_domains",
+                "implementation_anchors",
+                "bounded_validation_evidence",
+                "truth_effect",
+                "occurred_at",
+                "previous_event_sha256",
+                "event_sha256",
+            }
+            if set(event) != keys:
+                raise ValueError("CHX tactical_repair_recorded fields are not exact")
+            issue_id = event.get("issue_id")
+            if issue_id not in observed:
+                raise ValueError("CHX tactical repair targets an unknown issue")
+            if issue_id in dispositions:
+                raise ValueError("CHX tactical repair follows an issue disposition")
+            if issue_id in tactical_by_issue:
+                raise ValueError("CHX issue already has a tactical repair")
+            reconnaissance_id = event.get("reconnaissance_id")
+            if reconnaissance_id not in reconnaissance_events:
+                raise ValueError(
+                    "CHX tactical repair lacks a prior architecture reconnaissance"
+                )
+            repair_input = {
+                key: event[key]
+                for key in (
+                    "mechanism_id",
+                    "summary",
+                    "applicability",
+                    "implementation",
+                    "fail_closed_boundary",
+                    "reusable_domains",
+                    "implementation_anchors",
+                    "bounded_validation_evidence",
+                )
+            }
+            if repair_input != _validate_tactical_repair_input(repair_input):
+                raise ValueError("CHX tactical repair is not canonical")
+            tactical_repair_id = event.get("tactical_repair_id")
+            if not isinstance(
+                tactical_repair_id, str
+            ) or TACTICAL_REPAIR_ID_RE.fullmatch(tactical_repair_id) is None:
+                raise ValueError("CHX tactical repair id is invalid")
+            if event.get("truth_effect") != "none":
+                raise ValueError("CHX tactical repair authority is invalid")
+            if tactical_repair_id != _tactical_repair_id(event):
+                raise ValueError("CHX tactical repair content id mismatch")
+            tactical_by_issue[issue_id] = event
+        elif (
+            event_type == "integrated_repair_recorded"
+            and contract_revision in REPAIR_CONTRACT_REVISIONS
+        ):
+            keys = {
+                "schema_version",
+                "contract_revision",
+                "event",
+                "run_id",
+                "integrated_repair_id",
+                "included_issue_ids",
+                "tactical_repair_ids",
+                "supersedes_integrated_repair_id",
+                "reusable_mechanism_registry",
+                "reusable_mechanism_registry_sha256",
+                "coordination_decisions",
+                "risk_evidence",
+                "regression_evidence",
+                "truth_effect",
+                "occurred_at",
+                "previous_event_sha256",
+                "event_sha256",
+            }
+            if set(event) != keys:
+                raise ValueError("CHX integrated_repair_recorded fields are not exact")
+            included = _require_canonical_string_list(
+                event.get("included_issue_ids"),
+                "CHX integrated included_issue_ids",
+                nonempty=True,
+            )
+            if any(issue_id not in observed for issue_id in included):
+                raise ValueError("CHX integrated repair targets an unknown issue")
+            if any(
+                dispositions.get(issue_id, {}).get("status")
+                == "excluded_nonarchitectural"
+                for issue_id in included
+            ):
+                raise ValueError("CHX integrated repair includes an excluded issue")
+            prior_resolved = {
+                issue_id
+                for issue_id, disposition in dispositions.items()
+                if disposition["status"] == "resolved"
+            }
+            if not prior_resolved.issubset(set(included)):
+                raise ValueError(
+                    "CHX integrated repair omitted a previously resolved issue"
+                )
+            selected_tactical = [
+                tactical_by_issue[issue_id]
+                for issue_id in included
+                if issue_id in tactical_by_issue
+            ]
+            expected_tactical_ids = sorted(
+                event["tactical_repair_id"] for event in selected_tactical
+            )
+            tactical_ids = _require_canonical_string_list(
+                event.get("tactical_repair_ids"),
+                "CHX integrated tactical_repair_ids",
+                nonempty=True,
+            )
+            if tactical_ids != expected_tactical_ids:
+                raise ValueError("CHX integrated tactical repair closure drifted")
+            expected_registry = _reusable_mechanism_registry(
+                selected_tactical,
+                included_issue_ids=included,
+            )
+            if event.get("reusable_mechanism_registry") != expected_registry:
+                raise ValueError("CHX reusable mechanism registry drifted")
+            registry_sha256 = event.get("reusable_mechanism_registry_sha256")
+            expected_registry_sha256 = _sha256(
+                _canonical_nfc_bytes(expected_registry)
+            )
+            if registry_sha256 != expected_registry_sha256:
+                raise ValueError("CHX reusable mechanism registry hash drifted")
+            _validate_coordination_decisions(
+                event.get("coordination_decisions"),
+                included_issue_ids=included,
+            )
+            _require_canonical_string_list(
+                event.get("risk_evidence"),
+                "CHX integrated risk_evidence",
+                nonempty=True,
+            )
+            _require_canonical_string_list(
+                event.get("regression_evidence"),
+                "CHX integrated regression_evidence",
+                nonempty=True,
+            )
+            supersedes = event.get("supersedes_integrated_repair_id")
+            expected_supersedes = (
+                integrated_events[-1]["integrated_repair_id"]
+                if integrated_events
+                else ""
+            )
+            if supersedes != expected_supersedes:
+                raise ValueError("CHX integrated repair predecessor drifted")
+            integrated_repair_id = event.get("integrated_repair_id")
+            if not isinstance(
+                integrated_repair_id, str
+            ) or INTEGRATED_REPAIR_ID_RE.fullmatch(integrated_repair_id) is None:
+                raise ValueError("CHX integrated repair id is invalid")
+            if event.get("truth_effect") != "none":
+                raise ValueError("CHX integrated repair authority is invalid")
+            if integrated_repair_id != _integrated_repair_id(event):
+                raise ValueError("CHX integrated repair content id mismatch")
+            if any(
+                item["integrated_repair_id"] == integrated_repair_id
+                for item in integrated_events
+            ):
+                raise ValueError("CHX integrated repair is duplicated")
+            integrated_events.append(event)
         elif event_type == "issue_disposition":
             disposition_keys = {
                 "schema_version",
@@ -751,6 +1474,22 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
             if event.get("status") == "resolved" and not evidence:
                 raise ValueError(
                     "resolved CHX issue requires regression evidence"
+                )
+            if (
+                event.get("status") == "resolved"
+                and contract_revision in REPAIR_CONTRACT_REVISIONS
+            ):
+                _repair_gate(
+                    issue_id=issue_id,
+                    resolved_issue_ids={
+                        candidate
+                        for candidate, disposition in dispositions.items()
+                        if disposition["status"] == "resolved"
+                    },
+                    reconnaissance_events=reconnaissance_events,
+                    tactical_by_issue=tactical_by_issue,
+                    integrated_events=integrated_events,
+                    disposition_evidence=evidence,
                 )
             dispositions[issue_id] = event
         elif event_type == "run_closed":
@@ -824,10 +1563,46 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
                         for issue_id, item in sorted(observed.items())
                     },
                 }
-                if contract_revision == LINEAGE_CONTRACT_REVISION:
+                if contract_revision in LINEAGE_CONTRACT_REVISIONS:
                     report_semantic["predecessor_lineage"] = start[
                         "predecessor_lineage"
                     ]
+                if contract_revision in REPAIR_CONTRACT_REVISIONS:
+                    resolved_issue_ids = sorted(
+                        issue_id
+                        for issue_id, disposition in dispositions.items()
+                        if disposition["status"] == "resolved"
+                    )
+                    if resolved_issue_ids:
+                        if not integrated_events or not set(
+                            resolved_issue_ids
+                        ).issubset(
+                            set(integrated_events[-1]["included_issue_ids"])
+                        ):
+                            raise ValueError(
+                                "CHX close requires latest integrated coverage "
+                                "of every resolved issue"
+                            )
+                    report_semantic.update(
+                        {
+                            "reconnaissance_ids": sorted(
+                                reconnaissance_events
+                            ),
+                            "tactical_repair_ids": sorted(
+                                event["tactical_repair_id"]
+                                for event in tactical_by_issue.values()
+                            ),
+                            "integrated_repair_ids": [
+                                event["integrated_repair_id"]
+                                for event in integrated_events
+                            ],
+                            "latest_integrated_repair_id": (
+                                integrated_events[-1]["integrated_repair_id"]
+                                if integrated_events
+                                else ""
+                            ),
+                        }
+                    )
                 if event.get("architecture_report_semantic_sha256") != _sha256(
                     _canonical_nfc_bytes(report_semantic)
                 ):
@@ -928,7 +1703,7 @@ def _status_from_events(
                 ),
             }
         )
-    return {
+    status = {
         "schema_version": start["schema_version"],
         "contract_revision": start["contract_revision"],
         "run_id": start["run_id"],
@@ -955,6 +1730,97 @@ def _status_from_events(
         "truth_effect": "none",
         "project_effect": "none",
     }
+    if start["contract_revision"] in REPAIR_CONTRACT_REVISIONS:
+        reconnaissance = [
+            {
+                key: event[key]
+                for key in (
+                    "reconnaissance_id",
+                    "candidate_root",
+                    "candidate_version",
+                    "candidate_file_count",
+                    "inventory_sha256",
+                    "report_sha256",
+                    "capability_registry_sha256",
+                    "behavioral_registry_sha256",
+                    "scan_errors",
+                    "scan_warnings",
+                    "scope",
+                    "truth_effect",
+                    "occurred_at",
+                )
+            }
+            for event in events
+            if event["event"] == "architecture_reconnaissance_recorded"
+        ]
+        tactical = [
+            {
+                key: event[key]
+                for key in (
+                    "tactical_repair_id",
+                    "issue_id",
+                    "reconnaissance_id",
+                    "mechanism_id",
+                    "summary",
+                    "applicability",
+                    "implementation",
+                    "fail_closed_boundary",
+                    "reusable_domains",
+                    "implementation_anchors",
+                    "bounded_validation_evidence",
+                    "truth_effect",
+                    "occurred_at",
+                )
+            }
+            for event in events
+            if event["event"] == "tactical_repair_recorded"
+        ]
+        integrated = [
+            {
+                key: event[key]
+                for key in (
+                    "integrated_repair_id",
+                    "included_issue_ids",
+                    "tactical_repair_ids",
+                    "supersedes_integrated_repair_id",
+                    "reusable_mechanism_registry",
+                    "reusable_mechanism_registry_sha256",
+                    "coordination_decisions",
+                    "risk_evidence",
+                    "regression_evidence",
+                    "truth_effect",
+                    "occurred_at",
+                )
+            }
+            for event in events
+            if event["event"] == "integrated_repair_recorded"
+        ]
+        resolved_issue_ids = sorted(
+            issue_id
+            for issue_id, disposition in dispositions.items()
+            if disposition["status"] == "resolved"
+        )
+        latest_covered = (
+            integrated[-1]["included_issue_ids"] if integrated else []
+        )
+        status.update(
+            {
+                "architecture_reconnaissance_receipts": reconnaissance,
+                "tactical_repairs": tactical,
+                "integrated_repairs": integrated,
+                "latest_integrated_repair_id": (
+                    integrated[-1]["integrated_repair_id"] if integrated else ""
+                ),
+                "repair_gate": {
+                    "resolved_issue_ids": resolved_issue_ids,
+                    "latest_covered_issue_ids": latest_covered,
+                    "all_resolved_covered": set(resolved_issue_ids).issubset(
+                        set(latest_covered)
+                    ),
+                },
+            }
+        )
+    return status
 
 
 def _read_locked(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -1196,7 +2062,7 @@ def start_ledger(
                 "inherited_finding_ids": inherited_ids,
             }
         )
-        if CONTRACT_REVISION == LINEAGE_CONTRACT_REVISION:
+        if CONTRACT_REVISION in LINEAGE_CONTRACT_REVISIONS:
             start_payload["predecessor_lineage"] = predecessor_lineage
     elif predecessor_ledger is not None or inherited_findings:
         raise ValueError("legacy CHX ledger revisions do not support successors")
@@ -1497,6 +2363,154 @@ def record_issue(
     return event
 
 
+def record_architecture_reconnaissance(
+    ledger_path: Path | str,
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    normalized = _validate_architecture_reconnaissance_report(report)
+
+    def build(events: list[dict[str, Any]]) -> dict[str, Any]:
+        if events[0]["contract_revision"] not in REPAIR_CONTRACT_REVISIONS:
+            raise ValueError(
+                "CHX architecture reconnaissance receipts require revision 5"
+            )
+        if events[-1]["event"] == "run_closed":
+            raise ValueError("CHX ledger is closed")
+        if normalized["candidate_root"] != str(_skill_root()) or normalized[
+            "candidate_version"
+        ] != events[0]["skill_version"]:
+            raise ValueError(
+                "CHX reconnaissance does not bind this ledger runtime"
+            )
+        payload = {
+            "schema_version": events[0]["schema_version"],
+            "contract_revision": events[0]["contract_revision"],
+            "event": "architecture_reconnaissance_recorded",
+            "run_id": events[0]["run_id"],
+            **normalized,
+            "scope": "full_candidate_tree",
+            "truth_effect": "none",
+            "occurred_at": _utc_now(),
+        }
+        payload["reconnaissance_id"] = _reconnaissance_id(payload)
+        if any(
+            event.get("reconnaissance_id") == payload["reconnaissance_id"]
+            for event in events
+        ):
+            raise ValueError("CHX reconnaissance receipt is already recorded")
+        return payload
+
+    event, _ = _mutate_locked(path, build)
+    if event is None:  # pragma: no cover - builder always returns an event
+        raise RuntimeError("CHX reconnaissance mutation produced no event")
+    return event
+
+
+def record_tactical_repair(
+    ledger_path: Path | str,
+    *,
+    issue_id: str,
+    reconnaissance_id: str,
+    repair: dict[str, Any],
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    if not isinstance(issue_id, str) or ISSUE_ID_RE.fullmatch(issue_id) is None:
+        raise ValueError("CHX tactical repair issue_id is invalid")
+    if not isinstance(
+        reconnaissance_id, str
+    ) or RECONNAISSANCE_ID_RE.fullmatch(reconnaissance_id) is None:
+        raise ValueError("CHX tactical repair reconnaissance_id is invalid")
+    normalized = _validate_tactical_repair_input(repair)
+
+    def build(events: list[dict[str, Any]]) -> dict[str, Any]:
+        if events[0]["contract_revision"] not in REPAIR_CONTRACT_REVISIONS:
+            raise ValueError("CHX tactical repairs require revision 5")
+        if events[-1]["event"] == "run_closed":
+            raise ValueError("CHX ledger is closed")
+        payload = {
+            "schema_version": events[0]["schema_version"],
+            "contract_revision": events[0]["contract_revision"],
+            "event": "tactical_repair_recorded",
+            "run_id": events[0]["run_id"],
+            "issue_id": issue_id,
+            "reconnaissance_id": reconnaissance_id,
+            **normalized,
+            "truth_effect": "none",
+            "occurred_at": _utc_now(),
+        }
+        payload["tactical_repair_id"] = _tactical_repair_id(payload)
+        return payload
+
+    event, _ = _mutate_locked(path, build)
+    if event is None:  # pragma: no cover - builder always returns an event
+        raise RuntimeError("CHX tactical repair mutation produced no event")
+    return event
+
+
+def record_integrated_repair(
+    ledger_path: Path | str,
+    integration: dict[str, Any],
+) -> dict[str, Any]:
+    path = _resolved_path(ledger_path)
+    normalized = _validate_integrated_repair_input(integration)
+
+    def build(events: list[dict[str, Any]]) -> dict[str, Any]:
+        if events[0]["contract_revision"] not in REPAIR_CONTRACT_REVISIONS:
+            raise ValueError("CHX integrated repairs require revision 5")
+        if events[-1]["event"] == "run_closed":
+            raise ValueError("CHX ledger is closed")
+        included = normalized["included_issue_ids"]
+        tactical_events = [
+            event
+            for event in events
+            if event["event"] == "tactical_repair_recorded"
+            and event["issue_id"] in set(included)
+        ]
+        registry = _reusable_mechanism_registry(
+            tactical_events,
+            included_issue_ids=included,
+        )
+        prior_integrated = [
+            event
+            for event in events
+            if event["event"] == "integrated_repair_recorded"
+        ]
+        payload = {
+            "schema_version": events[0]["schema_version"],
+            "contract_revision": events[0]["contract_revision"],
+            "event": "integrated_repair_recorded",
+            "run_id": events[0]["run_id"],
+            "included_issue_ids": included,
+            "tactical_repair_ids": sorted(
+                event["tactical_repair_id"] for event in tactical_events
+            ),
+            "supersedes_integrated_repair_id": (
+                prior_integrated[-1]["integrated_repair_id"]
+                if prior_integrated
+                else ""
+            ),
+            "reusable_mechanism_registry": registry,
+            "reusable_mechanism_registry_sha256": _sha256(
+                _canonical_nfc_bytes(registry)
+            ),
+            "coordination_decisions": normalized[
+                "coordination_decisions"
+            ],
+            "risk_evidence": normalized["risk_evidence"],
+            "regression_evidence": normalized["regression_evidence"],
+            "truth_effect": "none",
+            "occurred_at": _utc_now(),
+        }
+        payload["integrated_repair_id"] = _integrated_repair_id(payload)
+        return payload
+
+    event, _ = _mutate_locked(path, build)
+    if event is None:  # pragma: no cover - builder always returns an event
+        raise RuntimeError("CHX integrated repair mutation produced no event")
+    return event
+
+
 def dispose_issue(
     ledger_path: Path | str,
     *,
@@ -1587,6 +2601,20 @@ def render_architecture_report(ledger_path: Path | str) -> str:
         "truth_effect": "none",
         "project_effect": "none",
     }
+    if status["contract_revision"] in REPAIR_CONTRACT_REVISIONS:
+        projection.update(
+            {
+                "architecture_reconnaissance_receipts": status[
+                    "architecture_reconnaissance_receipts"
+                ],
+                "tactical_repairs": status["tactical_repairs"],
+                "integrated_repairs": status["integrated_repairs"],
+                "latest_integrated_repair_id": status[
+                    "latest_integrated_repair_id"
+                ],
+                "repair_gate": status["repair_gate"],
+            }
+        )
     lines = [
         f"# CHX architecture report — {status['run_id']}",
         "",
@@ -1742,10 +2770,64 @@ def close_ledger(ledger_path: Path | str) -> dict[str, Any]:
                     for issue_id, item in sorted(observed.items())
                 },
             }
-            if events[0]["contract_revision"] == LINEAGE_CONTRACT_REVISION:
+            if events[0]["contract_revision"] in LINEAGE_CONTRACT_REVISIONS:
                 report_semantic["predecessor_lineage"] = events[0][
                     "predecessor_lineage"
                 ]
+            if events[0]["contract_revision"] in REPAIR_CONTRACT_REVISIONS:
+                dispositions = {
+                    event["issue_id"]: event
+                    for event in events
+                    if event["event"] == "issue_disposition"
+                }
+                resolved_issue_ids = sorted(
+                    issue_id
+                    for issue_id, disposition in dispositions.items()
+                    if disposition["status"] == "resolved"
+                )
+                reconnaissance_ids = sorted(
+                    event["reconnaissance_id"]
+                    for event in events
+                    if event["event"]
+                    == "architecture_reconnaissance_recorded"
+                )
+                tactical_repair_ids = sorted(
+                    event["tactical_repair_id"]
+                    for event in events
+                    if event["event"] == "tactical_repair_recorded"
+                )
+                integrated_repair_ids = [
+                    event["integrated_repair_id"]
+                    for event in events
+                    if event["event"] == "integrated_repair_recorded"
+                ]
+                integrated_events = [
+                    event
+                    for event in events
+                    if event["event"] == "integrated_repair_recorded"
+                ]
+                if resolved_issue_ids and (
+                    not integrated_events
+                    or not set(resolved_issue_ids).issubset(
+                        set(integrated_events[-1]["included_issue_ids"])
+                    )
+                ):
+                    raise ValueError(
+                        "CHX close requires latest integrated coverage of "
+                        "every resolved issue"
+                    )
+                report_semantic.update(
+                    {
+                        "reconnaissance_ids": reconnaissance_ids,
+                        "tactical_repair_ids": tactical_repair_ids,
+                        "integrated_repair_ids": integrated_repair_ids,
+                        "latest_integrated_repair_id": (
+                            integrated_repair_ids[-1]
+                            if integrated_repair_ids
+                            else ""
+                        ),
+                    }
+                )
             payload.update(
                 {
                     "finding_ids": finding_ids,
@@ -2087,6 +3169,20 @@ def _parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--reason", required=True)
     reconcile.add_argument("--issue-id", default="")
 
+    reconnaissance = commands.add_parser("record-reconnaissance")
+    reconnaissance.add_argument("--ledger", required=True)
+    reconnaissance.add_argument("--input", required=True)
+
+    tactical = commands.add_parser("record-tactical-repair")
+    tactical.add_argument("--ledger", required=True)
+    tactical.add_argument("--issue-id", required=True)
+    tactical.add_argument("--reconnaissance-id", required=True)
+    tactical.add_argument("--input", required=True)
+
+    integrated = commands.add_parser("record-integrated-repair")
+    integrated.add_argument("--ledger", required=True)
+    integrated.add_argument("--input", required=True)
+
     dispose = commands.add_parser("dispose")
     dispose.add_argument("--ledger", required=True)
     dispose.add_argument("--issue-id", required=True)
@@ -2148,6 +3244,23 @@ def main(argv: list[str] | None = None) -> int:
             reason=args.reason,
             issue_id=args.issue_id,
         )
+    elif args.command == "record-reconnaissance":
+        result = record_architecture_reconnaissance(
+            args.ledger,
+            _json_file(args.input),
+        )
+    elif args.command == "record-tactical-repair":
+        result = record_tactical_repair(
+            args.ledger,
+            issue_id=args.issue_id,
+            reconnaissance_id=args.reconnaissance_id,
+            repair=_json_file(args.input),
+        )
+    elif args.command == "record-integrated-repair":
+        result = record_integrated_repair(
+            args.ledger,
+            _json_file(args.input),
+        )
     elif args.command == "dispose":
         result = dispose_issue(
             args.ledger,
@@ -2162,8 +3275,10 @@ def main(argv: list[str] | None = None) -> int:
         result = write_architecture_report(args.ledger, args.output)
     elif args.command == "verify-report":
         result = verify_architecture_report(args.ledger, args.report)
-    else:
+    elif args.command == "verify-public-disclosure":
         result = verify_public_disclosure(args.ledger, args.skill_root)
+    else:  # parser and dispatch must remain exactly closed
+        raise ValueError(f"unsupported CHX command: {args.command}")
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

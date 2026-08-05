@@ -128,7 +128,6 @@ _CAMPAIGN_MUTATORS = frozenset(
         "target_add",
         "target_archive",
         "update",
-        "sync_targets",
         "promote_blackboard_node",
     }
 )
@@ -438,6 +437,8 @@ class MathGraphStore:
         self._thread_lock = _project_thread_lock(self.root)
         self._lock_depth = 0
         self._lock_handle: Any = None
+        self._snapshot_lock_depth = 0
+        self._snapshot_lock_handle: Any = None
 
     @classmethod
     def _for_inherited_chalk_fixture(
@@ -569,6 +570,10 @@ class MathGraphStore:
     def mutation_lock(self) -> Iterator[None]:
         with self._thread_lock:
             self._assert_mutation_allowed()
+            if self._snapshot_lock_depth:
+                raise ValueError(
+                    "project mutation cannot begin inside a snapshot read"
+                )
             if self._lock_depth:
                 self._lock_depth += 1
                 try:
@@ -587,6 +592,42 @@ class MathGraphStore:
             finally:
                 self._lock_depth = 0
                 self._lock_handle = None
+                if fcntl is not None:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                handle.close()
+
+    @contextmanager
+    def snapshot_lock(self) -> Iterator[None]:
+        """Hold one low-cost project snapshot against normal Chalxius writers.
+
+        The shared flock coordinates with mutation_lock's exclusive flock.  An
+        audit already nested under a normal mutation keeps the stronger lock;
+        nested snapshot reads share one handle and never touch project data.
+        """
+
+        with self._thread_lock:
+            if self._lock_depth:
+                yield
+                return
+            if self._snapshot_lock_depth:
+                self._snapshot_lock_depth += 1
+                try:
+                    yield
+                finally:
+                    self._snapshot_lock_depth -= 1
+                return
+            if self.lock_path.is_symlink() or not self.lock_path.is_file():
+                raise ValueError("project snapshot lock is missing or unsafe")
+            handle = self.lock_path.open("r+b")
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
+            self._snapshot_lock_handle = handle
+            self._snapshot_lock_depth = 1
+            try:
+                yield
+            finally:
+                self._snapshot_lock_depth = 0
+                self._snapshot_lock_handle = None
                 if fcntl is not None:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
                 handle.close()
@@ -772,9 +813,17 @@ class MathGraphStore:
             },
         )
 
-    def paper_logic(self) -> PaperLogicStore:
+    def paper_logic(
+        self,
+        *,
+        _inspection_cache: dict[tuple[Any, ...], Any] | None = None,
+    ) -> PaperLogicStore:
         return self._guard_child(
-            PaperLogicStore(self.root, owner=self),
+            PaperLogicStore(
+                self.root,
+                owner=self,
+                _inspection_cache=_inspection_cache,
+            ),
             _PAPER_LOGIC_MUTATORS,
         )
 
@@ -1920,7 +1969,11 @@ class MathGraphStore:
                 result.add(fact_id)
         return result
 
-    def _active_fact_paths(self) -> dict[str, Path]:
+    def _active_fact_paths(
+        self,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> dict[str, Path]:
         if (
             self.project_path.exists()
             and self.workflow_evidence_version()
@@ -1932,7 +1985,9 @@ class MathGraphStore:
                     "V5 Fact visibility forbids legacy ordinary Fact files; "
                     "only V5 admission markers may expose Facts"
                 )
-            return self.v5_lifecycle().active_fact_paths()
+            return self.v5_lifecycle().active_fact_paths(
+                _inspection_context=_inspection_context
+            )
         revoked = self._revoked_fact_ids()
         ordinary = {
             path.stem: path
@@ -1951,22 +2006,58 @@ class MathGraphStore:
             )
         return {**ordinary, **bundled}
 
-    def active_fact_path(self, fact_id: str) -> Path:
+    def active_fact_path(
+        self,
+        fact_id: str,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> Path:
         fact_id = validate_fact_id(fact_id)
-        path = self._active_fact_paths().get(fact_id)
+        path = self._active_fact_paths(
+            _inspection_context=_inspection_context
+        ).get(fact_id)
         if path is None:
             raise KeyError(f"unknown verified fact: {fact_id}")
         return path
 
-    def fact_ids(self) -> list[str]:
-        return sorted(self._active_fact_paths())
+    def fact_ids(self, *, _inspection_context: Any | None = None) -> list[str]:
+        return sorted(
+            self._active_fact_paths(
+                _inspection_context=_inspection_context
+            )
+        )
 
-    def get_raw_fact(self, fact_id: str) -> str:
-        path = self.active_fact_path(fact_id)
+    def get_raw_fact(
+        self,
+        fact_id: str,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> str:
+        path = self.active_fact_path(
+            fact_id,
+            _inspection_context=_inspection_context,
+        )
         return path.read_text(encoding="utf-8")
 
-    def get_fact(self, fact_id: str) -> Fact:
-        fact = parse_fact_markdown(self.get_raw_fact(fact_id))
+    def get_fact(
+        self,
+        fact_id: str,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> Fact:
+        fact_id = validate_fact_id(fact_id)
+        if (
+            _inspection_context is not None
+            and _inspection_context.active_facts is not None
+            and fact_id in _inspection_context.active_facts
+        ):
+            return _inspection_context.active_facts[fact_id]
+        fact = parse_fact_markdown(
+            self.get_raw_fact(
+                fact_id,
+                _inspection_context=_inspection_context,
+            )
+        )
         errors = fact.validate()
         if errors:
             raise ValueError(f"invalid verified fact {fact_id}: {'; '.join(errors)}")
@@ -1974,14 +2065,32 @@ class MathGraphStore:
             raise ValueError(f"verified fact {fact_id} belongs to another project")
         return fact
 
-    def facts(self) -> dict[str, Fact]:
-        return {fact_id: self.get_fact(fact_id) for fact_id in self.fact_ids()}
+    def facts(
+        self,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> dict[str, Fact]:
+        if (
+            _inspection_context is not None
+            and _inspection_context.active_facts is not None
+        ):
+            return dict(_inspection_context.active_facts)
+        return {
+            fact_id: self.get_fact(
+                fact_id,
+                _inspection_context=_inspection_context,
+            )
+            for fact_id in self.fact_ids(
+                _inspection_context=_inspection_context
+            )
+        }
 
     def statement_interface(
         self,
         fact_id: str,
         *,
         materialize: bool = True,
+        _inspection_context: Any | None = None,
     ) -> dict[str, Any]:
         """Return the statement-only interface for one active fact.
 
@@ -1996,26 +2105,42 @@ class MathGraphStore:
                 return self._statement_interface(
                     fact_id,
                     materialize=True,
+                    _inspection_context=_inspection_context,
                 )
-        return self._statement_interface(fact_id, materialize=False)
+        return self._statement_interface(
+            fact_id,
+            materialize=False,
+            _inspection_context=_inspection_context,
+        )
 
     def _statement_interface(
         self,
         fact_id: str,
         *,
         materialize: bool,
+        _inspection_context: Any | None = None,
     ) -> dict[str, Any]:
         """Implement guarded materialization or a byte-pure reconstruction."""
 
         fact_id = validate_fact_id(fact_id)
-        fact = self.get_fact(fact_id)
+        fact = self.get_fact(
+            fact_id,
+            _inspection_context=_inspection_context,
+        )
         path = self.interfaces_dir / f"{fact_id}.json"
         if path.exists():
             return validate_statement_interface(
                 self._read_json(path),
-                active_fact_ids=set(self.fact_ids()),
+                active_fact_ids=set(
+                    self.fact_ids(
+                        _inspection_context=_inspection_context
+                    )
+                ),
             )
-        fact_path = self.active_fact_path(fact_id)
+        fact_path = self.active_fact_path(
+            fact_id,
+            _inspection_context=_inspection_context,
+        )
         fact_bytes = fact_path.read_bytes()
         submission_path = self.submission_path(fact_id)
         submission = (

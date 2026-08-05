@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import stat
 from typing import Any, Callable, ContextManager
 
 from .computations import ExperimentManager, _ledger_prefix
@@ -13,11 +15,13 @@ from .contracts import (
     require_string,
     sha256_bytes,
     sha256_json,
+    validate_assignment_id,
     validate_experiment_id,
+    validate_round_id,
 )
 from .event_ledger import ExperimentEventLedger
 from .protocol import DEFAULT_HARD_CAPS
-from .v5_lifecycle import V5_POLICY_REVISION
+from .v5_lifecycle import RoundInspectionContext, V5_POLICY_REVISION
 
 
 _VIEW_FIELDS = {
@@ -79,28 +83,15 @@ class V5ExperimentManager(ExperimentManager):
             return raw
         return dict(task_card)
 
-    def _validate_bound_task_card(
+    def _bind_task_card_view_from_assignment(
         self,
         task_card: dict[str, Any],
         *,
-        allow_historical_estimate_policy: bool = False,
-        require_active_work_unit: bool = False,
+        raw: dict[str, Any],
+        assignment: dict[str, Any],
     ) -> dict[str, Any]:
-        del allow_historical_estimate_policy
-        raw = self._raw_card(task_card)
-        if require_active_work_unit:
-            self.store.reasoning_modes().require_work_unit_active(
-                raw["round_id"]
-            )
-        lifecycle = self.store.v5_lifecycle()
-        round_dir, manifest = lifecycle._round_manifest(raw["round_id"])
-        if require_active_work_unit and lifecycle._round_is_completed(
-            round_dir, manifest
-        ):
-            raise ValueError("completed V5 round is historical and cannot start work")
-        assignment = lifecycle._assignment(
-            manifest, raw["assignment_id"]
-        )
+        """Validate one frozen card binding and materialize its derived view."""
+
         card_path = contained_path(
             self.project_root,
             assignment["task_card_relpath"],
@@ -152,6 +143,119 @@ class V5ExperimentManager(ExperimentManager):
         if host_scope is not None:
             task_card["host_task_scope_id"] = host_scope
         return task_card
+
+    def _validate_bound_task_card(
+        self,
+        task_card: dict[str, Any],
+        *,
+        allow_historical_estimate_policy: bool = False,
+        require_active_work_unit: bool = False,
+        _inspection_context: Any | None = None,
+    ) -> dict[str, Any]:
+        del allow_historical_estimate_policy
+        raw = self._raw_card(task_card)
+        if require_active_work_unit:
+            self.store.reasoning_modes().require_work_unit_active(
+                raw["round_id"]
+            )
+        lifecycle = self.store.v5_lifecycle()
+        round_dir, manifest = lifecycle._round_manifest(
+            raw["round_id"],
+            _inspection_context=_inspection_context,
+        )
+        if require_active_work_unit and lifecycle._round_is_completed(
+            round_dir,
+            manifest,
+            _inspection_context=_inspection_context,
+        ):
+            raise ValueError("completed V5 round is historical and cannot start work")
+        assignment = lifecycle._assignment(
+            manifest, raw["assignment_id"]
+        )
+        return self._bind_task_card_view_from_assignment(
+            task_card,
+            raw=raw,
+            assignment=assignment,
+        )
+
+    def _contained_path_nofollow(
+        self,
+        relative: Any,
+        *,
+        label: str,
+    ) -> tuple[Path, dict[str, Any]]:
+        """Resolve a project child lexically while rejecting linked components.
+
+        Missing suffixes are returned so an optional-state applicability check
+        can distinguish exact absence.  Every existing component before that
+        point is inspected with lstat and is never resolved through a symlink.
+        """
+
+        rel = require_relative_path(relative, label)
+        current = self.project_root
+        parts = list(rel.parts)
+        for index, part in enumerate(parts):
+            current = current / part
+            try:
+                mode = os.lstat(current).st_mode
+            except FileNotFoundError:
+                for suffix in parts[index + 1 :]:
+                    current = current / suffix
+                return current
+            except OSError as exc:
+                raise ValueError(f"{label} is missing or unsafe") from exc
+            if stat.S_ISLNK(mode):
+                raise ValueError(f"{label} traverses a symlink")
+            if index < len(parts) - 1 and not stat.S_ISDIR(mode):
+                raise ValueError(f"{label} traverses a non-directory")
+        return current
+
+    def _canonical_experiment_root(
+        self,
+        *,
+        card_path: Path,
+        card: dict[str, Any],
+        inspection: RoundInspectionContext,
+        round_bindings: dict[str, tuple[Path, dict[str, Any]]],
+    ) -> Path:
+        raw = self._raw_card(card)
+        round_id = validate_round_id(raw.get("round_id"))
+        assignment_id = validate_assignment_id(raw.get("assignment_id"))
+        lifecycle = self.store.v5_lifecycle()
+        if round_id not in round_bindings:
+            round_bindings[round_id] = lifecycle._round_manifest(
+                round_id,
+                _inspection_context=inspection,
+            )
+        _, manifest = round_bindings[round_id]
+        assignment = lifecycle._assignment(manifest, assignment_id)
+        expected_card_path = self._contained_path_nofollow(
+            assignment.get("task_card_relpath"),
+            label="V5 Experiment task-card path",
+        )
+        if expected_card_path != card_path:
+            raise ValueError(
+                "V5 Experiment card path differs from the frozen assignment"
+            )
+        artifact = raw.get("artifact_capability")
+        if not isinstance(artifact, dict):
+            raise ValueError("V5 experiment task card lacks artifact capability")
+        work_dir_relpath = assignment.get("work_dir_relpath")
+        if artifact.get("work_dir_relpath") != work_dir_relpath:
+            raise ValueError(
+                "V5 Experiment work path differs from the frozen assignment"
+            )
+        work_dir = require_relative_path(
+            work_dir_relpath,
+            "V5 Experiment frozen work directory",
+        )
+        return (
+            self._contained_path_nofollow(
+                (work_dir / "experiments").as_posix(),
+                label="V5 Experiment root",
+            ),
+            assignment,
+        )
 
     def governance_task_id(self, task_card: dict[str, Any]) -> str:
         self._validate_bound_task_card(task_card)
@@ -509,20 +613,37 @@ class V5ExperimentManager(ExperimentManager):
                 task_card=task_card, receipt_path=receipt_path
             )
 
-    def audit_all(self) -> dict[str, Any]:
+    def audit_all(
+        self,
+        *,
+        _inspection_context: Any | None = None,
+    ) -> dict[str, Any]:
         errors: list[str] = []
         experiments = 0
+        inspection = (
+            _inspection_context
+            if _inspection_context is not None
+            else RoundInspectionContext()
+        )
+        round_bindings: dict[str, tuple[Path, dict[str, Any]]] = {}
         for card_path in sorted(self.store.rounds_dir.glob("*/task-cards/*.json")):
             try:
                 card = self.store._read_json(card_path)
-                self._validate_bound_task_card(card)
-                root = contained_path(
-                    self.project_root,
-                    card["work_dir_relpath"],
-                    "V5 experiment work directory",
-                ) / "experiments"
+                root, assignment = self._canonical_experiment_root(
+                    card_path=card_path,
+                    card=card,
+                    inspection=inspection,
+                    round_bindings=round_bindings,
+                )
                 if not root.exists():
                     continue
+                if not root.is_dir():
+                    raise ValueError("V5 experiment root is not a directory")
+                self._bind_task_card_view_from_assignment(
+                    card,
+                    raw=self._raw_card(card),
+                    assignment=assignment,
+                )
                 for directory in sorted(root.glob("experiment-*")):
                     experiments += 1
                     self.validate_manifest(

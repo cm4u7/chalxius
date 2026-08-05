@@ -20,6 +20,14 @@ remaining shape and bounds.
 Do not invent or omit an obligation, reuse another assignment's hash, or add an
 explanatory top-level key.
 
+If `control_plane.independent_adverse_pair` is present, also obey its exact
+role and `worker_context_id`. A `paired_adverse` worker must not receive,
+inherit, summarize, or share the primary worker's active context. It attacks
+the same frozen source Research using the card's `adverse_routing` rules. This
+is a worker-allocation and provenance contract only: the return is nontruth
+Research, and it creates neither a second Candidate review nor certification
+authority.
+
 ## Exact top-level object
 
 A current assurance-bound card without `adverse_routing` uses exactly:

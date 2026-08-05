@@ -1,186 +1,163 @@
-# Chalxius v0.6.4 — Goal-Driven Advisory Recovery
+# Chalxius v0.6.5 — Integrated Research Continuity
 
-Chalxius 0.6.4 makes the cautious BF-1–BF-3 recovery slice reachable from an
-ordinary research request without asking the user to know or say “Campaign.” It
-also closes release-validation and runtime-cutover defects exposed while
-validating that change.
-The Paper-first research model, domain-indexed target continuity, independent
-verification, and sole Fact-admission path remain unchanged.
+Chalxius 0.6.5 makes continuity a first-class contract across research drafts,
+Paper Graphs, Evidence, Research, release, verification, installation, and
+architecture learning. It also completes a staged, full-project consolidation
+of CHX mechanisms and introduces PHX as a host-global architecture route guide.
 
-## User-visible outcome
+The sole truth path remains:
 
-Under the default `auto` mode or an explicitly selected `deep` mode, a user may
-state an explicit research objective in ordinary Chinese or English.
-Operator-only `research-goal-intake` then:
+`Research → Candidate Release → Certification Decision → Fact`.
 
-1. normalizes Unicode NFC and whitespace without semantic or fuzzy matching;
-2. reuses exactly one lexically identical objective or creates one prospective
-   internal Campaign scope;
-3. ignores the `ACTIVE` pointer and never retags existing Research;
-4. honors explicit Brave Future disablement; and
-5. projects advisory BF-1 for that exact scope.
+Nothing in Paper Audit, Evidence, CHX, PHX, Brave Future, Reader, or software
+release validation bypasses that path.
 
-The user does not need to mention Campaign or invoke a Campaign command. The
-returned internal id is available to bind future Research and, only after real
-blockage evidence exists, the inherited BF-2/BF-3 reassessment path.
+## Research-draft continuity
 
-## Authority boundary remains narrow
+A research draft is now treated as the active research object, not as an
+external finished paper and not as a small convenience-Fact bundle. The normal
+route is:
 
-Goal intake does not:
+1. freeze the exact draft and its source artifacts;
+2. decompose it into a proposition-total Paper DAG;
+3. bind targets, ordered premises, defeaters, definitions, terminology,
+   quantifiers, and source occurrences;
+4. admit, repair, challenge, or extend claims node by node in Research; and
+5. reconstruct a successor Paper without topology compression.
 
-- plan a round or choose a worker;
-- dispatch an agent or Pulse;
-- create or rewrite Research;
-- close or continuously advance a Campaign;
-- manufacture blockage evidence;
-- activate BF-2/BF-3 merely because a goal exists; or
-- affect Paper, Candidate Release, Certification, Gateway, Fact, Reader, or
-  Learner authority.
+Finished external publications remain Evidence. Their PDF, publication
+identity, Paper Graph, and review state can be preserved in the cross-project
+Evidence library, but credibility and citation do not create Fact authority.
 
-`fast` and `deep` remain explicit mode choices. Goal intake is available in
-`auto` and `deep`; `fast` retains explicit low-level Campaign administration.
-BF-4, `plan_one`, `execute_one`, and `plan-round --reassessment` remain rejected.
+Continuity is domain-indexed:
 
-## CHX-063: natural-language goal activation
+- philosophy may preserve an exact argumentative stance and requires Operator
+  authorization for a headline reversal;
+- mathematics preserves the exact conjecture or question, hypotheses, domains,
+  quantifiers, and target ids, and may conclude `proved`, `disproved`, or
+  `unresolved_with_obstruction`;
+- a weaker mathematical theorem, special case, counterexample, or obstruction
+  may be retained as typed progress without being reported as resolution;
+- empirical work preserves its question, estimand, population,
+  exposure/intervention, outcome, and scope; and
+- mixed work uses explicit component adapters and shared target ids.
 
-The prior interface exposed only id-bearing Campaign operations. A complete
-research objective could therefore enter ordinary research while advisory BF-1
-stayed dormant. CHX-063 adds exact, idempotent goal compilation without reviving
-fuzzy routing, `ACTIVE`, a second scheduler, or background autonomy.
+## Global PHX architecture route guide
 
-Qualified owner:
-`run-20260803T050224999419Z-b61fe8ef982a/CHX-063`.
+PHX is a project-independent, host-global reference guide for reusable major
+architecture routes. It distills lessons from CHX problems and other measured
+architecture evidence without duplicating the concrete issue ledger.
 
-## CHX-064: audit nonmutation must be measured
+PHX records proposals, relationships, measurements, and applicability. Search,
+evaluation, and reporting are read-only. Recording a route does not authorize
+implementation, and a change to the active architecture requires a separate,
+informed user consultation. This release closes its first guide with 18 routes,
+8 measurements, and zero consultations or adoptions.
 
-The aggressive mutation audit formerly relied on caller-provided bytecode
-suppression and reported `candidate_unchanged=true` without measuring unexpected
-paths. It now disables bytecode intrinsically, propagates that policy to every
-child, snapshots the complete path/kind/mode/content-or-link identity, and makes
-any drift fail the audit. `--help` is now a true zero-audit path.
+Performance-related CHX work now consults PHX first and persists a hash-bound
+search receipt. Matching routes are reused or extended instead of silently
+creating another wheel. The 2–4 minute administrative-cost target remains an
+optimization goal for indexing, hashing, status, and audit coordination; it is
+not a correctness timeout for substantive research, proof, computation, or the
+high-cost release matrix.
 
-Qualified owner:
-`run-20260803T061517579316Z-67d1a8c570ed/CHX-064`.
+## Coordinated CHX repairs
 
-## CHX-065: parallel validation needs compatibility phases
+The public CHX lineage now covers CHX-001 through CHX-109. The final successor
+run resolves eight related findings discovered while validating a large,
+protected Paper-led project:
 
-The repaired audit correctly caught a full-suite process writing bytecode into
-the same cold tree during a concurrent run. Chalxius now ships a reusable
-release-validation coordinator that:
+- **CHX-102:** keep novelty validation inside the owning aggregate inspection
+  context;
+- **CHX-103:** derive exact empty task authority before opening the complete
+  active-Fact closure;
+- **CHX-104:** validate one canonical Paper-continuation disposition collection
+  and derive plan partitions from it;
+- **CHX-105/106:** decide optional Experiment applicability only from canonical,
+  validated frozen ownership and reject path drift or symlink components;
+- **CHX-107:** bind aggregate inspection to one canonical project and one shared
+  project snapshot lock;
+- **CHX-108:** bind standalone PHX CLI options to their owning handlers and test
+  the public dispatch path; and
+- **CHX-109:** materialize the complete validated task-card view before reading
+  present optional Experiment state while keeping exact absence cheap.
 
-- binds every lane to one approved `MANIFEST.sha256` identity;
-- creates canonical, no-symlink, manifest-only `lane/chalxius` copies;
-- isolates lane temporary and runtime-archive state;
-- permits compatible baseline checks to run in parallel;
-- places the snapshot-sensitive mutation audit behind a phase barrier;
-- snapshots the source and every lane; and
-- emits one aggregate fail-closed receipt.
+These repairs reuse one reconnaissance, one tactical record per issue, and one
+superseding integrated repair. They do not weaken first-access validation,
+historical-runtime checks, Candidate/Certification/Gateway boundaries, or Fact
+admission.
 
-Missing or duplicate lanes, mixed identities, shared mutable roots, nonzero
-results, timeouts, source drift, lane drift, or phase-barrier removal all reject
-the matrix. The mechanism is domain-neutral and can validate Chalxius research
-infrastructure used for philosophy, mathematics, empirical, or mixed projects.
+## Cautious advisory recovery remains bounded
 
-Qualified owner:
-`run-20260803T063745640293Z-1ebe1ce2cc97/CHX-065`.
+The 0.6.4 ordinary-language goal intake remains available under `auto` and
+`deep`. An explicit objective can establish or exactly reuse a prospective
+internal Campaign scope and project BF-1 without requiring Campaign jargon.
+BF-2/BF-3 still require real blockage evidence. BF-1 through BF-3 remain
+advisory-only and cannot plan rounds, dispatch agents, create Research, or
+affect Candidate, Certification, Gateway, or Fact.
 
-## CHX-066: deep must include applicable goal intake
+## Release and cutover reliability
 
-The first goal-intake implementation hard-coded `auto` as the only eligible
-profile, even though `deep` requests every applicable expensive research
-feature. Goal-intake revision 2 now accepts exactly `auto` and `deep`, returns a
-mode-specific trigger, and continues to reject `fast` before writes. The
-exact-match, no-`ACTIVE`, future-only binding, explicit-disablement,
-evidence-gated BF-2/BF-3, and zero-authority boundaries are unchanged.
+The release coordinator binds one approved `MANIFEST.sha256` to six isolated
+lanes:
 
-Qualified owner:
-`run-20260803T080711145538Z-d486dce92032/CHX-066`.
+- architecture reconnaissance;
+- mutation-registry preflight;
+- behavioral feature gate;
+- self-test;
+- the complete unit-test suite; and
+- the snapshot-sensitive aggressive mutation audit.
 
-## CHX-067: protected cutover must not repeat a whole-project audit
+Cheap gates run before baselines; the mutation audit runs behind a phase
+barrier. Every lane must preserve the same manifest and remain unchanged.
 
-The earlier cutover gate reconstructed a protected project before the swap and
-again after installing byte-identical candidate bytes. The replacement gate is
-receipt-first. One hash-approved request binds the exact runtime delta, complete
-release matrix, prior current audit, terminal rounds, historical runtime
-bindings, and the audit-relevant project digest. An affecting delta pays for one
-deep audit while building the receipt; an unchanged non-affecting delta reuses
-the prior audit. Cutover checks the same receipt and project digest after the
-swap, with automatic rollback on drift. It never runs a second semantic audit.
+Protected cutover consumes one hash-approved project-validation receipt. For
+this affecting delta, the receipt builder ran one fresh deep audit. The
+transactional cutover reused the exact project snapshot after the byte-exact
+swap and did not repeat the semantic audit. Any manifest, project, runtime,
+provenance, terminal-round, or receipt drift fails closed and restores the
+prior runtime.
 
-Qualified owner:
-`run-20260803T090357863328Z-315775267e7b/CHX-067`.
+## Validation summary
 
-## CHX-068: stale mutation plans must fail before the expensive baseline
+- deterministic archive: `241` members, `240` manifest entries;
+- archive SHA-256:
+  `9e2945f057ac38a1e41e7dea2d54bd39a68216fa903f1f72f9e1b22532578468`;
+- final matrix: all `6/6` lanes passed under one manifest;
+- complete suite: `787/787` passed;
+- aggressive audit: `142/142` registered mutations killed;
+- architecture reconnaissance: `0` errors, `0` warnings, `0` behavioral
+  orphans;
+- protected-project deep audit: PASS, `audit_current_ok=true`;
+- installed manifest and self-test: PASS; and
+- cold archive manifest and self-test: PASS.
 
-Mutation targets were formerly checked only when each mutant was reached. A
-refactor could therefore leave a late textual target stale after the full
-baseline and many earlier mutants had already run. The audit now resolves the
-entire registry before any baseline subprocess, requires each target to be one
-contained regular file, and requires exactly one occurrence of every attack
-fragment. Mutation uses the same resolver, and a self-mutant protects the
-preflight ordering. This reduces wasted validation without weakening release
-acceptance.
-
-Qualified owner:
-`run-20260803T094645700515Z-355e835f8fef/CHX-068`.
-
-## Preserved 0.6.3 and earlier behavior
-
-The release retains:
-
-- bounded content-addressed Paper-continuation status with explicit forensic
-  full reconstruction;
-- ordered digest-bound CHX ledger lineage and public disclosure;
-- complete draft-to-DAG, Paper Research Pipeline, and atomic Paper-subject Fact
-  preflight;
-- philosophy stance continuity, mathematical proof/disproof target continuity,
-  empirical estimand continuity, and explicit mixed adapters;
-- composable independent verification with the ordinary Candidate →
-  Certification → Gateway → Fact boundary;
-- read-only historical runtime archives and transactional global cutover; and
-- the BF-1–BF-3 advisory-only L3/L4 recovery boundary.
-
-No existing Paper, Research, Campaign, Candidate Release, Decision, Fact,
-Evidence object, task card, CHX ledger, or frozen runtime is rewritten or
-backfilled. No Fact authority is inherited or migrated.
-
-## Validation
-
-The release asset is manifest-complete, deterministic, symlink-free, and
-bytecode-free. One final manifest-bound matrix passed self-test, all 646 tests,
-all 138 mutants, exact lane isolation, and exact nonmutation. The deterministic
-archive then passed manifest and cold self-test checks. The installed tree was
-proved byte-identical to that candidate and received only the lightweight
-identity, self-test, and `deep` goal-intake smoke checks; the complete matrix was
-not repeated. Exact identities, timings, CHX hashes, rollback paths, and the
-project-validation receipt are recorded in [VALIDATION.md](VALIDATION.md) and
-[RELEASE.lock.json](RELEASE.lock.json).
+Exact hashes, receipts, runtime identities, and scope boundaries are recorded
+in [VALIDATION.md](VALIDATION.md) and [RELEASE.lock.json](RELEASE.lock.json).
 
 ## Install
 
 Download adjacent assets:
 
-- `chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz`
-- `chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz.sha256`
+- `chalxius-0.6.5-integrated-research-continuity.tar.gz`
+- `chalxius-0.6.5-integrated-research-continuity.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz.sha256
-tar -xzf chalxius-0.6.4-goal-driven-advisory-recovery.tar.gz
+shasum -a 256 -c chalxius-0.6.5-integrated-research-continuity.tar.gz.sha256
+tar -xzf chalxius-0.6.5-integrated-research-continuity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
 
-Installing over a global runtime is a separate explicit cutover decision. Use
-the bundled project-validation receipt builder and transactional cutover gate,
-and name every protected project. A valid unchanged receipt avoids duplicate
-whole-project audits; missing, stale, or semantically affected evidence fails
-closed or requires the one necessary full audit.
+Replacing a global runtime remains a separate cutover decision. Name every
+protected project, build or reuse an exact approved validation receipt, and use
+the transactional cutover entrypoint. Never replace the runtime underneath an
+already-frozen task card by raw file copy.
 
 ## Scope
 
-Software validation establishes exercised workflow and byte-identity
-properties. It does not verify a philosophical claim, prove a theorem, validate
-an empirical result, certify a manuscript, or admit a Fact. The sole truth path
-remains `Research → Candidate Release → Certification Decision → Fact`.
+Software validation establishes exercised behavior, fault detection,
+nonmutation, and byte identity. It does not verify a philosophical claim, prove
+a theorem, validate an empirical result, certify a manuscript, or admit a Fact.

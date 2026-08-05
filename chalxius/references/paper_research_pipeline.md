@@ -45,6 +45,18 @@ direction. Only an exact Operator target-revision authorization may replace a
 bound target. The current philosophy Paper uses the argumentative-stance
 adapter, so its conditional restorative position remains preserved.
 
+Mathematical progress uses an immutable exact-target root plus a typed
+refinement DAG. A refinement node is exactly one of `weaker_theorem`,
+`stronger_theorem`, `special_case`, `added_hypothesis_theorem`,
+`weakened_conclusion_theorem`, `counterexample`, or `obstruction`. It records
+the exact before/after hash-bound deltas for hypotheses, domain, quantifiers,
+and conclusion strength, its logical relation to the root, evidence or an
+obstruction, and the remaining gap. A verified refinement may map to a
+Candidate Fact, but the root remains `original_target_open=true` until an
+evidenced proof or disproof of the unchanged root is supplied. A weaker result
+therefore cannot use `directly_reconstructs` or otherwise substitute for the
+root. No mathematical record contains a stance field.
+
 ## Prospective activation and copy-on-write succession
 
 The stronger path applies only when an activation record says:
@@ -127,6 +139,14 @@ Candidate DAG. It requires:
 - `native_gateway_required=true` and
   `compatibility_fact_bundle_substitute=false`.
 
+For a mathematics graph, `--mathematical-progress` is additionally mandatory.
+Its exact top-level fields are `target_policy` and `refinement_dag`; the public
+receipt binds their canonical hashes and records whether the exact root is
+still open. Supplying that input to philosophy, empirical, or mixed adapters
+fails as nonapplicable. The historical native pipeline receipt remains bound
+inside the public receipt, so this extension does not bypass any existing
+Paper, evidence, verifier, Certification, or Gateway check.
+
 Passing this preflight establishes structural/evidential readiness only. It
 does not certify philosophical equivalence or truth and does not replace native
 Paper review, composable verification, Certification, or Gateway admission.
@@ -171,7 +191,8 @@ python3 -B "$PIPELINE" frontier \
 python3 -B "$PIPELINE" frontier-verify \
   --graph PAPER_GRAPH.json --frontier FRONTIER.json
 python3 -B "$PIPELINE" successor \
-  --graph PAPER_GRAPH.json --activation ACTIVATION.json \
+  --project-root PROJECT --graph PAPER_GRAPH.json \
+  --activation ACTIVATION.json \
   --actor main --builder-context-id RUN_ID \
   --bundle-output SUCCESSOR.json --receipt-output SUCCESSOR_RECEIPT.json
 python3 -B "$PIPELINE" evidence \
@@ -180,6 +201,7 @@ python3 -B "$PIPELINE" evidence \
 python3 -B "$PIPELINE" preflight \
   --graph PAPER_GRAPH.json --frontier FRONTIER.json \
   --dag ATOMIC_DAG.json --continuity RESEARCH_CONTINUITY.json \
+  --mathematical-progress MATHEMATICAL_PROGRESS.json \
   --evidence-receipt EVIDENCE_RECEIPT.json \
   --successor-receipt SUCCESSOR_RECEIPT.json --output PREFLIGHT.json
 python3 -B "$PIPELINE" delta-normalize \

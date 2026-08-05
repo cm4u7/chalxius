@@ -1,18 +1,13 @@
 ---
 name: chalxius
-description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
+description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; diagnose or reduce Chalxius administrative cost from ordinary-language requests; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius 0.6.4 — Goal-Driven Advisory Recovery
+# Chalxius 0.6.5 — Integrated Research Continuity
 
-Use the bundled Chalxius research engine as the only research runtime. Fast,
-auto, and deep are execution profiles of that one engine. The Fact Graph
-admission contract is identical in every profile.
+Use the bundled Chalxius research engine as the only research runtime. Fast, auto, and deep are execution profiles of that one engine. The Fact Graph admission contract is identical in every profile.
 
-`chalxius` is the public skill name. The earlier
-`operate-mathgraph-unified` label survives only as an archived candidate name
-and a compatibility protocol identifier in already-defined artifact schemas;
-it is not a second runtime or user-facing route.
+`chalxius` is the public skill name. The earlier `operate-mathgraph-unified` label survives only as an archived candidate name and a compatibility protocol identifier in already-defined artifact schemas; it is not a second runtime or user-facing route.
 
 ## Read the governing references
 
@@ -31,15 +26,11 @@ Read the directly applicable Chalxius reference before acting:
 - External theorems or sources: [references/external_theorem_applicability.md](references/external_theorem_applicability.md) and [references/external_source_reliability.md](references/external_source_reliability.md).
 - Explicitly requested academic teaching or testing over graph snapshots: [references/unified_learning_plane.md](references/unified_learning_plane.md) and [references/fact-graph-grilling.md](references/fact-graph-grilling.md).
 - Explicitly requested human-readable single-file graph visualization: [references/reader_html_export.md](references/reader_html_export.md).
-- Engine or release changes: [references/capability_difference_audit.md](references/capability_difference_audit.md), [references/v5_capability_matrix.md](references/v5_capability_matrix.md), and [references/v5_release_traceability.md](references/v5_release_traceability.md).
+- Engine, release, orphan-capability, global architecture-route, or performance-cost changes: [references/capability_difference_audit.md](references/capability_difference_audit.md), [references/v5_capability_matrix.md](references/v5_capability_matrix.md), [references/v5_release_traceability.md](references/v5_release_traceability.md), [references/phx_architecture_routes.md](references/phx_architecture_routes.md), [references/administrative_cost_playbook.md](references/administrative_cost_playbook.md), and the executable capability/behavior registries.
 
 ## Preserve authority and communication boundaries
 
-The V5 truth path is exactly `Research -> Candidate Release -> Certification
-Decision -> Fact`. Research is cumulative nontruth; Certification records
-evidence; the V5 Fact Graph is the only premise store. Evidence, Paper/Audit,
-and Blackboard remain separate nontruth/source subsystems, and the Reader is only a
-derived presentation.
+The V5 truth path is exactly `Research -> Candidate Release -> Certification Decision -> Fact`. Research is cumulative nontruth; Certification records evidence; the V5 Fact Graph is the only premise store. Evidence, Paper/Audit, and Blackboard remain separate nontruth/source subsystems, and Reader is only a derived presentation.
 
 Every worker task card retains three communication planes: compact control, one frozen
 mathematical-state view, and bounded narrative. The card is the immutable capability boundary. A
@@ -54,8 +45,8 @@ historical audit bytes.
 
 For every Chalxius run started after the 0.4.1 activation boundary, start one task-scoped CHX runtime ledger before substantive analysis or tool execution.
 Project-bound runs store it at `PROJECT/chx-ledgers/`; projectless runs use private host task state. Its bytes have `truth_effect=none` and `project_effect=none`.
-Record every architecture-caused or materially amplified mechanism first as a stable finding; revisions 3 and 4 require transactional promotion, reasoned merge, or reasoned exclusion before close and preserve typed issue relations. Revision 4 additionally freezes the complete digest-bound transitive predecessor lineage so issue allocation and relations survive empty intermediate ledgers.
-V1/V2/V3 remain byte-exact readable. Never backfill, reclassify, warn about, or redo an older run merely because its original contract lacked the newer ledger.
+Record every architecture-caused or materially amplified mechanism first as a stable finding; revisions 3 through 5 require transactional promotion, reasoned merge, or reasoned exclusion and preserve typed issue relations. Revisions 4 and 5 freeze the complete digest-bound predecessor lineage. For every revision-5 issue, first inspect the existing architecture and make one bounded reusable tactical repair; this provisional repair restores progress but never counts as resolution. At the task-stage boundary, coordinate the whole CHX set, PHX guidance, and reusable-mechanism registry into one integrated repair binding coordination, risk, regression evidence, and every issue to be resolved. A late issue requires a superseding integrated repair with renewed complete coverage. Performance-cost issues must persist a PHX search receipt before mechanism selection and cite it in tactical or integrated evidence.
+V1/V2/V3/V4 remain byte-exact readable with their original append semantics. Never backfill, reclassify, warn about, or redo an older run merely because its original contract lacked the newer ledger.
 
 ## Choose a reasoning mode
 
@@ -74,6 +65,8 @@ and `profile-closure-record` appends that advice to Research; neither has
 admission authority. Missing source, replay, convention, quantifier,
 atomic-DAG, adverse-disposition, or fresh-verifier evidence remains an explicit
 Candidate Release or Certification blocker in every mode.
+
+`deep` increases applicable research depth; it does not make unchanged history subject to unconditional replay. Validation scope is necessity-based: revalidate the exact changed target, predecessor, defeater, source, interface, writing, and admission closure, while reusing current receipts for unchanged sealed dependencies. Missing, stale, drifted, ambiguous, schema-changed, or explicitly forensic state fails closed to full validation. New or invalidated atomic claims still require fresh verification.
 
 ## Initialize a new V5 project
 
@@ -122,16 +115,16 @@ receipts, and read-only audit. A fully receipted round becomes `completed` and
 historical without an artificial abort; otherwise `round-status` projects aborted
 unfinished assignments as `frozen_aborted` with no live awaiting count. Audit checks
 exact frozen runtime bytes in either terminal state. A terminal schema-1 or schema-2 card may resolve those bytes only through the host-managed, content-addressed runtime archive outside skill discovery. The resolver rehashes the complete manifest, exact file set, read-only content object, and immutable identity registry record on each bounded read; it never imports or executes archived code.
-Active cards, worker CHX startup, return ingestion, experiments, Pulse, and every mutation still require the exact current live runtime, including every manifest-listed byte. `plan-round` completes that runtime preflight before it writes a Blackboard snapshot, round directory, or task card; worker CHX startup performs the same full-tree check before creating a ledger. Replace or roll back a global runtime only through `scripts/runtime_cutover.py`, with an explicit protected-project inventory, approved manifest, host archive, and rollback root. For a protected project, first build one approved receipt with `scripts/runtime_cutover_project_validation.py`. The request binds the exact runtime diff, release matrix, prior current audit, and whether changed code requires one fresh deep audit. The builder checks terminal rounds and historical runtime bindings, hashes the audit-relevant project state, and runs at most one deep audit. Cutover reuses that receipt before and after its exact rename; project or identity drift fails closed and restores the prior install. Without a receipt, protected cutover is refused unless the Operator explicitly requests one full audit; even that audit runs once and its exact snapshot is reused after the swap.
+Active cards, worker CHX startup, return ingestion, experiments, Pulse, and every mutation still require the exact current live runtime, including every manifest-listed byte. `plan-round` completes that runtime preflight before it writes a Blackboard snapshot, round directory, or task card; worker CHX startup performs the same full-tree check before creating a ledger. Replace or roll back a global runtime only through `scripts/runtime_cutover.py`, with an explicit protected-project inventory, approved manifest, host archive, and rollback root. For a protected project, first build one approved receipt with `scripts/runtime_cutover_project_validation.py`. The single-read exact-type request binds the runtime diff, release matrix, prior audit, and whether changed code requires one fresh deep audit. Receipt v2 binds a versioned project snapshot, terminal rounds, historical bindings, runtime content, and a finite acyclic predecessor chain ending at one deep receipt. Exact non-impacting reuse launches no candidate process; candidate path is provenance while installed content plus manifest identity supports the next generation. Cutover rechecks the same receipt before and after rename and restores the prior install on drift. Administrative two-to-four-minute targets are telemetry, never cutoffs; only the separate finite watchdog terminates lost work without issuing a receipt. Without a receipt, protected cutover is refused unless the Operator explicitly requests one full audit; even that audit runs once and its exact snapshot is reused after the swap.
 Use whole-pulse abort only to stop future Pulse
 dispatch while retaining accumulated contributions.
 
 ## Run research work
 
 1. Add or select cumulative Research. Challenges, counterexamples, obstacles, insights, repairs, and dispositions remain separate immutable entries. Source-dependent work uses `memory-add --current-assurance` with exact project-relative path/hash/role artifacts; path-only prose cannot be planned.
-2. At intake, distinguish a `research_draft` from an external finished source. For a draft, freeze the exact artifact, decompose its full load-bearing Paper DAG, inherit that graph copy-on-write, project its complete order-preserving research frontier with `scripts/paper_research_pipeline.py`, research and repair every selected claim/inference node, verify publication identity and claim-level witnesses, commit one atomic target-total disposition batch, and preserve its domain-specific research target unless the Operator authorizes a revision. Philosophy preserves argumentative stance; mathematics preserves the exact problem, hypotheses, and quantifiers while permitting proof, disproof, or unresolved obstruction. `auto` may accelerate work units but cannot compress topology.
+2. At intake, distinguish a `research_draft` from an external finished source. For a draft, freeze the exact artifact, decompose its full load-bearing Paper DAG, inherit that graph copy-on-write, project its complete order-preserving research frontier with `scripts/paper_research_pipeline.py`, research and repair every selected claim/inference node, verify publication identity and claim-level witnesses, commit one atomic target-total disposition batch, and preserve its domain-specific target unless Operator authorizes a revision. Philosophy alone preserves argumentative stance. Mathematics preserves the exact problem, hypotheses, domains, and quantifiers while permitting proof, disproof, obstruction, and a typed weaker-progress DAG; a weaker theorem, special case, added hypothesis, or weakened conclusion exposes its exact gap and never masquerades as resolution of the unchanged root. `auto` may accelerate work units but cannot compress topology.
    Target revision authorization is a durable Operator-only record bound to the exact plan hash, target, prior domain-continuity contract, and impact; a producer-supplied assertion is never authority. Admit the complete mapped atomic Candidate DAG through the project-bound signed verification lifecycle and Gateway before continuing Research from that Fact Graph. An external finished source enters Evidence, never Fact by credibility alone.
-3. Plan a round. The card binds the candidate skill root/version, content identity and host archive locator, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; the dedicated Host role remains dispatch-only. Bind the task/thread through `host_task_scope_id` when available; worker CHX startup passes the exact task card and fails on runtime drift. Runtime validation is deduplicated only within one bounded phase for one identical identity; no cache hit supplies authority across phases.
+3. Plan a round. The card binds the candidate skill root/version, content identity and host archive locator, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; Host remains dispatch-only. A load-bearing Paper target, or an explicitly marked proof target, receives a distinct paired `refute` worker/context; this attack enters Research and adds no second truth gate. Bind one normalized non-null `host_task_scope_id`; worker CHX startup passes the exact task card and fails on runtime drift. Runtime validation is deduplicated only within one bounded phase for one identical identity; no cache hit supplies authority across phases.
 4. Execute only from the frozen card. Preflight a repairable draft, then ingest only the exact worker-final hash. A malformed peer is quarantined locally.
 5. For collaborative work, use optional two-wave Pulse. Each valid Wave-1 and
    Wave-2 contribution enters Research independently; Pulse closure is advice,
@@ -139,8 +132,7 @@ dispatch while retaining accumulated contributions.
 6. Use experiments, novelty, campaigns, claims/conventions, and Blackboard
    promotion only when useful to the bounded task. An explicit Campaign scope
    is an envelope, not a universal closure checklist or second scheduler.
-7. Seal one explicit Candidate Release. It automatically includes linked
-   adverse Research, requires dispositions for every bound attack, and forbids a Paper-descended release from escaping through theorem mode or opaque philosophical compression.
+7. Seal one explicit Candidate Release. It includes linked adverse Research, requires dispositions for every bound attack, and forbids a Paper-descended theorem/opaque-compression escape. A continuation-descended release seals one content-addressed capsule over the current status generation, Logic/Audit refs, source and writing artifacts, changed closure, dispositions, and Candidate interfaces. Candidate, verifier, Certification, and Gateway revalidate it; stale or ambiguous state records an observable full-validation fallback.
 8. Send only the frozen verifier capsule to a fresh verifier, record one
    immutable decision, then let the gateway admit an accepted release.
 
@@ -156,8 +148,8 @@ projecting historical eight-metric Research without rewriting. The score has no 
 constraints, value, stop conditions, and history head as nontruth context. Without the flag the global
 frontier is unchanged; Campaign never silently schedules, expands, closes, rewrites, or affects Facts.
 
-When `reasoning_mode=auto` or `reasoning_mode=deep` and the user states a research objective without Campaign jargon, Operator must run `research-goal-intake` with those exact words before adding or planning new Research. The command lexically exact-matches or creates one Campaign, enables only the fixed advisory policy, computes BF-1, and returns the internal id that the host must bind to future Research; it never fuzzy-matches, consumes `ACTIVE` for selection, or retags existing Research. The user need not say `Campaign`. `fast` retains explicit Campaign/BF activation.
-After a real exact ingested-attempt blockage appears, the host may use that returned id to run BF-2 dry reassessment and BF-3 bounded persistence automatically; absent the blockage evidence gate it must wait. These paths never create Research or a round, dispatch work, close Campaigns, or enter Candidate, Certification, Gateway, Reader, Learner, or Fact authority. Explicit disablement blocks implicit re-enable; Operator decisions remain advice and `plan_one`/`execute_one` remain rejected.
+When `reasoning_mode=auto` or `reasoning_mode=deep` and the user states a research objective without Campaign jargon, Operator must run `research-goal-intake` before planning. The command exact-matches or creates one Campaign, commits advisory BF-1, and creates or reuses exactly one prospective root Research whose metadata binds the committed intake token and Campaign. It never fuzzy-matches, consumes `ACTIVE`, retags existing Research, plans, dispatches, or writes Fact authority. The user need not say `Campaign`; `fast` retains explicit Campaign/BF activation.
+BF-1 through BF-3 themselves remain advisory and create no Research. After a real exact ingested-attempt blockage, the host may use the returned id for BF-2 dry reassessment and BF-3 bounded persistence; otherwise it must wait. They never create a round, dispatch, close Campaigns, or enter Candidate, Certification, Gateway, Reader, Learner, or Fact authority. Explicit disablement blocks implicit re-enable; `plan_one`/`execute_one` remain rejected.
 
 For new 0.4.4 cards, one promoted Blackboard Research item may seed its exact
 bounded query and lineage. Exact enum mode suggestions apply only when their
@@ -222,11 +214,7 @@ show `implemented_order >= required_order`; matching two depths alone is not a
 proof. A load-bearing stage needs at least two distinct checks, including an
 independent implementation, symbolic oracle, or metamorphic relation.
 
-Prepare a neutral frozen verifier capability with
-`scripts/prepare_verifier_capsule.py`. It accepts one V5 release id, capsule id,
-or exact capsule JSON, copies only authorized bytes outside both the project
-field-level preflight validator. The verifier writes and preflights only the
-review; the gateway remains the sole recorder/admitter.
+Prepare a neutral frozen verifier capability with `scripts/prepare_verifier_capsule.py`. It accepts one V5 release id, capsule id, or exact capsule JSON and copies only authorized bytes outside the project. For a prospectively marked release the verifier writes `output/review-draft.json`; `host/submit_review.py` preserves and preflights it, quarantines invalid bytes with structured diagnostics, and atomically publishes immutable `output/review.json` plus content-addressed preflight/formal-return receipts only on success. Historical unmarked V5 releases retain their frozen direct-return capability. The gateway remains the sole recorder/admitter.
 
 ## Admit V5 facts through one contract
 
@@ -490,10 +478,16 @@ user decisions under a separate **Attack report** label; never classify them as
 CHX architecture issues or as admitted Facts.
 
 After those checks, close the task's CHX runtime ledger immediately before the
-final response. If `report_required=true`, report each included CHX issue with
+final response. Revision-5 close rechecks that its latest integrated repair
+covers every resolved issue; reconnaissance and repair records remain nontruth
+operational evidence. If `report_required=true`, report each included CHX issue with
 its causal mechanism, effect, disposition, and ledger path.
 If `report_required=false`, say nothing about the CHX ledger. If ledger startup,
 validation, or close failed, disclose that host-procedure failure instead of
 claiming a compliant post-0.4.1 run.
+
+Treat `降本`, `提速`, "reduce cost", "too much administrative work", a slow audit/index/status, or excessive overall Chalxius cost as an explicit semantic trigger for the global PHX guide and [references/administrative_cost_playbook.md](references/administrative_cost_playbook.md); do not require the user to name either. Architecture recommendation, global redesign, coordination, simplification, or recurring mechanism reuse likewise triggers PHX consultation. PHX stores major reusable routes distilled from CHX and other architecture evidence; it does not duplicate problems. Recording or retrieving a route never authorizes implementation, and every PHX adoption requires a recorded user consultation plus supporting measurement. First separate administrative work from substantive research, proof, computation, source review, and independent verification. Select the closest route, take one bounded measurement, and implement only an authorized confirmed route; if the mechanism is architecture-caused or amplified, record it in the current CHX ledger first.
+
+Administrative reconnaissance, indexing, hashing, and routine audit normally target one to two minutes, with rare explained cases near four. These are optimization targets, never brittle gates. Prefer bounded `status` over explicit forensic audit when appropriate; inside an aggregate, keep one ephemeral inspection context through every subaudit, derive applicability before authority, validate one canonical collection before filtering, and skip only an exactly absent optional subsystem. Eliminate work, reuse one successful command-local projection, and measure again before persistent indexing or genuinely independent parallelism. The primary failure model is agent misoperation and duplicate broad calls, not an external attacker; no optimization may weaken first-access validation, drift detection, or truth/project authority boundaries.
 
 Do not replace installed skills or migrate an active project without separate explicit authorization. Every cutover is prospective and must preserve frozen work contracts.

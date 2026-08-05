@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .contracts import SHA256_RE, sha256_json, validate_memory_id
+from .contracts import SHA256_RE, sha256_bytes, sha256_json, validate_memory_id
 
 
 PAPER_CONTINUATION_STATUS_INDEX_REVISION = (
@@ -67,7 +67,6 @@ class PaperContinuationStatusIndex:
         *,
         continuation_contract_revision: str,
         worker_outcomes: set[str] | frozenset[str],
-        writing_statuses: set[str] | frozenset[str],
         status_detail_fields: list[str],
     ) -> None:
         self.continuation = continuation
@@ -76,7 +75,6 @@ class PaperContinuationStatusIndex:
         self.project_id = self.store.project_id()
         self.continuation_contract_revision = continuation_contract_revision
         self.worker_outcomes = frozenset(worker_outcomes)
-        self.writing_statuses = frozenset(writing_statuses)
         self.status_detail_fields = list(status_detail_fields)
         self.root = continuation.root / "status-index"
         self.states_dir = self.root / "states" / "by-sha256"
@@ -240,6 +238,186 @@ class PaperContinuationStatusIndex:
     def require_current_if_declared(self) -> None:
         if self._plan_files_present():
             self._load_head(require_current=True)
+
+    def release_generation_surface(self) -> dict[str, Any]:
+        """Return the bounded filesystem generation used by release fallback.
+
+        This deliberately does not interpret an untrusted or stale HEAD.  The
+        raw HEAD file hash and the current protected-directory fingerprints
+        let a completed full-validation fallback be reused only while the
+        exact surface it validated remains unchanged.
+        """
+
+        observed_head: dict[str, Any] = {
+            "present": False,
+            "file_sha256": None,
+            "declared_generation": None,
+            "declared_head_sha256": None,
+        }
+        if self.head_path.exists():
+            if self.head_path.is_symlink() or not self.head_path.is_file():
+                raise ValueError("Paper continuation status head is unsafe")
+            raw = self.head_path.read_bytes()
+            observed_head["present"] = True
+            observed_head["file_sha256"] = sha256_bytes(raw)
+            try:
+                value = self.store._read_json(self.head_path)
+            except Exception:
+                value = None
+            if isinstance(value, dict):
+                generation = value.get("generation")
+                digest = value.get("head_sha256")
+                if isinstance(generation, int) and generation >= 1:
+                    observed_head["declared_generation"] = generation
+                if isinstance(digest, str) and SHA256_RE.fullmatch(digest):
+                    observed_head["declared_head_sha256"] = digest
+        elif self.head_path.is_symlink():
+            raise ValueError("Paper continuation status head is unsafe")
+        semantic = {
+            "index_revision": PAPER_CONTINUATION_STATUS_INDEX_REVISION,
+            "project_id": self.project_id,
+            "observed_head": observed_head,
+            "dependency_fingerprints": self._dependency_fingerprints(),
+        }
+        return {**semantic, "surface_sha256": sha256_json(semantic)}
+
+    def release_witness(self, plan_id: str) -> dict[str, Any]:
+        """Return one bounded, current, content-addressed plan witness.
+
+        The witness selects existing immutable state and receipt objects.  It
+        is a release proof projection, not a second continuation state owner.
+        """
+
+        plan_id = self.continuation.validate_plan_id(plan_id)
+        head = self._load_head(require_current=True)
+        if head is None or plan_id not in head["plan_heads"]:
+            raise KeyError(f"unknown Paper continuation plan: {plan_id}")
+        entry = head["plan_heads"][plan_id]
+        state = self._load_state(entry["state_sha256"])
+        receipt = self._load_receipt(entry["status_receipt_sha256"])
+        if (
+            state["plan_id"] != plan_id
+            or receipt["plan_id"] != plan_id
+            or receipt["state_sha256"] != state["state_sha256"]
+            or entry["state_sha256"] != state["state_sha256"]
+            or entry["status_receipt_sha256"]
+            != receipt["status_receipt_sha256"]
+        ):
+            raise ValueError("Paper continuation release witness binding drifted")
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": self.continuation_contract_revision,
+            "index_revision": PAPER_CONTINUATION_STATUS_INDEX_REVISION,
+            "project_id": self.project_id,
+            "plan_id": plan_id,
+            "plan_record_sha256": state["plan_record_sha256"],
+            "generation": head["generation"],
+            "head_sha256": head["head_sha256"],
+            "state_sha256": state["state_sha256"],
+            "status_receipt_sha256": receipt["status_receipt_sha256"],
+            "adequacy_receipt_sha256": receipt["adequacy_receipt_sha256"],
+            "adequacy_complete": receipt["adequacy_complete"],
+            "source_snapshot_current": receipt["source_snapshot_current"],
+            "truth_effect": "none",
+        }
+        return {**semantic, "witness_sha256": sha256_json(semantic)}
+
+    def validate_release_witness(
+        self,
+        value: Any,
+        *,
+        require_current: bool,
+    ) -> dict[str, Any]:
+        fields = {
+            "schema_version",
+            "contract_revision",
+            "index_revision",
+            "project_id",
+            "plan_id",
+            "plan_record_sha256",
+            "generation",
+            "head_sha256",
+            "state_sha256",
+            "status_receipt_sha256",
+            "adequacy_receipt_sha256",
+            "adequacy_complete",
+            "source_snapshot_current",
+            "truth_effect",
+            "witness_sha256",
+        }
+        witness = _exact(value, fields, "Paper continuation release witness")
+        plan_id = self.continuation.validate_plan_id(witness["plan_id"])
+        if (
+            witness["schema_version"] != 1
+            or witness["contract_revision"]
+            != self.continuation_contract_revision
+            or witness["index_revision"]
+            != PAPER_CONTINUATION_STATUS_INDEX_REVISION
+            or witness["project_id"] != self.project_id
+            or not isinstance(witness["generation"], int)
+            or witness["generation"] < 1
+            or any(
+                not isinstance(witness[field], str)
+                or SHA256_RE.fullmatch(witness[field]) is None
+                for field in (
+                    "plan_record_sha256",
+                    "head_sha256",
+                    "state_sha256",
+                    "status_receipt_sha256",
+                    "adequacy_receipt_sha256",
+                    "witness_sha256",
+                )
+            )
+            or not isinstance(witness["adequacy_complete"], bool)
+            or not isinstance(witness["source_snapshot_current"], bool)
+            or witness["truth_effect"] != "none"
+        ):
+            raise ValueError("Paper continuation release witness is invalid")
+        semantic = {
+            key: item for key, item in witness.items() if key != "witness_sha256"
+        }
+        if witness["witness_sha256"] != sha256_json(semantic):
+            raise ValueError("Paper continuation release witness hash mismatch")
+        state = self._load_state(witness["state_sha256"])
+        receipt = self._load_receipt(witness["status_receipt_sha256"])
+        if (
+            state["plan_id"] != plan_id
+            or state["plan_record_sha256"] != witness["plan_record_sha256"]
+            or receipt["state_sha256"] != witness["state_sha256"]
+            or receipt["plan_id"] != plan_id
+            or receipt["adequacy_receipt_sha256"]
+            != witness["adequacy_receipt_sha256"]
+            or receipt["adequacy_complete"] != witness["adequacy_complete"]
+            or receipt["source_snapshot_current"]
+            != witness["source_snapshot_current"]
+        ):
+            raise ValueError("Paper continuation release witness CAS binding drifted")
+        head: dict[str, Any] | None = None
+        if require_current:
+            head = self._load_head(require_current=True)
+            if head is None:
+                raise ValueError("Paper continuation release witness HEAD is missing")
+            entry = head["plan_heads"].get(plan_id)
+            if (
+                head["generation"] != witness["generation"]
+                or head["head_sha256"] != witness["head_sha256"]
+                or entry
+                != {
+                    "state_sha256": witness["state_sha256"],
+                    "status_receipt_sha256": witness[
+                        "status_receipt_sha256"
+                    ],
+                }
+            ):
+                raise ValueError(
+                    "Paper continuation release witness is stale against current HEAD"
+                )
+        return {
+            "witness": witness,
+            "state": state,
+            "receipt": receipt,
+            "head": head,
+        }
 
     def _write_head(
         self,
@@ -751,13 +929,12 @@ class PaperContinuationStatusIndex:
             return
         self.store._write_json_once(path, record)
 
-    def prepare_research(self, research: dict[str, Any]) -> dict[str, Any]:
-        base = self._load_head(require_current=True, allow_missing=True)
-        if base is None and self._plan_files_present():
-            raise ValueError(
-                "Paper continuation status index is missing for declared plans; "
-                "run paper-continuation-status-index-rebuild explicitly"
-            )
+    def _prepare_research_against_base(
+        self,
+        research: dict[str, Any],
+        *,
+        base: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         targets: set[tuple[str, str]] = set()
         binding = research["metadata"].get("paper_continuation")
         if binding is not None:
@@ -808,6 +985,102 @@ class PaperContinuationStatusIndex:
             "lineage": lineage,
             "state_updates": state_updates,
         }
+
+    def prepare_research(self, research: dict[str, Any]) -> dict[str, Any]:
+        base = self._load_head(require_current=True, allow_missing=True)
+        if base is None and self._plan_files_present():
+            raise ValueError(
+                "Paper continuation status index is missing for declared plans; "
+                "run paper-continuation-status-index-rebuild explicitly"
+            )
+        return self._prepare_research_against_base(research, base=base)
+
+    def _prepared_research_is_committed(
+        self,
+        prepared: dict[str, Any],
+    ) -> bool:
+        try:
+            lineage = self._load_lineage(prepared["lineage"]["research_id"])
+        except KeyError:
+            return False
+        if lineage != prepared["lineage"]:
+            raise ValueError("Paper continuation research lineage collision")
+        base = prepared["base_head"]
+        if base is None:
+            return True
+        for plan_id, semantic in prepared["state_updates"].items():
+            entry = base["plan_heads"].get(plan_id)
+            if entry is None:
+                return False
+            loaded = self._load_state(entry["state_sha256"])
+            current_semantic = {
+                key: item for key, item in loaded.items() if key != "state_sha256"
+            }
+            if current_semantic != semantic:
+                return False
+        return True
+
+    def reconcile_research(
+        self,
+        research: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Idempotently finish a Research/status-index transaction on retry.
+
+        A normal Research write prepares the status update before publishing
+        the immutable Research object.  If the process stops between that
+        publication and ``commit_research``, the Research directory is the
+        only permitted dependency to be ahead of the old HEAD.  The explicit
+        retrying writer then reuses the existing full rebuild mechanism so a
+        crash after either the Research object *or* its lineage receipt cannot
+        cause a partial incremental recovery.  Readers never invoke this path.
+        """
+
+        base = self._load_head(require_current=False, allow_missing=True)
+        if base is None:
+            if self._plan_files_present():
+                raise ValueError(
+                    "Paper continuation status index is missing for declared plans; "
+                    "run paper-continuation-status-index-rebuild explicitly"
+                )
+            prepared = self._prepare_research_against_base(research, base=None)
+            if self._prepared_research_is_committed(prepared):
+                return None
+            return self.commit_research(prepared)
+
+        current_fingerprints = self._dependency_fingerprints()
+        head_current = base["dependency_fingerprints"] == current_fingerprints
+        if not head_current:
+            drifted = {
+                name
+                for name in _DEPENDENCY_NAMES
+                if base["dependency_fingerprints"][name]
+                != current_fingerprints[name]
+            }
+            if drifted != {"research_entries"}:
+                raise ValueError(
+                    "Paper continuation status index is stale beyond the exact "
+                    "retried Research write; run "
+                    "paper-continuation-status-index-rebuild explicitly"
+                )
+            # Recovery is exceptional rather than a routine read path.  A full
+            # canonical replay is preferable here to guessing which side of
+            # the lineage/HEAD boundary the interrupted process reached.
+            self.rebuild()
+            base = self._load_head(require_current=True)
+            prepared = self._prepare_research_against_base(
+                research,
+                base=base,
+            )
+            if not self._prepared_research_is_committed(prepared):
+                raise ValueError(
+                    "Paper continuation status rebuild did not reconcile the "
+                    "retried Research record"
+                )
+            return base
+        prepared = self._prepare_research_against_base(research, base=base)
+        if self._prepared_research_is_committed(prepared):
+            return base
+        return self.commit_research(prepared)
 
     def commit_research(self, prepared: dict[str, Any]) -> dict[str, Any] | None:
         self._write_lineage(prepared["lineage"])

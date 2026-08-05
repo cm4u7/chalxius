@@ -27,11 +27,14 @@ coordination boundaries:
 Before that fresh dispatch, the host should run
 `scripts/prepare_verifier_capsule.py`. For V4 it materializes the exact frozen
 bundle. For V5 it recomputes the release/capsule, copies only authorized bytes,
-and supplies a complete decision template and standalone preflight validator.
-Give the verifier only the returned input paths and review output path; retain
-the host capability receipt separately. A reported access outside the allowlist
-invalidates the run. This is a cooperative audit boundary, not OS sandbox
-enforcement.
+and, for prospectively marked releases, supplies a complete decision template,
+standalone preflight validator, and copied host submission program. Give the
+verifier only the returned input paths and `review_draft_path`; retain the host
+capability receipt and run `host/submit_review.py` after the draft is returned.
+Only `formally_returned` bytes may go to the gateway. Historical unmarked V5
+capsules retain their direct `review_return_path`. A reported access outside the
+allowlist invalidates the run. This is a cooperative audit boundary, not OS
+sandbox enforcement.
 
 Installing the skill does not authorize migration or cutover of an active
 project. This package starts neither the legacy `$mathgraph-chalk-version` nor
@@ -124,6 +127,12 @@ coordinates share a task-relative host timeline; overlaps count once even across
 `CODEX_THREAD_ID`; planning fails before writing a round when no stable source exists. Campaign and
 memory IDs remain event provenance, so one host task can cross campaign boundaries without
 splitting or double-counting its clock.
+V5 uses the same normalizer with one prospective fallback: when neither an explicit value nor
+either environment channel exists, `plan-round` deterministically allocates a non-null local scope
+from the exact project and planning request before any round write, returns that scope, and freezes
+it into the round, every assignment, and every card. Reuse the returned scope explicitly for later
+rounds that belong to the same host task. Historical V5 cards with a null scope remain readable but
+cannot be silently attributed to a new attack report.
 Never use a worker vote to resolve a truth-bearing dispute. A surviving load-bearing challenge
 requires an orthogonal specialist or an explicit open/blocked boundary. Stop panel expansion after
 two consecutive barriered cross-review waves add no new typed information.
@@ -193,6 +202,16 @@ determines current Fact, Release, Decision, and admission status. An explicitly
 named attack target grants only its exact path/hash-bound Release, Decision,
 optional admission marker, admitted Facts, and sealed artifacts. Use the
 generated card rather than merging the schemas by hand.
+
+For prospective Research carrying the exact boolean
+`independent_adverse_required=true`, `workers` counts only primary assignments.
+Unless the primary is already `refute` or the Research itself is a `challenge`,
+the same round appends one separately numbered `refute` assignment bound to the
+same source Research. The pair freezes different worker and context ids and a
+contract forbidding inheritance or sharing of the primary context. The paired
+card receives the ordinary exact adverse rules. Both returns remain independent
+nontruth Research; existing Candidate adverse closure and disposition remain
+the sole release-review authority.
 
 A newly planned 0.4.4 card uses
 `task_context_revision="chalxius-v5-task-context-0.4.4-1"` and adds one exact

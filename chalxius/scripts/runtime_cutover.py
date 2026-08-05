@@ -10,7 +10,10 @@ import sys
 
 sys.dont_write_bytecode = True
 
-from mathgraph.runtime_cutover import perform_cutover
+from mathgraph.runtime_cutover import (
+    PROJECT_VALIDATION_TIMEOUT_SECONDS,
+    perform_cutover,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -41,6 +44,15 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run one full protected-project audit before cutover, then reuse its exact snapshot after swap.",
     )
+    parser.add_argument(
+        "--project-validation-timeout-seconds",
+        type=int,
+        default=PROJECT_VALIDATION_TIMEOUT_SECONDS,
+        help=(
+            "finite fail-closed watchdog; exceeding the 2-4 minute optimization "
+            "target alone does not stop a progressing validation"
+        ),
+    )
     parser.add_argument("--allow-fresh-install", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--operation", choices=("install", "rollback"), default="install")
@@ -63,6 +75,9 @@ def main() -> int:
             args.expected_project_validation_receipt_sha256
         ),
         force_full_project_audit=args.force_full_project_audit,
+        project_validation_timeout_seconds=(
+            args.project_validation_timeout_seconds
+        ),
         allow_fresh_install=args.allow_fresh_install,
         dry_run=args.dry_run,
         operation=args.operation,

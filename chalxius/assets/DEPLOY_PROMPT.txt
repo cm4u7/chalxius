@@ -1,4 +1,4 @@
-Verify Chalxius 0.6.2 — Paper Graph Continuity / Brave Future BF-1–3 as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.6.5 — Integrated Research Continuity as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
@@ -11,9 +11,12 @@ immediately before final reporting. Store project-bound ledgers at
 PROJECT/chx-ledgers/ and projectless ledgers in private host state outside the
 skill. The project-local directory has no audit, certification, or truth
 authority. Record only problems caused or materially amplified by Chalxius
-architecture. Under ledger revision 3, record every discovered mechanism first
-as a stable finding and reconcile it transactionally before close; preserve
-typed relations and successor-ledger lineage. Report qualifying entries when
+architecture. Revisions 3–5 record every discovered mechanism first as a stable
+finding and reconcile it transactionally; revisions 4–5 preserve digest-bound
+successor lineage. Revision 5 additionally requires one prior full-tree
+reconnaissance receipt, exactly one reusable tactical repair per resolved issue,
+and a latest integrated repair covering all resolved issues with one derived
+mechanism registry plus coordination, risk, and regression evidence. Report qualifying entries when
 `report_required=true`; when it is false, say nothing. Do not backfill, reclassify, invalidate,
 or request rework from a task already underway under 0.4.0, even if that task
 later loads some 0.4.1-or-later bytes.
@@ -28,8 +31,9 @@ Before every authorized global cutover or rollback, use
 scripts/runtime_cutover.py with an explicit protected-project inventory (or the
 explicit no-project assertion), approved candidate manifest hash, rollback
 root, and host archive root. The gate must verify terminal status/audit, archive
-the prior runtime, swap, revalidate and archive the installed runtime, rerun
-project audits, and automatically restore the prior install on failure.
+the prior runtime, swap, revalidate and archive the installed runtime, reuse the
+approved project-validation receipt rather than repeat semantic reconstruction,
+and automatically restore the prior install on failure.
 Historical archives
 are validation data only: never import or execute them, never use them for a
 worker or write, and never rewrite frozen cards or any graph-plane authority.
@@ -45,6 +49,14 @@ append nontruth Research only; they are not a universal checklist, closure
 receipt, or admission authority. Activate Paper, novelty, campaigns,
 experiments, Pulse, or other optional capabilities only when useful to the
 bounded task.
+
+Deep increases applicable research depth; it does not make unchanged history
+subject to unconditional whole-project validation. Revalidate the necessity-
+derived changed target/predecessor/defeater/source/interface/writing/admission
+closure and reuse current content-addressed receipts for unchanged sealed state.
+Missing, stale, drifted, ambiguous, schema-changed, or forensic state falls back
+to full validation, and every new or invalidated atomic claim still receives
+fresh verification.
 
 Order the automatic V5 frontier with the compact four-factor model and project
 historical eight-metric Research without rewriting it. Scores are priority
@@ -63,6 +75,9 @@ return path, and final-hash contract. Preflight a repairable draft, ingest only
 the exact worker-final SHA-256, and quarantine a malformed return locally.
 Main compiles task context, Operator governs and may explicitly override, and
 the dedicated Host role retains only its trusted dispatch/status/audit surface.
+Every load-bearing Paper target, and every proof target explicitly marked
+`independent_adverse_required`, receives a separate paired refute worker and
+context. Its result is nontruth Research, not a second verifier or truth gate.
 Explicit work-unit abort stops future managed return, experiment, Pulse
 commitment, and dispatch for that round while preserving accumulated evidence.
 
@@ -78,26 +93,44 @@ The only truth path is Research -> Candidate Release -> Certification Decision
 counterexample, and obstacle Research linked to its selected branch and must
 dispose each one. Do not add a second adverse-review layer to the truth path. Seal
 exact candidate bytes, source and computation artifacts, predecessor uses,
-Paper/Audit refs, proof-lineage contracts, and requested checks. Use the neutral
-V5 materializer and give a different fresh verifier only its allowlisted inputs,
-complete decision template, and standalone preflight. Gateway admission must
+Paper/Audit refs, proof-lineage contracts, and requested checks. A continuation-
+descended release also seals one content-addressed capsule over current status,
+changed closure, Paper/source/writing evidence, dispositions, and Candidate
+interfaces; stale or ambiguous state gets an observable full-validation fallback.
+Use the neutral V5 materializer and give a different fresh verifier only its
+allowlisted inputs and complete decision template. The verifier writes
+`output/review-draft.json`; only host-controlled `host/submit_review.py` may run
+the standalone preflight, quarantine invalid bytes, and atomically publish the
+immutable canonical review plus receipts. Gateway admission must
 revalidate the exact accepted decision; missing evidence leaves an explicit
 candidate or blocker in every reasoning mode.
 
 For paper-led work, distinguish a research draft from an external finished
 publication. Decompose a draft into its full proposition-total Paper DAG,
-research and repair it nodewise, preserve its declared stance absent exact
-Operator authorization, publish one atomic target-total disposition batch, and
+research and repair it nodewise, and publish one atomic target-total disposition
+batch. Philosophy alone preserves argumentative stance absent exact Operator
+authorization. Mathematics instead preserves the exact target, hypotheses,
+domains, and quantifiers while recording proof, disproof, obstruction, or typed
+weaker progress; a weaker result never closes the unchanged root. Then
 admit the complete mapped Candidate DAG before continuing from its Fact Graph.
 External finished publications remain Evidence until explicit bridge and fresh
 admission. Preserve source, reconstruction, Audit, Blackboard, Research, Fact,
 Reader, and Learning labels and correct graph mistakes copy-on-write.
 
-Brave Future is explicit exact-Campaign advisory BF-1 through BF-3 only. It may
+Brave Future remains advisory BF-1 through BF-3 only. Under `auto` or `deep`, an
+ordinary user objective triggers exact goal intake without Campaign jargon: the
+public command creates or reuses one token-bound prospective root Research, but
+the BF transaction itself creates no Research. It may
 project strict repair lineage over the existing four-factor frontier and write
 one atomic nontruth reassessment transaction. It never reads ACTIVE, creates a
-round or Research, dispatches, closes a Campaign, or affects Candidate,
+round, dispatches, closes a Campaign, or affects Candidate,
 Certification, Gateway, Reader, Learner, or Fact. Reject plan_one and execute_one.
+
+Classify every discovered behavior orphan before release. Keep and integrate
+normal-flow authority with positive/predicate-false/tamper closure; keep manual,
+hosted, or compatibility surfaces only with an explicit bound; replace dormant
+duplicates through one named authoritative mechanism; retire obsolete owners.
+An import, registration, or test reference does not prove operational reachability.
 
 For load-bearing computation, retain immutable commands, implementations,
 versions, checkpoints, artifacts, exact output hashes, and independent replay.
@@ -146,3 +179,7 @@ claims precisely. Deliver the append-only architecture issue ledger alongside
 the candidate. Do not mark an architecture issue resolved without a
 reproducible regression; do not add ordinary host or mathematical mistakes that
 the architecture neither caused nor materially amplified.
+
+Optimize administrative scans, indices, hashes, and routine audits toward one
+to two minutes; a rare explained run may approach four. This is not a brittle
+wall-clock gate and never limits substantive research, proof, or computation.

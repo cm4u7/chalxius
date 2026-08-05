@@ -13,13 +13,17 @@ Runs already underway under 0.4.0 must not be backfilled, migrated, reopened, or
 reclassified. A missing CHX runtime ledger on such a run is
 never an audit warning, certification blocker, or reason to redo work. Loading some 0.4.1-or-later bytes while an
 older run continues does not change that run's original contract or status.
-Ledger revisions 1, 2, and 3 remain byte-exact readable. Revision 3 added a
+Ledger revisions 1, 2, 3, and 4 remain byte-exact readable and retain their
+original append semantics. Revision 3 added a
 finding gate, typed issue relationships, direct successor lineage, and
 deterministic architecture-report verification. Revision 4 is prospective for
 newly started runs and additionally freezes the complete digest-bound
 transitive predecessor chain. It preserves issue numbering and typed relations
 across multiple generations and issue-free intermediate ledgers; it never
-rewrites an older ledger.
+rewrites an older ledger. Revision 5 is prospective for newly started runs. It
+retains revision 4 lineage and adds the reconnaissance, reusable tactical
+repair, and integrated-repair gates described below. It never projects those
+requirements back onto revisions 1 through 4.
 
 Project-bound runs store their ledger at `PROJECT/chx-ledgers/`.
 Projectless runs use private host task state outside the skill. The project-local directory
@@ -154,6 +158,110 @@ reproducible regression-evidence string; otherwise use
 Each JSONL event is exact-schema, sequentially numbered, SHA-256 chained, locked,
 flushed, and fail-closed on tampering. Never edit the file by hand.
 
+## Gate revision-5 resolution through reconnaissance and coordinated repair
+
+Revision 5 separates immediate repair from final architectural settlement. For
+each issue, first make a bounded tactical repair that is reusable if the same
+mechanism recurs. Do not postpone an in-scope task merely to design the entire
+future architecture, and do not require the full high-cost reliability matrix
+for this first bounded repair when focused evidence is sufficient. The tactical
+record preserves the mechanism, applicability, implementation, boundaries, and
+bounded evidence so the later integration can evaluate it.
+
+A tactical repair is **not** a resolved disposition. It is provisional
+implementation evidence and may later be retained, generalized, narrowed,
+replaced by an existing mechanism, or deprecated. The issue stays open until a
+subsequent integrated repair coordinates it with every other resolved issue and
+the disposition carries reproducible regression evidence. This prevents a
+locally successful patch from becoming an unexamined permanent architecture.
+
+At the task-stage boundary, review the complete CHX issue set, all tactical
+repairs, and the existing reusable-mechanism registry. The integrated repair
+must address interaction, duplicated mechanisms, lifecycle reachability,
+authority boundaries, migration and rollback implications, and the choice to
+retain, adapt, replace, or remove each tactical mechanism. It is the coordinated
+settlement for that stage, not a concatenation of tactical summaries.
+
+For every performance- or administrative-cost-related CHX issue, consult the
+global PHX architecture-route guide in
+[`phx_architecture_routes.md`](phx_architecture_routes.md) before selecting a
+repair mechanism and persist the hash-bound search receipt. Reuse, refine, or extend a matching route rather than silently
+creating another wheel. Name the consulted qualified PHX route ids in an
+available tactical summary or integration rationale together with the search
+receipt path and SHA-256; if none applies, cite the receipt's hash-bound empty
+result and record a new global route only when the lesson is genuinely
+reusable. The concrete problem and its resolution remain in CHX. PHX supplies
+nontruth route guidance and never substitutes for the CHX repair gates. A
+significant global architecture change identified through PHX still requires a
+recorded user consultation and decision before implementation.
+
+Before implementing a repair for a revision-5 issue, run the complete
+architecture reconnaissance over the Chalxius candidate tree and write its
+JSON report outside that tree. Then record the report before any tactical
+repair event:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/architecture_reconnaissance.py" \
+  --root "$SKILL_ROOT" --output /absolute/path/to/reconnaissance.json --quiet
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-reconnaissance \
+  --ledger "$LEDGER_PATH" --input /absolute/path/to/reconnaissance.json
+```
+
+The receipt requires the exact full-report schema, canonical candidate root,
+candidate version, file count, capability-registry hash,
+behavioral-feature-registry hash, and the scanner's content-derived
+`inventory_sha256`. A pre-repair report may contain errors or warnings: the
+receipt proves that the complete topology was inspected before the repair; it
+does not assert that the inspected tree was already clean. Recording consumes
+only a report whose canonical root and version match the ledger runtime. It
+does not rerun the administrative scan during later status,
+disposition, or close operations.
+
+Next record exactly one reusable tactical repair for each issue that will be
+resolved:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-tactical-repair \
+  --ledger "$LEDGER_PATH" --issue-id CHX-001 \
+  --reconnaissance-id reconnaissance-<sha256> \
+  --input /absolute/path/to/tactical-repair.json
+```
+
+The tactical JSON contains exactly `mechanism_id`, `summary`, `applicability`,
+`implementation`, `fail_closed_boundary`, sorted `reusable_domains`, sorted
+`implementation_anchors`, and sorted `bounded_validation_evidence`. The
+content-derived tactical id binds the issue to a previously recorded full-tree
+receipt. A tactical repair cannot be recorded after that issue's disposition,
+and a second tactical record for the same issue is rejected.
+
+After the scoped repairs are implemented, record their coordinated integration:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-integrated-repair \
+  --ledger "$LEDGER_PATH" --input /absolute/path/to/integrated-repair.json
+```
+
+The integrated JSON contains exactly sorted `included_issue_ids`, canonical
+`coordination_decisions`, sorted `risk_evidence`, and sorted
+`regression_evidence`. Every coordination decision has exactly `decision_id`,
+sorted `affected_issue_ids`, `decision`, and `rationale`; together the
+decisions must cover every included issue. The ledger derives an immutable
+reusable-mechanism registry from the included tactical records, groups
+consistent mechanism definitions with their issue-specific bindings, embeds
+the registry, and binds its SHA-256 in the integrated event. The event also
+binds the complete tactical closure and the preceding integrated-repair id.
+
+A `resolved` disposition is appendable only when its tactical repair has a
+prior reconnaissance receipt, the latest integrated repair covers the target
+and every already resolved issue, and the disposition's regression evidence is
+included in that integrated repair. An issue classified
+`excluded_nonarchitectural` does not require repair records. If a late issue is
+discovered, append it normally, record its tactical repair, and append a new
+integrated repair that supersedes the earlier one and again covers every
+already resolved issue. Close rechecks that the latest integration covers all
+resolved issues. All three repair layers remain `truth_effect=none` and have no
+Paper, Research, Candidate, Certification, Gateway, or Fact authority.
+
 ## Gate public release disclosure
 
 Before packaging or publishing a Chalxius release, compare the exact private
@@ -221,7 +329,7 @@ python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" close --ledger "$LEDGER_PATH"
 
 The close result is authoritative for host feedback:
 
-- Revision-3 and revision-4 close must already contain the exact verified
+- Revision-3, revision-4, and revision-5 close must already contain the exact verified
   `architecture_report` projection. The first close, an idempotent later close,
   and `status` expose the same durable projection; hosts need no hidden second
   read to discover the report.

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -17,7 +16,6 @@ from .adoption import (
 from .blackboard import make_node
 from .contracts import (
     ASSIGNMENT_ID_RE,
-    HOST_TASK_SCOPE_ID_RE,
     MEMORY_ID_RE,
     POLICY_REVISION_V4,
     ROUND_ID_RE,
@@ -37,6 +35,7 @@ from .protocol import (
     DEFAULT_BUDGETS,
     DEFAULT_HARD_CAPS,
     compact_worker_prompt,
+    normalize_host_task_scope_id,
     seal_ingestion_receipt_v4,
     validate_ingestion_receipt_v4,
     validate_task_card,
@@ -51,31 +50,6 @@ from .modes import (
     build_round_profile_obligations,
     validate_mode_binding_fields,
 )
-
-
-def _normalized_host_task_scope_id(value: str | None) -> str:
-    raw = (
-        value
-        if value is not None
-        else (
-            os.environ.get("MATHGRAPH_HOST_TASK_SCOPE_ID")
-            or os.environ.get("CODEX_THREAD_ID")
-        )
-    )
-    if not isinstance(raw, str) or not raw.strip():
-        raise ValueError(
-            "new V4 planning requires a stable host task scope via "
-            "--host-task-scope-id, MATHGRAPH_HOST_TASK_SCOPE_ID, or "
-            "CODEX_THREAD_ID"
-        )
-    if HOST_TASK_SCOPE_ID_RE.fullmatch(raw):
-        return raw
-    return "hosttask-" + sha256_json(
-        {
-            "namespace": "mathgraph-host-task-scope-v1",
-            "host_value": raw,
-        }
-    )[:32]
 
 
 WORK_MODES = CONTRACT_WORK_MODES
@@ -417,9 +391,12 @@ def _create_round_v4(
     campaign = store.campaigns().status(campaign_id)
     for source_claim_id in campaign.get("source_claim_ids", []):
         store.claims().show_claim(source_claim_id)
-    normalized_host_task_scope_id = _normalized_host_task_scope_id(
-        host_task_scope_id
+    normalized_host_task_scope_id = normalize_host_task_scope_id(
+        host_task_scope_id,
+        workflow_evidence_version=4,
     )
+    if normalized_host_task_scope_id is None:
+        raise RuntimeError("V4 host task scope normalization returned null")
     snapshot = _v4_round_snapshot(store, selected)
     snapshot_nodes, _ = store.blackboard().snapshot_objects(
         snapshot["snapshot_id"]

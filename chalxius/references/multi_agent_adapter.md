@@ -282,7 +282,16 @@ section into original homogeneous coordinates (or an invariant chart), compute i
 and compare it with the stated node/divisor. If the packet does not permit that check, the verdict is
 `reject` with a gap. The only permitted verdict strings are `correct` and `reject`; synonyms such as
 `incorrect` and `incomplete` are schema errors. It writes the exact review schema to
-`review_return_path` and nothing else.
+For a V4 capsule it writes `review_return_path` and nothing else. For a
+prospectively marked V5 capsule it writes only `review_draft_path`; the host then runs the returned
+`review_submission_path` (or `scripts/submit_neutral_review.py --capsule-root
+CAPSULE`). The host program preserves the draft, runs the copied strict
+preflight, quarantines any failure with JSON-pointer and allowed-enum
+diagnostics, and publishes `review_return_path` only together with a validated
+`formally_returned` receipt. The gateway must not consume a mere draft or a
+`preflight_passed` receipt.
+An historical unmarked V5 capability continues to name its direct
+`review_return_path`; its frozen return protocol is not rewritten.
 
 For a family over a punctured base, require a monodromy witness for every claim that a marking,
 cycle, polarization, or free energy is both flat and single-valued. Compute or cite the relevant

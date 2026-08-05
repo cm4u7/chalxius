@@ -20,6 +20,7 @@ from mathgraph.interfaces import (
     validate_predecessor_uses,
 )
 from mathgraph.model import Fact
+from mathgraph.neutral_review_submission import submit_neutral_review
 from mathgraph.proof_lineage import statement_projection_sha256
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_assurance import (
@@ -1426,12 +1427,15 @@ class Chalxius043UpgradeTests(unittest.TestCase):
             decision = self._correct_decision(lifecycle, release)
             result = validate_decision_against_capsule(decision, capsule)
             self.assertTrue(result["valid"])
-            review_path = Path(materialized["review_return_path"])
+            review_path = Path(materialized["review_draft_path"])
             review_path.write_text(
                 json.dumps(decision, ensure_ascii=False, indent=2, sort_keys=True)
                 + "\n",
                 encoding="utf-8",
             )
+            formal_return = submit_neutral_review(capsule_root)
+            self.assertEqual(formal_return["status"], "formally_returned")
+            self.assertTrue(Path(materialized["review_return_path"]).is_file())
 
             malformed = copy.deepcopy(decision)
             malformed["check_results"][0]["check"] = malformed["check_results"][0].pop(

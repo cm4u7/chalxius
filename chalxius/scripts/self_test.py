@@ -23,6 +23,9 @@ from mathgraph.cli import main as cli_main  # noqa: E402
 from mathgraph.applicability import validate_external_refs_for_submission  # noqa: E402
 from mathgraph.blackboard import make_edge, make_node  # noqa: E402
 from mathgraph.contracts import sha256_bytes, sha256_json  # noqa: E402
+from mathgraph.release_contracts import (  # noqa: E402
+    validate_release_audit_revision_bindings,
+)
 from mathgraph.elementary import validate_elementary_uses_for_submission  # noqa: E402
 from mathgraph.event_ledger import (  # noqa: E402
     ExperimentEventIndexSession,
@@ -284,6 +287,7 @@ def main() -> int:
     inheritance_lock = json.loads(
         (skill_root / "INHERITANCE.lock.json").read_text(encoding="utf-8")
     )
+    validate_release_audit_revision_bindings(skill_root)
     validate_runtime_compatibility(
         skill_root, inheritance_lock["runtime_compatibility"]
     )
@@ -353,7 +357,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.6.4 — Goal-Driven Advisory Recovery",
+            "# Chalxius 0.6.5 — Integrated Research Continuity",
             "`chalxius` is the public skill name",
             "standalone `$grill-me` companion, called `Grill Me Code`",
             "`Chalxius Learner` is the canonical name",
@@ -384,8 +388,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.6.4"',
-            '"release_codename": "Goal-Driven Advisory Recovery"',
+            '"version": "0.6.5"',
+            '"release_codename": "Integrated Research Continuity"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -404,10 +408,13 @@ def main() -> int:
             '"network_runtime": "disabled"',
             '"project_background_read_policy": "default_if_present_never_generate"',
             '"aggressive_bug_audit": "release_time_only"',
-            '"contract_revision": "chalxius-chx-run-ledger-4"',
+            '"contract_revision": "chalxius-chx-run-ledger-5"',
             '"chalxius-chx-run-ledger-1"',
             '"chalxius-chx-run-ledger-2"',
             '"chalxius-chx-run-ledger-3"',
+            '"chalxius-chx-run-ledger-4"',
+            '"architecture_reconnaissance": "one_prior_full_candidate_tree_content_addressed_receipt_per_repair_lineage"',
+            '"resolved_disposition_gate": "reconnaissance_then_tactical_then_latest_integrated_evidence_binding"',
             '"chalxius-chx-public-disclosure-2"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
@@ -427,10 +434,18 @@ def main() -> int:
             '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
             '"project_lifecycle_revision": "chalxius-parallel-verification-lifecycle-1"',
             '"freshness": "durable_project_wide_nonce_uniqueness_across_packet_and_receipt_records"',
+            '"neutral_review_submission_revision": "chalxius-neutral-review-submission-1"',
+            '"release_capsule_revision": "chalxius-v5-paper-continuation-release-capsule-1"',
+            '"mathematical_target_policy_revision": "chalxius-mathematical-target-policy-1"',
+            '"independent_pair_contract_revision": "chalxius-independent-adverse-pair-1"',
             '"policy_revision": "chalxius-brave-future-policy-1"',
             '"goal_intake_revision": "chalxius-bf-goal-intake-2"',
+            '"frontier_projection_revision": "chalxius-bf-frontier-projection-2"',
             '"goal_intake_modes": [',
             '"autonomy_level": "advisory"',
+            '"behavioral_gate_revision": "chalxius-behavioral-feature-gate-2"',
+            '"duplicate_body_adjudication_revision": "chalxius-duplicate-body-adjudication-1"',
+            '"replace_with_authoritative_mechanism"',
             '"contract_revision": "chalxius-runtime-archive-2"',
             '"closure_contract_revision": "chalxius-runtime-compatibility-closure-1"',
             '"active_and_write_policy": "full_manifest_exact_current_live_runtime_only_archive_forbidden_with_plan_round_preflight_before_project_writes"',
@@ -572,7 +587,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.6.4 `Goal-Driven Advisory Recovery` release artifact",
+            "The 0.6.5 `Integrated Research Continuity` release artifact",
             "standing authorization",
             "attack-report",
             "Never backfill attack cases",

@@ -403,6 +403,14 @@ abort authority into status, uses `frozen_aborted`, reports zero live awaiting
 returns and the exact abort id, and makes strict audit reject any mismatch. It
 does not rewrite the abort, task cards, returns, Research, or Facts.
 
+The consolidation matrix later found that a batch-read optimization had routed
+strict audit directly through the private context-aware implementation. Internal
+status stayed correct, but a stale public `round_status` wrapper could escape
+the audit comparison. CHX-097 keeps one public projection and passes the locally
+owned ephemeral inspection context through it. This preserves shared runtime,
+quarantine, manifest, completion, and abort reads while making public projection
+drift fail closed. The context is never persistent and carries no authority.
+
 The philosophy field report
 `run-20260730T145847217907Z-eedfc9368ea0/CHX-001–003` exposed a different
 coupling boundary: a large reviewed Paper graph could be flattened into thematic
@@ -436,12 +444,121 @@ while BF-1 through BF-3 remained unreachable unless the host exposed and then
 manually supplied the internal Campaign id. `research-goal-intake` now accepts
 only the exact objective under `auto` or `deep`, performs lexical normalization rather
 than semantic guessing, reuses one exact match or creates one prospective
-Campaign, enables the fixed advisory policy, and computes BF-1. The returned id
-is bound to future Research internally. Duplicate matches, `fast`, and explicit
+Campaign, enables the fixed advisory policy, and computes BF-1. The 0.6.5
+normal-flow consumer creates or reuses exactly one prospective root Research
+bound to the committed intake token and Campaign; BF itself still creates no
+Research. Duplicate matches, `fast`, and explicit
 disablement fail before writes. BF-2/BF-3 still require the
 original exact ingested-attempt blockage evidence and cannot plan or dispatch.
 This restores the user outcome without reviving `ACTIVE`, fuzzy routing, a
 second scheduler, background autonomy, or any Fact seam.
+
+The 0.6.5 consolidation addresses a broader reachability class rather than
+another standalone capability. Deep controls applicable research effort while
+validation follows the necessity-derived changed surface and exact receipt
+currentness. Mathematics receives an exact-target/typed-weaker-progress adapter
+instead of philosophy stance fields. Marked load-bearing targets receive a
+distinct adverse Research worker without a second truth gate. Paper continuation
+uses one scoped release capsule through Candidate, neutral verifier,
+Certification, and Gateway; the neutral verifier itself returns only through a
+host-controlled draft/preflight/quarantine/formal-publication transaction.
+
+The architecture scan therefore classifies operational behavior, not imports.
+Normal-flow features are retained and integrated only with real producer,
+predicate, typed handoff, consumer, effect, and positive/false/tamper probes.
+Manual/Host/compatibility features are retained with explicit bounds, dormant
+duplicates are replaced by named authoritative mechanisms, and obsolete owners
+are retired. The registry universe is now total over public commands, standalone
+entrypoints, and public persistent-state writers; raw same-basename calls cannot
+suppress an unclassified surface. Pure signed-receipt constructors remain
+bounded external protocols because the lifecycle layer is the sole project-state
+owner. Administrative scan/hash/index targets are optimized toward one to two
+minutes, with four minutes an uncommon target rather than a cutoff. A separate
+finite watchdog detects lost work; substantive research, proof, computation, and
+required validation have no SLO-derived wall-clock limit.
+
+The release metadata now follows the same closure rule. CHX-098 replaces
+independent reconnaissance and topology-registry literals with one shared
+runtime-neutral contract source. Strict reconnaissance and self-test compare
+that source with prospective CHX receipt admission, the registry file, the
+inheritance lock, and the protected runtime tree. A stale owner is therefore a
+release error rather than a locally valid but globally inconsistent version;
+historical ledger bytes are never normalized or rewritten.
+
+CHX-099 applies that coordination principle to validation order. The complete
+mutation registry now has a read-only phase-one applicability lane, bound to the
+same manifest as the rest of the matrix. Exact-one target failures skip the
+behavior gate and all expensive baselines; a dedicated mutant protects this
+ordering. The full mutation campaign still runs only after the compatibility
+barrier, so early failure does not weaken isolation or semantic attack coverage.
+
+CHX-100 and CHX-101 apply the same cost discipline to mature-project reads.
+Aggregate audit owns one ephemeral inspection context spanning the exact
+Research, Release, Decision, Fact-lineage, Paper, and continuation projections
+it already validates; repeated public paths reuse only a successful identical
+projection inside that command. Routine status no longer silently requests that
+forensic reconstruction and instead exposes an explicit non-audit dashboard;
+`--with-audit` preserves the complete path.
+
+CHX-102 through CHX-107 close six narrower descendants without adding another
+state owner. Novelty receives the same aggregate context instead of reopening
+Fact and Paper history. Task authority derives exact applicability before
+active-Fact reconstruction, so a truly empty reference set produces only the
+canonical empty snapshot. Paper continuation validates its immutable disposition
+collection once and filters plan-specific views afterward. Experiment audit
+checks the exact optional root before task authority, skipping absence while
+retaining complete context-bound validation for presence and failing closed on
+unsafe state. CHX-106 binds that applicability decision to the canonical frozen
+assignment and preserves component-wise no-follow evidence. CHX-107 binds the
+aggregate context to one project and excludes ordinary writers through the shared
+snapshot lock, preventing mixed-time reuse. These mechanisms reduce duplicate
+administrative work; they do not weaken validation, persist authority, or create
+a timeout shortcut.
+
+One same-machine protected philosophy-project canary moved from an incomplete
+formal audit after more than seven minutes to successive complete observations
+of approximately 30 seconds, 11.17 seconds, and 6.02 seconds. This is local
+diagnostic evidence only, not a portable benchmark, release qualification,
+truth result, or promise for another project or machine.
+
+The reusable cost order is eliminate work, reuse a successful projection inside
+one aggregate inspection, and measure the remaining path before persistent
+indexing or parallelism. It is designed chiefly for agent misoperation,
+hallucinated retries, and duplicate broad calls rather than hostile external
+attack. Parallel duplicate work and unmeasured indexes increase coordination
+surface and are not repairs.
+
+PHX generalizes the reusable route layer beyond performance. It is a private
+host-global, nontruth reference guide distilled from CHX and other architecture
+evidence; CHX remains the owner of concrete problems. Route search, recording,
+evaluation, and reporting do not authorize implementation. A significant
+active-architecture adoption requires an informed user consultation recorded
+before implementation, supporting digest-bound evaluation, and explicit scope,
+constraints, alternatives, risks, and rollback. The current task-locator and
+response-digest record is auditable but is not host-authenticated cryptographic
+approval; a host-issued decision receipt remains a future separately approved route.
+
+CHX-108 closes the first executable PHX integration defect found by using that
+surface. Standalone capability reachability now includes command-specific option
+ownership across argparse and the called handler, with public subprocess probes
+for both ledger creation and persisted search receipts. Static parser and handler
+presence remains inventory evidence, not proof that the public interface works.
+
+CHX-109 adds the missing positive side of applicability gating. Exact absence
+can avoid full owner validation, but canonical presence must materialize every
+derived field required by the subsystem before the first state read. Experiment
+audit now reuses the already validated round and assignment to construct that
+view once; it neither reads raw card bytes as a view nor reopens the round.
+
+The same consolidation makes transition evidence inheritable rather than
+path-fragile. Cutover approval parses one byte string, enforces exact scalar and
+nested receipt semantics, follows a finite acyclic snapshot-continuous ancestry
+to one deep-audit genesis, and derives bounded zero-process evidence only from
+the canonical executor. Candidate paths remain provenance; installed content and
+manifest hashes decide whether the next generation can reuse the audit. Evidence
+uses the analogous pre-effect pattern: one `eap-*` planning attempt is durable
+before exact Paper validation, so status and retry can recover a failure without
+creating another state owner or inferring an association from metadata.
 
 The final release matrix exposed a separate validation-boundary defect. The
 aggressive mutation audit suppressed writes only when its caller happened to
@@ -474,13 +591,21 @@ infrastructure and does not depend on philosophical content.
   round writes, preserve unscoped global ordering, and detect frozen-snapshot
   damage or history truncation without invalidating later legitimate updates;
 - goal intake must preserve the exact normalized objective, reject duplicate
-  exact matches and explicit disablement, ignore `ACTIVE` for selection, bind
-  only future Research, and remain unable to plan, dispatch, or create Facts;
+  exact matches and explicit disablement, ignore `ACTIVE` for selection, create
+  or reuse exactly one token-bound prospective root Research, and remain unable
+  to plan, dispatch, or create Facts; BF itself must remain unable to create Research;
 - the release mutation audit must remain byte-exact under ordinary Python
   invocation and must derive, rather than assert, its pre/post nonmutation result;
 - release validators may run concurrently only in manifest-bound isolated lanes;
   snapshot-sensitive checks require an explicit compatibility phase barrier;
 - accepted-idempotent retries and audits must fail after closure-evidence drift;
+- every aggregate subaudit must retain its owning inspection context, while
+  standalone entrypoints still perform complete first-access validation;
+- applicability-before-authority must produce an empty snapshot only for an
+  exact empty reference set, and optional-subsystem absence must reject links,
+  escapes, special entries, and malformed roots rather than masking them;
+- parameterized readers must validate one canonical immutable collection before
+  filtering without letting a command-local cache become persistent authority;
 - legacy Danus import must preserve assurance without silently recertifying;
 - every pre-V5 project must remain readable and read-only as nontruth lineage;
   neither `mode-init` nor copy-upgrade grants V5 authority;

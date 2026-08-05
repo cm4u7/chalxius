@@ -287,6 +287,33 @@ class PaperLibraryTests(unittest.TestCase):
             library.record_path(self.repo, "papers", first["paper_id"]).is_file()
         )
 
+    def test_zotero_snapshot_is_explicit_external_ingress(self) -> None:
+        self.initialize()
+        source = self.base / "zotero-export.json"
+        source.write_text(
+            json.dumps({"items": [{"id": "A"}, {"id": "B"}]}) + "\n",
+            encoding="utf-8",
+        )
+        record_root = self.repo / "records" / "zotero_exports"
+        self.assertFalse(record_root.exists())
+        arguments = library.parser().parse_args(
+            [
+                "zotero-snapshot",
+                "--root",
+                str(self.repo),
+                "--library-id",
+                "test-zotero",
+                "--input",
+                str(source),
+                "--format",
+                "zotero-json",
+            ]
+        )
+        result = arguments.function(arguments)
+        self.assertEqual(result["record"]["item_count"], 2)
+        self.assertEqual(result["record"]["truth_effect"], "none")
+        self.assertTrue(record_root.is_dir())
+
     def test_native_arxiv_identity_does_not_require_zotero(self) -> None:
         self.initialize()
         first_args = library.parser().parse_args(
@@ -659,6 +686,62 @@ class PaperLibraryTests(unittest.TestCase):
         result = add_args.function(add_args)
         self.assertEqual(result["record"]["sync_mode"], "explicit_user_fact_graph_bridge")
 
+        _, paper_evidence_id, _ = self.add_reviewed_paper_evidence()
+        association_args = library.parser().parse_args(
+            [
+                "evidence-association-add",
+                "--root",
+                str(self.repo),
+                "--destination-project-id",
+                "DESTINATION",
+                "--paper-evidence-id",
+                paper_evidence_id,
+                "--fact-evidence-id",
+                result["evidence_id"],
+                "--fact-id",
+                fact_id,
+                "--actor",
+                "operator",
+                "--reason",
+                "Explicit exact-member navigation fixture.",
+            ]
+        )
+        associated = association_args.function(association_args)
+        event_count = len(library.load_events(self.repo))
+        duplicate_association = association_args.function(association_args)
+        self.assertEqual(
+            duplicate_association["association_id"], associated["association_id"]
+        )
+        self.assertEqual(len(library.load_events(self.repo)), event_count)
+        association_query = library.parser().parse_args(
+            [
+                "evidence-query",
+                "--root",
+                str(self.repo),
+                "--query",
+                associated["association_id"],
+                "--associations-only",
+            ]
+        )
+        queried_association = association_query.function(association_query)
+        self.assertEqual(queried_association["results"], [])
+        self.assertEqual(
+            [
+                item["association_id"]
+                for item in queried_association["association_results"]
+            ],
+            [associated["association_id"]],
+        )
+        association_query.associations_only = False
+        linked_evidence = association_query.function(association_query)["results"]
+        self.assertEqual(len(linked_evidence), 2)
+        self.assertTrue(
+            all(
+                item["association_ids"] == [associated["association_id"]]
+                for item in linked_evidence
+            )
+        )
+
         scoped_core = copy.deepcopy(core)
         scoped_core["source_audit"] = {
             "schema_version": 1,
@@ -704,6 +787,22 @@ class PaperLibraryTests(unittest.TestCase):
             add_args.function(add_args)
         self.run_command("index", "--root", str(self.repo))
         self.run_command("verify", "--root", str(self.repo))
+        database = sqlite3.connect(self.repo / "index" / "library.sqlite3")
+        try:
+            association_row = database.execute(
+                "SELECT association_id, paper_evidence_id, fact_evidence_id "
+                "FROM evidence_associations"
+            ).fetchone()
+        finally:
+            database.close()
+        self.assertEqual(
+            association_row,
+            (
+                associated["association_id"],
+                paper_evidence_id,
+                result["evidence_id"],
+            ),
+        )
 
 
 if __name__ == "__main__":

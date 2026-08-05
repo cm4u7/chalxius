@@ -91,6 +91,7 @@ class PaperLogicGraphTests(unittest.TestCase):
             bundle,
             artifact=artifact,
         )
+        self.assertNotIn("successor_topology_receipt", logic_revision)
         self.assertEqual(
             self.paper.snapshot_source_role(logic_frozen["snapshot_id"]),
             "external_reference",
