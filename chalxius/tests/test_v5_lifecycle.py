@@ -14,6 +14,7 @@ from mathgraph.cli import main as cli_main
 from mathgraph.blackboard import make_node
 from mathgraph.computations import INDEPENDENCE_AXES
 from mathgraph.contracts import sha256_bytes, sha256_json
+from mathgraph.markdown import validate_fact_round_trip
 from mathgraph.model import Fact
 from mathgraph.paper_logic import PaperLogicStore
 from mathgraph.paper_continuation import (
@@ -28,6 +29,7 @@ from mathgraph.paper_logic_contracts import (
 )
 from mathgraph.reader_html import render_reader_html
 from mathgraph.store import MathGraphStore
+from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 from mathgraph.v5_lifecycle import (
     V5_LIFECYCLE_CONTRACT_SHA256,
     V5_POLICY_REVISION,
@@ -2473,11 +2475,117 @@ class V5LifecycleTests(unittest.TestCase):
                 ],
             )
             facts = [lemma, root_fact]
+            candidate_artifacts: list[dict[str, str]] = []
+            candidate_dir = root / "candidate-draft"
+            candidate_dir.mkdir(parents=True, exist_ok=True)
+            for index, fact in enumerate(facts, 1):
+                candidate_path = candidate_dir / f"fact-{index}.md"
+                candidate_bytes = validate_fact_round_trip(fact).encode("utf-8")
+                candidate_path.write_bytes(candidate_bytes)
+                candidate_artifacts.append(
+                    {
+                        "path": candidate_path.relative_to(root).as_posix(),
+                        "sha256": sha256_bytes(candidate_bytes),
+                        "role": f"candidate_fact_{index}",
+                    }
+                )
+            synthesis = lifecycle.add_research(
+                {
+                    "kind": "synthesis",
+                    "claim": (
+                        "Assemble the exact two-Fact paper target closure for "
+                        "independent attack before Candidate Release."
+                    ),
+                    "relation": "synthesizes",
+                    "related_research_ids": list(result_ids.values()),
+                    "independent_adverse_required": True,
+                    "artifacts": candidate_artifacts,
+                },
+                actor="paper-candidate-producer",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            adverse_round = lifecycle.create_round(
+                workers=1,
+                mode="refute",
+                research_ids=[synthesis["research_id"]],
+                host_task_scope_id="paper-continuation-candidate-attack",
+            )
+            adverse_assignment = adverse_round["assignments"][0]
+            adverse_card = json.loads(
+                Path(str(adverse_assignment["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            adverse_return = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": adverse_round["round_id"],
+                "assignment_id": adverse_assignment["assignment_id"],
+                "worker_id": adverse_assignment["worker_id"],
+                "task_card_sha256": adverse_assignment["task_card_sha256"],
+                "blackboard_snapshot_sha256": adverse_assignment[
+                    "blackboard_snapshot_sha256"
+                ],
+                "outcome": "evidence",
+                "claim": "No surviving attack was found in the exact Candidate bytes.",
+                "content": (
+                    "The bounded adverse route checked the exact two canonical Fact "
+                    "artifacts and found no surviving counterexample."
+                ),
+                "narrative": {
+                    "rationale": "Exercise the mandatory pre-seal adverse boundary.",
+                    "summary": "The exact Candidate draft survived the bounded attack.",
+                    "intuition": "Attack the bytes that will actually be sealed.",
+                    "limitations": "This remains nontruth Research.",
+                },
+                "artifacts": [],
+                "attack_learning": None,
+                "obligation_dispositions": [
+                    {
+                        "obligation_id": item["obligation_id"],
+                        "status": "complete",
+                        "witness_artifact_sha256s": [],
+                        "rationale": "The direct logical attack needs no new artifact.",
+                    }
+                    for item in adverse_card["assurance_contract"]["obligations"]
+                ],
+                "computation_manifest": None,
+                "research_assurance": {
+                    "source_uses": [],
+                    "route_invalidations": [],
+                    "extremal_cases": [],
+                    "claim_strength": [],
+                    "contour_substitutions": [],
+                    "claimed_structures": [],
+                    "program_math_alignments": [],
+                },
+            }
+            adverse_return_path = Path(str(adverse_assignment["return_path"]))
+            adverse_return_path.write_text(
+                json.dumps(adverse_return, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            adverse_receipt = lifecycle.ingest_return(
+                round_id=adverse_round["round_id"],
+                assignment_id=adverse_assignment["assignment_id"],
+                worker_final_sha256=sha256_bytes(adverse_return_path.read_bytes()),
+            )
             payload = self._release_payload(
                 facts=facts,
-                research_ids=list(result_ids.values()),
+                research_ids=[synthesis["research_id"]],
                 granularity="paper_target_closure",
             )
+            payload["challenge_dispositions"] = [
+                {
+                    "research_id": adverse_receipt["research_id"],
+                    "disposition": "nonblocking_with_reason",
+                    "rationale": (
+                        "The verifier must independently adjudicate the bounded "
+                        "zero-attack return against the exact Candidate bytes."
+                    ),
+                }
+            ]
+            payload["adverse_actor_ids"] = [adverse_assignment["worker_id"]]
             payload["artifacts"] = [
                 {
                     "path": artifact.relative_to(root).as_posix(),

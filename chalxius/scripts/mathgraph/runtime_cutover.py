@@ -411,6 +411,7 @@ def _round_bindings(project_root: Path) -> list[dict[str, Any]]:
         if not cards:
             raise ValueError("Chalxius protected round has no task cards")
         identities: set[str] = set()
+        binding_presence: set[bool] = set()
         for card_path in cards:
             if card_path.is_symlink() or not card_path.is_file():
                 raise ValueError("Chalxius protected round has an unsafe task card")
@@ -420,10 +421,18 @@ def _round_bindings(project_root: Path) -> list[dict[str, Any]]:
                 raise ValueError("Chalxius protected task card is not valid JSON") from exc
             if not isinstance(card, dict):
                 raise ValueError("Chalxius protected task card must contain one object")
-            binding = validate_runtime_binding(card.get("runtime_binding"))
+            has_runtime_binding = "runtime_binding" in card
+            binding_presence.add(has_runtime_binding)
+            if not has_runtime_binding:
+                continue
+            binding = validate_runtime_binding(card["runtime_binding"])
             identities.add(binding["runtime_identity_sha256"])
             bindings.append(binding)
-        if len(identities) != 1:
+        if len(binding_presence) != 1:
+            raise ValueError(
+                "one protected round mixes legacy and runtime-bound task cards"
+            )
+        if len(identities) > 1:
             raise ValueError("one protected round binds multiple Chalxius runtimes")
     return bindings
 

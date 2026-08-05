@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.6.5 `Integrated Research Continuity` release artifact contains one self-contained `chalxius`
+The 0.6.7 `Plain-Language Attack Recommendations` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -8,6 +8,12 @@ no live project, credentials, service dependency, bytecode, or symlink. Python
 Chalxius research engine is the only embedded research kernel; retired
 predecessor, coordinator, and standalone companion skills are not runtime
 dependencies.
+
+The release adds only prospective Research commands:
+`plan-supervision-round SOURCE_ROUND_ID` and
+`plan-computation-execution SOURCE_ROUND_ID ASSIGNMENT_ID`. Existing frozen
+rounds remain single-wave and retain their exact automatic computation-review
+behavior. No project migration or Candidate/Fact schema rewrite is required.
 
 ## Verify a received release
 
@@ -249,11 +255,14 @@ cases:
   --host-task-scope-id HOST_TASK_SCOPE_ID
 ```
 
-The report contains worker-reported nontruth surviving counterexamples,
-productive challenges with concrete value effects, and pending route proposals.
-Only the operator may approve, approve after supplying a modified
-rule, reject, or disable. Decisions affect future task cards only. Attack
-reports never become CHX architecture reports or Fact evidence.
+The default report contains at most three selective, family-deduplicated attack
+types with one reviewed ordinary-language sentence saying what each checks,
+applicability, support, and `批准建议 N`; it exposes no technical case internals
+or worker-authored instructions. Unknown families remain in `--full` until
+their user-facing explanation is reviewed. Use `--full` only for the complete worker-reported nontruth
+coverage/case audit. Only the operator may approve, approve after supplying a
+modified rule, reject, or disable. Decisions affect future task cards only.
+Attack reports never become CHX architecture reports or Fact evidence.
 
 ## Initialize and route
 

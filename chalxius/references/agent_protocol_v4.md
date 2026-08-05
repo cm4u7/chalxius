@@ -340,6 +340,59 @@ operator decision can affect future routing. See
 The delta may add only content-addressed nodes and edges allowed by the task card. Validation must
 finish before merge. A validation error has zero ingestion effect.
 
+## Prospective Research production and supervision
+
+`plan-round` creates production subround 1. A `refute` worker attacks its own
+assigned proposition under the exact hypotheses, including counterexamples,
+boundary failures, obstructions, hidden assumptions, and scope defects. It may
+use frozen earlier-cycle Research but never mutable same-wave peer returns.
+Every production return, including a refute return, is independently ingested
+and later eligible for supervision.
+
+After the source round is fully ingested, Main runs:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main \
+  plan-supervision-round SOURCE_ROUND_ID
+```
+
+The command binds the exact source manifest and complete receipt-set hash and
+creates one to three scoped `refute` supervisors. Explicit `--scope` may select
+only applicable distinct values among `proof_logic`, `program_math`,
+`source_scope`, and `integration`. Supervisors return one
+`research_supervision_report`; defects become later copy-on-write Research
+repair. The required cycle never starts Pulse or gives supervisors a mutable
+same-wave blackboard.
+
+Main routes a concrete defect back with:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main \
+  plan-repair-round PRODUCTION_RESULT_ID \
+  --trigger-memory-id SUPERVISOR_RESULT_ID
+```
+
+The repair preserves the source assignment's work mode when available, so a
+computation-design defect produces another design-only compute card rather
+than silently falling into a generic proof task.
+
+A production computer first returns exactly `computation_source`,
+`computation_design`, and `computation_dependencies`, with
+`computation_manifest=null` and no execution output. After the program-math
+supervisor result is explicitly disposed as `resolved_no_obstruction` or
+`resolved_by_evidence`, Main may run:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main \
+  plan-computation-execution SOURCE_ROUND_ID ASSIGNMENT_ID
+```
+
+The new card binds the design return, supervisor return, disposition, and exact
+source/dependency hashes. Preflight rejects changed bytes. The ingested actual
+output does not enter the legacy automatic review queue; Main sends its whole
+execution round through `plan-supervision-round` for the explicit second
+subround.
+
 ## Round procedure
 
 1. Add or select actionable memory and inspect the active campaign.

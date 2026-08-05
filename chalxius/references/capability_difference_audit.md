@@ -330,19 +330,24 @@ revision-2 state, and schema-2 learning also covers productive challenges.
 Revision-1 state and every frozen old card remain unchanged.
 
 The worker may autonomously abstract a surviving counterexample or structured
-productive challenge into a route proposal,
-but that proposal has no activation authority. The user-facing outcome is
-preserved through a separate attack report and three operator decisions:
-approve, approve after supplying a complete modified rule, or reject. Approved
-rules are content-addressed, project-local, limited to future refutation task
-cards, and independently disableable. This design avoids a mutable self-prompt,
-unreviewed global learning, a second verifier, and any route from exploration
-to Fact authority.
+productive challenge into a route proposal, but that proposal has no activation
+authority. The default user-facing outcome is a sparse report of at most three
+selective family-deduplicated attack types. In 0.6.7 each selected family also
+receives one reviewed ordinary-language sentence saying what it checks; the
+projection never copies worker-authored route instructions, and an unknown
+family remains full-report-only until reviewed. The complete technical coverage
+audit is explicit `--full`. `批准建议 N` maps to the frozen proposal and the
+same Operator decision. Approved rules are content-addressed, project-local,
+limited to future refutation task cards, and independently disableable. This
+design avoids a mutable self-prompt, unreviewed global learning, a second
+verifier, and any route from exploration to Fact authority.
 
 The extension does not auto-start Chalxius Learner, does not use Grill Me Code,
-does not change `fast`/`auto`/`deep`, and does not alter Candidate Release,
-Certification Decision, gateway admission, Reader, Paper/Audit, Blackboard,
-computation, or CHX-ledger semantics. Attack reports and CHX reports remain
+and does not change `fast`/`auto`/`deep`, Certification Decision, gateway
+admission, Reader, Paper/Audit, Blackboard, computation, or CHX-ledger
+semantics. Candidate Release gains only a prospective low-cost pre-seal
+fresh-adverse readiness receipt for explicitly marked branches; it adds no
+truth authority. Attack reports and CHX reports remain
 separate nontruth surfaces.
 
 The prospective 0.4.3 candidate repairs CHX-058 through CHX-075 without
@@ -579,6 +584,47 @@ receipt fails closed on incomplete results, mixed identities, shared roots,
 timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
 infrastructure and does not depend on philosophical content.
 
+## 0.6.6 conservative Research-cycle difference
+
+The prior architecture already had capable `refute` workers, immutable task
+cards, program-math assurance, a future computation-review queue, Candidate
+fresh-adverse readiness, and a fresh verifier. Its remaining ordering defect
+was that ordinary first-wave results had no uniform scoped supervisory pass,
+and computation code could be formally executed before a program-math worker
+attacked the exact executable bytes. Moving Candidate or verifier gates would
+have risked a broad authority rewrite, so 0.6.6 changes only prospective
+Research orchestration.
+
+Public `plan-round` now marks production subround 1. A completed production
+round can be hash-bound into one to three `refute` supervisors covering proof
+logic, program-math, source/scope, or integration. First-wave refute remains a
+peer researcher attacking the proposition and is itself supervised. Findings
+produce later copy-on-write Research repair; Pulse is not invoked. Candidate
+fresh-adverse review remains the whole-fact engineering acceptance attack, and
+the verifier still adjudicates its dispositions.
+
+For computation, the first return contains code, mathematical design, and
+dependencies but no result. A separate execution card is available only after
+the exact program-math supervisor result has a safe disposition, and return
+preflight requires identical source/dependency hashes. Actual output returns
+to the same explicit supervision mechanism. The legacy automatic future
+program-math queue remains for old single-wave cards only, preventing duplicate
+review in new cycles while preserving frozen history.
+
+## 0.6.7 conservative attack-report projection difference
+
+The adverse route lifecycle, proposal bytes, task cards, attack workers,
+Candidate fresh-adverse gate, and verifier are unchanged. The prior default
+projection exposed only an internal family slug, applicability, support, and an
+approval phrase, which was too compressed for an informed decision.
+
+The recommendation report contract revision 2 adds exactly one
+`what_it_checks` sentence from a reviewed fixed vocabulary for the thirteen
+current attack families. It never derives that sentence from worker-authored
+technical instructions. A new unknown family remains visible in `--full` but
+is omitted from the default report until reviewed, preserving the existing
+omit-instead-of-broaden quality rule and all nontruth boundaries.
+
 ## Residual risks to test
 
 - deterministic auto triggers may need calibration against real workloads;
@@ -610,6 +656,8 @@ infrastructure and does not depend on philosophical content.
 - every pre-V5 project must remain readable and read-only as nontruth lineage;
   neither `mode-init` nor copy-upgrade grants V5 authority;
 - learning writes must never appear in research audits or Fact admission.
+- supervision must never accept an incomplete, legacy, mismatched, or tampered
+  production receipt set, and changed computation code must require a new cycle;
 - ordinary research must not auto-start Chalxius Learner, and global product
   availability must not cause ordinary coding to auto-start Grill Me Code.
 - reader-packet normalization must not alter formulas, quantifiers, hypotheses,

@@ -71,6 +71,46 @@ There is no Round Closure, Pulse Closure, Profile Closure, Campaign Closure, or
 separate adverse-review object on this path. Compatibility commands may report
 process readiness, but they cannot supply admission authority.
 
+### Prospective Research cycle: production, then supervision
+
+New public `plan-round` work is one prospective production subround. Its
+workers independently attempt proof, proposition refutation/counterexample,
+computation design, literature and source work, interpretation, or insight
+search from frozen prior Research. A production `refute` attacks the assigned
+proposition (T) under the exact hypotheses (H): it seeks (H\land\neg T),
+boundary failure, obstruction, hidden assumptions, or scope defects. It cannot
+inspect mutable same-subround peers, and its own return is not supervisory.
+
+Only after every production return is ingested may Main run
+`plan-supervision-round SOURCE_ROUND`. The planner hash-binds the complete
+receipt set and selects at most three applicable supervisors from
+`proof_logic`, `program_math`, `source_scope`, and `integration`. Each
+supervisor uses `refute` mode to attack its exact receipt subset. Findings do
+not mutate peers through Pulse; they trigger a later copy-on-write production
+repair. Pulse remains optional compatibility collaboration and is not called
+by this cycle.
+
+For a first-subround `compute` assignment, the return has exactly the frozen
+core code (`computation_source`), its mathematical design, and its dependency
+manifest; it has no computation output or execution manifest. Formal execution
+is a distinct production assignment created by
+`plan-computation-execution SOURCE_ROUND ASSIGNMENT` only after the matching
+program-math supervisor result has a safe explicit disposition. The execution
+return must reproduce the supervised source and dependency hashes. Its actual
+source, log/manifest, and output then receive a new program-math supervision
+subround. Changed code is a new design and must repeat production and
+supervision.
+
+Within the Research state, a prospectively marked load-bearing branch has one
+mandatory ordering seam:
+
+```text
+constructive Research -> exact-Candidate adverse refute -> disposition
+  -> low-cost readiness gate -> high-cost Candidate validation/seal
+```
+
+This is a prerequisite inside Research, not a new truth-bearing state.
+
 Candidate Release automatically binds every existing challenge,
 counterexample, obstacle, or completed refute assignment that targets its
 selected Research branch. Refute provenance survives an `evidence` or `insight`
@@ -79,7 +119,13 @@ remain verifier-excluded even when no counterexample was found. Attack learning
 is still created only by a counterexample. `adverse_actor_ids` must exactly
 match the actors of the bound adverse Research. An unrelated project-wide
 challenge is not pulled into the release. V5 does not require inventing a new
-attack when none exists and does not add a second adverse filter.
+attack for an unmarked branch. For each maximal selected branch explicitly
+marked `independent_adverse_required=true`, however, Candidate preflight
+requires one later independent ingested refute whose frozen task card binds the
+exact canonical Candidate Fact hashes. Its disposition and actor binding are
+checked before artifact normalization or source audit; failure is
+`fresh_adverse_missing`. The sealed readiness receipt tells the fresh verifier
+to adjudicate the disposition and creates no second Certification authority.
 
 ## Three communication planes and immutable task cards
 
@@ -110,11 +156,14 @@ adverse closure, route governance, Certification, or Gateway authority.
 The same prospective round freezes one normalized non-null host-task scope in
 its manifest, assignments, and cards. Explicit input and the two documented
 environment channels take priority; otherwise V5 derives a stable local scope
-from the exact planning request before writing the round. `attack-report`
-enumerates the exact scope's rounds, assignments, cards, return/receipt states,
-pairs, and cases. Zero cases are complete only when dispatch/return coverage is
-complete or no pair was required; missing dispatch and pending returns remain
-separate fail-visible states.
+from the exact planning request before writing the round. The default
+`attack-report` exposes at most three selective, family-deduplicated pending
+attack-type recommendations, each with one reviewed ordinary-language sentence
+stating what it checks, and no technical case detail; `attack-report
+--full` enumerates the exact scope's rounds, assignments, cards,
+return/receipt states, pairs, and cases. Zero cases are complete only when
+dispatch/return coverage is complete or no pair was required; missing dispatch
+and pending returns remain separate fail-visible states.
 
 A current 0.4.3 task card also freezes one prospective assurance contract:
 typed per-obligation dispositions, computation-stage count, related-artifact

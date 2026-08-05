@@ -17,8 +17,11 @@ from mathgraph.adverse_routing import (
 )
 from mathgraph.cli import main as cli_main
 from mathgraph.contracts import sha256_bytes, sha256_json
+from mathgraph.markdown import validate_fact_round_trip
+from mathgraph.model import Fact
 from mathgraph.protocol import normalize_host_task_scope_id
 from mathgraph.store import MathGraphStore
+from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
 
 class IndependentAdverseNormalFlowTests(unittest.TestCase):
@@ -351,6 +354,208 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "completion projection"):
                 validate_host_scope_attack_report(tampered)
 
+    def test_candidate_release_fails_before_expensive_work_without_fresh_adverse(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "fresh-adverse-fast-fail")
+            lifecycle = store.v5_lifecycle()
+            research = self._research(store, required=True)
+            fact = Fact(
+                problem_id=store.project_id(),
+                author="candidate-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The exact bounded target holds.",
+                proof="Direct bounded proof.",
+            )
+            payload = {
+                "schema_version": 5,
+                "bundle_claim": fact.statement,
+                "candidates": [fact.as_submission_dict()],
+                "research_entry_ids": [research["research_id"]],
+                "claim_relation": "proves",
+                "artifacts": [],
+                "verification_plan": {
+                    "mode": "closed_capsule",
+                    "authorized_artifact_roles": [],
+                    "required_checks": [
+                        "mathematical",
+                        "typing",
+                        "scope",
+                        "source_and_applicability",
+                        "predecessor_interfaces",
+                        "computation_replay",
+                        "challenge_dispositions",
+                        "assurance_scope",
+                    ],
+                },
+                "requested_assurance": {
+                    "validation_subject": {
+                        "kind": "theorem",
+                        "subject_id": fact.fact_id,
+                        "artifact_sha256": None,
+                        "load_bearing_node_ids": [],
+                    },
+                    "validation_granularity": "monolithic_theorem",
+                    "coverage": [],
+                },
+                "challenge_dispositions": [],
+                "paper_evidence_refs": [],
+                "adverse_actor_ids": [],
+            }
+            with patch.object(
+                lifecycle,
+                "_normalize_artifacts",
+                side_effect=AssertionError("expensive release work was reached"),
+            ) as expensive:
+                with self.assertRaisesRegex(ValueError, "fresh_adverse_missing"):
+                    lifecycle.candidate_release(
+                        payload,
+                        producer="candidate-producer",
+                        preflight_only=True,
+                    )
+            expensive.assert_not_called()
+
+    def test_candidate_release_accepts_only_exact_candidate_bound_refute(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "fresh-adverse-exact")
+            lifecycle = store.v5_lifecycle()
+            fact = Fact(
+                problem_id=store.project_id(),
+                author="candidate-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The exact attacked target holds.",
+                proof="Direct proof over the frozen boundary.",
+            )
+            fact_raw = validate_fact_round_trip(fact).encode("utf-8")
+            fact_path = store.root / "candidate-fact.md"
+            fact_path.write_bytes(fact_raw)
+            fact_sha256 = sha256_bytes(fact_raw)
+            research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Establish the exact attacked target.",
+                    "independent_adverse_required": True,
+                    "artifacts": [
+                        {
+                            "path": "candidate-fact.md",
+                            "sha256": fact_sha256,
+                            "role": "candidate_fact",
+                        }
+                    ],
+                },
+                actor="candidate-researcher",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            planned = lifecycle.create_round(
+                workers=1,
+                mode="refute",
+                research_ids=[research["research_id"]],
+                host_task_scope_id="fresh-adverse-exact",
+            )
+            assignment = planned["assignments"][0]
+            return_sha = self._write_no_attack_return(store, assignment)
+            receipt = lifecycle.ingest_return(
+                round_id=planned["round_id"],
+                assignment_id=assignment["assignment_id"],
+                worker_final_sha256=return_sha,
+            )
+
+            payload = {
+                "schema_version": 5,
+                "bundle_claim": fact.statement,
+                "candidates": [fact.as_submission_dict()],
+                "research_entry_ids": [research["research_id"]],
+                "claim_relation": "proves",
+                "artifacts": [
+                    {
+                        "path": "candidate-fact.md",
+                        "sha256": fact_sha256,
+                        "role": "candidate_fact",
+                    }
+                ],
+                "verification_plan": {
+                    "mode": "closed_capsule",
+                    "authorized_artifact_roles": ["candidate_fact"],
+                    "required_checks": [
+                        "mathematical",
+                        "typing",
+                        "scope",
+                        "source_and_applicability",
+                        "predecessor_interfaces",
+                        "computation_replay",
+                        "challenge_dispositions",
+                        "assurance_scope",
+                        "research_obligation_evidence",
+                    ],
+                },
+                "requested_assurance": {
+                    "validation_subject": {
+                        "kind": "theorem",
+                        "subject_id": fact.fact_id,
+                        "artifact_sha256": None,
+                        "load_bearing_node_ids": [],
+                    },
+                    "validation_granularity": "monolithic_theorem",
+                    "coverage": [],
+                },
+                "challenge_dispositions": [
+                    {
+                        "research_id": receipt["research_id"],
+                        "disposition": "nonblocking_with_reason",
+                        "rationale": (
+                            "The frozen verifier must independently adjudicate "
+                            "the bounded zero-attack return."
+                        ),
+                    }
+                ],
+                "paper_evidence_refs": [],
+                "adverse_actor_ids": [assignment["worker_id"]],
+            }
+            preflight = lifecycle.candidate_release(
+                payload,
+                producer="candidate-producer",
+                preflight_only=True,
+            )
+            self.assertEqual(
+                preflight["fresh_adverse_readiness"]["status"],
+                "ready",
+            )
+            self.assertEqual(
+                preflight["fresh_adverse_readiness"][
+                    "required_target_research_ids"
+                ],
+                [research["research_id"]],
+            )
+
+            changed = Fact(
+                problem_id=store.project_id(),
+                author="candidate-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] A changed unattacked target holds.",
+                proof="A different proof.",
+            )
+            changed_payload = deepcopy(payload)
+            changed_payload["bundle_claim"] = changed.statement
+            changed_payload["candidates"] = [changed.as_submission_dict()]
+            changed_payload["requested_assurance"]["validation_subject"][
+                "subject_id"
+            ] = changed.fact_id
+            with patch.object(
+                lifecycle,
+                "_normalize_artifacts",
+                side_effect=AssertionError("expensive release work was reached"),
+            ) as expensive:
+                with self.assertRaisesRegex(ValueError, "fresh_adverse_missing"):
+                    lifecycle.candidate_release(
+                        changed_payload,
+                        producer="candidate-producer",
+                        preflight_only=True,
+                    )
+            expensive.assert_not_called()
+
     def test_public_plan_round_and_attack_report_reach_the_normal_flow(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"
@@ -396,10 +601,24 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertIsInstance(report, dict)
             assert report is not None
             self.assertEqual(report["coverage_status"], "pending")
-            self.assertEqual(len(report["rounds"]), 1)
-            self.assertEqual(len(report["assignments"]), 2)
-            self.assertEqual(len(report["cards"]), 2)
-            self.assertEqual(len(report["returns"]), 2)
+            self.assertEqual(report["recommendations"], [])
+            self.assertNotIn("rounds", report)
+            self.assertNotIn("attacks", report)
+
+            code, full, error = self._cli(
+                root,
+                "main",
+                "attack-report",
+                "--host-task-scope-id",
+                planned["host_task_scope_id"],
+                "--full",
+            )
+            self.assertEqual(code, 0, error)
+            assert full is not None
+            self.assertEqual(len(full["rounds"]), 1)
+            self.assertEqual(len(full["assignments"]), 2)
+            self.assertEqual(len(full["cards"]), 2)
+            self.assertEqual(len(full["returns"]), 2)
 
     def test_attack_report_tamper_is_rejected_after_hash_recomputation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

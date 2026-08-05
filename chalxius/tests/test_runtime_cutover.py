@@ -330,6 +330,50 @@ class RuntimeCutoverTests(unittest.TestCase):
                 1,
             )
 
+    def test_round_bindings_preserve_absent_legacy_field_but_reject_mixed_round(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            project = base / "protected-project"
+            legacy_round = (
+                project
+                / "rounds"
+                / "round-20260101T000000Z-00000001"
+                / "task-cards"
+            )
+            legacy_round.mkdir(parents=True)
+            self._write_json(legacy_round / "a01.json", {"schema_version": 5})
+            self._write_json(legacy_round / "a02.json", {"schema_version": 5})
+            self.assertEqual(_round_bindings(project), [])
+
+            runtime = self._runtime(base / "skills" / "chalxius", "0.6.5", "old")
+            binding = runtime_binding_from_root(
+                runtime,
+                archive_root=base / "skill-runtime-archives" / "chalxius",
+            )
+            self._write_json(
+                legacy_round / "a02.json",
+                {"schema_version": 5, "runtime_binding": binding},
+            )
+            with self.assertRaisesRegex(ValueError, "mixes legacy and runtime-bound"):
+                _round_bindings(project)
+
+    def test_round_bindings_strictly_validate_present_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary).resolve() / "protected-project"
+            cards = (
+                project
+                / "rounds"
+                / "round-20260101T000000Z-00000001"
+                / "task-cards"
+            )
+            cards.mkdir(parents=True)
+            self._write_json(
+                cards / "a01.json",
+                {"schema_version": 5, "runtime_binding": None},
+            )
+            with self.assertRaisesRegex(ValueError, "runtime binding fields are not exact"):
+                _round_bindings(project)
+
     def test_cutover_requires_an_explicit_protected_project_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()

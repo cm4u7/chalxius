@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.6.5",
-  "release_codename": "Integrated Research Continuity",
-  "release_display_name": "Chalxius 0.6.5 — Integrated Research Continuity",
+  "version": "0.6.7",
+  "release_codename": "Plain-Language Attack Recommendations",
+  "release_display_name": "Chalxius 0.6.7 — Plain-Language Attack Recommendations",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -264,6 +264,8 @@
     "disablement": "future_task_cards_only",
     "maximum_matching_approved_rules_per_card": 24,
     "attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx",
+    "recommendation_report_revision": "chalxius-attack-route-recommendations-2",
+    "default_recommendation_projection": "maximum_three_family_deduplicated_with_reviewed_plain_language_what_it_checks_applicability_support_and_numbered_approval_unknown_families_full_only",
     "captured_results": "surviving_counterexamples_and_productive_challenges_with_concrete_value_effects",
     "legacy_and_frozen_work_policy": "no_backfill_schema_change_warning_or_redo",
     "adverse_assignment_provenance": "exact_refute_task_card_worker_and_assignment_independent_of_outcome_kind",
@@ -296,6 +298,33 @@
     "source_dependent_planning": "fail_without_exact_artifact_or_machine_authority_snapshot",
     "frontier_ordering": "compact_four_factor_with_legacy_eight_metric_read_projection_no_cutoff",
     "truth_effect": "candidate_and_certification_gate_only"
+  },
+  "v5_research_cycle_surface": {
+    "contract_revision": "chalxius-v5-two-subround-research-1",
+    "supervision_revision": "chalxius-v5-research-supervision-1",
+    "approved_computation_execution_revision": "chalxius-v5-approved-computation-execution-1",
+    "activation": "prospective_public_plan_round_only",
+    "production_roles": "proof_refute_counterexample_computation_design_literature_source_interpretation_and_insight",
+    "supervisor_scopes": [
+      "proof_logic",
+      "program_math",
+      "source_scope",
+      "integration"
+    ],
+    "maximum_supervisors_per_round": 3,
+    "source_binding": "completed_production_manifest_and_complete_exact_receipt_set",
+    "repair_policy": "copy_on_write_next_research_cycle",
+    "pulse_policy": "not_used",
+    "computation_design_artifacts": [
+      "computation_dependencies",
+      "computation_design",
+      "computation_source"
+    ],
+    "execution_gate": "safe_program_math_disposition_then_exact_supervised_source_and_dependencies",
+    "actual_output_policy": "exact_source_dependency_log_manifest_output_then_new_explicit_program_math_supervision_round",
+    "legacy_single_wave_policy": "read_exact_and_retain_automatic_future_program_math_review_queue",
+    "candidate_verifier_gateway_fact_change": false,
+    "truth_effect": "none"
   },
   "v5_campaign_scope_surface": {
     "contract_revision": "chalxius-v5-campaign-scope-1",
@@ -565,7 +594,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 92,
-    "protected_tree_sha256": "0eadb4e2f31d81bdebe6d6469afe17c94962f8bef6bd26688252e9d02c6b6424",
+    "protected_tree_sha256": "96e0bfc70d592c8712ee5480cc76356e9976678fc4d3d9d3e937dfe1c4ff2054",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",

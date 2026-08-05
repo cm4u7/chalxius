@@ -56,13 +56,23 @@ representation, truncation order, or output interpretation. Exact replay and
 the older eight-axis independence matrix remain applicable where their frozen
 contracts require them.
 
-Successful ingestion of an actual computation-bearing V5 Research return
-queues one future nontruth `refute` review under the prospective default.
-The review is capability-bound to exact source/output artifacts and may attack
-the full formula-code-output chain during Research. It does not interrupt the
-producer or change the ingested return. Ordinary prose mentioning code does
-not activate the route, and any reusable attack proposal still requires a user
-decision before future activation.
+For new two-subround Research, semantic assurance begins before execution. A
+first-subround computer returns exactly three artifacts: executable core code,
+the program-mathematics design, and the dependency manifest. Its computation
+stage count is zero; output, logs, and an execution manifest are forbidden.
+`plan-supervision-round` gives these exact hashes to a `program_math`
+supervisor. Formal execution is scheduled only after that supervisor result is
+explicitly disposed as `resolved_no_obstruction` or `resolved_by_evidence`.
+
+The approved execution card binds the design return, supervisor return,
+disposition, code hash, and dependency hash. The execution return must repeat
+the same source/dependency bytes, add output and the normal stage/alignment
+manifest, and then undergo another explicit program-math supervision round.
+Changing code or dependencies starts a new design/supervision cycle. The old
+automatic future nontruth review queue remains only for legacy single-wave
+computation cards; approved execution suppresses that duplicate queue.
+Ordinary prose mentioning code activates neither mechanism, and no review has
+truth effect or automatically changes attack routing.
 
 ## Independence matrix
 

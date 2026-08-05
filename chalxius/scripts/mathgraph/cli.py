@@ -967,6 +967,20 @@ def build_parser() -> argparse.ArgumentParser:
             "explicit Main-planner selection into new V5 cards"
         ),
     )
+    p = sub.add_parser("plan-supervision-round")
+    p.add_argument("source_round_id")
+    p.add_argument(
+        "--scope",
+        action="append",
+        dest="supervisor_scopes",
+        choices=("proof_logic", "program_math", "source_scope", "integration"),
+        help="repeat one to three times; omitted selects sparse applicable scopes",
+    )
+    p.add_argument("--host-task-scope-id")
+    p = sub.add_parser("plan-computation-execution")
+    p.add_argument("source_round_id")
+    p.add_argument("assignment_id")
+    p.add_argument("--host-task-scope-id")
     sub.add_parser("project-background-index")
     p = sub.add_parser("project-background-read")
     p.add_argument("chunk_id")
@@ -1029,6 +1043,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("attack-report")
     p.add_argument("--host-task-scope-id", required=True)
+    p.add_argument(
+        "--full",
+        action="store_true",
+        help="include the complete technical coverage/case audit",
+    )
 
     p = sub.add_parser("attack-route-decide")
     p.add_argument("proposal_id")
@@ -2084,6 +2103,34 @@ def main(argv: list[str] | None = None) -> int:
                 )
         elif args.command == "adoption-plan":
             _print_json(build_adoption_plan(_json_file(args.input)))
+        elif args.command == "plan-supervision-round":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("plan-supervision-round requires a V5 project")
+            normalized_host_scope = normalize_host_task_scope_id(
+                args.host_task_scope_id,
+                workflow_evidence_version=store.workflow_evidence_version(),
+            )
+            _print_json(
+                store.v5_lifecycle().create_supervision_round(
+                    args.source_round_id,
+                    supervisor_scopes=args.supervisor_scopes,
+                    host_task_scope_id=normalized_host_scope,
+                )
+            )
+        elif args.command == "plan-computation-execution":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("plan-computation-execution requires a V5 project")
+            normalized_host_scope = normalize_host_task_scope_id(
+                args.host_task_scope_id,
+                workflow_evidence_version=store.workflow_evidence_version(),
+            )
+            _print_json(
+                store.v5_lifecycle().create_computation_execution_round(
+                    args.source_round_id,
+                    args.assignment_id,
+                    host_task_scope_id=normalized_host_scope,
+                )
+            )
         elif args.command == "plan-round":
             normalized_host_scope = normalize_host_task_scope_id(
                 args.host_task_scope_id,
@@ -2091,7 +2138,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if store.workflow_evidence_version() == 5:
                 _print_json(
-                    store.v5_lifecycle().create_round(
+                    store.v5_lifecycle().create_production_round(
                         workers=args.workers,
                         mode=args.mode,
                         research_ids=args.memory_ids,
@@ -2295,8 +2342,14 @@ def main(argv: list[str] | None = None) -> int:
             _print_json(store.adverse_routes().status())
         elif args.command == "attack-report":
             _print_json(
-                store.adverse_routes().report(
-                    host_task_scope_id=args.host_task_scope_id
+                (
+                    store.adverse_routes().report(
+                        host_task_scope_id=args.host_task_scope_id
+                    )
+                    if args.full
+                    else store.adverse_routes().recommendation_report(
+                        host_task_scope_id=args.host_task_scope_id
+                    )
                 )
             )
         elif args.command == "attack-route-decide":

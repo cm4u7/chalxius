@@ -32,6 +32,10 @@ ADVERSE_ROUTING_CONTRACT_REVISIONS = {
 ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS = frozenset({3, 4})
 ADVERSE_ROUTING_TRUTH_EFFECT = "none"
 ADVERSE_ROUTING_PROJECT_EFFECT = "future_exploration_routing_only"
+ATTACK_ROUTE_RECOMMENDATION_REPORT_REVISION = (
+    "chalxius-attack-route-recommendations-2"
+)
+MAX_ATTACK_ROUTE_RECOMMENDATIONS = 3
 INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION = (
     "chalxius-independent-adverse-pair-1"
 )
@@ -236,6 +240,52 @@ PROGRAM_MATH_ATTACK_RULE: dict[str, Any] = {
         "Do not treat an implementation choice as an error when an explicit mathematical equivalence and convention map justify it.",
         "Separate numerical instability from a semantic formula-to-code mismatch.",
     ],
+}
+
+# This is a deliberately curated user-facing vocabulary.  The concise report
+# never copies worker-authored instructions or technical case material.  A new
+# family remains available in --full but is omitted from the default report
+# until it has a reviewed ordinary-language explanation here.
+ATTACK_FAMILY_PLAIN_LANGUAGE: dict[str, str] = {
+    "exact_claim_mismatch": (
+        "Checks whether the conclusion silently changes the exact claim it was meant to establish."
+    ),
+    "implication_direction": (
+        "Checks whether necessity, sufficiency, converse, and equivalence directions are each justified."
+    ),
+    "missing_premise": (
+        "Checks whether the conclusion depends on an unstated premise or applicability condition."
+    ),
+    "type_domain_mismatch": (
+        "Checks whether every object, map, operation, and equality is used in the correct type and domain."
+    ),
+    "quantifier_witness": (
+        "Checks whether quantifier order or witness dependence was changed without justification."
+    ),
+    "scope_transport": (
+        "Checks whether a local, special, or pointwise result was extended to a global, general, or uniform claim without a valid bridge."
+    ),
+    "case_boundary": (
+        "Checks whether the cases are exhaustive and whether boundary or degenerate cases break the claim."
+    ),
+    "circularity": (
+        "Checks whether the reasoning assumes the conclusion or an equivalent downstream result."
+    ),
+    "hidden_conjunct_split": (
+        "Checks whether several independently falsifiable claims were bundled and supported as if they were one."
+    ),
+    "plain_language_substitution": (
+        "Checks whether replacing load-bearing jargon with faithful ordinary language exposes a hidden premise or unsupported step."
+    ),
+    "burden_charity_failure_surface": (
+        "Checks burdens of proof, the strongest fair objection, and whether independent failure routes remain unresolved."
+    ),
+    "quantifier_modality_scope_exception_equivalence": (
+        "Checks whether paraphrases preserve quantifiers, modality, operator scope, and stated exceptions."
+    ),
+    "program_math_semantic_alignment": (
+        "Checks whether the mathematical design, executable code, and interpreted output still represent the same computation."
+    ),
 }
 
 
@@ -844,6 +894,110 @@ def validate_host_scope_attack_report(value: Any) -> dict[str, Any]:
     )
     if value["coverage_status"] != expected_status:
         raise ValueError("host-scope attack report aggregate coverage drifted")
+    return value
+
+
+def validate_attack_route_recommendation_report(
+    value: Any,
+) -> dict[str, Any]:
+    """Validate the intentionally small user-facing attack-route projection."""
+
+    fields = {
+        "schema_version",
+        "contract_revision",
+        "project_id",
+        "host_task_scope_id",
+        "coverage_status",
+        "scope_complete",
+        "recommendation_policy",
+        "recommendations",
+        "pending_proposal_count",
+        "omitted_pending_count",
+        "user_decision_required",
+        "approval_instruction",
+        "routing_change_policy",
+        "evidence_boundary",
+        "truth_effect",
+        "project_effect",
+        "report_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError("attack-route recommendation report fields are not exact")
+    semantic = {
+        key: item for key, item in value.items() if key != "report_sha256"
+    }
+    if (
+        value["schema_version"] != ADVERSE_ROUTING_SCHEMA_VERSION
+        or value["contract_revision"]
+        != ATTACK_ROUTE_RECOMMENDATION_REPORT_REVISION
+        or value["truth_effect"] != ADVERSE_ROUTING_TRUTH_EFFECT
+        or value["project_effect"] != "report_only"
+        or value["routing_change_policy"]
+        != "no_route_change_without_operator_decision"
+        or value["report_sha256"] != sha256_json(semantic)
+    ):
+        raise ValueError("attack-route recommendation report identity is invalid")
+    policy = value["recommendation_policy"]
+    if policy != {
+        "maximum": MAX_ATTACK_ROUTE_RECOMMENDATIONS,
+        "selection": (
+            "pending_nonuniversal_selective_family_deduplicated_supported_plain_language_only"
+        ),
+        "quality_bias": "omit_instead_of_broaden",
+    }:
+        raise ValueError("attack-route recommendation policy drifted")
+    recommendations = value["recommendations"]
+    item_fields = {
+        "number",
+        "attack_type",
+        "what_it_checks",
+        "applies_when",
+        "support_kind",
+        "support_count",
+        "approval_phrase",
+    }
+    if (
+        not isinstance(recommendations, list)
+        or len(recommendations) > MAX_ATTACK_ROUTE_RECOMMENDATIONS
+        or any(
+            not isinstance(item, dict) or set(item) != item_fields
+            for item in recommendations
+        )
+    ):
+        raise ValueError("attack-route recommendations are invalid")
+    attack_types: set[str] = set()
+    for number, item in enumerate(recommendations, 1):
+        attack_type = _require_slug(
+            item["attack_type"],
+            "recommendation attack type",
+        )
+        if (
+            item["number"] != number
+            or attack_type in attack_types
+            or attack_type not in ATTACK_FAMILY_PLAIN_LANGUAGE
+            or item["what_it_checks"]
+            != ATTACK_FAMILY_PLAIN_LANGUAGE[attack_type]
+            or not isinstance(item["support_count"], int)
+            or isinstance(item["support_count"], bool)
+            or item["support_count"] < 1
+            or item["support_kind"]
+            not in {"surviving_counterexample", "productive_challenge", "mixed"}
+            or item["approval_phrase"] != f"批准建议 {number}"
+        ):
+            raise ValueError("attack-route recommendation item is invalid")
+        _require_text(item["applies_when"], "recommendation applicability")
+        _require_text(item["what_it_checks"], "recommendation explanation")
+        attack_types.add(attack_type)
+    for field_name in ("pending_proposal_count", "omitted_pending_count"):
+        count = value[field_name]
+        if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+            raise ValueError("attack-route recommendation counts are invalid")
+    if (
+        value["omitted_pending_count"]
+        != value["pending_proposal_count"] - len(recommendations)
+        or value["user_decision_required"] != bool(recommendations)
+    ):
+        raise ValueError("attack-route recommendation count projection drifted")
     return value
 
 
@@ -2833,6 +2987,135 @@ class AdverseRoutingManager:
             "report_sha256": sha256_json(report_semantic),
         }
         return validate_host_scope_attack_report(report)
+
+    def recommendation_report(
+        self,
+        *,
+        host_task_scope_id: str,
+    ) -> dict[str, Any]:
+        """Project only a few actionable route types for the user."""
+
+        full = self.report(host_task_scope_id=host_task_scope_id)
+        active_rule_hashes = {
+            sha256_json(item["route_rule"]) for item in self.active_rules()
+        }
+        groups: dict[str, dict[str, Any]] = {}
+        pending_proposal_ids: set[str] = set()
+        for attack in full["attacks"]:
+            if attack["proposal_status"] != "pending_user_decision":
+                continue
+            pending_proposal_ids.add(attack["proposal_id"])
+            rule = validate_route_rule(attack["proposed_rule"])
+            trigger = rule["trigger"]
+            if (
+                trigger["universal_refute"]
+                or not (
+                    trigger["claim_terms_any"]
+                    or trigger["metadata_signals_any"]
+                )
+                or sha256_json(rule) in active_rule_hashes
+            ):
+                continue
+            signature = rule["attack_family"]
+            if signature not in ATTACK_FAMILY_PLAIN_LANGUAGE:
+                # Unknown families remain visible in --full.  Do not leak an
+                # unreviewed worker instruction or invent a vague explanation
+                # merely to fill the concise recommendation quota.
+                continue
+            group = groups.setdefault(
+                signature,
+                {
+                    "entries": [],
+                    "result_kinds": [],
+                },
+            )
+            group["entries"].append(
+                {
+                    "proposal_id": attack["proposal_id"],
+                    "rule": rule,
+                }
+            )
+            group["result_kinds"].append(attack["attack_result"])
+
+        ranked = sorted(
+            groups.values(),
+            key=lambda item: (
+                -len(item["entries"]),
+                -sum(
+                    result == "surviving_counterexample"
+                    for result in item["result_kinds"]
+                ),
+                item["entries"][0]["rule"]["attack_family"],
+                min(entry["proposal_id"] for entry in item["entries"]),
+            ),
+        )
+        recommendations: list[dict[str, Any]] = []
+        for number, item in enumerate(
+            ranked[:MAX_ATTACK_ROUTE_RECOMMENDATIONS],
+            1,
+        ):
+            selected = min(
+                item["entries"],
+                key=lambda entry: entry["proposal_id"],
+            )
+            result_kinds = set(item["result_kinds"])
+            support_kind = (
+                next(iter(result_kinds))
+                if len(result_kinds) == 1
+                else "mixed"
+            )
+            recommendations.append(
+                {
+                    "number": number,
+                    "attack_type": selected["rule"]["attack_family"],
+                    "what_it_checks": ATTACK_FAMILY_PLAIN_LANGUAGE[
+                        selected["rule"]["attack_family"]
+                    ],
+                    "applies_when": selected["rule"]["scope_note"],
+                    "support_kind": support_kind,
+                    "support_count": len(item["entries"]),
+                    "approval_phrase": f"批准建议 {number}",
+                }
+            )
+
+        semantic = {
+            "schema_version": ADVERSE_ROUTING_SCHEMA_VERSION,
+            "contract_revision": ATTACK_ROUTE_RECOMMENDATION_REPORT_REVISION,
+            "project_id": self.store.project_id(),
+            "host_task_scope_id": full["host_task_scope_id"],
+            "coverage_status": full["coverage_status"],
+            "scope_complete": full["scope_complete"],
+            "recommendation_policy": {
+                "maximum": MAX_ATTACK_ROUTE_RECOMMENDATIONS,
+                "selection": (
+                    "pending_nonuniversal_selective_family_deduplicated_supported_plain_language_only"
+                ),
+                "quality_bias": "omit_instead_of_broaden",
+            },
+            "recommendations": recommendations,
+            "pending_proposal_count": len(pending_proposal_ids),
+            "omitted_pending_count": (
+                len(pending_proposal_ids) - len(recommendations)
+            ),
+            "user_decision_required": bool(recommendations),
+            "approval_instruction": (
+                "Reply with one listed approval phrase to activate that route "
+                "for future attack task cards."
+                if recommendations
+                else "No route upgrade is recommended from this scope."
+            ),
+            "routing_change_policy": (
+                "no_route_change_without_operator_decision"
+            ),
+            "evidence_boundary": (
+                "recommendations are nontruth routing suggestions; approval "
+                "changes future attack task cards only"
+            ),
+            "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
+            "project_effect": "report_only",
+        }
+        report = {**semantic, "report_sha256": sha256_json(semantic)}
+        return validate_attack_route_recommendation_report(report)
 
     def status(self) -> dict[str, Any]:
         if not self.enabled():

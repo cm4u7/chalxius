@@ -1,4 +1,4 @@
-Verify Chalxius 0.6.5 — Integrated Research Continuity as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.6.7 — Plain-Language Attack Recommendations as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit

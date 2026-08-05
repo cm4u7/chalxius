@@ -1,4 +1,4 @@
-# Known architecture limitations in Chalxius 0.6.5
+# Known architecture limitations in Chalxius 0.6.7
 
 The numbered entries below retain their immutable owner ledger: CHX-001 through
 CHX-017 belong to `run-20260801T072127934348Z-16d73c1b37d5`, CHX-018 through
@@ -35,6 +35,15 @@ The preceding closed release-audit ledger spans
 `run-20260804T091736232364Z-fd5af65fa476/CHX-082` through
 `run-20260804T091736232364Z-fd5af65fa476/CHX-083` and follows
 `run-20260803T101737542592Z-da3f0e67c7d5/CHX-081`.
+
+The 0.6.7 project-bound successor additionally records
+`run-20260805T135745960462Z-8b9e3b4057f3/CHX-005`: the default adverse
+recommendation projection exposed an internal family slug without saying what
+the proposed attack would check. Recommendation report revision 2 adds one
+reviewed ordinary-language sentence, keeps worker-authored technical material
+behind `--full`, and omits unknown families until their public explanation is
+reviewed. This repair changes no attack route, Research, Candidate,
+Certification, Gateway, Fact, or historical task-card authority.
 
 Chalxius 0.6.5 retains the 0.6.0/0.6.1/0.6.2/0.6.3/0.6.4 prospective repairs for every architecture mechanism recorded as
 CHX-001 through CHX-017 in the 2026-08-01 research-draft field run, plus the

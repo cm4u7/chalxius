@@ -1,4 +1,48 @@
-# Chalxius V5 traceability through 0.6.5 Integrated Research Continuity
+# Chalxius V5 traceability through 0.6.7 Plain-Language Attack Recommendations
+
+## 0.6.7 plain-language-attack-recommendations overlay
+
+- Candidate version: `0.6.7`; public name **Plain-Language Attack
+  Recommendations**. The project-bound architecture issue is
+  `run-20260805T135745960462Z-8b9e3b4057f3/CHX-005`.
+- The change is projection-only. Recommendation report revision 2 adds one
+  `what_it_checks` sentence from a reviewed fixed vocabulary while preserving
+  the three-item maximum, family deduplication, applicability, support,
+  `批准建议 N`, and Operator-only prospective activation.
+- Worker-authored instructions, mechanisms, witnesses, reproduction steps,
+  value effects, assignments, cards, and returns remain excluded from the
+  default view. An unknown family stays available in `--full` and is omitted
+  from the concise report until its explanation is reviewed.
+- Attack cases, proposals, decisions, active rules, task cards, Research,
+  Candidate fresh-adverse readiness, verifier, Certification, Gateway, Fact,
+  and all historical contracts are unchanged. Validation and publication
+  evidence are release gates, not mathematical truth evidence.
+
+## 0.6.6 supervised-research-cycle overlay
+
+- Candidate version: `0.6.6`; public name **Supervised Research Cycle**. The
+  architecture issue is project-bound
+  `run-20260805T112254409662Z-8524f54ec2c2/CHX-004`, extending the earlier
+  sequencing concern CHX-002. The adopted architecture route is
+  `run-20260805T115120884670Z-8de79fd44a14/PHX-001`, consultation
+  `consultation-414fa4e67564d3f688163b25af02a23bdb46d6afa215c590b2360566741b7869`.
+- The change is prospective and Research-only. Public `plan-round` creates
+  production subround 1; `plan-supervision-round` consumes a fully ingested
+  exact source manifest and receipt-set hash and creates one to three scoped
+  `refute` supervisors. First-wave refute attacks its assigned proposition and
+  is itself supervised. Supervisor findings route to later copy-on-write
+  Research repair. Pulse is not invoked.
+- First-wave computation has stage count zero and returns exactly core code,
+  mathematical design, and dependencies. `plan-computation-execution` requires
+  a completed program-math supervisor return plus a safe explicit disposition,
+  freezes all lineage hashes, and permits only identical source/dependency
+  bytes. The actual execution output returns through the same explicit
+  supervision command; the legacy automatic future review queue is retained
+  only for single-wave cards.
+- Candidate fresh-adverse review, verifier, Certification, Gateway, Fact,
+  Evidence, Paper/Audit, Reader, and historical task cards are unchanged. The
+  behavioral registry binds separate positive, predicate-false, and tamper
+  probes for both the two-subround flow and the preexecution code gate.
 
 ## 0.6.5 integrated-research-continuity overlay
 
@@ -554,6 +598,20 @@ issues in older release lineages belong to their own ledgers.
   philosophy set. Successful counterexamples and productive challenges still
   create nontruth proposals that remain inactive until an explicit Operator
   decision. Frozen/V1–V4 and schema-1/2/3 work is never backfilled.
+- The prospective Candidate fresh-adverse readiness receipt moves the
+  iteration-prone gate ahead of artifact normalization, source audit, capsule
+  construction, and sealing. It hashes canonical Candidate Fact bytes and
+  accepts only a later direct, independent, non-aborted ingested refute with
+  exact task-card capability coverage, Candidate disposition, and actor
+  binding. A missing or stale attack fails as `fresh_adverse_missing`; the
+  resulting release tells the fresh verifier to adjudicate the dispositions
+  rather than discovering mechanical freshness errors after packaging.
+- The public `attack-report` projection is now an intentionally sparse
+  decision surface: at most three non-universal selective recommendations,
+  deduplicated by attack family and stripped of technical case details. The
+  full immutable scope/case audit remains available through `--full`.
+  `批准建议 N` resolves the frozen proposal and uses the unchanged
+  Operator-only future-route decision contract.
 - A complete set of validated ingestion receipts projects a round as
   `completed` and historical. Newer bytes verify the exact frozen runtime,
   return, Research, and optional adverse/program-math bindings without an

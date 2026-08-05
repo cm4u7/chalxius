@@ -505,6 +505,17 @@ and authorize every artifact named by the bound managed Research result, the
 source as `paper_source`, and each covered revision as
 `paper_revised_writing`; the closed verifier receives only authorized roles.
 
+Before any of those artifacts are normalized, audited, or sealed, Candidate
+preflight computes the canonical bytes of `candidates`. If the maximal
+selected constructive Research branch carries
+`independent_adverse_required=true`, one later direct independent ingested
+`refute` task card must already freeze every one of those Candidate hashes.
+Its result Research id must appear in `challenge_dispositions`, and its worker
+must appear in `adverse_actor_ids`. Otherwise preflight fails immediately with
+`fresh_adverse_missing`. Successful prospective releases seal the derived
+`fresh_adverse_readiness` receipt; it is output, not an additional input
+field.
+
 Optional generic overlays are `successor_contracts` and
 `evidence_bridge_refs`. A continuation-descended release requires both Paper
 overlays shown above. Each candidate Fact may use the exact fields returned by

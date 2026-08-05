@@ -227,6 +227,34 @@
         "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_independent_pair_tamper_is_rejected"
       }
     },
+    "feature.candidate_fresh_adverse_readiness": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A marked Candidate branch must fail cheaply unless one later independent ingested refute binds its exact canonical Candidate Fact bytes and disposition.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._fresh_adverse_readiness",
+      "activation_predicate": {
+        "predicate_id": "maximal_selected_research_branch_requires_independent_adverse",
+        "domain": ["required_and_ready", "required_and_missing", "predicate_false", "candidate_bytes_changed"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-candidate-fresh-adverse-readiness-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_fresh_adverse_readiness"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.release",
+      "observable_effect": {
+        "effect_id": "fresh_adverse_fails_before_release_cost",
+        "kind": "validation_gate",
+        "description": "Missing, stale, aborted, inherited, or differently hashed adverse work exits before artifact normalization, source audit, capsule construction, or seal."
+      },
+      "probes": {
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_accepts_only_exact_candidate_bound_refute",
+        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_release_decision_and_gateway_admit_one_exact_fact",
+        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_fails_before_expensive_work_without_fresh_adverse"
+      }
+    },
     "feature.host_scope_attack_coverage": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
@@ -253,6 +281,90 @@
         "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_zero_attack_report_requires_complete_pair_return",
         "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_predicate_false_is_explicitly_not_required",
         "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_tamper_is_rejected_after_hash_recomputation"
+      }
+    },
+    "feature.concise_attack_route_recommendations": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "The default user-facing attack report exposes at most three selective family-deduplicated route types, explains what each checks in reviewed ordinary language, and keeps technical case detail behind --full.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
+      "activation_predicate": {
+        "predicate_id": "selective_pending_route_proposals_exist",
+        "domain": ["recommendations_present", "zero_or_filtered", "more_than_three", "duplicate_family"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-attack-route-recommendations-2",
+        "validator_symbol": "mathgraph.adverse_routing.validate_attack_route_recommendation_report"
+      },
+      "consumer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
+      "observable_effect": {
+        "effect_id": "sparse_one_utterance_route_upgrade_surface",
+        "kind": "bounded_output",
+        "description": "The user sees route type, a reviewed ordinary-language statement of what it checks, applicability, support, and a numbered approval phrase; future routing remains Operator-only."
+      },
+      "probes": {
+        "positive": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_counterexample_creates_case_proposal_and_separate_attack_report",
+        "predicate_false": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_reject_keeps_route_unchanged_and_zero_report_is_still_explicit",
+        "tamper": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_concise_report_deduplicates_attack_families"
+      }
+    },
+    "feature.two_subround_research_supervision": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Prospective Research freezes first-subround returns and sends sparse scoped supervisors over the exact receipts before Candidate construction.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._source_round_receipt_descriptors",
+      "activation_predicate": {
+        "predicate_id": "prospective_production_round_fully_ingested",
+        "domain": ["completed_production", "legacy_or_incomplete_round", "invalid_scope"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-research-supervision-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_research_supervision_binding"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_supervision_round_selection",
+      "observable_effect": {
+        "effect_id": "exact_production_receipts_bound_into_supervision_round",
+        "kind": "state_transition",
+        "description": "One to three refute-mode supervisors receive hash-bound production outputs; Pulse remains inactive and defects route to later copy-on-write repair."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_first_wave_refute_attacks_the_proposition_and_is_itself_supervised",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_legacy_round_is_not_backfilled",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_supervision_binding_tamper_fails_closed"
+      }
+    },
+    "feature.preexecution_computation_code_gate": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A first-subround computer returns core code before execution; formal execution consumes only safely disposed program-math supervision and identical source/dependency hashes.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_computation_execution_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._build_approved_computation_execution_binding",
+      "activation_predicate": {
+        "predicate_id": "computation_design_has_safe_program_math_disposition",
+        "domain": ["safe_disposition", "missing_or_blocking_disposition", "changed_source_or_dependencies"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-approved-computation-execution-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_approved_computation_execution_binding"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_research_cycle_return",
+      "observable_effect": {
+        "effect_id": "supervised_code_hash_controls_formal_execution",
+        "kind": "validation_gate",
+        "description": "Execution fails before scheduling without a safe disposition and return preflight rejects any source or dependency drift; actual output returns to supervision."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_code_is_supervised_before_exact_execution_and_output_is_rechecked",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_execution_gate_rejects_missing_supervision_disposition",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_changed_code_is_rejected_and_requires_a_new_cycle"
       }
     },
     "feature.communication_readiness_normal_flow": {

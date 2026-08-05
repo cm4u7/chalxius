@@ -3,13 +3,14 @@
 ## Contents
 
 1. [Purpose and authority boundary](#purpose-and-authority-boundary)
-2. [Prospective activation](#prospective-activation)
-3. [Case-to-rule lifecycle](#case-to-rule-lifecycle)
-4. [Worker return contract](#worker-return-contract)
-5. [Independent paired allocation](#independent-paired-allocation)
-6. [Attack report and user decision](#attack-report-and-user-decision)
-7. [Future task-card routing](#future-task-card-routing)
-8. [Compatibility and recovery](#compatibility-and-recovery)
+2. [Three Research attack roles](#three-research-attack-roles)
+3. [Prospective activation](#prospective-activation)
+4. [Case-to-rule lifecycle](#case-to-rule-lifecycle)
+5. [Worker return contract](#worker-return-contract)
+6. [Independent paired allocation](#independent-paired-allocation)
+7. [Attack report and user decision](#attack-report-and-user-decision)
+8. [Future task-card routing](#future-task-card-routing)
+9. [Compatibility and recovery](#compatibility-and-recovery)
 
 ## Purpose and authority boundary
 
@@ -44,6 +45,30 @@ The attack report is separate from the CHX runtime architecture report:
   Chalxius architecture.
 
 Never copy one report into the other or treat either as Fact evidence.
+
+## Three Research attack roles
+
+Keep three layers distinct:
+
+1. A production `refute` worker is a peer researcher. It attacks the assigned
+   proposition under its exact hypotheses, searches for counterexamples and
+   obstructions, and may challenge frozen earlier Research. It cannot inspect
+   mutable same-subround peers.
+2. A second-subround supervisor attacks exact first-subround returns. Its scope
+   is proof logic, program-math/code, source/scope, or integration. It can
+   induce a later copy-on-write Research repair, but it does not activate
+   attack routes or use Pulse for live peer editing.
+3. Candidate fresh-adverse review attacks the whole frozen Candidate fact
+   content and its dispositions before expensive sealing. It is the formal
+   engineering acceptance attack; a fresh verifier still follows it.
+
+Only a `refute` return carrying the current adverse-routing contract and an
+explicit qualifying `attack_learning` object supplies a route-evolution case.
+Supervisor or Candidate findings may justify Research repair, but they are not
+automatically converted into reusable route proposals. The
+default attack report remains a sparse list of at most three useful attack
+types that the user can approve with one utterance; it omits technical detail
+and emits no filler recommendation.
 
 ## Prospective activation
 
@@ -222,28 +247,63 @@ The pair creates no second review authority. A return enters cumulative
 Research, route activation still requires an Operator decision, and the normal
 Candidate adverse closure/disposition remains the sole release gate.
 
+Before Candidate artifact normalization, source audit, capsule construction,
+or sealing, the prospective fresh-adverse readiness gate inspects only
+content-hashed Research headers, canonical Candidate Fact bytes, and the exact
+refute assignment/card/return/receipt lineage. For each maximal selected
+constructive branch with `independent_adverse_required=true`, one later
+independent refute must directly target that branch head, freeze every exact
+Candidate Fact hash in its task-card capabilities, be non-aborted and ingested,
+appear in `adverse_actor_ids`, and have a Candidate disposition. A paired
+adverse assignment or a separately planned primary `refute` can satisfy the
+gate. Missing or inherited actor labels cannot. Failure is
+`fresh_adverse_missing` and occurs before high-cost release work.
+
+The sealed readiness receipt instructs the fresh verifier to adjudicate every
+bound adverse disposition. It does not ask the verifier to rerun packaging and
+does not make the adverse return true. A mathematical verifier finding may
+still require a copy-on-write repair; the gate eliminates late mechanical,
+freshness, scope, and candidate-byte failures rather than promising that
+substantive mathematical review can never disagree.
+
 ## Attack report and user decision
 
-At host-task completion, query the exact task scope and present the result to
-the user even when it contains zero attacks:
+At host-task completion, query the exact task scope and present the concise
+result to the user even when it contains zero recommendations:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role main attack-report \
   --host-task-scope-id HOST_TASK_SCOPE_ID
 ```
 
-Report separately:
+The default report is intentionally selective:
 
-- every validated scope round, assignment, task card, return/receipt state, and
-  paired adverse coverage record;
-- coverage as `missing-dispatch`, `pending`,
-  `dispatched-no-surviving-attack`, `attack-recorded`, or `not-required`;
-- each case id, result kind, family, target, mechanism, witnesses,
-  reproduction steps, exact success boundary, and concrete value effects;
-- the proposed trigger, instruction, guards, and scope;
-- its status: pending, approved, modified-and-approved, rejected, or disabled;
-- the explicit evidence boundary that the case is worker-reported nontruth;
-- whether a user decision is pending.
+- at most three pending attack types;
+- one item per attack family, even when several technical proposals share it;
+- only non-universal rules with an explicit claim-term or metadata-signal
+  trigger, false-positive guard, scope note, and worker support;
+- only the type, one reviewed ordinary-language sentence explaining what it
+  checks, applicability, support kind/count, and the phrase `批准建议 N`;
+- no mechanism, witnesses, reproduction steps, value effects, assignments,
+  cards, returns, or other implementation detail.
+
+The ordinary-language sentence comes from a reviewed family vocabulary, never
+from worker-authored route instructions. A new or unknown family remains in
+`--full` and is omitted from the default report until that vocabulary is
+reviewed; the report never invents filler merely to reach its quota.
+
+If no proposal survives this filter, recommend nothing. Do not fill a quota.
+The full coverage/case audit remains available for internal diagnosis:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main attack-report \
+  --host-task-scope-id HOST_TASK_SCOPE_ID --full
+```
+
+That full form retains every validated scope round, assignment, task card,
+return/receipt state, paired adverse coverage record, case, technical witness,
+proposal status, and the explicit worker-reported nontruth boundary. It is not
+the normal user-facing report.
 
 An empty `attacks` array is never self-interpreting. It establishes a completed
 zero only with `coverage_status=dispatched-no-surviving-attack` and complete
@@ -253,9 +313,13 @@ explicitly incomplete. A mixed or missing current scope, pair mismatch, or
 card/manifest/return drift fails closed. Historical null-scope cards stay
 readable and are not assigned to a newer scope.
 
-The user chooses one of three exact actions. `approve` copies the proposal and
-requires `rule=null`. `approve_modified` supplies a complete replacement rule.
-`reject` requires `rule=null`.
+The user may say `批准建议 N`. Main resolves that number against the exact
+just-produced report, writes the minimal `approve` decision for its frozen
+proposal id, and invokes the Operator route decision without asking the user to
+handle ids or JSON. The lower-level contract still has three exact actions:
+`approve` copies the proposal and requires `rule=null`;
+`approve_modified` supplies a complete replacement rule; `reject` requires
+`rule=null`.
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role operator attack-route-decide PROPOSAL_ID \

@@ -10,7 +10,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mathgraph.cli import main as cli_main
-from mathgraph.adverse_routing import LEGACY_BASELINE_ATTACK_RULES
+from mathgraph.adverse_routing import (
+    LEGACY_BASELINE_ATTACK_RULES,
+    validate_attack_route_recommendation_report,
+)
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
@@ -269,6 +272,39 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             self.assertEqual(report["truth_effect"], "none")
             self.assertNotIn("chx", json.dumps(report).casefold())
 
+            concise = store.adverse_routes().recommendation_report(
+                host_task_scope_id="host-adverse-task"
+            )
+            self.assertEqual(len(concise["recommendations"]), 1)
+            self.assertEqual(
+                concise["recommendations"][0]["approval_phrase"],
+                "批准建议 1",
+            )
+            self.assertEqual(
+                concise["recommendations"][0]["what_it_checks"],
+                "Checks whether quantifier order or witness dependence was changed without justification.",
+            )
+            serialized = json.dumps(concise, ensure_ascii=False)
+            for omitted in (
+                "failure_mechanism",
+                "premise_witnesses",
+                "reproduction_steps",
+                "value_effects",
+            ):
+                self.assertNotIn(omitted, serialized)
+            for omitted in ("assignments", "cards", "returns"):
+                self.assertNotIn(omitted, concise)
+            tampered = deepcopy(concise)
+            tampered["recommendations"][0]["number"] = 2
+            semantic = {
+                key: value
+                for key, value in tampered.items()
+                if key != "report_sha256"
+            }
+            tampered["report_sha256"] = sha256_json(semantic)
+            with self.assertRaisesRegex(ValueError, "item is invalid"):
+                validate_attack_route_recommendation_report(tampered)
+
     def test_philosophy_baselines_require_an_explicit_validated_domain(self) -> None:
         philosophy_rule_ids = {
             "baseline_philosophy_plain_language_substitution",
@@ -421,6 +457,102 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                     related_artifacts=[],
                     entry=unmarked_research,
                 )
+
+    def test_concise_report_deduplicates_attack_families(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.adverse_routes()
+            first_rule = self._learning(
+                term="uniform",
+                instruction="Attack silent uniform-witness replacement.",
+            )["route_rule"]
+            second_rule = self._learning(
+                term="canonical",
+                instruction="Attack silent canonical-witness replacement.",
+            )["route_rule"]
+            full = {
+                "host_task_scope_id": "hosttask-" + "a" * 32,
+                "coverage_status": "attack-recorded",
+                "scope_complete": True,
+                "attacks": [
+                    {
+                        "proposal_status": "pending_user_decision",
+                        "proposal_id": "route-proposal-" + "1" * 64,
+                        "proposed_rule": first_rule,
+                        "attack_result": "productive_challenge",
+                    },
+                    {
+                        "proposal_status": "pending_user_decision",
+                        "proposal_id": "route-proposal-" + "2" * 64,
+                        "proposed_rule": second_rule,
+                        "attack_result": "surviving_counterexample",
+                    },
+                ],
+            }
+            with patch.object(manager, "report", return_value=full), patch.object(
+                manager, "active_rules", return_value=[]
+            ):
+                concise = manager.recommendation_report(
+                    host_task_scope_id=full["host_task_scope_id"]
+                )
+            self.assertEqual(len(concise["recommendations"]), 1)
+            self.assertEqual(
+                concise["recommendations"][0]["attack_type"],
+                "quantifier_witness",
+            )
+            self.assertEqual(
+                concise["recommendations"][0]["support_count"],
+                2,
+            )
+            self.assertEqual(concise["omitted_pending_count"], 1)
+            tampered = deepcopy(concise)
+            tampered["recommendations"][0]["what_it_checks"] = (
+                "Worker-controlled replacement text."
+            )
+            semantic = {
+                key: value
+                for key, value in tampered.items()
+                if key != "report_sha256"
+            }
+            tampered["report_sha256"] = sha256_json(semantic)
+            with self.assertRaisesRegex(ValueError, "item is invalid"):
+                validate_attack_route_recommendation_report(tampered)
+
+    def test_concise_report_omits_unreviewed_family_instead_of_leaking_instruction(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.adverse_routes()
+            unknown_rule = self._learning(
+                term="opaque",
+                instruction="SECRET TECHNICAL ATTACK MECHANISM",
+            )["route_rule"]
+            unknown_rule["attack_family"] = "unreviewed_future_family"
+            full = {
+                "host_task_scope_id": "hosttask-" + "b" * 32,
+                "coverage_status": "attack-recorded",
+                "scope_complete": True,
+                "attacks": [
+                    {
+                        "proposal_status": "pending_user_decision",
+                        "proposal_id": "route-proposal-" + "3" * 64,
+                        "proposed_rule": unknown_rule,
+                        "attack_result": "productive_challenge",
+                    }
+                ],
+            }
+            with patch.object(manager, "report", return_value=full), patch.object(
+                manager, "active_rules", return_value=[]
+            ):
+                concise = manager.recommendation_report(
+                    host_task_scope_id=full["host_task_scope_id"]
+                )
+            self.assertEqual(concise["recommendations"], [])
+            self.assertEqual(concise["pending_proposal_count"], 1)
+            self.assertEqual(concise["omitted_pending_count"], 1)
+            self.assertNotIn(
+                "SECRET TECHNICAL ATTACK MECHANISM",
+                json.dumps(concise, ensure_ascii=False),
+            )
 
     def test_schema_three_frozen_baseline_remains_valid_without_backfill(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -737,7 +869,8 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 )
             self.assertEqual(reported, 0)
             report = json.loads(report_out.getvalue())
-            self.assertEqual(report["attacks"], [])
+            self.assertEqual(report["recommendations"], [])
+            self.assertNotIn("attacks", report)
             self.assertEqual(report["project_effect"], "report_only")
 
 

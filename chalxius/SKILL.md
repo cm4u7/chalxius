@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius, the integrated system for mathematical, philosophical, paper-led, computational, and academic teaching work. Use it to choose or switch fast, auto, and deep reasoning profiles; build source-bound Paper Logic and Audit Graphs; archive reviewed Paper Graphs in cross-project Evidence; explicitly import or bridge external Fact Graphs without transferring authority; run cumulative Research and replayable verification; govern adverse-worker attack reports and user-approved route evolution; diagnose or reduce Chalxius administrative cost from ordinary-language requests; certify V5 Facts through one invariant gate; use a user-generated project background or export an offline knowledge map; or, when academic teaching or testing is explicitly requested, activate Chalxius Learner over frozen Fact, Paper, and Blackboard snapshots.
 ---
 
-# Chalxius 0.6.5 — Integrated Research Continuity
+# Chalxius 0.6.7 — Plain-Language Attack Recommendations
 
 Use the bundled Chalxius research engine as the only research runtime. Fast, auto, and deep are execution profiles of that one engine. The Fact Graph admission contract is identical in every profile.
 
@@ -124,15 +124,14 @@ dispatch while retaining accumulated contributions.
 1. Add or select cumulative Research. Challenges, counterexamples, obstacles, insights, repairs, and dispositions remain separate immutable entries. Source-dependent work uses `memory-add --current-assurance` with exact project-relative path/hash/role artifacts; path-only prose cannot be planned.
 2. At intake, distinguish a `research_draft` from an external finished source. For a draft, freeze the exact artifact, decompose its full load-bearing Paper DAG, inherit that graph copy-on-write, project its complete order-preserving research frontier with `scripts/paper_research_pipeline.py`, research and repair every selected claim/inference node, verify publication identity and claim-level witnesses, commit one atomic target-total disposition batch, and preserve its domain-specific target unless Operator authorizes a revision. Philosophy alone preserves argumentative stance. Mathematics preserves the exact problem, hypotheses, domains, and quantifiers while permitting proof, disproof, obstruction, and a typed weaker-progress DAG; a weaker theorem, special case, added hypothesis, or weakened conclusion exposes its exact gap and never masquerades as resolution of the unchanged root. `auto` may accelerate work units but cannot compress topology.
    Target revision authorization is a durable Operator-only record bound to the exact plan hash, target, prior domain-continuity contract, and impact; a producer-supplied assertion is never authority. Admit the complete mapped atomic Candidate DAG through the project-bound signed verification lifecycle and Gateway before continuing Research from that Fact Graph. An external finished source enters Evidence, never Fact by credibility alone.
-3. Plan a round. The card binds the candidate skill root/version, content identity and host archive locator, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. An explicitly named target receives only exact Release/Decision/admission/Fact/artifact capabilities. Main compiles context; Operator governs; Host remains dispatch-only. A load-bearing Paper target, or an explicitly marked proof target, receives a distinct paired `refute` worker/context; this attack enters Research and adds no second truth gate. Bind one normalized non-null `host_task_scope_id`; worker CHX startup passes the exact task card and fails on runtime drift. Runtime validation is deduplicated only within one bounded phase for one identical identity; no cache hit supplies authority across phases.
-4. Execute only from the frozen card. Preflight a repairable draft, then ingest only the exact worker-final hash. A malformed peer is quarantined locally.
-5. For collaborative work, use optional two-wave Pulse. Each valid Wave-1 and
-   Wave-2 contribution enters Research independently; Pulse closure is advice,
-   not certification.
+3. Plan prospective subround 1 with `plan-round`. The card binds the candidate skill root/version, content identity and host archive locator, mode, Blackboard snapshot, complete source Research record, predecessor interfaces, related Research, task-referenced authority, and all three planes. Prove, proposition-refute/counterexample, literature, insight, interpretation, and computation-design workers operate independently; a first-subround `refute` attacks the assigned proposition under its exact hypotheses and is itself later supervised. A load-bearing Paper target, or an explicitly marked proof target, still receives its distinct paired `refute` worker/context. Bind one normalized non-null `host_task_scope_id`; runtime validation is deduplicated only inside one bounded phase and never supplies cross-phase authority.
+4. Execute only from a frozen card and ingest exact worker-final hashes; malformed peers are quarantined locally. After every prospective production round is fully ingested, use `plan-supervision-round SOURCE_ROUND` to send at most three scoped `refute` supervisors over the exact frozen returns (`proof_logic`, `program_math`, `source_scope`, `integration`). A defect is returned to `plan-repair-round PRODUCTION_RESULT --trigger-memory-id SUPERVISOR_RESULT`, which preserves the production work mode and creates a later copy-on-write Research cycle; there is no live peer mutation. A first-subround `compute` return contains exactly `computation_source`, `computation_design`, and `computation_dependencies`, with no execution output. Run `plan-computation-execution SOURCE_ROUND ASSIGNMENT` only after the program-math supervisor result has a safe explicit disposition; execution and its manifest must reuse the supervised source/dependency hashes, and the actual output returns through another supervision round.
+5. Optional two-wave Pulse remains a separate legacy collaboration mechanism. Each valid Wave-1 and
+   Wave-2 contribution enters Research independently. Pulse closure is advice, not certification. A malformed peer is quarantined locally. This optional two-wave Pulse is never invoked by the required production/supervision cycle.
 6. Use experiments, novelty, campaigns, claims/conventions, and Blackboard
    promotion only when useful to the bounded task. An explicit Campaign scope
    is an envelope, not a universal closure checklist or second scheduler.
-7. Seal one explicit Candidate Release. It includes linked adverse Research, requires dispositions for every bound attack, and forbids a Paper-descended theorem/opaque-compression escape. A continuation-descended release seals one content-addressed capsule over the current status generation, Logic/Audit refs, source and writing artifacts, changed closure, dispositions, and Candidate interfaces. Candidate, verifier, Certification, and Gateway revalidate it; stale or ambiguous state records an observable full-validation fallback.
+7. Before artifact normalization, source audit, or sealing, run the Candidate preflight's fresh-adverse gate. For every maximal selected Research branch explicitly marked `independent_adverse_required=true`, it requires one later independent ingested `refute` whose frozen task card contains the exact canonical Candidate Fact hashes, plus a Candidate disposition and exact adverse actor binding. Missing, stale, inherited, aborted, differently scoped, or differently hashed work fails immediately as `fresh_adverse_missing`. Only after this cheap gate passes may the system perform expensive validation and seal one explicit Candidate Release. The release includes the readiness receipt and all linked adverse Research, requires dispositions for every bound attack, and tells the fresh verifier to adjudicate those dispositions. A continuation-descended release then seals its content-addressed capsule over the current status generation, Logic/Audit refs, source and writing artifacts, changed closure, dispositions, and Candidate interfaces. Candidate, verifier, Certification, and Gateway revalidate it; stale or ambiguous state records an observable full-validation fallback.
 8. Send only the frozen verifier capsule to a fresh verifier, record one
    immutable decision, then let the gateway admit an accepted release.
 
@@ -166,14 +165,7 @@ Only the user, through the `operator` role, may approve, modify-and-approve,
 reject, or later disable the rule. Every decision affects future task cards
 only; frozen cards and old returns remain unchanged.
 
-When a V5 Research return contains one or more actual computation
-stages with exact source and output artifacts, successful ingestion also queues
-one typed future `refute` Research review of the formula-domain-
-representation-approximation-output chain. That review receives the scoped
-program-math attack after the nine general rules; exact philosophy/mixed cards alone add three philosophy rules. Mere
-prose about code, an ordinary challenge, or a task with no executable stage
-must not activate this route. The queued review is nontruth, does not interrupt
-the producer, and never imports a CHX issue into attack routing.
+Prospective computation follows the explicit code-before-execution gate in step 4: design bytes are supervised before formal execution, and exact execution bytes, logs, manifest, and output are supervised afterward. The old automatic future program-math `refute` queue remains only for legacy single-wave computation cards; new approved execution suppresses that duplicate queue. Both paths remain nontruth and never import a CHX issue into attack routing.
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role main profile-closure-status ROUND_ID
@@ -199,12 +191,21 @@ may materialize it explicitly:
 Global installation alone never rewrites a project. Do not attach the contract
 mid-unit, on V1-V4, or backfill, reclassify, invalidate, or redo earlier work.
 At every newly governed V5 task completion run
-`attack-report --host-task-scope-id ID` and report
-it separately from CHX, including zero. Include surviving counterexamples and
-productive challenges that forced a load-bearing repair, their schema-2 value
-effects, and every pending route proposal. The user alone chooses `approve`,
-`approve_modified`, or `reject`; silence and successful return never activate a
-rule. Attack reporting and route approval have no Fact authority.
+`attack-report --host-task-scope-id ID` and report it separately from CHX,
+including zero. The default user-facing result contains at most three
+high-quality pending attack **types**, deduplicated by family, with one reviewed
+ordinary-language sentence stating what each checks, plus applicability and
+evidence count; omit mechanisms, witnesses, reproduction steps, value-effect
+internals, assignments, cards, and returns. Never copy worker-authored route
+instructions into this concise view. An unknown family stays in `--full` until
+its ordinary-language explanation is reviewed. Prefer no recommendation to a
+broad, universal, or unexplained trigger. The complete technical audit
+remains available only through `attack-report --full` when diagnosis requires
+it. If the user says `批准建议 N`, map that number to the frozen proposal id and
+perform the existing Operator approval without another schema interview. The
+user alone chooses `approve`, `approve_modified`, or `reject`; silence and successful return never activate a
+rule. Attack reporting and route approval
+have no Fact authority.
 
 For every actual V5 computation stage, bind the displayed formula to one exact
 code anchor, mathematical and iteration domains, object representations and

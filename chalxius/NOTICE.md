@@ -36,6 +36,22 @@ behavior-orphan dispositions. These mechanisms preserve the existing V5 truth
 path and do not grant Paper, Evidence, Research, adverse, CHX, or release-matrix
 artifacts Fact authority. Historical contracts remain readable without backfill.
 
+Chalxius 0.6.6, **Supervised Research Cycle**, changes only prospective
+Research orchestration. It freezes production returns before sparse scoped
+supervision, requires program-math review of core code before execution, binds
+approved execution to identical code/dependency hashes, and supervises actual
+outputs afterward. Pulse, Candidate, verifier, Certification, Gateway, Fact,
+Evidence, Paper/Audit, Reader, and frozen historical contracts retain their
+prior authority and schemas.
+
+Chalxius 0.6.7, **Plain-Language Attack Recommendations**, changes only the
+default nontruth attack-report projection. Each sparse recommendation now says
+in reviewed ordinary language what it checks. The report never copies a
+worker-authored technical instruction; an unknown family remains visible in
+`--full` and is omitted from the default view until reviewed. Attack routing,
+worker cards, Candidate review, verifier, Certification, Gateway, Fact, and
+historical contracts are unchanged.
+
 The static nontruth learning-plane algorithm descends from Grill Me 0.2.0.
 Chalxius now owns that opt-in academic teaching/testing surface under the name
 Chalxius Learner. The standalone Grill Me 0.3.2-code companion, distinguished as

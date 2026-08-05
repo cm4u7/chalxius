@@ -1,223 +1,104 @@
-# Validation — Chalxius v0.6.5
+# Validation — Chalxius v0.6.7
 
-This record covers the exact public asset, the final manifest-bound reliability
-matrix, the protected-project receipt, global cutover, PHX/CHX disclosure, and
-a cold-archive check. It establishes software properties only; it does not
-certify research claims or admit Facts.
-
-## Release identity
+## Frozen release identity
 
 | Field | Exact value |
 |---|---|
-| Version | `0.6.5` |
-| Display name | `Integrated Research Continuity` |
+| Version | `0.6.7` |
+| Display name | `Plain-Language Attack Recommendations` |
 | Release date | `2026-08-05` |
-| Archive | `chalxius-0.6.5-integrated-research-continuity.tar.gz` |
-| Archive bytes | `2,291,346` |
-| Archive members | `241` |
-| Archive SHA-256 | `9e2945f057ac38a1e41e7dea2d54bd39a68216fa903f1f72f9e1b22532578468` |
-| Manifest entries | `240` |
-| `MANIFEST.sha256` SHA-256 | `5c8bf3c39b2269d819acbc6d4fbb5835dcb728fd02f8a132e101e6bb4af77e15` |
-| Deterministic double build | PASS |
-| Symlinks / bytecode / cache in asset | `0 / 0 / 0` |
+| Skill manifest entries | `241` |
+| `MANIFEST.sha256` SHA-256 | `b7231474bf67018c58205735337fc997f54195bdb4162260745977b132f10c9d` |
+| Archive | `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz` |
+| Archive bytes | `2330636` |
+| Archive members | `242` |
+| Archive SHA-256 | `ef99948624d849070642cb9826780a0ef4167d26c0211d6e982a455cfd13b9c5` |
+| Candidate runtime identity | `6feac856ca949045d155c2470ca15cb50a7e4e5ed27e80e08301788269ec2cec` |
 
-The archive builder independently produced two byte-identical gzip/tar streams
-with normalized member order, ownership, mode, and timestamp. A fresh extraction
-passed all 240 manifest hashes, exact manifest identity, and the bundled
-self-test.
+The archive builder independently produced the archive twice and required
+byte-for-byte equality. It also required the archive member set to equal the
+sorted manifest plus `MANIFEST.sha256`, with fixed ownership, modes, and mtime.
 
-## Necessary-validation strategy
+## Final manifest-bound matrix
 
-One final manifest-bound high-cost matrix was run after the candidate metadata
-and public-disclosure contract were frozen. The deterministic archive and the
-installed tree then reused that evidence only after proving exact manifest and
-content identity.
+The accepted receipt uses contract
+`chalxius-release-validation-matrix-4`, contains all six required lanes, and
+records `one_manifest_identity=true`, `source_unchanged=true`, and
+`lane_unchanged=true` for every lane.
 
-The following invalidate reuse:
+| Phase | Lane | Result |
+|---|---|---|
+| 1 | strict architecture reconnaissance | pass |
+| 1 | mutation-registry preflight | `142/142` exact single targets |
+| 2 | behavioral feature gate | `59/59` probes; `25` features |
+| 3 | full suite | `801/801` pass |
+| 3 | bundled self-test | pass |
+| 4 | aggressive mutation audit | `142/142` mutants killed; candidate unchanged |
 
-- any candidate or manifest byte change;
-- missing or stale mutation targets;
-- architecture errors, unclassified behavioral orphans, or unreachable public
-  state writers;
-- source or lane mutation;
-- release-receipt or request drift;
-- project-state, terminal-round, historical-runtime, or runtime-content drift;
-  and
-- any change in the semantics that the protected-project classification marks
-  as deep-audit affecting.
+The snapshot-sensitive mutation audit ran only after baseline phases. Any
+architecture or registry-preflight failure would have short-circuited the
+expensive lanes.
 
-## Final coordinated matrix
-
-Contract revision:
-`chalxius-release-validation-matrix-4`.
-
-| Lane | Result | Duration | Nonmutation |
-|---|---:|---:|---:|
-| Architecture reconnaissance | PASS | `4.594 s` | lane PASS |
-| Mutation-registry preflight | `142/142` exact targets | `0.084 s` | lane PASS |
-| Behavioral feature gate | PASS | `8.155 s` | lane PASS |
-| Self-test | PASS | `1.533 s` | lane PASS |
-| Complete suite | `787/787` PASS | `84.261 s` | lane PASS |
-| Aggressive mutation audit | `142/142` killed | `161.960 s` | lane PASS |
-
-Aggregate properties:
-
-- `complete_lane_set=true`;
-- `one_manifest_identity=true`;
-- `isolated_lane_roots=true`;
-- `architecture_gate_before_baseline=true`;
-- `behavioral_gate_after_architecture_before_baseline=true`;
-- `mutant_registry_preflight_before_baseline=true`;
-- `snapshot_sensitive_audit_exclusive_after_baseline=true`;
-- `source_unchanged=true`; and
-- `lane_unchanged=true` for every lane.
-
-Matrix receipt SHA-256:
-`c300d37676921f32779faf46390e1b790654d0a67d92ee2c3e0d94bc3b298323`.
-
-## Full architecture reconnaissance
-
-The final source-tree scan completed in `4.343 s` under strict mode.
-
-| Field | Result |
-|---|---:|
-| Files including manifest | `241` |
-| Python modules | `75` |
-| MathGraph modules | `57` |
-| Tests | `73` |
-| Exact duplicate file groups | `0` |
-| Behavioral orphan features | `0` |
-| Generated artifacts | `0` |
-| Errors | `0` |
-| Warnings | `0` |
-
-Inventory SHA-256:
-`e022527d476ac2f55fb8ae0dc365932304f56e00b28d5c109b37c7d29f692e30`.
-
-Report SHA-256:
-`325cb99367aeb780f9d668578464120fc90132bc073b2f20915ae1218e04c809`.
-
-This is a topology and reachability gate, not a truth validator. The complete
-matrix and mutation audit remain independently required.
-
-## Protected-project receipt and cutover
-
-| Field | Exact result |
+| Receipt | SHA-256 |
 |---|---|
-| Cutover contract | `chalxius-runtime-cutover-2` |
-| Project receipt contract | `chalxius-cutover-project-validation-receipt-2` |
-| Project-validation request SHA-256 | `46ac15e7e751c2f70223355b2b6c72a1e115ac69bdf091289f4a6bfc297d91ef` |
-| Project-validation receipt SHA-256 | `990161bfc9975924807eee0e50c402448d9579bc75b4c7d97894f421847e90e9` |
-| Deep audit required | `true` |
-| Candidate subprocesses during receipt build | `1` |
-| Deep audit duration | `2.855 s` |
-| Deep audits repeated during cutover | `0` |
-| Audit current | `true` |
-| Audit-relevant project files | `20,826` |
-| Audit-relevant project bytes | `134,698,238` |
-| Project state SHA-256 | `9f1dc9b44c5273dcc023e0377374cd20ce888abf171f2759acd87d2aa2282d1d` |
-| Terminal frozen rounds | `11/11 completed` |
-| Automatic rollback | armed; not needed |
+| Final matrix receipt | `3244d7ba431cf9ba6a3914ecbac6e2cba9cac947d436f7bad312997d9a21e078` |
+| Behavioral gate receipt | `fc1f449c1a7472b9df6581da19725804ae937cc82555eac024eef4cb38c5df24` |
+| Behavioral registry | `dc82f18e92966a942fc3b81a402bb73c898e112f35fb8ab259e324269835e57a` |
 
-The exact 102-path candidate-versus-installed delta affected aggregate audit,
-Paper continuation, optional Experiment validation, PHX, Evidence, Research,
-Candidate, adverse routing, Fact-admission support code, and cutover behavior.
-The request therefore required one fresh deep audit. The receipt bound the
-final release matrix, prior runtime, historical runtimes, project snapshot, and
-terminal rounds. The real cutover reused the exact receipt after the swap and
-did not repeat the semantic audit.
+## Focused 0.6.7 regression evidence
 
-The request, receipt, and cutover output are operator-local validation artifacts
-and are not included in the public skill archive.
+The adverse recommendation contract is
+`chalxius-attack-route-recommendations-2`.
 
-## Installed runtime
+- The positive regression requires the exact reviewed `what_it_checks`
+  sentence for each concise recommendation.
+- A tampered explanation is rejected.
+- An unknown family is omitted from the default report, and its worker-authored
+  technical instruction does not leak.
+- Technical detail remains available through `--full`; concise recommendations
+  remain inert until explicit user approval.
 
-| Identity | SHA-256 |
-|---|---|
-| Candidate path-bound runtime identity | `9c3ca71af057478879fe08f73fd2d1bf8d0a13d6985093a536d5d3b6585ea6be` |
-| Prior installed runtime identity | `3acf349ba7728d142dbc76c8d33587a09a624d5c7b0312dedd393b20df8ee678` |
-| Installed path-bound runtime identity | `1cff764e03d7e33998c040c6cafbcd0857564d3b84028f3d3167780755f69e4c` |
-| Installed runtime content | `167ca09c89f414ef44f81a5c15c3ebd92e2dc6dcae8abb94a62b13d345d3a88d` |
-| Installed archive tree | `6f367b6336aae9b89793422607dfc6b31f2c566c1b8dc493f1126d14062ca477` |
+## Cold extraction
 
-The installed manifest is byte-identical to the validated candidate manifest,
-all 240 installed hashes passed, and the installed self-test passed. The prior
-0.6.4 runtime remains available at
-`rollback-before-chalxius-0.6.4-20260805-final` and in the content-addressed
-runtime archive.
+A fresh extraction of the release archive passed:
 
-The complete matrix was not repeated after installation because the cutover
-proved exact candidate content and revalidated the protected-project snapshot.
-The installed manifest and self-test were run fresh.
+- `241/241` manifest hashes;
+- bundled `scripts/self_test.py`;
+- no `__pycache__`, `.pyc`, or `.pyo` files.
 
-## CHX public disclosure
-
-The package explicitly enumerates CHX-001 through CHX-109 across 18 ordered,
-digest-bound ledgers. The current qualified public head is
-`run-20260804T161234526251Z-380819388733/CHX-109`.
-
-| Artifact | SHA-256 |
-|---|---|
-| Public CHX registry semantic | `53f16e85551c76d37e9392e05b6769a9c79ce3c3e93af2f3d614f8fded2f8f72` |
-| Latest ledger file | `d25e2cf700d838aeee2df9dd21684de49c486e0f679a32af599f62115dc6f939` |
-| Latest architecture report | `7d7f0c2523fc4d23e31cd1b2caf489ff0ac991b7bb75203f6c193451f1b5db1b` |
-| `KNOWN_LIMITATIONS.md` | `3091fb50f7b339faf19c568797c464f515f8446c3adfbe452b16f438a2097046` |
-| `v5_release_traceability.md` | `b61b8b6822be49941ceee2d58c92a9bf3ad0bd3c3125177fa10ba1cfbb60ad42` |
-
-All eight issues in the latest ledger are resolved under one superseding
-integrated repair. Public-disclosure validation passed exact enumeration,
-dispositions, predecessor ownership, ledger digests, qualified namespaces, and
-document markers. Private ledgers and field research are not shipped.
-
-## PHX global route guide
-
-The first PHX ledger is global, project-independent, nontruth, and closed.
-
-| Field | Exact result |
-|---|---:|
-| Routes | `18` |
-| Measurements | `8` |
-| Consultations | `0` |
-| Adoptions | `0` |
-| Ledger SHA-256 | `395d0bd0fa4fc226f1428f172bcb236bd4e87884150039c578d253799151ed07` |
-| Report SHA-256 | `c48c4befb0ca3d10ed9b72c99ce7514f96ebbef836bbb68c16418a574225e2bc` |
-| Performance search receipt SHA-256 | `64608f860ccc4e833fe9381afbc0fdd319ea5e7f0a60e67fda4469d955ba2ae1` |
-
-The report verifies exactly. Routes are advisory: no route was retroactively
-declared adopted, and an active-architecture change still requires an informed
-user consultation.
-
-## Runtime compatibility closure
-
-| Field | Exact value |
-|---|---|
-| Baseline | `chalxius-0.4.3` |
-| Protected files | `92` |
-| Protected-tree SHA-256 | `0eadb4e2f31d81bdebe6d6469afe17c94962f8bef6bd26688252e9d02c6b6424` |
-| Changed protected paths | `44` |
-| Changed-path inventory SHA-256 | `91c2e13cc9f70e219cd5a364b2d12ab58478841db2ebd4824d93133edb61d736` |
-| Fact-admission contract changed | `false` |
+Skill Creator validation also returned `Skill is valid!`.
 
 ## Contract hashes
 
 | Contract | SHA-256 |
 |---|---|
-| `INHERITANCE.lock.json` | `f1f303c36b030000a624e5dabef6f59b1059efaea2bdd3231c1ed12d7ca3349c` |
+| `INHERITANCE.lock.json` | `b057eb65f2db6276d38e2404eb079bf48d10d1a1ab67ef5c11136be352211155` |
+| `KNOWN_LIMITATIONS.md` | `c53ec4e3d7d9618e35073f40368705c5f206a6df42434c5891d873cecb016bc5` |
+| `references/v5_release_traceability.md` | `aeeda68089f0bf45c6278da4ecf142348a024dac4941f8ed18e843e8b9484a9b` |
+| `scripts/mathgraph/adverse_routing.py` | `ca664f332edfbc299e16716ea5a4bfdc16c7ed6e012ac68c8e5e67fa4a5cbf4a` |
 | `scripts/release_validation.py` | `d132a19e80c823cab9c08a6dd100797d27046489582e9d708194cb6faace282b` |
 | `scripts/aggressive_bug_audit.py` | `fa1dcc47e24b0125a69395911cc2c55911193c7166e64bedb73b6983cf1e2d31` |
-| `scripts/architecture_reconnaissance.py` | `106b0061abe0df4d859e1e9e23d6d21965905135e22cb8aa0a639dec82c3fb99` |
-| `scripts/behavioral_feature_gate.py` | `d106a6ba10f2ca2ed71b2eec5084db03ac26222fb7dd4c1b941b72dd814b2a92` |
 | `scripts/runtime_cutover.py` | `06aa0e4f4bbee4ab10ca9c4ee5b93f463af420a23e7d2871f1df641a57959b8a` |
-| `scripts/runtime_cutover_project_validation.py` | `21caf44365b987501e2bd6dda0237eb9c75d2c507f57015ff82723c6de41d93e` |
-| `scripts/mathgraph/runtime_cutover.py` | `057cc4e6a92fb3c40476a62a377040634ba7a1206f2f82216139f307996899a2` |
 | `scripts/chx_ledger.py` | `1e8da18f6541b7609cfcf50b6867f24c8731ca51b759394c1708a1730710c33e` |
-| `scripts/phx_ledger.py` | `a555dfef5a1c693d53d8a5963243728aed879bb8e704b07f064fbe263c9e7906` |
-| `scripts/self_test.py` | `eb3200c7614b5eab2861c61e4771b9b8cfa817749009df428e121aee1db4fbe2` |
 
-## Scope boundary
+## CHX disclosure boundary
 
-Hashes establish byte identity. Tests establish exercised properties. Mutation
-scores establish detection of enumerated faults. Goal intake, Brave Future,
-Paper Audit, Evidence, Reader rendering, CHX, PHX, status projection, software
-validation, and cutover receipts never substitute for fresh independent
-verification, Certification, and Fact admission.
+The bundled canonical public CHX registry and self-test pass through the shipped
+public lineage ending at qualified CHX-109. The 0.6.7 plain-language report
+repair is additionally identified by its project-bound qualified owner
+`run-20260805T135745960462Z-8b9e3b4057f3/CHX-005`; its private ledger bytes are
+not distributed and no canonical-public-lineage preflight is claimed for that
+private field chain.
+
+## Installation boundary
+
+The candidate passed protected-cutover dry-run validation, but no global runtime
+replacement was performed. Publication of the validated archive and replacing a
+maintainer's active installation are intentionally separate decisions.
+
+## Claim scope
+
+Hashes establish byte identity. Tests establish only exercised properties.
+Mutation scores establish only detection of enumerated faults. None of these
+receipts substitutes for fresh independent verification, Certification, or Fact
+admission.

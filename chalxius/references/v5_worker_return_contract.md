@@ -96,6 +96,31 @@ The project-relative path must resolve inside the exact card artifact
 directory, name an ordinary file, and match the declared hash. Roles are
 nonempty and unique. File count and byte sizes stay within the card's caps.
 
+### Two-subround Research specializations
+
+If `research_cycle.subround="production"`, the work mode is `compute`, and
+the source Research has no `approved_computation_execution`, this is design,
+not execution. Return exactly three artifacts with roles
+`computation_source`, `computation_design`, and
+`computation_dependencies`. Use `computation_manifest=null` and an empty
+`program_math_alignments` list. Do not include output, logs, runtime receipts,
+or a formal target result.
+
+If `research_cycle.subround="supervision"`, return a
+`research_supervision_report` artifact that covers every exact receipt in the
+source Research's `research_supervision` binding. The supervisor attacks the
+frozen outputs; it does not rewrite them or use Pulse to negotiate a mutable
+repair.
+
+If a production compute source contains `approved_computation_execution`, the
+return is a formal execution. Its `computation_source` and
+`computation_dependencies` hashes must exactly equal the frozen
+`design_artifacts` hashes. It must also include `computation_output`, the
+`computation_log`, the ordinary computation manifest, and the full
+program-math alignment. Any code
+or dependency change fails preflight and requires a new design and supervision
+cycle.
+
 ## Per-obligation dispositions
 
 Create exactly one entry for every object in

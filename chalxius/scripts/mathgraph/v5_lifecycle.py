@@ -125,6 +125,9 @@ V5_CERTIFICATION_REPAIR_OUTBOX_REVISION = (
     "chalxius-v5-certification-repair-outbox-1"
 )
 V5_CERTIFICATION_REPAIR_ACTOR = "certification-gateway"
+V5_FRESH_ADVERSE_READINESS_REVISION = (
+    "chalxius-candidate-fresh-adverse-readiness-1"
+)
 V5_LIFECYCLE_CONTRACT: dict[str, Any] = {
     "schema_version": 1,
     "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -250,6 +253,28 @@ V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE = {
     "tractability": 0.8,
     "burden": 0.35,
 }
+V5_RESEARCH_CYCLE_REVISION = "chalxius-v5-two-subround-research-1"
+V5_RESEARCH_SUPERVISION_REVISION = "chalxius-v5-research-supervision-1"
+V5_APPROVED_COMPUTATION_EXECUTION_REVISION = (
+    "chalxius-v5-approved-computation-execution-1"
+)
+V5_RESEARCH_SUPERVISOR_SCOPES = (
+    "proof_logic",
+    "program_math",
+    "source_scope",
+    "integration",
+)
+V5_RESEARCH_SUPERVISOR_LIMIT = 3
+V5_SAFE_SUPERVISION_DISPOSITIONS = frozenset(
+    {"resolved_by_evidence", "resolved_no_obstruction"}
+)
+V5_COMPUTATION_DESIGN_ARTIFACT_ROLES = frozenset(
+    {
+        "computation_dependencies",
+        "computation_design",
+        "computation_source",
+    }
+)
 
 
 def _utc_now() -> str:
@@ -786,6 +811,20 @@ class V5LifecycleManager:
                 raise ValueError("Research route_invalidations must be V5 Research ids")
             if len(invalidations) != len(set(invalidations)):
                 raise ValueError("Research route_invalidations must be unique")
+        self._validate_research_supervision_record_fields(
+            kind=record["kind"],
+            status=record["status"],
+            relation=record["relation"],
+            related_research_ids=record["related_research_ids"],
+            metadata=metadata,
+        )
+        self._validate_approved_computation_record_fields(
+            kind=record["kind"],
+            status=record["status"],
+            relation=record["relation"],
+            related_research_ids=record["related_research_ids"],
+            metadata=metadata,
+        )
         if "brave_future_repair_contract" in metadata:
             # Prospective only.  Replay performs exact structural validation;
             # cross-record coverage/cycle semantics are rechecked by the BF
@@ -821,6 +860,101 @@ class V5LifecycleManager:
             V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
         )
         return str(value)
+
+    @staticmethod
+    def production_research_cycle_binding() -> dict[str, Any]:
+        """Return the prospective first-subround contract used by public planning."""
+
+        return {
+            "revision": V5_RESEARCH_CYCLE_REVISION,
+            "subround": "production",
+            "source_round_id": None,
+            "source_round_manifest_sha256": None,
+            "source_receipts_sha256": None,
+            "supervisor_scopes": [],
+            "computation_policy": "core_code_review_before_formal_execution",
+            "repair_policy": "copy_on_write_next_research_cycle",
+            "pulse_policy": "not_used",
+            "truth_effect": "none",
+        }
+
+    @staticmethod
+    def _validate_research_cycle_binding(payload: Any) -> dict[str, Any]:
+        required = {
+            "revision",
+            "subround",
+            "source_round_id",
+            "source_round_manifest_sha256",
+            "source_receipts_sha256",
+            "supervisor_scopes",
+            "computation_policy",
+            "repair_policy",
+            "pulse_policy",
+            "truth_effect",
+        }
+        if not isinstance(payload, dict) or set(payload) != required:
+            raise ValueError("V5 Research-cycle binding fields are not exact")
+        if (
+            payload["revision"] != V5_RESEARCH_CYCLE_REVISION
+            or payload["subround"] not in {"production", "supervision"}
+            or payload["computation_policy"]
+            != "core_code_review_before_formal_execution"
+            or payload["repair_policy"]
+            != "copy_on_write_next_research_cycle"
+            or payload["pulse_policy"] != "not_used"
+            or payload["truth_effect"] != "none"
+        ):
+            raise ValueError("V5 Research-cycle policy is invalid")
+        scopes = _require_string_list(
+            payload["supervisor_scopes"], "V5 Research supervisor scopes"
+        )
+        if scopes != sorted(set(scopes)) or any(
+            scope not in V5_RESEARCH_SUPERVISOR_SCOPES for scope in scopes
+        ):
+            raise ValueError("V5 Research supervisor scopes are invalid")
+        if payload["subround"] == "production":
+            if (
+                payload["source_round_id"] is not None
+                or payload["source_round_manifest_sha256"] is not None
+                or payload["source_receipts_sha256"] is not None
+                or scopes
+            ):
+                raise ValueError("V5 production subround has source supervision state")
+        else:
+            validate_round_id(
+                _require_nonempty_text(
+                    payload["source_round_id"],
+                    "V5 supervision source round id",
+                )
+            )
+            for key in (
+                "source_round_manifest_sha256",
+                "source_receipts_sha256",
+            ):
+                value = payload[key]
+                if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+                    raise ValueError(f"V5 supervision {key} is invalid")
+            if not scopes or len(scopes) > V5_RESEARCH_SUPERVISOR_LIMIT:
+                raise ValueError("V5 supervision must contain one to three scopes")
+        return payload
+
+    @classmethod
+    def _computation_design_only(
+        cls,
+        *,
+        entry: dict[str, Any],
+        work_mode: str,
+        research_cycle: dict[str, Any] | None,
+    ) -> bool:
+        if work_mode != "compute" or research_cycle is None:
+            return False
+        cycle = cls._validate_research_cycle_binding(research_cycle)
+        metadata = entry.get("metadata", {})
+        return (
+            cycle["subround"] == "production"
+            and isinstance(metadata, dict)
+            and "approved_computation_execution" not in metadata
+        )
 
     @staticmethod
     def _research_is_adverse_assignment(record: dict[str, Any]) -> bool:
@@ -920,6 +1054,588 @@ class V5LifecycleManager:
             for field in ("claim", "content", "rationale", "source")
         )
         return explicit or _LOCAL_SOURCE_PATH_RE.search(source_text) is not None
+
+    @staticmethod
+    def _research_artifact_bindings(record: dict[str, Any]) -> list[dict[str, str]]:
+        artifacts = record.get("metadata", {}).get("artifacts", [])
+        if not isinstance(artifacts, list):
+            raise ValueError("Research artifact bindings must be a list")
+        return sorted(
+            [
+                {"role": item["role"], "sha256": item["sha256"]}
+                for item in artifacts
+            ],
+            key=lambda item: (item["role"], item["sha256"]),
+        )
+
+    def _source_round_receipt_descriptors(
+        self,
+        round_id: str,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        round_dir, manifest = self._round_manifest(round_id)
+        cycle = manifest.get("research_cycle")
+        if cycle is None or self._validate_research_cycle_binding(cycle)[
+            "subround"
+        ] != "production":
+            raise ValueError(
+                "Research supervision requires a prospective production subround; "
+                "historical single-wave rounds are not backfilled"
+            )
+        if not self._round_is_completed(round_dir, manifest):
+            raise ValueError("Research production subround is not fully ingested")
+        if self.store.reasoning_modes().work_unit_abort(round_id) is not None:
+            raise ValueError("aborted Research production cannot be supervised")
+        descriptors: list[dict[str, Any]] = []
+        for assignment in manifest["assignments"]:
+            receipt = self._validated_ingest_receipt(
+                round_dir=round_dir,
+                assignment=assignment,
+            )
+            result = self._research_record(receipt["research_id"])
+            card = self.store._read_json(
+                self.store.root / assignment["task_card_relpath"]
+            )
+            source_metadata = card["mathematical_state"][
+                "source_research_dossier"
+            ]["metadata"]
+            computation_phase = "none"
+            if assignment["work_mode"] == "compute":
+                computation_phase = (
+                    "approved_execution"
+                    if "approved_computation_execution" in source_metadata
+                    else "core_code_design"
+                )
+            source_uses = result.get("metadata", {}).get("source_uses", [])
+            descriptors.append(
+                {
+                    "assignment_id": assignment["assignment_id"],
+                    "assignment_role": assignment.get(
+                        "assignment_role", "legacy_primary"
+                    ),
+                    "source_research_id": assignment["research_id"],
+                    "work_mode": assignment["work_mode"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "return_sha256": receipt["return_sha256"],
+                    "outcome": receipt["outcome"],
+                    "result_research_id": result["research_id"],
+                    "result_record_sha256": result["record_sha256"],
+                    "artifact_bindings": self._research_artifact_bindings(result),
+                    "has_source_uses": bool(source_uses),
+                    "computation_phase": computation_phase,
+                }
+            )
+        descriptors.sort(key=lambda item: item["assignment_id"])
+        return manifest, descriptors
+
+    @staticmethod
+    def _supervisor_scope_applies(
+        scope: str,
+        descriptor: dict[str, Any],
+    ) -> bool:
+        roles = {item["role"] for item in descriptor["artifact_bindings"]}
+        if scope == "proof_logic":
+            return descriptor["work_mode"] in {"prove", "refute", "interpret"} or descriptor[
+                "outcome"
+            ] in {"proof", "counterexample", "challenge"}
+        if scope == "program_math":
+            return descriptor["work_mode"] == "compute" or bool(
+                {"computation_source", "computation_output"}.intersection(roles)
+            )
+        if scope == "source_scope":
+            return descriptor["work_mode"] == "literature" or descriptor[
+                "has_source_uses"
+            ]
+        if scope == "integration":
+            return True
+        raise ValueError("unsupported Research supervisor scope")
+
+    def _validate_research_supervision_binding(
+        self,
+        payload: Any,
+    ) -> dict[str, Any]:
+        required = {
+            "revision",
+            "supervisor_scope",
+            "source_round_id",
+            "source_round_manifest_sha256",
+            "source_receipts",
+            "source_receipts_sha256",
+            "review_policy",
+            "repair_policy",
+            "pulse_policy",
+            "truth_effect",
+        }
+        if not isinstance(payload, dict) or set(payload) != required:
+            raise ValueError("Research supervision binding fields are not exact")
+        scope = payload["supervisor_scope"]
+        if (
+            payload["revision"] != V5_RESEARCH_SUPERVISION_REVISION
+            or scope not in V5_RESEARCH_SUPERVISOR_SCOPES
+            or payload["review_policy"] != "attack_exact_production_outputs"
+            or payload["repair_policy"]
+            != "copy_on_write_next_research_cycle"
+            or payload["pulse_policy"] != "not_used"
+            or payload["truth_effect"] != "none"
+        ):
+            raise ValueError("Research supervision policy is invalid")
+        round_id = validate_round_id(
+            _require_nonempty_text(
+                payload["source_round_id"], "Research supervision source round"
+            )
+        )
+        for key in (
+            "source_round_manifest_sha256",
+            "source_receipts_sha256",
+        ):
+            value = payload[key]
+            if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+                raise ValueError(f"Research supervision {key} is invalid")
+        receipts = payload["source_receipts"]
+        descriptor_fields = {
+            "assignment_id",
+            "assignment_role",
+            "source_research_id",
+            "work_mode",
+            "task_card_sha256",
+            "return_sha256",
+            "outcome",
+            "result_research_id",
+            "result_record_sha256",
+            "artifact_bindings",
+            "has_source_uses",
+            "computation_phase",
+        }
+        if not isinstance(receipts, list) or not receipts:
+            raise ValueError("Research supervision source receipts must be nonempty")
+        for descriptor in receipts:
+            if not isinstance(descriptor, dict) or set(descriptor) != descriptor_fields:
+                raise ValueError("Research supervision receipt fields are not exact")
+            validate_assignment_id(descriptor["assignment_id"])
+            validate_memory_id(descriptor["source_research_id"])
+            validate_memory_id(descriptor["result_research_id"])
+            if descriptor["work_mode"] not in WORK_MODES:
+                raise ValueError("Research supervision work mode is invalid")
+            if descriptor["outcome"] not in V5_RETURN_OUTCOMES:
+                raise ValueError("Research supervision outcome is invalid")
+            if descriptor["computation_phase"] not in {
+                "none",
+                "core_code_design",
+                "approved_execution",
+            }:
+                raise ValueError("Research supervision computation phase is invalid")
+            if not isinstance(descriptor["has_source_uses"], bool):
+                raise ValueError("Research supervision source-use flag is invalid")
+            for key in (
+                "task_card_sha256",
+                "return_sha256",
+                "result_record_sha256",
+            ):
+                if (
+                    not isinstance(descriptor[key], str)
+                    or SHA256_RE.fullmatch(descriptor[key]) is None
+                ):
+                    raise ValueError("Research supervision receipt hash is invalid")
+            artifacts = descriptor["artifact_bindings"]
+            if not isinstance(artifacts, list) or any(
+                not isinstance(item, dict)
+                or set(item) != {"role", "sha256"}
+                or not isinstance(item["role"], str)
+                or not item["role"].strip()
+                or SHA256_RE.fullmatch(item["sha256"]) is None
+                for item in artifacts
+            ):
+                raise ValueError("Research supervision artifact bindings are invalid")
+            if artifacts != sorted(
+                artifacts, key=lambda item: (item["role"], item["sha256"])
+            ):
+                raise ValueError("Research supervision artifact bindings are not canonical")
+        if receipts != sorted(receipts, key=lambda item: item["assignment_id"]):
+            raise ValueError("Research supervision source receipts are not canonical")
+        if payload["source_receipts_sha256"] != sha256_json(receipts):
+            raise ValueError("Research supervision receipt-set hash drifted")
+        source_manifest, all_descriptors = self._source_round_receipt_descriptors(
+            round_id
+        )
+        if payload["source_round_manifest_sha256"] != source_manifest[
+            "manifest_sha256"
+        ]:
+            raise ValueError("Research supervision source manifest drifted")
+        expected = [
+            item
+            for item in all_descriptors
+            if self._supervisor_scope_applies(scope, item)
+        ]
+        if scope == "integration" and len(all_descriptors) < 2:
+            expected = []
+        if not expected or receipts != expected:
+            raise ValueError("Research supervision scope/receipt coverage drifted")
+        return payload
+
+    def _validate_research_supervision_record_fields(
+        self,
+        *,
+        kind: str,
+        status: str,
+        relation: str | None,
+        related_research_ids: list[str],
+        metadata: dict[str, Any],
+    ) -> None:
+        raw = metadata.get("research_supervision")
+        if raw is None:
+            return
+        binding = self._validate_research_supervision_binding(raw)
+        if kind != "challenge" or status != "open" or relation != "challenges":
+            raise ValueError(
+                "Research supervision must be an open challenge relation"
+            )
+        target_ids = {
+            item["result_research_id"]
+            for item in binding["source_receipts"]
+        }
+        if binding["supervisor_scope"] == "program_math" and any(
+            item["computation_phase"] == "approved_execution"
+            for item in binding["source_receipts"]
+        ):
+            _, source_manifest = self._round_manifest(
+                binding["source_round_id"]
+            )
+            assignment_by_id = {
+                item["assignment_id"]: item
+                for item in source_manifest["assignments"]
+            }
+            for descriptor in binding["source_receipts"]:
+                if descriptor["computation_phase"] != "approved_execution":
+                    continue
+                assignment = assignment_by_id[descriptor["assignment_id"]]
+                card = self.store._read_json(
+                    self.store.root / assignment["task_card_relpath"]
+                )
+                approved = card["mathematical_state"][
+                    "source_research_dossier"
+                ]["metadata"].get("approved_computation_execution")
+                approved = self._validate_approved_computation_execution_binding(
+                    approved
+                )
+                target_ids.add(approved["design_research_id"])
+        if not target_ids.issubset(set(related_research_ids)):
+            raise ValueError(
+                "Research supervision links omit exact production results"
+            )
+        required_roles = metadata.get("required_related_artifact_roles", [])
+        if not isinstance(required_roles, list) or any(
+            not isinstance(item, str) for item in required_roles
+        ):
+            raise ValueError(
+                "Research supervision required artifact roles are invalid"
+            )
+        if required_roles != sorted(set(required_roles)):
+            raise ValueError(
+                "Research supervision required artifact roles are not canonical"
+            )
+        if binding["supervisor_scope"] == "program_math":
+            expected_roles: set[str] = set()
+            for descriptor in binding["source_receipts"]:
+                roles = {
+                    item["role"] for item in descriptor["artifact_bindings"]
+                }
+                if descriptor["computation_phase"] == "core_code_design":
+                    expected_roles.update(V5_COMPUTATION_DESIGN_ARTIFACT_ROLES)
+                elif descriptor["computation_phase"] == "approved_execution":
+                    expected_roles.update(
+                        {
+                            "computation_dependencies",
+                            "computation_design",
+                            "computation_log",
+                            "computation_output",
+                            "computation_source",
+                        }
+                    )
+                else:
+                    expected_roles.update(
+                        roles.intersection(
+                            {"computation_output", "computation_source"}
+                        )
+                    )
+            if not expected_roles.issubset(set(required_roles)):
+                raise ValueError(
+                    "program-math supervision lacks required exact artifacts"
+                )
+
+    def _validate_supervision_round_selection(
+        self,
+        *,
+        research_cycle: dict[str, Any],
+        selected: list[dict[str, Any]],
+    ) -> None:
+        cycle = self._validate_research_cycle_binding(research_cycle)
+        if cycle["subround"] != "supervision":
+            return
+        source_manifest, descriptors = self._source_round_receipt_descriptors(
+            cycle["source_round_id"]
+        )
+        if (
+            cycle["source_round_manifest_sha256"]
+            != source_manifest["manifest_sha256"]
+            or cycle["source_receipts_sha256"] != sha256_json(descriptors)
+        ):
+            raise ValueError("V5 supervision round source binding drifted")
+        scopes: list[str] = []
+        for entry in selected:
+            binding = self._validate_research_supervision_binding(
+                entry.get("metadata", {}).get("research_supervision")
+            )
+            if (
+                binding["source_round_id"] != cycle["source_round_id"]
+                or binding["source_round_manifest_sha256"]
+                != cycle["source_round_manifest_sha256"]
+            ):
+                raise ValueError(
+                    "V5 supervision Research and round source bindings disagree"
+                )
+            scopes.append(binding["supervisor_scope"])
+        if sorted(scopes) != cycle["supervisor_scopes"] or len(scopes) != len(
+            set(scopes)
+        ):
+            raise ValueError("V5 supervision round scope coverage drifted")
+
+    @staticmethod
+    def _canonical_design_artifacts(
+        record: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        artifacts = record.get("metadata", {}).get("artifacts", [])
+        if not isinstance(artifacts, list):
+            raise ValueError("computation design artifacts must be a list")
+        canonical = sorted(
+            [
+                {
+                    "path": item["path"],
+                    "sha256": item["sha256"],
+                    "role": item["role"],
+                }
+                for item in artifacts
+            ],
+            key=lambda item: item["role"],
+        )
+        if {item["role"] for item in canonical} != set(
+            V5_COMPUTATION_DESIGN_ARTIFACT_ROLES
+        ):
+            raise ValueError(
+                "approved computation requires exactly the frozen core source, "
+                "mathematical design, and dependency manifest"
+            )
+        return canonical
+
+    def _validate_approved_computation_execution_binding(
+        self,
+        payload: Any,
+    ) -> dict[str, Any]:
+        required = {
+            "revision",
+            "design_round_id",
+            "design_round_manifest_sha256",
+            "design_assignment_id",
+            "design_task_card_sha256",
+            "design_return_sha256",
+            "design_research_id",
+            "design_record_sha256",
+            "design_artifacts",
+            "supervision_round_id",
+            "supervision_round_manifest_sha256",
+            "supervision_assignment_id",
+            "supervision_task_card_sha256",
+            "supervision_return_sha256",
+            "supervision_research_id",
+            "supervision_record_sha256",
+            "disposition_research_id",
+            "disposition_record_sha256",
+            "disposition_status",
+            "execution_policy",
+            "repair_policy",
+            "pulse_policy",
+            "truth_effect",
+        }
+        if not isinstance(payload, dict) or set(payload) != required:
+            raise ValueError(
+                "approved computation execution binding fields are not exact"
+            )
+        if (
+            payload["revision"] != V5_APPROVED_COMPUTATION_EXECUTION_REVISION
+            or payload["execution_policy"]
+            != "execute_exact_supervised_source_and_dependencies"
+            or payload["repair_policy"]
+            != "changed_code_requires_new_production_and_supervision"
+            or payload["pulse_policy"] != "not_used"
+            or payload["truth_effect"] != "none"
+            or not isinstance(payload["disposition_status"], str)
+            or payload["disposition_status"] not in V5_SAFE_SUPERVISION_DISPOSITIONS
+        ):
+            raise ValueError("approved computation execution policy is invalid")
+        for key in ("design_round_id", "supervision_round_id"):
+            validate_round_id(_require_nonempty_text(payload[key], key))
+        for key in (
+            "design_assignment_id",
+            "supervision_assignment_id",
+        ):
+            validate_assignment_id(_require_nonempty_text(payload[key], key))
+        for key in (
+            "design_research_id",
+            "supervision_research_id",
+            "disposition_research_id",
+        ):
+            validate_memory_id(_require_nonempty_text(payload[key], key))
+        for key in (
+            "design_round_manifest_sha256",
+            "design_task_card_sha256",
+            "design_return_sha256",
+            "design_record_sha256",
+            "supervision_round_manifest_sha256",
+            "supervision_task_card_sha256",
+            "supervision_return_sha256",
+            "supervision_record_sha256",
+            "disposition_record_sha256",
+        ):
+            value = payload[key]
+            if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+                raise ValueError(f"approved computation {key} is invalid")
+
+        design_manifest, design_descriptors = self._source_round_receipt_descriptors(
+            payload["design_round_id"]
+        )
+        design_matches = [
+            item
+            for item in design_descriptors
+            if item["assignment_id"] == payload["design_assignment_id"]
+        ]
+        if len(design_matches) != 1:
+            raise ValueError("approved computation design assignment is missing")
+        design_descriptor = design_matches[0]
+        if (
+            design_manifest["manifest_sha256"]
+            != payload["design_round_manifest_sha256"]
+            or design_descriptor["work_mode"] != "compute"
+            or design_descriptor["computation_phase"] != "core_code_design"
+            or design_descriptor["task_card_sha256"]
+            != payload["design_task_card_sha256"]
+            or design_descriptor["return_sha256"]
+            != payload["design_return_sha256"]
+            or design_descriptor["result_research_id"]
+            != payload["design_research_id"]
+            or design_descriptor["result_record_sha256"]
+            != payload["design_record_sha256"]
+        ):
+            raise ValueError("approved computation design binding drifted")
+        design_record = self._research_record(payload["design_research_id"])
+        if payload["design_artifacts"] != self._canonical_design_artifacts(
+            design_record
+        ):
+            raise ValueError("approved computation design artifacts drifted")
+
+        supervision_dir, supervision_manifest = self._round_manifest(
+            payload["supervision_round_id"]
+        )
+        supervision_cycle = supervision_manifest.get("research_cycle")
+        if (
+            supervision_cycle is None
+            or self._validate_research_cycle_binding(supervision_cycle)[
+                "subround"
+            ]
+            != "supervision"
+            or supervision_cycle["source_round_id"] != payload["design_round_id"]
+            or "program_math" not in supervision_cycle["supervisor_scopes"]
+            or supervision_manifest["manifest_sha256"]
+            != payload["supervision_round_manifest_sha256"]
+            or not self._round_is_completed(
+                supervision_dir, supervision_manifest
+            )
+        ):
+            raise ValueError("approved computation supervision round drifted")
+        supervision_assignment = self._assignment(
+            supervision_manifest, payload["supervision_assignment_id"]
+        )
+        supervision_receipt = self._validated_ingest_receipt(
+            round_dir=supervision_dir,
+            assignment=supervision_assignment,
+        )
+        supervision_source = self._research_record(
+            supervision_assignment["research_id"]
+        )
+        supervision_binding = self._validate_research_supervision_binding(
+            supervision_source.get("metadata", {}).get("research_supervision")
+        )
+        if (
+            supervision_binding["supervisor_scope"] != "program_math"
+            or payload["design_assignment_id"]
+            not in {
+                item["assignment_id"]
+                for item in supervision_binding["source_receipts"]
+            }
+            or supervision_assignment["task_card_sha256"]
+            != payload["supervision_task_card_sha256"]
+            or supervision_receipt["return_sha256"]
+            != payload["supervision_return_sha256"]
+            or supervision_receipt["research_id"]
+            != payload["supervision_research_id"]
+        ):
+            raise ValueError("approved computation supervision binding drifted")
+        supervision_record = self._research_record(
+            payload["supervision_research_id"]
+        )
+        if (
+            supervision_record["record_sha256"]
+            != payload["supervision_record_sha256"]
+        ):
+            raise ValueError("approved computation supervision record drifted")
+
+        disposition = self._research_record(payload["disposition_research_id"])
+        if (
+            disposition["kind"] != "disposition"
+            or disposition["record_sha256"]
+            != payload["disposition_record_sha256"]
+            or disposition["metadata"].get("target_research_id")
+            != payload["supervision_research_id"]
+            or disposition["metadata"].get("disposition_status")
+            != payload["disposition_status"]
+            or disposition["status"] != payload["disposition_status"]
+        ):
+            raise ValueError("approved computation supervision disposition drifted")
+        return payload
+
+    def _validate_approved_computation_record_fields(
+        self,
+        *,
+        kind: str,
+        status: str,
+        relation: str | None,
+        related_research_ids: list[str],
+        metadata: dict[str, Any],
+    ) -> None:
+        raw = metadata.get("approved_computation_execution")
+        if raw is None:
+            return
+        binding = self._validate_approved_computation_execution_binding(raw)
+        if kind != "computation" or status != "open" or relation != "executes":
+            raise ValueError(
+                "approved computation execution must be an open computation relation"
+            )
+        expected_related = {
+            binding["design_research_id"],
+            binding["supervision_research_id"],
+            binding["disposition_research_id"],
+        }
+        if not expected_related.issubset(set(related_research_ids)):
+            raise ValueError(
+                "approved computation execution omits design, supervision, or disposition lineage"
+            )
+        required_roles = metadata.get("required_related_artifact_roles", [])
+        if (
+            not isinstance(required_roles, list)
+            or any(not isinstance(item, str) for item in required_roles)
+            or sorted(set(required_roles))
+            != sorted(V5_COMPUTATION_DESIGN_ARTIFACT_ROLES)
+        ):
+            raise ValueError(
+                "approved computation execution lacks exact design artifact capabilities"
+            )
 
     def add_research(
         self,
@@ -1097,6 +1813,20 @@ class V5LifecycleManager:
                 )
             for target_id in invalidations:
                 self._research_record(target_id)
+        self._validate_research_supervision_record_fields(
+            kind=kind,
+            status=status,
+            relation=relation,
+            related_research_ids=related,
+            metadata=metadata,
+        )
+        self._validate_approved_computation_record_fields(
+            kind=kind,
+            status=status,
+            relation=relation,
+            related_research_ids=related,
+            metadata=metadata,
+        )
         if task_binding is not None:
             if not isinstance(task_binding, dict) or any(
                 not isinstance(key, str) or not isinstance(value, str)
@@ -1280,9 +2010,18 @@ class V5LifecycleManager:
             },
             actor=actor,
         )
-        planned = self.create_round(
+        source_provenance = source.get("metadata", {}).get(
+            "assignment_provenance"
+        )
+        repair_mode = (
+            source_provenance.get("work_mode")
+            if isinstance(source_provenance, dict)
+            and source_provenance.get("work_mode") in WORK_MODES
+            else "auto"
+        )
+        planned = self.create_production_round(
             workers=1,
-            mode="auto",
+            mode=repair_mode,
             research_ids=[repair["research_id"]],
             host_task_scope_id=host_task_scope_id,
         )
@@ -2043,6 +2782,7 @@ class V5LifecycleManager:
         *,
         work_mode: str,
         adverse_routing_enabled: bool,
+        computation_design_only: bool = False,
     ) -> dict[str, Any]:
         """Project every mode-sensitive cross-component effect.
 
@@ -2058,6 +2798,7 @@ class V5LifecycleManager:
             obligations=obligations,
             work_mode=work_mode,
             related_artifacts=[],
+            computation_design_only=computation_design_only,
         )
         stage_count = assurance["computation_stage_count"]
         semantic = {
@@ -2087,6 +2828,7 @@ class V5LifecycleManager:
         requested_mode: str,
         index: int,
         adverse_routing_enabled: bool | None = None,
+        research_cycle: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if requested_mode != "auto" and requested_mode not in WORK_MODES:
             raise ValueError(f"unsupported work mode: {requested_mode}")
@@ -2118,6 +2860,11 @@ class V5LifecycleManager:
             entry,
             work_mode=default_mode,
             adverse_routing_enabled=adverse_enabled,
+            computation_design_only=self._computation_design_only(
+                entry=entry,
+                work_mode=default_mode,
+                research_cycle=research_cycle,
+            ),
         )
         eligible_signatures: list[dict[str, str]] = []
         for suggestion in accepted:
@@ -2126,6 +2873,11 @@ class V5LifecycleManager:
                 entry,
                 work_mode=suggestion,
                 adverse_routing_enabled=adverse_enabled,
+                computation_design_only=self._computation_design_only(
+                    entry=entry,
+                    work_mode=suggestion,
+                    research_cycle=research_cycle,
+                ),
             )
             if (
                 suggestion_signature[
@@ -3021,6 +3773,7 @@ class V5LifecycleManager:
             adverse_routing_enabled=mode_selection.get(
                 "adverse_routing_enabled_at_freeze"
             ),
+            research_cycle=card.get("research_cycle"),
         )
         if (
             (
@@ -3109,6 +3862,8 @@ class V5LifecycleManager:
             required.add("campaign_scope")
         if "paper_continuation_scope" in card:
             required.add("paper_continuation_scope")
+        if "research_cycle" in card:
+            required.add("research_cycle")
         if card.get("task_context_revision") == V5_TASK_CONTEXT_REVISION:
             required.add("context_selection")
         if set(card) != required:
@@ -3158,6 +3913,12 @@ class V5LifecycleManager:
         )
         if card.get("work_mode") not in WORK_MODES:
             raise ValueError("V5 task card work mode is invalid")
+        if "research_cycle" in card:
+            cycle = self._validate_research_cycle_binding(
+                card["research_cycle"]
+            )
+            if cycle["subround"] == "supervision" and card["work_mode"] != "refute":
+                raise ValueError("V5 supervision task cards must use refute mode")
         if card.get("requested_claim_relation") not in CLAIM_RELATIONS:
             raise ValueError("V5 task card claim relation is invalid")
         if not isinstance(card.get("worker_id"), str):
@@ -3541,6 +4302,65 @@ class V5LifecycleManager:
                     "Do not share active context with that worker; both returns enter "
                     "Research independently.\n\n"
                 )
+        research_cycle_note = ""
+        cycle = card.get("research_cycle")
+        if cycle is not None:
+            source_metadata = card["mathematical_state"][
+                "source_research_dossier"
+            ]["metadata"]
+            if cycle["subround"] == "supervision":
+                supervision = source_metadata["research_supervision"]
+                research_cycle_note = (
+                    "This is Research subround 2, a scoped supervisor assignment. "
+                    f"Your exact scope is `{supervision['supervisor_scope']}`. Attack "
+                    "the frozen subround-1 return bindings in research_supervision and "
+                    "the corresponding related Research/artifacts; do not replace them "
+                    "with a free-standing proof attempt. Report a narrow challenge or a "
+                    "clean bounded result. Any defect causes copy-on-write repair in a "
+                    "later Research cycle; there is no live Blackboard/Pulse repair bus.\n\n"
+                )
+            elif card["work_mode"] == "refute":
+                research_cycle_note = (
+                    "This is a subround-1 proposition refutation worker. Attack the "
+                    "assigned proposition T under its exact hypotheses H: seek H and "
+                    "not-T, a boundary failure, obstruction, hidden assumption, or "
+                    "scope defect. You may attack frozen prior-cycle Research in the "
+                    "card, but you cannot see or attack mutable same-subround peer "
+                    "outputs. A subround-2 supervisor will separately review this return.\n\n"
+                )
+            elif card["work_mode"] == "compute":
+                approved = source_metadata.get("approved_computation_execution")
+                if approved is None:
+                    research_cycle_note = (
+                        "This is subround-1 computation design, not formal execution. "
+                        "Return exactly three review artifacts: computation_source "
+                        "containing the core executable code, computation_design binding "
+                        "the mathematics, inputs, outputs, precision/truncation and boundary "
+                        "policy, and computation_dependencies listing exact runtime and "
+                        "dependency identities. Do not return computation_output, an "
+                        "execution manifest, logs, or formal target results. Program-math "
+                        "supervision must disposition these exact hashes before execution.\n\n"
+                    )
+                else:
+                    approved_hashes = {
+                        item["role"]: item["sha256"]
+                        for item in approved["design_artifacts"]
+                    }
+                    research_cycle_note = (
+                        "This is an approved subround-1 computation execution. Execute only "
+                        f"core source SHA-256 `{approved_hashes['computation_source']}` with "
+                        "dependency manifest SHA-256 "
+                        f"`{approved_hashes['computation_dependencies']}`. The "
+                        "returned computation_source and computation_dependencies bytes must "
+                        "match those hashes exactly; code replacement fails closed. The actual "
+                        "source, logs, manifest and output will receive subround-2 review.\n\n"
+                    )
+            else:
+                research_cycle_note = (
+                    "This is Research subround 1. Work from the frozen card; same-subround "
+                    "peer outputs are not visible. Your exact return will be eligible for "
+                    "a later scoped subround-2 supervisor review.\n\n"
+                )
         assurance_note = ""
         if "assurance_contract" in card:
             assurance_note = (
@@ -3619,6 +4439,7 @@ class V5LifecycleManager:
             "runtime mismatch must fail before the ledger is created.\n\n"
             f"Research claim: {card['narrative_plane']['claim']}\n\n"
             f"{pair_note}"
+            f"{research_cycle_note}"
             f"{adverse_note}"
             f"{assurance_note}"
             f"{campaign_note}"
@@ -3626,6 +4447,494 @@ class V5LifecycleManager:
             f"{task_context_note}"
             f"Write the exact return to `{card['return_contract']['return_relpath']}` "
             "and hand off only its SHA-256 plus status.\n"
+        )
+
+    def create_production_round(
+        self,
+        *,
+        workers: int,
+        mode: str = "auto",
+        research_ids: list[str] | None = None,
+        campaign_id: str | None = None,
+        host_task_scope_id: str | None = None,
+        background_chunk_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Plan prospective Research subround 1 without changing legacy cards."""
+
+        return self.create_round(
+            workers=workers,
+            mode=mode,
+            research_ids=research_ids,
+            campaign_id=campaign_id,
+            host_task_scope_id=host_task_scope_id,
+            background_chunk_ids=background_chunk_ids,
+            research_cycle=self.production_research_cycle_binding(),
+        )
+
+    def _existing_cycle_round_for_research(
+        self,
+        *,
+        research_id: str,
+        subround: str,
+    ) -> dict[str, Any] | None:
+        matches: list[str] = []
+        if not self.store.rounds_dir.exists():
+            return None
+        for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+            if round_dir.is_symlink() or not round_dir.is_dir():
+                continue
+            _, manifest = self._round_manifest(round_dir.name)
+            cycle = manifest.get("research_cycle")
+            if cycle is None or self._validate_research_cycle_binding(cycle)[
+                "subround"
+            ] != subround:
+                continue
+            if any(
+                assignment["research_id"] == research_id
+                for assignment in manifest["assignments"]
+            ):
+                matches.append(manifest["round_id"])
+        if len(matches) > 1:
+            raise ValueError(
+                "one Research entry was scheduled into multiple prospective cycle rounds"
+            )
+        return self.round_status(matches[0]) if matches else None
+
+    def create_supervision_round(
+        self,
+        source_round_id: str,
+        *,
+        supervisor_scopes: list[str] | None = None,
+        host_task_scope_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Plan subround 2 against exact, fully ingested subround-1 returns."""
+
+        source_manifest, descriptors = self._source_round_receipt_descriptors(
+            source_round_id
+        )
+        applicable = [
+            scope
+            for scope in (
+                "program_math",
+                "proof_logic",
+                "source_scope",
+                "integration",
+            )
+            if any(
+                self._supervisor_scope_applies(scope, descriptor)
+                for descriptor in descriptors
+            )
+            and (scope != "integration" or len(descriptors) >= 2)
+        ]
+        if supervisor_scopes is None:
+            chosen = applicable[:V5_RESEARCH_SUPERVISOR_LIMIT]
+        else:
+            chosen = _require_string_list(
+                supervisor_scopes, "Research supervisor scopes"
+            )
+            if (
+                chosen != list(dict.fromkeys(chosen))
+                or len(chosen) > V5_RESEARCH_SUPERVISOR_LIMIT
+                or any(scope not in V5_RESEARCH_SUPERVISOR_SCOPES for scope in chosen)
+            ):
+                raise ValueError(
+                    "Research supervision accepts one to three distinct supported scopes"
+                )
+            inapplicable = sorted(set(chosen).difference(applicable))
+            if inapplicable:
+                raise ValueError(
+                    "Research supervisor scopes do not apply to this production: "
+                    + ", ".join(inapplicable)
+                )
+        if not chosen:
+            raise ValueError("production has no applicable Research supervisor scope")
+        cycle = {
+            "revision": V5_RESEARCH_CYCLE_REVISION,
+            "subround": "supervision",
+            "source_round_id": source_manifest["round_id"],
+            "source_round_manifest_sha256": source_manifest["manifest_sha256"],
+            "source_receipts_sha256": sha256_json(descriptors),
+            "supervisor_scopes": sorted(chosen),
+            "computation_policy": "core_code_review_before_formal_execution",
+            "repair_policy": "copy_on_write_next_research_cycle",
+            "pulse_policy": "not_used",
+            "truth_effect": "none",
+        }
+        self._validate_research_cycle_binding(cycle)
+
+        if self.store.rounds_dir.exists():
+            existing: list[str] = []
+            for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+                if round_dir.is_symlink() or not round_dir.is_dir():
+                    continue
+                _, manifest = self._round_manifest(round_dir.name)
+                if manifest.get("research_cycle") == cycle:
+                    existing.append(manifest["round_id"])
+            if len(existing) > 1:
+                raise ValueError("duplicate exact Research supervision rounds exist")
+            if existing:
+                return self.round_status(existing[0])
+
+        source_assignment_by_id = {
+            item["assignment_id"]: item for item in source_manifest["assignments"]
+        }
+        campaign_scope = source_manifest.get("campaign_scope")
+        campaign_id = (
+            campaign_scope["campaign_id"] if campaign_scope is not None else None
+        )
+        supervisor_ids: list[str] = []
+        for scope in chosen:
+            scoped_receipts = [
+                descriptor
+                for descriptor in descriptors
+                if self._supervisor_scope_applies(scope, descriptor)
+            ]
+            if scope == "integration" and len(descriptors) < 2:
+                scoped_receipts = []
+            binding = {
+                "revision": V5_RESEARCH_SUPERVISION_REVISION,
+                "supervisor_scope": scope,
+                "source_round_id": source_manifest["round_id"],
+                "source_round_manifest_sha256": source_manifest[
+                    "manifest_sha256"
+                ],
+                "source_receipts": scoped_receipts,
+                "source_receipts_sha256": sha256_json(scoped_receipts),
+                "review_policy": "attack_exact_production_outputs",
+                "repair_policy": "copy_on_write_next_research_cycle",
+                "pulse_policy": "not_used",
+                "truth_effect": "none",
+            }
+            self._validate_research_supervision_binding(binding)
+            related_ids = {
+                item["result_research_id"] for item in scoped_receipts
+            }
+            required_roles: set[str] = set()
+            if scope == "program_math":
+                for descriptor in scoped_receipts:
+                    if descriptor["computation_phase"] == "core_code_design":
+                        required_roles.update(
+                            V5_COMPUTATION_DESIGN_ARTIFACT_ROLES
+                        )
+                    elif descriptor["computation_phase"] == "approved_execution":
+                        required_roles.update(
+                            {
+                                "computation_dependencies",
+                                "computation_design",
+                                "computation_log",
+                                "computation_output",
+                                "computation_source",
+                            }
+                        )
+                        assignment = source_assignment_by_id[
+                            descriptor["assignment_id"]
+                        ]
+                        card = self.store._read_json(
+                            self.store.root / assignment["task_card_relpath"]
+                        )
+                        approved = card["mathematical_state"][
+                            "source_research_dossier"
+                        ]["metadata"].get("approved_computation_execution")
+                        approved = self._validate_approved_computation_execution_binding(
+                            approved
+                        )
+                        related_ids.add(approved["design_research_id"])
+            payload: dict[str, Any] = {
+                "kind": "challenge",
+                "status": "open",
+                "claim": (
+                    f"Research supervisor ({scope}) attacks the exact frozen "
+                    f"returns of {source_manifest['round_id']}."
+                ),
+                "content": (
+                    "Review only the hash-bound production returns and their declared "
+                    "artifacts. Report concrete failures or a bounded no-obstruction "
+                    "finding. Do not use realtime Pulse or silently rewrite production; "
+                    "any defect opens a copy-on-write Research repair in a later cycle."
+                ),
+                "rationale": (
+                    "A dedicated second subround catches reasoning, projection, source, "
+                    "or integration defects before Candidate construction."
+                ),
+                "source": f"round:{source_manifest['round_id']}",
+                "relation": "challenges",
+                "related_research_ids": sorted(related_ids),
+                "research_supervision": binding,
+                "required_related_artifact_roles": sorted(required_roles),
+                "obligations": [
+                    {
+                        "obligation_id": f"obl-research-supervision-{scope}",
+                        "description": (
+                            "Return one concise, artifact-bound supervision report "
+                            "covering every frozen receipt assigned to this scope."
+                        ),
+                        "required_artifact_roles": [
+                            "research_supervision_report"
+                        ],
+                        "evidence_types": ["adversarial_review_report"],
+                        "not_applicable_allowed": False,
+                    }
+                ],
+                "truth_effect": "none",
+            }
+            if required_roles:
+                payload["decision_profile"] = dict(
+                    V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE
+                )
+            if campaign_id is not None:
+                payload["campaign_id"] = campaign_id
+            supervisor = self.add_research(
+                payload,
+                actor="v5-research-supervisor-planner",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            supervisor_ids.append(supervisor["research_id"])
+        self._validate_supervision_round_selection(
+            research_cycle=cycle,
+            selected=[self._research_record(item) for item in supervisor_ids],
+        )
+        return self.create_round(
+            workers=len(supervisor_ids),
+            mode="refute",
+            research_ids=supervisor_ids,
+            campaign_id=campaign_id,
+            host_task_scope_id=host_task_scope_id,
+            research_cycle=cycle,
+        )
+
+    def _program_math_supervision_result(
+        self,
+        *,
+        design_round_id: str,
+        design_assignment_id: str,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        matches: list[tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = []
+        pending = False
+        for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+            if round_dir.is_symlink() or not round_dir.is_dir():
+                continue
+            validated_dir, manifest = self._round_manifest(round_dir.name)
+            cycle = manifest.get("research_cycle")
+            if (
+                cycle is None
+                or self._validate_research_cycle_binding(cycle)["subround"]
+                != "supervision"
+                or cycle["source_round_id"] != design_round_id
+                or "program_math" not in cycle["supervisor_scopes"]
+            ):
+                continue
+            for assignment in manifest["assignments"]:
+                source = self._research_record(assignment["research_id"])
+                binding = source.get("metadata", {}).get("research_supervision")
+                if binding is None:
+                    continue
+                binding = self._validate_research_supervision_binding(binding)
+                if binding["supervisor_scope"] != "program_math" or design_assignment_id not in {
+                    item["assignment_id"] for item in binding["source_receipts"]
+                }:
+                    continue
+                if not self._round_is_completed(validated_dir, manifest):
+                    pending = True
+                    continue
+                receipt = self._validated_ingest_receipt(
+                    round_dir=validated_dir,
+                    assignment=assignment,
+                )
+                result = self._research_record(receipt["research_id"])
+                matches.append((manifest, assignment, result))
+        if len(matches) > 1:
+            raise ValueError("multiple completed program-math supervision results exist")
+        if not matches:
+            if pending:
+                raise ValueError("program-math supervision is not fully ingested")
+            raise ValueError("no program-math supervision covers this computation design")
+        return matches[0]
+
+    def _latest_supervision_disposition(
+        self,
+        supervision_research_id: str,
+    ) -> dict[str, Any]:
+        dispositions = [
+            record
+            for record in self.research_records()
+            if record["kind"] == "disposition"
+            and record.get("metadata", {}).get("target_research_id")
+            == supervision_research_id
+        ]
+        if not dispositions:
+            raise ValueError(
+                "program-math supervision must be explicitly disposed before execution"
+            )
+        latest = max(
+            dispositions,
+            key=lambda item: (item["created_at"], item["research_id"]),
+        )
+        if latest["metadata"].get("disposition_status") not in (
+            V5_SAFE_SUPERVISION_DISPOSITIONS
+        ):
+            raise ValueError(
+                "latest program-math supervision disposition does not permit execution"
+            )
+        return latest
+
+    def _build_approved_computation_execution_binding(
+        self,
+        *,
+        design_manifest: dict[str, Any],
+        design_descriptor: dict[str, Any],
+        design_record: dict[str, Any],
+        design_artifacts: list[dict[str, str]],
+        supervision_manifest: dict[str, Any],
+        supervision_assignment: dict[str, Any],
+        supervision_receipt: dict[str, Any],
+        supervision_record: dict[str, Any],
+        disposition: dict[str, Any],
+    ) -> dict[str, Any]:
+        binding = {
+            "revision": V5_APPROVED_COMPUTATION_EXECUTION_REVISION,
+            "design_round_id": design_manifest["round_id"],
+            "design_round_manifest_sha256": design_manifest["manifest_sha256"],
+            "design_assignment_id": design_descriptor["assignment_id"],
+            "design_task_card_sha256": design_descriptor["task_card_sha256"],
+            "design_return_sha256": design_descriptor["return_sha256"],
+            "design_research_id": design_record["research_id"],
+            "design_record_sha256": design_record["record_sha256"],
+            "design_artifacts": design_artifacts,
+            "supervision_round_id": supervision_manifest["round_id"],
+            "supervision_round_manifest_sha256": supervision_manifest[
+                "manifest_sha256"
+            ],
+            "supervision_assignment_id": supervision_assignment["assignment_id"],
+            "supervision_task_card_sha256": supervision_assignment[
+                "task_card_sha256"
+            ],
+            "supervision_return_sha256": supervision_receipt["return_sha256"],
+            "supervision_research_id": supervision_record["research_id"],
+            "supervision_record_sha256": supervision_record["record_sha256"],
+            "disposition_research_id": disposition["research_id"],
+            "disposition_record_sha256": disposition["record_sha256"],
+            "disposition_status": disposition["metadata"]["disposition_status"],
+            "execution_policy": "execute_exact_supervised_source_and_dependencies",
+            "repair_policy": "changed_code_requires_new_production_and_supervision",
+            "pulse_policy": "not_used",
+            "truth_effect": "none",
+        }
+        return self._validate_approved_computation_execution_binding(binding)
+
+    def create_computation_execution_round(
+        self,
+        source_round_id: str,
+        assignment_id: str,
+        *,
+        host_task_scope_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute only code already frozen, supervised, and safely disposed."""
+
+        design_manifest, descriptors = self._source_round_receipt_descriptors(
+            source_round_id
+        )
+        matches = [
+            item for item in descriptors if item["assignment_id"] == assignment_id
+        ]
+        if len(matches) != 1:
+            raise ValueError("unknown computation-design assignment")
+        descriptor = matches[0]
+        if (
+            descriptor["work_mode"] != "compute"
+            or descriptor["computation_phase"] != "core_code_design"
+        ):
+            raise ValueError(
+                "formal execution requires a first-subround core-code design return"
+            )
+        design_record = self._research_record(descriptor["result_research_id"])
+        design_artifacts = self._canonical_design_artifacts(design_record)
+        supervision_manifest, supervision_assignment, supervision_record = (
+            self._program_math_supervision_result(
+                design_round_id=design_manifest["round_id"],
+                design_assignment_id=assignment_id,
+            )
+        )
+        supervision_dir = self.store.rounds_dir / supervision_manifest["round_id"]
+        supervision_receipt = self._validated_ingest_receipt(
+            round_dir=supervision_dir,
+            assignment=supervision_assignment,
+        )
+        disposition = self._latest_supervision_disposition(
+            supervision_record["research_id"]
+        )
+        binding = self._build_approved_computation_execution_binding(
+            design_manifest=design_manifest,
+            design_descriptor=descriptor,
+            design_record=design_record,
+            design_artifacts=design_artifacts,
+            supervision_manifest=supervision_manifest,
+            supervision_assignment=supervision_assignment,
+            supervision_receipt=supervision_receipt,
+            supervision_record=supervision_record,
+            disposition=disposition,
+        )
+        workload = workload_profile_for_entry(
+            {
+                "kind": "computation",
+                "verification_plan": {"mode": "artifact_replay"},
+                "budgets": {"max_wall_seconds": 0},
+            }
+        )
+        workload["computation"]["stage_count"] = 1
+        campaign_scope = design_manifest.get("campaign_scope")
+        payload: dict[str, Any] = {
+            "kind": "computation",
+            "status": "open",
+            "claim": f"Execute the exact supervised computation for: {design_record['claim']}",
+            "content": (
+                "Execute the frozen core source with the frozen dependency manifest. "
+                "Any byte change is a new Research design and must return through "
+                "program-math supervision before execution."
+            ),
+            "rationale": (
+                "Formal computation begins only after exact code review and explicit "
+                "safe disposition of the program-math supervision result."
+            ),
+            "source": f"research:{design_record['research_id']}",
+            "relation": "executes",
+            "related_research_ids": sorted(
+                {
+                    design_record["research_id"],
+                    supervision_record["research_id"],
+                    disposition["research_id"],
+                }
+            ),
+            "approved_computation_execution": binding,
+            "required_related_artifact_roles": sorted(
+                V5_COMPUTATION_DESIGN_ARTIFACT_ROLES
+            ),
+            "logic_signals": ["formula_to_code", "program_math_hybrid"],
+            "workload_profile": validate_workload_profile(workload),
+            "truth_effect": "none",
+        }
+        if campaign_scope is not None:
+            payload["campaign_id"] = campaign_scope["campaign_id"]
+        execution = self.add_research(
+            payload,
+            actor="v5-approved-computation-planner",
+            assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+        )
+        existing = self._existing_cycle_round_for_research(
+            research_id=execution["research_id"],
+            subround="production",
+        )
+        if existing is not None:
+            return existing
+        return self.create_production_round(
+            workers=1,
+            mode="compute",
+            research_ids=[execution["research_id"]],
+            campaign_id=(
+                campaign_scope["campaign_id"]
+                if campaign_scope is not None
+                else None
+            ),
+            host_task_scope_id=host_task_scope_id,
         )
 
     def create_round(
@@ -3637,11 +4946,16 @@ class V5LifecycleManager:
         campaign_id: str | None = None,
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
+        research_cycle: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if workers < 1:
             raise ValueError("workers must be positive")
         if mode != "auto" and mode not in WORK_MODES:
             raise ValueError(f"unsupported work mode: {mode}")
+        if research_cycle is not None:
+            research_cycle = dict(
+                self._validate_research_cycle_binding(research_cycle)
+            )
         host_task_scope_id = normalize_host_task_scope_id(
             host_task_scope_id,
             workflow_evidence_version=5,
@@ -3694,6 +5008,11 @@ class V5LifecycleManager:
                 f"requested {workers} workers but only {len(selected)} active "
                 f"V5 Research entries{scope_note} are available"
             )
+        if research_cycle is not None and research_cycle["subround"] == "supervision":
+            self._validate_supervision_round_selection(
+                research_cycle=research_cycle,
+                selected=selected,
+            )
         host_task_scope_id = normalize_host_task_scope_id(
             host_task_scope_id,
             workflow_evidence_version=5,
@@ -3703,6 +5022,7 @@ class V5LifecycleManager:
                 "requested_mode": mode,
                 "campaign_id": campaign_id,
                 "background_chunk_ids": selected_background_chunks,
+                "research_cycle": research_cycle,
             },
         )
         if host_task_scope_id is None:
@@ -3791,6 +5111,7 @@ class V5LifecycleManager:
                     entry,
                     requested_mode=mode,
                     index=index,
+                    research_cycle=research_cycle,
                 )
                 for index, entry in enumerate(selected)
             }
@@ -3862,6 +5183,7 @@ class V5LifecycleManager:
                             entry,
                             requested_mode="refute",
                             index=pair_index - 1,
+                            research_cycle=research_cycle,
                         ),
                         "work_mode": "refute",
                         "assignment_id": adverse_assignment_id,
@@ -4088,6 +5410,11 @@ class V5LifecycleManager:
                     obligations=obligations,
                     work_mode=work_mode,
                     related_artifacts=related_artifacts,
+                    computation_design_only=self._computation_design_only(
+                        entry=entry,
+                        work_mode=work_mode,
+                        research_cycle=research_cycle,
+                    ),
                 )
                 context_selection = self._context_selection_binding(
                     blackboard_selection=blackboard_selection,
@@ -4187,6 +5514,8 @@ class V5LifecycleManager:
                 }
                 if adverse_routing is not None:
                     card_semantic["adverse_routing"] = adverse_routing
+                if research_cycle is not None:
+                    card_semantic["research_cycle"] = research_cycle
                 if campaign_scope is not None:
                     card_semantic["campaign_scope"] = campaign_scope
                 if paper_continuation_scope is not None:
@@ -4257,6 +5586,8 @@ class V5LifecycleManager:
             }
             if campaign_scope is not None:
                 manifest_semantic["campaign_scope"] = campaign_scope
+            if research_cycle is not None:
+                manifest_semantic["research_cycle"] = research_cycle
             manifest = {
                 **manifest_semantic,
                 "manifest_sha256": sha256_json(manifest_semantic),
@@ -4299,6 +5630,8 @@ class V5LifecycleManager:
         }
         if "campaign_scope" in manifest:
             required.add("campaign_scope")
+        if "research_cycle" in manifest:
+            required.add("research_cycle")
         current_allocation_fields = {
             "assignment_contract_revision",
             "host_task_scope_id",
@@ -4331,6 +5664,11 @@ class V5LifecycleManager:
                 campaign_scope,
                 round_id=round_id,
                 _inspection_context=inspection,
+            )
+        research_cycle = manifest.get("research_cycle")
+        if research_cycle is not None:
+            research_cycle = self._validate_research_cycle_binding(
+                research_cycle
             )
         abort = self.store.reasoning_modes().work_unit_abort(round_id)
         assignments = manifest.get("assignments")
@@ -4545,6 +5883,19 @@ class V5LifecycleManager:
                 raise ValueError(
                     "V5 round/task-card Campaign scope projections disagree"
                 )
+            if card.get("research_cycle") != research_cycle:
+                raise ValueError(
+                    "V5 round/task-card Research-cycle projections disagree"
+                )
+        if research_cycle is not None and research_cycle["subround"] == "supervision":
+            self._validate_supervision_round_selection(
+                research_cycle=research_cycle,
+                selected=[
+                    self._research_record(card["research_id"])
+                    for _, card in frozen_cards
+                    if card["control_plane"].get("assignment_role") == "primary"
+                ],
+            )
         snapshot_path = (
             self.store.blackboard().snapshots_dir
             / manifest["blackboard_snapshot_id"]
@@ -5237,6 +6588,83 @@ class V5LifecycleManager:
             "recorded_research_sha256": research["record_sha256"],
         }
 
+    def _validate_research_cycle_return(
+        self,
+        *,
+        card: dict[str, Any],
+        payload: dict[str, Any],
+    ) -> None:
+        cycle = card.get("research_cycle")
+        if cycle is None:
+            return
+        cycle = self._validate_research_cycle_binding(cycle)
+        artifacts = payload.get("artifacts", [])
+        by_role = {
+            item["role"]: item
+            for item in artifacts
+            if isinstance(item, dict) and isinstance(item.get("role"), str)
+        }
+        if cycle["subround"] == "supervision":
+            if "research_supervision_report" not in by_role:
+                raise ValueError(
+                    "Research supervision return lacks its exact review report"
+                )
+            return
+        if card["work_mode"] != "compute":
+            return
+        source_metadata = card["mathematical_state"][
+            "source_research_dossier"
+        ]["metadata"]
+        approved = source_metadata.get("approved_computation_execution")
+        if approved is None:
+            if set(by_role) != set(V5_COMPUTATION_DESIGN_ARTIFACT_ROLES):
+                raise ValueError(
+                    "first-subround computer must return exactly core source, "
+                    "mathematical design, and dependency manifest before execution"
+                )
+            if (
+                payload.get("computation_manifest") is not None
+                or payload.get("research_assurance", {}).get(
+                    "program_math_alignments"
+                )
+                != []
+            ):
+                raise ValueError(
+                    "first-subround computation design cannot contain execution results"
+                )
+            return
+        approved = self._validate_approved_computation_execution_binding(approved)
+        required_execution_roles = {
+            "computation_dependencies",
+            "computation_log",
+            "computation_output",
+            "computation_source",
+        }
+        if not required_execution_roles.issubset(by_role):
+            raise ValueError(
+                "approved computation return lacks exact source, dependencies, log, or output"
+            )
+        frozen = {
+            item["role"]: item["sha256"]
+            for item in approved["design_artifacts"]
+        }
+        for role in ("computation_source", "computation_dependencies"):
+            if by_role[role]["sha256"] != frozen[role]:
+                raise ValueError(
+                    "approved computation changed supervised source or dependencies; "
+                    "start a new production and supervision cycle"
+                )
+        manifest = payload.get("computation_manifest")
+        entries = manifest.get("entries", []) if isinstance(manifest, dict) else []
+        if not entries or any(
+            entry.get("source_artifact_sha256")
+            != frozen["computation_source"]
+            for entry in entries
+        ):
+            raise ValueError(
+                "approved computation manifest is not bound to the supervised source"
+            )
+
     def _validate_return_payload(
         self,
         *,
@@ -5417,6 +6845,7 @@ class V5LifecycleManager:
                 artifacts=artifacts,
                 artifact_bytes_by_sha256=artifact_bytes_by_sha256,
             )
+            self._validate_research_cycle_return(card=card, payload=payload)
         canonical_return = self.store.root / assignment["return_relpath"]
         if return_path.resolve() != canonical_return.resolve():
             # Preflight may inspect a draft elsewhere, but its declared
@@ -5522,6 +6951,19 @@ class V5LifecycleManager:
         if not self.store.adverse_routes().enabled():
             return None
         if card.get("work_mode") == "refute" or "assurance_contract" not in card:
+            return None
+        cycle = card.get("research_cycle")
+        source_metadata = card.get("mathematical_state", {}).get(
+            "source_research_dossier", {}
+        ).get("metadata", {})
+        if (
+            isinstance(cycle, dict)
+            and cycle.get("subround") == "production"
+            and isinstance(source_metadata, dict)
+            and "approved_computation_execution" in source_metadata
+        ):
+            # The explicit second subround owns the exact code/log/output
+            # review.  Do not create the legacy duplicate future queue entry.
             return None
         stage_count = card["assurance_contract"].get("computation_stage_count", 0)
         if isinstance(stage_count, bool) or not isinstance(stage_count, int):
@@ -6864,6 +8306,655 @@ class V5LifecycleManager:
         ]
         return facts, rendered, order, internal_edges, external_predecessors
 
+    def _lightweight_research_records(self) -> dict[str, dict[str, Any]]:
+        """Read immutable Research identity/lineage without opening its artifacts.
+
+        Candidate Release uses this projection only for the pre-release adverse
+        gate.  It deliberately runs before source hashing, assurance replay, and
+        artifact sealing, so a missing fresh attack fails at the cheap boundary.
+        The normal full Research validator still runs later and remains the
+        authority for release construction.
+        """
+
+        required = {
+            "schema_version",
+            "policy_revision",
+            "project_id",
+            "research_id",
+            "kind",
+            "status",
+            "claim",
+            "content",
+            "rationale",
+            "dependencies",
+            "source",
+            "relation",
+            "related_research_ids",
+            "metadata",
+            "actor",
+            "created_at",
+            "semantic_sha256",
+            "record_sha256",
+        }
+        records: dict[str, dict[str, Any]] = {}
+        for path in sorted(self.research_entries_dir.glob("*.json")):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("fresh adverse Research inventory is unsafe")
+            record = self.store._read_json(path)
+            if not isinstance(record, dict) or set(record) != required:
+                raise ValueError(
+                    "fresh adverse Research header fields are not exact"
+                )
+            research_id = validate_memory_id(
+                _require_nonempty_text(
+                    record.get("research_id"), "fresh adverse Research id"
+                )
+            )
+            if (
+                path.stem != research_id
+                or record.get("schema_version") != 5
+                or record.get("policy_revision") != V5_POLICY_REVISION
+                or record.get("project_id") != self.store.project_id()
+                or record.get("kind") not in V5_RESEARCH_KINDS
+                or record.get("status") not in MEMORY_STATUSES
+            ):
+                raise ValueError("fresh adverse Research identity is invalid")
+            if research_id in records:
+                raise ValueError("fresh adverse Research ids are duplicated")
+            related = _require_string_list(
+                record.get("related_research_ids"),
+                "fresh adverse Research related ids",
+            )
+            for related_id in related:
+                validate_memory_id(related_id)
+            if not isinstance(record.get("metadata"), dict):
+                raise ValueError("fresh adverse Research metadata must be an object")
+            _require_nonempty_text(record.get("actor"), "fresh adverse Research actor")
+            _parse_utc_timestamp(
+                record.get("created_at"),
+                label="fresh adverse Research created_at",
+            )
+            independent_adverse_required(record)
+            self._research_is_adverse_assignment(record)
+            semantic = {
+                key: record[key]
+                for key in required.difference(
+                    {
+                        "research_id",
+                        "created_at",
+                        "semantic_sha256",
+                        "record_sha256",
+                    }
+                )
+            }
+            if (
+                record.get("semantic_sha256") != sha256_json(semantic)
+                or research_id != record["semantic_sha256"][:12]
+            ):
+                raise ValueError("fresh adverse Research semantic hash mismatch")
+            without_hash = {
+                key: value
+                for key, value in record.items()
+                if key != "record_sha256"
+            }
+            if record.get("record_sha256") != sha256_json(without_hash):
+                raise ValueError("fresh adverse Research record hash mismatch")
+            records[research_id] = record
+        return records
+
+    def _candidate_fact_fingerprints_for_adverse(
+        self,
+        fact_payloads: Any,
+    ) -> list[dict[str, str]]:
+        """Canonicalize only Candidate Fact bytes for the cheap adverse gate."""
+
+        if (
+            not isinstance(fact_payloads, list)
+            or not fact_payloads
+            or any(not isinstance(item, dict) for item in fact_payloads)
+        ):
+            raise ValueError("Candidate Release facts must be a nonempty object list")
+        bindings: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for payload in fact_payloads:
+            fact = Fact.from_dict(payload)
+            errors = fact.validate()
+            if errors:
+                raise ValueError("; ".join(errors))
+            if fact.problem_id != self.store.project_id():
+                raise ValueError("Candidate Release Fact belongs to another project")
+            if fact.fact_id in seen:
+                raise ValueError("Candidate Release has a duplicate Fact id")
+            seen.add(fact.fact_id)
+            raw = validate_fact_round_trip(fact).encode("utf-8")
+            bindings.append(
+                {
+                    "fact_id": fact.fact_id,
+                    "fact_sha256": sha256_bytes(raw),
+                }
+            )
+        return sorted(bindings, key=lambda item: item["fact_id"])
+
+    def _lightweight_adverse_assignment_binding(
+        self,
+        *,
+        target: dict[str, Any],
+        adverse: dict[str, Any],
+        producer: str,
+        candidate_fact_sha256s: set[str],
+    ) -> dict[str, str]:
+        """Validate one ingested refute lineage without running release audit."""
+
+        if adverse["actor"] in {producer, target["actor"]}:
+            raise ValueError("adverse worker is not independent of the producer")
+        metadata = adverse["metadata"]
+        provenance = metadata.get("assignment_provenance")
+        task_binding = metadata.get("task_binding")
+        if (
+            not self._research_is_adverse_assignment(adverse)
+            or not isinstance(provenance, dict)
+            or provenance.get("work_mode") != "refute"
+            or not isinstance(task_binding, dict)
+        ):
+            raise ValueError("Research is not an ingested refute assignment")
+        if (
+            adverse.get("relation") != "responds_to"
+            or adverse.get("related_research_ids") != [target["research_id"]]
+        ):
+            raise ValueError("adverse Research does not directly target this branch head")
+        if _parse_utc_timestamp(
+            adverse["created_at"], label="fresh adverse created_at"
+        ) < _parse_utc_timestamp(
+            target["created_at"], label="fresh adverse target created_at"
+        ):
+            raise ValueError("adverse Research predates its target")
+
+        round_id = validate_round_id(provenance["round_id"])
+        assignment_id = validate_assignment_id(provenance["assignment_id"])
+        round_dir = self.store.rounds_dir / round_id
+        manifest_path = round_dir / "round.json"
+        assignment_path = round_dir / "assignments" / f"{assignment_id}.json"
+        card_path = self._task_card_path(round_id, assignment_id)
+        receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+        for label, path in (
+            ("round manifest", manifest_path),
+            ("assignment", assignment_path),
+            ("task card", card_path),
+            ("ingest receipt", receipt_path),
+        ):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(f"fresh adverse {label} is missing or unsafe")
+
+        manifest = self.store._read_json(manifest_path)
+        if (
+            not isinstance(manifest, dict)
+            or manifest.get("schema_version") != 5
+            or manifest.get("policy_revision") != V5_POLICY_REVISION
+            or manifest.get("project_id") != self.store.project_id()
+            or manifest.get("round_id") != round_id
+        ):
+            raise ValueError("fresh adverse round identity is invalid")
+        manifest_semantic = {
+            key: value for key, value in manifest.items() if key != "manifest_sha256"
+        }
+        if manifest.get("manifest_sha256") != sha256_json(manifest_semantic):
+            raise ValueError("fresh adverse round hash mismatch")
+        if self.store.reasoning_modes().work_unit_abort(round_id) is not None:
+            raise ValueError("fresh adverse round was aborted")
+
+        assignment = self.store._read_json(assignment_path)
+        if (
+            not isinstance(assignment, dict)
+            or assignment.get("assignment_id") != assignment_id
+            or assignment.get("research_id") != target["research_id"]
+            or assignment.get("worker_id") != adverse["actor"]
+            or assignment.get("work_mode") != "refute"
+            or assignment.get("task_card_sha256")
+            != provenance["task_card_sha256"]
+            or assignment.get("assignment_role")
+            not in {"primary", "paired_adverse"}
+            or assignment.get("task_card_relpath")
+            != card_path.relative_to(self.store.root).as_posix()
+        ):
+            raise ValueError("fresh adverse assignment binding is invalid")
+        pair_binding = assignment.get("independent_adverse_pair")
+        if assignment["assignment_role"] == "primary":
+            if pair_binding is not None:
+                raise ValueError(
+                    "primary refute cannot reuse a paired-primary allocation"
+                )
+        elif (
+            not isinstance(pair_binding, dict)
+            or pair_binding.get("role") != "paired_adverse"
+            or pair_binding.get("research_id") != target["research_id"]
+            or pair_binding.get("worker_id") != adverse["actor"]
+            or pair_binding.get("shared_context_forbidden") is not True
+        ):
+            raise ValueError("paired adverse isolation binding is invalid")
+        assignment_semantic = {
+            key: value
+            for key, value in assignment.items()
+            if key != "assignment_sha256"
+        }
+        if assignment.get("assignment_sha256") != sha256_json(
+            assignment_semantic
+        ):
+            raise ValueError("fresh adverse assignment hash mismatch")
+        manifest_assignments = manifest.get("assignments")
+        if (
+            not isinstance(manifest_assignments, list)
+            or sum(
+                item == assignment
+                for item in manifest_assignments
+                if isinstance(item, dict)
+            )
+            != 1
+        ):
+            raise ValueError("fresh adverse assignment is not frozen by its round")
+        if (
+            manifest.get("host_task_scope_id") is not None
+            and manifest.get("host_task_scope_id")
+            != assignment.get("host_task_scope_id")
+        ):
+            raise ValueError("fresh adverse round/task scope drifted")
+        if assignment["assignment_role"] == "paired_adverse":
+            pairs = manifest.get("independent_adverse_pairs")
+            if not isinstance(pairs, list):
+                raise ValueError("fresh adverse pair is absent from its round")
+            matched_pairs = [
+                validate_independent_adverse_pair(item)
+                for item in pairs
+                if isinstance(item, dict)
+                and item.get("adverse_assignment_id") == assignment_id
+            ]
+            if (
+                len(matched_pairs) != 1
+                or matched_pairs[0]["research_id"] != target["research_id"]
+                or matched_pairs[0]["adverse_worker_id"] != adverse["actor"]
+            ):
+                raise ValueError("fresh adverse pair lineage is invalid")
+
+        raw_card = card_path.read_bytes()
+        if sha256_bytes(raw_card) != provenance["task_card_sha256"]:
+            raise ValueError("fresh adverse task-card byte hash mismatch")
+        card = self.store._read_json(card_path)
+        control = card.get("control_plane") if isinstance(card, dict) else None
+        if (
+            not isinstance(card, dict)
+            or card.get("project_id") != self.store.project_id()
+            or card.get("round_id") != round_id
+            or card.get("assignment_id") != assignment_id
+            or card.get("research_id") != target["research_id"]
+            or card.get("worker_id") != adverse["actor"]
+            or card.get("work_mode") != "refute"
+            or not isinstance(control, dict)
+            or control.get("assignment_role") != assignment["assignment_role"]
+            or control.get("host_task_scope_id")
+            != assignment.get("host_task_scope_id")
+            or control.get("worker_context_id")
+            != assignment.get("worker_context_id")
+        ):
+            raise ValueError("fresh adverse task-card scope is invalid")
+        host_task_scope_id = control.get("host_task_scope_id")
+        worker_context_id = control.get("worker_context_id")
+        if (
+            not isinstance(host_task_scope_id, str)
+            or HOST_TASK_SCOPE_ID_RE.fullmatch(host_task_scope_id) is None
+            or not isinstance(worker_context_id, str)
+            or not worker_context_id.strip()
+        ):
+            raise ValueError("fresh adverse host scope/context is missing")
+        card_semantic = {
+            key: value
+            for key, value in card.items()
+            if key != "task_card_semantic_sha256"
+        }
+        if card.get("task_card_semantic_sha256") != sha256_json(card_semantic):
+            raise ValueError("fresh adverse task-card semantic hash mismatch")
+        related_artifacts = card.get("mathematical_state", {}).get(
+            "related_artifacts"
+        )
+        if not isinstance(related_artifacts, list):
+            raise ValueError("fresh adverse task card lacks frozen candidate artifacts")
+        frozen_hashes = {
+            item.get("sha256")
+            for item in related_artifacts
+            if isinstance(item, dict)
+            and isinstance(item.get("sha256"), str)
+            and SHA256_RE.fullmatch(item["sha256"]) is not None
+        }
+        missing_candidate_hashes = sorted(
+            candidate_fact_sha256s.difference(frozen_hashes)
+        )
+        if missing_candidate_hashes:
+            raise ValueError(
+                "fresh adverse task card does not bind the exact Candidate Fact bytes"
+            )
+
+        receipt = self.store._read_json(receipt_path)
+        if (
+            not isinstance(receipt, dict)
+            or receipt.get("schema_version") != 5
+            or receipt.get("policy_revision") != V5_POLICY_REVISION
+            or receipt.get("project_id") != self.store.project_id()
+            or receipt.get("round_id") != round_id
+            or receipt.get("assignment_id") != assignment_id
+            or receipt.get("task_card_sha256") != provenance["task_card_sha256"]
+            or receipt.get("research_id") != adverse["research_id"]
+            or receipt.get("return_sha256") != task_binding.get("return_sha256")
+            or receipt.get("outcome") not in V5_RETURN_OUTCOMES
+            or not isinstance(receipt.get("return_sha256"), str)
+            or SHA256_RE.fullmatch(receipt["return_sha256"]) is None
+        ):
+            raise ValueError("fresh adverse ingest receipt binding is invalid")
+        receipt_semantic = {
+            key: value
+            for key, value in receipt.items()
+            if key not in {"receipt_id", "created_at"}
+        }
+        if receipt.get("receipt_id") != "research-ingest-" + sha256_json(
+            receipt_semantic
+        ):
+            raise ValueError("fresh adverse ingest receipt hash mismatch")
+        return_path = contained_path(
+            self.store.root,
+            assignment.get("return_relpath"),
+            "fresh adverse return path",
+        )
+        if (
+            return_path.is_symlink()
+            or not return_path.is_file()
+            or sha256_bytes(return_path.read_bytes()) != receipt["return_sha256"]
+        ):
+            raise ValueError("fresh adverse return bytes/hash mismatch")
+
+        return {
+            "target_research_id": target["research_id"],
+            "adverse_research_id": adverse["research_id"],
+            "adverse_worker_id": adverse["actor"],
+            "round_id": round_id,
+            "assignment_id": assignment_id,
+            "task_card_sha256": provenance["task_card_sha256"],
+            "return_sha256": receipt["return_sha256"],
+            "receipt_id": receipt["receipt_id"],
+            "host_task_scope_id": host_task_scope_id,
+            "worker_context_id": worker_context_id,
+        }
+
+    def _fresh_adverse_readiness(
+        self,
+        *,
+        research_ids: list[str],
+        candidate_fact_bindings: list[dict[str, str]],
+        challenge_dispositions: Any,
+        adverse_actor_ids: Any,
+        producer: str,
+    ) -> dict[str, Any]:
+        """Fail before expensive Candidate work when a fresh attack is missing."""
+
+        records = self._lightweight_research_records()
+        missing = sorted(set(research_ids).difference(records))
+        if missing:
+            raise ValueError(
+                "fresh_adverse_missing: selected Research is absent: "
+                + ", ".join(missing)
+            )
+        branch = set(research_ids)
+        pending = list(research_ids)
+        while pending:
+            current = records[pending.pop()]
+            for related_id in current["related_research_ids"]:
+                if related_id not in records:
+                    raise ValueError(
+                        "fresh adverse Research lineage names an unknown ancestor"
+                    )
+                if related_id not in branch:
+                    branch.add(related_id)
+                    pending.append(related_id)
+
+        adverse_kinds = {"challenge", "counterexample", "obstacle", "dead_end"}
+        required_targets = {
+            research_id
+            for research_id in branch
+            if independent_adverse_required(records[research_id])
+            and records[research_id]["kind"] not in adverse_kinds
+            and not self._research_is_adverse_assignment(records[research_id])
+        }
+
+        ancestor_cache: dict[str, set[str]] = {}
+
+        def ancestors(research_id: str) -> set[str]:
+            cached = ancestor_cache.get(research_id)
+            if cached is not None:
+                return cached
+            result: set[str] = set()
+            stack = list(records[research_id]["related_research_ids"])
+            while stack:
+                related_id = stack.pop()
+                if related_id == research_id:
+                    raise ValueError("fresh adverse Research lineage is cyclic")
+                if related_id in result:
+                    continue
+                result.add(related_id)
+                stack.extend(records[related_id]["related_research_ids"])
+            ancestor_cache[research_id] = result
+            return result
+
+        maximal_targets = sorted(
+            research_id
+            for research_id in required_targets
+            if not any(
+                research_id in ancestors(other_id)
+                for other_id in required_targets
+                if other_id != research_id
+            )
+        )
+
+        if not isinstance(challenge_dispositions, list) or any(
+            not isinstance(item, dict)
+            or set(item) != {"research_id", "disposition", "rationale"}
+            for item in challenge_dispositions
+        ):
+            raise ValueError(
+                "fresh_adverse_missing: challenge dispositions are not ready"
+            )
+        disposition_ids = {
+            item["research_id"]
+            for item in challenge_dispositions
+            if isinstance(item.get("research_id"), str)
+            and item.get("disposition") in V5_CHALLENGE_DISPOSITIONS
+            and isinstance(item.get("rationale"), str)
+            and item["rationale"].strip()
+        }
+        actors = _require_string_list(adverse_actor_ids, "adverse actor ids")
+        actor_set = set(actors)
+        candidate_hashes = {
+            item["fact_sha256"] for item in candidate_fact_bindings
+        }
+        bindings: list[dict[str, str]] = []
+        for target_id in maximal_targets:
+            target = records[target_id]
+            respondents = sorted(
+                (
+                    record
+                    for record in records.values()
+                    if record.get("relation") == "responds_to"
+                    and record.get("related_research_ids") == [target_id]
+                    and self._research_is_adverse_assignment(record)
+                ),
+                key=lambda item: (item["created_at"], item["research_id"]),
+                reverse=True,
+            )
+            accepted: dict[str, str] | None = None
+            rejected: list[str] = []
+            for adverse in respondents:
+                try:
+                    candidate = self._lightweight_adverse_assignment_binding(
+                        target=target,
+                        adverse=adverse,
+                        producer=producer,
+                        candidate_fact_sha256s=candidate_hashes,
+                    )
+                except (KeyError, TypeError, ValueError) as exc:
+                    rejected.append(f"{adverse['research_id']}={exc}")
+                    continue
+                if adverse["research_id"] not in disposition_ids:
+                    rejected.append(
+                        f"{adverse['research_id']}=missing Candidate disposition"
+                    )
+                    continue
+                if adverse["actor"] not in actor_set:
+                    rejected.append(
+                        f"{adverse['research_id']}=missing adverse_actor_ids binding"
+                    )
+                    continue
+                accepted = candidate
+                break
+            if accepted is None:
+                detail = "; ".join(rejected[:3]) if rejected else "no direct refute return"
+                raise ValueError(
+                    "fresh_adverse_missing: run and ingest one independent refute "
+                    f"against branch head {target_id}, binding the exact Candidate "
+                    f"Fact bytes, then disposition it before Candidate Release ({detail})"
+                )
+            bindings.append(accepted)
+
+        semantic = {
+            "contract_revision": V5_FRESH_ADVERSE_READINESS_REVISION,
+            "required": bool(maximal_targets),
+            "status": "ready" if maximal_targets else "not_required",
+            "required_target_research_ids": maximal_targets,
+            "candidate_fact_bindings": candidate_fact_bindings,
+            "adverse_bindings": sorted(
+                bindings, key=lambda item: item["target_research_id"]
+            ),
+            "gate_position": (
+                "before_artifact_normalization_and_candidate_release_validation"
+            ),
+            "verifier_instruction": (
+                "independently_adjudicate_every_bound_adverse_disposition"
+            ),
+            "truth_effect": "none",
+        }
+        return {**semantic, "readiness_sha256": sha256_json(semantic)}
+
+    def _validate_fresh_adverse_readiness(
+        self,
+        value: Any,
+        *,
+        candidate_records: list[dict[str, Any]],
+        research_bindings: list[dict[str, Any]],
+        challenge_dispositions: list[dict[str, Any]],
+        excluded_verifier_ids: list[str],
+    ) -> dict[str, Any]:
+        fields = {
+            "contract_revision",
+            "required",
+            "status",
+            "required_target_research_ids",
+            "candidate_fact_bindings",
+            "adverse_bindings",
+            "gate_position",
+            "verifier_instruction",
+            "truth_effect",
+            "readiness_sha256",
+        }
+        if not isinstance(value, dict) or set(value) != fields:
+            raise ValueError("Candidate Release fresh-adverse readiness fields are not exact")
+        semantic = {
+            key: item for key, item in value.items() if key != "readiness_sha256"
+        }
+        if (
+            value["contract_revision"] != V5_FRESH_ADVERSE_READINESS_REVISION
+            or not isinstance(value["required"], bool)
+            or value["status"]
+            != ("ready" if value["required"] else "not_required")
+            or value["gate_position"]
+            != "before_artifact_normalization_and_candidate_release_validation"
+            or value["verifier_instruction"]
+            != "independently_adjudicate_every_bound_adverse_disposition"
+            or value["truth_effect"] != "none"
+            or value["readiness_sha256"] != sha256_json(semantic)
+        ):
+            raise ValueError("Candidate Release fresh-adverse readiness is invalid")
+        expected_candidate_bindings = sorted(
+            (
+                {
+                    "fact_id": item["fact_id"],
+                    "fact_sha256": item["fact_sha256"],
+                }
+                for item in candidate_records
+            ),
+            key=lambda item: item["fact_id"],
+        )
+        if value["candidate_fact_bindings"] != expected_candidate_bindings:
+            raise ValueError("Candidate Release fresh-adverse Candidate bytes drifted")
+        targets = _require_string_list(
+            value["required_target_research_ids"],
+            "fresh-adverse required target ids",
+        )
+        for research_id in targets:
+            validate_memory_id(research_id)
+        bindings = value["adverse_bindings"]
+        binding_fields = {
+            "target_research_id",
+            "adverse_research_id",
+            "adverse_worker_id",
+            "round_id",
+            "assignment_id",
+            "task_card_sha256",
+            "return_sha256",
+            "receipt_id",
+            "host_task_scope_id",
+            "worker_context_id",
+        }
+        if (
+            not isinstance(bindings, list)
+            or any(not isinstance(item, dict) or set(item) != binding_fields for item in bindings)
+            or [item["target_research_id"] for item in bindings] != targets
+            or value["required"] != bool(targets)
+        ):
+            raise ValueError("Candidate Release fresh-adverse bindings are invalid")
+        bound_research_ids = {
+            item["research_id"] for item in research_bindings
+        }
+        disposition_ids = {
+            item["research_id"] for item in challenge_dispositions
+        }
+        for binding in bindings:
+            validate_memory_id(binding["target_research_id"])
+            validate_memory_id(binding["adverse_research_id"])
+            validate_round_id(binding["round_id"])
+            validate_assignment_id(binding["assignment_id"])
+            for field_name in ("task_card_sha256", "return_sha256"):
+                if SHA256_RE.fullmatch(binding[field_name]) is None:
+                    raise ValueError("Candidate Release fresh-adverse hash is invalid")
+            if (
+                binding["target_research_id"] not in bound_research_ids
+                or binding["adverse_research_id"] not in bound_research_ids
+                or binding["adverse_research_id"] not in disposition_ids
+                or not isinstance(binding["adverse_worker_id"], str)
+                or not binding["adverse_worker_id"].strip()
+                or binding["adverse_worker_id"] not in excluded_verifier_ids
+                or not isinstance(binding["receipt_id"], str)
+                or not binding["receipt_id"].startswith("research-ingest-")
+                or SHA256_RE.fullmatch(
+                    binding["receipt_id"].removeprefix("research-ingest-")
+                )
+                is None
+                or not isinstance(binding["host_task_scope_id"], str)
+                or HOST_TASK_SCOPE_ID_RE.fullmatch(
+                    binding["host_task_scope_id"]
+                )
+                is None
+                or not isinstance(binding["worker_context_id"], str)
+                or not binding["worker_context_id"].strip()
+            ):
+                raise ValueError(
+                    "Candidate Release fresh-adverse release closure drifted"
+                )
+        return value
+
     def candidate_release(
         self,
         payload: dict[str, Any],
@@ -6919,6 +9010,16 @@ class V5LifecycleManager:
             raise ValueError(
                 "Candidate Release research ids must be nonempty and unique"
             )
+        candidate_fact_bindings = self._candidate_fact_fingerprints_for_adverse(
+            payload.get("candidates")
+        )
+        fresh_adverse_readiness = self._fresh_adverse_readiness(
+            research_ids=research_ids,
+            candidate_fact_bindings=candidate_fact_bindings,
+            challenge_dispositions=payload.get("challenge_dispositions"),
+            adverse_actor_ids=payload.get("adverse_actor_ids"),
+            producer=producer,
+        )
         explicit_research_records = [
             self._research_record(item) for item in research_ids
         ]
@@ -7051,6 +9152,19 @@ class V5LifecycleManager:
                 "geometric_stage_typing" in research_logic_signals
             ),
         )
+        if candidate_fact_bindings != sorted(
+            (
+                {
+                    "fact_id": fact_id,
+                    "fact_sha256": sha256_bytes(rendered[fact_id]),
+                }
+                for fact_id in facts
+            ),
+            key=lambda item: item["fact_id"],
+        ):
+            raise ValueError(
+                "Candidate Fact bytes drifted after the fresh-adverse gate"
+            )
         candidate_interfaces = [
             self._candidate_interface(
                 facts[fact_id],
@@ -7549,6 +9663,7 @@ class V5LifecycleManager:
                 normalized_dispositions, key=lambda item: item["research_id"]
             ),
             "paper_evidence_refs": paper_refs,
+            "fresh_adverse_readiness": fresh_adverse_readiness,
             **(
                 {
                     "research_draft_ref": research_draft_context[
@@ -7645,6 +9760,7 @@ class V5LifecycleManager:
                 "assurance_contract_revision": assurance_contract_revision,
                 "applicable_assurance_checks": applicable_assurance_checks,
                 "successor_contract_count": len(successor_contracts),
+                "fresh_adverse_readiness": fresh_adverse_readiness,
                 **(
                     {
                         "paper_continuation_release_validation": (
@@ -7766,6 +9882,18 @@ class V5LifecycleManager:
             seen.append(fact.fact_id)
         if seen != record.get("fact_ids"):
             raise ValueError("Candidate Release Fact order is inconsistent")
+        if "fresh_adverse_readiness" in record:
+            self._validate_fresh_adverse_readiness(
+                record["fresh_adverse_readiness"],
+                candidate_records=candidates,
+                research_bindings=record.get("research_bindings", []),
+                challenge_dispositions=record.get(
+                    "challenge_dispositions", []
+                ),
+                excluded_verifier_ids=record.get(
+                    "excluded_verifier_ids", []
+                ),
+            )
         if not strict_research_draft:
             for artifact in record.get("artifacts", []):
                 sealed = contained_path(

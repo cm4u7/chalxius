@@ -209,6 +209,7 @@
       ],
       "tests": [
         "tests/test_v5_lifecycle.py",
+        "tests/test_research_two_subround.py",
         "tests/test_v4_preflight_return.py",
         "tests/test_v4_protocol.py"
       ],
@@ -216,6 +217,14 @@
         {
           "kind": "cli",
           "command": "mgraph:plan-round"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-supervision-round"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-computation-execution"
         },
         {
           "kind": "cli",
@@ -228,7 +237,7 @@
       ]
     },
     "cap.adverse_routing": {
-      "summary": "Prospective nontruth adverse cases, proof attacks, route proposals, operator decisions and attack reports.",
+      "summary": "Prospective nontruth adverse cases, exact-Candidate pre-release readiness, sparse route recommendations, full attack audits, route proposals, and operator decisions.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -243,7 +252,8 @@
       ],
       "tests": [
         "tests/test_adverse_routing.py",
-        "tests/test_chalxius_043_upgrade.py"
+        "tests/test_chalxius_043_upgrade.py",
+        "tests/test_independent_adverse_normal_flow.py"
       ],
       "activation_paths": [
         {
@@ -1907,6 +1917,20 @@
       ]
     },
     "mgraph:plan-round": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:plan-supervision-round": {
+      "capability_id": "cap.research_execution",
+      "status": "canonical",
+      "authority_effects": [
+        "research"
+      ]
+    },
+    "mgraph:plan-computation-execution": {
       "capability_id": "cap.research_execution",
       "status": "canonical",
       "authority_effects": [

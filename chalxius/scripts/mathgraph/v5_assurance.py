@@ -251,6 +251,7 @@ def build_assurance_contract(
     obligations: Any,
     work_mode: str,
     related_artifacts: list[dict[str, str]],
+    computation_design_only: bool = False,
 ) -> dict[str, Any]:
     normalized_obligations = normalize_obligations(obligations)
     metadata = entry.get("metadata", {})
@@ -259,7 +260,51 @@ def build_assurance_contract(
     stage_count = computation.get("stage_count", 0) if isinstance(computation, dict) else 0
     if isinstance(stage_count, bool) or not isinstance(stage_count, int) or stage_count < 0:
         raise ValueError("workload_profile.computation.stage_count must be nonnegative")
-    if work_mode == "compute" and stage_count == 0:
+    if not isinstance(computation_design_only, bool):
+        raise ValueError("computation_design_only must be boolean")
+    if computation_design_only:
+        if work_mode != "compute":
+            raise ValueError("computation design-only assurance requires compute mode")
+        if any(
+            "computation_output" in item["required_artifact_roles"]
+            for item in normalized_obligations
+        ):
+            raise ValueError(
+                "first-subround computation design cannot require execution output; "
+                "move that obligation to an approved execution round"
+            )
+        stage_count = 0
+        design_roles = {
+            "computation_dependencies",
+            "computation_design",
+            "computation_source",
+        }
+        if not any(
+            design_roles.issubset(set(item["required_artifact_roles"]))
+            for item in normalized_obligations
+        ):
+            generated = {
+                "kind": "generated_preexecution_computation_design_contract",
+                "required_roles": sorted(design_roles),
+            }
+            normalized_obligations.append(
+                {
+                    "obligation_id": "obl-computation-preexecution-design",
+                    "description": (
+                        "Bind the reviewable core source, mathematical computation "
+                        "design, and exact dependency manifest before formal execution."
+                    ),
+                    "required_artifact_roles": sorted(design_roles),
+                    "evidence_types": [
+                        "dependency_manifest",
+                        "executable_source",
+                        "program_math_design",
+                    ],
+                    "not_applicable_allowed": False,
+                    "source_sha256": sha256_json(generated),
+                }
+            )
+    elif work_mode == "compute" and stage_count == 0:
         stage_count = 1
     if stage_count > 0 and not any(
         {"computation_source", "computation_output"}.issubset(

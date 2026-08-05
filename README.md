@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.6.5](https://github.com/cm4u7/chalxius/releases/tag/v0.6.5) ·
+[📦 Download v0.6.7](https://github.com/cm4u7/chalxius/releases/tag/v0.6.7) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -43,6 +43,11 @@ structure, not private claims, formulas, names, or source locators.
 - 🧠 **Run several lines of reasoning without mixing them.** Keep exploratory
   attempts, counterexamples, objections, repairs, and computations on the
   Research/Blackboard planes until their dependencies are visible.
+- 🛡️ **Review Research before expensive packaging.** Each Research cycle first
+  produces proof attempts, counterexamples, literature findings, computation
+  plans, and reviewable core code; a second subround assigns focused supervisors
+  to challenge the reasoning and program–math alignment before execution while
+  the work remains on the Research plane.
 - 🧮 **Make computation replayable.** Bind formulas, code, versions, domains,
   representations, checkpoints, outputs, and approximation budgets to the
   exact claim they support.
@@ -56,10 +61,6 @@ structure, not private claims, formulas, names, or source locators.
 - 🧾 **Learn from architecture failures.** Append-only CHX ledgers record every
   discovery before classification, preserve typed relations and predecessor
   runs, and gate public disclosure against the complete ordered ledger lineage.
-- 🧭 **Consult a global architecture route guide.** PHX distills reusable,
-  high-impact routes from CHX findings and other measured architecture work.
-  Problems and repairs remain in CHX; a PHX route is advisory and any active
-  architecture change still requires an informed user consultation.
 - ⚡ **Query large Paper continuations without rescanning them.** Routine status
   reads one atomic content-addressed HEAD and immutable receipts. Full closure
   validation is explicit; stale directory generations fail closed instead of
@@ -133,14 +134,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.6.5-integrated-research-continuity.tar.gz`
-- `chalxius-0.6.5-integrated-research-continuity.tar.gz.sha256`
+- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz`
+- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.5-integrated-research-continuity.tar.gz.sha256
-tar -xzf chalxius-0.6.5-integrated-research-continuity.tar.gz
+shasum -a 256 -c chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256
+tar -xzf chalxius-0.6.7-plain-language-attack-recommendations.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -155,7 +156,7 @@ the runtime beneath an already-frozen task card.
 
 You normally do **not** need to know any CLI command. Invoke the system by naming
 `$chalxius` (most explicit) or `Chalxius`, then describe the object, action,
-boundary, and desired output in ordinary language.
+boundary, and desired output in ordinary Chinese or English.
 
 ```text
 Use $chalxius + [mode] + [subject] + [action] + [boundaries/output]
@@ -164,9 +165,7 @@ Use $chalxius + [mode] + [subject] + [action] + [boundaries/output]
 For example:
 
 ```text
-Use $chalxius in auto mode to study this paper. Continue from its reviewed
-Paper Graph, bind each Research node to its source target, and leave unresolved
-obligations in Research.
+Use $chalxius in auto mode to study this paper，continue from established Paper Graph，
 ```
 
 ```text
@@ -174,46 +173,44 @@ Use $chalxius in deep mode to compare independent proof routes, replay the
 load-bearing computation, and prepare only verifier-ready claims for release.
 ```
 
-### Reasoning modes
+### Reasoning modes 
 
 | Say this | Effect |
 |---|---|
-| `Use $chalxius` | Starts in `auto`, the default |
-| `fast mode` | Narrow, low-cost exploration; Evidence and Fact gates remain unchanged |
-| `auto mode` | Activates only the expensive capabilities indicated by the task |
-| `deep mode` | Broad source, route, computation, novelty, and specialist planning when applicable |
-| `switch future work to ...` | Changes future work units only; frozen rounds are not restarted |
+| `用 Chalxius` / `Use $chalxius` | Starts in `auto`, the default |
+| `快速模式` / `fast mode` | Narrow, low-cost exploration; evidence and Fact gates remain unchanged |
+| `自动模式` / `auto mode` | Activates only the expensive capabilities indicated by the task |
+| `深度思考` / `deep mode` | Broad source, route, computation, novelty, and specialist planning when applicable |
+| `从现在切换到…` / `switch future work to…` | Changes future work units only; frozen rounds are not restarted |
 
-### What to say for each feature
+### What to say for each feature 
 
 | You want | Natural-language command examples |
 |---|---|
-| Ordinary proof research | `Use $chalxius to build the exact target closure, identify missing premises, and compare proof routes.` |
-| Build and audit a Paper Graph | `Use $chalxius to build a Paper Graph, bind every node to exact text, definitions, quantifiers, and dependencies, then send it to an independent Paper Auditor.` |
-| Strengthen a research draft | `Decompose this research draft into a complete DAG. Continue from its Paper Graph, admit or repair claims node by node, and do not compress it into a few convenience Facts.` |
-| Resolve an exact mathematical target | `Keep the conjecture, hypotheses, domains, and quantifiers exact. Prove or disprove it; if neither succeeds, return a checkable obstruction and separately record any weaker progress.` |
-| Continue from a reviewed paper | `Continue from this reviewed Paper Graph and keep each Research node bound to its Paper target.` |
-| Archive paper Evidence | `Archive the reviewed Paper Graph together with the exact paper version and PDF in the cross-project Evidence library.` A reviewed immutable freeze syncs automatically when a library is configured. |
-| Import a non-paper Fact Graph as Evidence | `Explicitly import /path/to/fact_graph as non-paper Evidence without inheriting its Fact authority.` |
-| Bridge Evidence into the current project | `Create verified bridges for these Evidence nodes, enumerate stale and correction risks, then use a fresh verifier and the Fact Gateway.` |
-| Correct a Paper/Evidence graph | `Append a correction for this Paper Graph node, mark the old object stale, and report affected bridges and local Facts without rewriting history.` |
-| Program–mathematics attack | `Attack the formula-to-code projection for truncation order, representation, domain, error budget, and independent replay.` |
-| Goal-driven advisory scope | `Use Chalxius in auto or deep mode to research this objective.` The explicit objective can establish the exact internal scope and project BF-1 without Campaign jargon. |
-| Lightweight Campaign | `Create a lightweight Campaign for these related targets; retain the four-factor frontier and do not treat the Campaign as a proof.` |
-| Cautious Brave Future reassessment | `Run one BF-2 dry reassessment for this explicit Campaign. If I later approve, write only a BF-3 advisory receipt; do not plan or dispatch work.` |
-| Adverse review | `Run a hostile/refute review of this conclusion and return the productive Attack report and reusable rule proposals without activating them.` |
-| Philosophy-only attacks | `This is a philosophical argument. Apply plain-language substitution, burden of proof, strongest charitable objection, independent failure surfaces, and quantifier/modal/scope/exception equivalence attacks.` |
-| Approve or reject a route proposal | `Approve rule R from the Attack report with this narrower scope ...` / `Reject rule R.` / `Disable rule R.` |
-| Prepare a certified Fact | `Package these Research claims as a Candidate Release and send them to a fresh verifier; only the exact accepted decision may reach the Fact Gateway.` |
-| Export the interactive Reader | `Export the current graph as a single-file Reader HTML and complete every node's summary, intuition, importance, reasoning, and provenance.` |
-| Generate project background | `Generate or refresh PROJECT_BACKGROUND.md for this project and build its searchable index.` |
-| Teach or test you | `Use Chalxius Learner to teach or test me from this frozen graph, one question at a time, without changing the research graph.` |
-| Diagnose Chalxius architecture | `Read this CHX ledger and repair mechanisms caused or materially amplified by Chalxius; do not convert them into attack-routing rules.` |
-| Reduce cost or assess a major architecture route | `Consult the global PHX guide for routes relevant to this cost or architecture goal. Report the measured options and ask before changing the active architecture.` |
+| Ordinary proof research | `用 Chalxius 研究这个命题，先列出目标闭包和缺失前提，再比较证明路线。`<br>`Use $chalxius to build the target closure and compare proof routes.` |
+| Build and audit a Paper Graph | `用 Chalxius 对这篇论文建立 Paper Graph，逐节点绑定原文、定义、量词和依赖，再交给独立 paper auditor。` |
+| Strengthen a research draft | `把这个研究中草稿拆成完整 DAG；以 Paper Graph 为研究基底，逐节点做 Fact 准入、补强和反驳检查，不要压缩成少量 convenience Facts。` |
+| Resolve an exact mathematical target | `保持这个猜想的假设、定义域和量词不变；证明或证伪它。若都做不到，返回可核验的 obstruction，不要改成更弱命题。` |
+| Continue from a reviewed paper | `从这个已审查 Paper Graph 继续研究，不要退回只读论文；保持每个 Research 节点与 Paper target 的绑定。` |
+| Archive paper Evidence | `把审查完成的 Paper Graph 连同论文版本和 PDF 保存到跨项目 Evidence 仓库。`<br>When a library is configured, a reviewed immutable freeze syncs automatically. |
+| Import a non-paper Fact Graph as Evidence | `把 /path/to/fact_graph 作为非论文 Fact Graph 显式导入 Evidence；不要继承它的 Fact 权威。` |
+| Bridge Evidence into the current project | `选择这些 Evidence 节点建立 verified bridge，列出所有 stale/correction 风险，再走新的 verifier 和 Fact Gateway。` |
+| Correct a Paper/Evidence graph | `这个 Paper Graph 节点有误：追加修正、标记旧图 stale，并报告所有 bridge 和本地 Fact 的影响；不要静默重写。` |
+| Program–mathematics attack | `对这段公式到代码的投影做数学-程序一致性攻击，检查截断阶数、表示、定义域、误差预算和独立重放。` |
+| Goal-driven advisory scope | `用 Chalxius 自动模式或 deep 模式研究这个目标……`<br>The explicit objective is enough: `auto` or `deep` can establish the exact internal scope and project BF-1 without asking you to say “Campaign”. |
+| Cautious Brave Future reassessment | `对这个显式激活的 Campaign 做一次 BF-2 dry-run reassessment；若我随后明确批准，只写一份 BF-3 advisory receipt，不要计划轮次或派发 worker。` |
+| Adverse review | `对这个结论做 hostile/refute 审查；任务结束时给我成功或有价值的 Attack report 和规则进化建议，但不要自动采用。` |
+| Philosophy-only attacks | `这是哲学论证。启用普通语言替换、举证责任、最强善意反驳、独立失败面，以及量词/模态/范围/例外等价性攻击。` |
+| Approve or reject a route proposal | `采用 Attack report 中规则 R…，但把适用范围改成……` / `拒绝这个规则` / `停用规则 R…` |
+| Prepare a certified Fact | `把这些 Research 封装为 Candidate Release，交给新的 verifier；只有完全一致的接受决定才能进入 Fact Gateway。` |
+| Export the interactive Reader | `把当前图导出为单文件 Reader HTML；每个节点补齐摘要、直觉、重要性、推理路线和来源。` |
+| Generate project background | `为这个项目生成（或刷新）PROJECT_BACKGROUND.md，并把它压成可检索索引。` |
+| Teach or test you | `用 Chalxius Learner 根据这个冻结图教我/考我，一次一个问题，不要修改研究图。` |
+| Diagnose Chalxius architecture | `读取这个 chx-ledger，修复其中由 Chalxius 架构造成或显著放大的问题，不要把它们加入攻击路由。` |
 
-Paths, exact targets, source versions, required outputs, and “do not ...”
-boundaries can be written in the same ordinary sentence; there is no separate
-prompt DSL.
+Chinese and English may be mixed freely. Paths, exact targets, source versions,
+required outputs, and “do not …” boundaries can be written in the same ordinary
+sentence; there is no separate prompt DSL.
 
 ### Default versus explicit behavior
 
@@ -411,42 +408,30 @@ or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
 
-## v0.6.5: Integrated Research Continuity
+## v0.6.7: Plain-Language Attack Recommendations
 
-This release keeps the ordinary-language `auto`/`deep` goal intake and cautious
-BF-1–BF-3 boundary from 0.6.4 while making research continuity explicit across
-Paper, Research, Evidence, release, and runtime transitions. Philosophy alone
-may preserve an argumentative stance. Mathematics preserves its exact target
-and can separately retain a typed weaker theorem, special case, counterexample,
-or obstruction without misreporting it as resolution.
+The default adverse report remains intentionally short and approval-only, but
+each proposed attack family now includes one reviewed plain-language sentence
+that says what it would check. For example, `scope_transport` checks whether a
+local, special-case, or pointwise result has been expanded to a global, general,
+or uniform claim without a valid bridge; `missing_premise` checks whether the
+conclusion relies on an unstated premise or applicability condition. Technical
+worker material remains available only through `--full`, and an unknown future
+family is omitted from the concise report until its public explanation is
+reviewed.
 
-Large projects now use resumable, content-addressed Paper-continuation state and
-one release capsule reused by Candidate, neutral verifier, Certification, and
-Gateway. Evidence association planning is durable even when exact PDF/Paper/
-Fact checks fail before an ordinary request exists, so status and retry can find
-the failure without guessing from a title or DOI.
+This release also carries forward the conservative two-subround Research cycle:
+subround 1 produces computation plans and reviewable core code alongside proof,
+counterexample, insight, and literature work; subround 2 assigns focused
+supervisors to attack proof reasoning and program–math alignment before code
+execution while the work remains on the Research plane. Candidate formation
+semantics are unchanged; later whole-Candidate adverse acceptance and the
+independent Verifier remain distinct mechanisms.
 
-Release engineering has the same continuity rule. Public commands, standalone
-entrypoints, and persistent-state writers must have exact executable coverage or
-an explicit bounded/replace/retire disposition. Protected cutover consumes one
-strict, single-read, snapshot-revisioned receipt; byte-identical runtime content
-can inherit the audit after moving from a candidate directory to the installed
-alias, while any content, manifest, project, provenance, or mode drift fails
-closed. Administrative 2–4 minute goals are telemetry, never correctness
-cutoffs.
-
-PHX is now a host-global, project-independent route reference. It records
-reusable architecture proposals and measured tradeoffs, including performance
-routes synthesized from CHX, but records no implementation authority. Search,
-evaluation, and reporting are read-only; adopting a route into the active
-architecture requires a separate, informed user consultation.
-
-The field mechanisms CHX-001 through CHX-109 are explicitly disclosed and
-resolved in this prospective package. Their public identities are bound to the
-ordered ledger lineage documented in
-[`KNOWN_LIMITATIONS.md`](chalxius/KNOWN_LIMITATIONS.md); private ledgers are not
-shipped. The upgrade performs no Fact migration, backfill, reclassification,
-forced redo, or authority inheritance. See [`RELEASE.md`](RELEASE.md) and
+The final manifest-bound matrix passed all 801 tests, all 142 registered
+mutants, 59 behavioral probes, architecture reconnaissance, self-test, exact
+lane isolation, and nonmutation. See [`RELEASE.md`](RELEASE.md),
+[`VALIDATION.md`](VALIDATION.md), and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).
 
 ## Scope and acknowledgements
