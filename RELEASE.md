@@ -1,102 +1,120 @@
-# Chalxius v0.6.7 — Plain-Language Attack Recommendations
+# Chalxius v0.7.0 — Failure-Informed Efficiency
 
-Chalxius 0.6.7 makes the short adverse recommendation report useful without
-turning it into a technical attack transcript. Each suggested attack family now
-includes one reviewed ordinary-language sentence explaining what it would
-check. The proposal remains inert until the user approves it.
+Chalxius 0.7.0 reduces routine Research coordination and validation cost while
+preserving the V5 truth path and its independent release gates. The release
+targets failures reproduced in real runs instead of adding broad speculative
+checks to every operation.
 
-## User-visible change
+## Research workflow
 
-The default report now presents recommendations in this form:
+Prospective Research uses two logical subrounds:
 
-- `scope_transport` — check whether a local, special-case, or pointwise result
-  has been expanded to a global, general, or uniform claim without a valid
-  bridge.
-- `missing_premise` — check whether the conclusion relies on an unstated
-  premise or applicability condition.
+1. Production creates proof attempts, literature and source analysis,
+   interpretation, insight, and computation designs. It rejects dedicated
+   `refute` assignments. A computation design freezes reviewable core code,
+   mathematical design, and dependencies before execution.
+2. Supervision assigns at most three scoped `refute` workers over exact frozen
+   production returns. Scope selection comes from a small static registry of
+   reproduced failures: program–math projection, proof boundary and scope,
+   source locator and applicability, and cross-output integration.
 
-These are explanations, not automatically enabled routes. Worker-authored
-technical instructions remain available only through `--full`. A future attack
-family that lacks a reviewed public explanation is omitted from the concise
-report instead of leaking raw worker text or displaying an unexplained slug.
+The subrounds are logical, not global time barriers. A completed logical
+component may enter supervision while unrelated production workers continue;
+dependency-related work remains in one component. Findings create a later
+copy-on-write Research repair round. Admitted Fact dependencies are frozen
+premises rather than default counterexample targets.
 
-## Research order carried by this release
+Formal computation starts only after a safe program–math disposition. The
+execution round revalidates the exact live supervisor result and latest
+disposition under its write lock, reuses the reviewed source and dependency
+hashes, and returns actual logs and output for another supervision round.
 
-The prospective Research cycle remains conservative and separates three levels
-of challenge:
+## Failure-informed efficiency
 
-1. Production subround 1 assigns proof, proposition-level refutation and
-   counterexample search, literature, insight, interpretation, and computation
-   design. A computation return contains frozen core code, mathematical design,
-   and dependencies, but no execution output.
-2. Supervision subround 2 consumes only the complete frozen first-subround
-   returns. Up to three scoped supervisors attack proof logic, program–math and
-   code alignment, source/scope, or integration. A defect creates a later
-   copy-on-write Research repair round; it never edits a peer return in place.
-3. Computation execution is permitted only after the matching program–math
-   supervisor gives a safe explicit disposition. The executed source and
-   dependency hashes must match the reviewed design, and the resulting code,
-   log, manifest, and output receive another supervision round.
+- Plain interpretive insight receives no blanket proof review. Frozen
+  proof-boundary signals selectively activate proof-logic supervision when an
+  interpretive artifact is load-bearing.
+- Integration review is used only when one logical component crosses at least
+  two primary supervision scopes.
+- New production cards receive one Blackboard root node and no write space by
+  default. Explicit promoted queries and write capabilities remain available.
+- New V5 Pulse planning is retired. Historical V5 and V4 Pulse records remain
+  readable and completable under their original contracts.
+- Candidate supervision and fresh-adverse readiness fail before expensive
+  artifact normalization, source audit, fingerprinting, and sealing. The
+  Candidate seal lock rechecks the live supervisor-result set once immediately
+  before writing.
 
-This 0.6.7 change does not alter Candidate formation semantics. Whole-Candidate
-fresh adverse review, the independent Verifier, Certification Decision,
-Gateway, and Fact admission remain distinct later mechanisms. Optional Pulse is
-not invoked by the required production/supervision cycle.
+## Field-integrated repairs
 
-## Compatibility and authority
+The final candidate also repairs four defects found while using A-model
+Research as a nontruth stability workload:
 
-This release includes the accumulated 0.6.5 and 0.6.6 Research-continuity,
-behavioral-reachability, validation-cost, and pre-execution program–math repairs
-that were not previously published in this repository. Historical Paper,
-Research, Candidate, Decision, Fact, Evidence, task-card, and ledger bytes are
-not rewritten or granted new authority.
+- Paper-continuation applicability traverses only selected Research ancestry
+  instead of scanning all project Research during a Fact read.
+- The exact active admitted Fact closure is projected to a worker only for the
+  dual typed `fact_closure_reconstruction` request; inactive roots or
+  predecessors fail before dispatch.
+- Frozen proof-boundary signals reach the selective supervisor planner without
+  changing immutable receipt hashes.
+- Public CHX disclosure can recognize one strictly later, resolved,
+  explicitly `supersedes` successor without rewriting an immutable predecessor.
+
+Five focused release-only mutation probes protect these reproduced failures.
+They add no new normal-runtime gate.
+
+## Authority boundary
 
 The sole truth path remains:
 
 `Research → Candidate Release → Certification Decision → Fact`
 
-Adverse reports, supervisor results, software tests, release receipts, and
-package hashes all have `truth_effect=none`.
+Research, supervisor reports, attack-route suggestions, CHX and PHX records,
+software tests, release receipts, and package hashes all have
+`truth_effect=none`. Whole-Candidate adverse review, the fresh Verifier,
+Certification, Gateway, and Fact admission remain distinct later stages.
 
 ## Validation
 
-The exact 241-entry manifest passed one final manifest-bound six-lane matrix:
+The exact 242-entry manifest passed one final manifest-bound six-lane matrix:
 
-- strict architecture reconnaissance;
-- mutation-registry preflight with 142 exact targets;
-- 59 behavioral probes across 25 registered features;
-- all 801 unit and integration tests;
+- strict architecture reconnaissance with no errors, warnings, or orphan
+  modules;
+- mutation-registry preflight with 147 exact single targets;
+- the behavioral feature gate over 29 registered features;
+- all 838 unit and integration tests;
 - bundled self-test; and
-- 142/142 mutation kills with source and every isolated lane unchanged.
+- 147/147 mutation kills with the source and every isolated lane unchanged.
 
-The release archive is deterministic, symlink-free, bytecode-free, and contains
-242 members including `MANIFEST.sha256`. A fresh extraction passed all 241
-manifest hashes and the bundled self-test. Exact receipts and hashes are in
-[VALIDATION.md](VALIDATION.md) and [RELEASE.lock.json](RELEASE.lock.json).
+The deterministic archive contains 243 members including
+`MANIFEST.sha256`. A fresh extraction passed all 242 manifest hashes, bundled
+self-test, and cache/bytecode absence checks. The validated candidate was also
+installed through the protected atomic cutover path after one project deep
+audit; the same exact project snapshot was reused after the swap and the prior
+runtime remains available for rollback.
 
-The validated candidate was not installed over the maintainer's global runtime;
-that replacement is a separate explicit cutover decision and is not claimed as
-release evidence.
+Exact receipts and hashes are recorded in [VALIDATION.md](VALIDATION.md) and
+[RELEASE.lock.json](RELEASE.lock.json).
 
 ## Install
 
 Download adjacent assets:
 
-- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz`
-- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256`
+- `chalxius-0.7.0-failure-informed-efficiency.tar.gz`
+- `chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256
-tar -xzf chalxius-0.6.7-plain-language-attack-recommendations.tar.gz
+shasum -a 256 -c chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256
+tar -xzf chalxius-0.7.0-failure-informed-efficiency.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/self_test.py
 ```
 
-Replacing an installed global runtime remains a separate cutover operation. Do
-not replace the runtime beneath an already-frozen task card.
+Replacing an active global runtime is a separate protected cutover operation;
+do not copy files over a runtime that already owns frozen task cards.
 
 ## Scope
 

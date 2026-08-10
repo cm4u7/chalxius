@@ -26,6 +26,13 @@
   records. Without a persistent-learning request, keep learning state in the
   current session. Grill Me Code must not mount or write Fact, Paper, Audit,
   Blackboard, or Learning Graph state and cannot certify research.
+- In an already active Learner session, route one bounded read-only oral
+  follow-up through the Learner fast path: read only the directly relevant
+  learning rule and mathematical source slice, and skip project audit, mode,
+  attack-report, PHX-search, new-CHX-ledger, and full-reference administration.
+  A local `N` prefix has this meaning only when the current teaching context
+  already defines it. Any mutation, persistent record, fresh verification,
+  Research, Fact, or architecture action restores the applicable full workflow.
 - In a mixed research-programming task, the user-selected research graph system
   owns research explanation, graph construction, audit, and Fact admission.
   Grill Me Code may assist requirements, interfaces, implementation, debugging,

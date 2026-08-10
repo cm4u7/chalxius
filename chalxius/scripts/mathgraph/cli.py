@@ -970,6 +970,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("plan-supervision-round")
     p.add_argument("source_round_id")
     p.add_argument(
+        "--component-id",
+        dest="source_component_id",
+        help=(
+            "frozen logical component from a component-aware production round; "
+            "required when that round has more than one component"
+        ),
+    )
+    p.add_argument(
         "--scope",
         action="append",
         dest="supervisor_scopes",
@@ -2113,6 +2121,7 @@ def main(argv: list[str] | None = None) -> int:
             _print_json(
                 store.v5_lifecycle().create_supervision_round(
                     args.source_round_id,
+                    source_component_id=args.source_component_id,
                     supervisor_scopes=args.supervisor_scopes,
                     host_task_scope_id=normalized_host_scope,
                 )
@@ -3048,6 +3057,13 @@ def main(argv: list[str] | None = None) -> int:
                 store.evidence().impact_report(evidence_id=args.evidence_id)
             )
         elif args.command == "pulse-plan":
+            if store.workflow_evidence_version() >= 5:
+                raise ValueError(
+                    "new Pulse planning is retired for V5 in Chalxius 0.7.0; "
+                    "use the production/supervision Research cycle. Historical "
+                    "Pulse status, audit, dispatch, closure, void, and abort remain "
+                    "available for already-created records"
+                )
             payload = _json_file(args.input)
             require_exact_keys(
                 payload,

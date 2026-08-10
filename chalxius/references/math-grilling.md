@@ -10,6 +10,13 @@ on the Chalxius research surface with Learner off.
 Once activated, use this mode for papers, books, lecture notes, proofs, theories,
 and mathematical research projects that the user wants to learn or be tested on.
 
+For a bounded read-only oral follow-up in an already active session, apply the
+fast path in [unified_learning_plane.md](unified_learning_plane.md). Read the
+smallest relevant source slice and answer directly. Do not turn an oral follow-up
+into a project audit or Research round. A locally defined `N` prefix may mean
+"answer orally without changing the notes"; without that explicit local
+definition it has no special global semantics.
+
 For paper reading, read and apply
 [paper-reading-modes.md](paper-reading-modes.md). Its teaching/testing boundary
 takes precedence over the testing-oriented question and hint rules below.

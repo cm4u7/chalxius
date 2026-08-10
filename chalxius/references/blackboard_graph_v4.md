@@ -77,6 +77,20 @@ order. `supersedes` and `closes` deactivate their targets from the current node/
 events remain visible through history. Edges incident to an inactive current endpoint are excluded.
 Every assignment in one round binds the same snapshot id and byte hash.
 
+For prospective V5 Research planned by Chalxius 0.7.0, the implicit query is
+only the project root-space identity: `max_hops=0`, one node, zero edges. The
+implicit write-space list is empty. A larger read requires an exact promoted
+query; mutation requires an explicitly requested space capability. Historical
+cards retain their frozen wider snapshots and write capabilities. This default
+does not delete Blackboard state, Paper mirrors, promotions, snapshots, or
+Learner mounts.
+
+New public V5 Pulse planning is retired because the production/supervision
+cycle owns prospective Research collaboration. V4 Pulse and operations needed
+to inspect or finish an already-created record remain compatible. They preserve
+their original immutable commitments and receipts and do not become Fact
+authority.
+
 ## Merge and conflicts
 
 Validate the complete delta before changing visibility. Merge is hash-bound and idempotent. The

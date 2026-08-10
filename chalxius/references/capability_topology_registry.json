@@ -183,7 +183,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, worker returns, ingestion and bounded repair execution.",
+      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution, and static failure-family selective second-subround assurance.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -407,7 +407,7 @@
       ]
     },
     "cap.blackboard": {
-      "summary": "Typed cumulative Blackboard objects, transactions, snapshots, projections and explicit indices.",
+      "summary": "Typed cumulative Blackboard objects, transactions, snapshots, projections and explicit indices; prospective V5 Research defaults to one root node and zero writes until an exact promoted query or write capability is requested.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -435,8 +435,8 @@
       ]
     },
     "cap.pulse": {
-      "summary": "Optional V4 and V5 multi-worker Pulse coordination with immutable commitments and receipts.",
-      "status": "active",
+      "summary": "V4 and already-created V5 multi-worker Pulse compatibility with immutable commitments and receipts; new public V5 planning is retired before state creation.",
+      "status": "compatibility",
       "stateful": true,
       "state_roots": [
         {
@@ -458,7 +458,8 @@
       ],
       "tests": [
         "tests/test_v4_collaboration_pulse.py",
-        "tests/test_v5_collaboration.py"
+        "tests/test_v5_collaboration.py",
+        "tests/test_v4_pulse_cli.py"
       ],
       "activation_paths": [
         {

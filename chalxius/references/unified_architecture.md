@@ -74,38 +74,110 @@ process readiness, but they cannot supply admission authority.
 ### Prospective Research cycle: production, then supervision
 
 New public `plan-round` work is one prospective production subround. Its
-workers independently attempt proof, proposition refutation/counterexample,
-computation design, literature and source work, interpretation, or insight
-search from frozen prior Research. A production `refute` attacks the assigned
-proposition (T) under the exact hypotheses (H): it seeks (H\land\neg T),
-boundary failure, obstruction, hidden assumptions, or scope defects. It cannot
-inspect mutable same-subround peers, and its own return is not supervisory.
+workers independently attempt proof, computation design, literature and source
+work, interpretation, or insight search from frozen prior Research. Production
+rejects explicit or automatically selected `refute` work and never appends a
+paired adverse worker. A constructive worker may record a boundary,
+obstruction, or counterexample encountered within its assigned task, but the
+formal attack pass is the second subround.
 
-Only after every production return is ingested may Main run
-`plan-supervision-round SOURCE_ROUND`. The planner hash-binds the complete
-receipt set and selects at most three applicable supervisors from
-`proof_logic`, `program_math`, `source_scope`, and `integration`. Each
-supervisor uses `refute` mode to attack its exact receipt subset. Findings do
-not mutate peers through Pulse; they trigger a later copy-on-write production
-repair. Pulse remains optional compatibility collaboration and is not called
-by this cycle.
+Before dispatch, the production manifest partitions selected assignments into
+content-addressed logical components. Two selected assignments share a
+component when one selected Research entry lies in the other's transitive
+Research ancestry; sharing an admitted Fact or an older common premise does not
+by itself serialize them. A logical dependency that matters here must therefore
+be represented in `related_research_ids`. The stored partition and hashes are
+witnesses rather than authority: validation reloads the exact selected Research
+records and rederives the connected components, so a forged but internally
+self-consistent repartition fails closed.
+
+As soon as every assignment in one component is ingested, Main may run
+`plan-supervision-round SOURCE_ROUND --component-id COMPONENT` while workers in
+unrelated components continue. The flag is optional only when the production
+round has one component. Component membership is frozen before dispatch and is
+never inferred from which returns happen to be present. The planner hash-binds
+the source manifest, component identity, and complete component receipt set,
+then selects at most three applicable supervisors from the static reproduced-
+failure registry. `program_math` applies to computation design or output,
+`proof_logic` to proof-bearing work, and `source_scope` to literature or exact
+source use. `integration` applies only when the component crosses at least two
+of those primary scopes; multiple outputs owned by one primary scope do not pay
+a duplicate integration review. A plain interpretive insight does not trigger
+proof review without a proof/counterexample/challenge outcome or proof artifact.
+The registry records failure families, not agent reputation or mathematical
+authority. Exact retries are idempotent and overlapping
+scope coverage of the same component fails closed. The authoritative retry and
+overlap decision is made while the project mutation lock is held. Exact reuse
+also requires the same normalized host scope; another live overlapping host is
+a conflict, while an aborted supervision round reserves no coverage. Production
+cycle and allocation revisions are validated as one compatible pair, so a new
+legacy/current hybrid round cannot be created or accepted.
+
+Every newly generated 0.7.0 supervisor freezes the registry revision, hash, and
+family id. A pre-0.7.0 revision-2 supervision record that lacks this additional
+nontruth provenance remains readable without backfill; it still undergoes its
+original exact binding and authority checks.
+
+Each supervisor uses `refute` mode to attack its exact receipt subset and gets
+one concise focus derived from the registry: program-math projection, proof
+boundary/scope, source locator/applicability, or cross-output contracts. Findings
+do not mutate peers through Pulse; they trigger a later copy-on-write production
+repair. Admitted Fact dependencies are frozen premises rather than default
+attack targets; exact contradiction evidence is escalated for separate
+authority-governed reopening. One ephemeral command-local inspection context
+breaks only reentrant validation of the identical supervision binding after
+local schema and hash checks; the outer frame still validates the complete
+source authority. Content-addressed supervisor Research makes an identical
+retry safe after a pre-round partial write. Historical component-free rounds
+retain conservative whole-round completion semantics.
+
+Prospective 0.7.0 cards keep Blackboard as an exact context-capability boundary,
+but the default query contains only one project root-space node (`max_hops=0`,
+one node, zero edges) and grants no write space. A promoted Blackboard query or
+an explicit write-space request is required for larger context or mutation.
+Historical wide snapshots remain byte-exact readable. This removes implicit
+graph traversal and the unused default repair bus without deleting Paper
+projection, promotion, snapshot identity, or Learner mounts.
+
+New V5 Pulse planning is retired. It has no consumer in the required two-subround
+cycle. Existing Pulse records keep their status, audit, dispatch, close, void,
+and abort operations so an upgrade cannot strand prior work; V4 retains its
+original compatibility contract.
+
+Candidate construction has a cheap prospective supervision gate before
+fingerprinting, source audit, or sealing. If an explicitly selected constructive
+Research result came from this production contract, each deterministic
+applicable supervisor scope for its exact component must have exactly one live,
+completed, ingested result. Pending or missing review blocks Candidate work.
+Supervisor task records and their adverse return records remain review-only and
+cannot serve as constructive anchors; the required result ids are instead
+automatically included in the release closure for later disposition and verifier
+adjudication. After the expensive validation but immediately before artifact
+sealing, Candidate creation recomputes that exact live-result set under the
+Candidate mutation lock and compares it with the preflight set. An intervening
+abort or any result-set drift fails without writing a release. Manual and
+historical single-wave Research retain their existing compatibility path.
 
 For a first-subround `compute` assignment, the return has exactly the frozen
 core code (`computation_source`), its mathematical design, and its dependency
 manifest; it has no computation output or execution manifest. Formal execution
 is a distinct production assignment created by
 `plan-computation-execution SOURCE_ROUND ASSIGNMENT` only after the matching
-program-math supervisor result has a safe explicit disposition. The execution
-return must reproduce the supervised source and dependency hashes. Its actual
-source, log/manifest, and output then receive a new program-math supervision
-subround. Changed code is a new design and must repeat production and
-supervision.
+program-math supervisor result has a safe explicit disposition and its round is
+still live. An aborted review neither authorizes execution nor masks a live
+successor. The selected execution Research, complete supervision binding, and
+latest disposition are revalidated under the execution-round mutation lock
+immediately before round bytes are written. The execution return must reproduce the supervised source and
+dependency hashes. Its actual source, log/manifest, and output then receive a
+new program-math supervision subround. Changed code is a new design and must
+repeat production and supervision.
 
 Within the Research state, a prospectively marked load-bearing branch has one
 mandatory ordering seam:
 
 ```text
-constructive Research -> exact-Candidate adverse refute -> disposition
+constructive Research -> completed scoped supervision -> repair if needed
+  -> exact-Candidate adverse refute -> disposition
   -> low-cost readiness gate -> high-cost Candidate validation/seal
 ```
 
@@ -145,13 +217,13 @@ the same Blackboard snapshot. A bad return is quarantined locally; other valid
 returns remain independently ingestible and cumulative.
 
 One prospective normal-flow allocation seam is exact and domain-general.
-Research may declare `independent_adverse_required=true`; every selected Paper
-target does so automatically, while a mathematical proof interface may opt in
-without a stance rule. `workers` counts primaries, and an applicable non-refute,
-non-challenge primary receives an extra paired `refute` card with a different
-worker id, different context id, and an explicit no-context-sharing contract.
-The pair is Research-only orchestration. It does not duplicate Candidate
-adverse closure, route governance, Certification, or Gateway authority.
+`workers` counts constructive production primaries, and the production
+allocation revision permits neither `refute` nor paired adverse assignments.
+Research may still declare `independent_adverse_required=true`, but that marker
+belongs to the later exact-Candidate adverse gate, not production dispatch.
+Historical direct-allocation cards and paired worker/context bindings remain
+readable. They do not duplicate Candidate adverse closure, route governance,
+Certification, or Gateway authority.
 
 The same prospective round freezes one normalized non-null host-task scope in
 its manifest, assignments, and cards. Explicit input and the two documented

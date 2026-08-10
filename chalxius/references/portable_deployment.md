@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.6.7 `Plain-Language Attack Recommendations` release artifact contains one self-contained `chalxius`
+The 0.7.0 `Failure-Informed Efficiency` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -9,11 +9,24 @@ Chalxius research engine is the only embedded research kernel; retired
 predecessor, coordinator, and standalone companion skills are not runtime
 dependencies.
 
-The release adds only prospective Research commands:
-`plan-supervision-round SOURCE_ROUND_ID` and
+The release retains the prospective Research commands:
+`plan-supervision-round SOURCE_ROUND_ID [--component-id COMPONENT_ID]` and
 `plan-computation-execution SOURCE_ROUND_ID ASSIGNMENT_ID`. Existing frozen
 rounds remain single-wave and retain their exact automatic computation-review
-behavior. No project migration or Candidate/Fact schema rewrite is required.
+behavior. New public production is constructive-only and leaves formal
+Research attack to the second logical subround. New production manifests freeze
+Research-ancestry components before dispatch: a completed component can enter
+supervision while unrelated workers continue, whereas related integration waits
+for its full component. Multi-component calls require the exact component id;
+timing-derived subsets and overlapping scope coverage fail closed. Cycle-safe
+command-local validation and content-addressed retry repair partial supervision
+writes without introducing a persistent authority cache. Historical
+component-free production retains conservative whole-round waiting. Candidate
+work checks completed live supervision before expensive validation and again
+under the seal lock. Formal computation ignores aborted program-math reviews
+and revalidates its exact approval plus latest disposition under the
+execution-round lock. No project migration or Candidate/Fact schema rewrite is
+required.
 
 ## Verify a received release
 
@@ -204,6 +217,12 @@ the skill. This operational file has no project-audit or truth effect. Close it
 after applicable audits and immediately before final reporting. Report it only when close returns
 `report_required=true`; when false, emit no ledger message at all. See
 `chx_runtime_ledger.md` for the exact commands and causal schema.
+
+For publication, an immutable predecessor need not be rewritten merely because
+its repair was completed by a successor. The public-disclosure gate accepts an
+unresolved predecessor only through exactly one strictly later, explicitly
+`supersedes`, publication-resolved issue; every other unresolved or ambiguous
+lineage still fails closed.
 
 ## Consult the global PHX route guide
 

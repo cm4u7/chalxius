@@ -253,8 +253,24 @@ V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE = {
     "tractability": 0.8,
     "burden": 0.35,
 }
-V5_RESEARCH_CYCLE_REVISION = "chalxius-v5-two-subround-research-1"
-V5_RESEARCH_SUPERVISION_REVISION = "chalxius-v5-research-supervision-1"
+V5_LEGACY_RESEARCH_CYCLE_REVISION = "chalxius-v5-two-subround-research-1"
+V5_RESEARCH_CYCLE_REVISION = "chalxius-v5-two-subround-research-2"
+V5_LEGACY_RESEARCH_SUPERVISION_REVISION = (
+    "chalxius-v5-research-supervision-1"
+)
+V5_RESEARCH_SUPERVISION_REVISION = "chalxius-v5-research-supervision-2"
+V5_LOGICAL_SUPERVISION_COMPONENT_REVISION = (
+    "chalxius-v5-logical-supervision-component-1"
+)
+V5_LEGACY_ADVERSE_ALLOCATION_REVISION = (
+    "chalxius-v5-independent-adverse-allocation-1"
+)
+V5_LEGACY_PRODUCTION_ALLOCATION_REVISION = (
+    "chalxius-v5-supervision-only-refute-allocation-1"
+)
+V5_PRODUCTION_ALLOCATION_REVISION = (
+    "chalxius-v5-logical-component-production-allocation-2"
+)
 V5_APPROVED_COMPUTATION_EXECUTION_REVISION = (
     "chalxius-v5-approved-computation-execution-1"
 )
@@ -265,6 +281,58 @@ V5_RESEARCH_SUPERVISOR_SCOPES = (
     "integration",
 )
 V5_RESEARCH_SUPERVISOR_LIMIT = 3
+V5_RESEARCH_ASSURANCE_SELECTION_REVISION = (
+    "chalxius-v5-failure-informed-selective-assurance-1"
+)
+V5_LEGACY_RESEARCH_ASSURANCE_SELECTION_POLICY = (
+    "static_role_artifact_outcome_with_cross_scope_integration"
+)
+V5_RESEARCH_ASSURANCE_SELECTION_POLICY = (
+    "static_role_artifact_outcome_or_frozen_logic_signal_with_"
+    "cross_scope_integration"
+)
+V5_PROOF_LOGIC_SELECTION_SIGNALS = frozenset(
+    {
+        "authority_boundary",
+        "proof_architecture",
+        "proof_logic",
+        "scope_transport",
+    }
+)
+# Append-only release registry.  Entries describe reproduced, high-loss failure
+# families; they are neither agent scores nor mathematical authority.
+V5_RESEARCH_FAILURE_FAMILIES = (
+    (
+        "program_math_projection",
+        "program_math",
+        "formula-to-code anchors, signs, truncation bounds, dependencies, and "
+        "code/output consistency",
+    ),
+    (
+        "proof_boundary_scope",
+        "proof_logic",
+        "premise-to-conclusion dependence, hidden assumptions, quantifiers, "
+        "boundary typing, and claim-scope inflation",
+    ),
+    (
+        "source_locator_applicability",
+        "source_scope",
+        "exact locators, theorem hypotheses, local/global scope, and convention "
+        "or transport applicability",
+    ),
+    (
+        "cross_output_contract",
+        "integration",
+        "conventions, coordinates, premises, and interfaces shared across two "
+        "or more distinct primary assurance scopes",
+    ),
+)
+V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256 = sha256_json(
+    [
+        {"family_id": family_id, "supervisor_scope": scope, "focus": focus}
+        for family_id, scope, focus in V5_RESEARCH_FAILURE_FAMILIES
+    ]
+)
 V5_SAFE_SUPERVISION_DISPOSITIONS = frozenset(
     {"resolved_by_evidence", "resolved_no_obstruction"}
 )
@@ -405,6 +473,9 @@ class RoundInspectionContext:
     ] = field(default_factory=dict)
     research_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     all_research_records: list[dict[str, Any]] | None = None
+    research_supervision_validation_stack: set[
+        tuple[str, str, str, str, str, str]
+    ] = field(default_factory=set)
     paper_continuation_scopes: dict[str, dict[str, Any] | None] = field(
         default_factory=dict
     )
@@ -669,12 +740,21 @@ class V5LifecycleManager:
     def _research_path(self, research_id: str) -> Path:
         return self.research_entries_dir / f"{validate_memory_id(research_id)}.json"
 
-    def _research_record(self, research_id: str) -> dict[str, Any]:
+    def _research_record(
+        self,
+        research_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
         path = self._research_path(research_id)
         if path.is_symlink() or not path.is_file():
             raise KeyError(f"unknown V5 research entry: {research_id}")
         record = self.store._read_json(path)
-        self._validate_research_record(record, path=path)
+        self._validate_research_record(
+            record,
+            path=path,
+            _inspection_context=_inspection_context,
+        )
         return record
 
     def _validate_research_record(
@@ -682,6 +762,7 @@ class V5LifecycleManager:
         record: Any,
         *,
         path: Path,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         if not isinstance(record, dict):
             raise ValueError("research record must be one object")
@@ -817,6 +898,7 @@ class V5LifecycleManager:
             relation=record["relation"],
             related_research_ids=record["related_research_ids"],
             metadata=metadata,
+            _inspection_context=_inspection_context,
         )
         self._validate_approved_computation_record_fields(
             kind=record["kind"],
@@ -871,6 +953,8 @@ class V5LifecycleManager:
             "source_round_id": None,
             "source_round_manifest_sha256": None,
             "source_receipts_sha256": None,
+            "source_component_id": None,
+            "source_component_sha256": None,
             "supervisor_scopes": [],
             "computation_policy": "core_code_review_before_formal_execution",
             "repair_policy": "copy_on_write_next_research_cycle",
@@ -880,7 +964,7 @@ class V5LifecycleManager:
 
     @staticmethod
     def _validate_research_cycle_binding(payload: Any) -> dict[str, Any]:
-        required = {
+        legacy_required = {
             "revision",
             "subround",
             "source_round_id",
@@ -892,10 +976,25 @@ class V5LifecycleManager:
             "pulse_policy",
             "truth_effect",
         }
-        if not isinstance(payload, dict) or set(payload) != required:
+        current_required = legacy_required.union(
+            {"source_component_id", "source_component_sha256"}
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("V5 Research-cycle binding fields are not exact")
+        revision = payload.get("revision")
+        required = (
+            legacy_required
+            if revision == V5_LEGACY_RESEARCH_CYCLE_REVISION
+            else current_required
+        )
+        if set(payload) != required:
             raise ValueError("V5 Research-cycle binding fields are not exact")
         if (
-            payload["revision"] != V5_RESEARCH_CYCLE_REVISION
+            revision
+            not in {
+                V5_LEGACY_RESEARCH_CYCLE_REVISION,
+                V5_RESEARCH_CYCLE_REVISION,
+            }
             or payload["subround"] not in {"production", "supervision"}
             or payload["computation_policy"]
             != "core_code_review_before_formal_execution"
@@ -920,6 +1019,13 @@ class V5LifecycleManager:
                 or scopes
             ):
                 raise ValueError("V5 production subround has source supervision state")
+            if revision == V5_RESEARCH_CYCLE_REVISION and (
+                payload["source_component_id"] is not None
+                or payload["source_component_sha256"] is not None
+            ):
+                raise ValueError(
+                    "V5 production subround has source component state"
+                )
         else:
             validate_round_id(
                 _require_nonempty_text(
@@ -934,6 +1040,24 @@ class V5LifecycleManager:
                 value = payload[key]
                 if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
                     raise ValueError(f"V5 supervision {key} is invalid")
+            if revision == V5_RESEARCH_CYCLE_REVISION:
+                component_id = _require_nonempty_text(
+                    payload["source_component_id"],
+                    "V5 supervision source component id",
+                )
+                if not component_id.startswith("component-"):
+                    raise ValueError(
+                        "V5 supervision source component id is invalid"
+                    )
+                component_sha = payload["source_component_sha256"]
+                if (
+                    not isinstance(component_sha, str)
+                    or SHA256_RE.fullmatch(component_sha) is None
+                    or component_id != "component-" + component_sha[:16]
+                ):
+                    raise ValueError(
+                        "V5 supervision source component hash is invalid"
+                    )
             if not scopes or len(scopes) > V5_RESEARCH_SUPERVISOR_LIMIT:
                 raise ValueError("V5 supervision must contain one to three scopes")
         return payload
@@ -1068,11 +1192,346 @@ class V5LifecycleManager:
             key=lambda item: (item["role"], item["sha256"]),
         )
 
+    @staticmethod
+    def _validate_logical_supervision_component_structure(
+        payload: Any,
+        *,
+        assignments: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Validate one immutable partition of production assignments.
+
+        Components are frozen before dispatch.  They are not a projection of
+        whichever workers happened to return first, so an identical planning
+        retry cannot silently widen or shrink the object under supervision.
+        """
+
+        if not isinstance(payload, list) or not payload:
+            raise ValueError(
+                "logical supervision components must be a nonempty list"
+            )
+        assignment_by_id = {
+            item["assignment_id"]: item for item in assignments
+        }
+        if len(assignment_by_id) != len(assignments):
+            raise ValueError(
+                "logical supervision components require unique assignments"
+            )
+        expected_assignment_ids = sorted(assignment_by_id)
+        covered_assignment_ids: list[str] = []
+        seen_component_ids: set[str] = set()
+        validated: list[dict[str, Any]] = []
+        required = {
+            "revision",
+            "component_id",
+            "component_sha256",
+            "assignment_ids",
+            "research_ids",
+            "relation_policy",
+            "truth_effect",
+        }
+        for component in payload:
+            if not isinstance(component, dict) or set(component) != required:
+                raise ValueError(
+                    "logical supervision component fields are not exact"
+                )
+            assignment_ids = _require_string_list(
+                component["assignment_ids"],
+                "logical supervision component assignment ids",
+            )
+            research_ids = _require_string_list(
+                component["research_ids"],
+                "logical supervision component Research ids",
+            )
+            if (
+                component["revision"]
+                != V5_LOGICAL_SUPERVISION_COMPONENT_REVISION
+                or component["relation_policy"]
+                != "selected_research_ancestry_connected_components"
+                or component["truth_effect"] != "none"
+                or not assignment_ids
+                or assignment_ids != sorted(set(assignment_ids))
+                or research_ids != sorted(set(research_ids))
+                or len(assignment_ids) != len(research_ids)
+            ):
+                raise ValueError("logical supervision component is invalid")
+            try:
+                component_assignments = [
+                    assignment_by_id[assignment_id]
+                    for assignment_id in assignment_ids
+                ]
+            except KeyError as exc:
+                raise ValueError(
+                    "logical supervision component names an unknown assignment"
+                ) from exc
+            if sorted(
+                item["research_id"] for item in component_assignments
+            ) != research_ids:
+                raise ValueError(
+                    "logical supervision component Research projection drifted"
+                )
+            semantic = {
+                "revision": component["revision"],
+                "assignment_ids": assignment_ids,
+                "research_ids": research_ids,
+                "relation_policy": component["relation_policy"],
+                "truth_effect": component["truth_effect"],
+            }
+            component_sha = sha256_json(semantic)
+            component_id = "component-" + component_sha[:16]
+            if (
+                component["component_sha256"] != component_sha
+                or component["component_id"] != component_id
+                or component_id in seen_component_ids
+            ):
+                raise ValueError(
+                    "logical supervision component identity is invalid"
+                )
+            seen_component_ids.add(component_id)
+            covered_assignment_ids.extend(assignment_ids)
+            validated.append(component)
+        if (
+            len(covered_assignment_ids) != len(set(covered_assignment_ids))
+            or sorted(covered_assignment_ids) != expected_assignment_ids
+        ):
+            raise ValueError(
+                "logical supervision components must partition assignments exactly"
+            )
+        if validated != sorted(
+            validated, key=lambda item: item["component_id"]
+        ):
+            raise ValueError(
+                "logical supervision components are not canonical"
+            )
+        return validated
+
+    def _validate_logical_supervision_components(
+        self,
+        payload: Any,
+        *,
+        assignments: list[dict[str, Any]],
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        """Validate structure and rederive the partition from Research ancestry.
+
+        Component hashes authenticate the declared partition, but a caller can
+        also rehash a different self-consistent partition.  Authority therefore
+        comes from rederiving the connected components from the exact selected
+        Research records, not from trusting the manifest's own grouping.
+        """
+
+        validated = self._validate_logical_supervision_component_structure(
+            payload,
+            assignments=assignments,
+        )
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        source_records = {
+            assignment["research_id"]: self._inspection_research_record(
+                assignment["research_id"], inspection
+            )
+            for assignment in assignments
+        }
+        derived = self._build_logical_supervision_components(
+            assignments=assignments,
+            source_records=source_records,
+            _inspection_context=inspection,
+            validate_result=False,
+        )
+        if validated != derived:
+            raise ValueError(
+                "logical supervision component partition drifted from "
+                "Research ancestry"
+            )
+        return validated
+
+    def _build_logical_supervision_components(
+        self,
+        *,
+        assignments: list[dict[str, Any]],
+        source_records: dict[str, dict[str, Any]],
+        _inspection_context: RoundInspectionContext | None = None,
+        validate_result: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Freeze dependency components from selected Research ancestry.
+
+        Two assignments share a component exactly when one selected Research
+        entry is in the ancestry of the other, transitively.  Sharing an
+        admitted Fact or an older common Research premise does not serialize
+        otherwise independent outputs.  A logical relation that matters for
+        supervision must therefore be represented in ``related_research_ids``.
+        """
+
+        assignment_by_research: dict[str, str] = {}
+        for assignment in assignments:
+            research_id = assignment["research_id"]
+            if research_id in assignment_by_research:
+                raise ValueError(
+                    "logical supervision cannot duplicate one Research assignment"
+                )
+            assignment_by_research[research_id] = assignment["assignment_id"]
+        selected_ids = set(assignment_by_research)
+        if selected_ids != set(source_records):
+            raise ValueError(
+                "logical supervision source records do not match assignments"
+            )
+
+        parent = {research_id: research_id for research_id in selected_ids}
+
+        def find(research_id: str) -> str:
+            while parent[research_id] != research_id:
+                parent[research_id] = parent[parent[research_id]]
+                research_id = parent[research_id]
+            return research_id
+
+        def union(left: str, right: str) -> None:
+            left_root = find(left)
+            right_root = find(right)
+            if left_root != right_root:
+                parent[max(left_root, right_root)] = min(left_root, right_root)
+
+        record_cache = dict(source_records)
+        for root_id in sorted(selected_ids):
+            seen: set[str] = set()
+            pending = list(source_records[root_id]["related_research_ids"])
+            while pending:
+                related_id = pending.pop()
+                if related_id == root_id:
+                    raise ValueError(
+                        "logical supervision Research ancestry is cyclic"
+                    )
+                if related_id in seen:
+                    continue
+                seen.add(related_id)
+                if related_id in selected_ids:
+                    union(root_id, related_id)
+                record = record_cache.get(related_id)
+                if record is None:
+                    record = self._inspection_research_record(
+                        related_id,
+                        _inspection_context,
+                    )
+                    record_cache[related_id] = record
+                pending.extend(record["related_research_ids"])
+
+        grouped: dict[str, list[str]] = {}
+        for research_id in sorted(selected_ids):
+            grouped.setdefault(find(research_id), []).append(research_id)
+        components: list[dict[str, Any]] = []
+        for research_ids in grouped.values():
+            research_ids = sorted(research_ids)
+            assignment_ids = sorted(
+                assignment_by_research[research_id]
+                for research_id in research_ids
+            )
+            semantic = {
+                "revision": V5_LOGICAL_SUPERVISION_COMPONENT_REVISION,
+                "assignment_ids": assignment_ids,
+                "research_ids": research_ids,
+                "relation_policy": (
+                    "selected_research_ancestry_connected_components"
+                ),
+                "truth_effect": "none",
+            }
+            component_sha = sha256_json(semantic)
+            components.append(
+                {
+                    **semantic,
+                    "component_id": "component-" + component_sha[:16],
+                    "component_sha256": component_sha,
+                }
+            )
+        components.sort(key=lambda item: item["component_id"])
+        if not validate_result:
+            return components
+        return self._validate_logical_supervision_component_structure(
+            components,
+            assignments=assignments,
+        )
+
+    def _source_supervision_component(
+        self,
+        manifest: dict[str, Any],
+        source_component_id: str | None,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any] | None:
+        components = manifest.get("supervision_components")
+        if components is None:
+            if source_component_id is not None:
+                raise ValueError(
+                    "historical production rounds have no logical component ids"
+                )
+            return None
+        components = self._validate_logical_supervision_components(
+            components,
+            assignments=manifest["assignments"],
+            _inspection_context=_inspection_context,
+        )
+        if source_component_id is None:
+            if len(components) != 1:
+                raise ValueError(
+                    "source component id is required for multi-component production"
+                )
+            return components[0]
+        source_component_id = _require_nonempty_text(
+            source_component_id,
+            "source component id",
+        )
+        matches = [
+            component
+            for component in components
+            if component["component_id"] == source_component_id
+        ]
+        if len(matches) != 1:
+            raise ValueError("unknown logical supervision component")
+        return matches[0]
+
+    def _source_component_id_for_assignment(
+        self,
+        manifest: dict[str, Any],
+        assignment_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> str | None:
+        assignment_id = validate_assignment_id(assignment_id)
+        components = manifest.get("supervision_components")
+        if components is None:
+            return None
+        components = self._validate_logical_supervision_components(
+            components,
+            assignments=manifest["assignments"],
+            _inspection_context=_inspection_context,
+        )
+        matches = [
+            component["component_id"]
+            for component in components
+            if assignment_id in component["assignment_ids"]
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                "assignment does not belong to exactly one logical component"
+            )
+        return matches[0]
+
     def _source_round_receipt_descriptors(
         self,
         round_id: str,
+        *,
+        source_component_id: str | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        round_dir, manifest = self._round_manifest(round_id)
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        round_dir, manifest = self._round_manifest(
+            round_id,
+            _inspection_context=inspection,
+        )
         cycle = manifest.get("research_cycle")
         if cycle is None or self._validate_research_cycle_binding(cycle)[
             "subround"
@@ -1081,17 +1540,41 @@ class V5LifecycleManager:
                 "Research supervision requires a prospective production subround; "
                 "historical single-wave rounds are not backfilled"
             )
-        if not self._round_is_completed(round_dir, manifest):
-            raise ValueError("Research production subround is not fully ingested")
         if self.store.reasoning_modes().work_unit_abort(round_id) is not None:
             raise ValueError("aborted Research production cannot be supervised")
+        component = self._source_supervision_component(
+            manifest,
+            source_component_id,
+            _inspection_context=inspection,
+        )
+        if component is None:
+            if not self._round_is_completed(
+                round_dir,
+                manifest,
+                _inspection_context=inspection,
+            ):
+                raise ValueError(
+                    "Research production subround is not fully ingested"
+                )
+            selected_assignments = manifest["assignments"]
+        else:
+            assignment_ids = set(component["assignment_ids"])
+            selected_assignments = [
+                assignment
+                for assignment in manifest["assignments"]
+                if assignment["assignment_id"] in assignment_ids
+            ]
         descriptors: list[dict[str, Any]] = []
-        for assignment in manifest["assignments"]:
+        for assignment in selected_assignments:
             receipt = self._validated_ingest_receipt(
                 round_dir=round_dir,
                 assignment=assignment,
+                _inspection_context=inspection,
             )
-            result = self._research_record(receipt["research_id"])
+            result = self._inspection_research_record(
+                receipt["research_id"],
+                inspection,
+            )
             card = self.store._read_json(
                 self.store.root / assignment["task_card_relpath"]
             )
@@ -1127,16 +1610,77 @@ class V5LifecycleManager:
         descriptors.sort(key=lambda item: item["assignment_id"])
         return manifest, descriptors
 
+    def _source_round_selection_logic_signals(
+        self,
+        manifest: dict[str, Any],
+        descriptors: list[dict[str, Any]],
+    ) -> dict[str, frozenset[str]]:
+        """Read prospective selection signals without changing receipt bytes.
+
+        Source-receipt descriptors are a frozen hash contract and cannot gain
+        fields retroactively.  Current component-aware production cards may,
+        however, carry explicit failure-family signals that guide whether a
+        supervisor is needed.  Keep those signals in this planning-only side
+        channel so historical descriptor hashes and legacy cycle semantics
+        remain byte-exact.
+        """
+
+        cycle = manifest.get("research_cycle")
+        if (
+            not isinstance(cycle, dict)
+            or cycle.get("revision") != V5_RESEARCH_CYCLE_REVISION
+        ):
+            return {}
+        assignment_by_id = {
+            assignment["assignment_id"]: assignment
+            for assignment in manifest["assignments"]
+        }
+        selected: dict[str, frozenset[str]] = {}
+        for descriptor in descriptors:
+            assignment_id = descriptor["assignment_id"]
+            assignment = assignment_by_id.get(assignment_id)
+            if assignment is None:
+                raise ValueError(
+                    "Research supervision descriptor assignment is missing"
+                )
+            card = self.store._read_json(
+                self.store.root / assignment["task_card_relpath"]
+            )
+            raw = card["mathematical_state"]["source_research_dossier"][
+                "metadata"
+            ].get("logic_signals", [])
+            signals = _require_string_list(
+                raw,
+                "Research supervision selection logic signals",
+            )
+            selected[assignment_id] = frozenset(signals)
+        return selected
+
     @staticmethod
     def _supervisor_scope_applies(
         scope: str,
         descriptor: dict[str, Any],
     ) -> bool:
+        """Return the immutable receipt-coverage rule for one supervisor.
+
+        Scope selection and receipt coverage are deliberately separate.  The
+        0.7 selector may omit an unnecessary supervisor, but a supervisor that
+        does exist still receives the complete historical scope it is expected
+        to review.  Keeping this rule stable also preserves validation of
+        already-frozen Research supervision records.
+        """
+
         roles = {item["role"] for item in descriptor["artifact_bindings"]}
         if scope == "proof_logic":
-            return descriptor["work_mode"] in {"prove", "refute", "interpret"} or descriptor[
-                "outcome"
-            ] in {"proof", "counterexample", "challenge"}
+            return descriptor["work_mode"] in {
+                "prove",
+                "refute",
+                "interpret",
+            } or descriptor["outcome"] in {
+                "proof",
+                "counterexample",
+                "challenge",
+            }
         if scope == "program_math":
             return descriptor["work_mode"] == "compute" or bool(
                 {"computation_source", "computation_output"}.intersection(roles)
@@ -1149,11 +1693,149 @@ class V5LifecycleManager:
             return True
         raise ValueError("unsupported Research supervisor scope")
 
+    @staticmethod
+    def _failure_informed_scope_applies(
+        scope: str,
+        descriptor: dict[str, Any],
+        *,
+        logic_signals: frozenset[str] = frozenset(),
+    ) -> bool:
+        """Return the narrow prospective 0.7 supervisor-selection rule."""
+
+        roles = {item["role"] for item in descriptor["artifact_bindings"]}
+        if scope == "proof_logic":
+            proof_artifact = any(
+                role.startswith("proof")
+                or role in {"counterexample", "derivation"}
+                for role in roles
+            )
+            return (
+                descriptor["work_mode"] == "prove"
+                or descriptor["outcome"]
+                in {"proof", "counterexample", "challenge"}
+                or proof_artifact
+                or bool(V5_PROOF_LOGIC_SELECTION_SIGNALS & logic_signals)
+            )
+        if scope == "program_math":
+            return descriptor["work_mode"] == "compute" or bool(
+                {"computation_source", "computation_output"}.intersection(roles)
+            )
+        if scope == "source_scope":
+            return descriptor["work_mode"] == "literature" or descriptor[
+                "has_source_uses"
+            ]
+        if scope == "integration":
+            return True
+        raise ValueError("unsupported Research supervisor scope")
+
+    @classmethod
+    def _applicable_research_supervisor_scopes(
+        cls,
+        descriptors: list[dict[str, Any]],
+        *,
+        selection_logic_signals: dict[str, frozenset[str]] | None = None,
+    ) -> list[str]:
+        """Select narrow assurance scopes from static reproduced failure families.
+
+        Integration replaces the former blanket multi-return check.  It is
+        useful only when one logical component crosses at least two primary
+        assurance scopes; same-scope consistency remains owned by that primary
+        supervisor.
+        """
+
+        primary = [
+            scope
+            for scope in ("program_math", "proof_logic", "source_scope")
+            if any(
+                cls._failure_informed_scope_applies(
+                    scope,
+                    descriptor,
+                    logic_signals=(selection_logic_signals or {}).get(
+                        descriptor.get("assignment_id", ""), frozenset()
+                    ),
+                )
+                for descriptor in descriptors
+            )
+        ]
+        applicable = list(primary)
+        if len(descriptors) >= 2 and len(primary) >= 2:
+            applicable.append("integration")
+        return applicable
+
+    @staticmethod
+    def _research_supervision_focus(scope: str) -> tuple[list[str], str]:
+        selected = [
+            (family_id, focus)
+            for family_id, family_scope, focus in V5_RESEARCH_FAILURE_FAMILIES
+            if family_scope == scope
+        ]
+        if not selected:
+            raise ValueError("Research supervisor scope has no failure-family focus")
+        return [family_id for family_id, _ in selected], "; ".join(
+            focus for _, focus in selected
+        )
+
+    @classmethod
+    def _validate_failure_informed_assurance(
+        cls,
+        payload: Any,
+        *,
+        supervisor_scope: str,
+    ) -> dict[str, Any]:
+        binding = _require_exact_object_fields(
+            payload,
+            {
+                "revision",
+                "registry_sha256",
+                "family_ids",
+                "supervisor_scope",
+                "selection_policy",
+                "truth_effect",
+            },
+            label="failure-informed Research assurance",
+            pointer="/failure_informed_assurance",
+        )
+        expected_ids, _ = cls._research_supervision_focus(supervisor_scope)
+        family_ids = _require_string_list(
+            binding["family_ids"],
+            "failure-informed Research assurance family ids",
+        )
+        if (
+            binding["revision"]
+            != V5_RESEARCH_ASSURANCE_SELECTION_REVISION
+            or binding["registry_sha256"]
+            != V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256
+            or family_ids != expected_ids
+            or binding["supervisor_scope"] != supervisor_scope
+            or binding["selection_policy"]
+            not in {
+                V5_LEGACY_RESEARCH_ASSURANCE_SELECTION_POLICY,
+                V5_RESEARCH_ASSURANCE_SELECTION_POLICY,
+            }
+            or binding["truth_effect"] != "none"
+        ):
+            raise ValueError("failure-informed Research assurance binding drifted")
+        return binding
+
+    def _default_research_supervisor_scopes(
+        self,
+        descriptors: list[dict[str, Any]],
+        *,
+        selection_logic_signals: dict[str, frozenset[str]] | None = None,
+    ) -> list[str]:
+        applicable = self._applicable_research_supervisor_scopes(
+            descriptors,
+            selection_logic_signals=selection_logic_signals,
+        )
+        return applicable[:V5_RESEARCH_SUPERVISOR_LIMIT]
+
     def _validate_research_supervision_binding(
         self,
         payload: Any,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
-        required = {
+        legacy_required = {
             "revision",
             "supervisor_scope",
             "source_round_id",
@@ -1165,11 +1847,26 @@ class V5LifecycleManager:
             "pulse_policy",
             "truth_effect",
         }
-        if not isinstance(payload, dict) or set(payload) != required:
+        current_required = legacy_required.union(
+            {"source_component_id", "source_component_sha256"}
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("Research supervision binding fields are not exact")
+        revision = payload.get("revision")
+        required = (
+            legacy_required
+            if revision == V5_LEGACY_RESEARCH_SUPERVISION_REVISION
+            else current_required
+        )
+        if set(payload) != required:
             raise ValueError("Research supervision binding fields are not exact")
         scope = payload["supervisor_scope"]
         if (
-            payload["revision"] != V5_RESEARCH_SUPERVISION_REVISION
+            revision
+            not in {
+                V5_LEGACY_RESEARCH_SUPERVISION_REVISION,
+                V5_RESEARCH_SUPERVISION_REVISION,
+            }
             or scope not in V5_RESEARCH_SUPERVISOR_SCOPES
             or payload["review_policy"] != "attack_exact_production_outputs"
             or payload["repair_policy"]
@@ -1178,6 +1875,22 @@ class V5LifecycleManager:
             or payload["truth_effect"] != "none"
         ):
             raise ValueError("Research supervision policy is invalid")
+        source_component_id: str | None = None
+        if revision == V5_RESEARCH_SUPERVISION_REVISION:
+            source_component_id = _require_nonempty_text(
+                payload["source_component_id"],
+                "Research supervision source component id",
+            )
+            component_sha = payload["source_component_sha256"]
+            if (
+                not source_component_id.startswith("component-")
+                or not isinstance(component_sha, str)
+                or SHA256_RE.fullmatch(component_sha) is None
+                or source_component_id != "component-" + component_sha[:16]
+            ):
+                raise ValueError(
+                    "Research supervision source component identity is invalid"
+                )
         round_id = validate_round_id(
             _require_nonempty_text(
                 payload["source_round_id"], "Research supervision source round"
@@ -1253,22 +1966,82 @@ class V5LifecycleManager:
             raise ValueError("Research supervision source receipts are not canonical")
         if payload["source_receipts_sha256"] != sha256_json(receipts):
             raise ValueError("Research supervision receipt-set hash drifted")
-        source_manifest, all_descriptors = self._source_round_receipt_descriptors(
-            round_id
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
         )
-        if payload["source_round_manifest_sha256"] != source_manifest[
-            "manifest_sha256"
-        ]:
-            raise ValueError("Research supervision source manifest drifted")
-        expected = [
-            item
-            for item in all_descriptors
-            if self._supervisor_scope_applies(scope, item)
-        ]
-        if scope == "integration" and len(all_descriptors) < 2:
-            expected = []
-        if not expected or receipts != expected:
-            raise ValueError("Research supervision scope/receipt coverage drifted")
+        assert inspection is not None
+        validation_key = (
+            round_id,
+            scope,
+            payload["source_round_manifest_sha256"],
+            payload["source_receipts_sha256"],
+            source_component_id or "",
+            (
+                payload.get("source_component_sha256")
+                if revision == V5_RESEARCH_SUPERVISION_REVISION
+                else ""
+            ),
+        )
+        if validation_key in inspection.research_supervision_validation_stack:
+            # A source task card can legitimately reconstruct admitted-Fact
+            # authority, whose sealed release in turn scans Research ancestry.
+            # If that ancestry reaches this same supervisor, the outer frame
+            # remains responsible for the exact source comparison.  The inner
+            # frame validates the complete local/hash schema and then stops at
+            # this explicit cycle boundary; it does not create an authority
+            # cache or accept a binding without one full outer validation.
+            return payload
+        inspection.research_supervision_validation_stack.add(validation_key)
+        try:
+            source_manifest, all_descriptors = (
+                self._source_round_receipt_descriptors(
+                    round_id,
+                    source_component_id=source_component_id,
+                    _inspection_context=inspection,
+                )
+            )
+            if payload["source_round_manifest_sha256"] != source_manifest[
+                "manifest_sha256"
+            ]:
+                raise ValueError("Research supervision source manifest drifted")
+            source_component = self._source_supervision_component(
+                source_manifest,
+                source_component_id,
+                _inspection_context=inspection,
+            )
+            if revision == V5_LEGACY_RESEARCH_SUPERVISION_REVISION:
+                if source_component is not None:
+                    raise ValueError(
+                        "legacy supervision cannot target component-aware production"
+                    )
+            elif (
+                source_component is None
+                or payload["source_component_sha256"]
+                != source_component["component_sha256"]
+            ):
+                raise ValueError(
+                    "Research supervision source component drifted"
+                )
+            expected = [
+                item
+                for item in all_descriptors
+                if self._supervisor_scope_applies(scope, item)
+            ]
+            # Frozen pre-0.7 integration records covered every multi-return
+            # component.  The 0.7 selector no longer creates same-scope
+            # integration supervisors, but validation must not reinterpret
+            # immutable historical records with the new prospective policy.
+            if scope == "integration" and len(all_descriptors) < 2:
+                expected = []
+            if not expected or receipts != expected:
+                raise ValueError(
+                    "Research supervision scope/receipt coverage drifted"
+                )
+        finally:
+            inspection.research_supervision_validation_stack.remove(
+                validation_key
+            )
         return payload
 
     def _validate_research_supervision_record_fields(
@@ -1279,11 +2052,55 @@ class V5LifecycleManager:
         relation: str | None,
         related_research_ids: list[str],
         metadata: dict[str, Any],
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
         raw = metadata.get("research_supervision")
         if raw is None:
             return
-        binding = self._validate_research_supervision_binding(raw)
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        raw_key: tuple[str, str, str, str, str, str] | None = None
+        if isinstance(raw, dict) and all(
+            isinstance(raw.get(key), str)
+            for key in (
+                "source_round_id",
+                "supervisor_scope",
+                "source_round_manifest_sha256",
+                "source_receipts_sha256",
+            )
+        ):
+            raw_key = (
+                raw["source_round_id"],
+                raw["supervisor_scope"],
+                raw["source_round_manifest_sha256"],
+                raw["source_receipts_sha256"],
+                str(raw.get("source_component_id") or ""),
+                str(raw.get("source_component_sha256") or ""),
+            )
+        reentrant_source_validation = (
+            raw_key is not None
+            and raw_key in inspection.research_supervision_validation_stack
+        )
+        binding = self._validate_research_supervision_binding(
+            raw,
+            _inspection_context=inspection,
+        )
+        failure_assurance = metadata.get("failure_informed_assurance")
+        if (
+            binding["revision"] == V5_RESEARCH_SUPERVISION_REVISION
+            and failure_assurance is not None
+        ):
+            self._validate_failure_informed_assurance(
+                failure_assurance,
+                supervisor_scope=binding["supervisor_scope"],
+            )
+        elif failure_assurance is not None:
+            raise ValueError(
+                "legacy Research supervision cannot claim failure-informed assurance"
+            )
         if kind != "challenge" or status != "open" or relation != "challenges":
             raise ValueError(
                 "Research supervision must be an open challenge relation"
@@ -1292,12 +2109,17 @@ class V5LifecycleManager:
             item["result_research_id"]
             for item in binding["source_receipts"]
         }
-        if binding["supervisor_scope"] == "program_math" and any(
+        if (
+            not reentrant_source_validation
+            and binding["supervisor_scope"] == "program_math"
+            and any(
             item["computation_phase"] == "approved_execution"
             for item in binding["source_receipts"]
+            )
         ):
             _, source_manifest = self._round_manifest(
-                binding["source_round_id"]
+                binding["source_round_id"],
+                _inspection_context=inspection,
             )
             assignment_by_id = {
                 item["assignment_id"]: item
@@ -1370,8 +2192,14 @@ class V5LifecycleManager:
         cycle = self._validate_research_cycle_binding(research_cycle)
         if cycle["subround"] != "supervision":
             return
+        source_component_id = (
+            cycle["source_component_id"]
+            if cycle["revision"] == V5_RESEARCH_CYCLE_REVISION
+            else None
+        )
         source_manifest, descriptors = self._source_round_receipt_descriptors(
-            cycle["source_round_id"]
+            cycle["source_round_id"],
+            source_component_id=source_component_id,
         )
         if (
             cycle["source_round_manifest_sha256"]
@@ -1392,11 +2220,96 @@ class V5LifecycleManager:
                 raise ValueError(
                     "V5 supervision Research and round source bindings disagree"
                 )
+            if cycle["revision"] == V5_RESEARCH_CYCLE_REVISION and (
+                binding["revision"] != V5_RESEARCH_SUPERVISION_REVISION
+                or binding["source_component_id"]
+                != cycle["source_component_id"]
+                or binding["source_component_sha256"]
+                != cycle["source_component_sha256"]
+            ):
+                raise ValueError(
+                    "V5 supervision Research and round component bindings disagree"
+                )
+            if (
+                cycle["revision"] == V5_LEGACY_RESEARCH_CYCLE_REVISION
+                and binding["revision"]
+                != V5_LEGACY_RESEARCH_SUPERVISION_REVISION
+            ):
+                raise ValueError(
+                    "V5 legacy supervision binding revision drifted"
+                )
             scopes.append(binding["supervisor_scope"])
         if sorted(scopes) != cycle["supervisor_scopes"] or len(scopes) != len(
             set(scopes)
         ):
             raise ValueError("V5 supervision round scope coverage drifted")
+
+    def _supervision_review_lane_allows_stale_projection(
+        self,
+        *,
+        projection: dict[str, Any],
+        research_cycle: dict[str, Any],
+    ) -> bool:
+        """Keep exact invalidator review schedulable without reviving its route.
+
+        A production result may itself invalidate an earlier Research route.
+        The supervisor entry that reviews that exact result then inherits the
+        invalidated target through the result's immutable lineage and is
+        correctly absent from the ordinary frontier.  It is nevertheless a
+        required review object.  This command-local exception admits only the
+        exact supervision binding whose frozen source result is every cause of
+        the projected staleness.  The projection remains stale everywhere
+        else, including ordinary planning and Candidate release.
+        """
+
+        cycle = self._validate_research_cycle_binding(research_cycle)
+        if (
+            cycle["subround"] != "supervision"
+            or projection.get("status") not in ACTIVE_MEMORY_STATUSES
+            or projection.get("route_status")
+            != "stale_pending_copy_on_write_repair"
+        ):
+            return False
+        invalidators = projection.get("route_invalidated_by")
+        if (
+            not isinstance(invalidators, list)
+            or not invalidators
+            or any(not isinstance(item, str) for item in invalidators)
+        ):
+            return False
+        # ``projection`` came from ``frontier(include_history=True)``, whose
+        # Research loader already validated this record and its binding.  Use
+        # that command-local projection here; the complete selection validator
+        # below reconstructs the exact source-round authority once more before
+        # any round bytes are written.
+        binding = projection.get("metadata", {}).get("research_supervision")
+        if not isinstance(binding, dict):
+            return False
+        if (
+            binding.get("source_round_id") != cycle["source_round_id"]
+            or binding.get("source_round_manifest_sha256")
+            != cycle["source_round_manifest_sha256"]
+            or binding.get("supervisor_scope") not in cycle["supervisor_scopes"]
+        ):
+            return False
+        if cycle["revision"] == V5_RESEARCH_CYCLE_REVISION and (
+            binding.get("revision") != V5_RESEARCH_SUPERVISION_REVISION
+            or binding.get("source_component_id")
+            != cycle["source_component_id"]
+            or binding.get("source_component_sha256")
+            != cycle["source_component_sha256"]
+        ):
+            return False
+        source_receipts = binding.get("source_receipts")
+        if not isinstance(source_receipts, list):
+            return False
+        reviewed_result_ids = {
+            item["result_research_id"]
+            for item in source_receipts
+            if isinstance(item, dict)
+            and isinstance(item.get("result_research_id"), str)
+        }
+        return set(invalidators).issubset(reviewed_result_ids)
 
     @staticmethod
     def _canonical_design_artifacts(
@@ -1498,8 +2411,16 @@ class V5LifecycleManager:
             if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
                 raise ValueError(f"approved computation {key} is invalid")
 
-        design_manifest, design_descriptors = self._source_round_receipt_descriptors(
+        _, design_manifest_preview = self._round_manifest(
             payload["design_round_id"]
+        )
+        design_component_id = self._source_component_id_for_assignment(
+            design_manifest_preview,
+            payload["design_assignment_id"],
+        )
+        design_manifest, design_descriptors = self._source_round_receipt_descriptors(
+            payload["design_round_id"],
+            source_component_id=design_component_id,
         )
         design_matches = [
             item
@@ -1544,6 +2465,10 @@ class V5LifecycleManager:
             or "program_math" not in supervision_cycle["supervisor_scopes"]
             or supervision_manifest["manifest_sha256"]
             != payload["supervision_round_manifest_sha256"]
+            or self.store.reasoning_modes().work_unit_abort(
+                supervision_manifest["round_id"]
+            )
+            is not None
             or not self._round_is_completed(
                 supervision_dir, supervision_manifest
             )
@@ -1599,6 +2524,50 @@ class V5LifecycleManager:
         ):
             raise ValueError("approved computation supervision disposition drifted")
         return payload
+
+    def _validate_selected_execution_authority_liveness(
+        self,
+        selected: list[dict[str, Any]],
+    ) -> None:
+        """Recheck approved computation authority under the round-write lock."""
+
+        for entry in selected:
+            raw = entry.get("metadata", {}).get(
+                "approved_computation_execution"
+            )
+            if raw is None:
+                continue
+            try:
+                current = self._research_record(entry["research_id"])
+                if current["record_sha256"] != entry["record_sha256"]:
+                    raise ValueError(
+                        "approved computation Research changed before round creation"
+                    )
+                binding = self._validate_approved_computation_execution_binding(
+                    raw
+                )
+                latest_disposition = self._latest_supervision_disposition(
+                    binding["supervision_research_id"]
+                )
+                if (
+                    latest_disposition["research_id"]
+                    != binding["disposition_research_id"]
+                    or latest_disposition["record_sha256"]
+                    != binding["disposition_record_sha256"]
+                    or latest_disposition["metadata"].get(
+                        "disposition_status"
+                    )
+                    != binding["disposition_status"]
+                ):
+                    raise ValueError(
+                        "approved computation supervision disposition changed "
+                        "before round creation"
+                    )
+            except ValueError as exc:
+                raise ValueError(
+                    "approved computation execution authority changed before "
+                    "round creation"
+                ) from exc
 
     def _validate_approved_computation_record_fields(
         self,
@@ -2330,6 +3299,177 @@ class V5LifecycleManager:
                     changed = True
         return [records[research_id] for research_id in sorted(selected)]
 
+    def _required_supervision_results_for_candidate(
+        self,
+        explicit_records: list[dict[str, Any]],
+    ) -> set[str]:
+        """Require completed, ingested subround-2 review before Candidate work.
+
+        The gate applies prospectively to constructive results ingested from a
+        two-subround production round.  Manual and historical single-wave
+        Research remain readable compatibility inputs.  For each production
+        component, the same deterministic default scope policy used by the
+        planner must have exactly one live, completed supervision return.
+        """
+
+        required_result_ids: set[str] = set()
+        inspection = RoundInspectionContext()
+        supervision_manifests: list[tuple[Path, dict[str, Any]]] = []
+        if self.store.rounds_dir.exists():
+            for candidate_dir in sorted(self.store.rounds_dir.glob("round-*")):
+                if candidate_dir.is_symlink() or not candidate_dir.is_dir():
+                    continue
+                round_dir, manifest = self._round_manifest(
+                    candidate_dir.name,
+                    _inspection_context=inspection,
+                )
+                cycle = manifest.get("research_cycle")
+                if (
+                    isinstance(cycle, dict)
+                    and cycle.get("subround") == "supervision"
+                    and self.store.reasoning_modes().work_unit_abort(
+                        manifest["round_id"]
+                    )
+                    is None
+                ):
+                    supervision_manifests.append((round_dir, manifest))
+
+        checked_components: set[tuple[str, str | None]] = set()
+        for record in explicit_records:
+            provenance = record.get("metadata", {}).get(
+                "assignment_provenance"
+            )
+            if not isinstance(provenance, dict):
+                continue
+            if self._research_is_adverse_assignment(record):
+                continue
+            production_round_id = provenance["round_id"]
+            production_round_dir, production_manifest = self._round_manifest(
+                production_round_id,
+                _inspection_context=inspection,
+            )
+            production_cycle = production_manifest.get("research_cycle")
+            if (
+                not isinstance(production_cycle, dict)
+                or self._validate_research_cycle_binding(production_cycle)[
+                    "subround"
+                ]
+                != "production"
+            ):
+                continue
+            assignment_matches = [
+                assignment
+                for assignment in production_manifest["assignments"]
+                if assignment["assignment_id"]
+                == provenance["assignment_id"]
+            ]
+            if len(assignment_matches) != 1:
+                raise ValueError(
+                    "Candidate Research production assignment is missing"
+                )
+            production_assignment = assignment_matches[0]
+            production_receipt = self._validated_ingest_receipt(
+                round_dir=production_round_dir,
+                assignment=production_assignment,
+                _inspection_context=inspection,
+            )
+            if production_receipt["research_id"] != record["research_id"]:
+                raise ValueError(
+                    "Candidate Research production receipt/result drifted"
+                )
+            source_component_id = self._source_component_id_for_assignment(
+                production_manifest,
+                production_assignment["assignment_id"],
+                _inspection_context=inspection,
+            )
+            component_key = (production_round_id, source_component_id)
+            if component_key in checked_components:
+                continue
+            checked_components.add(component_key)
+            source_manifest, descriptors = self._source_round_receipt_descriptors(
+                production_round_id,
+                source_component_id=source_component_id,
+                _inspection_context=inspection,
+            )
+            selection_logic_signals = (
+                self._source_round_selection_logic_signals(
+                    source_manifest,
+                    descriptors,
+                )
+            )
+            required_scopes = self._default_research_supervisor_scopes(
+                descriptors,
+                selection_logic_signals=selection_logic_signals,
+            )
+            if not required_scopes:
+                raise ValueError(
+                    "Candidate Research component has no applicable supervision scope"
+                )
+            for scope in required_scopes:
+                matching_results: list[str] = []
+                pending_rounds: list[str] = []
+                for supervision_round_dir, supervision_manifest in (
+                    supervision_manifests
+                ):
+                    cycle = supervision_manifest["research_cycle"]
+                    if (
+                        cycle.get("source_round_id") != production_round_id
+                        or cycle.get("source_component_id")
+                        != source_component_id
+                        or scope not in cycle.get("supervisor_scopes", [])
+                    ):
+                        continue
+                    if not self._round_is_completed(
+                        supervision_round_dir,
+                        supervision_manifest,
+                        _inspection_context=inspection,
+                    ):
+                        pending_rounds.append(
+                            supervision_manifest["round_id"]
+                        )
+                        continue
+                    for assignment in supervision_manifest["assignments"]:
+                        supervisor_task = self._inspection_research_record(
+                            assignment["research_id"], inspection
+                        )
+                        binding = supervisor_task.get("metadata", {}).get(
+                            "research_supervision"
+                        )
+                        if not isinstance(binding, dict):
+                            continue
+                        binding = self._validate_research_supervision_binding(
+                            binding,
+                            _inspection_context=inspection,
+                        )
+                        if (
+                            binding["supervisor_scope"] != scope
+                            or binding["source_round_id"]
+                            != production_round_id
+                            or binding.get("source_component_id")
+                            != source_component_id
+                        ):
+                            continue
+                        receipt = self._validated_ingest_receipt(
+                            round_dir=supervision_round_dir,
+                            assignment=assignment,
+                            _inspection_context=inspection,
+                        )
+                        matching_results.append(receipt["research_id"])
+                if pending_rounds:
+                    raise ValueError(
+                        "Candidate construction is blocked by pending Research "
+                        f"supervision ({scope}): "
+                        + ", ".join(sorted(pending_rounds))
+                    )
+                if len(matching_results) != 1:
+                    raise ValueError(
+                        "Candidate construction requires exactly one completed "
+                        f"and ingested Research supervision result ({scope}) for "
+                        f"{production_round_id}/{source_component_id or 'legacy'}"
+                    )
+                required_result_ids.add(matching_results[0])
+        return required_result_ids
+
     def _route_staleness(
         self,
         records: dict[str, dict[str, Any]],
@@ -2337,10 +3477,13 @@ class V5LifecycleManager:
         """Project explicit route invalidations without rewriting Research.
 
         A current-contract adverse/dead-end Research entry may invalidate exact
-        earlier Research ids.  Descendants remain visibly stale until a later
-        copy-on-write repair branch names the invalidated id.  Historical bytes
-        and statuses are unchanged; this projection only prevents accidental
-        reuse of a known-bad route.
+        earlier Research ids.  Staleness propagates forward through every path
+        that still reaches the invalidated target, but the exact invalidator and
+        a later copy-on-write repair of that target are path barriers.  This
+        keeps ordinary descendants of the bad route stale while allowing work
+        about the invalidation or its repair to proceed without pretending that
+        the old target became valid.  Historical bytes and statuses are never
+        rewritten.
         """
 
         invalidations: list[tuple[str, str, str]] = []
@@ -2354,35 +3497,43 @@ class V5LifecycleManager:
                         (target_id, invalidator_id, record["created_at"])
                     )
 
-        def ancestors(research_id: str) -> set[str]:
-            seen: set[str] = set()
-            pending = [research_id]
-            while pending:
-                current_id = pending.pop()
-                if current_id in seen or current_id not in records:
-                    continue
-                seen.add(current_id)
-                pending.extend(records[current_id]["related_research_ids"])
-            return seen
-
+        children_by_parent: dict[str, set[str]] = {
+            research_id: set() for research_id in records
+        }
+        for child_id, record in records.items():
+            for parent_id in record["related_research_ids"]:
+                if parent_id in children_by_parent:
+                    children_by_parent[parent_id].add(child_id)
+        invalidator_barriers_by_target: dict[str, set[str]] = {}
+        for target_id, invalidator_id, _ in invalidations:
+            invalidator_barriers_by_target.setdefault(target_id, set()).add(
+                invalidator_id
+            )
         stale: dict[str, list[str]] = {}
-        for research_id, record in records.items():
-            lineage = ancestors(research_id)
-            for target_id, invalidator_id, invalidated_at in invalidations:
-                if research_id == invalidator_id or target_id not in lineage:
+        for target_id, invalidator_id, invalidated_at in invalidations:
+            pending = [target_id]
+            seen: set[str] = set()
+            while pending:
+                research_id = pending.pop()
+                if (
+                    research_id in seen
+                    or research_id in invalidator_barriers_by_target[target_id]
+                ):
                     continue
-                repaired = any(
+                candidate = records[research_id]
+                repaired = (
                     candidate["kind"] == "repair"
                     and candidate["created_at"] > invalidated_at
                     and candidate.get("metadata", {}).get(
                         "repair_of_research_id"
                     )
                     == target_id
-                    for candidate_id, candidate in records.items()
-                    if candidate_id in lineage
                 )
-                if not repaired:
-                    stale.setdefault(research_id, []).append(invalidator_id)
+                if repaired:
+                    continue
+                seen.add(research_id)
+                stale.setdefault(research_id, []).append(invalidator_id)
+                pending.extend(sorted(children_by_parent[research_id], reverse=True))
         return {
             research_id: sorted(dict.fromkeys(invalidator_ids))
             for research_id, invalidator_ids in stale.items()
@@ -2776,6 +3927,22 @@ class V5LifecycleManager:
             return "literature"
         return WORK_MODES[index % len(WORK_MODES)] if kind == "plan" else "prove"
 
+    def _production_entry_is_review_only(
+        self,
+        entry: dict[str, Any],
+    ) -> bool:
+        """Keep completed attacks and supervisor tasks out of subround 1."""
+
+        metadata = entry.get("metadata", {})
+        return (
+            entry.get("kind") in {"challenge", "counterexample", "obstacle"}
+            or (
+                isinstance(metadata, dict)
+                and isinstance(metadata.get("research_supervision"), dict)
+            )
+            or self._research_is_adverse_assignment(entry)
+        )
+
     @staticmethod
     def _mode_architecture_signature(
         entry: dict[str, Any],
@@ -3081,11 +4248,11 @@ class V5LifecycleManager:
             query = {
                 "seed_node_ids": [spaces[0]],
                 "direction": "both",
-                "max_hops": 3,
+                "max_hops": 0,
                 "edge_type_allowlist": ["*"],
                 "node_type_allowlist": ["*"],
-                "node_budget": 256,
-                "edge_budget": 512,
+                "node_budget": 1,
+                "edge_budget": 0,
             }
             source = "default_project_space"
             origins = []
@@ -3337,7 +4504,10 @@ class V5LifecycleManager:
             return self._research_record(research_id)
         cached = context.research_records.get(research_id)
         if cached is None:
-            cached = self._research_record(research_id)
+            cached = self._research_record(
+                research_id,
+                _inspection_context=context,
+            )
             context.research_records[research_id] = cached
         return cached
 
@@ -3411,6 +4581,20 @@ class V5LifecycleManager:
         referenced_fact_ids = set(record["dependencies"])
         if related_fact_id is not None:
             referenced_fact_ids.add(related_fact_id)
+        obligations = metadata.get("obligations", [])
+        fact_closure_reconstruction_required = (
+            "fact_closure_reconstruction"
+            in metadata.get("logic_signals", [])
+            and
+            isinstance(obligations, list)
+            and any(
+                isinstance(obligation, dict)
+                and isinstance(obligation.get("evidence_types"), list)
+                and "fact_closure_reconstruction"
+                in obligation["evidence_types"]
+                for obligation in obligations
+            )
+        )
 
         # Empty task authority is a complete, canonical projection.  Derive
         # applicability before opening the active-Fact lineage so a card that
@@ -3435,6 +4619,49 @@ class V5LifecycleManager:
                 )
             active_paths = _inspection_context.active_fact_paths
             revoked_fact_ids = _inspection_context.revoked_fact_ids
+
+        # A typed closure-reconstruction obligation is an explicit request for
+        # the admitted statement interfaces in the dependency closure.  Pay
+        # that cost only for this exact evidence type; ordinary and empty
+        # authority snapshots retain their bounded direct-reference behavior.
+        if fact_closure_reconstruction_required and referenced_fact_ids:
+            non_active_root_ids = sorted(
+                fact_id
+                for fact_id in referenced_fact_ids
+                if fact_id not in active_paths
+            )
+            if non_active_root_ids:
+                raise ValueError(
+                    "Fact-closure authority root is not active: "
+                    + non_active_root_ids[0]
+                )
+            selected_closure_ids: set[str] = set()
+            pending_closure_ids = sorted(referenced_fact_ids)
+            while pending_closure_ids:
+                fact_id = pending_closure_ids.pop()
+                if fact_id in selected_closure_ids:
+                    continue
+                path = active_paths.get(fact_id)
+                if path is None:
+                    raise ValueError(
+                        "Fact-closure authority contains a non-active predecessor: "
+                        + fact_id
+                    )
+                fact = parse_fact_markdown(path.read_text(encoding="utf-8"))
+                if fact.fact_id != fact_id:
+                    raise ValueError(
+                        "Fact-closure authority path/id mismatch: " + fact_id
+                    )
+                selected_closure_ids.add(fact_id)
+                for predecessor_id in fact.predecessors:
+                    if predecessor_id not in active_paths:
+                        raise ValueError(
+                            "Fact-closure authority predecessor is not active: "
+                            + predecessor_id
+                        )
+                    if predecessor_id not in selected_closure_ids:
+                        pending_closure_ids.append(predecessor_id)
+            referenced_fact_ids.update(selected_closure_ids)
 
         capabilities: list[dict[str, str]] = []
 
@@ -3740,16 +4967,27 @@ class V5LifecycleManager:
             if blackboard_selection["origin_bindings"] != []:
                 raise ValueError("V5 default context selection has promotion lineage")
             snapshot_nodes, _ = self.store.blackboard().snapshot_objects(snapshot_id)
+            default_budget = (
+                query["max_hops"],
+                query["node_budget"],
+                query["edge_budget"],
+            )
             if (
                 len(query["seed_node_ids"]) != 1
                 or snapshot_nodes.get(query["seed_node_ids"][0], {}).get("node_type")
                 != "space"
                 or query["direction"] != "both"
-                or query["max_hops"] != 3
                 or query["edge_type_allowlist"] != ["*"]
                 or query["node_type_allowlist"] != ["*"]
-                or query["node_budget"] != V5_MAX_CONTEXT_SNAPSHOT_NODES
-                or query["edge_budget"] != V5_MAX_CONTEXT_SNAPSHOT_EDGES
+                or default_budget
+                not in {
+                    (0, 1, 0),
+                    (
+                        3,
+                        V5_MAX_CONTEXT_SNAPSHOT_NODES,
+                        V5_MAX_CONTEXT_SNAPSHOT_EDGES,
+                    ),
+                }
             ):
                 raise ValueError("V5 default context selection query is invalid")
         else:
@@ -4315,7 +5553,11 @@ class V5LifecycleManager:
                     f"Your exact scope is `{supervision['supervisor_scope']}`. Attack "
                     "the frozen subround-1 return bindings in research_supervision and "
                     "the corresponding related Research/artifacts; do not replace them "
-                    "with a free-standing proof attempt. Report a narrow challenge or a "
+                    "with a free-standing proof attempt. Admitted Fact dependencies are "
+                    "frozen premises, not default attack targets. If exact new evidence "
+                    "contradicts one, report that conflict separately for an "
+                    "authority-governed reopening; do not casually re-refute the Fact. "
+                    "Report a narrow challenge or a "
                     "clean bounded result. Any defect causes copy-on-write repair in a "
                     "later Research cycle; there is no live Blackboard/Pulse repair bus.\n\n"
                 )
@@ -4459,7 +5701,13 @@ class V5LifecycleManager:
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Plan prospective Research subround 1 without changing legacy cards."""
+        """Plan constructive Research subround 1 without changing legacy cards."""
+
+        if mode == "refute":
+            raise ValueError(
+                "Research refute is reserved for subround-2 supervision; "
+                "production accepts only constructive work"
+            )
 
         return self.create_round(
             workers=workers,
@@ -4500,32 +5748,97 @@ class V5LifecycleManager:
             )
         return self.round_status(matches[0]) if matches else None
 
+    def _authoritative_supervision_retry_or_overlap(
+        self,
+        *,
+        research_cycle: dict[str, Any],
+        host_task_scope_id: str,
+    ) -> str | None:
+        """Recheck supervision retry/overlap while the mutation lock is held.
+
+        Aborted rounds do not reserve coverage.  An exact retry is reusable
+        only for the same normalized host scope.  Every other live round for
+        the same source component whose supervisor scopes overlap is a hard
+        conflict, including an otherwise identical request from another host.
+        """
+
+        cycle = self._validate_research_cycle_binding(research_cycle)
+        if cycle["subround"] != "supervision":
+            return None
+        requested_scopes = set(cycle["supervisor_scopes"])
+        source_component_id = cycle.get("source_component_id")
+        exact: list[str] = []
+        overlapping: list[str] = []
+        if not self.store.rounds_dir.exists():
+            return None
+        inspection = RoundInspectionContext()
+        for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+            if round_dir.is_symlink() or not round_dir.is_dir():
+                continue
+            _, manifest = self._round_manifest(
+                round_dir.name,
+                _inspection_context=inspection,
+            )
+            if self.store.reasoning_modes().work_unit_abort(
+                manifest["round_id"]
+            ) is not None:
+                continue
+            other = manifest.get("research_cycle")
+            if (
+                not isinstance(other, dict)
+                or other.get("subround") != "supervision"
+                or other.get("source_round_id") != cycle["source_round_id"]
+                or other.get("source_component_id") != source_component_id
+            ):
+                continue
+            same_cycle = other == cycle
+            same_host = (
+                manifest.get("host_task_scope_id") == host_task_scope_id
+            )
+            if same_cycle and same_host:
+                exact.append(manifest["round_id"])
+                continue
+            other_scopes = other.get("supervisor_scopes", [])
+            if isinstance(other_scopes, list) and requested_scopes.intersection(
+                other_scopes
+            ):
+                overlapping.append(manifest["round_id"])
+        if len(exact) > 1:
+            raise ValueError("duplicate exact Research supervision rounds exist")
+        if overlapping:
+            raise ValueError(
+                "logical component already has overlapping supervisor scope "
+                "coverage: "
+                + ", ".join(sorted(overlapping))
+            )
+        return exact[0] if exact else None
+
     def create_supervision_round(
         self,
         source_round_id: str,
         *,
+        source_component_id: str | None = None,
         supervisor_scopes: list[str] | None = None,
         host_task_scope_id: str | None = None,
     ) -> dict[str, Any]:
-        """Plan subround 2 against exact, fully ingested subround-1 returns."""
+        """Plan subround 2 against one exact completed logical component."""
 
         source_manifest, descriptors = self._source_round_receipt_descriptors(
-            source_round_id
+            source_round_id,
+            source_component_id=source_component_id,
         )
-        applicable = [
-            scope
-            for scope in (
-                "program_math",
-                "proof_logic",
-                "source_scope",
-                "integration",
-            )
-            if any(
-                self._supervisor_scope_applies(scope, descriptor)
-                for descriptor in descriptors
-            )
-            and (scope != "integration" or len(descriptors) >= 2)
-        ]
+        source_component = self._source_supervision_component(
+            source_manifest,
+            source_component_id,
+        )
+        selection_logic_signals = self._source_round_selection_logic_signals(
+            source_manifest,
+            descriptors,
+        )
+        applicable = self._applicable_research_supervisor_scopes(
+            descriptors,
+            selection_logic_signals=selection_logic_signals,
+        )
         if supervisor_scopes is None:
             chosen = applicable[:V5_RESEARCH_SUPERVISOR_LIMIT]
         else:
@@ -4548,8 +5861,13 @@ class V5LifecycleManager:
                 )
         if not chosen:
             raise ValueError("production has no applicable Research supervisor scope")
-        cycle = {
-            "revision": V5_RESEARCH_CYCLE_REVISION,
+        cycle_revision = (
+            V5_RESEARCH_CYCLE_REVISION
+            if source_component is not None
+            else V5_LEGACY_RESEARCH_CYCLE_REVISION
+        )
+        cycle: dict[str, Any] = {
+            "revision": cycle_revision,
             "subround": "supervision",
             "source_round_id": source_manifest["round_id"],
             "source_round_manifest_sha256": source_manifest["manifest_sha256"],
@@ -4560,20 +5878,12 @@ class V5LifecycleManager:
             "pulse_policy": "not_used",
             "truth_effect": "none",
         }
+        if source_component is not None:
+            cycle["source_component_id"] = source_component["component_id"]
+            cycle["source_component_sha256"] = source_component[
+                "component_sha256"
+            ]
         self._validate_research_cycle_binding(cycle)
-
-        if self.store.rounds_dir.exists():
-            existing: list[str] = []
-            for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
-                if round_dir.is_symlink() or not round_dir.is_dir():
-                    continue
-                _, manifest = self._round_manifest(round_dir.name)
-                if manifest.get("research_cycle") == cycle:
-                    existing.append(manifest["round_id"])
-            if len(existing) > 1:
-                raise ValueError("duplicate exact Research supervision rounds exist")
-            if existing:
-                return self.round_status(existing[0])
 
         source_assignment_by_id = {
             item["assignment_id"]: item for item in source_manifest["assignments"]
@@ -4589,10 +5899,15 @@ class V5LifecycleManager:
                 for descriptor in descriptors
                 if self._supervisor_scope_applies(scope, descriptor)
             ]
-            if scope == "integration" and len(descriptors) < 2:
+            if scope == "integration" and scope not in applicable:
                 scoped_receipts = []
-            binding = {
-                "revision": V5_RESEARCH_SUPERVISION_REVISION,
+            binding_revision = (
+                V5_RESEARCH_SUPERVISION_REVISION
+                if source_component is not None
+                else V5_LEGACY_RESEARCH_SUPERVISION_REVISION
+            )
+            binding: dict[str, Any] = {
+                "revision": binding_revision,
                 "supervisor_scope": scope,
                 "source_round_id": source_manifest["round_id"],
                 "source_round_manifest_sha256": source_manifest[
@@ -4605,6 +5920,13 @@ class V5LifecycleManager:
                 "pulse_policy": "not_used",
                 "truth_effect": "none",
             }
+            if source_component is not None:
+                binding["source_component_id"] = source_component[
+                    "component_id"
+                ]
+                binding["source_component_sha256"] = source_component[
+                    "component_sha256"
+                ]
             self._validate_research_supervision_binding(binding)
             related_ids = {
                 item["result_research_id"] for item in scoped_receipts
@@ -4639,6 +5961,9 @@ class V5LifecycleManager:
                             approved
                         )
                         related_ids.add(approved["design_research_id"])
+            failure_family_ids, supervision_focus = (
+                self._research_supervision_focus(scope)
+            )
             payload: dict[str, Any] = {
                 "kind": "challenge",
                 "status": "open",
@@ -4650,7 +5975,11 @@ class V5LifecycleManager:
                     "Review only the hash-bound production returns and their declared "
                     "artifacts. Report concrete failures or a bounded no-obstruction "
                     "finding. Do not use realtime Pulse or silently rewrite production; "
-                    "any defect opens a copy-on-write Research repair in a later cycle."
+                    "any defect opens a copy-on-write Research repair in a later cycle. "
+                    "The evidenced focus for this scope is: "
+                    f"{supervision_focus}. Do not widen the review beyond the exact "
+                    "receipts or re-attack admitted Fact premises without separately "
+                    "escalated contradiction evidence."
                 ),
                 "rationale": (
                     "A dedicated second subround catches reasoning, projection, source, "
@@ -4660,6 +5989,16 @@ class V5LifecycleManager:
                 "relation": "challenges",
                 "related_research_ids": sorted(related_ids),
                 "research_supervision": binding,
+                "failure_informed_assurance": {
+                    "revision": V5_RESEARCH_ASSURANCE_SELECTION_REVISION,
+                    "registry_sha256": (
+                        V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256
+                    ),
+                    "family_ids": failure_family_ids,
+                    "supervisor_scope": scope,
+                    "selection_policy": V5_RESEARCH_ASSURANCE_SELECTION_POLICY,
+                    "truth_effect": "none",
+                },
                 "required_related_artifact_roles": sorted(required_roles),
                 "obligations": [
                     {
@@ -4714,6 +6053,10 @@ class V5LifecycleManager:
             if round_dir.is_symlink() or not round_dir.is_dir():
                 continue
             validated_dir, manifest = self._round_manifest(round_dir.name)
+            if self.store.reasoning_modes().work_unit_abort(
+                manifest["round_id"]
+            ) is not None:
+                continue
             cycle = manifest.get("research_cycle")
             if (
                 cycle is None
@@ -4830,8 +6173,14 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         """Execute only code already frozen, supervised, and safely disposed."""
 
+        _, design_manifest_preview = self._round_manifest(source_round_id)
+        design_component_id = self._source_component_id_for_assignment(
+            design_manifest_preview,
+            assignment_id,
+        )
         design_manifest, descriptors = self._source_round_receipt_descriptors(
-            source_round_id
+            source_round_id,
+            source_component_id=design_component_id,
         )
         matches = [
             item for item in descriptors if item["assignment_id"] == assignment_id
@@ -4956,6 +6305,15 @@ class V5LifecycleManager:
             research_cycle = dict(
                 self._validate_research_cycle_binding(research_cycle)
             )
+            if (
+                research_cycle["subround"] == "production"
+                and research_cycle["revision"]
+                != V5_RESEARCH_CYCLE_REVISION
+            ):
+                raise ValueError(
+                    "new production rounds require the current logical-component "
+                    "Research-cycle revision"
+                )
         host_task_scope_id = normalize_host_task_scope_id(
             host_task_scope_id,
             workflow_evidence_version=5,
@@ -4979,14 +6337,54 @@ class V5LifecycleManager:
                 raise ValueError(
                     "--workers must equal the number of explicit research ids"
                 )
+            supervision_selection = (
+                research_cycle is not None
+                and research_cycle["subround"] == "supervision"
+            )
+            production_selection = (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+            )
             by_id = {
                 item["research_id"]: item
                 for item in self.frontier(
                     limit=max(self._json_count(self.research_entries_dir), workers),
+                    include_history=supervision_selection,
                     campaign_id=campaign_id,
                 )
             }
-            missing = sorted(set(normalized_ids).difference(by_id))
+            missing: list[str] = []
+            production_review_only: list[str] = []
+            selected = []
+            for research_id in normalized_ids:
+                projection = by_id.get(research_id)
+                if projection is None:
+                    missing.append(research_id)
+                    continue
+                if production_selection and self._production_entry_is_review_only(
+                    projection
+                ):
+                    production_review_only.append(research_id)
+                    continue
+                if projection["route_status"] == "current" and projection[
+                    "status"
+                ] in ACTIVE_MEMORY_STATUSES:
+                    selected.append(projection)
+                    continue
+                if supervision_selection and self._supervision_review_lane_allows_stale_projection(
+                    projection=projection,
+                    research_cycle=research_cycle,
+                ):
+                    selected.append(projection)
+                    continue
+                missing.append(research_id)
+            if production_review_only:
+                raise ValueError(
+                    "Research refute is reserved for subround-2 supervision; "
+                    "production selection contains refute Research: "
+                    + ", ".join(sorted(production_review_only))
+                )
+            missing = sorted(missing)
             if missing:
                 scope_note = (
                     f" in Campaign {campaign_id}" if campaign_id is not None else ""
@@ -4997,9 +6395,24 @@ class V5LifecycleManager:
                     + ": "
                     + ", ".join(missing)
                 )
-            selected = [by_id[item] for item in normalized_ids]
         else:
-            selected = self.frontier(limit=workers, campaign_id=campaign_id)
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+            ):
+                selected = [
+                    item
+                    for item in self.frontier(
+                        limit=max(
+                            self._json_count(self.research_entries_dir),
+                            workers,
+                        ),
+                        campaign_id=campaign_id,
+                    )
+                    if not self._production_entry_is_review_only(item)
+                ][:workers]
+            else:
+                selected = self.frontier(limit=workers, campaign_id=campaign_id)
         if len(selected) != workers:
             scope_note = (
                 f" in Campaign {campaign_id}" if campaign_id is not None else ""
@@ -5029,6 +6442,19 @@ class V5LifecycleManager:
             raise RuntimeError("V5 local host task scope allocation returned null")
 
         with self.store.v5_mutation_lock(command="plan-round"):
+            self._validate_selected_execution_authority_liveness(selected)
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "supervision"
+            ):
+                existing_supervision_round_id = (
+                    self._authoritative_supervision_retry_or_overlap(
+                        research_cycle=research_cycle,
+                        host_task_scope_id=host_task_scope_id,
+                    )
+                )
+                if existing_supervision_round_id is not None:
+                    return self.round_status(existing_supervision_round_id)
             planned_runtime_binding = validate_runtime_binding(
                 self._runtime_binding()
             )
@@ -5115,6 +6541,21 @@ class V5LifecycleManager:
                 )
                 for index, entry in enumerate(selected)
             }
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+            ):
+                refute_ids = sorted(
+                    research_id
+                    for research_id, selection in mode_selections.items()
+                    if selection["selected_mode"] == "refute"
+                )
+                if refute_ids:
+                    raise ValueError(
+                        "Research refute is reserved for subround-2 supervision; "
+                        "production selection contains refute Research: "
+                        + ", ".join(refute_ids)
+                    )
             snapshot, blackboard_selection = self._snapshot_for_round(selected)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             round_id = (
@@ -5142,9 +6583,15 @@ class V5LifecycleManager:
                     "pair_binding": None,
                 }
                 primary_specs.append(primary_spec)
-                if independent_adverse_pair_is_required(
-                    entry,
-                    primary_work_mode=primary_mode,
+                if (
+                    not (
+                        research_cycle is not None
+                        and research_cycle["subround"] == "production"
+                    )
+                    and independent_adverse_pair_is_required(
+                        entry,
+                        primary_work_mode=primary_mode,
+                    )
                 ):
                     pair_candidates.append(
                         (entry, primary_spec, primary_assignment_id)
@@ -5247,15 +6694,20 @@ class V5LifecycleManager:
                 ],
                 "effect": "future_research_budget_only",
             }
-            all_nodes = self.store.blackboard().nodes()
+            explicit_blackboard_writes = any(
+                bool(
+                    work_spec["entry"]["metadata"].get(
+                        "blackboard_write_space_ids", []
+                    )
+                )
+                for work_spec in work_specs
+            )
+            all_nodes: dict[str, dict[str, Any]] = {}
             snapshot_nodes, _ = self.store.blackboard().snapshot_objects(
                 snapshot["snapshot_id"]
             )
-            default_spaces = sorted(
-                node_id
-                for node_id, node in all_nodes.items()
-                if node.get("node_type") == "space"
-            )[:1]
+            if explicit_blackboard_writes:
+                all_nodes = self.store.blackboard().nodes()
             assignments: list[dict[str, Any]] = []
             for work_spec in work_specs:
                 entry = work_spec["entry"]
@@ -5285,11 +6737,7 @@ class V5LifecycleManager:
                     "blackboard_write_space_ids"
                 )
                 if requested_spaces is None:
-                    requested_spaces = [
-                        space_id
-                        for space_id in default_spaces
-                        if space_id in snapshot_nodes
-                    ]
+                    requested_spaces = []
                 write_spaces = _require_string_list(
                     requested_spaces, "research Blackboard write spaces"
                 )
@@ -5566,6 +7014,18 @@ class V5LifecycleManager:
                     assignments_dir / f"{assignment_id}.json", assignment
                 )
                 assignments.append(assignment)
+            supervision_components: list[dict[str, Any]] | None = None
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+                and research_cycle["revision"] == V5_RESEARCH_CYCLE_REVISION
+            ):
+                supervision_components = (
+                    self._build_logical_supervision_components(
+                        assignments=assignments,
+                        source_records=source_records,
+                    )
+                )
             manifest_semantic = {
                 "schema_version": 5,
                 "policy_revision": V5_POLICY_REVISION,
@@ -5577,7 +7037,15 @@ class V5LifecycleManager:
                 "reasoning_mode_binding": reasoning_binding,
                 "contribution_policy": "independent_ingest_local_quarantine",
                 "assignment_contract_revision": (
-                    "chalxius-v5-independent-adverse-allocation-1"
+                    (
+                        V5_PRODUCTION_ALLOCATION_REVISION
+                        if research_cycle["revision"]
+                        == V5_RESEARCH_CYCLE_REVISION
+                        else V5_LEGACY_PRODUCTION_ALLOCATION_REVISION
+                    )
+                    if research_cycle is not None
+                    and research_cycle["subround"] == "production"
+                    else V5_LEGACY_ADVERSE_ALLOCATION_REVISION
                 ),
                 "host_task_scope_id": host_task_scope_id,
                 "primary_worker_count": workers,
@@ -5588,6 +7056,10 @@ class V5LifecycleManager:
                 manifest_semantic["campaign_scope"] = campaign_scope
             if research_cycle is not None:
                 manifest_semantic["research_cycle"] = research_cycle
+            if supervision_components is not None:
+                manifest_semantic["supervision_components"] = (
+                    supervision_components
+                )
             manifest = {
                 **manifest_semantic,
                 "manifest_sha256": sha256_json(manifest_semantic),
@@ -5632,6 +7104,8 @@ class V5LifecycleManager:
             required.add("campaign_scope")
         if "research_cycle" in manifest:
             required.add("research_cycle")
+        if "supervision_components" in manifest:
+            required.add("supervision_components")
         current_allocation_fields = {
             "assignment_contract_revision",
             "host_task_scope_id",
@@ -5679,7 +7153,11 @@ class V5LifecycleManager:
         if current_allocation:
             if (
                 manifest["assignment_contract_revision"]
-                != "chalxius-v5-independent-adverse-allocation-1"
+                not in {
+                    V5_LEGACY_ADVERSE_ALLOCATION_REVISION,
+                    V5_LEGACY_PRODUCTION_ALLOCATION_REVISION,
+                    V5_PRODUCTION_ALLOCATION_REVISION,
+                }
                 or not isinstance(manifest["host_task_scope_id"], str)
                 or HOST_TASK_SCOPE_ID_RE.fullmatch(
                     manifest["host_task_scope_id"]
@@ -5854,9 +7332,29 @@ class V5LifecycleManager:
                 source = self._inspection_research_record(
                     primary_assignment["research_id"], inspection
                 )
-                required_pair = independent_adverse_pair_is_required(
-                    source,
-                    primary_work_mode=primary_assignment["work_mode"],
+                supervision_only_production = (
+                    manifest["assignment_contract_revision"]
+                    in {
+                        V5_LEGACY_PRODUCTION_ALLOCATION_REVISION,
+                        V5_PRODUCTION_ALLOCATION_REVISION,
+                    }
+                )
+                if supervision_only_production and (
+                    research_cycle is None
+                    or research_cycle["subround"] != "production"
+                    or primary_assignment["work_mode"] == "refute"
+                ):
+                    raise ValueError(
+                        "V5 supervision-only allocation is not a constructive "
+                        "production subround"
+                    )
+                required_pair = (
+                    False
+                    if supervision_only_production
+                    else independent_adverse_pair_is_required(
+                        source,
+                        primary_work_mode=primary_assignment["work_mode"],
+                    )
                 )
                 binding = primary_assignment["independent_adverse_pair"]
                 if required_pair != (binding is not None):
@@ -5867,6 +7365,62 @@ class V5LifecycleManager:
                     raise ValueError("V5 primary names an unknown adverse pair")
                 if card["control_plane"]["independent_adverse_pair"] != binding:
                     raise ValueError("V5 primary pair card binding drifted")
+        if (
+            research_cycle is not None
+            and research_cycle["subround"] == "production"
+            and research_cycle["revision"] == V5_RESEARCH_CYCLE_REVISION
+        ):
+            if (
+                manifest.get("assignment_contract_revision")
+                != V5_PRODUCTION_ALLOCATION_REVISION
+            ):
+                raise ValueError(
+                    "component-aware production allocation revision drifted"
+                )
+            self._validate_logical_supervision_components(
+                manifest.get("supervision_components"),
+                assignments=assignments,
+                _inspection_context=inspection,
+            )
+        elif (
+            research_cycle is not None
+            and research_cycle["subround"] == "production"
+            and research_cycle["revision"]
+            == V5_LEGACY_RESEARCH_CYCLE_REVISION
+        ):
+            if (
+                manifest.get("assignment_contract_revision")
+                not in {
+                    V5_LEGACY_ADVERSE_ALLOCATION_REVISION,
+                    V5_LEGACY_PRODUCTION_ALLOCATION_REVISION,
+                }
+            ):
+                raise ValueError(
+                    "legacy production allocation revision drifted"
+                )
+            if "supervision_components" in manifest:
+                raise ValueError(
+                    "legacy production rounds cannot carry logical components"
+                )
+        elif (
+            research_cycle is not None
+            and research_cycle["subround"] == "supervision"
+        ):
+            if (
+                manifest.get("assignment_contract_revision")
+                != V5_LEGACY_ADVERSE_ALLOCATION_REVISION
+            ):
+                raise ValueError(
+                    "Research supervision allocation revision drifted"
+                )
+            if "supervision_components" in manifest:
+                raise ValueError(
+                    "supervision rounds cannot carry logical components"
+                )
+        elif "supervision_components" in manifest:
+            raise ValueError(
+                "historical or supervision rounds cannot carry logical components"
+            )
         completed = self._round_is_completed(
             round_dir,
             manifest,
@@ -9010,19 +10564,32 @@ class V5LifecycleManager:
             raise ValueError(
                 "Candidate Release research ids must be nonempty and unique"
             )
-        candidate_fact_bindings = self._candidate_fact_fingerprints_for_adverse(
-            payload.get("candidates")
-        )
-        fresh_adverse_readiness = self._fresh_adverse_readiness(
-            research_ids=research_ids,
-            candidate_fact_bindings=candidate_fact_bindings,
-            challenge_dispositions=payload.get("challenge_dispositions"),
-            adverse_actor_ids=payload.get("adverse_actor_ids"),
-            producer=producer,
-        )
         explicit_research_records = [
             self._research_record(item) for item in research_ids
         ]
+        supervision_review_only_ids = sorted(
+            item["research_id"]
+            for item in explicit_research_records
+            if (
+                isinstance(
+                    item.get("metadata", {}).get("research_supervision"),
+                    dict,
+                )
+                or self._research_is_adverse_assignment(item)
+            )
+        )
+        if supervision_review_only_ids:
+            raise ValueError(
+                "Candidate Release selects review-only Research-supervision task "
+                "or return records; select the constructive branch and let bound "
+                "review evidence attach automatically: "
+                + ", ".join(supervision_review_only_ids)
+            )
+        required_supervision_result_ids = (
+            self._required_supervision_results_for_candidate(
+                explicit_research_records
+            )
+        )
         all_research_records = {
             item["research_id"]: item for item in self.research_records()
         }
@@ -9043,6 +10610,28 @@ class V5LifecycleManager:
             )
         research_records = self._release_research_records(
             explicit_research_records
+        )
+        bound_research_ids = {
+            record["research_id"] for record in research_records
+        }
+        missing_supervision_results = sorted(
+            required_supervision_result_ids.difference(bound_research_ids)
+        )
+        if missing_supervision_results:
+            raise ValueError(
+                "Candidate Release closure omitted required completed Research "
+                "supervision results: "
+                + ", ".join(missing_supervision_results)
+            )
+        candidate_fact_bindings = self._candidate_fact_fingerprints_for_adverse(
+            payload.get("candidates")
+        )
+        fresh_adverse_readiness = self._fresh_adverse_readiness(
+            research_ids=research_ids,
+            candidate_fact_bindings=candidate_fact_bindings,
+            challenge_dispositions=payload.get("challenge_dispositions"),
+            adverse_actor_ids=payload.get("adverse_actor_ids"),
+            producer=producer,
         )
         assurance_contract_revision = (
             V5_ASSURANCE_CONTRACT_REVISION
@@ -9780,6 +11369,25 @@ class V5LifecycleManager:
                 if existing["release_sha256"] != release_sha:
                     raise ValueError(f"Candidate Release id collision at {path}")
                 return existing
+            try:
+                sealed_supervision_result_ids = (
+                    self._required_supervision_results_for_candidate(
+                        explicit_research_records
+                    )
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    "Candidate Research supervision liveness changed between "
+                    "preflight and seal"
+                ) from exc
+            if (
+                sealed_supervision_result_ids
+                != required_supervision_result_ids
+            ):
+                raise ValueError(
+                    "Candidate Research supervision result set changed between "
+                    "preflight and seal"
+                )
             sealed, _ = self._normalize_artifacts(
                 payload.get("artifacts"), seal=True
             )

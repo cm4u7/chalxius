@@ -584,6 +584,97 @@ receipt fails closed on incomplete results, mixed identities, shared roots,
 timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
 infrastructure and does not depend on philosophical content.
 
+## 0.7.0 failure-informed efficiency difference
+
+Version 0.7.0 treats assurance as an error-cost allocation problem rather than
+a universal checklist. The release registry contains only reproduced,
+high-loss failure families and maps them deterministically from the frozen work
+mode, artifact roles, and outcome. It neither learns agent reputation nor
+changes itself at runtime. Adding a family is a future reviewed release change.
+
+Four broad costs are withdrawn or narrowed. Plain `interpret`/`insight` output
+without proof-bearing evidence no longer receives `proof_logic`. Multiple
+same-scope outputs no longer receive a duplicate `integration` supervisor;
+integration is selected only when a completed logical component crosses at
+least two primary scopes. A default Research task no longer traverses three
+Blackboard hops or receives an implicit write space; it binds one root-space
+identity and zero writes until an explicit promoted query or write capability
+is requested. Public V5 `pulse-plan` no longer creates a second collaboration
+path beside the required production/supervision cycle.
+
+The deletion boundary is evidence-based. Blackboard still owns live Paper
+projections, snapshots, promotions, and Learner mounts, so its module and state
+are retained. Pulse still owns V4 and historical V5 records, so status, audit,
+dispatch, close, void, and abort remain compatible. Candidate fresh-adverse,
+verifier, Certification, Gateway, Fact, exact runtime/card/return, abort,
+seal-lock, and execution-lock checks remain because their failures are both
+reproduced and high loss. The already-active Learner receives a separate
+read-only oral-follow-up fast path, but any persistence, truth verification,
+Research, architecture, or external effect restores the full applicable path.
+
+This implements PHX route
+`run-20260809T131409541618Z-e6ec115394d1/PHX-003` under consultation
+`consultation-9a44ca5cfada8c5773e1e795498b96695fa1cffeebad9edaebf5d629527e6d8f`.
+The PHX binding is design provenance only; measurements and release validation
+must still precede adoption, and neither has mathematical truth effect.
+
+## 0.6.9 conservative Research-gate integrity difference
+
+The 0.6.8 two-subround contract still serialized supervision at whole-round
+completion and trusted a self-reported component partition. It also did not
+make completed supervision a live atomic prerequisite of Candidate sealing or
+formal computation. Version 0.6.9 keeps the truth-bearing lifecycle unchanged
+and strengthens only prospective Research orchestration.
+
+Production now freezes dependency-defined logical components before dispatch.
+Validation reloads the exact Research ancestry and rederives the partition;
+component identity is part of the recursion guard, and retry/overlap arbitration
+is lock-held. A complete component may therefore be supervised while unrelated
+workers continue, while related integration still waits for the whole component.
+
+Candidate construction performs the complete-supervision check before expensive
+normalization and audit, automatically binds the review results, and rejects
+review records as constructive anchors. Immediately before sealing, it
+recomputes the exact live result set under the Candidate mutation lock. Formal
+computation likewise ignores aborted program-math rounds, permits a live
+successor, and under the round-write lock rechecks the approved Research,
+supervision binding, and latest disposition id/hash/status. These final checks
+close abort and late-disposition races without moving iterative repair behind
+packaging or verification.
+
+No Candidate schema, verifier, Certification, Gateway, Fact, Evidence,
+Paper/Audit, Reader, Pulse, or attack-route authority changes. Historical
+component-free and single-wave cards retain their exact compatibility path.
+
+## 0.6.8 conservative Research-supervision stability difference
+
+The 0.6.7 prospective production planner still admitted proposition-level
+`refute` entries and automatically paired marked constructive entries with
+adverse workers. That duplicated the dedicated second-subround supervision
+pass and could redirect ordinary Research toward already admitted Fact
+premises. Version 0.6.8 changes only prospective public allocation: production
+rejects explicit or automatically selected `refute`, does not append paired
+adverse assignments, and freezes a distinct allocation revision. Historical
+direct-allocation bytes remain readable, and `independent_adverse_required`
+still governs the later exact-Candidate adverse readiness gate.
+
+The same field run exposed a second defect when planning supervision over a real
+completed round: full source validation re-entered validation of the supervisor
+Research being constructed, and the content-addressed Research write could
+survive without a round. Version 0.6.8 threads one ephemeral inspection context
+and guards only a reentrant check of the identical supervision binding. The
+inner frame still validates local schema and hashes; the outer frame still
+reconstructs the complete source-round authority. An identical retry reuses the
+same Research record and writes at most one round. No persistent validation
+cache or new authority surface is introduced.
+
+Second-subround supervisors continue to attack exact new Research returns and
+declared artifacts. Admitted Fact dependencies are frozen premises unless exact
+new contradiction evidence is separately escalated for authority-governed
+reopening. Candidate review, fresh verifier, Certification, Gateway, Fact,
+Evidence, Paper/Audit, Pulse, and the 0.6.7 plain-language attack recommendation
+projection are unchanged.
+
 ## 0.6.6 conservative Research-cycle difference
 
 The prior architecture already had capable `refute` workers, immutable task

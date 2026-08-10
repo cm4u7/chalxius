@@ -16,6 +16,23 @@ because a research graph exists, or because the user asks to test Chalxius's
 research capability. A learning request may remain in-session; persistent
 learning-graph writes need separate user authorization.
 
+## Bounded oral follow-ups
+
+Once Learner is already active, one bounded read-only explanation may stay in
+session and bypass Research-runtime administration. This applies only when the
+answer needs no file mutation, persistent learning record, fresh correctness
+verification, project audit, CHX/PHX work, or external effect. A local `N`
+prefix or similar shorthand selects this path only when the current teaching
+context has already defined that shorthand; `N` has no universal meaning.
+
+On this path, read only the directly relevant learning rule and mathematical
+source slice. Do not run mode status, a project-wide audit, an attack report, a
+PHX lookup, a new CHX runtime ledger, or a complete governing-reference reread.
+If the question crosses into source-defect resolution, Research, Candidate,
+Certification, Gateway, Fact admission, document editing, or architecture
+change, leave the fast path before acting. The answer remains nontruth teaching
+and acquires no new certification status.
+
 The research reasoning profile is a separate axis. `deep` does not activate
 Chalxius Learner, and Learner activation does not switch `fast`, `auto`, or
 `deep`, create a research round, or alter the invariant Fact admission gate.

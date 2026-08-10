@@ -50,14 +50,15 @@ Never copy one report into the other or treat either as Fact evidence.
 
 Keep three layers distinct:
 
-1. A production `refute` worker is a peer researcher. It attacks the assigned
-   proposition under its exact hypotheses, searches for counterexamples and
-   obstructions, and may challenge frozen earlier Research. It cannot inspect
-   mutable same-subround peers.
-2. A second-subround supervisor attacks exact first-subround returns. Its scope
+1. A production worker is a constructive peer researcher. It may record a
+   boundary, obstruction, or counterexample found while proving, computing,
+   interpreting, or searching sources, but prospective public production does
+   not dispatch a `refute` worker.
+2. A second-subround `refute` supervisor attacks exact first-subround returns. Its scope
    is proof logic, program-math/code, source/scope, or integration. It can
    induce a later copy-on-write Research repair, but it does not activate
-   attack routes or use Pulse for live peer editing.
+   attack routes or use Pulse for live peer editing. Its default target is new
+   Research, not an admitted Fact premise.
 3. Candidate fresh-adverse review attacks the whole frozen Candidate fact
    content and its dispositions before expensive sealing. It is the formal
    engineering acceptance attack; a fresh verifier still follows it.
@@ -225,27 +226,22 @@ from the explicit `logic_signals` list in Research metadata. A universal rule
 must set `universal_refute=true` and leave every filter list empty. Workers may
 propose universal rules, but they never activate them.
 
-## Independent paired allocation
+## Historical paired allocation and prospective replacement
 
-Adverse rules on a possible future `refute` card are not proof that an adverse
-worker was allocated. For current V5 Research, allocation uses only the exact
-boolean metadata predicate `independent_adverse_required`; claim text and
-domain labels cannot infer it. Every Paper-continuation target sets the
-predicate because every selected target is load-bearing. A mathematical proof
-target may set the same boolean without importing a philosophical stance.
+Historical direct-allocation contracts may contain paired adverse assignments
+and remain byte-exact readable. New public production rounds freeze
+`chalxius-v5-logical-component-production-allocation-2`: `workers` counts only
+constructive primaries, `refute` is rejected, and no pair is appended. The exact
+boolean metadata predicate `independent_adverse_required` remains meaningful,
+but only as a later exact-Candidate adverse-readiness marker. Claim text and
+domain labels cannot infer it. The earlier
+`chalxius-v5-supervision-only-refute-allocation-1` remains readable for frozen
+production rounds.
 
-`plan-round --workers N` selects exactly `N` primaries. For each applicable
-primary that is not already `refute` and is not itself a `challenge`, the round
-adds one extra `refute` assignment. The immutable pair record binds the same
-source Research, different assignment/worker ids, different context ids, the
-ordinary frozen attack rules, and a prohibition on primary-context inheritance
-or cross-worker context sharing. Philosophy or mixed domain still controls
-only the three philosophy attack families; stance preservation remains a
-separate Paper/research-target contract.
-
-The pair creates no second review authority. A return enters cumulative
-Research, route activation still requires an Operator decision, and the normal
-Candidate adverse closure/disposition remains the sole release gate.
+Second-subround supervision supplies the Research attack pass. The normal
+Candidate adverse closure/disposition remains the later whole-candidate release
+gate, and route activation still requires an Operator decision. Neither stage
+creates a second Fact authority.
 
 Before Candidate artifact normalization, source audit, capsule construction,
 or sealing, the prospective fresh-adverse readiness gate inspects only
