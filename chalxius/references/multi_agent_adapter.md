@@ -20,20 +20,27 @@ multi-agent tools. Prefer `fork_turns="none"` when the generated file is self-co
 
 ## Prospective Research production and supervisors
 
-For new V5 public Research, launch all subround-1 assignments from one
-`plan-round`, wait for every assignment, and ingest each exact return. Do not
-share mutable peer context. Then run `plan-supervision-round SOURCE_ROUND` and
-launch its one to three scoped `refute` assignments in fresh contexts. These
-supervisors attack the frozen receipts; they do not negotiate live repairs.
-Any defect creates a later copy-on-write production cycle.
+For new V5 public Research, launch subround-1 assignments from `plan-round` and
+ingest each exact return independently. Do not share mutable peer context. The
+production manifest freezes logical components from selected Research ancestry.
+When one component is complete, run
+`plan-supervision-round SOURCE_ROUND --component-id COMPONENT` and launch its
+one to three scoped `refute` assignments in fresh contexts even if unrelated
+components still have live workers. Omit the flag only for a one-component
+round. Related assignments stay in one component, `integration` waits for that
+whole component, and no component is derived from return timing. These
+supervisors attack the frozen receipts; they do not negotiate live repairs. Any
+defect creates a later copy-on-write production cycle.
 
 This required Research sequencing does not call Pulse. The optional
 execution-profile Pulse below remains a separate compatibility mechanism for a
 task that independently requires snapshot-mediated peer exchange; it cannot
 substitute for exact receipt-bound supervisors. A first-wave computation worker
 must finish core code/design/dependencies before its program-math supervisor;
-only a safely disposed result permits `plan-computation-execution`, whose
-actual output then gets another supervision round.
+only a safely disposed result from a still-live, non-aborted supervision round
+permits `plan-computation-execution`. The execution-round lock revalidates that
+authority and the latest disposition immediately before writing the card, and
+the actual output then gets another supervision round.
 
 ## Execution-profile panel and exchange barrier
 

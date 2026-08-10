@@ -70,6 +70,13 @@ PAPER_RESEARCH_PIPELINE_TEST_MODULE = (
 RUNTIME_COMPATIBILITY_TEST_MODULE = (
     "tests.test_runtime_compatibility.RuntimeCompatibilityClosureTests"
 )
+CHX004_TEST_MODULE = (
+    "tests.test_chx_004_fact_closure_authority."
+    "CHX004FactClosureAuthorityTests"
+)
+RESEARCH_TWO_SUBROUND_TEST_MODULE = (
+    "tests.test_research_two_subround.ResearchTwoSubroundTests"
+)
 MUTANTS = (
     Mutant(
         name="frontier_limit_minus_one",
@@ -306,6 +313,68 @@ MUTANTS = (
             "test_philosophy_paper_continuation_is_complete_atomic_and_current"
         ),
         target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="paper_continuation_bounded_lookup_replaced_by_project_scan",
+        old=(
+            "            try:\n"
+            "                record = self.lifecycle._inspection_research_record(\n"
+            "                    research_id,\n"
+            "                    self._inspection_context,\n"
+            "                )\n"
+            "            except KeyError as exc:\n"
+        ),
+        new=(
+            "            try:\n"
+            "                record = {\n"
+            "                    item[\"research_id\"]: item\n"
+            "                    for item in self.lifecycle.research_records(\n"
+            "                        _inspection_context=self._inspection_context\n"
+            "                    )\n"
+            "                }[research_id]\n"
+            "            except KeyError as exc:\n"
+        ),
+        test=(
+            f"{TEST_MODULE}."
+            "test_paper_continuation_plan_lookup_is_ancestry_bounded"
+        ),
+        target="mathgraph/paper_continuation.py",
+    ),
+    Mutant(
+        name="typed_fact_closure_authority_expansion_bypassed",
+        old=(
+            "        if fact_closure_reconstruction_required and "
+            "referenced_fact_ids:\n"
+        ),
+        new=(
+            "        if False and fact_closure_reconstruction_required and "
+            "referenced_fact_ids:\n"
+        ),
+        test=(
+            f"{CHX004_TEST_MODULE}."
+            "test_typed_closure_evidence_expands_only_active_dependency_ancestry"
+        ),
+    ),
+    Mutant(
+        name="typed_fact_closure_non_active_root_accepted",
+        old="            if non_active_root_ids:\n",
+        new="            if False and non_active_root_ids:\n",
+        test=(
+            f"{CHX004_TEST_MODULE}."
+            "test_typed_closure_rejects_non_active_root_before_dispatch"
+        ),
+    ),
+    Mutant(
+        name="proof_risk_logic_signals_ignored_by_supervision",
+        old=(
+            "                or bool(V5_PROOF_LOGIC_SELECTION_SIGNALS & "
+            "logic_signals)\n"
+        ),
+        new="                or False\n",
+        test=(
+            f"{RESEARCH_TWO_SUBROUND_TEST_MODULE}."
+            "test_interpretive_proof_boundary_signal_receives_proof_supervisor"
+        ),
     ),
     Mutant(
         name="paper_revised_writing_authority_bypassed",
@@ -1973,16 +2042,32 @@ MUTANTS = (
     Mutant(
         name="chx_public_disclosure_unresolved_issue_accepted",
         old=(
-            "        if any(item[\"status\"] != \"resolved\" for item in issues):\n"
-            "            raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+            "    if unresolved_issue_ids:\n"
+            "        raise ValueError(\n"
+            "            \"CHX publication contains an unresolved included issue: \"\n"
+            "            + \", \".join(unresolved_issue_ids)\n"
+            "        )\n"
         ),
         new=(
-            "        if False and any(item[\"status\"] != \"resolved\" for item in issues):\n"
-            "            raise ValueError(\"CHX publication contains an unresolved included issue\")\n"
+            "    if False and unresolved_issue_ids:\n"
+            "        raise ValueError(\n"
+            "            \"CHX publication contains an unresolved included issue: \"\n"
+            "            + \", \".join(unresolved_issue_ids)\n"
+            "        )\n"
         ),
         test=(
             f"{CHX_TEST_MODULE}."
             "test_public_disclosure_binds_ledger_registry_and_documents"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="chx_public_disclosure_superseding_successor_ignored",
+        old="            if relation[\"relation_type\"] != \"supersedes\":\n",
+        new="            if True:\n",
+        test=(
+            f"{CHX_TEST_MODULE}."
+            "test_public_disclosure_accepts_exact_resolved_superseding_successor"
         ),
         target="chx_ledger.py",
     ),

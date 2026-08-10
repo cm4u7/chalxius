@@ -1086,12 +1086,6 @@ class PaperContinuationManager:
     def plan_ids_for_research(
         self, records: list[dict[str, Any]]
     ) -> list[str]:
-        by_id = {
-            item["research_id"]: item
-            for item in self.lifecycle.research_records(
-                _inspection_context=self._inspection_context
-            )
-        }
         result: set[str] = set()
         pending = [record["research_id"] for record in records]
         seen: set[str] = set()
@@ -1100,11 +1094,15 @@ class PaperContinuationManager:
             if research_id in seen:
                 continue
             seen.add(research_id)
-            record = by_id.get(research_id)
-            if record is None:
+            try:
+                record = self.lifecycle._inspection_research_record(
+                    research_id,
+                    self._inspection_context,
+                )
+            except KeyError as exc:
                 raise ValueError(
                     "Paper continuation release Research ancestry is incomplete"
-                )
+                ) from exc
             binding = record.get("metadata", {}).get("paper_continuation")
             if binding is not None:
                 validated = self._validate_research_binding(binding, record=record)

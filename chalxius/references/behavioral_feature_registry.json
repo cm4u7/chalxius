@@ -200,31 +200,41 @@
       }
     },
     "feature.paired_adverse_proof_philosophy_attack": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Historical direct-allocation cards may retain exact paired adverse worker/context bindings, but prospective public production never creates them.",
+      "boundary_reason": "Frozen direct-allocation history must remain readable without reactivating paired adverse dispatch in the prospective public Research cycle.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "boundary_probe": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_philosophy_primary_gets_distinct_rule_bound_adverse_pair"
+    },
+    "feature.production_supervision_refute_boundary": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Research explicitly marked independent_adverse_required must receive a distinct paired refute worker/context unless its primary is already adverse.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
-      "producer_symbol": "mathgraph.adverse_routing.build_paired_proof_philosophy_attack_handoff",
+      "summary": "Prospective public production is constructive-only; formal Research refute work begins in the supervision subround and Candidate adverse review remains later.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_production_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
       "activation_predicate": {
-        "predicate_id": "exact_independent_adverse_required_and_primary_not_already_adverse",
-        "domain": ["required_primary", "predicate_false", "primary_refute", "primary_challenge"],
+        "predicate_id": "prospective_public_production_allocation",
+        "domain": ["constructive_selection", "explicit_refute", "auto_refute", "legacy_direct_allocation"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-paired-adverse-attack-assignment-1",
-        "validator_symbol": "mathgraph.adverse_routing.validate_independent_adverse_pair"
+        "type_id": "chalxius-v5-logical-component-production-allocation-2",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._round_manifest"
       },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.validate_task_card",
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._source_round_receipt_descriptors",
       "observable_effect": {
-        "effect_id": "paired_attack_assignments_visible",
+        "effect_id": "production_contains_only_constructive_primary_assignments",
         "kind": "routing",
-        "description": "The frozen adverse work unit exposes the applicable proof and philosophy attack assignments separately."
+        "description": "The production manifest contains no refute assignment or adverse pair; admitted Facts remain frozen premises unless exact conflict evidence is separately escalated."
       },
       "probes": {
-        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_philosophy_primary_gets_distinct_rule_bound_adverse_pair",
-        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_false_predicate_and_existing_refute_or_challenge_do_not_double",
-        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_independent_pair_tamper_is_rejected"
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_plan_round_keeps_refute_out_of_production",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_legacy_round_is_not_backfilled",
+        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_production_rejects_explicit_or_auto_refute"
       }
     },
     "feature.candidate_fresh_adverse_readiness": {
@@ -315,40 +325,128 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Prospective Research freezes first-subround returns and sends sparse scoped supervisors over the exact receipts before Candidate construction.",
+      "summary": "Prospective Research freezes first-subround logical components and sends sparse scoped supervisors over one exact completed component before Candidate construction, with component-bound cycle-safe full outer validation and lock-held same-host retry.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._source_round_receipt_descriptors",
       "activation_predicate": {
-        "predicate_id": "prospective_production_round_fully_ingested",
-        "domain": ["completed_production", "legacy_or_incomplete_round", "invalid_scope"],
+        "predicate_id": "prospective_logical_component_fully_ingested",
+        "domain": ["completed_component", "legacy_or_incomplete_component", "invalid_scope"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-v5-research-supervision-1",
+        "type_id": "chalxius-v5-research-supervision-2",
         "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_research_supervision_binding"
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_supervision_round_selection",
       "observable_effect": {
         "effect_id": "exact_production_receipts_bound_into_supervision_round",
         "kind": "state_transition",
-        "description": "One to three refute-mode supervisors receive hash-bound production outputs; Pulse remains inactive and defects route to later copy-on-write repair."
+        "description": "One to three refute-mode supervisors receive hash-bound production outputs; one ephemeral component-bound inspection stack prevents recursive validation without persistent authority caching, retry arbitration occurs under the mutation lock, aborted rounds reserve no scope, and Pulse remains inactive."
       },
       "probes": {
-        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_first_wave_refute_attacks_the_proposition_and_is_itself_supervised",
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_supervision_retry_reuses_pre_round_supervisor_research",
         "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_legacy_round_is_not_backfilled",
-        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_supervision_binding_tamper_fails_closed"
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_concurrent_exact_supervision_retry_creates_one_round"
+      }
+    },
+    "feature.failure_informed_selective_research_assurance": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Prospective second-subround supervisors are selected from a static append-only registry of reproduced high-loss failure families; blanket proof and same-scope integration review are absent.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._applicable_research_supervisor_scopes",
+      "activation_predicate": {
+        "predicate_id": "frozen_production_descriptor_matches_reproduced_failure_family",
+        "domain": ["applicable_primary_or_cross_scope_family", "plain_interpretive_or_same_scope_redundancy"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-failure-informed-selective-assurance-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_failure_informed_assurance"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_research_supervision_record_fields",
+      "observable_effect": {
+        "effect_id": "narrow_failure_family_bound_to_each_selected_supervisor",
+        "kind": "routing",
+        "description": "Only role, artifact, and outcome-applicable supervisors are planned; integration requires distinct primary scopes, and every selected supervisor binds the exact static registry hash and family id."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_interpretive_insight_does_not_receive_a_blanket_proof_supervisor",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_tamper_fails_closed"
+      }
+    },
+    "feature.research_supervision_candidate_gate": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A prospective constructive Research result cannot enter expensive Candidate work until every deterministic component supervisor has one live completed ingested result; Candidate sealing rechecks the exact set under its mutation lock, and review records cannot replace the constructive anchor.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._required_supervision_results_for_candidate",
+      "activation_predicate": {
+        "predicate_id": "selected_constructive_result_has_two_subround_production_provenance",
+        "domain": [
+          "complete_ingested_supervision",
+          "pending_or_missing_supervision",
+          "review_only_anchor"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-research-supervision-candidate-gate-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._required_supervision_results_for_candidate"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "observable_effect": {
+        "effect_id": "completed_supervisor_results_bound_before_candidate_expense",
+        "kind": "validation_gate",
+        "description": "Missing, pending, duplicate, aborted, wrong-component, or wrong-revision review fails before Candidate expense; the one valid result per scope is automatically included in the release closure and its liveness is rechecked under the seal lock."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_waits_for_completed_ingested_supervision",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_seal_rechecks_live_supervision_under_lock"
+      }
+    },
+    "feature.logical_component_research_supervision": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Production freezes a deterministic partition from selected Research ancestry and validation authoritatively rederives it; a completed component may be supervised while unrelated workers continue, but related integration waits and timing-derived or overlapping coverage fails closed.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._build_logical_supervision_components",
+      "activation_predicate": {
+        "predicate_id": "component_receipts_complete_independent_of_other_components",
+        "domain": ["complete_component_with_unrelated_live_work", "incomplete_related_component", "tampered_component_partition"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-logical-supervision-component-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_logical_supervision_components"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._source_supervision_component",
+      "observable_effect": {
+        "effect_id": "logical_component_supervision_without_round_barrier",
+        "kind": "state_transition",
+        "description": "One exact component enters scoped supervision before unrelated assignments return; multi-component calls require an explicit frozen component id, exact Research ancestry is reloaded to reject a self-consistent forged partition, and duplicate scope coverage is rejected."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_completed_component_can_be_supervised_while_unrelated_worker_runs",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_related_component_waits_and_integration_sees_complete_component",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_rehashed_component_partition_is_rederived_from_ancestry"
       }
     },
     "feature.preexecution_computation_code_gate": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "A first-subround computer returns core code before execution; formal execution consumes only safely disposed program-math supervision and identical source/dependency hashes.",
+      "summary": "A first-subround computer returns core code before execution; formal execution consumes only its assignment-local safely disposed, live, non-aborted program-math supervision and identical source/dependency hashes, with a final lock-held latest-disposition and authority check.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_computation_execution_round",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._build_approved_computation_execution_binding",
       "activation_predicate": {
         "predicate_id": "computation_design_has_safe_program_math_disposition",
-        "domain": ["safe_disposition", "missing_or_blocking_disposition", "changed_source_or_dependencies"],
+        "domain": ["safe_live_disposition", "missing_blocking_or_aborted_disposition", "changed_source_dependencies_or_liveness"],
         "conditional": true
       },
       "typed_handoff": {
@@ -359,12 +457,12 @@
       "observable_effect": {
         "effect_id": "supervised_code_hash_controls_formal_execution",
         "kind": "validation_gate",
-        "description": "Execution fails before scheduling without a safe disposition and return preflight rejects any source or dependency drift; actual output returns to supervision."
+        "description": "Execution fails before scheduling without the exact assignment-local safe live disposition; aborted reviews are skipped, the latest disposition and authority are rechecked under the round-write lock, and return preflight rejects source or dependency drift before actual output returns to supervision."
       },
       "probes": {
-        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_code_is_supervised_before_exact_execution_and_output_is_rechecked",
-        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_execution_gate_rejects_missing_supervision_disposition",
-        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_changed_code_is_rejected_and_requires_a_new_cycle"
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_multi_component_computation_uses_assignment_local_supervision",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_aborted_program_math_supervision_cannot_authorize_execution",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_execution_round_rechecks_latest_disposition_under_lock"
       }
     },
     "feature.communication_readiness_normal_flow": {

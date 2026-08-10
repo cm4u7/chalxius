@@ -3068,14 +3068,18 @@ def verify_public_disclosure(
     path = _resolved_path(ledger_path)
     records = _collect_closed_ledger_records(path)
     actual_lineage: list[dict[str, Any]] = []
+    publication_issues: dict[str, tuple[int, dict[str, Any]]] = {}
     previous_run_id = ""
-    for record in records:
+    for record_index, record in enumerate(records):
         status = record["status"]
         if status.get("unreconciled_finding_ids"):
             raise ValueError("CHX publication has unreconciled findings")
         issues = status["issues"]
-        if any(item["status"] != "resolved" for item in issues):
-            raise ValueError("CHX publication contains an unresolved included issue")
+        for issue in issues:
+            issue_id = issue["issue_id"]
+            if issue_id in publication_issues:
+                raise ValueError("CHX publication issue ownership overlaps")
+            publication_issues[issue_id] = (record_index, issue)
         issue_ids = sorted(
             (item["issue_id"] for item in issues),
             key=lambda item: int(item.removeprefix("CHX-")),
@@ -3090,6 +3094,61 @@ def verify_public_disclosure(
             }
         )
         previous_run_id = status["run_id"]
+
+    superseding_issue_ids: dict[str, list[str]] = {}
+    for source_id, (source_index, source_issue) in publication_issues.items():
+        for relation in source_issue["relations"]:
+            if relation["relation_type"] != "supersedes":
+                continue
+            target_id = relation["issue_id"]
+            target = publication_issues.get(target_id)
+            if target is None:
+                raise ValueError(
+                    "CHX publication supersedes relation names an absent issue"
+                )
+            target_index, _ = target
+            if target_index >= source_index:
+                raise ValueError(
+                    "CHX publication supersedes relation is not strictly later"
+                )
+            superseding_issue_ids.setdefault(target_id, []).append(source_id)
+
+    resolution_cache: dict[str, bool] = {}
+
+    def publication_resolved(issue_id: str, visiting: set[str]) -> bool:
+        cached = resolution_cache.get(issue_id)
+        if cached is not None:
+            return cached
+        if issue_id in visiting:
+            raise ValueError("CHX publication supersedes relation contains a cycle")
+        _, issue = publication_issues[issue_id]
+        if issue["status"] == "resolved":
+            resolution_cache[issue_id] = True
+            return True
+        successors = sorted(
+            superseding_issue_ids.get(issue_id, []),
+            key=lambda item: int(item.removeprefix("CHX-")),
+        )
+        if len(successors) != 1:
+            resolution_cache[issue_id] = False
+            return False
+        resolved = publication_resolved(successors[0], visiting | {issue_id})
+        resolution_cache[issue_id] = resolved
+        return resolved
+
+    unresolved_issue_ids = sorted(
+        (
+            issue_id
+            for issue_id in publication_issues
+            if not publication_resolved(issue_id, set())
+        ),
+        key=lambda item: int(item.removeprefix("CHX-")),
+    )
+    if unresolved_issue_ids:
+        raise ValueError(
+            "CHX publication contains an unresolved included issue: "
+            + ", ".join(unresolved_issue_ids)
+        )
     if actual_lineage != contract["ledger_lineage"]:
         raise ValueError("CHX private ledger lineage differs from public disclosure")
     current = records[-1]

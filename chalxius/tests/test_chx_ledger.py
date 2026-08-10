@@ -993,6 +993,98 @@ class CHXRunLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "enumeration drifted"):
             validate_public_disclosure_contract(skill_root)
 
+    def test_public_disclosure_accepts_exact_resolved_superseding_successor(
+        self,
+    ) -> None:
+        predecessor = self._started("run-public-open-predecessor-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Publish an exact superseding successor.",
+                run_id="run-public-resolved-successor-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        successor_issue = self._issue()
+        successor_issue["audit_anchors"] = ["resolved-superseding-successor:PASS"]
+        record_issue(
+            successor,
+            successor_issue,
+            relations=[
+                {"relation_type": "supersedes", "issue_id": "CHX-001"}
+            ],
+        )
+        self._repair_chain(successor, ["CHX-002"])
+        dispose_issue(
+            successor,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The successor safely replaces the predecessor mechanism.",
+                "regression_evidence": ["test-public-successor:PASS"],
+            },
+        )
+        close_ledger(successor)
+
+        skill_root = Path(self.temporary.name) / "superseding-public-skill"
+        (skill_root / "references").mkdir(parents=True)
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "1. **CHX-001 — predecessor.** immutable open mechanism\n"
+            "2. **CHX-002 — successor.** exact resolved supersedes relation\n",
+            encoding="utf-8",
+        )
+        (skill_root / "references" / "v5_release_traceability.md").write_text(
+            "CHX-001 CHX-002 immutable predecessor resolved supersedes successor\n",
+            encoding="utf-8",
+        )
+        contract = {
+            "contract_revision": "chalxius-chx-public-disclosure-2",
+            "included_issue_ids": ["CHX-001", "CHX-002"],
+            "ledger_lineage": [
+                {
+                    "ledger_run_id": "run-public-open-predecessor-001",
+                    "ledger_sha256": __import__("hashlib").sha256(
+                        predecessor.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "",
+                    "included_issue_ids": ["CHX-001"],
+                },
+                {
+                    "ledger_run_id": "run-public-resolved-successor-001",
+                    "ledger_sha256": __import__("hashlib").sha256(
+                        successor.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "run-public-open-predecessor-001",
+                    "included_issue_ids": ["CHX-002"],
+                },
+            ],
+            "latest_issue_id": "CHX-002",
+            "document_contracts": {
+                "KNOWN_LIMITATIONS.md": {
+                    "explicit_issue_enumeration": True,
+                    "required_markers": ["immutable open", "supersedes"],
+                },
+                "references/v5_release_traceability.md": {
+                    "explicit_issue_enumeration": False,
+                    "required_markers": ["CHX-001", "CHX-002", "supersedes"],
+                },
+            },
+            "private_ledger_included": False,
+            "truth_effect": "none",
+        }
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            verify_public_disclosure(successor, skill_root)["status"],
+            "pass",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

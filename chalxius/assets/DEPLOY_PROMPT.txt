@@ -1,9 +1,17 @@
-Verify Chalxius 0.6.7 — Plain-Language Attack Recommendations as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.7.0 — Failure-Informed Efficiency as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
 is release-time only and must not be added to normal Research, Pulse,
 computation, or Reader execution.
+
+Confirm the 0.7.0 efficiency boundary: supervisor selection is static and
+failure-family informed; plain interpretive insight has no blanket proof gate;
+integration requires distinct primary scopes; new Research cards default to one
+Blackboard root node and zero writes; new V5 Pulse planning fails before state
+creation. Preserve explicit Blackboard promotion/writes, V4 and historical
+Pulse completion, Candidate fresh adverse, verifier, Certification, Gateway,
+Fact, exact runtime/card/return, abort, and lock-held final-write gates.
 
 For every Chalxius run started after the 0.4.1 activation boundary, start one
 task-scoped CHX architecture ledger before substantive work and close it
@@ -75,18 +83,18 @@ return path, and final-hash contract. Preflight a repairable draft, ingest only
 the exact worker-final SHA-256, and quarantine a malformed return locally.
 Main compiles task context, Operator governs and may explicitly override, and
 the dedicated Host role retains only its trusted dispatch/status/audit surface.
-Every load-bearing Paper target, and every proof target explicitly marked
-`independent_adverse_required`, receives a separate paired refute worker and
-context. Its result is nontruth Research, not a second verifier or truth gate.
+Production Research never auto-appends a paired refute worker. A branch marked
+`independent_adverse_required` instead receives the later exact-Candidate
+adverse review before sealing; its result is nontruth Research, not a second
+verifier or truth gate.
 Explicit work-unit abort stops future managed return, experiment, Pulse
 commitment, and dispatch for that round while preserving accumulated evidence.
 
-Use optional two-wave Pulse when peer exchange is useful. Wave 1 shares one
-snapshot; Wave 2 receives exact peer Research through a later frozen snapshot.
-Each valid contribution enters cumulative Research independently. One malformed
-peer never deletes or invalidates valid peer Research. Pulse closure is
-coordination advice only and cannot certify a Fact. Host dispatch must fail
-closed unless a trusted issuer and the exact fresh-context contract are bound.
+New V5 Pulse planning is retired; use the frozen production/supervision cycle.
+Retain V4 Pulse and status, audit, dispatch, close, void, or abort for an
+already-created record so historical work is not stranded. Pulse coordination
+cannot certify a Fact. Host dispatch must fail closed unless a trusted issuer
+and the exact fresh-context contract are bound.
 
 The only truth path is Research -> Candidate Release -> Certification Decision
 -> Fact. A Candidate Release automatically binds all existing challenge,

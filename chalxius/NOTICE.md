@@ -52,6 +52,27 @@ worker-authored technical instruction; an unknown family remains visible in
 worker cards, Candidate review, verifier, Certification, Gateway, Fact, and
 historical contracts are unchanged.
 
+Chalxius 0.6.8, **Research Supervision Stability**, reserves formal Research
+refutation for the second subround, keeps admitted Facts out of default
+counterexample search, makes supervision validation cycle-safe, and reuses an
+identical content-addressed supervisor Research write after interruption.
+Chalxius 0.6.9, **Research Gate Integrity**, freezes logical supervision
+components, permits unrelated components to progress concurrently, and closes
+Candidate-seal and computation-disposition races with lock-held liveness checks.
+Both releases are prospective Research-orchestration repairs and leave the
+Candidate schema and Fact authority unchanged.
+
+Chalxius 0.7.0, **Failure-Informed Efficiency**, replaces blanket prospective
+Research checks with a static append-only registry of reproduced failure
+families. It removes the empty proof review of plain interpretive insight,
+limits integration review to components crossing distinct primary assurance
+scopes, makes the default Blackboard capability one root node with no writes,
+and retires new V5 Pulse planning. Explicit Blackboard promotion and mutation,
+V4 Pulse, and inspection or completion of existing Pulse records remain
+available. Candidate fresh-adverse review, verifier, Certification, Gateway,
+Fact admission, historical contracts, and the 0.6.9 lock-held race repairs are
+unchanged. The PHX route is advisory provenance; it supplies no truth effect.
+
 The static nontruth learning-plane algorithm descends from Grill Me 0.2.0.
 Chalxius now owns that opt-in academic teaching/testing surface under the name
 Chalxius Learner. The standalone Grill Me 0.3.2-code companion, distinguished as

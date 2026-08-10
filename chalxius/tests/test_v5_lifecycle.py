@@ -64,6 +64,78 @@ class V5LifecycleTests(unittest.TestCase):
         )
         return store
 
+    def test_paper_continuation_plan_lookup_is_ancestry_bounded(self) -> None:
+        selected_id = "a" * 12
+        ancestor_id = "b" * 12
+        unrelated_id = "c" * 12
+        records = {
+            selected_id: {
+                "research_id": selected_id,
+                "related_research_ids": [ancestor_id],
+                "metadata": {},
+            },
+            ancestor_id: {
+                "research_id": ancestor_id,
+                "related_research_ids": [],
+                "metadata": {
+                    "paper_continuation": {"fixture": "binding"},
+                },
+            },
+            unrelated_id: {
+                "research_id": unrelated_id,
+                "related_research_ids": [],
+                "metadata": {},
+            },
+        }
+        loaded: list[str] = []
+
+        class BoundedStore:
+            @staticmethod
+            def project_id() -> str:
+                return "bounded-research-fixture"
+
+        class BoundedLifecycle:
+            def __init__(self, root: Path) -> None:
+                self.root = root
+                self.store = BoundedStore()
+
+            def research_records(self, **_kwargs: object) -> list[dict[str, object]]:
+                raise AssertionError("bounded lookup must not scan all Research")
+
+            def _inspection_research_record(
+                self,
+                research_id: str,
+                _context: object,
+            ) -> dict[str, object]:
+                loaded.append(research_id)
+                try:
+                    return records[research_id]
+                except KeyError as exc:
+                    raise KeyError(research_id) from exc
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = PaperContinuationManager(BoundedLifecycle(Path(tmp)))
+            with patch.object(
+                manager,
+                "_validate_research_binding",
+                return_value={"plan_id": "pcp-" + "d" * 64},
+            ):
+                self.assertEqual(
+                    manager.plan_ids_for_research(
+                        [{"research_id": selected_id}]
+                    ),
+                    ["pcp-" + "d" * 64],
+                )
+            self.assertEqual(loaded, [selected_id, ancestor_id])
+            self.assertNotIn(unrelated_id, loaded)
+            with self.assertRaisesRegex(
+                ValueError,
+                "Paper continuation release Research ancestry is incomplete",
+            ):
+                manager.plan_ids_for_research(
+                    [{"research_id": "e" * 12}]
+                )
+
     @staticmethod
     def _paper_source_unit(local_id: str, text: str, order: int) -> dict[str, object]:
         return {

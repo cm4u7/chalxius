@@ -1,4 +1,110 @@
-# Chalxius V5 traceability through 0.6.7 Plain-Language Attack Recommendations
+# Chalxius V5 traceability through 0.7.0 Failure-Informed Efficiency
+
+## 0.7.0 failure-informed-efficiency overlay
+
+- Candidate version: `0.7.0`; public name **Failure-Informed Efficiency**.
+  Learner administrative coupling is owned by
+  `run-20260809T104247487967Z-561e6b0b599d/CHX-001`. The architecture route is
+  `run-20260809T131409541618Z-e6ec115394d1/PHX-003`, authorized with constraints
+  by consultation
+  `consultation-9a44ca5cfada8c5773e1e795498b96695fa1cffeebad9edaebf5d629527e6d8f`.
+- Prospective second-subround scopes are selected from four static reproduced
+  failure families: program-math projection, proof boundary/scope, source
+  locator/applicability, and cross-output contracts. The registry is
+  append-only release data, not dynamic scoring, agent reputation, or truth
+  authority. Plain interpretive insight no longer pays an empty proof review;
+  integration applies only when one component crosses at least two distinct
+  primary scopes. Pre-0.7.0 revision-2 supervision records without the new
+  provenance binding remain readable and are not backfilled; every newly
+  generated 0.7.0 supervisor binds it.
+- New production cards bind only the root Blackboard space by default
+  (`max_hops=0`, one node, zero edges) and grant zero write spaces. Explicit
+  promoted queries and exact write-space capabilities retain the full
+  Blackboard path. Paper projections, snapshots, promotions, Learner mounts,
+  and historical wide snapshots are not deleted.
+- New V5 Pulse planning is rejected before collaboration state is written.
+  Existing Pulse status, audit, dispatch, close, void, and abort remain usable;
+  V4 keeps its original contract. Pulse and Blackboard modules therefore remain
+  compatibility/active owners rather than being deleted under a false
+  zero-consumer assumption.
+- The already-active Learner has a bounded read-only oral-follow-up path that
+  reads only the directly relevant learning rule and mathematical source slice.
+  Any mutation, persistent learning, fresh truth verification, Research,
+  architecture action, or external effect exits that path.
+- Candidate fresh-adverse review, verifier, Certification, Gateway, Fact
+  admission, runtime/task-card/return exactness, abort/liveness checks, and the
+  0.6.9 lock-held seal/execution repairs are unchanged. The release removes
+  broad administrative work; it does not move or merge authority boundaries.
+- The final 0.7.0 field-integration lineage is
+  `run-20260809T104247487967Z-561e6b0b599d/CHX-001`,
+  `run-20260810T091643131656Z-0972f636748d/CHX-002`, and
+  `run-20260810T094527949129Z-70b4cac32984/CHX-003` through `CHX-006`.
+  The integrated repair keeps Paper-continuation discovery on exact selected
+  Research ancestry, projects an active admitted predecessor closure only for
+  the dual typed `fact_closure_reconstruction` request, preserves a small
+  proof-boundary logic-signal set for selective `proof_logic` supervision, and
+  lets a strictly later resolved `supersedes` issue discharge an immutable open
+  predecessor for publication. Missing, backward, cyclic, ambiguous, or
+  unresolved successor chains remain rejected.
+- Five release-only mutation probes bind these reproduced failure surfaces:
+  project-wide Research scan regression, skipped typed closure expansion,
+  non-active closure-root acceptance, dropped proof-risk selection signals,
+  and ignored resolved supersession. They reuse focused ordinary tests and add
+  no normal-runtime gate. The A-model Research that exposed the defects remains
+  nontruth and is not modified or admitted by this release.
+
+## 0.6.9 research-gate-integrity overlay
+
+- Candidate version: `0.6.9`; public name **Research Gate Integrity**. The
+  project-bound field issues are
+  `run-20260809T083132685134Z-ef62c2588193/CHX-003` through `CHX-007`.
+- Prospective production freezes deterministic logical supervision components
+  from exact selected-Research ancestry. A complete component may enter scoped
+  supervision while unrelated workers continue; validation rederives the
+  partition, includes component identity in recursion guards, rejects timing
+  subsets and overlapping coverage under the mutation lock, and keeps legacy
+  component-free rounds on their original whole-round path.
+- Candidate construction rejects review-only anchors and requires exactly one
+  live completed ingested result for every deterministic component scope before
+  expensive work. The exact result set is recomputed under the Candidate seal
+  lock immediately before artifacts are sealed, so an intervening abort or set
+  drift leaves no release.
+- Formal computation accepts only the assignment-local, live, non-aborted
+  program-math result whose latest disposition is safely resolved. The approved
+  execution Research, complete supervision binding, and latest disposition
+  id/hash/status are revalidated under the execution-round lock before any round
+  bytes are written; an aborted predecessor does not mask a live successor.
+- Repairs remain prospective and Research-orchestration-only. Candidate schema,
+  fresh verifier, Certification, Gateway, Fact admission, Evidence, Paper/Audit,
+  Reader, Pulse, attack-route activation, and historical task-card authority are
+  unchanged. PHX remains advisory and has no truth effect.
+
+## 0.6.8 research-supervision-stability overlay
+
+- Candidate version: `0.6.8`; public name **Research Supervision Stability**.
+  The project-bound field issues are
+  `run-20260809T083132685134Z-ef62c2588193/CHX-001` and `CHX-002` in the same
+  ledger.
+- Prospective public production subrounds reject explicit or automatically
+  selected `refute` work and freeze
+  `chalxius-v5-supervision-only-refute-allocation-1` with no paired adverse
+  assignments. Historical direct-allocation contracts remain byte-exact
+  readable; `independent_adverse_required` remains a later exact-Candidate
+  readiness marker.
+- Research-level `refute` is generated by `plan-supervision-round` and attacks
+  exact production returns and declared artifacts. Admitted Fact dependencies
+  are frozen premises rather than default counterexample targets. Exact new
+  contradiction evidence is escalated separately for authority-governed
+  reopening.
+- Supervision binding validation carries one ephemeral command-local inspection
+  context. Only a reentrant visit to the identical binding stops after local
+  schema and hash validation; the outer frame retains complete source-round
+  authority validation. Identical retry reuses content-addressed supervisor
+  Research after a pre-round partial write and creates at most one round.
+- Candidate fresh-adverse review, verifier, Certification, Gateway, Fact,
+  Evidence, Paper/Audit, Reader, Pulse, 0.6.7 attack recommendation wording,
+  and historical task-card authority are unchanged. PHX input is advisory and
+  supplies no mathematical truth effect.
 
 ## 0.6.7 plain-language-attack-recommendations overlay
 

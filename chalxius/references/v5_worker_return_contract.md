@@ -110,7 +110,12 @@ If `research_cycle.subround="supervision"`, return a
 `research_supervision_report` artifact that covers every exact receipt in the
 source Research's `research_supervision` binding. The supervisor attacks the
 frozen outputs; it does not rewrite them or use Pulse to negotiate a mutable
-repair.
+repair. The adjacent `failure_informed_assurance` binding freezes the exact
+release registry hash, family id, and concise focus for that scope. Review only
+that evidenced focus and the exact receipt set: do not widen into a generic
+audit, add agent scoring, or re-attack admitted Fact premises without separate
+contradiction evidence. A worker cannot edit or propose a replacement for the
+registry through its return.
 
 If a production compute source contains `approved_computation_execution`, the
 return is a formal execution. Its `computation_source` and

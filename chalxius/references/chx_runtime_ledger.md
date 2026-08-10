@@ -277,12 +277,20 @@ The gate walks the exact closed private predecessor chain from the supplied
 current ledger and compares it with an ordered public lineage of run ids,
 ledger digests, contract revisions, predecessor links, and per-run issue
 ownership. It requires every included issue in every contributing ledger to be
-resolved, every finding to be reconciled, non-overlapping and contiguous issue
-ownership, and
+publication-resolved, every finding to be reconciled, non-overlapping and
+contiguous issue ownership, and
 `KNOWN_LIMITATIONS.md` plus release traceability to contain their declared
 enumeration and semantic markers. It returns hashes and the current ledger
 event head. It does not copy the private ledger or research content into the
 release and has `truth_effect=none`.
+
+Direct `resolved` status is publication-resolved. An unresolved immutable
+predecessor is also publication-resolved only when exactly one strictly later
+issue carries an explicit `supersedes` relation to it and that successor is
+itself publication-resolved. Missing, backward, cyclic, ambiguous, unresolved,
+or non-superseding relations fail closed. This permits append-only repair
+succession without allowing a later issue to erase or rewrite predecessor
+history.
 
 ## Immutable successors and deterministic reports
 

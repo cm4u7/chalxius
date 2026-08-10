@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.6.7](https://github.com/cm4u7/chalxius/releases/tag/v0.6.7) ·
+[📦 Download v0.7.0](https://github.com/cm4u7/chalxius/releases/tag/v0.7.0) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -134,14 +134,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz`
-- `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256`
+- `chalxius-0.7.0-failure-informed-efficiency.tar.gz`
+- `chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.6.7-plain-language-attack-recommendations.tar.gz.sha256
-tar -xzf chalxius-0.6.7-plain-language-attack-recommendations.tar.gz
+shasum -a 256 -c chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256
+tar -xzf chalxius-0.7.0-failure-informed-efficiency.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -408,29 +408,29 @@ or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
 
-## v0.6.7: Plain-Language Attack Recommendations
+## v0.7.0: Failure-Informed Efficiency
 
-The default adverse report remains intentionally short and approval-only, but
-each proposed attack family now includes one reviewed plain-language sentence
-that says what it would check. For example, `scope_transport` checks whether a
-local, special-case, or pointwise result has been expanded to a global, general,
-or uniform claim without a valid bridge; `missing_premise` checks whether the
-conclusion relies on an unstated premise or applicability condition. Technical
-worker material remains available only through `--full`, and an unknown future
-family is omitted from the concise report until its public explanation is
-reviewed.
+Prospective production now excludes dedicated `refute` assignments. Exact
+frozen outputs are reviewed in the second logical subround by at most three
+supervisors selected from four reproduced failure families. Independent logical
+components may progress concurrently, admitted Facts are not default
+counterexample targets, and program code is reviewed before execution.
 
-This release also carries forward the conservative two-subround Research cycle:
-subround 1 produces computation plans and reviewable core code alongside proof,
-counterexample, insight, and literature work; subround 2 assigns focused
-supervisors to attack proof reasoning and program–math alignment before code
-execution while the work remains on the Research plane. Candidate formation
-semantics are unchanged; later whole-Candidate adverse acceptance and the
-independent Verifier remain distinct mechanisms.
+Routine overhead is narrower: plain interpretive insight no longer receives
+blanket proof review, integration is reserved for cross-primary components,
+the default Blackboard capability is one root node with no writes, and new V5
+Pulse planning is retired while historical compatibility remains. Candidate
+supervision and fresh-adverse failures are rejected before expensive packaging.
 
-The final manifest-bound matrix passed all 801 tests, all 142 registered
-mutants, 59 behavioral probes, architecture reconnaissance, self-test, exact
-lane isolation, and nonmutation. See [`RELEASE.md`](RELEASE.md),
+The field integration also bounds Paper-continuation ancestry reads, provides
+typed active Fact-closure authority, preserves proof-risk signals for selective
+supervision, and repairs immutable CHX successor disclosure. Five focused
+release-only probes protect these observed failures without adding a normal
+runtime gate.
+
+The final manifest-bound matrix passed all 838 tests, all 147 registered
+mutants, the behavioral feature gate, architecture reconnaissance, self-test,
+exact lane isolation, and nonmutation. See [`RELEASE.md`](RELEASE.md),
 [`VALIDATION.md`](VALIDATION.md), and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).
 

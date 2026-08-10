@@ -556,7 +556,7 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                     )
             expensive.assert_not_called()
 
-    def test_public_plan_round_and_attack_report_reach_the_normal_flow(self) -> None:
+    def test_public_plan_round_keeps_refute_out_of_production(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"
             store = self._store(root, "paired-cli-normal-flow")
@@ -581,14 +581,13 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertIsInstance(planned, dict)
             assert planned is not None
             self.assertEqual(planned["primary_worker_count"], 1)
-            self.assertEqual(len(planned["assignments"]), 2)
-            adverse = next(
-                item
-                for item in planned["assignments"]
-                if item["assignment_role"] == "paired_adverse"
-            )
-            prompt = Path(adverse["prompt_path"]).read_text(encoding="utf-8")
-            self.assertIn("Do not receive, reuse, summarize, or share", prompt)
+            self.assertEqual(len(planned["assignments"]), 1)
+            self.assertEqual(planned["independent_adverse_pairs"], [])
+            primary = planned["assignments"][0]
+            self.assertEqual(primary["assignment_role"], "primary")
+            self.assertNotEqual(primary["work_mode"], "refute")
+            prompt = Path(primary["prompt_path"]).read_text(encoding="utf-8")
+            self.assertIn("This is Research subround 1", prompt)
 
             code, report, error = self._cli(
                 root,
@@ -600,7 +599,7 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertEqual(code, 0, error)
             self.assertIsInstance(report, dict)
             assert report is not None
-            self.assertEqual(report["coverage_status"], "pending")
+            self.assertEqual(report["coverage_status"], "missing-dispatch")
             self.assertEqual(report["recommendations"], [])
             self.assertNotIn("rounds", report)
             self.assertNotIn("attacks", report)
@@ -616,9 +615,48 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertEqual(code, 0, error)
             assert full is not None
             self.assertEqual(len(full["rounds"]), 1)
-            self.assertEqual(len(full["assignments"]), 2)
-            self.assertEqual(len(full["cards"]), 2)
-            self.assertEqual(len(full["returns"]), 2)
+            self.assertEqual(len(full["assignments"]), 1)
+            self.assertEqual(len(full["cards"]), 1)
+            self.assertEqual(len(full["returns"]), 1)
+
+    def test_public_production_rejects_explicit_or_auto_refute(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "production-refute-rejected")
+            proof = self._research(store, required=False)
+            code, payload, error = self._cli(
+                root,
+                "main",
+                "plan-round",
+                "--workers",
+                "1",
+                "--mode",
+                "refute",
+                "--memory-id",
+                proof["research_id"],
+            )
+            self.assertEqual(code, 2)
+            self.assertIsNone(payload)
+            self.assertIn("reserved for subround-2 supervision", error)
+
+            challenge = self._research(
+                store,
+                kind="challenge",
+                required=False,
+            )
+            code, payload, error = self._cli(
+                root,
+                "main",
+                "plan-round",
+                "--workers",
+                "1",
+                "--memory-id",
+                challenge["research_id"],
+            )
+            self.assertEqual(code, 2)
+            self.assertIsNone(payload)
+            self.assertIn("production selection contains refute Research", error)
+            self.assertEqual(list(store.rounds_dir.glob("round-*")), [])
 
     def test_attack_report_tamper_is_rejected_after_hash_recomputation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

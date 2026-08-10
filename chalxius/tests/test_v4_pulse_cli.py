@@ -108,6 +108,33 @@ class PulseCliTests(unittest.TestCase):
         self.assertTrue(aborted_audit["ok"])
         self.assertEqual(aborted_audit["warnings"], [])
 
+    def test_v5_retires_new_pulse_planning_without_touching_v4(self) -> None:
+        v5_root = self.root / "v5"
+        v5_store = MathGraphStore(v5_root)
+        v5_store.initialize(
+            project_id="v5-retired-pulse-plan",
+            title="V5 retired Pulse planning",
+            workflow_evidence_version=5,
+        )
+        output = StringIO()
+        errors = StringIO()
+        with redirect_stdout(output), redirect_stderr(errors):
+            code = cli_main(
+                [
+                    "--root",
+                    str(v5_root),
+                    "--role",
+                    "main",
+                    "pulse-plan",
+                    "--input",
+                    str(v5_root / "unused-input.json"),
+                ]
+            )
+        self.assertEqual(code, 2)
+        self.assertEqual(output.getvalue(), "")
+        self.assertIn("new Pulse planning is retired for V5", errors.getvalue())
+        self.assertFalse((v5_root / "collaboration").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

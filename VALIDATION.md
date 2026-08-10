@@ -1,19 +1,19 @@
-# Validation — Chalxius v0.6.7
+# Validation — Chalxius v0.7.0
 
 ## Frozen release identity
 
 | Field | Exact value |
 |---|---|
-| Version | `0.6.7` |
-| Display name | `Plain-Language Attack Recommendations` |
-| Release date | `2026-08-05` |
-| Skill manifest entries | `241` |
-| `MANIFEST.sha256` SHA-256 | `b7231474bf67018c58205735337fc997f54195bdb4162260745977b132f10c9d` |
-| Archive | `chalxius-0.6.7-plain-language-attack-recommendations.tar.gz` |
-| Archive bytes | `2330636` |
-| Archive members | `242` |
-| Archive SHA-256 | `ef99948624d849070642cb9826780a0ef4167d26c0211d6e982a455cfd13b9c5` |
-| Candidate runtime identity | `6feac856ca949045d155c2470ca15cb50a7e4e5ed27e80e08301788269ec2cec` |
+| Version | `0.7.0` |
+| Display name | `Failure-Informed Efficiency` |
+| Release date | `2026-08-10` |
+| Skill manifest entries | `242` |
+| `MANIFEST.sha256` SHA-256 | `9cb93afb90d90e8f8cdfd7cba59bbce3e3c68f7b4181f9594d561cc878942468` |
+| Runtime content SHA-256 | `6078c75b0ae64f17502450d4a6e1b67047f6e5955f45202bbfe56243eeb78950` |
+| Archive | `chalxius-0.7.0-failure-informed-efficiency.tar.gz` |
+| Archive bytes | `2352031` |
+| Archive members | `243` |
+| Archive SHA-256 | `94637f21f221761532936c07074a5b98d606cd25f57aca326c754e37d3b2dc38` |
 
 The archive builder independently produced the archive twice and required
 byte-for-byte equality. It also required the archive member set to equal the
@@ -28,73 +28,87 @@ records `one_manifest_identity=true`, `source_unchanged=true`, and
 
 | Phase | Lane | Result |
 |---|---|---|
-| 1 | strict architecture reconnaissance | pass |
-| 1 | mutation-registry preflight | `142/142` exact single targets |
-| 2 | behavioral feature gate | `59/59` probes; `25` features |
-| 3 | full suite | `801/801` pass |
+| 1 | strict architecture reconnaissance | pass; 0 errors, 0 warnings, 0 orphan modules |
+| 1 | mutation-registry preflight | `147/147` exact single targets |
+| 2 | behavioral feature gate | pass; `29` registered features |
+| 3 | full suite | `838/838` pass |
 | 3 | bundled self-test | pass |
-| 4 | aggressive mutation audit | `142/142` mutants killed; candidate unchanged |
+| 4 | aggressive mutation audit | `147/147` mutants killed; candidate unchanged |
 
 The snapshot-sensitive mutation audit ran only after baseline phases. Any
 architecture or registry-preflight failure would have short-circuited the
 expensive lanes.
 
-| Receipt | SHA-256 |
+| Receipt or inventory | SHA-256 |
 |---|---|
-| Final matrix receipt | `3244d7ba431cf9ba6a3914ecbac6e2cba9cac947d436f7bad312997d9a21e078` |
-| Behavioral gate receipt | `fc1f449c1a7472b9df6581da19725804ae937cc82555eac024eef4cb38c5df24` |
-| Behavioral registry | `dc82f18e92966a942fc3b81a402bb73c898e112f35fb8ab259e324269835e57a` |
+| Final matrix receipt | `a049f1074938cab779f80fd5257a3a40e15c3a5baebc39a1d9c2646653aefdc1` |
+| Final architecture inventory | `6c85ea575ebe97bbfc8a60f34977a9f085c33fc5cdbb83def28f8532342abfe9` |
+| Behavioral registry | `f41dd06ed1ea20febd8cea597921d45d73ade7e1932aef38f0810e61ee892a0f` |
 
-## Focused 0.6.7 regression evidence
+## Focused 0.7.0 regression evidence
 
-The adverse recommendation contract is
-`chalxius-attack-route-recommendations-2`.
-
-- The positive regression requires the exact reviewed `what_it_checks`
-  sentence for each concise recommendation.
-- A tampered explanation is rejected.
-- An unknown family is omitted from the default report, and its worker-authored
-  technical instruction does not leak.
-- Technical detail remains available through `--full`; concise recommendations
-  remain inert until explicit user approval.
+- Selected-ancestry Paper-continuation lookup completes real target `show` and
+  39-Fact closure reads without project-wide Research recursion.
+- Typed closure authority expands active admitted predecessors only for the
+  exact dual typed request; direct, empty, inactive-root, and inactive-
+  predecessor cases are separately checked.
+- A current interpretive artifact carrying a frozen proof-boundary signal
+  receives proof-logic supervision; ordinary interpretive insight does not.
+- Public disclosure accepts one exact later resolved `supersedes` successor and
+  rejects unresolved, absent, backward, cyclic, ambiguous, or differently
+  related substitutes.
+- The mutation registry contains one exact probe for each reproduced regression
+  surface and validates all targets before starting the expensive audit.
 
 ## Cold extraction
 
 A fresh extraction of the release archive passed:
 
-- `241/241` manifest hashes;
+- `242/242` manifest hashes;
 - bundled `scripts/self_test.py`;
 - no `__pycache__`, `.pyc`, or `.pyo` files.
 
-Skill Creator validation also returned `Skill is valid!`.
+## Protected installation
+
+The final candidate was installed through `runtime_cutover.py` after one fresh
+deep audit of the protected project. Preflight and postflight both recorded
+`audit_current_ok=true`; the postflight reused the same exact snapshot rather
+than repeating semantic reconstruction. The installed tree is byte-identical
+to the candidate, its self-test passes, and the prior runtime is retained as a
+rollback tree.
+
+| Field | Exact value |
+|---|---|
+| Installed runtime identity | `12df834343960f4e968227f784e243d8de17109f5790706dcde1234b24b8e100` |
+| Project state SHA-256 | `670943df121e997ccf624f69f2e6e5d798bdba40196a9f40c751eea7754278ff` |
+| Deep audits performed during cutover | `1` |
+| Post-swap duplicate semantic audits | `0` |
 
 ## Contract hashes
 
 | Contract | SHA-256 |
 |---|---|
-| `INHERITANCE.lock.json` | `b057eb65f2db6276d38e2404eb079bf48d10d1a1ab67ef5c11136be352211155` |
-| `KNOWN_LIMITATIONS.md` | `c53ec4e3d7d9618e35073f40368705c5f206a6df42434c5891d873cecb016bc5` |
-| `references/v5_release_traceability.md` | `aeeda68089f0bf45c6278da4ecf142348a024dac4941f8ed18e843e8b9484a9b` |
+| `INHERITANCE.lock.json` | `5dd08bcf0e9953854d92fca02f489d42cb4e25c415198781016844afce489145` |
+| `KNOWN_LIMITATIONS.md` | `a5f2ae581fdfeb3db4cebb0a2f28c7f7c39f1412cf38aa07616694e6ef2eda6a` |
+| `references/v5_release_traceability.md` | `ec70e72e7fc6e22dbe9f4ef035232bb48720d70fe580a650d14040fa77217d2d` |
 | `scripts/mathgraph/adverse_routing.py` | `ca664f332edfbc299e16716ea5a4bfdc16c7ed6e012ac68c8e5e67fa4a5cbf4a` |
 | `scripts/release_validation.py` | `d132a19e80c823cab9c08a6dd100797d27046489582e9d708194cb6faace282b` |
-| `scripts/aggressive_bug_audit.py` | `fa1dcc47e24b0125a69395911cc2c55911193c7166e64bedb73b6983cf1e2d31` |
+| `scripts/aggressive_bug_audit.py` | `9e27c708ef03f461635aa511755d7e870264d22571b63cb32878d7766379c393` |
 | `scripts/runtime_cutover.py` | `06aa0e4f4bbee4ab10ca9c4ee5b93f463af420a23e7d2871f1df641a57959b8a` |
-| `scripts/chx_ledger.py` | `1e8da18f6541b7609cfcf50b6867f24c8731ca51b759394c1708a1730710c33e` |
+| `scripts/chx_ledger.py` | `27e25697bf67f4bc6fcbe185e98be79fdf0e99caa464eedd994dde20580c8416` |
+| `scripts/mathgraph/paper_continuation.py` | `a8cc713213a49efb67d4f08755421f3a64a2634c7a6ce2f99117c81f203cf0b2` |
+| `scripts/mathgraph/v5_lifecycle.py` | `5b1ac7738faff5507eb791883faddda8910bfa7126d4c640f51c9f346e4bd451` |
 
 ## CHX disclosure boundary
 
-The bundled canonical public CHX registry and self-test pass through the shipped
-public lineage ending at qualified CHX-109. The 0.6.7 plain-language report
-repair is additionally identified by its project-bound qualified owner
-`run-20260805T135745960462Z-8b9e3b4057f3/CHX-005`; its private ledger bytes are
-not distributed and no canonical-public-lineage preflight is claimed for that
-private field chain.
-
-## Installation boundary
-
-The candidate passed protected-cutover dry-run validation, but no global runtime
-replacement was performed. Publication of the validated archive and replacing a
-maintainer's active installation are intentionally separate decisions.
+The release binds the exact append-only field lineage from qualified CHX-001
+through CHX-006. The current ledger SHA-256 is
+`9419d638cd15549bd0006d4bad2c44174d975ab02aaf7da11e88daa9f2d57b67`;
+its generated architecture report SHA-256 is
+`cad4c49ae42bc1e734e8cb0222ed958fe9588f0b212a88a0551a50a7504ef7b6`.
+Private JSONL and Research bytes are not distributed. Public disclosure passed
+the exact owner, predecessor, document, issue enumeration, and ledger-hash
+checks.
 
 ## Claim scope
 

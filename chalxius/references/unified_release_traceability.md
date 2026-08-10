@@ -6,6 +6,27 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
+## Current 0.7.0 overlay
+
+Chalxius 0.7.0 **Failure-Informed Efficiency** preserves the V5 truth path and
+the 0.6.9 lock-held Research gates. It selects second-subround supervisors from
+a static reproduced-failure registry, removes blanket proof review of plain
+interpretive insight, limits integration review to cross-primary components,
+defaults Research Blackboard capability to one root node and no writes, and
+retires new V5 Pulse planning while preserving V4 and historical completion.
+An already-active Learner also gains a bounded read-only oral follow-up path.
+None of these changes grant Research, Blackboard, Pulse, Learner, CHX, or PHX
+Fact authority.
+
+The final 0.7.0 field integration also replaces project-wide
+Paper-continuation Research scans with selected-ancestry traversal, supplies
+exact active Fact-closure interfaces only for a dual typed closure request,
+routes frozen proof-boundary signals into selective proof-logic supervision,
+and makes public CHX disclosure recognize one exact later resolved
+`supersedes` successor without rewriting its immutable predecessor. Five
+focused release-only mutation probes protect these observed failures; no new
+normal-runtime gate is added.
+
 ## Candidate identity
 
 - Skill: `chalxius`

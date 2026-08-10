@@ -61,13 +61,22 @@ first-subround computer returns exactly three artifacts: executable core code,
 the program-mathematics design, and the dependency manifest. Its computation
 stage count is zero; output, logs, and an execution manifest are forbidden.
 `plan-supervision-round` gives these exact hashes to a `program_math`
-supervisor. Formal execution is scheduled only after that supervisor result is
-explicitly disposed as `resolved_no_obstruction` or `resolved_by_evidence`.
+supervisor as soon as the computation's frozen logical component is complete;
+unrelated production workers need not finish first. A multi-component source
+round names the exact `--component-id`, while a related component remains
+indivisible. Formal execution is scheduled only after that supervisor result
+is explicitly disposed as `resolved_no_obstruction` or
+`resolved_by_evidence` and its supervision round is still live. Aborted
+supervision is skipped rather than counted as an approval or duplicate, so one
+live successor can authorize the assignment without conflict.
 
 The approved execution card binds the design return, supervisor return,
-disposition, code hash, and dependency hash. The execution return must repeat
-the same source/dependency bytes, add output and the normal stage/alignment
-manifest, and then undergo another explicit program-math supervision round.
+disposition, code hash, and dependency hash. Immediately before round bytes are
+written, the execution-round mutation lock protects one final reconstruction of
+that Research, supervision authority, and latest disposition. The execution
+return must repeat the same source/dependency bytes, add output and the normal
+stage/alignment manifest, and then undergo another explicit program-math
+supervision round.
 Changing code or dependencies starts a new design/supervision cycle. The old
 automatic future nontruth review queue remains only for legacy single-wave
 computation cards; approved execution suppresses that duplicate queue.

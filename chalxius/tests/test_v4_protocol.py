@@ -1188,7 +1188,7 @@ class V4ProtocolTests(unittest.TestCase):
 
 
 class SkillCollaborationPolicyTests(unittest.TestCase):
-    def test_v5_routes_constructive_pulse_without_universal_closure(self) -> None:
+    def test_v5_retires_new_pulse_planning_while_v4_policy_stays_bounded(self) -> None:
         skill_root = Path(__file__).resolve().parents[1]
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
         adoption = (
@@ -1202,13 +1202,16 @@ class SkillCollaborationPolicyTests(unittest.TestCase):
             "Every worker task card retains three communication planes",
             skill,
         )
-        self.assertIn("optional two-wave Pulse", skill)
+        self.assertIn("New V5 Pulse planning is retired", skill)
         self.assertIn(
-            "Each valid Wave-1 and\n   Wave-2 contribution enters Research independently",
+            "production/supervision cycle is the only prospective Research collaboration path",
             skill,
         )
-        self.assertIn("Pulse closure is advice", skill)
-        self.assertIn("A malformed peer is quarantined locally", skill)
+        self.assertIn(
+            "Existing historical Pulse records retain status, audit, dispatch, close, void, and abort compatibility",
+            skill,
+        )
+        self.assertNotIn("optional two-wave Pulse", skill)
         self.assertIn(
             "When its status is `required`",
             adoption,
