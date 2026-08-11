@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.7.0](https://github.com/cm4u7/chalxius/releases/tag/v0.7.0) ·
+[📦 Download v0.7.3](https://github.com/cm4u7/chalxius/releases/tag/v0.7.3) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -134,14 +134,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.7.0-failure-informed-efficiency.tar.gz`
-- `chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256`
+- `chalxius-0.7.3-selective-startup.tar.gz`
+- `chalxius-0.7.3-selective-startup.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.7.0-failure-informed-efficiency.tar.gz.sha256
-tar -xzf chalxius-0.7.0-failure-informed-efficiency.tar.gz
+shasum -a 256 -c chalxius-0.7.3-selective-startup.tar.gz.sha256
+tar -xzf chalxius-0.7.3-selective-startup.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -407,6 +407,28 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.7.3: Selective Startup
+
+Current Research production, Research supervision, and Chalxius Learner
+document editing now start from compact, manifest-bound role bootstraps. Exact
+Research objectives project their own frontier directly; broad historical
+protocols load only when the frozen card or a newly observed event requires
+them. Logical subround ordering and every Candidate, verifier, Certification,
+Gateway, and Fact boundary remain unchanged.
+
+Failure-informed work elimination now happens before pipeline construction:
+stale dispositions fail before design reconstruction, one-off computations are
+screened for information value, unsupported negative source-status claims are
+removed or marked unresolved, and empty or explicitly excluded worker CHX
+observations remain silent. Repair mode survives abort and replan, with the
+final write-lock revalidation retained.
+
+The public architecture lineage explicitly covers CHX-001 through CHX-020,
+including the separate Learner startup workload and ownership of an excluded
+nonarchitectural issue. The final matrix passed all 844 tests, all 148
+registered mutants, 30 behavioral features, strict architecture
+reconnaissance, self-test, lane isolation, and candidate nonmutation.
 
 ## v0.7.0: Failure-Informed Efficiency
 

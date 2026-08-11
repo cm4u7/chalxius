@@ -1,15 +1,19 @@
-Verify Chalxius 0.7.0 — Failure-Informed Efficiency as one self-contained skill. Read SKILL.md
+Verify Chalxius 0.7.1 — Scoped Supervisor Bootstrap as one self-contained skill. Read SKILL.md
 and its directly applicable references completely, validate
 INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
 unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
 is release-time only and must not be added to normal Research, Pulse,
 computation, or Reader execution.
 
-Confirm the 0.7.0 efficiency boundary: supervisor selection is static and
+Confirm the 0.7.1 efficiency boundary: supervisor selection is static and
 failure-family informed; plain interpretive insight has no blanket proof gate;
 integration requires distinct primary scopes; new Research cards default to one
 Blackboard root node and zero writes; new V5 Pulse planning fails before state
-creation. Preserve explicit Blackboard promotion/writes, V4 and historical
+creation; and an exact current supervision card selects the manifest-bound
+compact supervisor bootstrap while production and non-supervision workers keep
+the ordinary full contract. Verify that conditional computation, source,
+attack-learning, CHX-repair, and unprojected assurance branches fail closed.
+Preserve explicit Blackboard promotion/writes, V4 and historical
 Pulse completion, Candidate fresh adverse, verifier, Certification, Gateway,
 Fact, exact runtime/card/return, abort, and lock-held final-write gates.
 

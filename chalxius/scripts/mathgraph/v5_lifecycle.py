@@ -105,8 +105,10 @@ from .adverse_routing import (
 from .protocol import normalize_host_task_scope_id
 from .v5_assurance import (
     V5_ASSURANCE_CONTRACT_REVISION,
+    V5_COMPUTATION_DESIGN_ARTIFACT_ROLES,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     build_assurance_contract,
+    validate_computation_design_role_contract,
     validate_assurance_contract,
     validate_return_assurance,
 )
@@ -336,15 +338,6 @@ V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256 = sha256_json(
 V5_SAFE_SUPERVISION_DISPOSITIONS = frozenset(
     {"resolved_by_evidence", "resolved_no_obstruction"}
 )
-V5_COMPUTATION_DESIGN_ARTIFACT_ROLES = frozenset(
-    {
-        "computation_dependencies",
-        "computation_design",
-        "computation_source",
-    }
-)
-
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
@@ -2188,7 +2181,13 @@ class V5LifecycleManager:
         *,
         research_cycle: dict[str, Any],
         selected: list[dict[str, Any]],
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         cycle = self._validate_research_cycle_binding(research_cycle)
         if cycle["subround"] != "supervision":
             return
@@ -2200,6 +2199,7 @@ class V5LifecycleManager:
         source_manifest, descriptors = self._source_round_receipt_descriptors(
             cycle["source_round_id"],
             source_component_id=source_component_id,
+            _inspection_context=inspection,
         )
         if (
             cycle["source_round_manifest_sha256"]
@@ -2210,7 +2210,8 @@ class V5LifecycleManager:
         scopes: list[str] = []
         for entry in selected:
             binding = self._validate_research_supervision_binding(
-                entry.get("metadata", {}).get("research_supervision")
+                entry.get("metadata", {}).get("research_supervision"),
+                _inspection_context=inspection,
             )
             if (
                 binding["source_round_id"] != cycle["source_round_id"]
@@ -2614,7 +2615,13 @@ class V5LifecycleManager:
         task_binding: dict[str, str] | None = None,
         goal_intake_token: str | None = None,
         assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         if not isinstance(payload, dict):
             raise ValueError("research input must be one object")
         if "id" in payload or "research_id" in payload:
@@ -2641,7 +2648,9 @@ class V5LifecycleManager:
             payload.get("dependencies", []), "research dependencies"
         )
         dependencies = sorted(dict.fromkeys(validate_fact_id(item) for item in dependencies))
-        active_facts = set(self.store.fact_ids())
+        active_facts = set(
+            self.store.fact_ids(_inspection_context=inspection)
+        )
         missing_facts = sorted(set(dependencies).difference(active_facts))
         if missing_facts:
             raise ValueError(
@@ -2653,7 +2662,7 @@ class V5LifecycleManager:
         )
         related = sorted(dict.fromkeys(validate_memory_id(item) for item in related))
         for related_id in related:
-            self._research_record(related_id)
+            self._inspection_research_record(related_id, inspection)
         relation = payload.get("relation")
         if relation is not None:
             relation = _require_nonempty_text(relation, "research relation")
@@ -2781,13 +2790,14 @@ class V5LifecycleManager:
                     "only adverse or dead-end Research may invalidate a route"
                 )
             for target_id in invalidations:
-                self._research_record(target_id)
+                self._inspection_research_record(target_id, inspection)
         self._validate_research_supervision_record_fields(
             kind=kind,
             status=status,
             relation=relation,
             related_research_ids=related,
             metadata=metadata,
+            _inspection_context=inspection,
         )
         self._validate_approved_computation_record_fields(
             kind=kind,
@@ -2843,7 +2853,10 @@ class V5LifecycleManager:
                 )
             self.store.campaigns().status(campaign_id)
             existing_records = {
-                item["research_id"]: item for item in self.research_records()
+                item["research_id"]: item
+                for item in self.research_records(
+                    _inspection_context=inspection
+                )
             }
             validate_repair_contract_semantics(
                 record,
@@ -2852,7 +2865,10 @@ class V5LifecycleManager:
         path = self._research_path(research_id)
         with self.store.v5_mutation_lock(command="research-add"):
             if path.exists():
-                existing = self._research_record(research_id)
+                existing = self._inspection_research_record(
+                    research_id,
+                    inspection,
+                )
                 if existing["semantic_sha256"] != semantic_sha:
                     raise ValueError(f"research id collision at {path}")
                 # The immutable Research object is published before the
@@ -2860,16 +2876,21 @@ class V5LifecycleManager:
                 # that narrow interval must be recoverable by retrying the
                 # same write command; ordinary status/read paths never invoke
                 # this reconciliation.
-                self.paper_continuation()._status_index.reconcile_research(
-                    existing
-                )
+                self.paper_continuation(
+                    _inspection_context=inspection
+                )._status_index.reconcile_research(existing)
                 return existing
-            continuation = self.paper_continuation()
+            continuation = self.paper_continuation(
+                _inspection_context=inspection
+            )
             prepared_status_index = continuation._status_index.prepare_research(
                 record
             )
             self.store._write_json_once(path, record)
             continuation._status_index.commit_research(prepared_status_index)
+            inspection.research_records[research_id] = record
+            if inspection.all_research_records is not None:
+                inspection.all_research_records.append(record)
         return record
 
     def update_research(
@@ -2934,6 +2955,22 @@ class V5LifecycleManager:
             trigger = self._research_record(trigger_research_id)
             related_ids.append(trigger["research_id"])
         related_ids = sorted(dict.fromkeys(related_ids))
+        source_provenance = source.get("metadata", {}).get(
+            "assignment_provenance"
+        )
+        inherited_repair_mode = source.get("metadata", {}).get(
+            "repair_work_mode"
+        )
+        repair_mode = (
+            source_provenance.get("work_mode")
+            if isinstance(source_provenance, dict)
+            and source_provenance.get("work_mode") in WORK_MODES
+            else (
+                inherited_repair_mode
+                if inherited_repair_mode in WORK_MODES
+                else "auto"
+            )
+        )
         copied_metadata = {
             key: source["metadata"][key]
             for key in (
@@ -2972,21 +3009,13 @@ class V5LifecycleManager:
                 "relation": "repairs",
                 "related_research_ids": related_ids,
                 "repair_of_research_id": source["research_id"],
+                "repair_work_mode": repair_mode,
                 "trigger_research_id": (
                     trigger["research_id"] if trigger is not None else None
                 ),
                 **copied_metadata,
             },
             actor=actor,
-        )
-        source_provenance = source.get("metadata", {}).get(
-            "assignment_provenance"
-        )
-        repair_mode = (
-            source_provenance.get("work_mode")
-            if isinstance(source_provenance, dict)
-            and source_provenance.get("work_mode") in WORK_MODES
-            else "auto"
         )
         planned = self.create_production_round(
             workers=1,
@@ -3917,8 +3946,135 @@ class V5LifecycleManager:
         )
         return visible[:limit]
 
+    def _explicit_research_projections(
+        self,
+        research_ids: list[str],
+        *,
+        campaign_id: str | None,
+        _inspection_context: RoundInspectionContext,
+    ) -> dict[str, dict[str, Any]]:
+        """Project exact requested Research without rebuilding the full frontier.
+
+        Explicit Main selection does not need scores for unrelated Research.  It
+        does still need the selected records' immutable ancestry, route
+        invalidations, and latest dispositions.  Read those exact records and
+        scan unrelated ledger bytes only for the two typed event keys that can
+        change liveness.  This keeps the safety boundary while avoiding artifact
+        and assurance validation for every historical branch.
+        """
+
+        requested = set(research_ids)
+        lineage: dict[str, dict[str, Any]] = {}
+        pending = list(reversed(research_ids))
+        while pending:
+            research_id = pending.pop()
+            if research_id in lineage:
+                continue
+            record = self._inspection_research_record(
+                research_id,
+                _inspection_context,
+            )
+            lineage[research_id] = record
+            pending.extend(
+                parent_id
+                for parent_id in reversed(record["related_research_ids"])
+                if parent_id not in lineage
+            )
+
+        lineage_ids = set(lineage)
+        route_records = {
+            research_id: record
+            for research_id, record in lineage.items()
+            if record["kind"] != "disposition"
+        }
+        dispositions: dict[str, list[dict[str, Any]]] = {
+            research_id: [] for research_id in requested
+        }
+        if self.research_entries_dir.exists():
+            id_tokens = {
+                research_id: research_id.encode("ascii")
+                for research_id in lineage_ids
+            }
+            for path in sorted(self.research_entries_dir.glob("*.json")):
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("research ledger contains an unsafe entry")
+                raw = path.read_bytes()
+                might_dispose = (
+                    b'"kind": "disposition"' in raw
+                    and any(
+                        research_id.encode("ascii") in raw
+                        for research_id in requested
+                    )
+                )
+                might_invalidate = (
+                    b'"route_invalidations"' in raw
+                    and any(token in raw for token in id_tokens.values())
+                )
+                if not might_dispose and not might_invalidate:
+                    continue
+                record = self._inspection_research_record(
+                    path.stem,
+                    _inspection_context,
+                )
+                if might_dispose and record["kind"] == "disposition":
+                    target_id = record.get("metadata", {}).get(
+                        "target_research_id"
+                    )
+                    if target_id in dispositions:
+                        dispositions[target_id].append(record)
+                if might_invalidate:
+                    invalidated = set(
+                        record.get("metadata", {}).get(
+                            "route_invalidations", []
+                        )
+                    )
+                    if invalidated.intersection(lineage_ids):
+                        route_records[record["research_id"]] = record
+
+        route_staleness = self._route_staleness(route_records)
+        projections: dict[str, dict[str, Any]] = {}
+        for research_id in research_ids:
+            record = lineage[research_id]
+            if (
+                campaign_id is not None
+                and record["metadata"].get("campaign_id") != campaign_id
+            ):
+                continue
+            projection = dict(record)
+            candidates = dispositions[research_id]
+            if candidates:
+                latest = max(
+                    candidates,
+                    key=lambda item: (
+                        item["created_at"],
+                        item["research_id"],
+                    ),
+                )
+                projection["status"] = latest["metadata"][
+                    "disposition_status"
+                ]
+                projection["latest_disposition_id"] = latest["research_id"]
+                projection["latest_disposition_note"] = latest["content"]
+            if research_id in route_staleness:
+                projection["route_status"] = (
+                    "stale_pending_copy_on_write_repair"
+                )
+                projection["route_invalidated_by"] = route_staleness[
+                    research_id
+                ]
+            else:
+                projection["route_status"] = "current"
+                projection["route_invalidated_by"] = []
+            projection["id"] = research_id
+            projections[research_id] = projection
+        return projections
+
     def _work_mode(self, entry: dict[str, Any], index: int) -> str:
         kind = entry["kind"]
+        if kind == "repair":
+            repair_mode = entry.get("metadata", {}).get("repair_work_mode")
+            if repair_mode in WORK_MODES:
+                return repair_mode
         if kind in {"counterexample", "obstacle", "challenge"}:
             return "refute"
         if kind == "computation":
@@ -5605,15 +5761,30 @@ class V5LifecycleManager:
                 )
         assurance_note = ""
         if "assurance_contract" in card:
-            assurance_note = (
-                "Exact public worker-return schema: "
-                "references/v5_worker_return_contract.md; copyable template: "
-                "assets/worker_return.v5.assurance-no-adverse.template.json. "
-                "This task card uses the prospective assurance contract. "
-                "Return exact per-obligation dispositions, a typed computation manifest "
-                "when required, and the exact research_assurance object. Related "
-                "Research artifacts are authorized only through the frozen allowlist.\n\n"
-            )
+            if cycle is not None and cycle["subround"] == "supervision":
+                assurance_note = (
+                    "Scoped supervisor startup contract: "
+                    "references/v5_supervisor_worker_bootstrap.md. For this exact "
+                    "current supervision card it replaces broad protocol preloading; "
+                    "load a broader reference only at one of that contract's explicit "
+                    "fail-closed conditional branches. It includes the exact return "
+                    "shape, CHX start/close path, preflight, canonical byte-copy, "
+                    "validation, and authority boundaries.\n\n"
+                )
+            else:
+                assurance_note = (
+                    "Scoped production startup contract: "
+                    "references/v5_production_worker_bootstrap.md. For this exact "
+                    "current production card it replaces broad protocol preloading; "
+                    "load a broader reference only at one of that contract's explicit "
+                    "fail-closed conditional branches. Exact public worker-return schema: "
+                    "references/v5_worker_return_contract.md; copyable template: "
+                    "assets/worker_return.v5.assurance-no-adverse.template.json. "
+                    "This task card uses the prospective assurance contract. "
+                    "Return exact per-obligation dispositions, a typed computation manifest "
+                    "when required, and the exact research_assurance object. Related "
+                    "Research artifacts are authorized only through the frozen allowlist.\n\n"
+                )
         campaign_note = ""
         if "campaign_scope" in card:
             campaign_note = (
@@ -5823,13 +5994,20 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         """Plan subround 2 against one exact completed logical component."""
 
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
         source_manifest, descriptors = self._source_round_receipt_descriptors(
             source_round_id,
             source_component_id=source_component_id,
+            _inspection_context=inspection,
         )
         source_component = self._source_supervision_component(
             source_manifest,
             source_component_id,
+            _inspection_context=inspection,
         )
         selection_logic_signals = self._source_round_selection_logic_signals(
             source_manifest,
@@ -6026,11 +6204,16 @@ class V5LifecycleManager:
                 payload,
                 actor="v5-research-supervisor-planner",
                 assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+                _inspection_context=inspection,
             )
             supervisor_ids.append(supervisor["research_id"])
         self._validate_supervision_round_selection(
             research_cycle=cycle,
-            selected=[self._research_record(item) for item in supervisor_ids],
+            selected=[
+                self._inspection_research_record(item, inspection)
+                for item in supervisor_ids
+            ],
+            _inspection_context=inspection,
         )
         return self.create_round(
             workers=len(supervisor_ids),
@@ -6039,6 +6222,7 @@ class V5LifecycleManager:
             campaign_id=campaign_id,
             host_task_scope_id=host_task_scope_id,
             research_cycle=cycle,
+            _inspection_context=inspection,
         )
 
     def _program_math_supervision_result(
@@ -6097,13 +6281,25 @@ class V5LifecycleManager:
         self,
         supervision_research_id: str,
     ) -> dict[str, Any]:
-        dispositions = [
-            record
-            for record in self.research_records()
-            if record["kind"] == "disposition"
-            and record.get("metadata", {}).get("target_research_id")
-            == supervision_research_id
-        ]
+        dispositions: list[dict[str, Any]] = []
+        target_token = supervision_research_id.encode("ascii")
+        if self.research_entries_dir.exists():
+            for path in sorted(self.research_entries_dir.glob("*.json")):
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("research ledger contains an unsafe entry")
+                raw = path.read_bytes()
+                if (
+                    target_token not in raw
+                    or b'"kind": "disposition"' not in raw
+                ):
+                    continue
+                record = self._research_record(path.stem)
+                if (
+                    record["kind"] == "disposition"
+                    and record.get("metadata", {}).get("target_research_id")
+                    == supervision_research_id
+                ):
+                    dispositions.append(record)
         if not dispositions:
             raise ValueError(
                 "program-math supervision must be explicitly disposed before execution"
@@ -6178,6 +6374,17 @@ class V5LifecycleManager:
             design_manifest_preview,
             assignment_id,
         )
+        supervision_manifest, supervision_assignment, supervision_record = (
+            self._program_math_supervision_result(
+                design_round_id=design_manifest_preview["round_id"],
+                design_assignment_id=assignment_id,
+            )
+        )
+        # A missing or blocking disposition is cheap and decisive.  Reject it
+        # before rehashing the full computation design and artifact closure.
+        disposition = self._latest_supervision_disposition(
+            supervision_record["research_id"]
+        )
         design_manifest, descriptors = self._source_round_receipt_descriptors(
             source_round_id,
             source_component_id=design_component_id,
@@ -6197,19 +6404,10 @@ class V5LifecycleManager:
             )
         design_record = self._research_record(descriptor["result_research_id"])
         design_artifacts = self._canonical_design_artifacts(design_record)
-        supervision_manifest, supervision_assignment, supervision_record = (
-            self._program_math_supervision_result(
-                design_round_id=design_manifest["round_id"],
-                design_assignment_id=assignment_id,
-            )
-        )
         supervision_dir = self.store.rounds_dir / supervision_manifest["round_id"]
         supervision_receipt = self._validated_ingest_receipt(
             round_dir=supervision_dir,
             assignment=supervision_assignment,
-        )
-        disposition = self._latest_supervision_disposition(
-            supervision_record["research_id"]
         )
         binding = self._build_approved_computation_execution_binding(
             design_manifest=design_manifest,
@@ -6296,7 +6494,13 @@ class V5LifecycleManager:
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
         research_cycle: dict[str, Any] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         if workers < 1:
             raise ValueError("workers must be positive")
         if mode != "auto" and mode not in WORK_MODES:
@@ -6345,14 +6549,11 @@ class V5LifecycleManager:
                 research_cycle is not None
                 and research_cycle["subround"] == "production"
             )
-            by_id = {
-                item["research_id"]: item
-                for item in self.frontier(
-                    limit=max(self._json_count(self.research_entries_dir), workers),
-                    include_history=supervision_selection,
-                    campaign_id=campaign_id,
-                )
-            }
+            by_id = self._explicit_research_projections(
+                normalized_ids,
+                campaign_id=campaign_id,
+                _inspection_context=inspection,
+            )
             missing: list[str] = []
             production_review_only: list[str] = []
             selected = []
@@ -6408,11 +6609,16 @@ class V5LifecycleManager:
                             workers,
                         ),
                         campaign_id=campaign_id,
+                        _inspection_context=inspection,
                     )
                     if not self._production_entry_is_review_only(item)
                 ][:workers]
             else:
-                selected = self.frontier(limit=workers, campaign_id=campaign_id)
+                selected = self.frontier(
+                    limit=workers,
+                    campaign_id=campaign_id,
+                    _inspection_context=inspection,
+                )
         if len(selected) != workers:
             scope_note = (
                 f" in Campaign {campaign_id}" if campaign_id is not None else ""
@@ -6425,6 +6631,7 @@ class V5LifecycleManager:
             self._validate_supervision_round_selection(
                 research_cycle=research_cycle,
                 selected=selected,
+                _inspection_context=inspection,
             )
         host_task_scope_id = normalize_host_task_scope_id(
             host_task_scope_id,
@@ -6454,7 +6661,10 @@ class V5LifecycleManager:
                     )
                 )
                 if existing_supervision_round_id is not None:
-                    return self.round_status(existing_supervision_round_id)
+                    return self.round_status(
+                        existing_supervision_round_id,
+                        _inspection_context=inspection,
+                    )
             planned_runtime_binding = validate_runtime_binding(
                 self._runtime_binding()
             )
@@ -6489,7 +6699,10 @@ class V5LifecycleManager:
                         + ", ".join(mismatched)
                     )
             source_records = {
-                entry["research_id"]: self._research_record(entry["research_id"])
+                entry["research_id"]: self._inspection_research_record(
+                    entry["research_id"],
+                    inspection,
+                )
                 for entry in selected
             }
             source_dossiers = {
@@ -6497,7 +6710,10 @@ class V5LifecycleManager:
                 for research_id, record in source_records.items()
             }
             authority_snapshots = {
-                research_id: self._task_authority_snapshot(record)
+                research_id: self._task_authority_snapshot(
+                    record,
+                    _inspection_context=inspection,
+                )
                 for research_id, record in source_records.items()
             }
             for research_id, record in source_records.items():
@@ -6556,6 +6772,18 @@ class V5LifecycleManager:
                         "production selection contains refute Research: "
                         + ", ".join(refute_ids)
                     )
+                for entry in selected:
+                    selected_mode = mode_selections[entry["research_id"]][
+                        "selected_mode"
+                    ]
+                    if self._computation_design_only(
+                        entry=entry,
+                        work_mode=selected_mode,
+                        research_cycle=research_cycle,
+                    ):
+                        validate_computation_design_role_contract(
+                            entry["metadata"].get("obligations", [])
+                        )
             snapshot, blackboard_selection = self._snapshot_for_round(selected)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             round_id = (
@@ -6790,7 +7018,10 @@ class V5LifecycleManager:
                 related_artifacts: list[dict[str, str]] = []
                 related_artifacts.extend(self._typed_research_artifacts(entry))
                 for related_id in entry["related_research_ids"]:
-                    related_record = self._research_record(related_id)
+                    related_record = self._inspection_research_record(
+                        related_id,
+                        inspection,
+                    )
                     research_context.append(
                         {
                             key: related_record[key]
@@ -6870,7 +7101,10 @@ class V5LifecycleManager:
                     mode_selection=mode_selection,
                 )
                 paper_continuation_scope = (
-                    self.paper_continuation().scope_for_research(entry)
+                    self._inspection_paper_continuation_scope(
+                        entry,
+                        inspection,
+                    )
                 )
                 card_semantic = {
                     "schema_version": 5,
@@ -7065,7 +7299,10 @@ class V5LifecycleManager:
                 "manifest_sha256": sha256_json(manifest_semantic),
             }
             self.store._write_json_once(round_dir / "round.json", manifest)
-        return self.round_status(round_id)
+        return self.round_status(
+            round_id,
+            _inspection_context=inspection,
+        )
 
     def _round_manifest(
         self,
@@ -7445,10 +7682,14 @@ class V5LifecycleManager:
             self._validate_supervision_round_selection(
                 research_cycle=research_cycle,
                 selected=[
-                    self._research_record(card["research_id"])
+                    self._inspection_research_record(
+                        card["research_id"],
+                        inspection,
+                    )
                     for _, card in frozen_cards
                     if card["control_plane"].get("assignment_role") == "primary"
                 ],
+                _inspection_context=inspection,
             )
         snapshot_path = (
             self.store.blackboard().snapshots_dir
@@ -7510,16 +7751,25 @@ class V5LifecycleManager:
             "program_math_review_research_id",
             "program_math_review_policy",
         }
+        architecture_observation_fields = {
+            "architecture_observation_ids",
+            "architecture_observation_policy",
+        }
         if not isinstance(receipt, dict):
             raise ValueError("V5 ingestion receipt must be one object")
         receipt_fields = set(receipt)
         has_attack = bool(receipt_fields.intersection(attack_fields))
         has_program_math = bool(receipt_fields.intersection(program_math_fields))
+        has_architecture_observations = bool(
+            receipt_fields.intersection(architecture_observation_fields)
+        )
         expected_fields = set(base_fields)
         if has_attack:
             expected_fields.update(attack_fields)
         if has_program_math:
             expected_fields.update(program_math_fields)
+        if has_architecture_observations:
+            expected_fields.update(architecture_observation_fields)
         if receipt_fields != expected_fields:
             raise ValueError("V5 ingestion receipt fields are not exact")
         if (
@@ -7637,6 +7887,54 @@ class V5LifecycleManager:
                 _inspection_context,
             )
             expected_effect += "_plus_nontruth_program_math_adverse_review"
+        if has_architecture_observations:
+            observation_ids = receipt.get("architecture_observation_ids")
+            if (
+                not isinstance(observation_ids, list)
+                or not observation_ids
+                or len(observation_ids) != len(set(observation_ids))
+                or any(
+                    not isinstance(item, str)
+                    or not item.startswith("chx-observation-")
+                    or SHA256_RE.fullmatch(
+                        item.removeprefix("chx-observation-")
+                    )
+                    is None
+                    for item in observation_ids
+                )
+                or receipt.get("architecture_observation_policy")
+                != "nontruth_chx_inbox_pending_coordination"
+            ):
+                raise ValueError(
+                    "V5 ingestion receipt CHX observation binding is invalid"
+                )
+            for observation_id in observation_ids:
+                path = (
+                    self.store.root
+                    / "chx-observations"
+                    / "by-id"
+                    / f"{observation_id}.json"
+                )
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError(
+                        "V5 ingestion receipt CHX observation is missing"
+                    )
+                observation = self.store._read_json(path)
+                if (
+                    observation.get("observation_id") != observation_id
+                    or observation.get("round_id") != round_dir.name
+                    or observation.get("assignment_id") != assignment_id
+                    or observation.get("task_card_sha256")
+                    != receipt["task_card_sha256"]
+                    or observation.get("return_sha256")
+                    != receipt["return_sha256"]
+                    or observation.get("truth_effect") != "none"
+                    or observation.get("project_effect") != "none"
+                ):
+                    raise ValueError(
+                        "V5 ingestion receipt CHX observation is mismatched"
+                    )
+            expected_effect += "_plus_chx_observation_inbox"
         if receipt.get("effect") != expected_effect:
             raise ValueError("V5 ingestion receipt effect is invalid")
         semantic = {
@@ -8629,6 +8927,149 @@ class V5LifecycleManager:
         )
         return review
 
+    def _capture_worker_chx_observations(
+        self,
+        *,
+        round_id: str,
+        assignment: dict[str, Any],
+        return_sha256: str,
+    ) -> list[str]:
+        """Persist card-bound worker CHX findings in one small nontruth inbox.
+
+        The worker ledger remains canonical.  This projection merely prevents a
+        reusable architecture finding from disappearing when Main ingests the
+        mathematical return.  Pure mathematical challenges and unbound ledgers
+        create no inbox entry.
+        """
+
+        ledger_root = self.store.root / "chx-ledgers"
+        if ledger_root.is_symlink() or not ledger_root.is_dir():
+            return []
+        expected_binding = {
+            "round_id": round_id,
+            "assignment_id": assignment["assignment_id"],
+            "task_card_sha256": assignment["task_card_sha256"],
+        }
+        observation_ids: set[str] = set()
+        for ledger_path in sorted(ledger_root.glob("run-*.jsonl")):
+            if ledger_path.is_symlink() or not ledger_path.is_file():
+                continue
+            raw = ledger_path.read_bytes()
+            try:
+                events = [
+                    json.loads(line)
+                    for line in raw.decode("utf-8").splitlines()
+                    if line
+                ]
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if not events or events[-1].get("event") != "run_closed":
+                continue
+            binding = events[0].get("task_card_binding")
+            if not isinstance(binding, dict) or any(
+                binding.get(key) != value
+                for key, value in expected_binding.items()
+            ):
+                continue
+            reconciliations = {
+                event.get("finding_id"): event.get("status")
+                for event in events
+                if event.get("event") == "finding_reconciled"
+            }
+            for event in events:
+                if event.get("event") != "finding_observed":
+                    continue
+                finding_id = event.get("finding_id")
+                if reconciliations.get(finding_id) not in {
+                    "promoted_to_issue",
+                    "merged_with_reason",
+                }:
+                    continue
+                identity_payload = {
+                    "finding_id": finding_id,
+                    "classification": event.get("classification"),
+                    "mechanism_type": event.get("mechanism_type"),
+                    "trigger": event.get("trigger"),
+                    "mechanism": event.get("mechanism"),
+                    "upgrade_requirement": event.get("upgrade_requirement"),
+                }
+                mechanism_identity = (
+                    finding_id
+                    if isinstance(finding_id, str)
+                    else "finding-" + sha256_json(identity_payload)
+                )
+                observation_id = "chx-observation-" + sha256_json(
+                    {
+                        "mechanism_identity": mechanism_identity,
+                        "project_id": self.store.project_id(),
+                    }
+                )
+                semantic = {
+                    "schema_version": 1,
+                    "observation_id": observation_id,
+                    "mechanism_identity": mechanism_identity,
+                    "status": "pending_coordination",
+                    "project_id": self.store.project_id(),
+                    "round_id": round_id,
+                    "assignment_id": assignment["assignment_id"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "return_sha256": return_sha256,
+                    "source_ledger_relpath": str(
+                        ledger_path.relative_to(self.store.root)
+                    ),
+                    "source_ledger_sha256": sha256_bytes(raw),
+                    "source_event_sha256": event.get("event_sha256"),
+                    "finding": {
+                        key: event.get(key)
+                        for key in (
+                            "finding_id",
+                            "classification",
+                            "mechanism_type",
+                            "trigger",
+                            "mechanism",
+                            "observed_effect",
+                            "mathematical_effect",
+                            "current_workaround",
+                            "upgrade_requirement",
+                            "audit_anchors",
+                        )
+                    },
+                    "routing_policy": (
+                        "coordinate_with_chx_and_consult_phx_before_reusable_repair"
+                    ),
+                    "truth_effect": "none",
+                    "project_effect": "none",
+                }
+                destination = (
+                    self.store.root
+                    / "chx-observations"
+                    / "by-id"
+                    / f"{observation_id}.json"
+                )
+                if destination.exists():
+                    existing = self.store._read_json(destination)
+                    if (
+                        existing.get("observation_id") != observation_id
+                        or existing.get("mechanism_identity")
+                        != mechanism_identity
+                    ):
+                        raise ValueError(
+                            "CHX observation inbox identity collision"
+                        )
+                    if (
+                        existing.get("round_id") != round_id
+                        or existing.get("assignment_id")
+                        != assignment["assignment_id"]
+                        or existing.get("task_card_sha256")
+                        != assignment["task_card_sha256"]
+                        or existing.get("return_sha256") != return_sha256
+                    ):
+                        continue
+                else:
+                    self.store._write_json_once(destination, semantic)
+                observation_ids.add(observation_id)
+        return sorted(observation_ids)
+
     def ingest_return(
         self,
         *,
@@ -8774,6 +9215,11 @@ class V5LifecycleManager:
                         counterexample_research_id=research["research_id"],
                         return_sha256=worker_final_sha256,
                     )
+            architecture_observation_ids = self._capture_worker_chx_observations(
+                round_id=round_id,
+                assignment=assignment,
+                return_sha256=worker_final_sha256,
+            )
             receipt_semantic = {
                 "schema_version": 5,
                 "policy_revision": V5_POLICY_REVISION,
@@ -8814,6 +9260,21 @@ class V5LifecycleManager:
                         "effect": (
                             receipt_semantic["effect"]
                             + "_plus_nontruth_program_math_adverse_review"
+                        ),
+                    }
+                )
+            if architecture_observation_ids:
+                receipt_semantic.update(
+                    {
+                        "architecture_observation_ids": (
+                            architecture_observation_ids
+                        ),
+                        "architecture_observation_policy": (
+                            "nontruth_chx_inbox_pending_coordination"
+                        ),
+                        "effect": (
+                            receipt_semantic["effect"]
+                            + "_plus_chx_observation_inbox"
                         ),
                     }
                 )

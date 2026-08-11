@@ -53,11 +53,21 @@ If the artifact later downloads with a different hash, stop. Resolve the version
 discrepancy before using the result. Matching titles or arXiv numbers do not substitute for matching
 bytes.
 
-## 2. Audit source status once per exact artifact
+## 2. Separate load-bearing source closure from optional current-status metadata
 
-Version history, errata, retraction status, and paper-level counterexample signals normally apply to
-the source artifact, not separately to each theorem. Run these three searches once for each exact
-artifact SHA-256:
+Exact theorem/formula transcription, hypotheses, conventions, locators, and
+applicability are load-bearing source closure. A negative claim that no erratum,
+retraction, or counterexample exists is a different, current-status claim.
+
+For ordinary Research, current-status assessment may be `not_assessed` or
+`unresolved`. Absence of a frozen response receipt must not be converted into a
+negative status finding and, by itself, must not trigger copy-on-write repair or
+repeat supervision. If a current-status claim is retained or is load-bearing for
+Candidate/Fact work, freeze the exact response/query evidence below.
+
+Version history, errata, retraction status, and paper-level counterexample signals
+apply to the source artifact, not separately to each theorem. When assessed, run
+these three searches once for each exact artifact SHA-256:
 
 1. `version_history`: compare relevant arXiv versions or named editions and record statement drift;
 2. `errata`: inspect official author, journal, publisher, or repository correction pages and run an
@@ -65,8 +75,11 @@ artifact SHA-256:
 3. `retraction_or_counterexample`: inspect official status pages and run an exact-title/identifier
    query with `retraction`, `counterexample`, or `false`.
 
-Record the check date, exact queries, absolute locators, concrete findings, an overall finding, and
-`unresolved_signals`. An admissible source audit has an empty `unresolved_signals` list.
+Record the check date, exact queries, absolute locators, frozen response receipts,
+concrete findings, an overall finding, and `unresolved_signals`. A retained
+negative status conclusion requires replayable response receipts and an empty
+`unresolved_signals` list. `not_assessed` and `unresolved` remain valid Research
+metadata but make no current-status claim.
 
 Compute `source_audit.audit_sha256` as SHA-256 of the canonical UTF-8 JSON object containing every
 `source_audit` field except `audit_sha256`, with keys sorted, no insignificant whitespace, and
@@ -74,7 +87,7 @@ non-ASCII characters preserved. The engine recomputes this hash.
 
 ### Reuse rule
 
-Reuse only when the exact artifact SHA-256 and artifact locator match and the reuse date is no more
+Reuse a completed current-status audit only when the exact artifact SHA-256 and artifact locator match and the reuse date is no more
 than 30 days after `source_audit.checked_at`.
 
 - For a newly performed audit, use `mode="fresh"`, `origin="current_submission"`, and set
@@ -86,8 +99,8 @@ than 30 days after `source_audit.checked_at`.
 
 When one submission cites several items from identical artifact bytes, the engine requires one
 identical source audit and requires every later item to reuse the first source key. Reuse saves status
-searches only. It never exempts the new theorem statement from exact transcription, statement hash,
-applicability mapping, or theorem-level sanity checks.
+searches only. Omitting current-status assessment never exempts the new theorem statement from exact
+transcription, statement hash, applicability mapping, or theorem-level sanity checks.
 
 Refresh the source audit immediately when the reuse window expires, the artifact changes, a search
 locator becomes unavailable, a new version or correction appears, any unresolved signal is found, or

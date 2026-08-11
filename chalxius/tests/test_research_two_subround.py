@@ -8,6 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
+from chx_ledger import (
+    close_ledger,
+    record_finding,
+    record_issue,
+    reconcile_finding,
+    start_ledger,
+)
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.model import Fact
 from mathgraph.store import MathGraphStore
@@ -34,6 +41,29 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             "contour_substitutions": [],
             "claimed_structures": [],
             "program_math_alignments": [],
+        }
+
+    @staticmethod
+    def _architecture_issue() -> dict[str, object]:
+        return {
+            "classification": "worker architecture observation handoff",
+            "causation": "caused",
+            "mechanism_type": "interface_contract",
+            "mechanism": (
+                "A card-bound worker finding needs an explicit lifecycle handoff."
+            ),
+            "trigger": "Main ingests the matching mathematical worker return.",
+            "observed_effect": (
+                "Without projection the reusable architecture observation is lost."
+            ),
+            "mathematical_effect": "none",
+            "current_workaround": "Main copies the worker report manually.",
+            "upgrade_requirement": (
+                "Project genuine findings into one nontruth CHX observation inbox."
+            ),
+            "audit_anchors": [
+                "scripts/mathgraph/v5_lifecycle.py:_capture_worker_chx_observations"
+            ],
         }
 
     @staticmethod
@@ -728,6 +758,69 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     assignment_id=execution["assignments"][0]["assignment_id"],
                 )
 
+    def test_compute_design_custom_roles_fail_before_round_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "kind": "computation",
+                    "claim": "Design one adapter without executing it.",
+                    "obligations": [
+                        {
+                            "obligation_id": "adapter-custom-role",
+                            "description": "Return task-specific adapter files.",
+                            "required_artifact_roles": [
+                                "adapter_design",
+                                "adapter_source",
+                            ],
+                            "evidence_types": ["program_math_design"],
+                            "not_applicable_allowed": False,
+                        }
+                    ],
+                },
+                actor="main",
+            )
+            historical_projection = lifecycle._mode_architecture_signature(
+                research,
+                work_mode="compute",
+                adverse_routing_enabled=False,
+                computation_design_only=True,
+            )
+            historical_roles = {
+                role
+                for obligation in historical_projection[
+                    "assurance_contract_without_artifact_roles"
+                ]["obligations"]
+                for role in obligation["required_artifact_roles"]
+            }
+            self.assertTrue(
+                {"adapter_design", "adapter_source"}.issubset(
+                    historical_roles
+                )
+            )
+            before = (
+                set(store.rounds_dir.iterdir())
+                if store.rounds_dir.exists()
+                else set()
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "unsupported artifact roles: adapter_design, adapter_source",
+            ):
+                lifecycle.create_production_round(
+                    workers=1,
+                    mode="compute",
+                    research_ids=[research["research_id"]],
+                    host_task_scope_id="unsatisfiable-compute-role-card",
+                )
+            after = (
+                set(store.rounds_dir.iterdir())
+                if store.rounds_dir.exists()
+                else set()
+            )
+            self.assertEqual(before, after)
+
     def test_execution_gate_rejects_missing_supervision_disposition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
@@ -735,13 +828,124 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             design, assignment, _, _ = self._design_round(store)
             self._ingest_supervision(store, design["round_id"])
             rounds_before = {item.name for item in store.rounds_dir.iterdir()}
-            with self.assertRaisesRegex(ValueError, "explicitly disposed"):
-                lifecycle.create_computation_execution_round(
-                    design["round_id"], assignment["assignment_id"]
-                )
+            with patch.object(
+                lifecycle,
+                "_canonical_design_artifacts",
+                side_effect=AssertionError(
+                    "design closure must not run before disposition rejection"
+                ),
+            ):
+                with self.assertRaisesRegex(ValueError, "explicitly disposed"):
+                    lifecycle.create_computation_execution_round(
+                        design["round_id"], assignment["assignment_id"]
+                    )
             self.assertEqual(
                 rounds_before, {item.name for item in store.rounds_dir.iterdir()}
             )
+
+    def test_ingest_projects_only_genuine_card_bound_chx_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {"kind": "direction", "claim": "Produce one bounded lemma."},
+                actor="main",
+            )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[research["research_id"]],
+            )
+            assignment = planned["assignments"][0]
+            started = start_ledger(
+                project_root=store.root,
+                task="Exercise card-bound CHX observation projection.",
+                run_id="run-card-bound-observation",
+                task_card=assignment["task_card_path"],
+            )
+            ledger = Path(started["ledger_path"])
+            first_event = json.loads(
+                ledger.read_text(encoding="utf-8").splitlines()[0]
+            )
+            self.assertEqual(
+                first_event["task_card_binding"],
+                {
+                    "round_id": planned["round_id"],
+                    "assignment_id": assignment["assignment_id"],
+                    "task_card_sha256": assignment["task_card_sha256"],
+                    "task_card_semantic_sha256": json.loads(
+                        Path(str(assignment["task_card_path"])).read_text(
+                            encoding="utf-8"
+                        )
+                    )["task_card_semantic_sha256"],
+                },
+            )
+            record_issue(ledger, self._architecture_issue())
+            close_ledger(ledger)
+
+            receipt = self._ingest_plain_assignment(store, planned, assignment)
+            observation_ids = receipt["architecture_observation_ids"]
+            self.assertEqual(len(observation_ids), 1)
+            observation_path = (
+                store.root
+                / "chx-observations"
+                / "by-id"
+                / f"{observation_ids[0]}.json"
+            )
+            observation = json.loads(
+                observation_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(observation["round_id"], planned["round_id"])
+            self.assertEqual(
+                observation["assignment_id"], assignment["assignment_id"]
+            )
+            self.assertEqual(observation["truth_effect"], "none")
+            self.assertEqual(observation["project_effect"], "none")
+
+    def test_empty_card_bound_chx_ledger_creates_no_observation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {"kind": "direction", "claim": "Produce a clean bounded lemma."},
+                actor="main",
+            )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[research["research_id"]],
+            )
+            assignment = planned["assignments"][0]
+            started = start_ledger(
+                project_root=store.root,
+                task="Exercise silent-zero card-bound CHX behavior.",
+                run_id="run-card-bound-silent-zero",
+                task_card=assignment["task_card_path"],
+            )
+            close_ledger(Path(started["ledger_path"]))
+            excluded = start_ledger(
+                project_root=store.root,
+                task="Exercise excluded card-bound CHX finding behavior.",
+                run_id="run-card-bound-excluded",
+                task_card=assignment["task_card_path"],
+            )
+            excluded_ledger = Path(excluded["ledger_path"])
+            issue = self._architecture_issue()
+            finding = {
+                key: value for key, value in issue.items() if key != "causation"
+            }
+            observed = record_finding(excluded_ledger, finding)
+            reconcile_finding(
+                excluded_ledger,
+                finding_id=observed["finding_id"],
+                status="excluded_with_reason",
+                reason="The frozen causal check ruled out an architecture issue.",
+            )
+            close_ledger(excluded_ledger)
+
+            receipt = self._ingest_plain_assignment(store, planned, assignment)
+            self.assertNotIn("architecture_observation_ids", receipt)
+            self.assertFalse((store.root / "chx-observations").exists())
 
     def test_supervisor_finding_opens_copy_on_write_mode_preserving_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -773,6 +977,24 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertEqual(
                 repair_card["assurance_contract"]["computation_stage_count"], 0
             )
+            with store.v5_mutation_lock(command="work-unit-abort"):
+                store.reasoning_modes().abort_work_unit(
+                    round_id=repair["round_id"],
+                    actor="main",
+                    reason="Exercise mode-preserving repair replan.",
+                )
+            successor = lifecycle.create_production_round(
+                workers=1,
+                mode="auto",
+                research_ids=[repair["research_id"]],
+                host_task_scope_id="mode-preserving-repair-replan",
+            )
+            successor_card = json.loads(
+                Path(
+                    str(successor["assignments"][0]["task_card_path"])
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(successor_card["work_mode"], "compute")
 
     def test_supervision_retry_reuses_pre_round_supervisor_research(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -828,6 +1050,36 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 [item["research_id"] for item in supervisors],
                 [orphaned[0]["research_id"]],
             )
+
+    def test_supervision_planning_shares_one_read_phase(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            design, _, _, _ = self._design_round(store)
+            with patch.object(
+                lifecycle,
+                "frontier",
+                wraps=lifecycle.frontier,
+            ) as frontier_spy, patch.object(
+                lifecycle,
+                "_validate_supervision_round_selection",
+                wraps=lifecycle._validate_supervision_round_selection,
+            ) as selection_spy:
+                lifecycle.create_supervision_round(
+                    design["round_id"],
+                    supervisor_scopes=["program_math"],
+                    host_task_scope_id="shared-supervision-read-phase",
+                )
+            contexts = [
+                call.kwargs.get("_inspection_context")
+                for call in [
+                    *frontier_spy.call_args_list,
+                    *selection_spy.call_args_list,
+                ]
+            ]
+            self.assertTrue(contexts)
+            self.assertNotIn(None, contexts)
+            self.assertEqual(1, len({id(context) for context in contexts}))
 
     def test_exact_invalidator_review_lane_does_not_reactivate_stale_routes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1701,6 +1953,118 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             assurance = source["metadata"]["failure_informed_assurance"]
             self.assertEqual(assurance["family_ids"], ["proof_boundary_scope"])
             self.assertIn("claim-scope inflation", source["content"])
+
+            production_prompt = Path(
+                str(planned["assignments"][0]["prompt_path"])
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                "references/v5_production_worker_bootstrap.md",
+                production_prompt,
+            )
+            self.assertIn(
+                "references/v5_worker_return_contract.md", production_prompt
+            )
+            production_contract = (
+                Path(__file__).resolve().parents[1]
+                / "references"
+                / "v5_production_worker_bootstrap.md"
+            ).read_text(encoding="utf-8")
+            for required_boundary in (
+                'research_cycle.subround="production"',
+                "Do not preload",
+                "Role-specific expansion",
+                "computational_verification_v4.md",
+                "external_theorem_applicability.md",
+                "adverse_routing_evolution.md",
+                "computation_source",
+                "computation_design",
+                "computation_dependencies",
+                "preflight-return",
+                "Candidate Release",
+            ):
+                self.assertIn(required_boundary, production_contract)
+            supervisor_prompt = Path(
+                str(supervision["assignments"][0]["prompt_path"])
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                "references/v5_supervisor_worker_bootstrap.md",
+                supervisor_prompt,
+            )
+            for broad_startup_reference in (
+                "references/agent_protocol_v4.md",
+                "references/v5_worker_return_contract.md",
+                "references/adverse_routing_evolution.md",
+                "references/chx_runtime_ledger.md",
+                "references/unified_architecture.md",
+            ):
+                self.assertNotIn(broad_startup_reference, supervisor_prompt)
+            compact_contract = (
+                Path(__file__).resolve().parents[1]
+                / "references"
+                / "v5_supervisor_worker_bootstrap.md"
+            ).read_text(encoding="utf-8")
+            for required_boundary in (
+                'research_cycle.subround="supervision"',
+                "Do not preload",
+                "Conditional expansion is local",
+                "computational_verification_v4.md",
+                "external_theorem_applicability.md",
+                "adverse_routing_evolution.md",
+                "--task-card /absolute/path/to/exact-task-card.json",
+                "research_supervision_report",
+                "preflight-return",
+                "Candidate Release, fresh Candidate adverse review",
+            ):
+                self.assertIn(required_boundary, compact_contract)
+
+            skill_root = Path(__file__).resolve().parents[1]
+            skill_router = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+            learner_contract = (
+                skill_root / "references" / "learner_document_edit_bootstrap.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                "references/learner_document_edit_bootstrap.md", skill_router
+            )
+            for required_boundary in (
+                "existing academic teaching Markdown file",
+                "no new research result",
+                "Fact admission",
+                "global architecture change",
+                "no-chat-context",
+                "Stop the compact path",
+            ):
+                self.assertIn(required_boundary, learner_contract)
+            for forbidden_preload in (
+                "Read `references/unified_architecture.md` completely",
+                "Read `references/admission_contract.md` completely",
+                "Read `references/agent_protocol_v4.md` completely",
+            ):
+                self.assertNotIn(forbidden_preload, learner_contract)
+
+    def test_failure_informed_source_status_and_one_off_compute_budget(self) -> None:
+        references = Path(__file__).resolve().parents[1] / "references"
+        source_policy = (references / "external_source_reliability.md").read_text(
+            encoding="utf-8"
+        )
+        compute_policy = (
+            references / "computational_verification_v4.md"
+        ).read_text(encoding="utf-8")
+        source_policy = " ".join(source_policy.split())
+        compute_policy = " ".join(compute_policy.split())
+        for marker in (
+            "current-status assessment may be `not_assessed`",
+            "`unresolved`. Absence of a frozen response receipt",
+            "must not trigger copy-on-write repair or repeat supervision",
+            "negative status conclusion requires replayable response receipts",
+        ):
+            self.assertIn(marker, source_policy)
+        for marker in (
+            "smallest independent mathematical check",
+            "recorded mathematical-correctness or evidential-credibility failure family",
+            "optional diagnostic and cannot block execution",
+            "eliminate it as redundant at planning",
+        ):
+            self.assertIn(marker, compute_policy)
 
     def test_interpretive_insight_does_not_receive_a_blanket_proof_supervisor(
         self,

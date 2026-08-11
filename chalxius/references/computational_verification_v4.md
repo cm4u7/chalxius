@@ -56,6 +56,28 @@ representation, truncation order, or output interpretation. Exact replay and
 the older eight-axis independence matrix remain applicable where their frozen
 contracts require them.
 
+### Failure-informed hard-gate budget
+
+For one bounded, nonresumable computation, use one production validation path
+and the smallest independent mathematical check that can detect a wrong result.
+An additional hard control must name the recorded mathematical-correctness or
+evidential-credibility failure family that selects it. Otherwise it is an
+optional diagnostic and cannot block execution or force per-control argv,
+stdout, stderr, status, and hash packaging.
+
+Do not create a second semantic validator beside the production loader. Reuse
+the same parser/normalizer/checker and test its failure cases directly. Remove
+or merge displaced broad controls when a narrower demonstrated check replaces
+them. This policy reduces one-off ceremony; it does not weaken formula/code
+binding, exact input/output hashes, source/dependency identity, replay, or the
+required independent mathematical check.
+
+Before code allocation, state either the exact open target/interface that the
+output can discharge or an explicit architecture-smoke-test purpose. If the
+quantity is already available from an existing derivation and the proposed run
+cannot test a distinct open interface, eliminate it as redundant at planning
+time. This is advisory work elimination, not a new execution or Candidate gate.
+
 For new two-subround Research, semantic assurance begins before execution. A
 first-subround computer returns exactly three artifacts: executable core code,
 the program-mathematics design, and the dependency manifest. Its computation

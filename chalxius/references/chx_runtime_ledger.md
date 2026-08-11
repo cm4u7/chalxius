@@ -68,6 +68,15 @@ the candidate skill root bound by that card and add `--task-card /exact/card.jso
 Startup validates the card semantic hash, canonical skill-root identity,
 expected `VERSION`, `MANIFEST.sha256` file hash, and every manifest-listed
 runtime byte before it creates a ledger.
+For current revision-5 worker ledgers, the start event also stores the exact
+round id, assignment id, task-card file SHA-256, and task-card semantic SHA-256.
+The field is optional for existing revision-5 ledgers, so no historical bytes or
+contract revision are rewritten. When Main later ingests the matching return, a
+closed card-bound ledger contributes only its genuine `finding_observed` events
+to a small content-addressed `chx-observations/by-id/` projection. That inbox is
+nontruth and pending coordination; it does not promote an issue, consult or
+adopt PHX, alter project authority, or create Blackboard/Pulse state. A closed
+ledger with no finding produces no observation object.
 An older global Chalxius runtime must fail closed instead of starting a
 wrong-version worker ledger. This is prospective: historical cards and running
 0.4.0/0.4.3 work have no new field, warning, invalidation, or redo obligation.

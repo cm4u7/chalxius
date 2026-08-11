@@ -73,6 +73,25 @@ available. Candidate fresh-adverse review, verifier, Certification, Gateway,
 Fact admission, historical contracts, and the 0.6.9 lock-held race repairs are
 unchanged. The PHX route is advisory provenance; it supplies no truth effect.
 
+Chalxius 0.7.1, **Scoped Supervisor Bootstrap**, retains the 0.7.0 selective
+supervisor set but removes a second administrative cost: a validated current
+second-subround card now routes its worker through one manifest-bound compact
+startup contract. Broader computation, external-source, attack-learning,
+CHX-repair, or assurance schemas load only when the exact scope or observed
+event requires them. Ordinary production, invalid or legacy cards, all
+machine validators, Candidate fresh-adverse review, verifier, Certification,
+Gateway, and Fact admission keep their prior boundaries.
+
+Chalxius 0.7.2, **Integrated Research Efficiency**, applies the same compact,
+card-selected startup rule to current production workers, shares one ephemeral
+inspection context across the repeated validation phases of a single
+supervision-planning command, and derives computation-design planning and
+return validation from one canonical three-role contract. Custom computation
+files are bundled inside those roles; an incompatible plan fails before round
+bytes are frozen. There is no persistent cache, background service, weakened
+final-lock recheck, or change to Candidate, verifier, Certification, Gateway,
+or Fact authority.
+
 The static nontruth learning-plane algorithm descends from Grill Me 0.2.0.
 Chalxius now owns that opt-in academic teaching/testing surface under the name
 Chalxius Learner. The standalone Grill Me 0.3.2-code companion, distinguished as

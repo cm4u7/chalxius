@@ -1,0 +1,167 @@
+# V5 managed production bootstrap
+
+This is the complete startup contract for one current, machine-bound V5
+Research production worker. It replaces broad protocol preloading with one
+card-selected path. It changes no validator, authority boundary, return schema,
+computation gate, or Fact-admission rule.
+
+## Applicability gate
+
+Use this compact path only when all of the following are literal task-card
+facts:
+
+- `research_cycle.subround="production"`;
+- `work_mode` is `prove`, `literature`, `compute`, or `interpret`;
+- the card contains the current `assurance_contract` and `runtime_binding`;
+- worker CHX accepts that exact card under the candidate root named by the
+  runtime binding.
+
+Production `refute` is not eligible: it belongs to the second logical subround.
+If any condition is absent, inconsistent, legacy, or unvalidated, stop the
+compact path and use the ordinary full protocol routed by `SKILL.md`. Never
+infer eligibility from prompt prose, directory names, assignment timing, or a
+worker label.
+
+For an eligible card, read completely, in this order:
+
+1. the candidate's full `SKILL.md`;
+2. the generated prompt and exact task card;
+3. this reference;
+4. `v5_worker_return_contract.md` and the current return template named by the
+   prompt;
+5. every exact predecessor, source, and artifact byte authorized by the card;
+6. only the role-specific expansions below.
+
+When the card repeats one path/hash under several descriptive roles, read the
+physical byte object once and reuse the verified hash binding. Do not reread a
+protocol or artifact merely because the card repeats its description.
+
+Do not preload `unified_architecture.md`, `reasoning_modes.md`,
+`admission_contract.md`, `v5_capability_matrix.md`, `brave_future_l3_l4.md`,
+`agent_protocol_v4.md`, Paper protocols, Blackboard protocols, or unrelated
+mode references. The task card and this contract contain the production
+projection needed to start safely.
+
+## Role-specific expansion
+
+- `prove`: no broad expansion by default. Read the external-theorem and
+  external-source references before introducing or relying on an external
+  theorem, formula, correction, or source not already fully authorized for the
+  exact use in the card. Read the computation reference before making a
+  load-bearing program or numerical claim.
+- `literature`: read `external_theorem_applicability.md` and
+  `external_source_reliability.md`. A bounded source cut is not an exhaustive
+  absence claim.
+- `compute`: read `computational_verification_v4.md`. A design assignment may
+  expose code but must not run it. An approved execution assignment may run
+  only the exact supervised source and dependencies bound by the card.
+- `interpret`: no broad expansion by default. Load a domain protocol only when
+  the card explicitly requires that domain's typed artifact or evidence.
+- Before returning a surviving `counterexample`, a productive `challenge`
+  with non-null `attack_learning`, or any route proposal, read
+  `adverse_routing_evolution.md`. Routing remains user-decision-only.
+- The compact CHX procedure below is sufficient for normal start and close.
+  If architecture causes or materially amplifies a problem, read
+  `chx_runtime_ledger.md` completely before recording or repairing it.
+
+Conditional expansion is local. Loading one branch never activates the other
+broad stacks.
+
+## Frozen authority and work boundary
+
+The exact task card is the capability boundary. Verify its semantic hash and
+use only its frozen read capabilities, artifact directory, work directory,
+return path, and size limits. The source Research dossier and authority
+snapshot control over lower-priority background prose. Admitted Facts are
+frozen premises, not default refutation targets. Same-subround peer drafts are
+not visible and must not be requested or inferred.
+
+Produce exactly the card obligations. Do not create extra report copies merely
+to restate the task card, authority snapshot, source dossier, or predecessor
+list. Reuse one artifact for multiple obligations only when the card permits
+the same canonical role and the artifact genuinely discharges each obligation.
+
+Research output is nontruth. It does not create a Candidate Release,
+Certification Decision, Gateway acceptance, or Fact.
+
+## Computation boundary
+
+A first-subround computation design returns exactly these three canonical
+roles:
+
+- `computation_source`;
+- `computation_design`;
+- `computation_dependencies`.
+
+Task-specific adapters, probes, and supporting design files must be bundled
+inside those canonical artifacts. A design card that asks for another artifact
+role is unsatisfiable and must fail before any round bytes are frozen. Design
+work must not import or execute target code, emit derived target output, or
+claim execution evidence.
+
+An approved execution card binds the exact prior source/dependency hashes and
+safe program-math disposition. Execute only the declared command in the
+declared environment, preserve stdout, stderr, status, manifest, and output,
+and return them through a later program-math supervision round. Any source or
+dependency byte change starts a new design and supervision cycle.
+
+## Worker CHX
+
+Before substantive analysis or target execution, run the `chx_ledger.py`
+under the candidate root bound by the card:
+
+```bash
+python3 -B CANDIDATE_ROOT/scripts/chx_ledger.py start \
+  --project-root PROJECT \
+  --task "bounded description of this production assignment" \
+  --host-task-scope-id HOST_SCOPE_FROM_CARD \
+  --task-card /absolute/path/to/exact-task-card.json
+```
+
+Runtime, version, manifest-file, manifest-tree, card-hash, or canonical-root
+mismatch must fail before a ledger is created. Keep the returned ledger path.
+If no architecture finding occurs, close after canonical return validation and
+before final handoff:
+
+```bash
+python3 -B CANDIDATE_ROOT/scripts/chx_ledger.py close --ledger LEDGER_PATH
+```
+
+Report a worker CHX issue only when close says `report_required=true`. The
+worker does not run host-level attack recommendations or integrate a release.
+The task-card-bound start event lets Main project any genuine finding into the
+small nontruth CHX observation inbox during return ingestion; no finding means
+no inbox write. The worker does not maintain a second report or registry.
+
+## Return and handoff
+
+Follow `v5_worker_return_contract.md` literally. In particular:
+
+- copy all card identities exactly;
+- declare only files inside the authorized artifact directory;
+- give one disposition for every card obligation and no others;
+- every `complete` obligation cites all required artifact-role hashes;
+- keep `computation_manifest=null` unless this is an approved execution;
+- keep each assurance list empty unless the return contract and applicable
+  expansion define the exact typed evidence being asserted;
+- use `challenge` only for a concrete bounded defect and `counterexample` only
+  for a surviving falsification under the exact hypotheses;
+- keep all narrative fields within the card's word limits.
+
+Write a mutable draft only in the work directory. Run read-only preflight:
+
+```bash
+mgraph --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
+  --input /absolute/path/to/draft.json
+```
+
+After it passes, confirm the canonical return path is absent, copy the passing
+draft bytes without reserialization, verify byte equality and SHA-256, then run:
+
+```bash
+mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
+```
+
+Close worker CHX and hand off exactly `assignment_id`, `return_sha256`, and
+`status`. Main alone ingests the exact hash. A defect is repaired in a later
+copy-on-write Research cycle; there is no live Pulse or Blackboard repair bus.

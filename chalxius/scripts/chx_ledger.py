@@ -971,6 +971,11 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         expected_start_keys = v3_start_keys
     else:
         expected_start_keys = legacy_start_keys
+    if (
+        contract_revision == REPAIR_CONTRACT_REVISION
+        and "task_card_binding" in start
+    ):
+        expected_start_keys = expected_start_keys | {"task_card_binding"}
     if set(start) != expected_start_keys:
         raise ValueError("CHX run_started fields are not exact")
     _require_text(start.get("task"), "CHX run task", maximum=2_000)
@@ -983,6 +988,43 @@ def _validate_events(events: list[dict[str, Any]], *, ledger_path: Path) -> None
         or start.get("project_effect") != "none"
     ):
         raise ValueError("CHX run authority boundary is invalid")
+    task_card_binding = start.get("task_card_binding")
+    if task_card_binding is not None:
+        if (
+            not isinstance(task_card_binding, dict)
+            or set(task_card_binding)
+            != {
+                "round_id",
+                "assignment_id",
+                "task_card_sha256",
+                "task_card_semantic_sha256",
+            }
+        ):
+            raise ValueError("CHX worker task-card binding fields are not exact")
+        _require_text(
+            task_card_binding.get("round_id"),
+            "CHX worker round id",
+            maximum=160,
+        )
+        _require_text(
+            task_card_binding.get("assignment_id"),
+            "CHX worker assignment id",
+            maximum=160,
+        )
+        digest = _require_text(
+            task_card_binding.get("task_card_sha256"),
+            "CHX worker task-card hash",
+            maximum=64,
+        )
+        if SHA256_RE.fullmatch(digest) is None:
+            raise ValueError("CHX worker task-card hash is invalid")
+        semantic_digest = _require_text(
+            task_card_binding.get("task_card_semantic_sha256"),
+            "CHX worker task-card semantic hash",
+            maximum=64,
+        )
+        if SHA256_RE.fullmatch(semantic_digest) is None:
+            raise ValueError("CHX worker task-card semantic hash is invalid")
     predecessor_issue_ids: set[str] = set()
     inherited_finding_ids: set[str] = set()
     if contract_revision in FINDING_CONTRACT_REVISIONS:
@@ -1984,8 +2026,38 @@ def start_ledger(
     predecessor_ledger: Path | str | None = None,
     inherited_findings: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
+    task_card_binding: dict[str, str] | None = None
     if task_card is not None:
-        _validate_task_card_runtime(task_card)
+        card = _validate_task_card_runtime(task_card)
+        task_card_binding = {
+            "round_id": _require_text(
+                card.get("round_id"), "CHX worker round id", maximum=160
+            ),
+            "assignment_id": _require_text(
+                card.get("assignment_id"),
+                "CHX worker assignment id",
+                maximum=160,
+            ),
+            "task_card_sha256": _require_text(
+                _sha256(_resolved_path(task_card).read_bytes()),
+                "CHX worker task-card hash",
+                maximum=64,
+            ),
+            "task_card_semantic_sha256": _require_text(
+                card.get("task_card_semantic_sha256"),
+                "CHX worker task-card semantic hash",
+                maximum=64,
+            ),
+        }
+        if SHA256_RE.fullmatch(task_card_binding["task_card_sha256"]) is None:
+            raise ValueError("CHX worker task-card hash is invalid")
+        if (
+            SHA256_RE.fullmatch(
+                task_card_binding["task_card_semantic_sha256"]
+            )
+            is None
+        ):
+            raise ValueError("CHX worker task-card semantic hash is invalid")
     if (project_root is None) == (root is None):
         raise ValueError("exactly one of project_root or root is required")
     if project_root is not None:
@@ -2066,6 +2138,8 @@ def start_ledger(
             start_payload["predecessor_lineage"] = predecessor_lineage
     elif predecessor_ledger is not None or inherited_findings:
         raise ValueError("legacy CHX ledger revisions do not support successors")
+    if task_card_binding is not None:
+        start_payload["task_card_binding"] = task_card_binding
     events = [_with_hash(start_payload, "")]
     previous = events[0]["event_sha256"]
     for finding in sorted(normalized_inherited, key=_finding_id):
@@ -3074,7 +3148,37 @@ def verify_public_disclosure(
         status = record["status"]
         if status.get("unreconciled_finding_ids"):
             raise ValueError("CHX publication has unreconciled findings")
-        issues = status["issues"]
+        # The ordinary status projection deliberately hides issues disposed as
+        # nonarchitectural.  Public lineage cannot do that: issue ownership must
+        # remain contiguous and an explicit exclusion is itself the terminal
+        # publication disposition.  Reconstruct only those omitted issue ids
+        # from the already validated immutable events; do not reinterpret them
+        # as repaired.
+        excluded_ids = {
+            event["issue_id"]
+            for event in record["events"]
+            if event["event"] == "issue_disposition"
+            and event["status"] == "excluded_nonarchitectural"
+        }
+        observed = {
+            event["issue_id"]: event
+            for event in record["events"]
+            if event["event"] == "issue_observed"
+        }
+        issues = [
+            *status["issues"],
+            *[
+                {
+                    "issue_id": issue_id,
+                    "relations": observed[issue_id].get("relations", []),
+                    "status": "excluded_nonarchitectural",
+                }
+                for issue_id in sorted(
+                    excluded_ids,
+                    key=lambda item: int(item.removeprefix("CHX-")),
+                )
+            ],
+        ]
         for issue in issues:
             issue_id = issue["issue_id"]
             if issue_id in publication_issues:
@@ -3122,7 +3226,7 @@ def verify_public_disclosure(
         if issue_id in visiting:
             raise ValueError("CHX publication supersedes relation contains a cycle")
         _, issue = publication_issues[issue_id]
-        if issue["status"] == "resolved":
+        if issue["status"] in {"resolved", "excluded_nonarchitectural"}:
             resolution_cache[issue_id] = True
             return True
         successors = sorted(

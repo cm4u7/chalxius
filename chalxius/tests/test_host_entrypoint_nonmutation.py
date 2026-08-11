@@ -101,6 +101,7 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
                 parent=Path(temporary),
             )
             self.assertEqual(runtime.name, "chalxius")
+            self.assertEqual(runtime.parent, Path(temporary).resolve())
             target = runtime / "scripts" / "mathgraph" / "roles.py"
             target.write_text(
                 target.read_text(encoding="utf-8") + "\n# deliberate test mutation\n",

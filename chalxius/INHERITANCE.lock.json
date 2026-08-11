@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.7.0",
-  "release_codename": "Failure-Informed Efficiency",
-  "release_display_name": "Chalxius 0.7.0 — Failure-Informed Efficiency",
+  "version": "0.7.3",
+  "release_codename": "Selective Startup",
+  "release_display_name": "Chalxius 0.7.3 — Selective Startup",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -307,6 +307,26 @@
     "contract_revision": "chalxius-v5-two-subround-research-2",
     "legacy_contract_revision": "chalxius-v5-two-subround-research-1",
     "supervision_revision": "chalxius-v5-research-supervision-2",
+    "production_bootstrap_revision": "chalxius-v5-production-worker-bootstrap-1",
+    "production_bootstrap_activation": "exact_current_machine_bound_production_card_only_with_full_protocol_fallback",
+    "production_protocol_preload": "full_skill_exact_prompt_card_compact_bootstrap_worker_return_contract_and_role_local_expansion",
+    "production_conditional_protocols": [
+      "proof_external_theorem_or_source_only_when_introduced",
+      "literature_source_applicability_and_reliability",
+      "compute_computational_verification",
+      "nonnull_attack_learning_adverse_routing",
+      "observed_architecture_issue_full_chx_repair"
+    ],
+    "supervisor_bootstrap_revision": "chalxius-v5-supervisor-worker-bootstrap-1",
+    "supervisor_bootstrap_activation": "exact_current_machine_bound_supervision_card_only_with_full_protocol_fallback",
+    "supervisor_protocol_preload": "full_skill_exact_prompt_card_and_compact_bootstrap_then_local_conditional_expansion",
+    "supervisor_conditional_protocols": [
+      "program_math_computational_verification",
+      "source_scope_or_new_external_use_source_applicability_and_reliability",
+      "nonnull_attack_learning_adverse_routing",
+      "observed_architecture_issue_full_chx_repair",
+      "nonempty_unprojected_assurance_type_full_worker_return"
+    ],
     "legacy_supervision_revision": "chalxius-v5-research-supervision-1",
     "logical_component_revision": "chalxius-v5-logical-supervision-component-1",
     "approved_computation_execution_revision": "chalxius-v5-approved-computation-execution-1",
@@ -342,7 +362,8 @@
     "source_binding": "complete_exact_component_receipt_set_plus_component_and_source_manifest_hashes",
     "timing_derived_subset_policy": "forbidden",
     "overlapping_scope_coverage": "lock_held_fail_closed_with_same_host_exact_retry_and_aborted_rounds_reserving_no_coverage",
-    "supervision_validation": "one_ephemeral_component_bound_cycle_safe_inspection_context_with_complete_outer_authority_and_hash_validation",
+    "supervision_validation": "one_ephemeral_command_local_component_bound_cycle_safe_inspection_context_shared_across_planning_subaudits_with_complete_outer_authority_and_hash_validation",
+    "planning_validation_reuse": "one_command_local_context_only_without_persistent_cache_and_with_fresh_lock_held_overlap_and_liveness_recheck",
     "revision_pairing": "current_production_requires_current_allocation_and_components_while_legacy_production_cannot_be_newly_created_or_mixed",
     "partial_write_recovery": "content_addressed_supervisor_research_reused_by_identical_retry_before_single_round_seal",
     "repair_policy": "copy_on_write_next_research_cycle",
@@ -363,6 +384,7 @@
       "computation_design",
       "computation_source"
     ],
+    "computation_design_role_contract": "exact_canonical_three_roles_prevalidated_before_round_bytes_with_task_specific_files_bundled_inside_them",
     "execution_gate": "safe_live_nonaborted_assignment_local_latest_program_math_disposition_then_exact_supervised_source_and_dependencies_with_lock_held_authority_recheck_before_round_write",
     "aborted_supervision_downstream_authority": "never_authorizes_candidate_or_computation_and_reserves_no_coverage",
     "actual_output_policy": "exact_source_dependency_log_manifest_output_then_new_explicit_program_math_supervision_round",
@@ -638,7 +660,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 92,
-    "protected_tree_sha256": "d7b3e55b9887be8c0a12f82ffc3ca7f66899a4d53ef1e943e27e9518f1a7ed0f",
+    "protected_tree_sha256": "aa86b1832ca801b74fb003048fba1a6bd4e2cc840f33670c4afcd97bc4e4af95",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -676,6 +698,7 @@
       "scripts/mathgraph/runtime_compatibility.py",
       "scripts/mathgraph/runtime_cutover.py",
       "scripts/mathgraph/store.py",
+      "scripts/mathgraph/v5_assurance.py",
       "scripts/mathgraph/v5_experiments.py",
       "scripts/mathgraph/v5_lifecycle.py",
       "scripts/mathgraph/v5_reader.py",
@@ -685,7 +708,7 @@
       "scripts/runtime_cutover_project_validation.py",
       "scripts/submit_neutral_review.py"
     ],
-    "changed_path_inventory_sha256": "91c2e13cc9f70e219cd5a364b2d12ab58478841db2ebd4824d93133edb61d736",
+    "changed_path_inventory_sha256": "122aa63132b07387596f766a61ea383b2e96106c10f3731dd8edfd201a166430",
     "project_schema_change": "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
     "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
     "fact_admission_change": false,
@@ -699,76 +722,143 @@
       "CHX-003",
       "CHX-004",
       "CHX-005",
-      "CHX-006"
+      "CHX-006",
+      "CHX-007",
+      "CHX-008",
+      "CHX-009",
+      "CHX-010",
+      "CHX-011",
+      "CHX-012",
+      "CHX-013",
+      "CHX-014",
+      "CHX-015",
+      "CHX-016",
+      "CHX-017",
+      "CHX-018",
+      "CHX-019",
+      "CHX-020"
     ],
     "ledger_lineage": [
       {
-        "ledger_run_id": "run-20260809T104247487967Z-561e6b0b599d",
-        "ledger_sha256": "c7491c856833f5f6fef38a623f2f5cca6cbfb2716249342cbd340319a96ad1b1",
+        "ledger_run_id": "run-20260811T013254358017Z-46283133a345",
+        "ledger_sha256": "05f5f821ff1c060c0fc243b92e3cf2d617311bd686e34732e5b4eefb2ab19749",
         "ledger_contract_revision": "chalxius-chx-run-ledger-5",
         "predecessor_run_id": "",
         "included_issue_ids": [
-          "CHX-001"
-        ]
-      },
-      {
-        "ledger_run_id": "run-20260810T091643131656Z-0972f636748d",
-        "ledger_sha256": "b3f72f47f2cc4915e43149305faf5118ace99bcd7c107a48f00d1c44ea43bda3",
-        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
-        "predecessor_run_id": "run-20260809T104247487967Z-561e6b0b599d",
-        "included_issue_ids": [
-          "CHX-002"
-        ]
-      },
-      {
-        "ledger_run_id": "run-20260810T094527949129Z-70b4cac32984",
-        "ledger_sha256": "9419d638cd15549bd0006d4bad2c44174d975ab02aaf7da11e88daa9f2d57b67",
-        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
-        "predecessor_run_id": "run-20260810T091643131656Z-0972f636748d",
-        "included_issue_ids": [
+          "CHX-001",
+          "CHX-002",
           "CHX-003",
-          "CHX-004",
+          "CHX-004"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260811T085034084387Z-6c87c04d5462",
+        "ledger_sha256": "defee8ff999ee51d121fbd5f1f380752874c8b05c9ab2cf613212ab935b96738",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260811T013254358017Z-46283133a345",
+        "included_issue_ids": [
           "CHX-005",
-          "CHX-006"
+          "CHX-006",
+          "CHX-007",
+          "CHX-008",
+          "CHX-009",
+          "CHX-010",
+          "CHX-011"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260811T191546409764Z-b156c46cab1c",
+        "ledger_sha256": "9f6a6c42f0c1f225320ad79ae1f5dd01dc443343ccab03cc588a30aecec4ce27",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260811T085034084387Z-6c87c04d5462",
+        "included_issue_ids": [
+          "CHX-012",
+          "CHX-013",
+          "CHX-014",
+          "CHX-015",
+          "CHX-016",
+          "CHX-017",
+          "CHX-018",
+          "CHX-019"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260811T193354268477Z-7a6dcfe41bb0",
+        "ledger_sha256": "04eb473a6360c49fcf806de6b737c529f47ab91d63c7e1aa8adfb966bdc1acd4",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260811T191546409764Z-b156c46cab1c",
+        "included_issue_ids": [
+          "CHX-020"
         ]
       }
     ],
-    "latest_issue_id": "CHX-006",
+    "latest_issue_id": "CHX-020",
     "document_contracts": {
       "KNOWN_LIMITATIONS.md": {
         "explicit_issue_enumeration": true,
         "required_markers": [
+          "019fa908-8cf5-7a70-a867-dde76a1c6182",
           "CHX-001",
           "CHX-002",
           "CHX-003",
           "CHX-004",
           "CHX-005",
           "CHX-006",
-          "Failure-Informed Efficiency",
-          "fact_closure_reconstruction",
+          "CHX-007",
+          "CHX-008",
+          "CHX-009",
+          "CHX-010",
+          "CHX-011",
+          "CHX-012",
+          "CHX-013",
+          "CHX-014",
+          "CHX-015",
+          "CHX-016",
+          "CHX-017",
+          "CHX-018",
+          "CHX-019",
+          "CHX-020",
+          "Selective Startup",
+          "excluded_nonarchitectural",
+          "immutable predecessor",
           "publication-resolved",
-          "run-20260809T104247487967Z-561e6b0b599d/CHX-001",
-          "run-20260810T091643131656Z-0972f636748d/CHX-002",
-          "run-20260810T094527949129Z-70b4cac32984/CHX-006",
+          "run-20260811T013254358017Z-46283133a345",
+          "run-20260811T085034084387Z-6c87c04d5462",
+          "run-20260811T191546409764Z-b156c46cab1c",
+          "run-20260811T193354268477Z-7a6dcfe41bb0",
           "supersedes"
         ]
       },
       "references/v5_release_traceability.md": {
         "explicit_issue_enumeration": false,
         "required_markers": [
+          "019fa908-8cf5-7a70-a867-dde76a1c6182",
           "CHX-001",
           "CHX-002",
           "CHX-003",
           "CHX-004",
           "CHX-005",
           "CHX-006",
-          "Paper-continuation discovery",
-          "fact_closure_reconstruction",
+          "CHX-007",
+          "CHX-008",
+          "CHX-009",
+          "CHX-010",
+          "CHX-011",
+          "CHX-012",
+          "CHX-013",
+          "CHX-014",
+          "CHX-015",
+          "CHX-016",
+          "CHX-017",
+          "CHX-018",
+          "CHX-019",
+          "CHX-020",
+          "Selective Startup",
           "nontruth",
-          "proof_logic",
-          "run-20260809T104247487967Z-561e6b0b599d/CHX-001",
-          "run-20260810T091643131656Z-0972f636748d/CHX-002",
-          "run-20260810T094527949129Z-70b4cac32984/CHX-003",
+          "run-20260811T013254358017Z-46283133a345",
+          "run-20260811T085034084387Z-6c87c04d5462",
+          "run-20260811T191546409764Z-b156c46cab1c",
+          "run-20260811T193354268477Z-7a6dcfe41bb0",
           "supersedes"
         ]
       }

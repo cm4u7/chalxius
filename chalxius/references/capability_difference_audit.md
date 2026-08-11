@@ -584,6 +584,98 @@ receipt fails closed on incomplete results, mixed identities, shared roots,
 timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
 infrastructure and does not depend on philosophical content.
 
+## 0.7.3 selective startup difference
+
+Version 0.7.3 coordinates the performance defects reproduced after the 0.7.2
+local installation, including the bounded teaching-document edit reported by
+task `019fa908-8cf5-7a70-a867-dde76a1c6182`. The dominant mechanisms were not
+mathematical difficulty: exact explicit planning rebuilt 414 unrelated Research
+records and took 154 seconds in a bounded probe; production and Learner workers
+reloaded broad protocol stacks despite already frozen scope; cheap missing
+dispositions and low-information computation plans were rejected only after
+expensive artifact work; and worker architecture findings depended on host
+memory instead of a card-bound lifecycle handoff.
+
+The coordinated repair eliminates work at the earliest safe boundary. The full
+skill is now a 0.7.3 router selecting complete compact production, supervision,
+or bounded Learner-document contracts. Explicit Research planning validates the
+selected immutable ancestry plus typed invalidation/disposition events instead
+of scoring the global frontier. Repair Research persists its original work mode.
+Computation checks its latest program-math disposition before design closure,
+retaining the final lock-held recheck. Ordinary source status may remain
+unassessed, and one-off computation adds hard controls only for a named failure
+family beyond the smallest independent mathematical check.
+
+Worker CHX is connected without a new architecture subsystem. A current
+`start --task-card` event carries the exact task-card file and semantic hashes.
+On ingestion, a closed matching ledger with a genuine `finding_observed` event
+produces one content-addressed nontruth observation; no finding produces no
+object. The canonical worker ledger remains authoritative for CHX operations.
+The inbox neither promotes issues nor changes project truth/state and requires
+later Main coordination plus PHX consultation before reusable adoption.
+
+This release does not add a persistent frontier index, background watcher,
+agent score, second validator, Blackboard channel, Pulse path, or automatic PHX
+decision. Automatic frontier planning remains complete; exact-ID planning alone
+uses the narrow path. Candidate adverse review, verifier, Certification,
+Gateway, Fact admission, historical records, and final mutation-lock gates are
+unchanged.
+
+## 0.7.2 integrated research efficiency difference
+
+Version 0.7.2 integrates three field-reproduced costs from one A-model campaign.
+First, exact current production workers receive a manifest-bound compact
+bootstrap with role-local expansion, matching the already bounded supervisor
+path. Second, the several nested validators inside one supervision-planning
+command share one ephemeral inspection context rather than reconstructing the
+same Research, source-round, component, frontier, and task-card views. The
+context has command lifetime only; the mutation-lock overlap, abort, runtime,
+authority, and liveness checks create a fresh view. Third, assurance planning
+and return validation import one canonical computation-design role set and
+reject an incompatible obligation union before writing any round bytes.
+
+This is deliberately not a general cache, validation bypass, role-registry
+subsystem, or dynamic policy engine. It retains exact runtime and task-card
+binding, worker CHX, artifact capabilities, design-before-execution,
+program-math supervision, preflight and byte-identical return ingestion,
+Candidate fresh adverse, verifier, Certification, Gateway, and Fact admission.
+The changes repair CHX-001, CHX-003, and CHX-004 in
+`run-20260811T013254358017Z-46283133a345`; the excluded CHX-002 is not used as
+evidence or represented as repaired.
+
+## 0.7.1 scoped supervisor bootstrap difference
+
+Version 0.7.1 removes fixed protocol preload from the already selective
+second-subround worker. The reproduced `proof_logic` startup surface in 0.7.0
+included Main planning, mode, lifecycle, return, adverse, and CHX repair
+references before any bound artifact was read, even though the machine-validated
+card already froze the exact logical component, failure family, receipt set,
+capabilities, artifact obligation, and return path.
+
+The repair adds one versioned `v5_supervisor_worker_bootstrap.md` and selects it
+only when a current card literally has
+`research_cycle.subround="supervision"`, `work_mode="refute"`, the exact
+supervision binding, and a runtime binding accepted by worker CHX startup. The
+worker still reads the complete skill, prompt, and card. A missing, legacy,
+invalid, or mismatched condition falls back to the ordinary full protocol.
+Program-math, new external-source, non-null attack-learning, architecture-
+repair, and unprojected assurance schemas expand locally only when applicable.
+
+No validator or lifecycle state is bypassed. The compact contract repeats the
+exact report/return projection, artifact containment, per-obligation coverage,
+draft preflight, byte-identical canonical copy, validation, final hash handoff,
+worker CHX start/close, frozen-Fact policy, and Research-only effect. Production
+keeps the full public worker-return contract. Candidate fresh adverse,
+verifier, Certification, Gateway, Fact admission, abort/liveness, and lock-held
+final-write gates are unchanged. The mechanism is a static routing refinement,
+not a second policy engine, dynamic score, cache, or authority store.
+
+This bounded refinement follows PHX route
+`run-20260809T131409541618Z-e6ec115394d1/PHX-003`,
+`route.failure_informed_selective_assurance`, under its existing approved
+simple/failure-informed constraints. The concrete reproduced cost and repair
+remain CHX nontruth architecture evidence.
+
 ## 0.7.0 failure-informed efficiency difference
 
 Version 0.7.0 treats assurance as an error-cost allocation problem rather than

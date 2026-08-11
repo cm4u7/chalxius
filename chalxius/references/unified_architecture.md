@@ -113,7 +113,7 @@ a conflict, while an aborted supervision round reserves no coverage. Production
 cycle and allocation revisions are validated as one compatible pair, so a new
 legacy/current hybrid round cannot be created or accepted.
 
-Every newly generated 0.7.0 supervisor freezes the registry revision, hash, and
+Every newly generated 0.7.0-or-later supervisor freezes the registry revision, hash, and
 family id. A pre-0.7.0 revision-2 supervision record that lacks this additional
 nontruth provenance remains readable without backfill; it still undergoes its
 original exact binding and authority checks.
@@ -131,7 +131,35 @@ source authority. Content-addressed supervisor Research makes an identical
 retry safe after a pre-round partial write. Historical component-free rounds
 retain conservative whole-round completion semantics.
 
-Prospective 0.7.0 cards keep Blackboard as an exact context-capability boundary,
+For a newly generated current supervisor, protocol startup is separately
+bounded. After reading the complete skill and its exact prompt/card, the worker
+uses the manifest-bound `v5_supervisor_worker_bootstrap.md` as its complete
+pre-attack projection. The compact path is selected only by a validated card
+whose `research_cycle.subround` is `supervision`; a legacy, invalid, production,
+or ordinary-worker card falls back to the full general protocol. Program-math,
+new external source use, non-null attack learning, architecture repair, and
+unprojected assurance types trigger only their named broader references. This
+changes context loading, not the card validator, source-receipt closure, return
+validator, CHX binding, Candidate supervision/adverse gates, verifier,
+Certification, Gateway, or Fact authority.
+
+The same bounded projection applies prospectively to a newly generated current
+production card through `v5_production_worker_bootstrap.md`. Production loads
+the common return contract and only its prove, literature, compute, or
+interpret expansion. During supervision planning, one command-local inspection
+context serves repeated immutable subaudits; it is discarded before the next
+command, while the final mutation lock obtains fresh overlap, abort, runtime,
+authority, and liveness state. Computation-design obligations are checked
+against the single canonical three-role contract before any round bytes exist.
+
+An explicitly requested local edit of an existing Chalxius Learner teaching
+Markdown has a third compact selector in
+`learner_document_edit_bootstrap.md`. It is semantic rather than card-selected,
+requires every bounded-edit condition to hold, and fails closed to the ordinary
+path for source defects, Research, truth-state work, persistent learning,
+architecture, publication, or nonlocal editing. It changes startup reads only.
+
+Prospective 0.7.0-or-later cards keep Blackboard as an exact context-capability boundary,
 but the default query contains only one project root-space node (`max_hops=0`,
 one node, zero edges) and grants no write space. A promoted Blackboard query or
 an explicit write-space request is required for larger context or mutation.

@@ -183,7 +183,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution, and static failure-family selective second-subround assurance.",
+      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution, static failure-family selective second-subround assurance, manifest-bound compact production and supervisor startup projections, exact-ID planning without unrelated frontier reconstruction, mode-preserving repair, early computation disposition rejection, automatic card-bound CHX observation projection, command-local planning inspection reuse, and one canonical computation-design role contract.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -205,6 +205,8 @@
       ],
       "documents": [
         "references/agent_protocol_v4.md",
+        "references/v5_production_worker_bootstrap.md",
+        "references/v5_supervisor_worker_bootstrap.md",
         "references/v5_worker_return_contract.md"
       ],
       "tests": [
@@ -870,7 +872,7 @@
       ]
     },
     "cap.learner": {
-      "summary": "Explicitly requested nontruth Chalxius Learner over frozen Fact, Paper and Blackboard snapshots.",
+      "summary": "Explicitly requested nontruth Chalxius Learner over frozen Fact, Paper and Blackboard snapshots, including a fail-closed compact path for bounded edits of an existing teaching document.",
       "status": "learner",
       "stateful": true,
       "state_roots": [
@@ -882,6 +884,7 @@
       ],
       "documents": [
         "references/unified_learning_plane.md",
+        "references/learner_document_edit_bootstrap.md",
         "references/fact-graph-grilling.md"
       ],
       "tests": [
@@ -902,7 +905,7 @@
       ]
     },
     "cap.chx_runtime_ledger": {
-      "summary": "Task-scoped append-only CHX finding, issue, reconnaissance, reusable tactical repair, integrated repair, disposition and public-disclosure ledger.",
+      "summary": "Task-scoped append-only CHX finding, issue, reconnaissance, reusable tactical repair, integrated repair, disposition and public-disclosure ledger, with optional exact task-card binding and a nontruth ingestion observation projection.",
       "status": "active",
       "stateful": true,
       "state_roots": [

@@ -90,6 +90,7 @@ MUTANTS = (
     Mutant(
         name="campaign_frontier_exact_match_bypassed",
         old=(
+            "        for research_id, record in bases.items():\n"
             "            if (\n"
             "                campaign_id is not None\n"
             "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
@@ -97,6 +98,7 @@ MUTANTS = (
             "                continue\n"
         ),
         new=(
+            "        for research_id, record in bases.items():\n"
             "            if False and (\n"
             "                campaign_id is not None\n"
             "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
@@ -106,6 +108,31 @@ MUTANTS = (
         test=(
             f"{CAMPAIGN_TEST_MODULE}."
             "test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
+        ),
+    ),
+    Mutant(
+        name="explicit_selection_campaign_exact_match_bypassed",
+        old=(
+            "        for research_id in research_ids:\n"
+            "            record = lineage[research_id]\n"
+            "            if (\n"
+            "                campaign_id is not None\n"
+            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
+            "            ):\n"
+            "                continue\n"
+        ),
+        new=(
+            "        for research_id in research_ids:\n"
+            "            record = lineage[research_id]\n"
+            "            if False and (\n"
+            "                campaign_id is not None\n"
+            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
+            "            ):\n"
+            "                continue\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_cross_campaign_explicit_selection_fails_before_round_write"
         ),
     ),
     Mutant(
@@ -2377,6 +2404,11 @@ def _candidate_is_unchanged(
 def _copy_complete_runtime(*, candidate_root: Path, parent: Path) -> Path:
     """Create one complete isolated runtime with the canonical root name."""
 
+    # macOS exposes the temporary directory through ``/var`` even though that
+    # path traverses the system ``/var -> private/var`` symlink.  Chalxius
+    # correctly rejects symlinked runtime ancestors, so canonicalize the
+    # already-existing temporary parent before constructing the isolated root.
+    parent = parent.resolve(strict=True)
     runtime_root = parent / "chalxius"
     if runtime_root.exists():
         raise ValueError("isolated mutant runtime already exists")

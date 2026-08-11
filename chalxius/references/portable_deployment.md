@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.7.0 `Failure-Informed Efficiency` release artifact contains one self-contained `chalxius`
+The 0.7.3 `Selective Startup` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -27,6 +27,19 @@ under the seal lock. Formal computation ignores aborted program-math reviews
 and revalidates its exact approval plus latest disposition under the
 execution-round lock. No project migration or Candidate/Fact schema rewrite is
 required.
+
+A newly generated current production worker or supervisor reads the full skill,
+exact prompt/card, and its manifest-bound compact bootstrap before mathematical
+inputs. Production then reads the public return contract and only its role-
+specific expansion; supervision loads broader computation, source,
+attack-learning, CHX-repair, or unprojected assurance protocols only for the
+exact scope or observed event. Legacy or invalid cards retain the ordinary
+full protocol path. Computation-design cards use exactly the canonical source,
+design, and dependency roles and reject incompatible obligations before round
+bytes. This is context routing and early satisfiability only: task-card
+validation, worker CHX, return preflight and exact-byte ingestion, Candidate
+fresh adverse, verifier, Certification, Gateway, and Fact admission are
+unchanged.
 
 ## Verify a received release
 

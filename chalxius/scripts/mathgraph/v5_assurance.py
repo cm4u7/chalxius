@@ -8,6 +8,40 @@ from .contracts import SHA256_RE, sha256_json
 
 V5_ASSURANCE_CONTRACT_REVISION = "chalxius-v5-assurance-0.4.3-1"
 V5_LEGACY_ASSURANCE_CONTRACT_REVISION = "chalxius-v5-assurance-0.4.2-legacy"
+V5_COMPUTATION_DESIGN_ARTIFACT_ROLES = frozenset(
+    {
+        "computation_dependencies",
+        "computation_design",
+        "computation_source",
+    }
+)
+
+
+def validate_computation_design_role_contract(obligations: Any) -> None:
+    """Reject a newly planned design whose frozen return could never validate.
+
+    Historical task cards are validated against their frozen contract and do
+    not call this prospective planning gate.
+    """
+
+    normalized = normalize_obligations(obligations)
+    requested_roles = {
+        role
+        for obligation in normalized
+        for role in obligation["required_artifact_roles"]
+    }
+    unsupported_roles = sorted(
+        requested_roles.difference(V5_COMPUTATION_DESIGN_ARTIFACT_ROLES)
+    )
+    if unsupported_roles:
+        raise ValueError(
+            "first-subround computation design obligations require unsupported "
+            "artifact roles: "
+            + ", ".join(unsupported_roles)
+            + "; use exactly computation_source, computation_design, and "
+            "computation_dependencies, bundling task-specific files inside those "
+            "three canonical artifacts"
+        )
 
 _OBLIGATION_ID_RE = re.compile(r"[A-Za-z0-9._:-]+")
 _RESEARCH_ID_RE = re.compile(r"[0-9a-f]{12}")
@@ -274,11 +308,7 @@ def build_assurance_contract(
                 "move that obligation to an approved execution round"
             )
         stage_count = 0
-        design_roles = {
-            "computation_dependencies",
-            "computation_design",
-            "computation_source",
-        }
+        design_roles = V5_COMPUTATION_DESIGN_ARTIFACT_ROLES
         if not any(
             design_roles.issubset(set(item["required_artifact_roles"]))
             for item in normalized_obligations

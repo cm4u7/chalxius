@@ -382,12 +382,12 @@ before the round, an identical retry reuses that Research and creates at most
 one round. The required cycle never starts Pulse or gives supervisors a mutable
 same-wave blackboard.
 
-Each newly generated 0.7.0 supervisor also binds the exact static registry
+Each newly generated 0.7.0-or-later supervisor also binds the exact static registry
 revision, hash, and family id. Pre-0.7.0 revision-2 supervision records without
 that additional nontruth provenance remain readable without backfill and retain
 their original exact supervision validation.
 
-For prospective 0.7.0 planning, the default Blackboard capability freezes only
+For prospective 0.7.0-or-later planning, the default Blackboard capability freezes only
 one root-space node and grants zero write spaces. Larger reads require a promoted
 query, and writes require an explicit space capability. Historical wide
 snapshots remain valid. Public V5 `pulse-plan` is retired; operations needed to
