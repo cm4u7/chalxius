@@ -1,20 +1,21 @@
-# Chalxius 0.7.3 architecture findings and residual boundaries
+# Chalxius 0.7.4 architecture findings and residual boundaries
 
-This file is the public, nontruth disclosure for Chalxius 0.7.3
-**Selective Startup**. It describes architecture defects and their
+This file is the public, nontruth disclosure for Chalxius 0.7.4
+**Bounded Main Routing**. It describes architecture defects and their
 prospective repairs; it is not mathematical evidence and grants no Research,
 Candidate Release, Certification, Gateway, or Fact authority.
 
-The 0.7.3 integration covers the architecture issues reproduced after the
+The 0.7.4 integration extends the architecture issues reproduced after the
 0.7.2 local installation, including the bounded teaching-document edit in task
 `019fa908-8cf5-7a70-a867-dde76a1c6182`. Its exact current ledger lineage is
 bound in `INHERITANCE.lock.json`; older immutable ledgers are not rewritten.
 That lineage is `run-20260811T013254358017Z-46283133a345` followed by
 `run-20260811T085034084387Z-6c87c04d5462` and the resolved successor
 `run-20260811T191546409764Z-b156c46cab1c`, with the final disclosure repair
-at `run-20260811T193354268477Z-7a6dcfe41bb0`.
+at `run-20260811T193354268477Z-7a6dcfe41bb0` and the 0.7.4 successor
+`run-20260812T073631884601Z-53f28d3790b8`.
 
-## 0.7.3 issue enumeration
+## Public issue enumeration
 
 1. **CHX-001 — production startup predecessor.** The 0.7.2 compact production
    bootstrap remains the immutable predecessor for the broader 0.7.3
@@ -83,6 +84,24 @@ at `run-20260811T193354268477Z-7a6dcfe41bb0`.
     relation, and owner ledger while preserving exclusion as distinct from
     repair. Open issues still require one strictly later resolved `supersedes`
     successor, and every hash, document, and contiguous-id check remains exact.
+21. **CHX-021 — Main-governed bounded attack routing.** Workers now return
+    concrete failure evidence and success boundaries without drafting route
+    text. Main alone may reject or synthesize a persistent mechanism-level
+    rule. Current rules use English internal prose, reject rather than truncate
+    oversized text, permit at most sixteen active rules per project and per
+    new card, and remain future-only nontruth guidance. Historical user-rule
+    cards retain their frozen twenty-four-rule compatibility bound.
+22. **CHX-022 — first-output work elimination.** After exact startup, a compact
+    production worker or supervisor must make its next milestone one durable
+    artifact or one explicit blocker. Consecutive status-only drafting updates
+    while the authorized artifact directory remains empty permit Main to
+    reclaim the work. Architecture-caused repetition uses the existing worker
+    CHX path; no watcher, timer, lifecycle state, audit, truth gate, or packaging
+    prerequisite is added.
+
+CHX-021 and CHX-022 are publication-resolved in the latest immutable ledger.
+They preserve the 0.7.3 **Selective Startup** mechanisms and all prior
+`supersedes` relations without rewriting their evidence.
 
 These repairs are deliberately simple: no persistent frontier index, background
 watcher, agent reputation, dynamic scoring, second semantic validator, new

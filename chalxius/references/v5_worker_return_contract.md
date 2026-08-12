@@ -72,9 +72,14 @@ four shown string fields, each bounded to 400 words.
 The three assurance fields are present if and only if the card has
 `assurance_contract`. If the card has `adverse_routing`, add exactly one
 top-level `attack_learning` field. It is `null` unless the return meets the
-productive-challenge or surviving-counterexample contract in
+productive-challenge or surviving-counterexample failure-report contract in
 [adverse_routing_evolution.md](adverse_routing_evolution.md). If the card lacks
 `adverse_routing`, adding the field is an error.
+
+For current cards the worker reports only the concrete failure, witnesses,
+reproduction and boundary. It must not propose a persistent attack rule. Main
+alone compares reports and decides whether a compact mechanism-level route is
+warranted.
 
 The copyable no-adverse template is
 `assets/worker_return.v5.assurance-no-adverse.template.json`. Its uppercase

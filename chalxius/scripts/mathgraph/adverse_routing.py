@@ -18,22 +18,26 @@ from .protocol import normalize_host_task_scope_id
 
 
 ADVERSE_ROUTING_SCHEMA_VERSION = 1
-ADVERSE_CASE_SCHEMA_VERSION = 2
-ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION = 2
-ADVERSE_TASK_CARD_SCHEMA_VERSION = 4
+ADVERSE_PRODUCTIVE_CASE_SCHEMA_VERSION = 2
+ADVERSE_CASE_SCHEMA_VERSION = 3
+ADVERSE_ATTACK_LEARNING_RULE_SCHEMA_VERSION = 2
+ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION = 3
+ADVERSE_TASK_CARD_SCHEMA_VERSION = 5
 ADVERSE_ROUTING_LEGACY_CONTRACT_REVISION = "chalxius-adverse-routing-evolution-1"
 ADVERSE_ROUTING_PRODUCTIVE_CONTRACT_REVISION = "chalxius-adverse-routing-evolution-2"
-ADVERSE_ROUTING_CONTRACT_REVISION = "chalxius-adverse-routing-evolution-3"
+ADVERSE_ROUTING_USER_RULE_CONTRACT_REVISION = "chalxius-adverse-routing-evolution-3"
+ADVERSE_ROUTING_CONTRACT_REVISION = "chalxius-adverse-routing-evolution-4"
 ADVERSE_ROUTING_CONTRACT_REVISIONS = {
     ADVERSE_ROUTING_LEGACY_CONTRACT_REVISION,
     ADVERSE_ROUTING_PRODUCTIVE_CONTRACT_REVISION,
+    ADVERSE_ROUTING_USER_RULE_CONTRACT_REVISION,
     ADVERSE_ROUTING_CONTRACT_REVISION,
 }
-ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS = frozenset({3, 4})
+ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS = frozenset({3, 4, 5})
 ADVERSE_ROUTING_TRUTH_EFFECT = "none"
 ADVERSE_ROUTING_PROJECT_EFFECT = "future_exploration_routing_only"
 ATTACK_ROUTE_RECOMMENDATION_REPORT_REVISION = (
-    "chalxius-attack-route-recommendations-2"
+    "chalxius-main-route-synthesis-queue-3"
 )
 MAX_ATTACK_ROUTE_RECOMMENDATIONS = 3
 INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION = (
@@ -42,8 +46,28 @@ INDEPENDENT_ADVERSE_PAIR_CONTRACT_REVISION = (
 INDEPENDENT_ADVERSE_REQUIREMENT_FIELD = "independent_adverse_required"
 MAX_TEXT_BYTES = 8 * 1024
 MAX_LIST_ITEMS = 32
-MAX_SELECTED_RULES = 24
+LEGACY_MAX_SELECTED_RULES = 24
+MAX_SELECTED_RULES = 16
+MAX_ACTIVE_ROUTE_RULES = 16
+MAX_PERSISTED_ROUTE_CODEPOINTS = 720
+MAX_ROUTE_INSTRUCTION_CODEPOINTS = 280
+MAX_ROUTE_SCOPE_CODEPOINTS = 180
+MAX_ROUTE_GUARD_CODEPOINTS = 180
+MAX_ROUTE_GUARDS = 2
+MAX_ROUTE_TRIGGER_ITEMS = 8
+MAX_ROUTE_TRIGGER_ITEM_CODEPOINTS = 64
 _SLUG_RE = re.compile(r"[a-z][a-z0-9_]{1,63}")
+_CJK_SCRIPT_RE = re.compile(
+    "["
+    "\\u2e80-\\u2fff"
+    "\\u3040-\\u30ff"
+    "\\u31c0-\\u31ef"
+    "\\u3400-\\u4dbf"
+    "\\u4e00-\\u9fff"
+    "\\uac00-\\ud7af"
+    "\\uf900-\\ufaff"
+    "]"
+)
 ADVERSE_DOMAIN_PROFILES = frozenset({"mathematics", "philosophy", "mixed"})
 PRODUCTIVE_ATTACK_OUTCOMES = frozenset({"evidence", "insight", "challenge"})
 ATTACK_RESULT_KINDS = frozenset(
@@ -632,6 +656,10 @@ def validate_host_scope_attack_report(value: Any) -> dict[str, Any]:
             item.get("proposal_status") == "pending_user_decision"
             for item in value["attacks"]
         ),
+        "pending_main_synthesis_count": sum(
+            item.get("proposal_status") == "pending_main_synthesis"
+            for item in value["attacks"]
+        ),
         "approved_count": sum(
             item.get("proposal_status") in {"approve", "approve_modified"}
             for item in value["attacks"]
@@ -656,9 +684,11 @@ def validate_host_scope_attack_report(value: Any) -> dict[str, Any]:
     }
     if summary != expected_counts:
         raise ValueError("host-scope attack report summary counts drifted")
-    if value["user_decision_required"] != (
-        expected_counts["pending_user_decision_count"] > 0
-    ):
+    expected_user_decision = any(
+        item.get("proposal_status") == "pending_user_decision"
+        for item in value["attacks"]
+    )
+    if value["user_decision_required"] != expected_user_decision:
         raise ValueError("host-scope attack report decision projection is invalid")
     scope_id = value.get("host_task_scope_id")
     if not isinstance(scope_id, str) or not scope_id.strip():
@@ -900,7 +930,7 @@ def validate_host_scope_attack_report(value: Any) -> dict[str, Any]:
 def validate_attack_route_recommendation_report(
     value: Any,
 ) -> dict[str, Any]:
-    """Validate the intentionally small user-facing attack-route projection."""
+    """Validate the small Main-facing queue of concrete worker failure reports."""
 
     fields = {
         "schema_version",
@@ -913,8 +943,8 @@ def validate_attack_route_recommendation_report(
         "recommendations",
         "pending_proposal_count",
         "omitted_pending_count",
-        "user_decision_required",
-        "approval_instruction",
+        "main_synthesis_required",
+        "main_instruction",
         "routing_change_policy",
         "evidence_boundary",
         "truth_effect",
@@ -933,7 +963,7 @@ def validate_attack_route_recommendation_report(
         or value["truth_effect"] != ADVERSE_ROUTING_TRUTH_EFFECT
         or value["project_effect"] != "report_only"
         or value["routing_change_policy"]
-        != "no_route_change_without_operator_decision"
+        != "no_route_change_without_main_synthesis"
         or value["report_sha256"] != sha256_json(semantic)
     ):
         raise ValueError("attack-route recommendation report identity is invalid")
@@ -941,7 +971,7 @@ def validate_attack_route_recommendation_report(
     if policy != {
         "maximum": MAX_ATTACK_ROUTE_RECOMMENDATIONS,
         "selection": (
-            "pending_nonuniversal_selective_family_deduplicated_supported_plain_language_only"
+            "pending_worker_failure_reports_family_deduplicated_for_main_review"
         ),
         "quality_bias": "omit_instead_of_broaden",
     }:
@@ -951,10 +981,11 @@ def validate_attack_route_recommendation_report(
         "number",
         "attack_type",
         "what_it_checks",
+        "reported_failure",
         "applies_when",
         "support_kind",
         "support_count",
-        "approval_phrase",
+        "main_disposition",
     }
     if (
         not isinstance(recommendations, list)
@@ -982,10 +1013,11 @@ def validate_attack_route_recommendation_report(
             or item["support_count"] < 1
             or item["support_kind"]
             not in {"surviving_counterexample", "productive_challenge", "mixed"}
-            or item["approval_phrase"] != f"批准建议 {number}"
+            or item["main_disposition"] != "synthesize_compress_or_reject"
         ):
             raise ValueError("attack-route recommendation item is invalid")
         _require_text(item["applies_when"], "recommendation applicability")
+        _require_text(item["reported_failure"], "reported worker failure")
         _require_text(item["what_it_checks"], "recommendation explanation")
         attack_types.add(attack_type)
     for field_name in ("pending_proposal_count", "omitted_pending_count"):
@@ -995,7 +1027,7 @@ def validate_attack_route_recommendation_report(
     if (
         value["omitted_pending_count"]
         != value["pending_proposal_count"] - len(recommendations)
-        or value["user_decision_required"] != bool(recommendations)
+        or value["main_synthesis_required"] != bool(recommendations)
     ):
         raise ValueError("attack-route recommendation count projection drifted")
     return value
@@ -1053,6 +1085,30 @@ def _require_text_list(
     if len(set(normalized)) != len(normalized):
         raise ValueError(f"{label} contains duplicates")
     return normalized
+
+
+def _require_internal_english_text(value: Any, label: str) -> str:
+    """Keep current governance prose English without restricting mathematics.
+
+    Mathematical symbols, formulas, identifiers, and source locators remain
+    valid. Exact user claims and external quotations are outside this helper.
+    Historical schemas are validated by their original contract.
+    """
+
+    text = _require_text(value, label)
+    if _CJK_SCRIPT_RE.search(text) is not None:
+        raise ValueError(f"{label} must use English internal prose")
+    return text
+
+
+def _require_internal_english_text_list(
+    value: Any, label: str, *, nonempty: bool
+) -> list[str]:
+    items = _require_text_list(value, label, nonempty=nonempty)
+    for item in items:
+        if _CJK_SCRIPT_RE.search(item) is not None:
+            raise ValueError(f"{label} must use English internal prose")
+    return items
 
 
 def _validate_id(value: Any, prefix: str, label: str) -> str:
@@ -1121,6 +1177,91 @@ def validate_route_rule(value: Any, *, label: str = "route rule") -> dict[str, A
     }
 
 
+def validate_persistent_route_rule(
+    value: Any, *, label: str = "persistent route rule"
+) -> dict[str, Any]:
+    """Validate one Main-synthesized, compact mechanism-level route rule.
+
+    Worker reports deliberately do not pass through this interface.  The caps
+    apply only to the small persistent rule that Main chooses to place on future
+    task cards; truncation is never used as a substitute for semantic compression.
+    """
+
+    rule = validate_route_rule(value, label=label)
+    _require_internal_english_text(rule["instruction"], f"{label} instruction")
+    _require_internal_english_text(rule["scope_note"], f"{label} scope")
+    _require_internal_english_text_list(
+        rule["false_positive_guards"],
+        f"{label} false_positive_guards",
+        nonempty=True,
+    )
+    _require_internal_english_text_list(
+        rule["trigger"]["claim_terms_any"],
+        f"{label} claim_terms_any",
+        nonempty=False,
+    )
+    trigger = rule["trigger"]
+    trigger_items = (
+        trigger["research_kinds"]
+        + trigger["claim_terms_any"]
+        + trigger["metadata_signals_any"]
+    )
+    texts = [
+        rule["attack_family"],
+        rule["instruction"],
+        rule["scope_note"],
+        *trigger_items,
+        *rule["false_positive_guards"],
+    ]
+    total_codepoints = sum(len(item) for item in texts)
+    if len(rule["instruction"]) > MAX_ROUTE_INSTRUCTION_CODEPOINTS:
+        raise ValueError(
+            f"{label} instruction exceeds {MAX_ROUTE_INSTRUCTION_CODEPOINTS} Unicode "
+            "code points; Main must compress the mechanism semantically"
+        )
+    if len(rule["scope_note"]) > MAX_ROUTE_SCOPE_CODEPOINTS:
+        raise ValueError(
+            f"{label} scope exceeds {MAX_ROUTE_SCOPE_CODEPOINTS} Unicode code points; "
+            "Main must compress the mechanism semantically"
+        )
+    if len(rule["false_positive_guards"]) > MAX_ROUTE_GUARDS or any(
+        len(item) > MAX_ROUTE_GUARD_CODEPOINTS
+        for item in rule["false_positive_guards"]
+    ):
+        raise ValueError(
+            f"{label} guards exceed the compact {MAX_ROUTE_GUARDS}-guard budget; "
+            "Main must merge or compress them"
+        )
+    if len(trigger_items) > MAX_ROUTE_TRIGGER_ITEMS or any(
+        len(item) > MAX_ROUTE_TRIGGER_ITEM_CODEPOINTS for item in trigger_items
+    ):
+        raise ValueError(
+            f"{label} trigger exceeds the compact trigger budget; Main must generalize "
+            "the mechanism rather than enumerate concrete cases"
+        )
+    if total_codepoints > MAX_PERSISTED_ROUTE_CODEPOINTS:
+        raise ValueError(
+            f"{label} contains {total_codepoints} Unicode code points, exceeding the "
+            f"hard cap {MAX_PERSISTED_ROUTE_CODEPOINTS}; Main must submit a semantically "
+            "compressed rule and automatic truncation is forbidden"
+        )
+    return rule
+
+
+def _persistent_route_codepoints(rule: dict[str, Any]) -> int:
+    trigger = rule["trigger"]
+    return sum(
+        len(item)
+        for item in (
+            [rule["attack_family"], rule["instruction"], rule["scope_note"]]
+            + trigger["research_kinds"]
+            + trigger["claim_terms_any"]
+            + trigger["metadata_signals_any"]
+            + rule["false_positive_guards"]
+        )
+    )
+
+
 def validate_attack_learning(
     value: Any,
     *,
@@ -1137,23 +1278,41 @@ def validate_attack_learning(
         "success_boundary",
         "route_rule",
     }
-    current_required = {
+    rule_bearing_required = {
         *legacy_required,
         "schema_version",
         "result_kind",
         "value_effects",
     }
+    report_required = {
+        "schema_version",
+        "result_kind",
+        "attack_family",
+        "target_pattern",
+        "failure_mechanism",
+        "premise_witnesses",
+        "conclusion_failure_witness",
+        "reproduction_steps",
+        "success_boundary",
+        "value_effects",
+    }
     if not isinstance(value, dict):
         raise ValueError("attack_learning must be an object")
-    is_current = set(value) == current_required
-    if set(value) != legacy_required and not is_current:
+    is_rule_bearing = set(value) == rule_bearing_required
+    is_report = set(value) == report_required
+    if set(value) != legacy_required and not is_rule_bearing and not is_report:
         raise ValueError("attack_learning fields are not exact")
-    if require_current and not is_current:
-        raise ValueError("current adverse task requires attack_learning schema_version=2")
+    if require_current and not is_report:
+        raise ValueError("current adverse task requires worker failure-report schema_version=3")
     result_kind: str | None = None
     value_effects: list[dict[str, str]] = []
-    if is_current:
-        if value["schema_version"] != ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION:
+    if is_rule_bearing or is_report:
+        expected_schema = (
+            ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION
+            if is_report
+            else ADVERSE_ATTACK_LEARNING_RULE_SCHEMA_VERSION
+        )
+        if value["schema_version"] != expected_schema:
             raise ValueError("attack_learning schema version is unsupported")
         result_kind = value["result_kind"]
         if result_kind not in ATTACK_RESULT_KINDS:
@@ -1182,48 +1341,75 @@ def validate_attack_learning(
             value_effects.append(
                 {
                     "effect_kind": effect_kind,
-                    "before": _require_text(
+                    "before": _require_internal_english_text(
+                        raw["before"],
+                        f"attack_learning value_effects[{index}] before",
+                    ) if is_report else _require_text(
                         raw["before"],
                         f"attack_learning value_effects[{index}] before",
                     ),
-                    "after": _require_text(
+                    "after": _require_internal_english_text(
+                        raw["after"],
+                        f"attack_learning value_effects[{index}] after",
+                    ) if is_report else _require_text(
                         raw["after"],
                         f"attack_learning value_effects[{index}] after",
                     ),
-                    "evidence": _require_text(
+                    "evidence": _require_internal_english_text(
+                        raw["evidence"],
+                        f"attack_learning value_effects[{index}] evidence",
+                    ) if is_report else _require_text(
                         raw["evidence"],
                         f"attack_learning value_effects[{index}] evidence",
                     ),
                 }
             )
     attack_family = _require_slug(value["attack_family"], "attack family")
-    route_rule = validate_route_rule(value["route_rule"])
-    if route_rule["attack_family"] != attack_family:
-        raise ValueError("attack_learning family and route rule family disagree")
+    route_rule = None
+    if not is_report:
+        route_rule = validate_route_rule(value["route_rule"])
+        if route_rule["attack_family"] != attack_family:
+            raise ValueError("attack_learning family and route rule family disagree")
     normalized = {
         "attack_family": attack_family,
-        "target_pattern": _require_text(value["target_pattern"], "attack target pattern"),
-        "failure_mechanism": _require_text(
+        "target_pattern": _require_internal_english_text(
+            value["target_pattern"], "attack target pattern"
+        ) if is_report else _require_text(
+            value["target_pattern"], "attack target pattern"
+        ),
+        "failure_mechanism": _require_internal_english_text(
+            value["failure_mechanism"], "attack failure mechanism"
+        ) if is_report else _require_text(
             value["failure_mechanism"], "attack failure mechanism"
         ),
-        "premise_witnesses": _require_text_list(
+        "premise_witnesses": _require_internal_english_text_list(
+            value["premise_witnesses"], "attack premise witnesses", nonempty=True
+        ) if is_report else _require_text_list(
             value["premise_witnesses"], "attack premise witnesses", nonempty=True
         ),
-        "conclusion_failure_witness": _require_text(
+        "conclusion_failure_witness": _require_internal_english_text(
+            value["conclusion_failure_witness"],
+            "attack conclusion-failure witness",
+        ) if is_report else _require_text(
             value["conclusion_failure_witness"],
             "attack conclusion-failure witness",
         ),
-        "reproduction_steps": _require_text_list(
+        "reproduction_steps": _require_internal_english_text_list(
+            value["reproduction_steps"], "attack reproduction steps", nonempty=True
+        ) if is_report else _require_text_list(
             value["reproduction_steps"], "attack reproduction steps", nonempty=True
         ),
-        "success_boundary": _require_text(
+        "success_boundary": _require_internal_english_text(
+            value["success_boundary"], "attack success boundary"
+        ) if is_report else _require_text(
             value["success_boundary"], "attack success boundary"
         ),
-        "route_rule": route_rule,
     }
-    if is_current:
+    if route_rule is not None:
+        normalized["route_rule"] = route_rule
+    if is_rule_bearing or is_report:
         return {
-            "schema_version": ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION,
+            "schema_version": value["schema_version"],
             "result_kind": result_kind,
             **normalized,
             "value_effects": value_effects,
@@ -1234,7 +1420,7 @@ def validate_attack_learning(
 
 
 class AdverseRoutingManager:
-    """Project-local, nontruth learning and user-governed adverse routing."""
+    """Project-local, nontruth failure reporting and Main-governed routing."""
 
     def __init__(self, store: Any) -> None:
         self.store = store
@@ -1435,7 +1621,9 @@ class AdverseRoutingManager:
     def _validate_case(self, payload: Any, path: Path) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("attack case must be an object")
-        legacy = payload.get("schema_version") == ADVERSE_ROUTING_SCHEMA_VERSION
+        schema_version = payload.get("schema_version")
+        legacy = schema_version == ADVERSE_ROUTING_SCHEMA_VERSION
+        worker_report = schema_version == ADVERSE_CASE_SCHEMA_VERSION
         fields = (
             {
                 "schema_version",
@@ -1487,7 +1675,10 @@ class AdverseRoutingManager:
             allowed_schema_versions=(
                 {ADVERSE_ROUTING_SCHEMA_VERSION}
                 if legacy
-                else {ADVERSE_CASE_SCHEMA_VERSION}
+                else {
+                    ADVERSE_PRODUCTIVE_CASE_SCHEMA_VERSION,
+                    ADVERSE_CASE_SCHEMA_VERSION,
+                }
             ),
         )
         for name in (
@@ -1527,7 +1718,7 @@ class AdverseRoutingManager:
                 raise ValueError("attack case result/outcome binding is invalid")
             validate_attack_learning(
                 record["attack_learning"],
-                require_current=True,
+                require_current=worker_report,
                 expected_result_kind=attack_result,
             )
             expected_status = (
@@ -1540,7 +1731,7 @@ class AdverseRoutingManager:
         return record
 
     def _validate_proposal(self, payload: Any, path: Path) -> dict[str, Any]:
-        fields = {
+        legacy_fields = {
             "schema_version",
             "contract_revision",
             "project_id",
@@ -1550,26 +1741,45 @@ class AdverseRoutingManager:
             "activation_policy",
             "truth_effect",
         }
+        report_fields = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "case_id",
+            "proposal_status",
+            "activation_policy",
+            "truth_effect",
+        }
+        report_only = (
+            isinstance(payload, dict)
+            and payload.get("contract_revision") == ADVERSE_ROUTING_CONTRACT_REVISION
+        )
         record = self._validate_content_record(
             payload,
             path=path,
             id_field="proposal_id",
             prefix="route-proposal-",
-            semantic_fields=fields,
+            semantic_fields=report_fields if report_only else legacy_fields,
             label="route proposal",
         )
         self._validate_common_identity(record, "route proposal")
         _validate_id(record["case_id"], "attack-case-", "route proposal case id")
-        validate_route_rule(record["route_rule"])
+        if report_only:
+            expected_status = "pending_main_synthesis"
+            expected_policy = "main_synthesis_only"
+        else:
+            validate_route_rule(record["route_rule"])
+            expected_status = "pending_user_decision"
+            expected_policy = "user_decision_only"
         if (
-            record["proposal_status"] != "pending_user_decision"
-            or record["activation_policy"] != "user_decision_only"
+            record["proposal_status"] != expected_status
+            or record["activation_policy"] != expected_policy
         ):
             raise ValueError("route proposal policy is invalid")
         return record
 
     def _validate_decision(self, payload: Any, path: Path) -> dict[str, Any]:
-        fields = {
+        legacy_fields = {
             "schema_version",
             "contract_revision",
             "project_id",
@@ -1581,25 +1791,71 @@ class AdverseRoutingManager:
             "effect",
             "truth_effect",
         }
+        current_fields = {*legacy_fields, "governance"}
+        current = (
+            isinstance(payload, dict)
+            and payload.get("contract_revision") == ADVERSE_ROUTING_CONTRACT_REVISION
+        )
         record = self._validate_content_record(
             payload,
             path=path,
             id_field="decision_id",
             prefix="route-decision-",
-            semantic_fields=fields,
+            semantic_fields=current_fields if current else legacy_fields,
             label="route decision",
         )
         self._validate_common_identity(record, "route decision")
         _validate_id(record["proposal_id"], "route-proposal-", "route decision proposal id")
-        if record["action"] not in {"approve", "approve_modified", "reject"}:
+        allowed_actions = (
+            {"approve_modified", "reject"}
+            if current
+            else {"approve", "approve_modified", "reject"}
+        )
+        if record["action"] not in allowed_actions:
             raise ValueError("route decision action is invalid")
-        _require_text(record["reason"], "route decision reason")
+        if current:
+            _require_internal_english_text(
+                record["reason"], "route decision reason"
+            )
+        else:
+            _require_text(record["reason"], "route decision reason")
         _require_text(record["actor"], "route decision actor")
         if record["action"] == "reject":
             if record["approved_rule"] is not None:
                 raise ValueError("rejected route decision cannot carry a rule")
         else:
-            validate_route_rule(record["approved_rule"], label="approved route rule")
+            if current:
+                validate_persistent_route_rule(
+                    record["approved_rule"], label="approved route rule"
+                )
+            else:
+                validate_route_rule(record["approved_rule"], label="approved route rule")
+        if current:
+            governance = record["governance"]
+            if record["action"] == "reject":
+                if governance is not None:
+                    raise ValueError("rejected route decision cannot carry governance")
+            elif not isinstance(governance, dict) or set(governance) != {
+                "decision_authority",
+                "abstraction_level",
+                "concrete_evidence_excluded",
+                "compression",
+                "persistent_text_codepoints",
+            }:
+                raise ValueError("Main route governance fields are not exact")
+            elif (
+                governance["decision_authority"] != "main"
+                or governance["abstraction_level"] != "mechanism"
+                or governance["concrete_evidence_excluded"] is not True
+                or governance["compression"] not in {"within_budget", "compressed"}
+                or not isinstance(governance["persistent_text_codepoints"], int)
+                or governance["persistent_text_codepoints"] < 1
+                or governance["persistent_text_codepoints"]
+                > MAX_PERSISTED_ROUTE_CODEPOINTS
+                or governance["persistent_text_codepoints"]
+                != _persistent_route_codepoints(record["approved_rule"])
+            ):
+                raise ValueError("Main route governance is invalid")
         if record["effect"] != "future_task_cards_only":
             raise ValueError("route decision effect is invalid")
         return record
@@ -1632,7 +1888,10 @@ class AdverseRoutingManager:
         _validate_id(
             record["source_decision_id"], "route-decision-", "route rule decision id"
         )
-        validate_route_rule(record["route_rule"])
+        if record["contract_revision"] == ADVERSE_ROUTING_CONTRACT_REVISION:
+            validate_persistent_route_rule(record["route_rule"])
+        else:
+            validate_route_rule(record["route_rule"])
         if record["effect"] != "future_task_cards_only":
             raise ValueError("route rule effect is invalid")
         return record
@@ -1658,7 +1917,12 @@ class AdverseRoutingManager:
         )
         self._validate_common_identity(record, "route disablement")
         _validate_id(record["rule_id"], "route-rule-", "route disablement rule id")
-        _require_text(record["reason"], "route disablement reason")
+        if record["contract_revision"] == ADVERSE_ROUTING_CONTRACT_REVISION:
+            _require_internal_english_text(
+                record["reason"], "route disablement reason"
+            )
+        else:
+            _require_text(record["reason"], "route disablement reason")
         _require_text(record["actor"], "route disablement actor")
         if record["effect"] != "future_task_cards_only":
             raise ValueError("route disablement effect is invalid")
@@ -1966,8 +2230,8 @@ class AdverseRoutingManager:
                 activation_kind="prospective_default_user_authorization",
                 actor="v5-adverse-router",
                 reason=(
-                    "Default future-only adverse reporting and user-governed route "
-                    "evolution for newly frozen V5 refute tasks."
+                    "Default future-only worker failure reporting and Main-governed "
+                    "route synthesis for newly frozen V5 refute tasks."
                 ),
             )
         related_artifacts = related_artifacts or []
@@ -1995,7 +2259,7 @@ class AdverseRoutingManager:
             "schema_version": ADVERSE_TASK_CARD_SCHEMA_VERSION,
             "contract_revision": ADVERSE_ROUTING_CONTRACT_REVISION,
             "enabled": True,
-            "selection_policy": "baseline_plus_user_approved_future_only",
+            "selection_policy": "baseline_plus_main_synthesized_future_only",
             "baseline_rules": baseline,
             "baseline_rules_sha256": sha256_json(baseline),
             "approved_rules": selected,
@@ -2004,13 +2268,14 @@ class AdverseRoutingManager:
             "learning_contract": {
                 "counterexample_requires_attack_learning": True,
                 "productive_challenge_learning": (
-                    "structured_when_attack_forces_a_load_bearing_repair"
+                    "worker_failure_report_when_attack_forces_a_load_bearing_repair"
                 ),
                 "attack_learning_schema_version": (
                     ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION
                 ),
                 "reportable_result_kinds": sorted(ATTACK_RESULT_KINDS),
-                "proposal_activation": "user_decision_only",
+                "worker_rule_proposal": "forbidden",
+                "route_synthesis": "main_only",
                 "attack_report": "required_at_host_task_completion",
                 "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
             },
@@ -2055,7 +2320,7 @@ class AdverseRoutingManager:
                 or value["baseline_rules_sha256"] != sha256_json(expected_baseline)
             ):
                 raise ValueError("legacy adverse-routing task-card baseline binding is invalid")
-        elif task_schema in {2, 3, ADVERSE_TASK_CARD_SCHEMA_VERSION}:
+        elif task_schema in {2, 3, 4, ADVERSE_TASK_CARD_SCHEMA_VERSION}:
             required = {*legacy_required, "scope_evidence"}
             if set(value) != required:
                 raise ValueError("adverse-routing task-card fields are not exact")
@@ -2077,7 +2342,7 @@ class AdverseRoutingManager:
             }
             expected_scope_fields = (
                 program_scope_fields | philosophy_scope_fields
-                if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                if task_schema in {4, ADVERSE_TASK_CARD_SCHEMA_VERSION}
                 else program_scope_fields
             )
             if not isinstance(scope, dict) or set(scope) != expected_scope_fields:
@@ -2122,7 +2387,7 @@ class AdverseRoutingManager:
                 or scope["artifact_bindings"] != []
             ):
                 raise ValueError("inactive program-math scope must be empty")
-            if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION:
+            if task_schema in {4, ADVERSE_TASK_CARD_SCHEMA_VERSION}:
                 if entry is None:
                     raise ValueError(
                         "current adverse-routing validation requires source Research"
@@ -2140,7 +2405,11 @@ class AdverseRoutingManager:
                     expected_baseline.extend(
                         dict(item) for item in PHILOSOPHY_ATTACK_RULES
                     )
-                expected_revision = ADVERSE_ROUTING_CONTRACT_REVISION
+                expected_revision = (
+                    ADVERSE_ROUTING_CONTRACT_REVISION
+                    if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                    else ADVERSE_ROUTING_USER_RULE_CONTRACT_REVISION
+                )
             else:
                 expected_baseline = list(LEGACY_BASELINE_ATTACK_RULES)
                 expected_revision = (
@@ -2153,7 +2422,12 @@ class AdverseRoutingManager:
             if (
                 value["contract_revision"] != expected_revision
                 or value["enabled"] is not True
-                or value["selection_policy"] != "baseline_plus_user_approved_future_only"
+                or value["selection_policy"]
+                != (
+                    "baseline_plus_main_synthesized_future_only"
+                    if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                    else "baseline_plus_user_approved_future_only"
+                )
                 or value["baseline_rules"] != expected_baseline
                 or value["baseline_rules_sha256"] != sha256_json(expected_baseline)
             ):
@@ -2161,7 +2435,12 @@ class AdverseRoutingManager:
         else:
             raise ValueError("adverse-routing task-card schema version is unsupported")
         approved = value["approved_rules"]
-        if not isinstance(approved, list) or len(approved) > MAX_SELECTED_RULES:
+        selected_cap = (
+            MAX_SELECTED_RULES
+            if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+            else LEGACY_MAX_SELECTED_RULES
+        )
+        if not isinstance(approved, list) or len(approved) > selected_cap:
             raise ValueError("adverse-routing approved rules are invalid")
         if value["approved_rules_sha256"] != sha256_json(approved):
             raise ValueError("adverse-routing approved-rule hash mismatch")
@@ -2186,13 +2465,24 @@ class AdverseRoutingManager:
             else {
                 "counterexample_requires_attack_learning": True,
                 "productive_challenge_learning": (
-                    "structured_when_attack_forces_a_load_bearing_repair"
+                    "worker_failure_report_when_attack_forces_a_load_bearing_repair"
+                    if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                    else "structured_when_attack_forces_a_load_bearing_repair"
                 ),
                 "attack_learning_schema_version": (
                     ADVERSE_ATTACK_LEARNING_SCHEMA_VERSION
+                    if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                    else ADVERSE_ATTACK_LEARNING_RULE_SCHEMA_VERSION
                 ),
                 "reportable_result_kinds": sorted(ATTACK_RESULT_KINDS),
-                "proposal_activation": "user_decision_only",
+                **(
+                    {
+                        "worker_rule_proposal": "forbidden",
+                        "route_synthesis": "main_only",
+                    }
+                    if task_schema == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                    else {"proposal_activation": "user_decision_only"}
+                ),
                 "attack_report": "required_at_host_task_completion",
                 "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
             }
@@ -2305,14 +2595,22 @@ class AdverseRoutingManager:
             )
         learning = validate_attack_learning(
             payload.get("attack_learning"),
-            require_current=True,
+            require_current=(
+                card["adverse_routing"]["schema_version"]
+                == ADVERSE_TASK_CARD_SCHEMA_VERSION
+            ),
             expected_result_kind=attack_result,
         )
         scope_id = card["control_plane"].get("host_task_scope_id")
         if not isinstance(scope_id, str) or not scope_id.strip():
             scope_id = f"round:{card['round_id']}"
         case_semantic = {
-            "schema_version": ADVERSE_CASE_SCHEMA_VERSION,
+            "schema_version": (
+                ADVERSE_CASE_SCHEMA_VERSION
+                if card["adverse_routing"]["schema_version"]
+                == ADVERSE_TASK_CARD_SCHEMA_VERSION
+                else ADVERSE_PRODUCTIVE_CASE_SCHEMA_VERSION
+            ),
             "contract_revision": card["adverse_routing"]["contract_revision"],
             "project_id": self.store.project_id(),
             "round_id": card["round_id"],
@@ -2339,14 +2637,22 @@ class AdverseRoutingManager:
         )
         case_path = self.cases_dir / f"{case_record['case_id']}.json"
         self._validate_case(case_record, case_path)
+        current = (
+            card["adverse_routing"]["schema_version"]
+            == ADVERSE_TASK_CARD_SCHEMA_VERSION
+        )
         proposal_semantic = {
             "schema_version": ADVERSE_ROUTING_SCHEMA_VERSION,
             "contract_revision": card["adverse_routing"]["contract_revision"],
             "project_id": self.store.project_id(),
             "case_id": case_record["case_id"],
-            "route_rule": learning["route_rule"],
-            "proposal_status": "pending_user_decision",
-            "activation_policy": "user_decision_only",
+            **({} if current else {"route_rule": learning["route_rule"]}),
+            "proposal_status": (
+                "pending_main_synthesis" if current else "pending_user_decision"
+            ),
+            "activation_policy": (
+                "main_synthesis_only" if current else "user_decision_only"
+            ),
             "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
         }
         proposal_record = self._write_content_record(
@@ -2412,23 +2718,61 @@ class AdverseRoutingManager:
     ) -> dict[str, Any]:
         self.require_enabled()
         actor = _require_text(actor, "route decision actor")
-        if not isinstance(payload, dict) or set(payload) != {"action", "reason", "rule"}:
+        if actor.casefold() not in {"main", "chalxius-main"}:
+            raise ValueError("route decisions require Main authority")
+        if not isinstance(payload, dict) or set(payload) != {
+            "action",
+            "reason",
+            "rule",
+            "governance",
+        }:
             raise ValueError("route decision input fields are not exact")
         action = payload["action"]
-        if action not in {"approve", "approve_modified", "reject"}:
+        if action not in {"approve_modified", "reject"}:
             raise ValueError("route decision action is invalid")
-        reason = _require_text(payload["reason"], "route decision reason")
+        reason = _require_internal_english_text(
+            payload["reason"], "route decision reason"
+        )
         proposal = self._proposal(proposal_id)
-        if action == "approve":
-            if payload["rule"] is not None:
-                raise ValueError("approve copies the proposal and requires rule=null")
-            approved_rule = proposal["route_rule"]
-        elif action == "approve_modified":
-            approved_rule = validate_route_rule(payload["rule"], label="modified route rule")
+        current_proposal = (
+            proposal["contract_revision"] == ADVERSE_ROUTING_CONTRACT_REVISION
+        )
+        if not current_proposal:
+            if action == "reject":
+                pass
+            elif action == "approve_modified":
+                # Main may synthesize an abstract successor from a legacy worker
+                # suggestion, but the legacy text is never copied directly.
+                pass
+        governance = payload["governance"]
+        if action == "approve_modified":
+            if not isinstance(governance, dict) or set(governance) != {
+                "abstraction_level",
+                "concrete_evidence_excluded",
+                "compression",
+            }:
+                raise ValueError("Main synthesis governance fields are not exact")
+            if (
+                governance["abstraction_level"] != "mechanism"
+                or governance["concrete_evidence_excluded"] is not True
+                or governance["compression"] not in {"within_budget", "compressed"}
+            ):
+                raise ValueError("Main synthesis governance is invalid")
+            approved_rule = validate_persistent_route_rule(
+                payload["rule"], label="Main-synthesized route rule"
+            )
+            decision_governance = {
+                "decision_authority": "main",
+                **governance,
+                "persistent_text_codepoints": _persistent_route_codepoints(
+                    approved_rule
+                ),
+            }
         else:
-            if payload["rule"] is not None:
-                raise ValueError("reject requires rule=null")
+            if payload["rule"] is not None or governance is not None:
+                raise ValueError("reject requires rule=null and governance=null")
             approved_rule = None
+            decision_governance = None
         with self.store.v5_mutation_lock(command="attack-route-decide"):
             prior = [item for item in self.decisions() if item["proposal_id"] == proposal_id]
             expected = {
@@ -2436,6 +2780,7 @@ class AdverseRoutingManager:
                 "reason": reason,
                 "actor": actor,
                 "approved_rule": approved_rule,
+                "governance": decision_governance,
             }
             if prior:
                 if len(prior) != 1 or any(
@@ -2444,6 +2789,14 @@ class AdverseRoutingManager:
                     raise ValueError("route proposal already has a different immutable decision")
                 decision = prior[0]
             else:
+                if (
+                    approved_rule is not None
+                    and len(self.active_rules()) >= MAX_ACTIVE_ROUTE_RULES
+                ):
+                    raise ValueError(
+                        f"active route hard cap {MAX_ACTIVE_ROUTE_RULES} reached; Main "
+                        "must consolidate or disable a route before adding another"
+                    )
                 semantic = {
                     "schema_version": ADVERSE_ROUTING_SCHEMA_VERSION,
                     "contract_revision": ADVERSE_ROUTING_CONTRACT_REVISION,
@@ -2475,7 +2828,7 @@ class AdverseRoutingManager:
     def disable(self, rule_id: str, *, reason: str, actor: str) -> dict[str, Any]:
         self.require_enabled()
         rule = self._rule(rule_id)
-        reason = _require_text(reason, "route disablement reason")
+        reason = _require_internal_english_text(reason, "route disablement reason")
         actor = _require_text(actor, "route disablement actor")
         with self.store.v5_mutation_lock(command="attack-route-disable"):
             prior = [item for item in self.disablements() if item["rule_id"] == rule_id]
@@ -2850,7 +3203,7 @@ class AdverseRoutingManager:
             decision = decisions.get(proposal["proposal_id"])
             rule = rules_by_decision.get(decision["decision_id"]) if decision else None
             if decision is None:
-                proposal_status = "pending_user_decision"
+                proposal_status = "pending_main_synthesis"
             else:
                 proposal_status = decision["action"]
             items.append(
@@ -2876,7 +3229,7 @@ class AdverseRoutingManager:
                     "value_effects": case["attack_learning"].get(
                         "value_effects", []
                     ),
-                    "proposed_rule": proposal["route_rule"],
+                    "proposed_rule": proposal.get("route_rule"),
                     "proposal_status": proposal_status,
                     "decision_id": decision["decision_id"] if decision else None,
                     "active_rule_id": (
@@ -2888,7 +3241,12 @@ class AdverseRoutingManager:
                 }
             )
         items.sort(key=lambda item: item["case_id"])
-        pending = sum(item["proposal_status"] == "pending_user_decision" for item in items)
+        pending_user = sum(
+            item["proposal_status"] == "pending_user_decision" for item in items
+        )
+        pending_main = sum(
+            item["proposal_status"] == "pending_main_synthesis" for item in items
+        )
         approved = sum(
             item["proposal_status"] in {"approve", "approve_modified"} for item in items
         )
@@ -2933,7 +3291,8 @@ class AdverseRoutingManager:
                 item["attack_result"] == "productive_challenge"
                 for item in items
             ),
-            "pending_user_decision_count": pending,
+            "pending_user_decision_count": pending_user,
+            "pending_main_synthesis_count": pending_main,
             "approved_count": approved,
             "rejected_count": rejected,
             "missing_dispatch_count": sum(
@@ -2971,9 +3330,9 @@ class AdverseRoutingManager:
                 "and context ids are mandatory frozen contracts"
             ),
             "attacks": items,
-            "user_decision_required": pending > 0,
-            "allowed_user_actions": ["approve", "approve_modified", "reject"],
-            "routing_change_policy": "no_route_change_without_operator_decision",
+            "user_decision_required": False,
+            "allowed_user_actions": [],
+            "routing_change_policy": "no_route_change_without_main_synthesis",
             "evidence_boundary": (
                 "worker-reported counterexamples and productive challenges are nontruth "
                 "Research; attack-report and routing approval neither certify a refutation "
@@ -2993,38 +3352,24 @@ class AdverseRoutingManager:
         *,
         host_task_scope_id: str,
     ) -> dict[str, Any]:
-        """Project only a few actionable route types for the user."""
+        """Project a few concrete worker failure reports for Main synthesis."""
 
         full = self.report(host_task_scope_id=host_task_scope_id)
-        active_rule_hashes = {
-            sha256_json(item["route_rule"]) for item in self.active_rules()
-        }
         groups: dict[str, dict[str, Any]] = {}
         pending_proposal_ids: set[str] = set()
         for attack in full["attacks"]:
-            if attack["proposal_status"] != "pending_user_decision":
+            if attack["proposal_status"] != "pending_main_synthesis":
                 continue
             pending_proposal_ids.add(attack["proposal_id"])
-            rule = validate_route_rule(attack["proposed_rule"])
-            trigger = rule["trigger"]
-            if (
-                trigger["universal_refute"]
-                or not (
-                    trigger["claim_terms_any"]
-                    or trigger["metadata_signals_any"]
-                )
-                or sha256_json(rule) in active_rule_hashes
-            ):
-                continue
-            signature = rule["attack_family"]
+            signature = attack["attack_family"]
             if signature not in ATTACK_FAMILY_PLAIN_LANGUAGE:
-                # Unknown families remain visible in --full.  Do not leak an
-                # unreviewed worker instruction or invent a vague explanation
-                # merely to fill the concise recommendation quota.
+                # Unknown families remain in --full. Main never receives an
+                # invented abstraction merely to fill a queue quota.
                 continue
             group = groups.setdefault(
                 signature,
                 {
+                    "attack_family": signature,
                     "entries": [],
                     "result_kinds": [],
                 },
@@ -3032,7 +3377,8 @@ class AdverseRoutingManager:
             group["entries"].append(
                 {
                     "proposal_id": attack["proposal_id"],
-                    "rule": rule,
+                    "failure_mechanism": attack["failure_mechanism"],
+                    "success_boundary": attack["success_boundary"],
                 }
             )
             group["result_kinds"].append(attack["attack_result"])
@@ -3045,7 +3391,7 @@ class AdverseRoutingManager:
                     result == "surviving_counterexample"
                     for result in item["result_kinds"]
                 ),
-                item["entries"][0]["rule"]["attack_family"],
+                item["attack_family"],
                 min(entry["proposal_id"] for entry in item["entries"]),
             ),
         )
@@ -3067,14 +3413,15 @@ class AdverseRoutingManager:
             recommendations.append(
                 {
                     "number": number,
-                    "attack_type": selected["rule"]["attack_family"],
+                    "attack_type": item["attack_family"],
                     "what_it_checks": ATTACK_FAMILY_PLAIN_LANGUAGE[
-                        selected["rule"]["attack_family"]
+                        item["attack_family"]
                     ],
-                    "applies_when": selected["rule"]["scope_note"],
+                    "reported_failure": selected["failure_mechanism"],
+                    "applies_when": selected["success_boundary"],
                     "support_kind": support_kind,
                     "support_count": len(item["entries"]),
-                    "approval_phrase": f"批准建议 {number}",
+                    "main_disposition": "synthesize_compress_or_reject",
                 }
             )
 
@@ -3088,7 +3435,7 @@ class AdverseRoutingManager:
             "recommendation_policy": {
                 "maximum": MAX_ATTACK_ROUTE_RECOMMENDATIONS,
                 "selection": (
-                    "pending_nonuniversal_selective_family_deduplicated_supported_plain_language_only"
+                    "pending_worker_failure_reports_family_deduplicated_for_main_review"
                 ),
                 "quality_bias": "omit_instead_of_broaden",
             },
@@ -3097,19 +3444,19 @@ class AdverseRoutingManager:
             "omitted_pending_count": (
                 len(pending_proposal_ids) - len(recommendations)
             ),
-            "user_decision_required": bool(recommendations),
-            "approval_instruction": (
-                "Reply with one listed approval phrase to activate that route "
-                "for future attack task cards."
+            "main_synthesis_required": bool(recommendations),
+            "main_instruction": (
+                "Main must compare concrete reports, then synthesize, semantically "
+                "compress, or reject; worker wording is never activated directly."
                 if recommendations
-                else "No route upgrade is recommended from this scope."
+                else "No Main route synthesis is warranted from this scope."
             ),
             "routing_change_policy": (
-                "no_route_change_without_operator_decision"
+                "no_route_change_without_main_synthesis"
             ),
             "evidence_boundary": (
-                "recommendations are nontruth routing suggestions; approval "
-                "changes future attack task cards only"
+                "items are concrete nontruth worker failure reports, not route rules; "
+                "only a separately bounded Main synthesis changes future task cards"
             ),
             "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
             "project_effect": "report_only",
@@ -3158,8 +3505,9 @@ class AdverseRoutingManager:
             "decision_count": len(decisions),
             "rule_count": len(rules),
             "active_rule_count": len(active),
+            "active_rule_hard_cap": MAX_ACTIVE_ROUTE_RULES,
             "active_rule_ids": [item["rule_id"] for item in active],
-            "activation_policy": "user_decision_only",
+            "activation_policy": "main_synthesis_only",
             "effect": ADVERSE_ROUTING_PROJECT_EFFECT,
             "truth_effect": ADVERSE_ROUTING_TRUTH_EFFECT,
         }

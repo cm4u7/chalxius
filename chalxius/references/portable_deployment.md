@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.7.3 `Selective Startup` release artifact contains one self-contained `chalxius`
+The 0.7.4 `Bounded Main Routing` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -289,11 +289,12 @@ cases:
 
 The default report contains at most three selective, family-deduplicated attack
 types with one reviewed ordinary-language sentence saying what each checks,
-applicability, support, and `批准建议 N`; it exposes no technical case internals
-or worker-authored instructions. Unknown families remain in `--full` until
-their user-facing explanation is reviewed. Use `--full` only for the complete worker-reported nontruth
-coverage/case audit. Only the operator may approve, approve after supplying a
-modified rule, reject, or disable. Decisions affect future task cards only.
+its applicability, and its support. It exposes no technical case internals or
+worker-authored instructions. Unknown families remain in `--full` until their
+user-facing explanation is reviewed. Use `--full` only for the complete
+worker-reported nontruth coverage/case audit. Main alone may reject a report or
+synthesize a compact mechanism-level rule; the operator may disable an active
+rule. Decisions affect future task cards only.
 Attack reports never become CHX architecture reports or Fact evidence.
 
 ## Initialize and route

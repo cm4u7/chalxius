@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.7.3",
-  "release_codename": "Selective Startup",
-  "release_display_name": "Chalxius 0.7.3 — Selective Startup",
+  "version": "0.7.4",
+  "release_codename": "Bounded Main Routing",
+  "release_display_name": "Chalxius 0.7.4 — Bounded Main Routing",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -243,7 +243,8 @@
     "project_effect": "none"
   },
   "adverse_routing_surface": {
-    "contract_revision": "chalxius-adverse-routing-evolution-3",
+    "contract_revision": "chalxius-adverse-routing-evolution-4",
+    "user_rule_contract_revision": "chalxius-adverse-routing-evolution-3",
     "productive_contract_revision": "chalxius-adverse-routing-evolution-2",
     "legacy_contract_revision": "chalxius-adverse-routing-evolution-1",
     "activation": "prospective_default_for_new_v5_tasks_with_lazy_project_materialization",
@@ -258,17 +259,33 @@
     "program_math_activation": "generated_research_review_with_typed_computation_source_and_output_only",
     "research_stage_intervention": "future_nontruth_refute_research_after_source_ingestion",
     "architecture_issue_import": "forbidden",
-    "proposal_activation": "user_decision_only",
+    "current_case_schema_version": 3,
+    "current_attack_learning_schema_version": 3,
+    "worker_report_policy": "concrete_failure_evidence_and_boundaries_without_route_text",
+    "proposal_activation": "main_decision_only",
+    "persistent_rule_authority": "main_only",
     "decision_actions": [
-      "approve",
       "approve_modified",
       "reject"
     ],
     "disablement": "future_task_cards_only",
-    "maximum_matching_approved_rules_per_card": 24,
+    "maximum_matching_current_rules_per_card": 16,
+    "maximum_legacy_rules_per_card": 24,
+    "maximum_active_current_rules_per_project": 16,
+    "persistent_rule_total_codepoint_cap": 720,
+    "oversize_policy": "semantic_compression_required_truncation_forbidden",
+    "current_internal_prose": "English",
     "attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx",
-    "recommendation_report_revision": "chalxius-attack-route-recommendations-2",
-    "default_recommendation_projection": "maximum_three_family_deduplicated_with_reviewed_plain_language_what_it_checks_applicability_support_and_numbered_approval_unknown_families_full_only",
+    "recommendation_report_revision": "chalxius-main-route-synthesis-queue-3",
+    "default_recommendation_projection": "maximum_three_family_deduplicated_concrete_failure_reports_for_main_without_worker_rule_text_unknown_families_full_only",
+    "phx_route_provenance": {
+      "qualified_route_id": "run-20260812T073119641576Z-a5cb7d922e7a/PHX-001",
+      "route_key": "route.main_governed_abstract_attack_rules.adopted",
+      "ledger_sha256": "0db62d4656042f8dfea024f20ba4e13623c4c1f26ac12358f1dbc70c3d044f36",
+      "adoption_id": "adoption-35d5dea14f5df16ab052902e5c11213850217ea7e539bbbdec77ca5858ab303e",
+      "architecture_report_sha256": "f73c4cfed8834cd1036687964550adec2dde6c67af264bed01e934d3c2d48f3b",
+      "truth_effect": "none"
+    },
     "captured_results": "surviving_counterexamples_and_productive_challenges_with_concrete_value_effects",
     "legacy_and_frozen_work_policy": "no_backfill_schema_change_warning_or_redo",
     "adverse_assignment_provenance": "exact_refute_task_card_worker_and_assignment_independent_of_outcome_kind",
@@ -327,6 +344,10 @@
       "observed_architecture_issue_full_chx_repair",
       "nonempty_unprojected_assurance_type_full_worker_return"
     ],
+    "first_output_checkpoint": "after_exact_startup_next_milestone_is_one_durable_artifact_or_one_explicit_blocker",
+    "consecutive_empty_status_policy": "forbidden_with_main_reclamation_and_existing_worker_chx_escalation",
+    "first_output_checkpoint_runtime_state": false,
+    "first_output_checkpoint_truth_or_packaging_gate": false,
     "legacy_supervision_revision": "chalxius-v5-research-supervision-1",
     "logical_component_revision": "chalxius-v5-logical-supervision-component-1",
     "approved_computation_execution_revision": "chalxius-v5-approved-computation-execution-1",
@@ -660,7 +681,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 92,
-    "protected_tree_sha256": "aa86b1832ca801b74fb003048fba1a6bd4e2cc840f33670c4afcd97bc4e4af95",
+    "protected_tree_sha256": "348d24f984ef75b510587d3013c8ec689d3373f48d3a40cdef47b4977115da9d",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -736,7 +757,9 @@
       "CHX-017",
       "CHX-018",
       "CHX-019",
-      "CHX-020"
+      "CHX-020",
+      "CHX-021",
+      "CHX-022"
     ],
     "ledger_lineage": [
       {
@@ -790,14 +813,25 @@
         "included_issue_ids": [
           "CHX-020"
         ]
+      },
+      {
+        "ledger_run_id": "run-20260812T073631884601Z-53f28d3790b8",
+        "ledger_sha256": "ca3d5634586755ba179a8d5c4001c174ec60e1ec05cae945cfa81800d93c3ec0",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260811T193354268477Z-7a6dcfe41bb0",
+        "included_issue_ids": [
+          "CHX-021",
+          "CHX-022"
+        ]
       }
     ],
-    "latest_issue_id": "CHX-020",
+    "latest_issue_id": "CHX-022",
     "document_contracts": {
       "KNOWN_LIMITATIONS.md": {
         "explicit_issue_enumeration": true,
         "required_markers": [
           "019fa908-8cf5-7a70-a867-dde76a1c6182",
+          "Bounded Main Routing",
           "CHX-001",
           "CHX-002",
           "CHX-003",
@@ -818,6 +852,8 @@
           "CHX-018",
           "CHX-019",
           "CHX-020",
+          "CHX-021",
+          "CHX-022",
           "Selective Startup",
           "excluded_nonarchitectural",
           "immutable predecessor",
@@ -826,6 +862,7 @@
           "run-20260811T085034084387Z-6c87c04d5462",
           "run-20260811T191546409764Z-b156c46cab1c",
           "run-20260811T193354268477Z-7a6dcfe41bb0",
+          "run-20260812T073631884601Z-53f28d3790b8",
           "supersedes"
         ]
       },
@@ -833,6 +870,7 @@
         "explicit_issue_enumeration": false,
         "required_markers": [
           "019fa908-8cf5-7a70-a867-dde76a1c6182",
+          "Bounded Main Routing",
           "CHX-001",
           "CHX-002",
           "CHX-003",
@@ -853,12 +891,15 @@
           "CHX-018",
           "CHX-019",
           "CHX-020",
+          "CHX-021",
+          "CHX-022",
           "Selective Startup",
           "nontruth",
           "run-20260811T013254358017Z-46283133a345",
           "run-20260811T085034084387Z-6c87c04d5462",
           "run-20260811T191546409764Z-b156c46cab1c",
           "run-20260811T193354268477Z-7a6dcfe41bb0",
+          "run-20260812T073631884601Z-53f28d3790b8",
           "supersedes"
         ]
       }

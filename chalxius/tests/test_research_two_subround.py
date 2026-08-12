@@ -1981,6 +1981,8 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "computation_dependencies",
                 "preflight-return",
                 "Candidate Release",
+                "First-output checkpoint",
+                "consecutive status-only updates",
             ):
                 self.assertIn(required_boundary, production_contract)
             supervisor_prompt = Path(
@@ -2014,6 +2016,8 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "research_supervision_report",
                 "preflight-return",
                 "Candidate Release, fresh Candidate adverse review",
+                "First-output checkpoint",
+                "consecutive",
             ):
                 self.assertIn(required_boundary, compact_contract)
 

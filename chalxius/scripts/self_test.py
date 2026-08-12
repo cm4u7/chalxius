@@ -361,7 +361,7 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.7.3 — Selective Startup",
+            "# Chalxius 0.7.4 — Bounded Main Routing",
             "Start through the smallest applicable contract",
             "references/v5_production_worker_bootstrap.md",
             "references/v5_supervisor_worker_bootstrap.md",
@@ -386,8 +386,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.7.3"',
-            '"release_codename": "Selective Startup"',
+            '"version": "0.7.4"',
+            '"release_codename": "Bounded Main Routing"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -440,12 +440,16 @@ def main() -> int:
             '"chalxius-chx-public-disclosure-2"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
-            '"contract_revision": "chalxius-adverse-routing-evolution-3"',
-            '"recommendation_report_revision": "chalxius-attack-route-recommendations-2"',
+            '"contract_revision": "chalxius-adverse-routing-evolution-4"',
+            '"user_rule_contract_revision": "chalxius-adverse-routing-evolution-3"',
+            '"recommendation_report_revision": "chalxius-main-route-synthesis-queue-3"',
             '"productive_contract_revision": "chalxius-adverse-routing-evolution-2"',
             '"legacy_contract_revision": "chalxius-adverse-routing-evolution-1"',
             '"activation": "prospective_default_for_new_v5_tasks_with_lazy_project_materialization"',
-            '"proposal_activation": "user_decision_only"',
+            '"proposal_activation": "main_decision_only"',
+            '"persistent_rule_authority": "main_only"',
+            '"maximum_active_current_rules_per_project": 16',
+            '"oversize_policy": "semantic_compression_required_truncation_forbidden"',
             '"attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx"',
             '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_manifest_file_hash_and_full_manifest_tree_fail_closed_before_ledger_creation"',
             '"automatic_inheritance": false',
@@ -587,6 +591,7 @@ def main() -> int:
             "`$chalxius`, not through standalone `$grill-me`",
         ),
         "references/v5_release_traceability.md": (
+            "0.7.4 bounded-main-routing overlay",
             "0.7.3 selective-startup overlay",
             "bounded existing-Learner-document cards",
             "Explicit `plan-round` selection",
@@ -653,13 +658,13 @@ def main() -> int:
         ),
         "references/adverse_routing_evolution.md": (
             "`counterexample` return",
-            "operator decision",
+            "Main compares the concrete reports",
             "attack report is separate from the CHX",
             "fresh-adverse readiness gate",
-            "at most three pending attack types",
-            "reviewed ordinary-language sentence explaining what it",
+            "at most three pending failure families",
+            "one reviewed ordinary-language family description",
             "never\nfrom worker-authored route instructions",
-            "`批准建议 N`",
+            "Only Main may decide",
             "worker_reported_counterexample_nontruth",
             "COPY_EXACT_PROJECT_ID_FROM_TASK_CARD",
             "Do not start from a schema-v4 example",
@@ -668,7 +673,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "The 0.7.3 `Selective Startup` release artifact",
+            "The 0.7.4 `Bounded Main Routing` release artifact",
             "standing authorization",
             "attack-report",
             "Never backfill attack cases",
@@ -942,7 +947,7 @@ def main() -> int:
                 "program_math_alignments": [],
             },
             "attack_learning": {
-                "schema_version": 2,
+                "schema_version": 3,
                 "result_kind": "surviving_counterexample",
                 "attack_family": "quantifier_witness",
                 "target_pattern": "Pointwise witnesses are treated as uniform.",
@@ -963,20 +968,6 @@ def main() -> int:
                         "evidence": "The two valid witness sets are disjoint.",
                     }
                 ],
-                "route_rule": {
-                    "attack_family": "quantifier_witness",
-                    "trigger": {
-                        "research_kinds": ["challenge"],
-                        "claim_terms_any": ["uniform"],
-                        "metadata_signals_any": ["quantifier_sensitive"],
-                        "universal_refute": False,
-                    },
-                    "instruction": "Attack silent witness replacement.",
-                    "false_positive_guards": [
-                        "Do not demand uniformity from a literal pointwise claim."
-                    ],
-                    "scope_note": "Use when witness identity is load-bearing.",
-                },
             },
         }
         adverse_return_path = Path(adverse_assignment["return_path"])
@@ -994,19 +985,39 @@ def main() -> int:
         )
         if (
             "attack_case_id" not in adverse_receipt
-            or adverse_report["summary"]["pending_user_decision_count"] != 1
-            or not adverse_report["user_decision_required"]
+            or adverse_report["summary"]["pending_main_synthesis_count"] != 1
+            or adverse_report["user_decision_required"]
+            or adverse_report["routing_change_policy"]
+            != "no_route_change_without_main_synthesis"
             or adverse_report["truth_effect"] != "none"
         ):
             raise RuntimeError("adverse case/proposal/report contract failed")
         adverse_decision = adverse_store.adverse_routes().decide(
             adverse_receipt["route_proposal_id"],
             {
-                "action": "approve",
-                "reason": "Self-test approval with exact guard.",
-                "rule": None,
+                "action": "approve_modified",
+                "reason": "Several reports can share this guarded mechanism.",
+                "rule": {
+                    "attack_family": "quantifier_witness",
+                    "trigger": {
+                        "research_kinds": ["challenge"],
+                        "claim_terms_any": ["uniform"],
+                        "metadata_signals_any": ["quantifier_sensitive"],
+                        "universal_refute": False,
+                    },
+                    "instruction": "Attack changes in witness dependency or quantifier order.",
+                    "false_positive_guards": [
+                        "Accept explicitly pointwise conclusions."
+                    ],
+                    "scope_note": "Use when witness dependency is load-bearing.",
+                },
+                "governance": {
+                    "abstraction_level": "mechanism",
+                    "concrete_evidence_excluded": True,
+                    "compression": "within_budget",
+                },
             },
-            actor="self-test-user",
+            actor="main",
         )
         future_target = adverse_lifecycle.add_research(
             {

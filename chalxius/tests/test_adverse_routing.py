@@ -12,6 +12,9 @@ from unittest.mock import patch
 from mathgraph.cli import main as cli_main
 from mathgraph.adverse_routing import (
     LEGACY_BASELINE_ATTACK_RULES,
+    MAX_ACTIVE_ROUTE_RULES,
+    MAX_SELECTED_RULES,
+    validate_attack_learning,
     validate_attack_route_recommendation_report,
 )
 from mathgraph.contracts import sha256_bytes, sha256_json
@@ -38,7 +41,7 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         effect_kind: str = "claim_refuted",
     ) -> dict[str, object]:
         return {
-            "schema_version": 2,
+            "schema_version": 3,
             "result_kind": result_kind,
             "attack_family": "quantifier_witness",
             "target_pattern": "A pointwise existential witness is treated as canonical and uniform.",
@@ -59,20 +62,25 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                     "evidence": "The two-parameter construction isolates the load-bearing change.",
                 }
             ],
-            "route_rule": {
-                "attack_family": "quantifier_witness",
-                "trigger": {
-                    "research_kinds": ["challenge"],
-                    "claim_terms_any": [term],
-                    "metadata_signals_any": ["quantifier_sensitive"],
-                    "universal_refute": False,
-                },
-                "instruction": instruction,
-                "false_positive_guards": [
-                    "Do not demand one witness when the literal conclusion is pointwise."
-                ],
-                "scope_note": "Use when witness identity or uniformity is load-bearing.",
+        }
+
+    @staticmethod
+    def _main_rule(
+        *, term: str = "uniform", instruction: str = "Attack witness scope changes."
+    ) -> dict[str, object]:
+        return {
+            "attack_family": "quantifier_witness",
+            "trigger": {
+                "research_kinds": ["challenge"],
+                "claim_terms_any": [term],
+                "metadata_signals_any": ["quantifier_sensitive"],
+                "universal_refute": False,
             },
+            "instruction": instruction,
+            "false_positive_guards": [
+                "Accept explicitly pointwise conclusions."
+            ],
+            "scope_note": "Use when witness dependency is load-bearing.",
         }
 
     @staticmethod
@@ -263,11 +271,11 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 host_task_scope_id="host-adverse-task"
             )
             self.assertEqual(report["summary"]["worker_reported_success_count"], 1)
-            self.assertEqual(report["summary"]["pending_user_decision_count"], 1)
-            self.assertTrue(report["user_decision_required"])
+            self.assertEqual(report["summary"]["pending_main_synthesis_count"], 1)
+            self.assertFalse(report["user_decision_required"])
             self.assertEqual(
                 report["routing_change_policy"],
-                "no_route_change_without_operator_decision",
+                "no_route_change_without_main_synthesis",
             )
             self.assertEqual(report["truth_effect"], "none")
             self.assertNotIn("chx", json.dumps(report).casefold())
@@ -277,8 +285,8 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             )
             self.assertEqual(len(concise["recommendations"]), 1)
             self.assertEqual(
-                concise["recommendations"][0]["approval_phrase"],
-                "批准建议 1",
+                concise["recommendations"][0]["main_disposition"],
+                "synthesize_compress_or_reject",
             )
             self.assertEqual(
                 concise["recommendations"][0]["what_it_checks"],
@@ -462,30 +470,36 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             manager = store.adverse_routes()
-            first_rule = self._learning(
+            first_rule = self._main_rule(
                 term="uniform",
                 instruction="Attack silent uniform-witness replacement.",
-            )["route_rule"]
-            second_rule = self._learning(
+            )
+            second_rule = self._main_rule(
                 term="canonical",
                 instruction="Attack silent canonical-witness replacement.",
-            )["route_rule"]
+            )
             full = {
                 "host_task_scope_id": "hosttask-" + "a" * 32,
                 "coverage_status": "attack-recorded",
                 "scope_complete": True,
                 "attacks": [
                     {
-                        "proposal_status": "pending_user_decision",
+                        "proposal_status": "pending_main_synthesis",
                         "proposal_id": "route-proposal-" + "1" * 64,
                         "proposed_rule": first_rule,
                         "attack_result": "productive_challenge",
+                        "attack_family": "quantifier_witness",
+                        "failure_mechanism": "A witness escaped its quantified scope.",
+                        "success_boundary": "Only witness dependency is challenged.",
                     },
                     {
-                        "proposal_status": "pending_user_decision",
+                        "proposal_status": "pending_main_synthesis",
                         "proposal_id": "route-proposal-" + "2" * 64,
                         "proposed_rule": second_rule,
                         "attack_result": "surviving_counterexample",
+                        "attack_family": "quantifier_witness",
+                        "failure_mechanism": "A canonical witness was silently selected.",
+                        "success_boundary": "Pointwise existence remains open.",
                     },
                 ],
             }
@@ -522,10 +536,10 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             manager = store.adverse_routes()
-            unknown_rule = self._learning(
+            unknown_rule = self._main_rule(
                 term="opaque",
                 instruction="SECRET TECHNICAL ATTACK MECHANISM",
-            )["route_rule"]
+            )
             unknown_rule["attack_family"] = "unreviewed_future_family"
             full = {
                 "host_task_scope_id": "hosttask-" + "b" * 32,
@@ -533,10 +547,13 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 "scope_complete": True,
                 "attacks": [
                     {
-                        "proposal_status": "pending_user_decision",
+                        "proposal_status": "pending_main_synthesis",
                         "proposal_id": "route-proposal-" + "3" * 64,
                         "proposed_rule": unknown_rule,
                         "attack_result": "productive_challenge",
+                        "attack_family": "unreviewed_future_family",
+                        "failure_mechanism": "SECRET TECHNICAL ATTACK MECHANISM",
+                        "success_boundary": "Opaque boundary.",
                     }
                 ],
             }
@@ -564,10 +581,25 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             frozen = deepcopy(card["adverse_routing"])
             frozen["schema_version"] = 3
             frozen["contract_revision"] = "chalxius-adverse-routing-evolution-2"
+            frozen["selection_policy"] = "baseline_plus_user_approved_future_only"
             frozen["baseline_rules"] = list(LEGACY_BASELINE_ATTACK_RULES)
             frozen["baseline_rules_sha256"] = sha256_json(
                 frozen["baseline_rules"]
             )
+            frozen["learning_contract"] = {
+                "counterexample_requires_attack_learning": True,
+                "productive_challenge_learning": (
+                    "structured_when_attack_forces_a_load_bearing_repair"
+                ),
+                "attack_learning_schema_version": 2,
+                "reportable_result_kinds": [
+                    "productive_challenge",
+                    "surviving_counterexample",
+                ],
+                "proposal_activation": "user_decision_only",
+                "attack_report": "required_at_host_task_completion",
+                "truth_effect": "none",
+            }
             for key in (
                 "philosophy_active",
                 "philosophy_activation",
@@ -632,7 +664,7 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             self.assertEqual(report["summary"]["productive_challenge_count"], 1)
             self.assertEqual(report["summary"]["surviving_counterexample_count"], 0)
             self.assertEqual(report["attacks"][0]["attack_result"], "productive_challenge")
-            self.assertEqual(report["attacks"][0]["proposal_status"], "pending_user_decision")
+            self.assertEqual(report["attacks"][0]["proposal_status"], "pending_main_synthesis")
             self.assertEqual(store.adverse_routes().status()["active_rule_count"], 0)
 
     def test_state_rejects_tampered_or_incomplete_immutable_lineage(self) -> None:
@@ -669,11 +701,16 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             decision = store.adverse_routes().decide(
                 str(receipt["route_proposal_id"]),
                 {
-                    "action": "approve",
+                    "action": "approve_modified",
                     "reason": "Retain this reusable guarded pattern.",
-                    "rule": None,
+                    "rule": self._main_rule(),
+                    "governance": {
+                        "abstraction_level": "mechanism",
+                        "concrete_evidence_excluded": True,
+                        "compression": "within_budget",
+                    },
                 },
-                actor="user",
+                actor="main",
             )
             rule_id = str(decision["rule_id"])
             (store.adverse_routes().rules_dir / f"{rule_id}.json").unlink()
@@ -682,7 +719,7 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             ):
                 store.adverse_routes().status()
 
-    def test_user_approval_changes_only_future_matching_task_cards(self) -> None:
+    def test_main_synthesis_changes_only_future_matching_task_cards(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             store.adverse_routes().initialize(actor="operator", reason="Enable learning.")
@@ -691,11 +728,16 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             decision = store.adverse_routes().decide(
                 proposal_id,
                 {
-                    "action": "approve",
+                    "action": "approve_modified",
                     "reason": "The pattern is reusable with its guard.",
-                    "rule": None,
+                    "rule": self._main_rule(),
+                    "governance": {
+                        "abstraction_level": "mechanism",
+                        "concrete_evidence_excluded": True,
+                        "compression": "within_budget",
+                    },
                 },
-                actor="user",
+                actor="main",
             )
             self.assertIsNotNone(decision["rule_id"])
 
@@ -728,22 +770,27 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             )
             self.assertEqual(nonmatching_card["adverse_routing"]["approved_rules"], [])
 
-    def test_modified_approval_and_disablement_are_user_governed_and_future_only(self) -> None:
+    def test_main_synthesis_and_disablement_are_future_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             store.adverse_routes().initialize(actor="operator", reason="Enable learning.")
             _, receipt = self._capture_one(store)
-            modified = self._learning(
+            modified = self._main_rule(
                 term="canonical", instruction="Attack a canonical-witness upgrade."
-            )["route_rule"]
+            )
             decision = store.adverse_routes().decide(
                 str(receipt["route_proposal_id"]),
                 {
                     "action": "approve_modified",
                     "reason": "Narrow the trigger before activation.",
                     "rule": modified,
+                    "governance": {
+                        "abstraction_level": "mechanism",
+                        "concrete_evidence_excluded": True,
+                        "compression": "compressed",
+                    },
                 },
-                actor="user",
+                actor="main",
             )
             rule_id = str(decision["rule_id"])
             _, before_disable = self._counterexample_round(
@@ -792,8 +839,9 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                     "action": "reject",
                     "reason": "The case is too task-specific.",
                     "rule": None,
+                    "governance": None,
                 },
-                actor="user",
+                actor="main",
             )
             self.assertEqual(store.adverse_routes().status()["active_rule_count"], 0)
             report = store.adverse_routes().report(
@@ -801,18 +849,76 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
             )
             self.assertEqual(report["attacks"][0]["proposal_status"], "reject")
 
-    def test_only_operator_can_enable_decide_or_disable_routes(self) -> None:
+    def test_main_alone_decides_routes(self) -> None:
         self.assertIn("attack-route-status", allowed_commands("main"))
         self.assertIn("attack-report", allowed_commands("main"))
-        for command in (
-            "attack-route-enable",
-            "attack-route-decide",
-            "attack-route-disable",
-        ):
+        for command in ("attack-route-enable", "attack-route-disable"):
             self.assertIn(command, allowed_commands("operator"))
             self.assertNotIn(command, allowed_commands("main"))
             self.assertNotIn(command, allowed_commands("worker"))
             self.assertNotIn(command, allowed_commands("gateway"))
+        self.assertIn("attack-route-decide", allowed_commands("main"))
+        self.assertNotIn("attack-route-decide", allowed_commands("operator"))
+
+    def test_worker_report_has_no_route_rule_and_main_rule_is_hard_capped(self) -> None:
+        report = self._learning()
+        self.assertNotIn("route_rule", report)
+        self.assertEqual(MAX_ACTIVE_ROUTE_RULES, 16)
+        self.assertEqual(MAX_SELECTED_RULES, 16)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            store.adverse_routes().initialize(actor="operator", reason="Enable learning.")
+            _, receipt = self._capture_one(store)
+            oversized = self._main_rule(
+                instruction="x" * 281,
+            )
+            with self.assertRaisesRegex(ValueError, "compress"):
+                store.adverse_routes().decide(
+                    str(receipt["route_proposal_id"]),
+                    {
+                        "action": "approve_modified",
+                        "reason": "Reject an oversized persistent route.",
+                        "rule": oversized,
+                        "governance": {
+                            "abstraction_level": "mechanism",
+                            "concrete_evidence_excluded": True,
+                            "compression": "compressed",
+                        },
+                    },
+                    actor="main",
+                )
+
+    def test_current_internal_governance_prose_must_be_english(self) -> None:
+        report = self._learning()
+        report["failure_mechanism"] = "non-English " + "\u8fb9\u754c"
+        with self.assertRaisesRegex(ValueError, "English internal prose"):
+            validate_attack_learning(report, require_current=True)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            store.adverse_routes().initialize(
+                actor="operator", reason="Enable reporting."
+            )
+            _, receipt = self._capture_one(store)
+            rule = self._main_rule(
+                instruction="Attack recursive " + "\u8fb9\u754c" + " conditions."
+            )
+            with self.assertRaisesRegex(ValueError, "English internal prose"):
+                store.adverse_routes().decide(
+                    str(receipt["route_proposal_id"]),
+                    {
+                        "action": "approve_modified",
+                        "reason": "Reject non-English internal prose.",
+                        "rule": rule,
+                        "governance": {
+                            "abstraction_level": "mechanism",
+                            "concrete_evidence_excluded": True,
+                            "compression": "within_budget",
+                        },
+                    },
+                    actor="main",
+                )
 
     def test_cli_keeps_mutation_operator_only_and_report_readable_by_main(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.7.3 — Selective Startup
+# Chalxius 0.7.4 — Bounded Main Routing
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -194,9 +194,13 @@ Certification records one immutable decision; Gateway alone admits accepted
 Facts. Never weaken a missing gate because a mode is fast or a result is
 plausible.
 
-Adverse reports present at most three deduplicated, well-supported attack types
-in ordinary language. Technical details remain in the full report. Nothing is
-activated until the user explicitly approves a proposal.
+Workers report at most three deduplicated, well-supported concrete failure
+families and their success boundaries. They do not author persistent attack
+rules. Main may reject a report or synthesize one compact mechanism-level rule
+for future work. Current rules use English internal prose, accept at most
+sixteen active project rules, and fail closed on an oversized rule until Main
+provides semantic compression; they are never truncated. This routing plane has
+no truth or admission effect.
 
 ## Paper, Evidence, and Reader
 

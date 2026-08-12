@@ -54,11 +54,13 @@ associations and freeze nontruth planning context, but never changes the score,
 mode, assurance contract, or Fact gate; no Campaign flag means global selection.
 
 New V5 refutation task cards receive the fixed low-cost attack vocabulary plus
-matching user-approved rules in every reasoning profile. That vocabulary does
-not itself spawn work. Separately, an exact `independent_adverse_required=true`
+matching Main-approved, mechanism-level rules in every reasoning profile. That
+vocabulary does not itself spawn work. Workers contribute concrete failure
+reports and boundaries, while Main alone decides whether to synthesize a
+compact future rule. Separately, an exact `independent_adverse_required=true`
 predicate gives a load-bearing Paper/proof primary one distinct paired `refute`
 worker and context; the result enters Research and does not close exploration or
-alter Fact admission. Rule approval and disablement remain future-only and
+alter Fact admission. Rule decisions and disablement remain future-only and
 profile-independent. The general vocabulary
 includes hidden-conjunct splitting; the three philosophy attacks require an
 exact frozen `philosophy` or `mixed` domain and cannot be inferred from claim

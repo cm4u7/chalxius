@@ -5668,13 +5668,13 @@ class V5LifecycleManager:
         adverse_note = ""
         if "adverse_routing" in card:
             adverse_note = (
-                "Adverse routing, approved rules, and the attack-learning contract are "
-                "frozen in the task card. Include exact structured `attack_learning` for "
+                "Adverse routing and the worker failure-report contract are frozen in the "
+                "task card. Include exact structured `attack_learning` for "
                 "a surviving counterexample, or for a productive challenge that forces a "
                 "load-bearing hypothesis, scope, definition, source, computation, boundary, "
                 "or proof-route repair even when the theorem survives. Otherwise return "
-                "`attack_learning=null`. A proposal never changes routing without a later "
-                "user/operator decision.\n\n"
+                "`attack_learning=null`. Do not propose a route rule: Main alone compares "
+                "failure reports and may synthesize a compact mechanism-level future rule.\n\n"
             )
         pair_note = ""
         pair_binding = card.get("control_plane", {}).get(
@@ -7827,7 +7827,8 @@ class V5LifecycleManager:
                     "worker_reported_counterexample_nontruth",
                     "worker_reported_productive_challenge_nontruth",
                 }
-                or receipt.get("route_activation_policy") != "user_decision_only"
+                or receipt.get("route_activation_policy")
+                not in {"user_decision_only", "main_synthesis_only"}
             ):
                 raise ValueError("V5 ingestion receipt attack binding is invalid")
             if _inspection_context is None:
@@ -8581,22 +8582,24 @@ class V5LifecycleManager:
         if payload.get("outcome") not in V5_RETURN_OUTCOMES:
             raise ValueError("V5 worker return outcome is invalid")
         if adverse_enabled:
-            current_adverse = card["adverse_routing"].get("schema_version") in (
+            adverse_schema = card["adverse_routing"].get("schema_version")
+            current_adverse = adverse_schema in (
                 ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS
             )
+            worker_report_only = adverse_schema == 5
             learning = payload.get("attack_learning")
             if current_adverse:
                 if payload["outcome"] == "counterexample":
                     validate_attack_learning(
                         learning,
-                        require_current=True,
+                        require_current=worker_report_only,
                         expected_result_kind="surviving_counterexample",
                     )
                 elif payload["outcome"] in PRODUCTIVE_ATTACK_OUTCOMES:
                     if learning is not None:
                         validate_attack_learning(
                             learning,
-                            require_current=True,
+                            require_current=worker_report_only,
                             expected_result_kind="productive_challenge",
                         )
                 elif learning is not None:

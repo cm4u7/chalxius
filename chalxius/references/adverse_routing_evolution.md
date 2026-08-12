@@ -5,17 +5,17 @@
 1. [Purpose and authority boundary](#purpose-and-authority-boundary)
 2. [Three Research attack roles](#three-research-attack-roles)
 3. [Prospective activation](#prospective-activation)
-4. [Case-to-rule lifecycle](#case-to-rule-lifecycle)
+4. [Failure-report-to-route lifecycle](#failure-report-to-route-lifecycle)
 5. [Worker return contract](#worker-return-contract)
 6. [Independent paired allocation](#independent-paired-allocation)
-7. [Attack report and user decision](#attack-report-and-user-decision)
+7. [Attack report and Main synthesis](#attack-report-and-main-synthesis)
 8. [Future task-card routing](#future-task-card-routing)
 9. [Compatibility and recovery](#compatibility-and-recovery)
 
 ## Purpose and authority boundary
 
 The adverse-routing extension lets an adverse worker retain either a surviving
-counterexample or a productive challenge and propose a reusable attack rule. A
+counterexample or a productive challenge as a concrete failure report. A
 productive challenge is one that does not refute the repaired theorem but
 forces a load-bearing hypothesis, scope, definition, proof route, source,
 computation, or boundary change. It does not let a worker rewrite its own
@@ -25,10 +25,10 @@ The persistent lifecycle is:
 
 ```text
 surviving counterexample or productive challenge
-  -> immutable attack case
-  -> immutable route proposal
-  -> operator decision
-  -> future-only active route rule
+  -> immutable concrete failure report
+  -> Main comparison and abstraction
+  -> bounded Main decision
+  -> future-only active route rule, if warranted
 ```
 
 Attack cases, proposals, decisions, reports, and rules have
@@ -64,18 +64,17 @@ Keep three layers distinct:
    engineering acceptance attack; a fresh verifier still follows it.
 
 Only a `refute` return carrying the current adverse-routing contract and an
-explicit qualifying `attack_learning` object supplies a route-evolution case.
-Supervisor or Candidate findings may justify Research repair, but they are not
-automatically converted into reusable route proposals. The
-default attack report remains a sparse list of at most three useful attack
-types that the user can approve with one utterance; it omits technical detail
-and emits no filler recommendation.
+explicit qualifying `attack_learning` object supplies a failure report.
+Supervisor or Candidate findings may justify Research repair, but workers do
+not turn them into reusable rules. The default attack report remains a sparse
+Main-facing queue of at most three concrete failure families and emits no
+filler. Main may synthesize, compress, merge, or reject them.
 
 ## Prospective activation
 
 Default adverse reporting is enabled for V5. Every host task produces a
 separate attack report, including an explicit zero report. A newly frozen V5
-`refute` card receives the baseline and already user-approved future rules. The
+`refute` card receives the baseline and already Main-synthesized future rules. The
 first such card lazily materializes only
 `PROJECT/governance/adverse-routing/`; merely loading newer bytes or reading
 status does not write project state. The compatibility command below may still
@@ -83,7 +82,7 @@ materialize the same state explicitly:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
-  --actor USER --reason "Enable user-governed adverse routing evolution."
+  --actor OPERATOR --reason "Materialize prospective adverse reporting."
 ```
 
 Existing rounds, task cards, returns, and V1-V4 work units never acquire the
@@ -103,31 +102,39 @@ change the invariant V5 Fact-admission contract. L2 may select `refute` because
 the adverse capability is already user-authorized prospectively; the separate
 program-math review and assurance-equivalence guards remain enforced.
 
-## Case-to-rule lifecycle
+## Failure-report-to-route lifecycle
 
 For a current adverse-bound task card, a `counterexample` return must include a
-schema-2 `attack_learning` object with
+schema-3 `attack_learning` failure report with
 `result_kind="surviving_counterexample"`. An `evidence`, `insight`, or
-`challenge` return may include the same object with
+`challenge` return may include the same report with
 `result_kind="productive_challenge"` only when the attack forced one or more
 explicit value effects. Ingestion first creates the ordinary cumulative
-Research entry, then records:
+Research entry, then records an exact attack case binding the round,
+assignment, task-card hash, return hash, target Research, attack Research,
+result kind, host-task scope, witnesses, reproduction steps, value effects,
+and exact success boundary.
 
-1. an exact attack case binding the round, assignment, task-card hash, return
-   hash, target Research, attack Research, result kind, host-task scope,
-   witnesses, reproduction steps, value effects, and exact success boundary;
-2. one proposed route rule containing a deterministic trigger, attack
-   instruction, false-positive guards, and scope note.
-
-The case is labeled `worker_reported_counterexample_nontruth` or
+The worker report contains no trigger, instruction, scope note, or proposed
+route rule. The case is labeled `worker_reported_counterexample_nontruth` or
 `worker_reported_productive_challenge_nontruth`. Schema and hash checks
 establish provenance and reproducibility of the report, not the mathematical
 truth of the refutation or of the claimed value.
 
-Proposal creation has no routing effect. Exactly one immutable user decision
-may later approve it unchanged, approve a modified rule, or reject it. Only an
-approved rule is eligible for future task cards. A rule may subsequently be
-disabled; both approval and disablement apply only to work units frozen later.
+Current worker failure reports, Main decision reasons, persistent route rules,
+CHX/PHX architecture records, and protocol artifacts use English internal
+prose. Mathematical notation, exact user claims, source quotations, and frozen
+historical bytes are preserved in their original language and are not rewritten
+by this policy.
+
+Main compares one or more concrete reports, deduplicates failure families, and
+may synthesize a persistent rule only at the mechanism level. Main may also
+reject the report as too specific or redundant. A synthesized rule has a hard
+720-Unicode-code-point total budget, smaller per-field budgets, at most two
+false-positive guards, at most eight trigger items, and a sixteen-active-rule
+project cap. Oversize rules must be semantically compressed; truncation is
+forbidden. Decisions and disablements affect only task cards frozen later;
+already frozen future task cards are never rewritten.
 
 ## Worker return contract
 
@@ -170,7 +177,7 @@ requires `obligation_dispositions`, `computation_manifest`, and
     "program_math_alignments": []
   },
   "attack_learning": {
-    "schema_version": 2,
+    "schema_version": 3,
     "result_kind": "surviving_counterexample",
     "attack_family": "quantifier_witness",
     "target_pattern": "A pointwise witness is treated as canonical and uniform.",
@@ -186,19 +193,7 @@ requires `obligation_dispositions`, `computation_manifest`, and
         "after": "Only pointwise existence remains viable.",
         "evidence": "The two-parameter witness construction is reproduced above."
       }
-    ],
-    "route_rule": {
-      "attack_family": "quantifier_witness",
-      "trigger": {
-        "research_kinds": ["challenge"],
-        "claim_terms_any": ["uniform"],
-        "metadata_signals_any": ["quantifier_sensitive"],
-        "universal_refute": false
-      },
-      "instruction": "Attack silent witness replacement.",
-      "false_positive_guards": ["Do not demand one witness for a literal pointwise claim."],
-      "scope_note": "Use when witness identity or uniformity is load-bearing."
-    }
+    ]
   }
 }
 ```
@@ -212,7 +207,7 @@ objects must match the exact frozen card revision; the empty values above are
 valid only when the card has no corresponding obligation or computation stage.
 
 For `evidence`, `insight`, or `challenge`, `attack_learning` is either `null` or
-a complete schema-2 object with `result_kind="productive_challenge"`. Its
+a complete schema-3 failure report with `result_kind="productive_challenge"`. Its
 `value_effects` must identify at least one exact before/after/evidence triple
 using one of `hypothesis_added`, `scope_narrowed`, `definition_repaired`,
 `proof_route_replaced`, `source_defect_isolated`, `computation_corrected`, or
@@ -220,11 +215,11 @@ using one of `hypothesis_added`, `scope_narrowed`, `definition_repaired`,
 card retains its old learning schema or lacks the field entirely; never add or
 rewrite it retroactively.
 
-Triggers combine their nonempty axes conjunctively. Terms are
-case-insensitive substrings of the Research claim; metadata signals come only
-from the explicit `logic_signals` list in Research metadata. A universal rule
-must set `universal_refute=true` and leave every filter list empty. Workers may
-propose universal rules, but they never activate them.
+Workers never supply triggers. For a Main-synthesized rule, trigger axes combine
+conjunctively. Terms are case-insensitive substrings of the Research claim;
+metadata signals come only from the explicit `logic_signals` list in Research
+metadata. A universal rule must set `universal_refute=true` and leave every
+filter list empty.
 
 ## Historical paired allocation and prospective replacement
 
@@ -240,7 +235,7 @@ production rounds.
 
 Second-subround supervision supplies the Research attack pass. The normal
 Candidate adverse closure/disposition remains the later whole-candidate release
-gate, and route activation still requires an Operator decision. Neither stage
+gate, and route activation still requires a Main decision. Neither stage
 creates a second Fact authority.
 
 Before Candidate artifact normalization, source audit, capsule construction,
@@ -262,10 +257,10 @@ still require a copy-on-write repair; the gate eliminates late mechanical,
 freshness, scope, and candidate-byte failures rather than promising that
 substantive mathematical review can never disagree.
 
-## Attack report and user decision
+## Attack report and Main synthesis
 
-At host-task completion, query the exact task scope and present the concise
-result to the user even when it contains zero recommendations:
+At host-task completion, Main queries the exact task scope, including an
+explicit zero queue:
 
 ```bash
 "$MGRAPH" --root "$PROJECT" --role main attack-report \
@@ -274,14 +269,11 @@ result to the user even when it contains zero recommendations:
 
 The default report is intentionally selective:
 
-- at most three pending attack types;
-- one item per attack family, even when several technical proposals share it;
-- only non-universal rules with an explicit claim-term or metadata-signal
-  trigger, false-positive guard, scope note, and worker support;
-- only the type, one reviewed ordinary-language sentence explaining what it
-  checks, applicability, support kind/count, and the phrase `批准建议 N`;
-- no mechanism, witnesses, reproduction steps, value effects, assignments,
-  cards, returns, or other implementation detail.
+- at most three pending failure families;
+- one item per family, even when several concrete reports share it;
+- one concrete reported failure and its success boundary;
+- one reviewed ordinary-language family description and support kind/count;
+- no worker-authored trigger, instruction, scope note, or persistent rule.
 
 The ordinary-language sentence comes from a reviewed family vocabulary, never
 from worker-authored route instructions. A new or unknown family remains in
@@ -309,26 +301,39 @@ explicitly incomplete. A mixed or missing current scope, pair mismatch, or
 card/manifest/return drift fails closed. Historical null-scope cards stay
 readable and are not assigned to a newer scope.
 
-The user may say `批准建议 N`. Main resolves that number against the exact
-just-produced report, writes the minimal `approve` decision for its frozen
-proposal id, and invokes the Operator route decision without asking the user to
-handle ids or JSON. The lower-level contract still has three exact actions:
-`approve` copies the proposal and requires `rule=null`;
-`approve_modified` supplies a complete replacement rule; `reject` requires
-`rule=null`.
+Main compares the concrete reports with active routes. It either rejects a
+report or supplies a newly written mechanism-level rule. Copying worker text is
+not an action. The decision records that Main excluded concrete case detail and
+whether semantic compression was needed.
 
 ```bash
-"$MGRAPH" --root "$PROJECT" --role operator attack-route-decide PROPOSAL_ID \
-  --input DECISION.json --actor USER
+"$MGRAPH" --root "$PROJECT" --role main attack-route-decide PROPOSAL_ID \
+  --input DECISION.json --actor main
 ```
 
 Example approval input:
 
 ```json
 {
-  "action": "approve",
-  "reason": "The trigger and false-positive guard are reusable.",
-  "rule": null
+  "action": "approve_modified",
+  "reason": "Several reports share one mechanism-level failure family.",
+  "rule": {
+    "attack_family": "quantifier_witness",
+    "trigger": {
+      "research_kinds": ["challenge"],
+      "claim_terms_any": ["uniform"],
+      "metadata_signals_any": ["quantifier_sensitive"],
+      "universal_refute": false
+    },
+    "instruction": "Attack changes in quantifier order or witness dependency.",
+    "false_positive_guards": ["Accept explicitly pointwise conclusions."],
+    "scope_note": "Use when witness dependency is load-bearing."
+  },
+  "governance": {
+    "abstraction_level": "mechanism",
+    "concrete_evidence_excluded": true,
+    "compression": "compressed"
+  }
 }
 ```
 
@@ -339,8 +344,8 @@ Disable an approved rule prospectively with:
   --actor USER --reason "The route was too broad."
 ```
 
-Only the `operator` role may enable, decide, or disable. `main` may read status
-and produce the attack report but cannot alter routing.
+Only Main may decide. The Operator may materialize reporting state or disable a
+rule prospectively, but cannot approve worker reports.
 
 ## Future task-card routing
 
@@ -355,11 +360,11 @@ Every newly frozen V5 refutation task card carries:
   philosophy-only families: faithful ordinary-language substitution;
   burden-of-proof plus strongest charitable objection plus independent failure
   surfaces; and quantifier/modal/scope/exception equivalence;
-- at most 24 active user-approved rules whose triggers match the frozen
+- at most sixteen active Main-synthesized rules whose triggers match the frozen
   Research entry;
 - exact hashes for both lists;
-- the requirement that a counterexample supplies schema-2 learning, while a
-  non-refuting attack creates a proposal only when it supplies a structured
+- the requirement that a counterexample supplies a schema-3 concrete failure
+  report, while a non-refuting attack is recorded only with a structured
   productive-challenge value witness.
 
 Every new ordinary refutation card carries the original eight families plus
@@ -406,8 +411,9 @@ issues are forbidden inputs to this route.
 
 The task card remains the immutable capability boundary. A later approval,
 modification, rejection, or disablement cannot mutate a frozen card. More than
-24 matching approved rules fails planning visibly so the user can narrow or
-disable routes instead of silently truncating them.
+sixteen matching current rules fails planning visibly so Main can consolidate
+or disable routes instead of silently truncating them. Historical schema-3/4
+cards retain their original twenty-four-rule compatibility bound.
 
 This revision is prospective. Schema-1/2 cards retain the original legacy
 learning contract; schema-3 cards retain the earlier eight-rule baseline plus

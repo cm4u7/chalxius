@@ -58,14 +58,30 @@ projection needed to start safely.
 - `interpret`: no broad expansion by default. Load a domain protocol only when
   the card explicitly requires that domain's typed artifact or evidence.
 - Before returning a surviving `counterexample`, a productive `challenge`
-  with non-null `attack_learning`, or any route proposal, read
-  `adverse_routing_evolution.md`. Routing remains user-decision-only.
+  with non-null `attack_learning`, read `adverse_routing_evolution.md`.
+  Report the concrete failure and its boundary only. Workers never propose
+  persistent route rules; Main alone performs bounded mechanism-level synthesis.
 - The compact CHX procedure below is sufficient for normal start and close.
   If architecture causes or materially amplifies a problem, read
   `chx_runtime_ledger.md` completely before recording or repairing it.
 
 Conditional expansion is local. Loading one branch never activates the other
 broad stacks.
+
+## First-output checkpoint
+
+After startup and exact-card binding, the next progress milestone must be one
+durable task artifact or one explicit blocker that names the missing capability,
+source, or premise. Do not emit consecutive status-only updates such as
+"drafting", "composing", or "almost written" while the authorized artifact
+directory remains empty. If a first artifact cannot yet be produced, state the
+single blocker and stop expanding scope. Main may reclaim a worker that repeats
+a no-output milestone. This is a communication and work-elimination rule, not a
+watcher, timer, lifecycle state, truth gate, or packaging prerequisite. If the
+work contract itself causes or materially amplifies a repeated no-output
+milestone, record that concrete architecture finding in worker CHX before
+close. Do not turn it into a PHX route or persistent attack rule; Main performs
+that later coordination.
 
 ## Frozen authority and work boundary
 

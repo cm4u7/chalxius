@@ -239,7 +239,7 @@
       ]
     },
     "cap.adverse_routing": {
-      "summary": "Prospective nontruth adverse cases, exact-Candidate pre-release readiness, sparse route recommendations, full attack audits, route proposals, and operator decisions.",
+      "summary": "Prospective nontruth worker failure reports, exact-Candidate pre-release readiness, sparse Main synthesis queues, full attack audits, bounded persistent rules, and Main decisions.",
       "status": "active",
       "stateful": true,
       "state_roots": [
