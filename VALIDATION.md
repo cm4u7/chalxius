@@ -1,125 +1,123 @@
-# Validation — Chalxius v0.7.3
+# Validation — Chalxius v0.7.4
 
 ## Frozen release identity
 
 | Field | Exact value |
 |---|---|
-| Version | `0.7.3` |
-| Display name | `Selective Startup` |
+| Version | `0.7.4` |
+| Display name | `Bounded Main Routing` |
 | Release date | `2026-08-12` |
 | Skill manifest entries | `245` |
-| `MANIFEST.sha256` SHA-256 | `191f1880b01c2f7bed75bdc3a246f66e59cd9475fb12d02a708e08c08305e11c` |
-| Runtime content SHA-256 | `7ecc27da8c6407ccf6171a1d4a19c2c38484bd2e899a65d1628c79c22802e78d` |
-| Archive | `chalxius-0.7.3-selective-startup.tar.gz` |
-| Archive bytes | `2366343` |
+| `MANIFEST.sha256` SHA-256 | `80e8b1abc333c32786149b6e4794091aeefc0e8eaa55415b56252b356e205cf7` |
+| Runtime content SHA-256 | `d6673f07691c4657d9e35d2ee6d743099960904d73fe44dc9c74a9c5e54ff5c7` |
+| Archive | `chalxius-0.7.4-bounded-main-routing.tar.gz` |
+| Archive bytes | `2372899` |
 | Archive members | `246` |
-| Archive SHA-256 | `0ad47e0cbb4339ccbd17e8b8011aa939db0d7b47da89a1ee8735aaeee5d8c69e` |
+| Archive SHA-256 | `dbad69ae6cb6ef5b1fff23fefbc73a98d3229b1737833f0bd67ff73ac4ec6d9e` |
 
-The archive builder independently produced the archive twice and required
-byte-for-byte equality. It also required the archive member set to equal the
-sorted manifest plus `MANIFEST.sha256`, with fixed ownership, modes, and mtime.
+The deterministic USTAR archive was built twice from the sorted exact member
+set with fixed ownership and time metadata; the two outputs were byte-identical.
 
-## Final manifest-bound matrix
+## Manifest-bound release matrix
 
-The accepted receipt uses contract
-`chalxius-release-validation-matrix-4`, contains all six required lanes, and
-records `one_manifest_identity=true`, `source_unchanged=true`, and
-`lane_unchanged=true` for every lane.
+The accepted receipt uses contract `chalxius-release-validation-matrix-4`,
+contains all six required lanes, and records `one_manifest_identity=true`,
+`source_unchanged=true`, and `lane_unchanged=true` for every lane.
 
-| Phase | Lane | Result |
-|---|---|---|
-| 1 | strict architecture reconnaissance | pass; 246 files; 0 errors, warnings, or orphan modules/features |
-| 1 | mutation-registry preflight | `148/148` exact single targets |
-| 2 | behavioral feature gate | pass; `30` registered features |
-| 3 | full suite | `844/844` pass |
-| 3 | bundled self-test | pass |
-| 4 | aggressive mutation audit | `148/148` mutants killed; candidate unchanged |
-
-The snapshot-sensitive mutation audit ran only after baseline phases. Any
-architecture or registry-preflight failure would have short-circuited the
-expensive lanes.
+| Phase | Lane | Result | Duration |
+|---|---|---|---:|
+| 1 | strict architecture reconnaissance | pass; 246 files; 0 errors or warnings; no orphan modules/features | 4.451 s |
+| 1 | mutation-registry preflight | `148/148` exact targets | 0.093 s |
+| 2 | behavioral feature gate | pass; `30` registered features | 18.233 s |
+| 3 | full discovered suite | `846/846` pass | 133.417 s |
+| 3 | bundled self-test | pass | 1.630 s |
+| 4 | aggressive mutation audit | `148/148` mutants killed; source unchanged | 184.481 s |
 
 | Receipt or inventory | SHA-256 |
 |---|---|
-| Final matrix receipt | `6ce9a0d63345363807790d7d8e4b9c7a9aae26805f69eaacad05f9fc79e922ea` |
-| Final architecture inventory | `eea2500513027ca37e5c6933455786fb3b81d5be2c3a5c08786ffb668acb766c` |
-| Architecture receipt bytes | `15f7542e42c55cc71b945beb0bbf2a2aa53843f35244b3017a7f63f822b77f80` |
-| Behavioral registry | `54a52af2ba33c070b9cda787faf47c38d3d89e240a6026c12fa90ab0149b455d` |
+| Final matrix receipt | `90ffcd665ab01bc35fcde437b317cef7ac0e59869fa38221d18ce43175ad7da7` |
+| Final architecture inventory | `b3564ad4240e55088d2d44486011f527be74ad44ef9ce0dc0de070234b43e853` |
+| Final architecture receipt bytes | `4896713078204fe426b3fe2719f0d5c8b353a10a0eb9b25c80297a990e3329cf` |
+| Behavioral registry | `4ff43881e6c67a9d43141f0d8607a75e580ef089185b9992f577a743a9695e5c` |
+| Capability registry | `2d9dabec4d9d0532e5275c91868058d1c733859e83d501afda052f05bc33a712` |
 
-## Focused 0.7.3 regression evidence
+The final strict scan was rerun with bytecode writes disabled. It verified exact
+manifest path equality and detected no generated cache artifacts.
 
-- The compact root router is 242 lines and current Research roles load one
-  card-selected bootstrap instead of the broad historical protocol stack.
-- An exact Research projection completed in 1.67 seconds in the reproduced
-  workload; the historical full-frontier route exceeded 154 seconds before it
-  was stopped.
-- A document-editing Chalxius Learner task uses the dedicated bounded bootstrap
-  and does not preload Research, Candidate, verifier, CHX-repair, or PHX
-  protocols unless a later event requires them.
-- Repair mode survives abort and replan; stale dispositions fail before
-  expensive design reconstruction and are checked again under the final write
-  lock.
-- One-off computations and unsupported negative source-status claims can be
-  eliminated before high-cost pipeline construction while preserving the
-  mathematical and source-reliability boundaries.
-- CHX public disclosure includes every issue from CHX-001 through CHX-020,
-  including explicit ownership of `excluded_nonarchitectural` CHX-010.
+## Focused 0.7.4 evidence
+
+- Fifty-nine focused adverse-routing and two-subround Research tests passed.
+- Current route creation and promotion are Main-only; workers return incident
+  evidence rather than persistent abstractions.
+- Current rules are English, mechanism-level, semantically compressed, and
+  bound by per-field and total code-point limits.
+- Current projects and newly frozen cards expose at most sixteen active routes;
+  legacy cards retain compatibility with their historical contract.
+- Compact worker bootstraps require an artifact-or-blocker first-output
+  milestone and reuse the existing CHX path for architecture-caused repeats.
+- No watcher, timer, new lifecycle state, normal-flow audit, package gate, or
+  truth gate was added.
+- An isolated English-text predicate benchmark measured approximately
+  7.2–7.6 microseconds per call. It is telemetry, not a separate release lane.
 
 ## Cold extraction
 
-A fresh extraction of the release archive passed:
+A fresh extraction of the archive passed:
 
 - `245/245` manifest hashes;
-- bundled `scripts/self_test.py`;
+- bundled `scripts/self_test.py`; and
 - no `__pycache__`, `.pyc`, or `.pyo` files.
 
-## Protected installation
+## Protected global installation
 
-The final candidate was installed through `runtime_cutover.py` using an exact
-project-validation receipt. One fresh deep audit of the protected project ran
-under the candidate before cutover. Dry-run and post-swap checks reused that
-immutable snapshot rather than repeating semantic reconstruction.
+The final candidate was installed with `runtime_cutover.py`. Because both the
+protected project and lifecycle code had changed, the cutover used the explicit
+full-audit path once and retained that result in memory for exact post-swap
+validation. It did not run a second semantic audit.
 
 | Field | Exact value |
 |---|---|
-| Project validation receipt | `833c6a1de7c35086abfaa61403b8ddef2ddfa3c1d75e33c0e6292ec1c5b0f9bb` |
-| Installed runtime identity | `32689d62b09bc1fc12f5006c9c658252abd82d0fb790400444df8e363389f8fe` |
-| Project state SHA-256 | `e3eb579b62dc1cb0d087c1e5da8fca1139bfde3f7f9b6794505a2bb8c2b1e436` |
-| Historical Research rounds | `125`, all terminal |
-| Deep audits performed for cutover | `1` |
+| Installed runtime identity | `6063cd16304ca1e32fea728c5d9c8e55e790355bd36bad8c007c86cbc2d32fa6` |
+| Installed runtime content SHA-256 | `d6673f07691c4657d9e35d2ee6d743099960904d73fe44dc9c74a9c5e54ff5c7` |
+| Runtime archive tree SHA-256 | `a29a3ac0c3f9c800506b97402e04240b303f51b6266153f18c4eda191086a06e` |
+| Protected project state SHA-256 | `5a70a5fc5d0d9d662cf0d42b302b916a129ff9a1f079ef211b10ff33ab3b4195` |
+| Protected Research rounds | `136`, all terminal |
+| Full semantic audits during cutover | `1` |
 | Duplicate post-swap semantic audits | `0` |
+| Rollback runtime | `chalxius-rollback-0.7.3-pre-0.7.4-20260812` |
 
-The installed tree reports version `0.7.3`, exact manifest SHA-256
-`191f1880...e11c`, passes its bundled self-test, and returns
-`current_ok=true` on the protected project. The prior 0.7.2 runtime is retained
-at `chalxius-rollback-0.7.2-pre-0.7.3-20260812`.
+The installed runtime reports version `0.7.4`, matches the frozen manifest,
+passes its bundled self-test, and leaves the protected project
+`current_ok=true`.
+
+## CHX and PHX receipts
+
+The public CHX lineage enumerates CHX-001 through CHX-022. The 0.7.4 successor
+ledger is `run-20260812T073631884601Z-53f28d3790b8`, SHA-256
+`ca3d5634586755ba179a8d5c4001c174ec60e1ec05cae945cfa81800d93c3ec0`;
+its architecture report SHA-256 is
+`b7d1676a269cf1fe16e1cb9e3b698b479a1decdc981964c930eb7cb1755f66e5`.
+
+The adopted advisory PHX successor is
+`run-20260812T073119641576Z-a5cb7d922e7a`, SHA-256
+`0db62d4656042f8dfea024f20ba4e13623c4c1f26ac12358f1dbc70c3d044f36`.
+Its route adoption remains nontruth and Main-governed.
 
 ## Contract hashes
 
 | Contract | SHA-256 |
 |---|---|
-| `INHERITANCE.lock.json` | `2dd254b2aa8cf5274f0774a385eeb69e62d0aa91e94007b85c3551c46d38aee1` |
-| `KNOWN_LIMITATIONS.md` | `3db7bd72fc5d868097376565849d291c49f42bdfd30ff16eee73ba4940c29fcd` |
-| `references/v5_release_traceability.md` | `870125deb04ef2da3a6769791f9df658ef8557bbfdbe0bc39a9369672987b20b` |
-| `SKILL.md` | `3542efa1baf0af7f40ed85a9fd4620a1f3bcfa0b8aa9f0f7a56f508a160f16b7` |
-| `scripts/aggressive_bug_audit.py` | `6738ef4812967dad44a78938706a11e9009f125a942993bb945743ef4fe0c4ce` |
-| `scripts/chx_ledger.py` | `32bcf8572688e6af0fa1bf6437583dcb2d2bb1137f544726711bbe3d0ff8eb6c` |
-| `scripts/mathgraph/v5_lifecycle.py` | `4eef06ddb6fe71e1f5af890e0c6a2f6f7adb8324aed08a9c9eb7d663aa9aaf53` |
-
-## CHX disclosure boundary
-
-The release binds four immutable ledgers and explicitly enumerates CHX-001
-through CHX-020. The latest ledger SHA-256 is
-`04eb473a6360c49fcf806de6b737c529f47ab91d63c7e1aa8adfb966bdc1acd4`;
-its generated architecture report SHA-256 is
-`0821ffbdc7bc2a5548fa6a9ba6628ad8f0d6c8509ac57c3453b4536231671e7b`.
-Private JSONL and Research bytes are not distributed. Public disclosure passed
-the exact owner, predecessor, document, issue-enumeration, exclusion-status,
-and ledger-hash checks.
+| `INHERITANCE.lock.json` | `7b8a585e876524c707c88232275f5f99ff6d7aa7081a468a5e54e9e8faab41e9` |
+| `KNOWN_LIMITATIONS.md` | `3cd9d312c7a5cbcfdc7986a4f6a62a750cd48475d4a06803c8009acd1355e0cc` |
+| `references/adverse_routing_evolution.md` | `0c8802a1bedbdeac7ac1e91538638bf0d8a77d311c38982fb9aa215ae5530e3c` |
+| `references/v5_release_traceability.md` | `d8ad147d22122afccf1cb19f4da267becb80cd538d8387a595117a6ce71fca96` |
+| `SKILL.md` | `7d00183914c468d65c160c0e3a90b4266452edbe7442f414dd50c9a3a77c0b4f` |
+| `scripts/mathgraph/adverse_routing.py` | `5f796ef7f520582c319146afb23f3d044f652d550e9547c52a8041e32c73b480` |
+| `scripts/mathgraph/v5_lifecycle.py` | `e84e969e5b973c8266341eed6403946280c124c3933f6b2b4b4ea6117014b270` |
 
 ## Claim scope
 
 Hashes establish byte identity. Tests establish only exercised properties.
-Mutation scores establish only detection of enumerated faults. None of these
-receipts substitutes for fresh independent verification, Certification, or
-Fact admission.
+Mutation scores establish only detection of registered faults. Research
+artifacts remain nontruth unless they separately pass Candidate Release,
+independent verification, Certification, Gateway, and Fact admission.

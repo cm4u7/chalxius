@@ -297,23 +297,23 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "The default user-facing attack report exposes at most three selective family-deduplicated route types, explains what each checks in reviewed ordinary language, and keeps technical case detail behind --full.",
+      "summary": "The default Main-facing attack report exposes at most three family-deduplicated concrete worker failure families; workers provide no persistent route text and technical case detail remains behind --full.",
       "production_entry_symbol": "mathgraph.cli.main",
       "producer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
       "activation_predicate": {
-        "predicate_id": "selective_pending_route_proposals_exist",
+        "predicate_id": "selective_pending_worker_failure_reports_exist",
         "domain": ["recommendations_present", "zero_or_filtered", "more_than_three", "duplicate_family"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-attack-route-recommendations-2",
+        "type_id": "chalxius-main-route-synthesis-queue-3",
         "validator_symbol": "mathgraph.adverse_routing.validate_attack_route_recommendation_report"
       },
       "consumer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
       "observable_effect": {
-        "effect_id": "sparse_one_utterance_route_upgrade_surface",
+        "effect_id": "sparse_main_route_synthesis_surface",
         "kind": "bounded_output",
-        "description": "The user sees route type, a reviewed ordinary-language statement of what it checks, applicability, support, and a numbered approval phrase; future routing remains Operator-only."
+        "description": "Main sees concrete failures and boundaries, then may reject or synthesize one compact mechanism-level future rule; worker text is never activated."
       },
       "probes": {
         "positive": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_counterexample_creates_case_proposal_and_separate_attack_report",

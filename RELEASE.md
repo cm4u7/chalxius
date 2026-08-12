@@ -1,114 +1,119 @@
-# Chalxius v0.7.3 — Selective Startup
+# Chalxius v0.7.4 — Bounded Main Routing
 
-Chalxius 0.7.3 removes repeated administrative work from Research workers and
-architecture repair while retaining the verifier-gated V5 truth path. The
-release is based on reproduced costs and defects observed in A-model Research
-and a separate Chalxius Learner document-editing run.
+Chalxius 0.7.4 makes attack-route evolution a bounded Main responsibility and
+adds a work-elimination checkpoint to compact Research workers. It preserves
+the V5 truth path, frozen-card compatibility, and the two-subround Research
+architecture introduced by earlier releases.
 
-## Selective startup
+## Main-governed attack routes
 
-- The root `SKILL.md` is a compact router. Current Research production,
-  Research supervision, and Learner document editing each load one
-  manifest-bound role bootstrap; broader protocols load only when the frozen
-  task card or a newly observed event requires them.
-- Exact Research objectives project their own frontier directly. They no
-  longer construct a full historical frontier and discard unrelated work.
-- Logical subrounds remain dependency order, not global time barriers:
-  completed components may enter supervision while unrelated production
-  continues.
-- Repair work mode is immutable across abort and replan. A rejected or aborted
-  consumer cannot silently restore ordinary production behavior.
+- Attack and supervision workers return concrete failure evidence, affected
+  boundaries, and surviving boundaries. They do not author persistent attack
+  rules.
+- Main alone decides whether repeated evidence justifies a reusable route,
+  writes the mechanism-level abstraction, and records its provenance.
+- Current route text is English and mechanism-level. Case-specific phrases are
+  rejected as persistent rules when they cannot transfer beyond the incident.
+- A current route is capped at 720 code points in total, including at most 280
+  for its instruction, 180 for scope, and two 180-code-point guards. Oversized
+  material must be semantically compressed; blind truncation is forbidden.
+- A project and each newly frozen task card may expose at most sixteen active
+  current routes. Main's default promotion queue remains at most three concrete
+  failure families per decision pass.
+- Legacy route contracts remain readable for frozen historical cards.
 
-## Failure-informed work elimination
+## Worker work elimination
 
-- Latest supervisor dispositions are checked before expensive design
-  reconstruction and are revalidated under the final write lock.
-- One-off computation is judged first by information value. If the requested
-  quantity is already available by an authoritative route, the system records
-  the elimination instead of building a redundant execution pipeline.
-- Negative source-status claims without frozen response evidence are removed or
-  marked unresolved; a new online-query subsystem is not introduced merely to
-  preserve a negative statement.
-- Worker CHX observations are projected from the task card. Empty or explicitly
-  excluded observations remain silent; qualifying architecture costs stay
-  append-only and reusable.
-- macOS temporary paths are canonicalized before audit containment checks, so
-  `/var/...` and `/private/var/...` do not create false mutation findings.
+The compact production and supervision bootstraps now require the first
+post-startup milestone to be either one durable artifact or one explicit
+blocker. Repeated status-only drafting while the artifact directory is empty
+may be reclaimed by Main and recorded under the existing worker-CHX mechanism.
+This is a protocol checkpoint, not a watcher, timer, lifecycle state, package
+gate, audit, or truth gate.
+
+The English-only check for current internal governance text is intentionally
+small. An isolated local microbenchmark measured approximately 7.2–7.6
+microseconds per validation call. The high-cost target remains repeated broad
+protocol loading and avoidable repair/replay work, not this text predicate.
 
 ## CHX and PHX integration
 
-The public nontruth lineage now covers CHX-001 through CHX-020 across four
-immutable ledgers. CHX-012 through CHX-019 are the integrated 0.7.3 successors
-for startup, exact-frontier, repair-mode, source-status, observation,
-disposition-order, information-value, and temporary-path findings. CHX-020
-repairs public ownership of an explicitly excluded nonarchitectural issue.
+The public CHX lineage now covers CHX-001 through CHX-022. CHX-021 records the
+worker-authored, oversized, case-specific route problem; CHX-022 records
+status-only startup delay before the first substantive artifact. Both are
+closed by reusable 0.7.4 behavior and public architecture documentation.
 
-PHX remains advisory. It supplied existing failure-informed selective-assurance,
-work-elimination, source-status, and robust-practical-repair routes; no PHX
-suggestion was silently activated as a new truth gate.
+PHX remains advisory. The adopted route is
+`route.main_governed_abstract_attack_rules.adopted`: workers supply incident
+evidence, Main performs abstraction and promotion, and route size is bounded.
+No PHX entry admits a Fact or silently changes the truth path.
 
-## Research and truth boundary
+## A-model Research boundary
 
-The A-model workload produced reusable nontruth Research about a finite
-bound-quiver quotient majorant. It did not create a Candidate Release or Fact.
-For local P2 the finite-heart geometry supplies a three-lift combinatorial
-constant, but a family-uniform exponential DT/BPS coefficient bound after the
-spherical factor is removed remains open.
+The release cycle also produced nontruth Research for the local
+\(K_{\mathbb P^2}\) program:
 
-The sole truth path is unchanged:
+- a finite-heart, unique-vanishing-simple, non-spherical mass-gap mechanism;
+- a reusable finite-quiver quotient majorant;
+- a common-domain analytic factorization criterion with controlled word and
+  operator growth, including one parameter derivative via a buffer-domain
+  Cauchy estimate; and
+- a non-Dynkin formal control class from cyclic quivers with potential.
 
-`Research → Candidate Release → Certification Decision → Fact`
+The formal-to-analytic, degeneration-family, endpoint, and A-model geometry
+bridges for that non-Dynkin class remain open. These results are Research only:
+no Candidate Release, Certification Decision, Gateway admission, or Fact was
+created.
 
-CHX, PHX, software tests, release receipts, Research artifacts, and package
-hashes all have `truth_effect=none`.
+## Validation and installation
 
-## Validation
+The exact 245-entry manifest passed the six-lane release matrix:
 
-The exact 245-entry manifest passed one manifest-bound six-lane matrix:
-
-- architecture reconnaissance: 246 files, 0 errors, 0 warnings, 0 orphan
-  modules or features;
+- strict architecture reconnaissance: 246 release files, 0 errors, 0
+  warnings, and no orphan module or feature;
 - mutation-registry preflight: 148 exact single targets;
 - behavioral feature gate: 30 registered features;
-- full suite: 844 tests;
+- full discovered suite: 846 tests;
 - bundled self-test; and
-- aggressive audit: 148/148 mutants killed, with every isolated lane and the
-  candidate source unchanged.
+- aggressive audit: 148/148 registered mutants killed.
 
-One protected-project deep audit validated all 125 historical Research rounds
-as terminal and `current_ok=true`. The immutable receipt was reused for dry-run
-and installation, so the semantic audit was not repeated after the exact swap.
-The prior 0.7.2 runtime remains available for rollback.
+Every isolated lane and the candidate source remained unchanged. A fresh
+archive extraction passed all 245 manifest hashes, the bundled self-test, and
+the no-cache check. The deterministic archive contains 246 members and was
+reproduced byte-for-byte in a second build.
 
-The deterministic archive contains 246 members including `MANIFEST.sha256`.
-A fresh extraction passed all 245 manifest hashes, the bundled self-test, and
-the cache/bytecode absence check.
+The exact candidate was globally installed through the protected cutover. One
+full pre-swap project audit was reused after the exact swap; no duplicate
+post-swap semantic audit ran. All 136 protected Research rounds were terminal,
+and the project remained `current_ok=true`. The previous 0.7.3 runtime is
+retained for rollback.
 
 Exact receipts and hashes are recorded in [VALIDATION.md](VALIDATION.md) and
 [RELEASE.lock.json](RELEASE.lock.json).
 
 ## Install
 
-Download adjacent assets:
+Download adjacent release assets:
 
-- `chalxius-0.7.3-selective-startup.tar.gz`
-- `chalxius-0.7.3-selective-startup.tar.gz.sha256`
+- `chalxius-0.7.4-bounded-main-routing.tar.gz`
+- `chalxius-0.7.4-bounded-main-routing.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.7.3-selective-startup.tar.gz.sha256
-tar -xzf chalxius-0.7.3-selective-startup.tar.gz
+shasum -a 256 -c chalxius-0.7.4-bounded-main-routing.tar.gz.sha256
+tar -xzf chalxius-0.7.4-bounded-main-routing.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/self_test.py
 ```
 
-Replacing an active global runtime is a separate protected cutover operation;
-do not copy files over a runtime that already owns frozen task cards.
+Replacing an active global runtime is a protected cutover operation. Do not
+copy files over a runtime that owns frozen task cards.
 
-## Scope
+## Claim scope
 
-Software validation establishes exercised workflow and byte-identity
-properties. It does not prove a theorem, certify a manuscript, validate an
-empirical result, or admit a Fact.
+Hashes establish byte identity. Tests establish exercised software behavior.
+Mutation results establish detection of enumerated faults. None of these
+receipts proves a mathematical theorem or substitutes for fresh independent
+verification, Certification, or Fact admission.

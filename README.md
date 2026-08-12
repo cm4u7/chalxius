@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.7.3](https://github.com/cm4u7/chalxius/releases/tag/v0.7.3) ·
+[📦 Download v0.7.4](https://github.com/cm4u7/chalxius/releases/tag/v0.7.4) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -120,8 +120,9 @@ frozen sources ──► Paper Logic ──► independent Audit ──► Evide
                                   Fact Graph
 ```
 
-Main explores and compiles task context. Operator governs explicit activation,
-overrides, imports, and route decisions. Host is a narrow dispatch/status/audit
+Main explores, compiles task context, and decides bounded future attack routes.
+Operator governs explicit activation, overrides, imports, and prospective route
+disablement. Host is a narrow dispatch/status/audit
 boundary. Workers contribute bounded Research. Paper Auditor, Verifier, and
 Gateway remain separate so the same actor cannot silently explore, certify, and
 admit its own result.
@@ -134,14 +135,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.7.3-selective-startup.tar.gz`
-- `chalxius-0.7.3-selective-startup.tar.gz.sha256`
+- `chalxius-0.7.4-bounded-main-routing.tar.gz`
+- `chalxius-0.7.4-bounded-main-routing.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.7.3-selective-startup.tar.gz.sha256
-tar -xzf chalxius-0.7.3-selective-startup.tar.gz
+shasum -a 256 -c chalxius-0.7.4-bounded-main-routing.tar.gz.sha256
+tar -xzf chalxius-0.7.4-bounded-main-routing.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -201,7 +202,7 @@ load-bearing computation, and prepare only verifier-ready claims for release.
 | Cautious Brave Future reassessment | `对这个显式激活的 Campaign 做一次 BF-2 dry-run reassessment；若我随后明确批准，只写一份 BF-3 advisory receipt，不要计划轮次或派发 worker。` |
 | Adverse review | `对这个结论做 hostile/refute 审查；任务结束时给我成功或有价值的 Attack report 和规则进化建议，但不要自动采用。` |
 | Philosophy-only attacks | `这是哲学论证。启用普通语言替换、举证责任、最强善意反驳、独立失败面，以及量词/模态/范围/例外等价性攻击。` |
-| Approve or reject a route proposal | `采用 Attack report 中规则 R…，但把适用范围改成……` / `拒绝这个规则` / `停用规则 R…` |
+| Review route evolution | `汇报本轮攻击发现和 Main 的抽象处置；不要把 worker 文本直接写成规则。` / `停用规则 R…` |
 | Prepare a certified Fact | `把这些 Research 封装为 Candidate Release，交给新的 verifier；只有完全一致的接受决定才能进入 Fact Gateway。` |
 | Export the interactive Reader | `把当前图导出为单文件 Reader HTML；每个节点补齐摘要、直觉、重要性、推理路线和来源。` |
 | Generate project background | `为这个项目生成（或刷新）PROJECT_BACKGROUND.md，并把它压成可检索索引。` |
@@ -230,7 +231,7 @@ Once `$chalxius` is invoked for a new governed V5 task:
 The following actions always require explicit language from the user:
 
 - importing a non-paper Fact Graph into Evidence;
-- activating, changing, approving, rejecting, or disabling an adverse route;
+- overriding or disabling an adverse route outside Main's bounded decision;
 - generating or refreshing project background;
 - starting Chalxius Learner or a Reader export, and manually activating or
   changing Campaign state beyond exact `auto`/`deep` goal intake;
@@ -249,8 +250,8 @@ role. Chalxius binds every low-level operation to one explicit role:
 
 | Role | May do | Must not do |
 |---|---|---|
-| `operator` | Initialize governance, switch modes, import Evidence, decide attack routes, perform explicit overrides | Treat a governance decision as mathematical verification |
-| `main` | Inspect sources and graphs, plan Research, compile context, query Evidence, prepare releases and Readers | Certify its own release or bypass the gateway |
+| `operator` | Initialize governance, switch modes, import Evidence, disable routes, perform explicit overrides | Approve worker reports as route policy or treat governance as mathematical verification |
+| `main` | Inspect sources and graphs, plan Research, compile context, decide bounded future attack routes, query Evidence, prepare releases and Readers | Certify its own release or bypass the gateway |
 | `host` | Trusted dispatch, task status, and bounded audit transport | Read background for exploration, plan mathematics, or gain proof authority |
 | `worker` | Execute one immutable task card and return bounded Research/artifacts | Infer capabilities from filesystem access or write Facts |
 | `paper-auditor` | Independently review Paper Logic and correction coverage | Turn interpretation into source authority |
@@ -346,9 +347,9 @@ for exact schemas and failure behavior.
 These are deliberately separate:
 
 - The **Attack report** records successful counterexamples and other productive
-  challenges, then proposes reusable future routing rules. New governed V5
-  tasks produce a report even when it is explicitly zero. Proposals remain
-  inactive until the user/Operator approves, edits, rejects, or disables them.
+  challenges as concrete evidence. New governed V5 tasks produce a report even
+  when it is explicitly zero. Main alone may abstract that evidence into a
+  compact future mechanism-level rule; workers do not draft persistent policy.
 - The **CHX architecture report** contains only failures caused or materially
   amplified by Chalxius architecture. A run with no qualifying issue stays
   silent. CHX issues are repair inputs for Chalxius and are never learned as
@@ -407,6 +408,20 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.7.4: Bounded Main Routing
+
+Attack workers now return concrete failure evidence and success boundaries,
+while Main alone decides whether a reusable mechanism-level route is justified.
+Current persistent rules use English internal prose, hard semantic-size limits,
+semantic compression instead of truncation, and at most sixteen active rules
+per project and per newly frozen card.
+
+Compact production and supervision workers also have a first-output checkpoint:
+after exact startup, the next milestone is one durable artifact or one explicit
+blocker. Repeated status-only drafting may be reclaimed without adding a
+watcher, timer, lifecycle state, audit, packaging gate, or truth gate. The
+public CHX lineage now covers CHX-001 through CHX-022.
 
 ## v0.7.3: Selective Startup
 

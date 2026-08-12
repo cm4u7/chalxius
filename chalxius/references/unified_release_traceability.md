@@ -6,7 +6,17 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
-## Current 0.7.3 overlay
+## Current 0.7.4 overlay
+
+Chalxius 0.7.4 **Bounded Main Routing** preserves every 0.7.3 startup and truth
+gate while separating concrete worker attack evidence from persistent routing.
+Main alone may synthesize a compact mechanism-level future rule. Current rules
+use English internal prose, semantic compression instead of truncation, and a
+sixteen-active-rule cap. Compact Research bootstraps also require a first
+durable artifact or an explicit blocker after startup, without adding a
+watcher, lifecycle state, audit, packaging prerequisite, or truth gate.
+
+## 0.7.3 overlay
 
 Chalxius 0.7.3 **Selective Startup** preserves the 0.7.2 gates while removing
 work already made unnecessary by exact scope. The root skill is a compact

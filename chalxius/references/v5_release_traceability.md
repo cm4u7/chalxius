@@ -1,4 +1,26 @@
-# Chalxius V5 traceability through 0.7.3 Selective Startup
+# Chalxius V5 traceability through 0.7.4 Bounded Main Routing
+
+## 0.7.4 bounded-main-routing overlay
+
+- Candidate version: `0.7.4`; public name **Bounded Main Routing**. Its public
+  CHX successor is `run-20260812T073631884601Z-53f28d3790b8`, which owns
+  CHX-021 and CHX-022 after the immutable 0.7.3 lineage.
+- CHX-021 separates worker evidence from persistent route policy. A worker
+  records concrete failures and success boundaries; Main alone compares those
+  reports and may reject them or synthesize a compact English mechanism-level
+  future rule. Current rules have hard field and total code-point budgets,
+  semantic compression rather than truncation, and a sixteen-active-rule cap.
+- CHX-022 adds a first-output checkpoint to both compact Research bootstraps.
+  After startup, the next milestone is a durable artifact or an explicit
+  blocker. Repeated status-only drafting may be reclaimed by Main and may enter
+  existing worker CHX when architecture-caused. No watcher, timer, new state,
+  audit, packaging gate, or truth gate is introduced.
+- The A-model field workload remains nontruth Research. The finite-heart,
+  quotient-majorant, common-domain factorization, and non-Dynkin formal-source
+  results create no Candidate Release, Certification Decision, Gateway action,
+  or Fact.
+- The invariant truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
 
 ## 0.7.3 selective-startup overlay
 

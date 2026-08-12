@@ -48,8 +48,10 @@ Load a broader protocol only at one of the conditional branches below.
   because the production return cited them.
 - Keep `attack_learning=null` by default. Before returning a surviving
   `counterexample` or a non-null productive-challenge `attack_learning`, read
-  `adverse_routing_evolution.md` and use its exact current schema. A concern,
-  clean result, or non-load-bearing suggestion does not qualify.
+  `adverse_routing_evolution.md` and use its exact current failure-report
+  schema. Report concrete evidence and boundaries only; never synthesize a
+  persistent route rule. A concern, clean result, or non-load-bearing
+  suggestion does not qualify.
 - The compact CHX procedure below is sufficient for normal start and close. If
   the worker observes a problem caused or materially amplified by Chalxius
   architecture, read `chx_runtime_ledger.md` completely and record the finding
@@ -61,6 +63,20 @@ Load a broader protocol only at one of the conditional branches below.
 
 Conditional expansion is local: loading one applicable protocol does not
 activate the other broad references.
+
+## First-output checkpoint
+
+After startup and exact-card binding, the next progress milestone must be the
+required `research_supervision_report` artifact or one explicit blocker naming
+the missing capability, receipt, or premise. Do not emit consecutive
+status-only updates such as "reviewing", "writing the report", or "almost at
+preflight" while the authorized artifact directory remains empty. Main may
+reclaim a supervisor that repeats a no-output milestone. This is a bounded
+communication rule, not a watcher, timer, lifecycle state, audit, truth gate,
+or packaging prerequisite. If the work contract itself causes or materially
+amplifies a repeated no-output milestone, record that concrete architecture
+finding in worker CHX before close. Do not turn it into a PHX route or
+persistent attack rule; Main performs that later coordination.
 
 ## Frozen authority and scope
 

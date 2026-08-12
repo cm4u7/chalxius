@@ -257,10 +257,9 @@ The same prospective round freezes one normalized non-null host-task scope in
 its manifest, assignments, and cards. Explicit input and the two documented
 environment channels take priority; otherwise V5 derives a stable local scope
 from the exact planning request before writing the round. The default
-`attack-report` exposes at most three selective, family-deduplicated pending
-attack-type recommendations, each with one reviewed ordinary-language sentence
-stating what it checks, and no technical case detail; `attack-report
---full` enumerates the exact scope's rounds, assignments, cards,
+`attack-report` exposes at most three family-deduplicated concrete worker
+failure reports for Main synthesis. It does not expose or activate worker-authored
+route text; `attack-report --full` enumerates the exact scope's rounds, assignments, cards,
 return/receipt states, pairs, and cases. Zero cases are complete only when
 dispatch/return coverage is complete or no pair was required; missing dispatch
 and pending returns remain separate fail-visible states.
@@ -471,7 +470,7 @@ V4 roots and original Danus material are never rewritten or recertified by V5.
 Their readability is preserved by the original files and, when present, the
 single background projection—not by inherited Fact authority.
 
-## User-governed adverse-routing evolution
+## Main-governed adverse-routing evolution
 
 V5 adverse reporting is prospectively enabled by default. Reading status or
 producing an empty report is nonmutating; the first newly frozen `refute` card
@@ -482,17 +481,18 @@ attack-learning obligation.
 
 For current adverse-bound work, a surviving counterexample or productive
 challenge binds structured witnesses, reproduction steps, an exact success
-boundary, concrete load-bearing before/after/evidence value effects, and a
-proposed general route. Ingestion records an immutable nontruth attack case and
-proposal. The worker cannot activate either. At every host-task completion, a
-separate attack report presents the cases and proposals to the user, including
-an explicit zero report. Only an operator decision may approve,
-modify-and-approve, reject, or later disable a rule, and every such effect is
-limited to task cards frozen afterward.
+boundary, and concrete load-bearing before/after/evidence value effects.
+Workers do not write triggers or route rules. Ingestion records an immutable
+nontruth failure report. At every host-task completion, a separate attack
+report presents a sparse queue to Main, including an explicit zero report.
+Main compares reports and may reject them or synthesize one mechanism-level
+rule. Persistent rules have Unicode code-point and a sixteen-active-rule hard cap;
+oversize text must be semantically compressed and is never truncated. Every
+effect is limited to task cards frozen afterward.
 
 Approved route rules remain exploration guidance. They neither certify their
 source counterexample nor create a new adverse-review state on the truth path.
-At most 24 matching approved rules may enter one refutation card; excess fails
+At most sixteen matching synthesized rules may enter one refutation card; excess fails
 visibly rather than truncating. The attack report is not a CHX architecture
 report, and neither report is Fact evidence. See
 `adverse_routing_evolution.md`.

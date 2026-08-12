@@ -149,6 +149,7 @@ ALL_COMMANDS = {
 OPERATOR_COMMANDS = ALL_COMMANDS - {
     "preflight-return",
     "pulse-dispatch",
+    "attack-route-decide",
 }
 
 
@@ -204,6 +205,7 @@ ROLE_COMMANDS = {
         "ingest-return",
         "attack-route-status",
         "attack-report",
+        "attack-route-decide",
         "plan-repair-round",
         "make-verifier-task",
         "novelty-record",

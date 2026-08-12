@@ -329,18 +329,16 @@ and zero reports are read-only, the first new V5 refute card lazily materializes
 revision-2 state, and schema-2 learning also covers productive challenges.
 Revision-1 state and every frozen old card remain unchanged.
 
-The worker may autonomously abstract a surviving counterexample or structured
-productive challenge into a route proposal, but that proposal has no activation
-authority. The default user-facing outcome is a sparse report of at most three
-selective family-deduplicated attack types. In 0.6.7 each selected family also
-receives one reviewed ordinary-language sentence saying what it checks; the
-projection never copies worker-authored route instructions, and an unknown
-family remains full-report-only until reviewed. The complete technical coverage
-audit is explicit `--full`. `批准建议 N` maps to the frozen proposal and the
-same Operator decision. Approved rules are content-addressed, project-local,
-limited to future refutation task cards, and independently disableable. This
-design avoids a mutable self-prompt, unreviewed global learning, a second
-verifier, and any route from exploration to Fact authority.
+Historical schema-1 through schema-4 workers may retain their frozen proposal
+contracts. Current schema-5 workers instead report concrete failure evidence
+and success boundaries without route text. The default Main-facing outcome is
+a sparse report of at most three family-deduplicated failures; unknown families
+remain full-report-only until their ordinary-language description is reviewed.
+The complete technical coverage audit is explicit `--full`. Main alone may
+reject a report or synthesize a content-addressed, project-local,
+mechanism-level future rule. This design avoids a mutable self-prompt,
+unreviewed worker policy, a second verifier, and any route from exploration to
+Fact authority.
 
 The extension does not auto-start Chalxius Learner, does not use Grill Me Code,
 and does not change `fast`/`auto`/`deep`, Certification Decision, gateway
@@ -366,7 +364,7 @@ adverse-routing-enabled project, actual computation stages may queue one
 future nontruth program-math review with an additional scoped attack rule;
 new ordinary refutation cards receive the original eight rules plus one
 general hidden-conjunct split. An exact frozen philosophy or mixed domain adds
-three user-approved philosophy-only attacks for faithful ordinary-language
+three fixed philosophy-only attacks for faithful ordinary-language
 substitution, atomic burdens/strongest-charitable objection/independent failure
 surfaces, and quantifier-modal-scope-exception equivalence. Claim wording
 cannot activate those three. Earlier frozen cards keep their exact baseline.
@@ -583,6 +581,18 @@ parallel, while the snapshot-sensitive audit is barriered afterward. Its single
 receipt fails closed on incomplete results, mixed identities, shared roots,
 timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
 infrastructure and does not depend on philosophical content.
+
+## 0.7.4 bounded Main routing difference
+
+Version 0.7.4 does not add a mathematical capability or a new assurance layer.
+It changes two reproduced coordination boundaries. Adverse workers retain
+concrete failure evidence but no longer author persistent route text; Main
+alone may synthesize a compact mechanism-level rule under English-internal,
+semantic-size, trigger, guard, and sixteen-active-rule limits. Compact workers
+also stop repeating status-only drafting after startup: the next milestone is
+one durable artifact or one explicit blocker, with existing worker CHX as the
+only architecture escalation. These are work-elimination and authority
+repairs, not Candidate, verifier, Certification, Gateway, or Fact gates.
 
 ## 0.7.3 selective startup difference
 
