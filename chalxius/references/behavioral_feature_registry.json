@@ -377,6 +377,34 @@
         "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_tamper_fails_closed"
       }
     },
+    "feature.scoped_supervisor_bootstrap": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A current machine-bound second-subround supervisor starts from one compact versioned contract and loads broad source, computation, attack-learning, or CHX-repair protocols only when the exact scope or observed event makes them applicable.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._compact_prompt",
+      "activation_predicate": {
+        "predicate_id": "validated_current_task_card_is_managed_research_supervision",
+        "domain": ["current_supervision", "production_or_ordinary_worker", "legacy_or_invalid_card"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-supervisor-worker-bootstrap-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_research_cycle_return"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_return_payload",
+      "observable_effect": {
+        "effect_id": "bounded_supervisor_protocol_preload_with_unchanged_return_and_truth_gates",
+        "kind": "routing",
+        "description": "The generated supervision prompt selects one manifest-bound compact bootstrap; ordinary production keeps the full public worker contract, conditional broad protocols fail closed, and exact return, runtime, CHX, Candidate, verifier, Certification, Gateway, and Fact boundaries remain unchanged."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard",
+        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_public_v5_worker_return_template_and_diagnostics_are_executable",
+        "tamper": "tests.test_runtime_archive.RuntimeArchiveTests.test_original_bound_root_rehashes_every_manifest_entry"
+      }
+    },
     "feature.research_supervision_candidate_gate": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",

@@ -723,10 +723,17 @@ class V5LifecycleTests(unittest.TestCase):
             self.assertEqual(len(lifecycle.frontier(limit=3)), 3)
             self.assertEqual(len(lifecycle.frontier(limit=4)), 3)
             last = entries[-1]["research_id"]
-            planned = lifecycle.create_round(
-                workers=1,
-                research_ids=[last],
-            )
+            with patch.object(
+                lifecycle,
+                "frontier",
+                side_effect=AssertionError(
+                    "explicit selection must not rebuild the global frontier"
+                ),
+            ):
+                planned = lifecycle.create_round(
+                    workers=1,
+                    research_ids=[last],
+                )
             self.assertEqual(planned["assignments"][0]["research_id"], last)
 
     def test_three_plane_cards_share_one_snapshot_without_closure_coupling(self) -> None:

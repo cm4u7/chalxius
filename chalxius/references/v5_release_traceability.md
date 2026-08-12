@@ -1,4 +1,108 @@
-# Chalxius V5 traceability through 0.7.0 Failure-Informed Efficiency
+# Chalxius V5 traceability through 0.7.3 Selective Startup
+
+## 0.7.3 selective-startup overlay
+
+- Candidate version: `0.7.3`; public name **Selective Startup**. The field
+  evidence is the A-model campaign since the 0.7.2 local cutover plus the
+  bounded Learner-document edit in task
+  `019fa908-8cf5-7a70-a867-dde76a1c6182`. It has `truth_effect=none` and does
+  not alter any mathematical result or frozen Research record.
+- The exact public CHX lineage is:
+  `run-20260811T013254358017Z-46283133a345` owning CHX-001, CHX-002,
+  CHX-003, and CHX-004;
+  `run-20260811T085034084387Z-6c87c04d5462` owning CHX-005, CHX-006,
+  CHX-007, CHX-008, CHX-009, CHX-010, and CHX-011; and
+  `run-20260811T191546409764Z-b156c46cab1c` owning CHX-012, CHX-013,
+  CHX-014, CHX-015, CHX-016, CHX-017, CHX-018, and CHX-019; and
+  `run-20260811T193354268477Z-7a6dcfe41bb0` owning CHX-020.
+  CHX-002 and CHX-010 are excluded as nonarchitectural. The resolved successor
+  relations are CHX-012 supersedes CHX-001, CHX-013 supersedes CHX-003,
+  CHX-014 supersedes CHX-005, CHX-015 supersedes CHX-006, CHX-016 supersedes
+  CHX-007, CHX-017 supersedes CHX-008, CHX-018 supersedes CHX-009, and CHX-019
+  supersedes CHX-011. This preserves each immutable predecessor while making
+  every current replacement publication-resolved.
+- CHX-020 closes the disclosure-only gap exposed by CHX-002 and CHX-010:
+  exact `excluded_nonarchitectural` ownership remains in the contiguous public
+  lineage and is accepted as a terminal exclusion, never relabeled as a repair.
+- The complete skill becomes a compact manifest-bound router. Current
+  production, supervision, and bounded existing-Learner-document cards select
+  their own complete startup contracts. Repeated task-card roles that bind the
+  same bytes are read once. Any selector uncertainty, source conflict, fresh
+  verification, new Research, truth mutation, architecture work, publication,
+  persistence, or nonlocal edit returns to the ordinary path.
+- Explicit `plan-round` selection validates the exact Research records,
+  ancestors, route invalidations, and dispositions without reconstructing the
+  unrelated scored frontier. Automatic planning retains the complete frontier.
+  Repair mode is frozen into cumulative repair Research and inherited through
+  abort/replan.
+- Program-math execution rejects a missing or blocking latest disposition
+  before rebuilding the design artifact closure, then repeats exact authority
+  liveness under the final write lock. One-off computation defaults to one
+  production path and the smallest independent mathematical check; additional
+  hard controls require a recorded failure family.
+- `chx_ledger.py start --task-card` adds an optional exact file/semantic card
+  binding to new revision-5 ledgers without changing historical event schemas.
+  Return ingestion projects only genuine findings from a closed, exact-matching
+  ledger into `chx-observations/by-id/`. Empty ledgers and pure mathematical
+  challenges create no inbox object. The projection is nontruth, pending CHX
+  coordination, and has no Blackboard, Pulse, scoring, or authority effect.
+- Ordinary Research may record source current-status as `not_assessed` or
+  `unresolved`. A negative no-correction/retraction assertion requires a frozen
+  response receipt; absence of such a receipt alone does not force another
+  repair/supervision cycle. Candidate and Fact may still require load-bearing
+  current-status evidence.
+- Candidate fresh adverse, verifier, Certification, Gateway, Fact admission,
+  historical runtime identity, immutable repair lineage, and lock-held final
+  writes are unchanged.
+
+## 0.7.2 integrated-research-efficiency overlay
+
+- Candidate version: `0.7.2`; public name **Integrated Research Efficiency**.
+  Its project-bound repair lineage is
+  `run-20260811T013254358017Z-46283133a345/CHX-001`, `CHX-003`, and `CHX-004`.
+  CHX-002 from the same run is excluded as a host-orchestration
+  misclassification and is not part of the mechanism set.
+- A current exact production card selects
+  `references/v5_production_worker_bootstrap.md`. The complete skill, exact
+  prompt/card, return contract, authorized input bytes, and role-local
+  expansion remain mandatory. Invalid or historical cards retain the broad
+  path. This is the production analogue of the 0.7.1 supervisor projection.
+- One supervision-planning command reuses one ephemeral inspection context for
+  repeated immutable reads. It does not persist across commands. Fresh
+  overlap, abort, runtime, authority, and liveness checks remain inside the
+  final mutation boundary.
+- Computation design has one shared canonical three-role contract. Unsupported
+  custom roles fail during assurance construction before round bytes; task-
+  specific files are bundled within the canonical source, design, and
+  dependency artifacts.
+- All changes are prospective Research administration with
+  `truth_effect=none`. Candidate fresh adverse, verifier, Certification,
+  Gateway, Fact admission, historical runtime identity, and copy-on-write
+  repair semantics are unchanged.
+
+## 0.7.1 scoped-supervisor-bootstrap overlay
+
+- Candidate version: `0.7.1`; public name **Scoped Supervisor Bootstrap**.
+  The project-bound architecture issue is
+  `run-20260811T002058829626Z-42d7d269ac6d/CHX-001`. Its performance-route
+  provenance is the persisted PHX search receipt
+  `search-4717d9be91c928c1d2ca38a4526789db66ccc8b4c580602fd8302e222a779f2e`
+  and the already authorized route
+  `run-20260809T131409541618Z-e6ec115394d1/PHX-003`.
+- A current exact supervision card selects
+  `references/v5_supervisor_worker_bootstrap.md`. The bootstrap is bound by the
+  candidate manifest and is applicable only after the full skill, exact prompt,
+  exact card, and worker-CHX runtime binding have been read and accepted.
+  Invalid, legacy, production, or ordinary-worker cards keep the full protocol.
+- Computation, new external-source use, non-null attack learning, architecture
+  repair, and unprojected assurance types are explicit local expansion branches.
+  The generated supervisor prompt no longer preloads Main planning, general
+  worker, release, or unrelated source protocols.
+- Exact task-card validation, immutable source receipts and artifacts, worker
+  CHX, return preflight/canonical-byte validation/hash ingestion, copy-on-write
+  Research repair, Candidate fresh adverse, verifier, Certification, Gateway,
+  Fact admission, abort/liveness, and lock-held final writes are unchanged. The
+  change has `truth_effect=none` and supplies no A-model evidence.
 
 ## 0.7.0 failure-informed-efficiency overlay
 

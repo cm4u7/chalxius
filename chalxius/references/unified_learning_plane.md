@@ -33,6 +33,20 @@ Certification, Gateway, Fact admission, document editing, or architecture
 change, leave the fast path before acting. The answer remains nontruth teaching
 and acquires no new certification status.
 
+## Bounded teaching-document edits
+
+An already active Learner task may edit one named section or a small consecutive
+section range in an existing teaching Markdown through
+[`learner_document_edit_bootstrap.md`](learner_document_edit_bootstrap.md).
+That file is the complete compact contract only when its selector passes:
+existing document, exact frozen source slice, local exposition change, no new
+Research or truth claim, no persistent learning mutation, no architecture or
+external effect. It preserves source fidelity, local render/lint checks, hashes,
+and the no-chat-context check while skipping unrelated research, release,
+admission, attack, PHX, and full-graph preloads. Any source conflict, fresh
+verification, nonlocal edit, or authority mutation fails closed to the ordinary
+applicable Chalxius path.
+
 The research reasoning profile is a separate axis. `deep` does not activate
 Chalxius Learner, and Learner activation does not switch `fast`, `auto`, or
 `deep`, create a research round, or alter the invariant Fact admission gate.

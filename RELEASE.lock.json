@@ -1,37 +1,39 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "package": "chalxius",
-  "version": "0.7.0",
-  "release_display_name": "Failure-Informed Efficiency",
-  "status": "frozen_validated",
-  "release_date": "2026-08-10",
+  "version": "0.7.3",
+  "release_display_name": "Selective Startup",
+  "status": "frozen_validated_installed",
+  "release_date": "2026-08-12",
   "workflow_authority": "V5",
   "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
   "public_distribution": {
-    "archive_name": "chalxius-0.7.0-failure-informed-efficiency.tar.gz",
-    "archive_bytes": 2352031,
-    "archive_sha256": "94637f21f221761532936c07074a5b98d606cd25f57aca326c754e37d3b2dc38",
-    "archive_members": 243,
-    "manifest_entry_count": 242,
-    "manifest_sha256": "9cb93afb90d90e8f8cdfd7cba59bbce3e3c68f7b4181f9594d561cc878942468",
-    "runtime_content_sha256": "6078c75b0ae64f17502450d4a6e1b67047f6e5955f45202bbfe56243eeb78950",
+    "archive_name": "chalxius-0.7.3-selective-startup.tar.gz",
+    "archive_bytes": 2366343,
+    "archive_sha256": "0ad47e0cbb4339ccbd17e8b8011aa939db0d7b47da89a1ee8735aaeee5d8c69e",
+    "archive_members": 246,
+    "manifest_entry_count": 245,
+    "manifest_sha256": "191f1880b01c2f7bed75bdc3a246f66e59cd9475fb12d02a708e08c08305e11c",
+    "runtime_content_sha256": "7ecc27da8c6407ccf6171a1d4a19c2c38484bd2e899a65d1628c79c22802e78d",
     "deterministic_double_build": "pass",
-    "cold_extract_manifest": "242/242 pass",
+    "cold_extract_manifest": "245/245 pass",
     "cold_extract_self_test": "pass",
     "cache_and_bytecode_absent": true
   },
   "validation": {
     "strategy": "architecture_and_registry_preflight_then_behavior_and_baselines_then_snapshot_sensitive_mutation_audit",
     "matrix_contract_revision": "chalxius-release-validation-matrix-4",
-    "matrix_receipt_sha256": "a049f1074938cab779f80fd5257a3a40e15c3a5baebc39a1d9c2646653aefdc1",
-    "architecture_inventory_sha256": "6c85ea575ebe97bbfc8a60f34977a9f085c33fc5cdbb83def28f8532342abfe9",
+    "matrix_receipt_sha256": "6ce9a0d63345363807790d7d8e4b9c7a9aae26805f69eaacad05f9fc79e922ea",
+    "architecture_inventory_sha256": "eea2500513027ca37e5c6933455786fb3b81d5be2c3a5c08786ffb668acb766c",
+    "architecture_receipt_sha256": "15f7542e42c55cc71b945beb0bbf2a2aa53843f35244b3017a7f63f822b77f80",
+    "behavioral_registry_sha256": "54a52af2ba33c070b9cda787faf47c38d3d89e240a6026c12fa90ab0149b455d",
     "lane_count": 6,
-    "architecture_reconnaissance": "pass; errors=0; warnings=0; orphan_modules=0",
-    "mutation_registry_preflight": "147/147 exact targets",
-    "behavioral_feature_gate": "pass; 29 registered features",
-    "full_suite_final_candidate": "838/838 pass",
+    "architecture_reconnaissance": "pass; files=246; errors=0; warnings=0; orphan_modules=0; orphan_features=0",
+    "mutation_registry_preflight": "148/148 exact targets",
+    "behavioral_feature_gate": "pass; 30 registered features",
+    "full_suite_final_candidate": "844/844 pass",
     "self_test_final_candidate": "pass",
-    "aggressive_bug_audit_final_candidate": "147/147 mutants killed; source_unchanged=true",
+    "aggressive_bug_audit_final_candidate": "148/148 mutants killed; source_unchanged=true",
     "one_manifest_identity": true,
     "source_unchanged": true,
     "all_isolated_lanes_unchanged": true,
@@ -42,85 +44,124 @@
     "subround_1": "constructive_proof_literature_source_interpretation_insight_and_computation_design_without_refute_dispatch",
     "logical_component_concurrency": "completed_components_may_enter_supervision_while_unrelated_production_continues",
     "subround_2": "up_to_three_static_failure_informed_scoped_refute_supervisors",
-    "execution_gate": "safe_live_program_math_disposition_then_exact_reviewed_source_and_dependencies",
-    "repair_policy": "copy_on_write_next_research_cycle",
+    "execution_gate": "safe_latest_program_math_disposition_before_design_reconstruction_and_final_lock_revalidation",
+    "repair_policy": "immutable_repair_mode_across_abort_and_replan_then_copy_on_write_successor",
     "fact_premise_policy": "admitted_facts_are_not_default_counterexample_targets",
-    "pulse_policy": "new_v5_planning_retired_historical_and_v4_compatibility_retained",
     "candidate_verifier_gateway_fact_change": false,
     "truth_effect": "none"
   },
-  "efficiency_surface": {
-    "supervisor_registry": "four_static_reproduced_failure_families",
-    "plain_interpretive_insight_blanket_review": false,
-    "integration_review": "cross_primary_components_only",
-    "default_blackboard_capability": "one_root_node_zero_write_spaces",
-    "candidate_gate_order": "supervision_and_fresh_adverse_before_expensive_packaging",
-    "normal_runtime_gate_added_for_field_repairs": false,
+  "selective_startup": {
+    "root_skill_lines": 242,
+    "root_skill_bytes": 12963,
+    "role_selected_bootstraps": [
+      "references/v5_production_worker_bootstrap.md",
+      "references/v5_supervisor_worker_bootstrap.md",
+      "references/learner_document_edit_bootstrap.md"
+    ],
+    "historical_full_frontier_seconds_before_stop": 154.02,
+    "exact_research_projection_seconds": 1.67,
+    "broad_protocol_fallback": "fail_closed_for_invalid_legacy_or_event_expanded_scope",
+    "persistent_cache_added": false,
+    "normal_runtime_truth_gate_added": false,
     "truth_effect": "none"
   },
-  "field_integrated_repairs": {
-    "paper_continuation": "selected_research_ancestry_only",
-    "fact_closure_authority": "dual_typed_active_admitted_closure_only",
-    "proof_risk_supervision": "small_frozen_signal_set_planning_side_channel",
-    "public_disclosure": "one_strictly_later_resolved_supersedes_successor",
-    "focused_release_mutants": 5,
-    "a_model_research_status": "nontruth_not_admitted"
+  "work_elimination": {
+    "information_value_before_computation_allocation": true,
+    "one_off_computation_policy": "prefer_authoritative_existing_derivation_when_it_answers_the_exact_question",
+    "unsupported_negative_source_status": "delete_or_mark_unresolved_without_new_online_query_subsystem",
+    "worker_chx_observation_projection": "task_card_bound_and_silent_when_empty_or_excluded",
+    "temporary_path_policy": "canonicalize_macos_var_alias_before_containment_comparison",
+    "truth_effect": "none"
   },
-  "adverse_recommendation_surface": {
-    "recommendation_report_revision": "chalxius-attack-route-recommendations-2",
-    "default_projection": "maximum_three_family_deduplicated_supported_plain_language_recommendations",
-    "worker_technical_detail_default": "hidden",
-    "proposal_activation": "explicit_user_decision_only",
-    "fact_admission_change": false,
+  "a_model_research": {
+    "status": "nontruth_research_not_candidate_not_fact",
+    "reusable_result": "finite_bound_quiver_quotient_majorant_with_uniform_exponential_coefficient_hypothesis",
+    "local_p2_specialization": "finite_heart_three_lift_combinatorics",
+    "open_boundary": "family_uniform_exponential_DT_BPS_growth_after_spherical_factor_removal",
+    "truth_effect": "none"
+  },
+  "phx_integration": {
+    "advisory_only": true,
+    "matched_routes": [
+      "failure_informed_selective_assurance",
+      "role_selected_startup",
+      "work_elimination",
+      "source_status_scope",
+      "robust_practical_repair"
+    ],
+    "automatic_route_activation": false,
+    "new_complex_subsystem_added": false,
     "truth_effect": "none"
   },
   "chx_disclosure": {
     "canonical_public_contract_revision": "chalxius-chx-public-disclosure-2",
-    "qualified_issue_range": "CHX-001..CHX-006",
-    "current_ledger_run_id": "run-20260810T094527949129Z-70b4cac32984",
-    "current_ledger_sha256": "9419d638cd15549bd0006d4bad2c44174d975ab02aaf7da11e88daa9f2d57b67",
-    "architecture_report_sha256": "cad4c49ae42bc1e734e8cb0222ed958fe9588f0b212a88a0551a50a7504ef7b6",
+    "qualified_issue_range": "CHX-001..CHX-020",
+    "ledger_lineage": [
+      {
+        "run_id": "run-20260811T013254358017Z-46283133a345",
+        "ledger_sha256": "05f5f821ff1c060c0fc243b92e3cf2d617311bd686e34732e5b4eefb2ab19749",
+        "issues": "CHX-001..CHX-004"
+      },
+      {
+        "run_id": "run-20260811T085034084387Z-6c87c04d5462",
+        "ledger_sha256": "defee8ff999ee51d121fbd5f1f380752874c8b05c9ab2cf613212ab935b96738",
+        "issues": "CHX-005..CHX-011"
+      },
+      {
+        "run_id": "run-20260811T191546409764Z-b156c46cab1c",
+        "ledger_sha256": "9f6a6c42f0c1f225320ad79ae1f5dd01dc443343ccab03cc588a30aecec4ce27",
+        "issues": "CHX-012..CHX-019"
+      },
+      {
+        "run_id": "run-20260811T193354268477Z-7a6dcfe41bb0",
+        "ledger_sha256": "04eb473a6360c49fcf806de6b737c529f47ab91d63c7e1aa8adfb966bdc1acd4",
+        "issues": "CHX-020"
+      }
+    ],
+    "latest_architecture_report_sha256": "0821ffbdc7bc2a5548fa6a9ba6628ad8f0d6c8509ac57c3453b4536231671e7b",
+    "explicit_exclusion_ownership": true,
     "private_ledger_included": false,
     "public_disclosure_preflight": "pass",
     "truth_effect": "none"
   },
   "installation": {
     "protected_cutover": "pass",
-    "forced_deep_project_audit_count": 1,
+    "project_validation_receipt_sha256": "833c6a1de7c35086abfaa61403b8ddef2ddfa3c1d75e33c0e6292ec1c5b0f9bb",
+    "deep_project_audit_count": 1,
     "duplicate_post_swap_semantic_audit_count": 0,
     "project_preflight_current_ok": true,
     "project_postflight_current_ok": true,
-    "project_state_sha256": "670943df121e997ccf624f69f2e6e5d798bdba40196a9f40c751eea7754278ff",
+    "project_state_sha256": "e3eb579b62dc1cb0d087c1e5da8fca1139bfde3f7f9b6794505a2bb8c2b1e436",
+    "project_round_count": 125,
     "global_runtime_replaced": true,
-    "installed_runtime_identity": "12df834343960f4e968227f784e243d8de17109f5790706dcde1234b24b8e100",
+    "installed_runtime_identity": "32689d62b09bc1fc12f5006c9c658252abd82d0fb790400444df8e363389f8fe",
     "rollback_available": true,
+    "rollback_version": "0.7.2",
     "truth_effect": "none"
   },
   "runtime_compatibility": {
     "baseline": "chalxius-0.4.3",
     "protected_file_count": 92,
-    "protected_tree_sha256": "d7b3e55b9887be8c0a12f82ffc3ca7f66899a4d53ef1e943e27e9518f1a7ed0f",
-    "changed_path_inventory_sha256": "91c2e13cc9f70e219cd5a364b2d12ab58478841db2ebd4824d93133edb61d736",
+    "protected_tree_sha256": "aa86b1832ca801b74fb003048fba1a6bd4e2cc840f33670c4afcd97bc4e4af95",
+    "changed_path_inventory_sha256": "122aa63132b07387596f766a61ea383b2e96106c10f3731dd8edfd201a166430",
     "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
     "fact_admission_change": false
   },
   "contract_hashes": {
-    "inheritance_lock_sha256": "5dd08bcf0e9953854d92fca02f489d42cb4e25c415198781016844afce489145",
-    "known_limitations_sha256": "a5f2ae581fdfeb3db4cebb0a2f28c7f7c39f1412cf38aa07616694e6ef2eda6a",
-    "v5_release_traceability_sha256": "ec70e72e7fc6e22dbe9f4ef035232bb48720d70fe580a650d14040fa77217d2d",
-    "adverse_routing_sha256": "ca664f332edfbc299e16716ea5a4bfdc16c7ed6e012ac68c8e5e67fa4a5cbf4a",
-    "release_validation_sha256": "d132a19e80c823cab9c08a6dd100797d27046489582e9d708194cb6faace282b",
-    "aggressive_bug_audit_sha256": "9e27c708ef03f461635aa511755d7e870264d22571b63cb32878d7766379c393",
-    "runtime_cutover_entrypoint_sha256": "06aa0e4f4bbee4ab10ca9c4ee5b93f463af420a23e7d2871f1df641a57959b8a",
-    "chx_ledger_entrypoint_sha256": "27e25697bf67f4bc6fcbe185e98be79fdf0e99caa464eedd994dde20580c8416",
-    "paper_continuation_sha256": "a8cc713213a49efb67d4f08755421f3a64a2634c7a6ce2f99117c81f203cf0b2",
-    "v5_lifecycle_sha256": "5b1ac7738faff5507eb791883faddda8910bfa7126d4c640f51c9f346e4bd451"
+    "inheritance_lock_sha256": "2dd254b2aa8cf5274f0774a385eeb69e62d0aa91e94007b85c3551c46d38aee1",
+    "known_limitations_sha256": "3db7bd72fc5d868097376565849d291c49f42bdfd30ff16eee73ba4940c29fcd",
+    "v5_release_traceability_sha256": "870125deb04ef2da3a6769791f9df658ef8557bbfdbe0bc39a9369672987b20b",
+    "root_skill_sha256": "3542efa1baf0af7f40ed85a9fd4620a1f3bcfa0b8aa9f0f7a56f508a160f16b7",
+    "aggressive_bug_audit_sha256": "6738ef4812967dad44a78938706a11e9009f125a942993bb945743ef4fe0c4ce",
+    "chx_ledger_entrypoint_sha256": "32bcf8572688e6af0fa1bf6437583dcb2d2bb1137f544726711bbe3d0ff8eb6c",
+    "v5_lifecycle_sha256": "4eef06ddb6fe71e1f5af890e0c6a2f6f7adb8324aed08a9c9eb7d663aa9aaf53"
   },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius",
-    "tag": "v0.7.0",
+    "tag": "v0.7.3",
+    "source_branch": "codex/0.7.3-selective-startup",
     "target_branch": "main",
-    "state_at_lock_freeze": "validated_for_pull_request_and_separate_release",
+    "state_at_lock_freeze": "validated_installed_for_pull_request",
     "main_merge_performed": false,
     "truth_effect": "none"
   }

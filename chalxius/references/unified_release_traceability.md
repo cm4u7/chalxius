@@ -6,7 +6,45 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
-## Current 0.7.0 overlay
+## Current 0.7.3 overlay
+
+Chalxius 0.7.3 **Selective Startup** preserves the 0.7.2 gates while removing
+work already made unnecessary by exact scope. The root skill is a compact
+router for current production, supervision, and bounded existing-Learner-
+document edits. Explicit Research selection avoids unrelated frontier
+reconstruction, repair mode survives abort/replan, missing computation
+dispositions reject before design closure, and card-bound worker findings enter
+one nontruth CHX observation inbox. Ordinary source status may remain
+unassessed, and one-off computation adds hard controls only for a demonstrated
+failure family beyond the smallest independent mathematical check. No
+persistent index, watcher, score, Pulse/Blackboard path, graph-plane authority,
+Candidate gate, verifier, Certification, Gateway, or Fact admission rule
+changes.
+
+## 0.7.2 overlay
+
+Chalxius 0.7.2 **Integrated Research Efficiency** preserves the 0.7.1 compact
+supervisor path and extends the same manifest-bound routing to exact current
+production cards. A single supervision-planning command shares one ephemeral
+inspection context across repeated immutable subaudits, then performs fresh
+mutation-sensitive checks under the final lock. Computation planning and
+return validation share one canonical three-role contract and reject an
+unsatisfiable card before it creates round bytes. No persistent cache, graph-
+plane authority, Candidate gate, verifier, Certification, Gateway, or Fact
+admission rule changes.
+
+## 0.7.1 overlay
+
+Chalxius 0.7.1 **Scoped Supervisor Bootstrap** preserves every 0.7.0 selective
+assurance rule and changes only the protocol projection for a validated current
+second-subround card. Its manifest-bound compact contract contains the exact
+supervisor scope, return, CHX, preflight, and authority boundaries; computation,
+new source use, non-null attack learning, architecture repair, and unprojected
+assurance schemas expand only when applicable. Production and legacy workers
+retain the ordinary full path. No graph-plane authority, Candidate gate,
+verifier, Certification, Gateway, or Fact admission rule changes.
+
+## 0.7.0 overlay
 
 Chalxius 0.7.0 **Failure-Informed Efficiency** preserves the V5 truth path and
 the 0.6.9 lock-held Research gates. It selects second-subround supervisors from

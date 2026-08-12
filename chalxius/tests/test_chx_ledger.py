@@ -1085,6 +1085,83 @@ class CHXRunLedgerTests(unittest.TestCase):
             "pass",
         )
 
+    def test_public_disclosure_retains_explicitly_excluded_issue_ownership(
+        self,
+    ) -> None:
+        ledger = self._started("run-public-excluded-lineage-001")
+        record_issue(ledger, self._issue())
+        dispose_issue(
+            ledger,
+            issue_id="CHX-001",
+            disposition={
+                "status": "excluded_nonarchitectural",
+                "reason": "The reproduced event is not an architecture defect.",
+                "regression_evidence": [],
+            },
+        )
+        second = self._issue()
+        second["audit_anchors"] = ["public-excluded-successor:PASS"]
+        record_issue(ledger, second)
+        self._repair_chain(ledger, ["CHX-002"])
+        dispose_issue(
+            ledger,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The included architecture issue is repaired.",
+                "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+            },
+        )
+        close_ledger(ledger)
+
+        skill_root = Path(self.temporary.name) / "excluded-public-skill"
+        (skill_root / "references").mkdir(parents=True)
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "1. **CHX-001 — excluded.** excluded_nonarchitectural\n"
+            "2. **CHX-002 — resolved.** publication repair\n",
+            encoding="utf-8",
+        )
+        (skill_root / "references" / "v5_release_traceability.md").write_text(
+            "CHX-001 excluded_nonarchitectural CHX-002 resolved\n",
+            encoding="utf-8",
+        )
+        contract = {
+            "contract_revision": "chalxius-chx-public-disclosure-2",
+            "included_issue_ids": ["CHX-001", "CHX-002"],
+            "ledger_lineage": [
+                {
+                    "ledger_run_id": "run-public-excluded-lineage-001",
+                    "ledger_sha256": hashlib.sha256(
+                        ledger.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "",
+                    "included_issue_ids": ["CHX-001", "CHX-002"],
+                }
+            ],
+            "latest_issue_id": "CHX-002",
+            "document_contracts": {
+                "KNOWN_LIMITATIONS.md": {
+                    "explicit_issue_enumeration": True,
+                    "required_markers": ["excluded_nonarchitectural"],
+                },
+                "references/v5_release_traceability.md": {
+                    "explicit_issue_enumeration": False,
+                    "required_markers": ["CHX-001", "CHX-002"],
+                },
+            },
+            "private_ledger_included": False,
+            "truth_effect": "none",
+        }
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            verify_public_disclosure(ledger, skill_root)["status"],
+            "pass",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
