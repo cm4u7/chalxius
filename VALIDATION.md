@@ -1,123 +1,128 @@
-# Validation — Chalxius v0.7.4
+# Validation - Chalxius v0.7.15
 
-## Frozen release identity
+This document records software, packaging, CHX/PHX, and protected-installation
+evidence for Chalxius 0.7.15 **Research Obligation Closure**. It does not certify
+any mathematical claim.
 
-| Field | Exact value |
+## Frozen identity
+
+| Field | Value |
 |---|---|
-| Version | `0.7.4` |
-| Display name | `Bounded Main Routing` |
-| Release date | `2026-08-12` |
-| Skill manifest entries | `245` |
-| `MANIFEST.sha256` SHA-256 | `80e8b1abc333c32786149b6e4794091aeefc0e8eaa55415b56252b356e205cf7` |
-| Runtime content SHA-256 | `d6673f07691c4657d9e35d2ee6d743099960904d73fe44dc9c74a9c5e54ff5c7` |
-| Archive | `chalxius-0.7.4-bounded-main-routing.tar.gz` |
-| Archive bytes | `2372899` |
-| Archive members | `246` |
-| Archive SHA-256 | `dbad69ae6cb6ef5b1fff23fefbc73a98d3229b1737833f0bd67ff73ac4ec6d9e` |
+| Version | `0.7.15` |
+| Release date | `2026-08-14` |
+| Skill manifest entries | `251` |
+| `MANIFEST.sha256` SHA-256 | `84b9521218079357f4a325ef1561adb70b2663259068d0c18cee6f4d820a6e62` |
+| Runtime content SHA-256 | `dacdd1112bd0b9e63f0da46d439acc57b11eb62e7703cc7c9d54b3ccdcc3ccca` |
+| Installed runtime identity | `e1ec1d9a49715506c9018ec4fda46f8be688d2bec0517ad8cab34f6fd39fdfe4` |
+| Archive | `chalxius-0.7.15-research-obligation-closure.tar.gz` |
+| Archive bytes | `2438226` |
+| Archive members | `252` |
+| Archive SHA-256 | `66cb6bfc0ed2b3ee654d53d15eec352bbfcc57b7b8ea56d7608e2ea721c7b05e` |
+| Checksum-file SHA-256 | `ff00d4cf64b77b360ca2e46913cf2c94b68952ecd16526b7d4ca92fa1ea0cb47` |
 
-The deterministic USTAR archive was built twice from the sorted exact member
-set with fixed ownership and time metadata; the two outputs were byte-identical.
+The deterministic USTAR archive was built twice from the sorted exact manifest
+and the two byte streams were identical.
 
-## Manifest-bound release matrix
+## Release matrix
 
-The accepted receipt uses contract `chalxius-release-validation-matrix-4`,
-contains all six required lanes, and records `one_manifest_identity=true`,
-`source_unchanged=true`, and `lane_unchanged=true` for every lane.
+The final manifest-bound receipt is
+`release-validation-0.7.15-final2.json`, SHA-256
+`d8d35f1bf296895a1d59689d1bc05b57bec914b2e50add37223c2db5da4f028c`.
+It records `ok=true`, `complete_lane_set=true`,
+`one_manifest_identity=true`, and `source_unchanged=true`.
 
-| Phase | Lane | Result | Duration |
-|---|---|---|---:|
-| 1 | strict architecture reconnaissance | pass; 246 files; 0 errors or warnings; no orphan modules/features | 4.451 s |
-| 1 | mutation-registry preflight | `148/148` exact targets | 0.093 s |
-| 2 | behavioral feature gate | pass; `30` registered features | 18.233 s |
-| 3 | full discovered suite | `846/846` pass | 133.417 s |
-| 3 | bundled self-test | pass | 1.630 s |
-| 4 | aggressive mutation audit | `148/148` mutants killed; source unchanged | 184.481 s |
-
-| Receipt or inventory | SHA-256 |
+| Lane | Result |
 |---|---|
-| Final matrix receipt | `90ffcd665ab01bc35fcde437b317cef7ac0e59869fa38221d18ce43175ad7da7` |
-| Final architecture inventory | `b3564ad4240e55088d2d44486011f527be74ad44ef9ce0dc0de070234b43e853` |
-| Final architecture receipt bytes | `4896713078204fe426b3fe2719f0d5c8b353a10a0eb9b25c80297a990e3329cf` |
-| Behavioral registry | `4ff43881e6c67a9d43141f0d8607a75e580ef089185b9992f577a743a9695e5c` |
-| Capability registry | `2d9dabec4d9d0532e5275c91868058d1c733859e83d501afda052f05bc33a712` |
+| Mutation-registry preflight | PASS; `148/148` exact targets |
+| Architecture reconnaissance | PASS |
+| Behavioral feature gate | PASS |
+| Full discovered suite | PASS; `889/889` tests |
+| Bundled self-test | PASS |
+| Aggressive bug audit | PASS; `148/148` registered mutants killed |
 
-The final strict scan was rerun with bytecode writes disabled. It verified exact
-manifest path equality and detected no generated cache artifacts.
+All six isolated lane copies retained the exact approved manifest and reported
+`lane_unchanged=true`.
 
-## Focused 0.7.4 evidence
+The focused Research-obligation regression file contains eight tests covering:
 
-- Fifty-nine focused adverse-routing and two-subround Research tests passed.
-- Current route creation and promotion are Main-only; workers return incident
-  evidence rather than persistent abstractions.
-- Current rules are English, mechanism-level, semantically compressed, and
-  bound by per-field and total code-point limits.
-- Current projects and newly frozen cards expose at most sixteen active routes;
-  legacy cards retain compatibility with their historical contract.
-- Compact worker bootstraps require an artifact-or-blocker first-output
-  milestone and reuse the existing CHX path for architecture-caused repeats.
-- No watcher, timer, new lifecycle state, normal-flow audit, package gate, or
-  truth gate was added.
-- An isolated English-text predicate benchmark measured approximately
-  7.2–7.6 microseconds per call. It is telemetry, not a separate release lane.
+- Main-only semantic reuse across actor labels;
+- retained actor identity for ordinary and task-bound writes;
+- caller authority instead of display text;
+- valid receipt closure of source obligations only;
+- assignment-local closure;
+- pending, quarantined, invalid, and aborted exclusions;
+- exact-ID planning without generic frontier reconstruction; and
+- fresh lock-held obligation revalidation.
 
-## Cold extraction
+## CHX disclosure
 
-A fresh extraction of the archive passed:
+The public lineage is continuous through CHX-035. The final closed ledger and
+deterministic report are:
 
-- `245/245` manifest hashes;
-- bundled `scripts/self_test.py`; and
-- no `__pycache__`, `.pyc`, or `.pyo` files.
-
-## Protected global installation
-
-The final candidate was installed with `runtime_cutover.py`. Because both the
-protected project and lifecycle code had changed, the cutover used the explicit
-full-audit path once and retained that result in memory for exact post-swap
-validation. It did not run a second semantic audit.
-
-| Field | Exact value |
+| Evidence | SHA-256 |
 |---|---|
-| Installed runtime identity | `6063cd16304ca1e32fea728c5d9c8e55e790355bd36bad8c007c86cbc2d32fa6` |
-| Installed runtime content SHA-256 | `d6673f07691c4657d9e35d2ee6d743099960904d73fe44dc9c74a9c5e54ff5c7` |
-| Runtime archive tree SHA-256 | `a29a3ac0c3f9c800506b97402e04240b303f51b6266153f18c4eda191086a06e` |
-| Protected project state SHA-256 | `5a70a5fc5d0d9d662cf0d42b302b916a129ff9a1f079ef211b10ff33ab3b4195` |
-| Protected Research rounds | `136`, all terminal |
-| Full semantic audits during cutover | `1` |
+| `run-20260814T004319766703Z-fdfc7f3fd6e2.jsonl` | `4eb2660eee4bc089d0bd50fd7f871ad48a2141ce1c0d587fb3e50625eebbf8af` |
+| `run-20260814T004319766703Z-fdfc7f3fd6e2.architecture-report.md` | `36b515222031f191f79607ccbc09f60927c90279cc3d7daf544b51646fce198e` |
+
+Public-disclosure verification passed. The private ledgers and reports are not
+included in the public package and have no truth effect.
+
+## PHX evaluation and adoption
+
+PHX-002 was evaluated only after protected installation and post-installation
+identity checks.
+
+| Field | Value |
+|---|---|
+| PHX run | `run-20260809T131409541618Z-e6ec115394d1` |
+| Ledger SHA-256 after adoption | `7aa5e1d5a5b18dc405faad665591a297f4c3ae66322a79795defd9d303188a27` |
+| Consultation | `consultation-62a703ac5ffb398ee39b5b66b90d003775812ce0fa951a42e42dd659641af303` |
+| Measurement | `measurement-5d00c8098221212fe654735adce4b72dd304bdc8ab98b0f4ca9f3867654efe96` |
+| Adoption | `adoption-7758607e23b0b6526f67e33932713240c1be68ef6e7fa0ccbd02d745c35afdec` |
+| Outcome | `supported` |
+| Authority | advisory, nontruth, premise-ineligible |
+
+The adoption covers only explicitly Main-originated unbound Research identity
+and validated generic production-obligation closure. It does not authorize a
+Candidate, verifier shortcut, Certification, Gateway action, or Fact.
+
+## Protected runtime cutover
+
+The approved project-validation receipt SHA-256 is
+`d8ed812c0391671f40950974d3db33ff00e8a9e6eaed6de10247d0dc7b06c928`.
+It binds the exact candidate manifest, prior 0.7.14 runtime identity, complete
+15-path runtime diff, final release matrix, protected project inventory, and
+one fresh candidate-runtime deep audit.
+
+The installation receipt SHA-256 is
+`2ba4f815611849f4eb3e98a77ed1b8081b0ea65788c01b5da464d7bead863172`.
+
+| Field | Result |
+|---|---|
+| Cutover status | `cutover_complete` |
+| Deep project audits | `1` |
 | Duplicate post-swap semantic audits | `0` |
-| Rollback runtime | `chalxius-rollback-0.7.3-pre-0.7.4-20260812` |
+| Protected terminal rounds | `201` |
+| Preflight audit | `current_ok=true` |
+| Postflight project snapshot | unchanged |
+| Project-state SHA-256 | `e49f11893069389999ff154916e093ad1a59395314736629ce5f75e7f2c89b15` |
+| Installed self-test | PASS |
+| Candidate-to-installed tree diff | no differences |
+| Rollback runtime | `0.7.14` preserved |
+| Installed archive-tree SHA-256 | `cbaa950f8c91a0b534d0630c7646cfe65a04566d26d85f23a6561ebad0a6208f` |
 
-The installed runtime reports version `0.7.4`, matches the frozen manifest,
-passes its bundled self-test, and leaves the protected project
-`current_ok=true`.
+## Cold archive check
 
-## CHX and PHX receipts
+A fresh extraction of the public archive passed:
 
-The public CHX lineage enumerates CHX-001 through CHX-022. The 0.7.4 successor
-ledger is `run-20260812T073631884601Z-53f28d3790b8`, SHA-256
-`ca3d5634586755ba179a8d5c4001c174ec60e1ec05cae945cfa81800d93c3ec0`;
-its architecture report SHA-256 is
-`b7d1676a269cf1fe16e1cb9e3b698b479a1decdc981964c930eb7cb1755f66e5`.
+- `251/251` manifest hashes;
+- the bundled self-test; and
+- absence of `__pycache__` directories and `.pyc` files.
 
-The adopted advisory PHX successor is
-`run-20260812T073119641576Z-a5cb7d922e7a`, SHA-256
-`0db62d4656042f8dfea024f20ba4e13623c4c1f26ac12358f1dbc70c3d044f36`.
-Its route adoption remains nontruth and Main-governed.
+## Research and truth boundary
 
-## Contract hashes
-
-| Contract | SHA-256 |
-|---|---|
-| `INHERITANCE.lock.json` | `7b8a585e876524c707c88232275f5f99ff6d7aa7081a468a5e54e9e8faab41e9` |
-| `KNOWN_LIMITATIONS.md` | `3cd9d312c7a5cbcfdc7986a4f6a62a750cd48475d4a06803c8009acd1355e0cc` |
-| `references/adverse_routing_evolution.md` | `0c8802a1bedbdeac7ac1e91538638bf0d8a77d311c38982fb9aa215ae5530e3c` |
-| `references/v5_release_traceability.md` | `d8ad147d22122afccf1cb19f4da267becb80cd538d8387a595117a6ce71fca96` |
-| `SKILL.md` | `7d00183914c468d65c160c0e3a90b4266452edbe7442f414dd50c9a3a77c0b4f` |
-| `scripts/mathgraph/adverse_routing.py` | `5f796ef7f520582c319146afb23f3d044f652d550e9547c52a8041e32c73b480` |
-| `scripts/mathgraph/v5_lifecycle.py` | `e84e969e5b973c8266341eed6403946280c124c3933f6b2b4b4ea6117014b270` |
-
-## Claim scope
-
-Hashes establish byte identity. Tests establish only exercised properties.
-Mutation scores establish only detection of registered faults. Research
-artifacts remain nontruth unless they separately pass Candidate Release,
-independent verification, Certification, Gateway, and Fact admission.
+The A-model workload is closed as nontruth Research for this release. No
+Candidate Release, Certification Decision, Gateway admission, or Fact was
+created. Hashes establish byte identity, tests establish exercised behavior,
+and mutation results establish detection of registered faults; none proves a
+mathematical theorem.
