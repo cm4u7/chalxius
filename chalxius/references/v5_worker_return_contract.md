@@ -122,6 +122,14 @@ audit, add agent scoring, or re-attack admitted Fact premises without separate
 contradiction evidence. A worker cannot edit or propose a replacement for the
 registry through its return.
 
+For task cards frozen by Chalxius 0.7.13 or later, an artifact with role
+`candidate_fact` is not a generic Markdown attachment. Worker preflight parses
+the exact bytes as Fact Markdown, requires canonical round-trip serialization,
+and requires exactly one semantic conclusion atom. A typed semantic interface
+may separate premises from that conclusion; without one, the statement must
+contain exactly one `[CLAIM:*]` clause. This prospective gate does not rewrite
+or retroactively reject returns frozen under an older runtime.
+
 If a production compute source contains `approved_computation_execution`, the
 return is a formal execution. Its `computation_source` and
 `computation_dependencies` hashes must exactly equal the frozen

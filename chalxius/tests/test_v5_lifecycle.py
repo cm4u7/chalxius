@@ -722,6 +722,27 @@ class V5LifecycleTests(unittest.TestCase):
             self.assertEqual(len(lifecycle.frontier(limit=2)), 2)
             self.assertEqual(len(lifecycle.frontier(limit=3)), 3)
             self.assertEqual(len(lifecycle.frontier(limit=4)), 3)
+            complete_history = lifecycle.frontier(
+                limit=len(entries) + 1,
+                include_history=True,
+            )
+            complete_history_ids = [
+                item["research_id"] for item in complete_history
+            ]
+            self.assertEqual(set(complete_history_ids), {
+                item["research_id"] for item in entries
+            })
+            for limit in range(1, len(entries) + 1):
+                self.assertEqual(
+                    [
+                        item["research_id"]
+                        for item in lifecycle.frontier(
+                            limit=limit,
+                            include_history=True,
+                        )
+                    ],
+                    complete_history_ids[:limit],
+                )
             last = entries[-1]["research_id"]
             with patch.object(
                 lifecycle,
@@ -735,6 +756,90 @@ class V5LifecycleTests(unittest.TestCase):
                     research_ids=[last],
                 )
             self.assertEqual(planned["assignments"][0]["research_id"], last)
+
+    def test_explicit_round_replays_selected_content_but_not_unused_ancestor_artifacts(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-bounded-ancestor-projection")
+            lifecycle = store.v5_lifecycle()
+            artifact = root / "evidence" / "deep-ancestor.txt"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_text("frozen ancestor evidence\n", encoding="utf-8")
+            ancestor = lifecycle.add_research(
+                {
+                    "kind": "literature",
+                    "claim": "A deep source record.",
+                    "artifacts": [
+                        {
+                            "path": artifact.relative_to(root).as_posix(),
+                            "sha256": sha256_bytes(artifact.read_bytes()),
+                            "role": "deep_source",
+                        }
+                    ],
+                },
+                actor="source-worker",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            parent = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "A structural intermediate record.",
+                    "relation": "follows",
+                    "related_research_ids": [ancestor["research_id"]],
+                },
+                actor="main",
+            )
+            selected = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "A selected record that consumes only its direct parent.",
+                    "relation": "follows",
+                    "related_research_ids": [parent["research_id"]],
+                },
+                actor="main",
+            )
+            artifact.write_text("drifted unused ancestor bytes\n", encoding="utf-8")
+            planned = lifecycle.create_round(
+                workers=1,
+                research_ids=[selected["research_id"]],
+            )
+            self.assertEqual(
+                planned["assignments"][0]["research_id"],
+                selected["research_id"],
+            )
+            with self.assertRaisesRegex(ValueError, "artifact.*drifted"):
+                lifecycle.research_records()
+
+    def test_failed_round_materialization_leaves_no_public_or_private_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(
+                Path(temporary) / "v5", "v5-atomic-round-materialization"
+            )
+            lifecycle = store.v5_lifecycle()
+            selected = lifecycle.add_research(
+                {"kind": "proof_attempt", "claim": "Stage one atomic round."},
+                actor="main",
+            )
+            original = store._write_json_once
+
+            def fail_at_task_card(path: Path, payload: object) -> None:
+                if path.parent.name == "task-cards":
+                    raise RuntimeError("injected task-card write failure")
+                original(path, payload)
+
+            with patch.object(
+                store, "_write_json_once", side_effect=fail_at_task_card
+            ), self.assertRaisesRegex(RuntimeError, "injected"):
+                lifecycle.create_round(
+                    workers=1,
+                    research_ids=[selected["research_id"]],
+                )
+            self.assertEqual(list(store.rounds_dir.glob("round-*")), [])
+            self.assertEqual(
+                list(store.rounds_dir.glob(".round-*.staging-*")), []
+            )
 
     def test_three_plane_cards_share_one_snapshot_without_closure_coupling(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1386,6 +1491,115 @@ class V5LifecycleTests(unittest.TestCase):
             report = store.audit()
             self.assertEqual(report.novelty_entries, 1)
             self.assertTrue(report.current_ok, report.errors)
+
+    def test_exact_repair_spec_is_hash_bound_into_research_and_task_card(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "exact-repair-spec")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "An oversized theorem requires a typed split.",
+                },
+                actor="proof-worker",
+            )
+            spec = {
+                "schema_version": 1,
+                "claim": "Produce only the primitive full-lattice root Fact.",
+                "content": (
+                    "Remove quotient, chamber, and period conclusions. Return one "
+                    "canonical Candidate Fact with exactly one semantic conclusion."
+                ),
+                "rationale": (
+                    "The fresh verifier found independent failure surfaces."
+                ),
+                "work_mode": "prove",
+                "obligations": [
+                    {
+                        "obligation_id": "obl-exact-root",
+                        "description": "Return only the exact root Candidate Fact.",
+                        "required_artifact_roles": ["candidate_fact"],
+                        "evidence_types": ["bounded_argument"],
+                        "not_applicable_allowed": False,
+                    }
+                ],
+                "stop_conditions": [
+                    "Stop if any quotient, chamber, or period conclusion remains."
+                ],
+            }
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    source["research_id"],
+                    repair_spec=spec,
+                    host_task_scope_id="exact-repair-spec",
+                )
+            repair = lifecycle._research_record(planned["research_id"])
+            self.assertEqual(repair["metadata"]["repair_spec"], spec)
+            self.assertEqual(
+                repair["metadata"]["repair_spec_sha256"],
+                sha256_json(spec),
+            )
+            self.assertEqual(planned["repair_spec_sha256"], sha256_json(spec))
+            card = json.loads(
+                Path(str(planned["assignments"][0]["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(card["work_mode"], "prove")
+            self.assertEqual(card["narrative_plane"]["claim"], spec["claim"])
+            self.assertEqual(card["stop_conditions"], spec["stop_conditions"])
+            self.assertEqual(
+                card["mathematical_state"]["source_research_dossier"][
+                    "metadata"
+                ]["repair_spec_sha256"],
+                sha256_json(spec),
+            )
+
+    def test_exact_repair_spec_rejects_drift_and_inexact_fields(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "fields are not exact",
+        ):
+            V5LifecycleManager._normalize_exact_repair_spec(
+                {
+                    "schema_version": 1,
+                    "claim": "Repair one atom.",
+                    "content": "Preserve the exact boundary.",
+                    "rationale": "The verifier found a split.",
+                    "work_mode": "prove",
+                    "obligations": [],
+                    "stop_conditions": [],
+                    "extra": "silently widened instruction",
+                }
+            )
+
+        normalized = V5LifecycleManager._normalize_exact_repair_spec(
+            {
+                "schema_version": 1,
+                "claim": "Repair one atom.",
+                "content": "Preserve the exact boundary.",
+                "rationale": "The verifier found a split.",
+                "work_mode": "prove",
+                "obligations": [],
+                "stop_conditions": [],
+            }
+        )
+        metadata = {
+            "repair_spec": normalized,
+            "repair_spec_sha256": "0" * 64,
+        }
+        with self.assertRaisesRegex(
+            ValueError,
+            "repair specification metadata drifted",
+        ):
+            V5LifecycleManager._validate_exact_repair_spec_metadata(
+                kind="repair",
+                metadata=metadata,
+            )
 
     def test_release_decision_and_gateway_admit_one_exact_fact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

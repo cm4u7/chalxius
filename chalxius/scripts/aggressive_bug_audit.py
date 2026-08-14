@@ -80,8 +80,8 @@ RESEARCH_TWO_SUBROUND_TEST_MODULE = (
 MUTANTS = (
     Mutant(
         name="frontier_limit_minus_one",
-        old="        return visible[:limit]\n",
-        new="        return visible[: max(0, limit - 1)]\n",
+        old="        selected = visible[:limit]\n",
+        new="        selected = visible[: max(0, limit - 1)]\n",
         test=(
             f"{TEST_MODULE}."
             "test_frontier_limits_and_explicit_last_entry_have_no_truncation_error"

@@ -1,6 +1,6 @@
 # Chalxius portable deployment
 
-The 0.7.4 `Bounded Main Routing` release artifact contains one self-contained `chalxius`
+The 0.7.15 `Research Obligation Closure` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -27,6 +27,47 @@ under the seal lock. Formal computation ignores aborted program-math reviews
 and revalidates its exact approval plus latest disposition under the
 execution-round lock. No project migration or Candidate/Fact schema rewrite is
 required.
+
+Generic production planning now removes a source Research obligation only when
+an exact valid ingestion receipt exists in a non-aborted production round. The
+receipt-produced worker Research remains available for continuation, and
+explicit Research-ID planning plus history views retain their prior behavior.
+Immediately before publishing a generic production round, the mutation lock
+uses a fresh inspection to reject a newly closed obligation without writing
+round bytes. Main-role `memory-add` also reuses complete identical unbound
+semantics across actor labels; operator and task/assignment-bound writes remain
+actor-sensitive. No persistent index, scheduler, new lifecycle state, or truth
+authority is added.
+
+The release adds `selective-fact-checkpoint` as a Main-only pre-Candidate
+operation. It freezes one bounded nontruth readiness receipt and a deterministic
+dependency-closed Candidate batch partition over explicit Research ids.
+Dependency-connected selected targets stay atomic; independent targets remain
+singleton failure-isolation units. It neither
+automates truth selection nor weakens Candidate adverse, verifier,
+Certification, Gateway, or Fact admission. Existing projects need no migration;
+the governance directory is created lazily by the ordinary V5 initializer.
+
+Main may then use `plan-candidate-adverse RESEARCH_ID` for one exact current
+Candidate-Fact target. Candidate checks reuse only a command-local validated
+inspection context and repeat supervision liveness under the seal lock. No
+persistent cache or new lifecycle owner is installed.
+
+If that target is an exact supervised production result, Main may first use
+`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. Current
+Candidate-adverse cards use a dedicated compact bootstrap; current supervision
+cards inherit a content-addressed projection of the attacked production Fact
+premises and exact source/input capabilities. Historical cards remain
+byte-exact under their archived runtime.
+
+Candidate-local assurance shape and exact current-assurance statement-interface
+errors reject from submitted Fact bytes and immutable selected-Research
+envelopes before global replay. Active-Fact validation may reenter only through
+one command-local provisional Release/marker/Fact projection; the outer frame
+still performs complete authority replay and requires exact equality. Approved
+computation replay preserves the same inspection context through its nested
+design and supervision closure. No recursion-limit change, alternate authority,
+or persistent cache is installed.
 
 A newly generated current production worker or supervisor reads the full skill,
 exact prompt/card, and its manifest-bound compact bootstrap before mathematical

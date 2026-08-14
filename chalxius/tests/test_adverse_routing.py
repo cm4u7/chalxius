@@ -478,37 +478,58 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 term="canonical",
                 instruction="Attack silent canonical-witness replacement.",
             )
-            full = {
-                "host_task_scope_id": "hosttask-" + "a" * 32,
-                "coverage_status": "attack-recorded",
-                "scope_complete": True,
-                "attacks": [
+            scope_id = "hosttask-" + "a" * 32
+            state = {
+                "cases": [
                     {
-                        "proposal_status": "pending_main_synthesis",
-                        "proposal_id": "route-proposal-" + "1" * 64,
-                        "proposed_rule": first_rule,
+                        "case_id": "attack-case-" + "1" * 64,
+                        "host_task_scope_id": scope_id,
                         "attack_result": "productive_challenge",
-                        "attack_family": "quantifier_witness",
-                        "failure_mechanism": "A witness escaped its quantified scope.",
-                        "success_boundary": "Only witness dependency is challenged.",
+                        "attack_learning": {
+                            "attack_family": "quantifier_witness",
+                            "failure_mechanism": "A witness escaped its quantified scope.",
+                            "success_boundary": "Only witness dependency is challenged.",
+                        },
                     },
                     {
-                        "proposal_status": "pending_main_synthesis",
-                        "proposal_id": "route-proposal-" + "2" * 64,
-                        "proposed_rule": second_rule,
+                        "case_id": "attack-case-" + "2" * 64,
+                        "host_task_scope_id": scope_id,
                         "attack_result": "surviving_counterexample",
-                        "attack_family": "quantifier_witness",
-                        "failure_mechanism": "A canonical witness was silently selected.",
-                        "success_boundary": "Pointwise existence remains open.",
+                        "attack_learning": {
+                            "attack_family": "quantifier_witness",
+                            "failure_mechanism": "A canonical witness was silently selected.",
+                            "success_boundary": "Pointwise existence remains open.",
+                        },
                     },
                 ],
+                "proposals": [
+                    {
+                        "case_id": "attack-case-" + "1" * 64,
+                        "proposal_id": "route-proposal-" + "1" * 64,
+                        "route_rule": first_rule,
+                    },
+                    {
+                        "case_id": "attack-case-" + "2" * 64,
+                        "proposal_id": "route-proposal-" + "2" * 64,
+                        "route_rule": second_rule,
+                    },
+                ],
+                "decisions": [],
+                "rules": [],
+                "disablements": [],
             }
-            with patch.object(manager, "report", return_value=full), patch.object(
-                manager, "active_rules", return_value=[]
+            with patch.object(
+                manager, "_validated_state", return_value=state
+            ), patch.object(
+                manager,
+                "report",
+                side_effect=AssertionError("concise report called forensic report"),
             ):
                 concise = manager.recommendation_report(
-                    host_task_scope_id=full["host_task_scope_id"]
+                    host_task_scope_id=scope_id
                 )
+            self.assertEqual(concise["coverage_status"], "case-projection")
+            self.assertFalse(concise["scope_complete"])
             self.assertEqual(len(concise["recommendations"]), 1)
             self.assertEqual(
                 concise["recommendations"][0]["attack_type"],
@@ -541,27 +562,40 @@ class AdverseRoutingEvolutionTests(unittest.TestCase):
                 instruction="SECRET TECHNICAL ATTACK MECHANISM",
             )
             unknown_rule["attack_family"] = "unreviewed_future_family"
-            full = {
-                "host_task_scope_id": "hosttask-" + "b" * 32,
-                "coverage_status": "attack-recorded",
-                "scope_complete": True,
-                "attacks": [
+            scope_id = "hosttask-" + "b" * 32
+            state = {
+                "cases": [
                     {
-                        "proposal_status": "pending_main_synthesis",
-                        "proposal_id": "route-proposal-" + "3" * 64,
-                        "proposed_rule": unknown_rule,
+                        "case_id": "attack-case-" + "3" * 64,
+                        "host_task_scope_id": scope_id,
                         "attack_result": "productive_challenge",
-                        "attack_family": "unreviewed_future_family",
-                        "failure_mechanism": "SECRET TECHNICAL ATTACK MECHANISM",
-                        "success_boundary": "Opaque boundary.",
+                        "attack_learning": {
+                            "attack_family": "unreviewed_future_family",
+                            "failure_mechanism": "SECRET TECHNICAL ATTACK MECHANISM",
+                            "success_boundary": "Opaque boundary.",
+                        },
                     }
                 ],
+                "proposals": [
+                    {
+                        "case_id": "attack-case-" + "3" * 64,
+                        "proposal_id": "route-proposal-" + "3" * 64,
+                        "route_rule": unknown_rule,
+                    }
+                ],
+                "decisions": [],
+                "rules": [],
+                "disablements": [],
             }
-            with patch.object(manager, "report", return_value=full), patch.object(
-                manager, "active_rules", return_value=[]
+            with patch.object(
+                manager, "_validated_state", return_value=state
+            ), patch.object(
+                manager,
+                "report",
+                side_effect=AssertionError("concise report called forensic report"),
             ):
                 concise = manager.recommendation_report(
-                    host_task_scope_id=full["host_task_scope_id"]
+                    host_task_scope_id=scope_id
                 )
             self.assertEqual(concise["recommendations"], [])
             self.assertEqual(concise["pending_proposal_count"], 1)

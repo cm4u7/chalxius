@@ -556,6 +556,230 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                     )
             expensive.assert_not_called()
 
+    def test_public_candidate_adverse_planner_is_exact_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "candidate-adverse-planner")
+            lifecycle = store.v5_lifecycle()
+            fact_path = root / "candidate-fact.md"
+            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Attack the exact Candidate Fact before packaging.",
+                    "independent_adverse_required": True,
+                    "artifacts": [
+                        {
+                            "path": "candidate-fact.md",
+                            "sha256": sha256_bytes(fact_path.read_bytes()),
+                            "role": "candidate_fact",
+                        }
+                    ],
+                },
+                actor="candidate-producer",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            code, first, error = self._cli(
+                root,
+                "main",
+                "plan-candidate-adverse",
+                research["research_id"],
+                "--host-task-scope-id",
+                "candidate-adverse-planner",
+            )
+            self.assertEqual(code, 0, error)
+            assert first is not None
+            self.assertEqual(len(first["assignments"]), 1)
+            self.assertEqual(first["assignments"][0]["work_mode"], "refute")
+            self.assertIsNone(first.get("research_cycle"))
+
+            code, second, error = self._cli(
+                root,
+                "main",
+                "plan-candidate-adverse",
+                research["research_id"],
+                "--host-task-scope-id",
+                "candidate-adverse-planner",
+            )
+            self.assertEqual(code, 0, error)
+            assert second is not None
+            self.assertEqual(second["round_id"], first["round_id"])
+
+            code, rejected, error = self._cli(
+                root,
+                "main",
+                "plan-candidate-adverse",
+                research["research_id"],
+                "--host-task-scope-id",
+                "different-candidate-adverse-scope",
+            )
+            self.assertEqual(code, 2)
+            self.assertIsNone(rejected)
+            self.assertIn("different host scope", error)
+
+            ordinary = self._research(store, required=True)
+            code, rejected, error = self._cli(
+                root,
+                "main",
+                "plan-candidate-adverse",
+                ordinary["research_id"],
+            )
+            self.assertEqual(code, 2)
+            self.assertIsNone(rejected)
+            self.assertIn("exactly one candidate_fact", error)
+
+            code, rejected, error = self._cli(
+                root,
+                "worker",
+                "plan-candidate-adverse",
+                research["research_id"],
+            )
+            self.assertEqual(code, 3)
+            self.assertIsNone(rejected)
+            self.assertIn("not allowed", error)
+
+            stale_path = root / "stale-candidate-fact.md"
+            stale_path.write_text("# Stale Candidate Fact\n", encoding="utf-8")
+            stale_target = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "A stale Candidate target.",
+                    "independent_adverse_required": True,
+                    "artifacts": [
+                        {
+                            "path": "stale-candidate-fact.md",
+                            "sha256": sha256_bytes(stale_path.read_bytes()),
+                            "role": "candidate_fact",
+                        }
+                    ],
+                },
+                actor="candidate-producer",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "The stale Candidate target is invalid.",
+                    "relation": "challenges",
+                    "related_research_ids": [stale_target["research_id"]],
+                    "route_invalidations": [stale_target["research_id"]],
+                },
+                actor="supervisor",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            code, rejected, error = self._cli(
+                root,
+                "main",
+                "plan-candidate-adverse",
+                stale_target["research_id"],
+            )
+            self.assertEqual(code, 2)
+            self.assertIsNone(rejected)
+            self.assertIn("is stale", error)
+
+    def test_candidate_adverse_retry_skips_aborted_pre_cutover_card(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "candidate-adverse-aborted-cutover")
+            lifecycle = store.v5_lifecycle()
+            fact_path = root / "candidate-fact.md"
+            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Retry the exact Candidate Fact after a cutover.",
+                    "independent_adverse_required": True,
+                    "artifacts": [
+                        {
+                            "path": "candidate-fact.md",
+                            "sha256": sha256_bytes(fact_path.read_bytes()),
+                            "role": "candidate_fact",
+                        }
+                    ],
+                },
+                actor="candidate-producer",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            first = lifecycle.plan_candidate_adverse_round(
+                research["research_id"],
+                host_task_scope_id="candidate-adverse-aborted-cutover",
+            )
+            with store.v5_mutation_lock(command="work-unit-abort"):
+                store.reasoning_modes().abort_work_unit(
+                    round_id=first["round_id"],
+                    actor="main",
+                    reason="Simulate a runtime cutover before exact retry.",
+                )
+            original_round_manifest = lifecycle._round_manifest
+
+            def fail_on_aborted_round(round_id: str, **kwargs: object) -> object:
+                if round_id == first["round_id"]:
+                    raise AssertionError(
+                        "aborted pre-cutover round was reconstructed as active"
+                    )
+                return original_round_manifest(round_id, **kwargs)
+
+            with patch.object(
+                lifecycle,
+                "_round_manifest",
+                side_effect=fail_on_aborted_round,
+            ):
+                second = lifecycle.plan_candidate_adverse_round(
+                    research["research_id"],
+                    host_task_scope_id="candidate-adverse-aborted-cutover",
+                )
+            self.assertNotEqual(second["round_id"], first["round_id"])
+            self.assertEqual(second["work_unit_state"], "active")
+            self.assertEqual(second["assignments"][0]["work_mode"], "refute")
+
+    def test_candidate_adverse_active_retry_still_reconstructs_bound_card(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "candidate-adverse-active-retry")
+            lifecycle = store.v5_lifecycle()
+            fact_path = root / "candidate-fact.md"
+            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Keep an active exact adverse retry strict.",
+                    "independent_adverse_required": True,
+                    "artifacts": [
+                        {
+                            "path": "candidate-fact.md",
+                            "sha256": sha256_bytes(fact_path.read_bytes()),
+                            "role": "candidate_fact",
+                        }
+                    ],
+                },
+                actor="candidate-producer",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            first = lifecycle.plan_candidate_adverse_round(
+                research["research_id"],
+                host_task_scope_id="candidate-adverse-active-retry",
+            )
+            original_round_manifest = lifecycle._round_manifest
+
+            def reject_active_round(round_id: str, **kwargs: object) -> object:
+                if round_id == first["round_id"]:
+                    raise ValueError("active retry card was reconstructed")
+                return original_round_manifest(round_id, **kwargs)
+
+            with patch.object(
+                lifecycle,
+                "_round_manifest",
+                side_effect=reject_active_round,
+            ):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "active retry card was reconstructed",
+                ):
+                    lifecycle.plan_candidate_adverse_round(
+                        research["research_id"],
+                        host_task_scope_id="candidate-adverse-active-retry",
+                    )
+
     def test_public_plan_round_keeps_refute_out_of_production(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"
@@ -599,7 +823,8 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertEqual(code, 0, error)
             self.assertIsInstance(report, dict)
             assert report is not None
-            self.assertEqual(report["coverage_status"], "missing-dispatch")
+            self.assertEqual(report["coverage_status"], "case-projection")
+            self.assertFalse(report["scope_complete"])
             self.assertEqual(report["recommendations"], [])
             self.assertNotIn("rounds", report)
             self.assertNotIn("attacks", report)

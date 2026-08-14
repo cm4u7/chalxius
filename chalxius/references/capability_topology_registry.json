@@ -119,11 +119,25 @@
       ],
       "tests": [
         "tests/test_v5_lifecycle.py",
+        "tests/test_selective_fact_checkpoint.py",
+        "tests/test_independent_adverse_normal_flow.py",
         "tests/test_bttf_field_repairs.py",
         "tests/test_research_draft_admission.py",
         "tests/test_neutral_review_submission.py"
       ],
       "activation_paths": [
+        {
+          "kind": "cli",
+          "command": "mgraph:selective-fact-checkpoint"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-candidate-adverse"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:prepare-candidate-adverse-target"
+        },
         {
           "kind": "cli",
           "command": "mgraph:candidate-release"
@@ -1823,6 +1837,27 @@
       ]
     },
     "mgraph:candidate-release-check": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:selective-fact-checkpoint": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:plan-candidate-adverse": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:prepare-candidate-adverse-target": {
       "capability_id": "cap.fact_certification",
       "status": "canonical",
       "authority_effects": [

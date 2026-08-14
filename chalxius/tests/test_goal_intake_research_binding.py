@@ -6,6 +6,7 @@ from io import StringIO
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from mathgraph.brave_future import BF_GOAL_INTAKE_REVISION
 from mathgraph.cli import main as cli_main
@@ -67,7 +68,12 @@ class GoalIntakeResearchBindingTests(unittest.TestCase):
             self.assertEqual(list(store.rounds_dir.iterdir()), [])
 
             repeated_out, repeated_err = StringIO(), StringIO()
-            with redirect_stdout(repeated_out), redirect_stderr(repeated_err):
+            with patch(
+                "mathgraph.v5_lifecycle.V5LifecycleManager.research_records",
+                side_effect=AssertionError(
+                    "goal reuse must not rebuild the complete Research collection"
+                ),
+            ), redirect_stdout(repeated_out), redirect_stderr(repeated_err):
                 repeated_code = cli_main(
                     [
                         "--root",

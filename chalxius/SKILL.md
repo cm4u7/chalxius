@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.7.4 — Bounded Main Routing
+# Chalxius 0.7.15 — Research Obligation Closure
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -17,11 +17,14 @@ Read this complete router first. Then select exactly one startup path:
    [references/v5_production_worker_bootstrap.md](references/v5_production_worker_bootstrap.md).
 2. A current task card with `research_cycle.subround="supervision"` uses
    [references/v5_supervisor_worker_bootstrap.md](references/v5_supervisor_worker_bootstrap.md).
-3. An explicitly requested, bounded edit of an existing Chalxius Learner
+3. A current whole-Candidate refute card with no `research_cycle` and literal
+   `independent_adverse_required=true` uses
+   [references/v5_candidate_adverse_worker_bootstrap.md](references/v5_candidate_adverse_worker_bootstrap.md).
+4. An explicitly requested, bounded edit of an existing Chalxius Learner
    teaching Markdown uses
    [references/learner_document_edit_bootstrap.md](references/learner_document_edit_bootstrap.md)
    only when every selector condition in that file holds.
-4. Every other Main, Operator, legacy, malformed, uncertain, or escalated task
+5. Every other Main, Operator, legacy, malformed, uncertain, or escalated task
    uses the ordinary path: read
    [references/unified_architecture.md](references/unified_architecture.md),
    [references/reasoning_modes.md](references/reasoning_modes.md),
@@ -82,6 +85,33 @@ frozen mathematical-state view, and bounded narrative. The card is the
 immutable capability boundary. Current task-referenced authority overrides
 conflicting background prose. Historical artifacts remain readable and are
 repaired copy-on-write, never rewritten.
+
+## Selective Fact-admission checkpoint
+
+Before expensive Candidate construction, Main may run
+`selective-fact-checkpoint --input FILE` over at most sixteen explicitly named
+Research targets. The checkpoint fully validates each selected Research record
+and its direct readiness requirements, uses structural envelopes only for
+unselected graph connectivity, and freezes exact ancestry, downstream reuse,
+known blockers, explicit exclusions, and a content-addressed Candidate batch
+seed. It performs no automatic ranking or selection.
+
+The default batch partition first closes the explicitly selected dependency
+graph. Dependency-connected ready targets remain in one atomic unit, while
+independent ready targets remain singleton failure-isolation units. Main may
+combine independent units only after reviewing their logical dependency and
+failure surfaces. Every resulting Candidate still requires independently
+authored Fact statements or a typed mini-DAG, fresh Candidate adverse review
+when applicable, verifier coverage, Certification, and Gateway admission. The
+checkpoint is nontruth and creates no Candidate, Decision, admission, or Fact.
+
+For a ready target that binds exactly one current `candidate_fact` artifact and
+requires independent adverse review, Main uses
+`plan-candidate-adverse RESEARCH_ID`. The command is separate from constructive
+production and Research supervision, is exact-retry idempotent within one host
+scope, and creates only ordinary nontruth refute work. Candidate disposition,
+fresh verifier review, Certification, Gateway, and Fact admission remain
+mandatory.
 
 ## CHX and PHX
 
@@ -152,6 +182,11 @@ repair caches implicitly.
    fresh Candidate-level adverse gate. Recheck live supervisor results under
    the seal lock, then package once. Iterative repair belongs before expensive
    packaging.
+8. Generic production planning omits only source Research obligations closed by
+   an exact valid, non-aborted production receipt. It retains the worker result,
+   history views, and explicit-ID planning. Main `memory-add` reuses identical
+   unbound semantics across actor labels only when the current CLI role is Main;
+   actor text never grants that authority.
 
 Admitted Fact dependencies are frozen premises, not default counterexample
 targets. Exact contradiction evidence is routed separately for governed
@@ -193,6 +228,35 @@ and dispositions. Send only the frozen verifier capsule to a fresh verifier.
 Certification records one immutable decision; Gateway alone admits accepted
 Facts. Never weaken a missing gate because a mode is fast or a result is
 plausible.
+
+One Candidate command may reuse one ephemeral fully validated inspection
+context across its immutable Research, adverse, and historical-runtime
+projections. The context never persists across commands or mutation boundaries;
+Candidate sealing recomputes live supervision under the final lock. Automatic
+selection may form dependency-closed authoring batches, but it never atomizes
+claims. Each later Fact must expose exactly one semantic conclusion, and any
+multi-Fact batch requires explicit Candidate-DAG closure. A Main-approved batch
+merge still requires the exact dependency and failure-surface checks recorded by
+the selective checkpoint. New `candidate_fact` worker outputs are canonical-Fact
+validated before ingestion; an exact repair specification, when supplied, is
+hash-bound into both repair Research and its task card.
+
+Candidate preflight rejects assurance cardinality, internal-edge, and exact
+statement-interface mismatches from the submitted Candidate bytes before global
+Research replay. This early projection is nonauthoritative: the complete
+assurance validator still reruns after Research, source, artifact, predecessor,
+and adverse closure. Manual or historical Research does not inventory
+supervision rounds unless a selected constructive record actually carries
+production-assignment provenance.
+
+Active-Fact reconstruction uses one two-phase command-local projection. A
+reentrant task-card check may read only locally hash-validated Release,
+admission-marker, and admitted-Fact bytes; the outer frame then performs the
+complete Research, runtime, Decision, successor, and lineage replay and rejects
+any provisional/final drift. Approved-computation replay propagates the same
+inspection context through its design, supervision, receipt, disposition, and
+task-card closure. This is a recursion boundary, not an admission shortcut or a
+persistent authority cache.
 
 Workers report at most three deduplicated, well-supported concrete failure
 families and their success boundaries. They do not author persistent attack

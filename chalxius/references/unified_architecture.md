@@ -186,6 +186,18 @@ Candidate mutation lock and compares it with the preflight set. An intervening
 abort or any result-set drift fails without writing a release. Manual and
 historical single-wave Research retain their existing compatibility path.
 
+Before any global Research replay, Candidate construction also performs a
+nonauthoritative local projection over the submitted Candidate Fact bytes,
+requested assurance granularity, and immutable selected-Research envelopes.
+Cardinality, internal-edge, and exact current-assurance statement-interface
+mismatches fail there because deeper project replay cannot change their answer.
+A valid projection continues into the complete authoritative assurance
+validator after Research, source, artifact, predecessor, and adverse closure.
+Supervision-round inventory is similarly lazy: manual and historical Research
+trigger no scan, while the first selected constructive record with
+production-assignment provenance loads and validates the required supervision
+history exactly as before.
+
 For a first-subround `compute` assignment, the return has exactly the frozen
 core code (`computation_source`), its mathematical design, and its dependency
 manifest; it has no computation output or execution manifest. Formal execution
@@ -226,6 +238,57 @@ exact canonical Candidate Fact hashes. Its disposition and actor binding are
 checked before artifact normalization or source audit; failure is
 `fresh_adverse_missing`. The sealed readiness receipt tells the fresh verifier
 to adjudicate the disposition and creates no second Certification authority.
+
+### Selective admission planning before Candidate construction
+
+Main may freeze one bounded selective Fact-admission checkpoint over an
+explicit Research target set before paying Candidate packaging cost. Selected
+Research and its direct readiness inputs are fully validated; unrelated graph
+records supply structural identity and connectivity envelopes only. The
+content-addressed receipt records ancestry, downstream structural reuse,
+assurance and supervision state, blockers, and explicit exclusions.
+
+The receipt also provides a deterministic Candidate batch seed. It records the
+exact dependency edges among selected targets and forms disjoint connected
+authoring batches. A batch is a packaging and dependency-closure unit, never a
+claim that its contents form one Fact atom. Each later Candidate Fact must
+expose exactly one semantic conclusion; a connected batch may therefore become
+several Facts with explicit internal DAG edges. Independent targets remain
+singleton failure-isolation batches, and a blocked selected premise blocks every
+selected dependent. Main may merge independent batches only after reviewing
+their shared failure surface and preserving exact Candidate-DAG closure. This
+layer never ranks claims, automatically atomizes Research, authors Candidate
+Facts, dispatches review, or changes truth state. Candidate preflight,
+Candidate-level adverse attack, verifier, Certification, and Gateway remain the
+only path to admitted Fact bytes.
+
+The one-conclusion rule is checked cheaply before global Research replay. New
+0.7.13 task cards additionally validate every `candidate_fact` worker artifact
+as exact canonical Fact Markdown before ingestion. Historical returns keep the
+contract of their frozen runtime. A copy-on-write repair may accept an exact
+Main-authored JSON repair specification; its claim, content, rationale, work
+mode, obligations, and stop conditions are normalized and hash-bound into both
+repair Research and the immutable task card so a repair round cannot silently
+fall back to a generic prompt.
+
+Main launches that later whole-Candidate attack through
+`plan-candidate-adverse RESEARCH_ID` only when the target is active, non-stale,
+binds exactly one current `candidate_fact` artifact, and explicitly requires
+independent adverse review. The command is exact-retry idempotent within one
+host scope and does not reopen constructive production or supervision.
+
+For exact canonical Fact bytes returned by constructive production, Main may
+derive that target with
+`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. The command requires
+the unique live completed Research-supervision result and adds no mathematical
+claim. Its refute card uses the dedicated Candidate-adverse compact bootstrap.
+
+Current supervision cards additionally freeze one content-addressed projection
+of each attacked production card's active Fact premises, exact task-card bytes,
+and input/source capabilities. This is capability closure for the review, not a
+new authority snapshot or truth state. Unselected Research ancestry remains a
+hash-checked structural connectivity input; only selected authority-bearing
+records are fully replayed.
 
 ## Three communication planes and immutable task cards
 
@@ -342,11 +405,25 @@ bytes first, then successor-contract replay against an explicit snapshot with
 the release's own Facts removed. Each release replays only Facts admitted before
 its own `created_at`; a later repaired Fact can never turn an older rejected
 release into a retroactive successor. Before the marker, a read-only historical
-simulation replays all sealed releases under this cutoff. No release validation
-calls the active-Fact projection recursively. Every projection is fully planned
-and collision-checked before the marker; after the marker, acceptance-event and statement-interface
-materialization is exact and idempotent, so an interrupted admission is resumed
-with the same decision and gateway rather than manually patched.
+simulation replays all sealed releases under this cutoff. If a frozen task-card
+authority check reenters active-Fact reconstruction, the nested frame validates
+only command-local Release, marker, and Fact bytes. The outer frame still
+performs complete Research, historical-runtime, Decision, successor, and
+lineage replay and requires exact agreement with that provisional projection.
+Approved-computation replay carries the same inspection context through design,
+supervision, receipt, disposition, and nested task-card checks. Every admission
+projection is fully planned and collision-checked before the marker; after the
+marker, acceptance-event and statement-interface materialization is exact and
+idempotent, so an interrupted admission resumes with the same decision and
+gateway rather than being manually patched.
+
+The admission command may share one ephemeral complete inspection context
+among its immutable pre-lock Release, Decision, capsule, Candidate, predecessor,
+and active-Fact readers. That context is discarded before publication. After
+the mutation lock is acquired, the command creates a distinct fresh context and
+shares it only across lock-held historical-release and lineage replay. No
+authority cache crosses the liveness boundary, and the marker remains the sole
+all-or-none visibility switch.
 
 Cross-project reuse is never automatic. Operator may run
 `fact-graph-inventory --source-root OLD` to inspect active interfaces and exact

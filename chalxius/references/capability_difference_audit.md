@@ -33,6 +33,82 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.7.15 research-obligation-closure difference
+
+Version 0.7.15 closes two duplicate-work mechanisms without adding a Research
+state or persistent index. The generic production frontier derives completed
+source obligations only from exact valid receipts in non-aborted production
+rounds; it does not hide the receipt-produced Research, change history, or
+disable exact-ID continuation. The final plan-round mutation lock rederives
+that small selected set with a fresh inspection, preventing a completion race
+from publishing redundant work.
+
+Separately, the public Main `memory-add` caller requests idempotent reuse of
+complete unbound Research semantics excluding actor. The role is the authority:
+operator calls and ordinary direct writes remain actor-sensitive, and task or
+assignment provenance excludes reuse. Existing records keep their original
+actor-inclusive identities and are never rewritten. Both mechanisms remain in
+the nontruth Research plane and leave Candidate, adverse, verifier,
+Certification, Gateway, and Fact contracts unchanged.
+
+The repair follows PHX route
+`run-20260809T131409541618Z-e6ec115394d1/PHX-002` under consultation
+`consultation-62a703ac5ffb398ee39b5b66b90d003775812ce0fa951a42e42dd659641af303`.
+The route and consultation are nontruth design provenance only.
+
+The private field observations remain source evidence in
+`run-20260813T182913219213Z-39649c18119c`; they are not published as a parallel
+`CHX-001/CHX-002` numbering domain. Continuous public successor
+`run-20260813T234901055084Z-22649ebe6545` inherits the release lineage through
+`CHX-031` and publication-resolves these mechanisms as `CHX-032` and
+`CHX-033`. This disclosure mapping has no truth or project effect.
+
+Final matrix successor `run-20260814T001848013126Z-a494126a5017/CHX-034`
+strengthens the existing mutation-registry regression after a whole-call
+preflight deletion survived its mocked witness. It adds no production code,
+release lane, persistent state, or authority; the exact unmodified preflight
+still validates 148 single-target mutants before expensive test subprocesses.
+
+Successor `run-20260814T004319766703Z-fdfc7f3fd6e2/CHX-035` extends that
+failure-informed witness to the exact mutated branch and return value. The
+frontier boundary regression now verifies every ordered prefix and the endpoint
+of the include-history slice, killing the off-by-one mutant without changing
+the frontier implementation, mutation registry, release lanes, or any runtime
+or truth authority.
+
+## 0.7.14 bounded-handoff difference
+
+Version 0.7.14 groups six reproduced costs into four shared mechanisms. Main
+now prepares the exact supervised Candidate-adverse target through one public
+command; Candidate refute has its own compact startup; read-heavy frontier,
+logical-component, and Certification paths reuse only ephemeral command-local
+inspection; and supervisor/repair cards retain the exact premise/source
+capability closure of the work they review.
+
+The change is intentionally bounded. Structural Research envelopes supply only
+identity and connectivity; every selected or authority-bearing record receives
+full validation. Certification still performs a distinct fresh seal-lock
+recheck. Current supervisor closures are content-addressed and historical cards
+are not reinterpreted. There is no persistent cache, scheduler, background
+worker, automatic Fact selection, new truth state, or skipped Candidate,
+verifier, Certification, Gateway, or Fact gate.
+
+This integrated repair follows PHX route
+`run-20260809T131409541618Z-e6ec115394d1/PHX-001` under consultation
+`consultation-a3a4a29c91d6a6afb72824ac0822f610f7a0483e432ff31a2ebf0b9e53746665`.
+The PHX binding is design provenance only; reproduced CHX runs and release
+validation remain nontruth evidence.
+
+## 0.7.13 admission-frontload difference
+
+Version 0.7.13 adds no second verifier or Fact authority. It repairs an
+efficiency and correctness seam before those gates: dependency-connected
+Research selections are authoring batches rather than inferred Fact atoms;
+prospective Facts must expose one semantic conclusion; new `candidate_fact`
+worker bytes must already be canonical; and an exact Main repair specification
+is carried unchanged through repair Research into the task card. Older frozen
+returns remain replayable, so the prospective gate does not rewrite history.
+
 The embedded learning algorithm is copied from Grill Me 0.2.0 only because its
 static hash-bound overlay is the desired teaching data structure. Its academic
 workflow, CLI, and docs are now the opt-in Chalxius nontruth learning plane,
@@ -581,6 +657,114 @@ parallel, while the snapshot-sensitive audit is barriered afterward. Its single
 receipt fails closed on incomplete results, mixed identities, shared roots,
 timeouts, nonzero exits, or any drift. The mechanism is domain-neutral release
 infrastructure and does not depend on philosophical content.
+
+## 0.7.12 Admission inspection reuse difference
+
+Version 0.7.12 adds no mathematical or truth-bearing capability. Fact
+admission shares one complete ephemeral inspection context before the
+publication lock, then discards it and creates a distinct fresh context under
+the lock for historical-release and active-lineage replay. This removes
+duplicate reconstruction inside each phase without carrying authority across
+the final liveness boundary. The atomic acceptance marker, exact Candidate and
+Decision bindings, successor validation, historical snapshots, projection
+materialization, and full Fact audit remain unchanged and fail closed.
+
+## 0.7.11 Candidate inspection reuse difference
+
+Version 0.7.11 adds no mathematical or truth-bearing capability. Candidate
+preparation, predecessor-interface lookup, successor validation, and active-Fact
+hashing now share the command's existing ephemeral inspection context. One
+Candidate command therefore performs one complete top-level active-Fact
+reconstruction instead of reopening the same immutable authority projection at
+each internal reader. Historical admission-time slices, successor-contract
+detection, selected predecessor bytes, seal-time liveness, verifier,
+Certification, Gateway, and Fact admission remain exact. There is no persistent
+cache, index, skipped gate, or alternate authority.
+
+## 0.7.10 abort-aware adverse retry difference
+
+Version 0.7.10 adds no mathematical or truth-bearing capability. It changes
+only exact Candidate-adverse retry recovery: a validated immutable abort is
+checked before the obsolete round and task card are reconstructed. Active
+cards remain bound to the current runtime, completed cards remain bound to the
+sealed historical archive, and full project audit retains aborted-byte checks.
+The repair neither changes selective target choice nor weakens dependency-
+closed atomization.
+
+## 0.7.9 reentrant admission closure difference
+
+Version 0.7.9 adds no mathematical or truth-bearing capability. It extends the
+early Candidate rejection-only projection from cardinality and internal edges
+to exact current-assurance statement interfaces, so a missing premise anchor
+fails before global Research replay while language-neutral typed interfaces
+continue normally.
+
+The active-Fact reader now uses one explicit two-phase command-local boundary.
+A reentrant task-card authority check consumes a locally hash-validated view of
+Release, acceptance marker, and admitted Fact bytes; the outer validation still
+replays the complete Research, historical runtime, Decision, successor, and
+lineage closure and rejects any mismatch. Approved-computation validation
+threads the same inspection context through its nested design and supervision
+authority. There is no persistent cache, recursion-limit change, skipped outer
+validator, new state, or alternate admission path.
+
+## 0.7.8 early Candidate gate difference
+
+Version 0.7.8 adds no mathematical capability and removes no assurance gate.
+It moves only Candidate-local cardinality and internal-edge predicates ahead of
+global Research replay, where they can be decided from submitted Candidate
+bytes alone. The projection is nonauthoritative: valid inputs still reach the
+complete assurance, source, artifact, predecessor, adverse, supervision, seal,
+verifier, Certification, Gateway, and Fact checks.
+
+The same repair makes supervision history demand-driven. Manual and historical
+Research return without inventorying every supervision round; production-derived
+Research loads the identical validated history once its assignment provenance
+is established. The implementation adds no cache, index, watcher, scheduler,
+truth state, or alternate admission route.
+
+## 0.7.7 Candidate admission efficiency difference
+
+Version 0.7.7 adds no mathematical or truth-bearing capability. It exposes one
+Main-only exact Candidate adverse planner, reuses one transient fully validated
+inspection context inside a Candidate command, and strengthens automatic
+atomization to dependency-closed selected components. Independent targets stay
+singleton units; selected dependency edges are immutable seed data; blocked
+selected premises block selected dependents. All Candidate, adverse, source,
+verifier, Certification, Gateway, and Fact gates remain exact, and seal-time
+supervision is recomputed without the preflight context. There is no persistent
+cache, score, scheduler, watcher, or second authority.
+
+## 0.7.6 selective admission checkpoint difference
+
+Version 0.7.6 adds no mathematical or truth-bearing capability. It introduces
+one Main-only pre-Candidate projection over an explicit bounded Research set.
+The projection fully checks selected records and their readiness inputs, uses
+structural envelopes only for unrelated graph connectivity, and freezes a
+content-addressed rationale plus Candidate batch seed. Default singleton units
+localize later review failure; Main may combine them. There is no centrality
+score, automatic claim selection, Candidate authoring, review dispatch, or Fact
+effect. Candidate, adverse, verifier, Certification, and Gateway contracts are
+unchanged.
+
+The implementation reuses existing V5 Research validation, supervision
+selection, structural-envelope, lock, and immutable-record mechanisms. It adds
+one governance collection and one command rather than a scheduler, index,
+cache, watcher, or second admission route. Approved PHX selective-assurance and
+work-elimination routes justify the bounded projection; PHX gains no authority.
+
+## 0.7.5 bounded projections difference
+
+Version 0.7.5 changes administrative scope, not mathematical capability. Exact
+selected Research and direct authority inputs remain fully validated, while
+unconsumed ancestry is reduced to content-addressed structural envelopes for
+identity and connectivity. Ordinary goal intake and advisory Fact snapshots use
+direct active projections; complete Research and Fact Evidence reconstruction
+remain explicit. Concise attack reporting is labeled an incomplete case
+projection, and round construction becomes visible only after one atomic rename.
+Compact worker contracts add a monotone completion checkpoint without adding a
+watcher, scheduler, cache, or lifecycle state. The iteration is for protected
+local installation only and does not authorize remote publication.
 
 ## 0.7.4 bounded Main routing difference
 

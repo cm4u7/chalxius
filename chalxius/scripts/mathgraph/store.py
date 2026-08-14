@@ -4584,7 +4584,7 @@ class MathGraphStore:
         experiments = self.experiments()
         audited_governance: set[str] = set()
         for task_card_path in sorted(
-            self.rounds_dir.glob("*/task-cards/*.json")
+            self.rounds_dir.glob("round-*/task-cards/*.json")
         ):
             try:
                 task_card = self._read_json(task_card_path)

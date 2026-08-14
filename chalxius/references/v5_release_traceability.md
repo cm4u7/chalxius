@@ -1,4 +1,288 @@
-# Chalxius V5 traceability through 0.7.4 Bounded Main Routing
+# Chalxius V5 traceability through 0.7.15 Research Obligation Closure
+
+## 0.7.15 research-obligation-closure release overlay
+
+- Candidate version: `0.7.15`; release name **Research Obligation Closure**.
+  The candidate is authorized for protected global installation and
+  GitHub source, tag, and Release publication. Pull-request merge, system
+  restart/update, Candidate construction, and Fact admission remain excluded.
+- A valid ingestion receipt in a live production round closes only its source
+  Research obligation for the default generic frontier. Pending, quarantined,
+  invalid, missing, or aborted work closes nothing; the worker result remains
+  visible, and history plus explicit-ID planning are unchanged.
+- Generic production planning repeats the selected-obligation check with a
+  fresh inspection under the mutation lock so a receipt completed after
+  selection cannot produce a duplicate public round.
+- Main-role `memory-add` reuses one existing unbound record only when every
+  normalized semantic field except actor is identical. Task- and assignment-
+  bound Research remains distinct, ordinary/operator writes remain actor-
+  sensitive, and actor text never grants Main authority.
+- The mechanism adds no persistent cache, watcher, scheduler, lifecycle state,
+  automatic Research successor, Candidate, verifier, Certification, Gateway,
+  or Fact authority.
+- Field run `run-20260813T182913219213Z-39649c18119c` first froze the two
+  mechanisms as task-local `CHX-001` and `CHX-002`; its closed ledger SHA-256 is
+  `d1b604cb04a10de17da837a3e4de3a97098ca1ff6df5d8cc3e1f7ea99563da44`
+  and its deterministic report SHA-256 is
+  `b67edb6da0bf2b0d9ae605b89b6fdf1e3f1ce328c415e841e2fb0cdeb88bdd7e`.
+  These private identifiers are source evidence, not a publishable parallel
+  issue lineage.
+- Public successor `run-20260813T234901055084Z-22649ebe6545` inherits the
+  continuous release lineage through `CHX-031` and resolves `CHX-032` plus
+  `CHX-033`. Its closed ledger SHA-256 is
+  `ed479d3343e3f4a5722d36e052fe5354cb507d83517741d0c0a1d41368bec104`
+  and its deterministic report SHA-256 is
+  `5645e456c51744a17a51bd03f5b9bd7193a29332b34082b65da7a1997fa309e8`.
+  Both ledgers and reports have `truth_effect=none`, remain outside the public
+  package, and grant no Research, Candidate, Certification, Gateway, or Fact
+  authority.
+- Final release validation exposed continuous successor
+  `run-20260814T001848013126Z-a494126a5017/CHX-034`: one whole-call deletion
+  mutant survived because the focused regression mocked the deleted preflight
+  rather than witnessing its real invocation. The repair strengthens only that
+  existing regression. The closed ledger SHA-256 is
+  `1220b6b2bf226af4e0dc8c1811944bfb8f399f332a87905398d8717ceb3277a4`;
+  the deterministic report SHA-256 is
+  `2dc72e14bd865edbd29ea351d583bb2fde8b363d90d4900d10f2ad0b93c269bf`.
+  The release lane set, phase order, registry size, runtime behavior, and truth
+  path remain unchanged.
+- The next complete campaign exposed continuous successor
+  `run-20260814T004319766703Z-fdfc7f3fd6e2/CHX-035`: the registered
+  `frontier_limit_minus_one` mutant changed the include-history slice, while
+  its named regression exercised only the ordinary active-frontier branch. The
+  repair adds exact ordered-prefix and endpoint assertions on the mutated
+  branch and changes no production code. The closed ledger SHA-256 is
+  `4eb2660eee4bc089d0bd50fd7f871ad48a2141ce1c0d587fb3e50625eebbf8af`;
+  the deterministic report SHA-256 is
+  `36b515222031f191f79607ccbc09f60927c90279cc3d7daf544b51646fce198e`.
+  The repaired candidate passed all 889 tests and killed all 148 registered
+  mutants with unchanged candidate bytes before final matrix freeze.
+
+## 0.7.14 bounded-handoff local-install overlay
+
+- Candidate version: `0.7.14`; local name **Bounded Handoff**. Global local
+  installation is authorized. Remote push, pull request, merge, tag, and
+  release remain outside scope.
+- Main-only `prepare-candidate-adverse-target` derives one exact nontruth attack
+  target from a canonical `candidate_fact` production result and its unique
+  live completed supervision result. It does not atomize, package, verify,
+  certify, or admit the Fact.
+- Candidate-adverse refute cards use a dedicated compact bootstrap. They no
+  longer fall through to the production bootstrap or broad ordinary preload.
+- Current supervisor cards project the attacked production cards' active Fact
+  premises, exact task-card bytes, and source/input capabilities through one
+  content-addressed closure. Historical cards retain their frozen contract.
+- Frontier and logical-component construction use hash-checked structural
+  Research envelopes for unselected records, then fully validate only selected
+  authority-bearing outputs. Certification shares one complete command-local
+  context before its narrow publication lock and one distinct fresh context
+  under that lock; the CLI no longer holds a redundant outer lock.
+- Repairs preserve exact source artifact capabilities from the challenged
+  Research. There is no persistent cache, background scheduler, second truth
+  path, weakened seal-lock recheck, or automatic Fact selection. This overlay
+  is installed locally and is not a remote release.
+
+## 0.7.13 admission-frontload local-install overlay
+
+- Candidate version: `0.7.13`; local name **Admission Frontload**.
+- The selective checkpoint now labels connected units as dependency-closed
+  authoring batches, not Fact atoms. It explicitly requires exactly one semantic
+  conclusion per later Fact and exact internal Candidate-DAG closure.
+- Prospective Candidate preflight rejects a non-atomic Fact before global
+  Research replay and expensive packaging. A typed premise plus one typed
+  conclusion remains a valid atom; an untyped multi-`[CLAIM:*]` statement does
+  not.
+- New 0.7.13 `candidate_fact` worker artifacts must be exact canonical Fact
+  Markdown at return preflight. Historical frozen returns retain their original
+  runtime contract and remain readable nontruth lineage.
+- `plan-repair-round --input` accepts one exact bounded repair specification and
+  hash-binds it through repair Research into the immutable task card, preventing
+  generic repair prompts from losing Main's split and boundary instructions.
+- These are work-elimination and instruction-integrity gates. Candidate adverse,
+  fresh verifier, Certification, Gateway, admission marker, and Fact authority
+  are unchanged. This overlay is installed locally and is not a remote release.
+
+## 0.7.12 admission-inspection-reuse local-install overlay
+
+- Candidate version: `0.7.12`; local name **Admission Inspection Reuse**.
+  Global local installation is authorized. Remote push, pull request, merge,
+  tag, and release remain outside scope.
+- Project run `run-20260813T034008229822Z-e2e4385472f3` owns CHX-011 and
+  extends the command-local reuse mechanism repaired for Candidate preflight.
+- Fact admission now shares one complete ephemeral inspection context across
+  its pre-lock Release, Decision, capsule, Candidate, predecessor, and active-
+  Fact readers. After acquiring the publication lock it creates a separate
+  fresh context and shares that only across the lock-held historical-release
+  and admission-lineage replay.
+- No authority cache crosses the lock. The atomic acceptance marker, exact
+  release and decision bytes, successor contracts, historical snapshots,
+  projection materialization, and all Fact validation remain fail closed.
+
+## 0.7.11 candidate-inspection-reuse local-install overlay
+
+- Candidate version: `0.7.11`; local name **Candidate Inspection Reuse**.
+  Global local installation is authorized. Remote push, pull request, merge,
+  tag, and release remain outside scope.
+- Project run `run-20260813T002626355371Z-2584e6da6c32` owns CHX-010 and
+  inherits the resolved selective-admission and active-Fact lineage repairs.
+- Candidate preparation, active-Fact collision and predecessor checks,
+  predecessor interfaces, successor detection, and active-Fact hashing share
+  one ephemeral inspection context. The exact top-level active projection is
+  reconstructed once per Candidate command.
+- Historical admission-time slices, active Fact bytes, successor contracts,
+  final seal-time liveness, verifier, Certification, Gateway, and Fact admission
+  remain fail closed. No persistent cache, index, new truth state, or automatic
+  Candidate authoring is added.
+
+## 0.7.10 abort-aware-adverse-retry local-install overlay
+
+- Candidate version: `0.7.10`; local name **Abort-Aware Adverse Retry**.
+  Global local installation is authorized. Remote push, pull request, merge,
+  tag, and release remain outside scope.
+- Project run `run-20260812T232944429816Z-e3c8a9130f6f` owns CHX-009 and
+  inherits CHX-005 dependency-closed atomization plus the resolved 0.7.9
+  Candidate and active-Fact repairs.
+- Candidate-adverse exact-retry matching validates an immutable abort authority
+  before reconstructing the old round or task card. Aborted work cannot reserve
+  retry ownership and cannot be mistaken for a current-runtime active card.
+- Active cards still require the current installed runtime. Completed cards
+  still require their sealed historical archive. Full project audit retains
+  independent frozen-byte validation for aborted rounds.
+- No automatic mathematical ranking, new truth state, skipped active-card
+  validation, Candidate, Certification, Gateway, or Fact authority is added.
+
+## 0.7.9 reentrant-admission-closure local-install overlay
+
+- Candidate version: `0.7.9`; local name **Reentrant Admission Closure**.
+  Global local installation is authorized. Remote push, pull request, merge,
+  tag, and release remain outside scope.
+- Project run `run-20260812T200026180866Z-ccb9d355783f` owns CHX-007 and
+  CHX-008 and inherits the resolved selective-admission lineage through
+  CHX-005 and the 0.7.8 CHX-006 repair.
+- Candidate Release now rejects an exact current-assurance statement-interface
+  defect from submitted Fact bytes and immutable selected Research envelopes
+  before global Research replay. This remains rejection-only; every surviving
+  Candidate still reaches complete authoritative validation.
+- Active-Fact reconstruction now has an explicit command-local two-phase
+  boundary. A reentrant frame validates only local Release, acceptance-marker,
+  and admitted-Fact identities and bytes. The outer frame retains complete
+  Research, historical-runtime, Decision, successor, and lineage validation,
+  then requires exact equality with the provisional projection.
+- Approved-computation replay propagates that same inspection context through
+  design, supervision, receipt, disposition, and nested task-card checks. A
+  real protected-project probe reconstructs 77 active Facts without recursive
+  failure, and focused tests reject provisional/full drift.
+- No persistent cache, recursion-limit change, validator bypass, automatic
+  Fact selection, alternate admission authority, or remote publication is
+  introduced. The truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
+
+## 0.7.8 early-candidate-gates local-install overlay
+
+- Candidate version: `0.7.8`; local name **Early Candidate Gates**. Global
+  local installation is authorized. Remote push, pull request, merge, tag, and
+  release remain outside scope.
+- Project run `run-20260812T200026180866Z-ccb9d355783f` owns CHX-006 and
+  inherits the resolved selective-admission lineage through CHX-005.
+- Candidate Release derives canonical Fact identities, cardinality, and
+  internal Candidate edges from the submitted bytes before global Research
+  replay. An impossible assurance shape fails at this local boundary.
+- The early projection is deliberately nonauthoritative. Valid inputs still
+  pass the complete assurance validator after exact Research, source, artifact,
+  predecessor, adverse, and supervision closure; the seal lock still performs
+  its fresh liveness checks.
+- Manual and historical Research do not inventory supervision rounds. The
+  inventory is loaded only after a selected constructive Research record proves
+  production-assignment provenance, and production-derived Research retains
+  the same complete supervision requirement.
+- Focused regressions cover early singleton/DAG mismatch rejection, valid-input
+  continuation into authoritative Research validation, lazy supervision
+  inventory, and preservation of linked adverse closure. The truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
+
+## 0.7.7 candidate-admission-efficiency local-install overlay
+
+- Candidate version: `0.7.7`; local name **Candidate Admission Efficiency**.
+  Global local installation is authorized. Remote push, pull request, merge,
+  tag, and release are outside scope.
+- Project run `run-20260812T175055302224Z-943735ad5337` owns CHX-003 through
+  CHX-005 and inherits resolved checkpoint CHX-002 from
+  `run-20260812T164021036787Z-e3fa69b57a73`.
+- Main-only `plan-candidate-adverse` validates one active non-stale target, one
+  exact `candidate_fact` artifact, the adverse marker, host scope, and exact
+  retry identity before using the existing immutable refute-round materializer.
+- Candidate Release validates each immutable Research and historical runtime
+  identity once inside one command-local context. The context is discarded at
+  exit; sealing recomputes supervision under the final mutation lock.
+- Candidate batch seed revision 2 records exact selected dependency edges,
+  forms deterministic disjoint dependency-connected components, retains
+  singleton failure isolation for independent targets, and blocks selected
+  dependents of a blocked selected premise. Overlap or incomplete structural
+  ancestry remains fail-closed.
+- The truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
+  No score, scheduler, persistent cache, watcher, automatic ranking,
+  Candidate authoring, verifier substitution, or second admission authority is
+  introduced.
+
+## 0.7.6 selective-admission-checkpoints local-install overlay
+
+- Candidate version: `0.7.6`; local name **Selective Admission Checkpoints**.
+  This iteration is authorized for global local installation only. Remote push,
+  pull request, merge, tag, and release are outside scope.
+- CHX successor `run-20260812T164021036787Z-e3fa69b57a73` owns CHX-002 and
+  supersedes predecessor `run-20260812T134234791817Z-ae0fd96bef2e/CHX-001`.
+  The repair adds one Main-only, content-addressed
+  `selective-fact-checkpoint` command before Candidate construction.
+- A checkpoint accepts at most sixteen explicitly named Research targets and
+  thirty-two exclusions. It fully validates selected Research and current
+  readiness inputs, uses structural envelopes only for unrelated graph
+  connectivity, and records exact ancestry, downstream reuse, assurance,
+  supervision, blockers, and rationale. It never ranks or selects mathematics
+  automatically.
+- Every checkpoint carries a deterministic Candidate batch seed. Singleton
+  units are the default so one failed adverse or verifier result does not force
+  unrelated repackaging; Main alone may merge units after reviewing dependency
+  and failure surfaces.
+- The checkpoint creates no Candidate Fact text, proof, adverse disposition,
+  verifier decision, Certification, Gateway admission, or Fact. The invariant
+  truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
+- The efficiency mechanism reuses approved PHX selective-assurance and
+  work-elimination routes. It adds no score, watcher, cache, scheduler,
+  background worker, or second lifecycle owner.
+
+## 0.7.5 bounded-projections local-install overlay
+
+- Candidate version: `0.7.5`; local name **Bounded Projections**. This iteration
+  is installed locally but is not published. Remote push, pull request, merge,
+  tag, and release remain outside the authorized scope.
+- The immutable measured predecessors are
+  `run-20260812T082458508253Z-50fef06fdcab` owning CHX-023,
+  `run-20260812T084555825183Z-c0da7ae56f95` owning CHX-024, and
+  `run-20260812T085042959321Z-48034fc56b06` owning CHX-025. The resolved
+  successor is `run-20260812T110223791595Z-71cc17e3531b`, owning CHX-026,
+  CHX-027, CHX-028, CHX-029, and CHX-030. The strict-scan successor
+  `run-20260812T130915592717Z-6300da6b4bad` owns CHX-031. These issues are
+  local-install-resolved and preserve every immutable predecessor.
+- CHX-026 supersedes CHX-023 with exact content-addressed goal-root selection;
+  CHX-027 supersedes CHX-024 with fully checked selected authority, structural
+  ancestry envelopes, private staged round construction, and atomic publication;
+  CHX-028 supersedes CHX-025 with a bounded host-scoped case projection whose
+  incomplete coverage is explicit. CHX-029 extends CHX-022 through canonical
+  return closure, and CHX-030 extends CHX-026 with a direct active-Fact advisory
+  snapshot while retaining the explicit recursive Fact Evidence audit.
+- CHX-031 makes the behavior registry follow the actual private implementation
+  caller introduced by atomic wrapping. It changes two topology declarations,
+  not executable behavior, and restores strict behavioral-closure validation.
+- Structural envelopes establish identity and connectivity only. Exact selected
+  Research, direct authority inputs, active Fact bytes, mutation-sensitive
+  liveness, and final task cards remain fully validated. The complete forensic
+  paths remain explicit and fail closed.
+- No persistent index, background cache, watcher, scheduler, new lifecycle
+  state, mathematical authority, or automatic PHX adoption is introduced. The
+  invariant truth path remains
+  `Research -> Candidate Release -> Certification Decision -> Fact`.
 
 ## 0.7.4 bounded-main-routing overlay
 

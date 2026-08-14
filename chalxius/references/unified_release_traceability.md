@@ -6,7 +6,132 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
-## Current 0.7.4 overlay
+## Current 0.7.15 overlay
+
+Chalxius 0.7.15 **Research Obligation Closure** preserves the complete 0.7.14
+truth path. The default generic production frontier omits only the source
+Research of an exact valid, non-aborted ingestion receipt, while keeping the
+worker result, history projection, and explicit-ID continuation. A fresh
+lock-held check rejects receipt races before round publication. Main-role
+`memory-add` reuses complete identical unbound semantics across actor labels;
+actor text does not grant authority and worker/task-bound writes remain
+distinct. No persistent state, automatic Candidate work, or truth authority is
+introduced. Release-only regressions now witness both whole-call deletion and
+the exact ordered-prefix boundary of the mutated frontier branch; these test
+repairs add no normal-runtime hook or release lane.
+
+## 0.7.14 overlay
+
+Chalxius 0.7.14 **Bounded Handoff** preserves the complete 0.7.13 truth path.
+Main can derive one exact supervised Candidate-adverse target through a public
+command; Candidate refute uses a dedicated compact bootstrap; read-heavy
+frontier, logical-component, repair, and Certification paths reuse bounded
+command-local projections; and prospective supervision cards retain the
+attacked production card's exact Fact and source/input capability closure.
+Selected and authority-bearing objects still receive full validation,
+Certification still performs a distinct fresh lock-held recheck, and historical
+cards remain byte-exact. No persistent cache, automatic Fact selection, truth
+state, or remote publication is introduced.
+
+## 0.7.13 overlay
+
+Chalxius 0.7.13 **Admission Frontload** preserves the complete 0.7.12 truth
+path while moving semantic Fact atomicity before global Research replay and
+packaging. Selective checkpoint components are now authoring batches rather
+than implicit atoms; each later Fact carries one semantic conclusion and a
+multi-Fact batch carries exact internal DAG edges. New 0.7.13 `candidate_fact`
+returns must be canonical Fact Markdown, and exact Main repair specifications
+are hash-bound through Research into task cards. Historical task cards keep
+their frozen contracts. This is a local installation, not a remote publication.
+
+## 0.7.12 overlay
+
+Chalxius 0.7.12 **Admission Inspection Reuse** preserves the complete 0.7.11
+truth path. Fact admission uses one ephemeral inspection context before the
+publication lock and a distinct fresh context under the lock, eliminating
+duplicate immutable authority reconstruction without carrying cached authority
+across the liveness boundary. The atomic marker, historical lineage replay,
+verifier, Certification, Gateway, and Fact contracts remain exact. This is a
+local installation, not a remote publication.
+
+## 0.7.11 overlay
+
+Chalxius 0.7.11 **Candidate Inspection Reuse** preserves the complete 0.7.10
+truth path. Candidate preparation, predecessor-interface lookup, successor
+validation, and active-Fact hashing use one ephemeral command-local inspection
+context, eliminating repeated reconstruction of the same active authority.
+Historical admission-time slices and every adverse, verifier, Certification,
+Gateway, and Fact boundary remain exact. No persistent cache or remote
+publication is introduced.
+
+## 0.7.10 overlay
+
+Chalxius 0.7.10 **Abort-Aware Adverse Retry** preserves the complete 0.7.9
+truth path. A validated aborted Candidate-adverse work unit is excluded from
+exact-retry ownership before old round or task-card reconstruction, so a local
+runtime cutover cannot misclassify its frozen card as active. Active cards keep
+current-runtime validation, completed cards keep historical archive validation,
+and full project audit still covers aborted bytes. This is a local installation,
+not a remote publication.
+
+## 0.7.9 overlay
+
+Chalxius 0.7.9 **Reentrant Admission Closure** preserves the complete 0.7.8
+truth path while moving exact Candidate statement-interface rejection into the
+same early nonauthoritative projection as cardinality and internal-edge checks.
+It also makes active-Fact reconstruction explicitly two-phase: a command-local
+local-byte projection breaks reentry, the outer frame performs the complete
+authority replay, and both projections must agree exactly. Approved-computation
+validation now carries that same inspection context through its full frozen
+closure. This is a local installation, not a remote publication.
+
+## 0.7.8 overlay
+
+Chalxius 0.7.8 **Early Candidate Gates** preserves the 0.7.7 Candidate,
+adverse, verifier, Certification, Gateway, and Fact boundaries while moving
+only Candidate-local assurance-shape rejection before global Research replay.
+The full assurance validator remains authoritative later in the same command.
+Supervision history is loaded lazily only when production provenance makes it
+applicable; manual and historical Research pay no unrelated round inventory.
+This is a local installation, not a remote publication.
+
+## 0.7.7 overlay
+
+Chalxius 0.7.7 **Candidate Admission Efficiency** preserves the complete truth
+path while making the 0.7.6 checkpoint executable through Candidate adverse and
+preflight. Main has one exact Candidate-bound refute planner; Candidate
+preflight shares one ephemeral validated inspection context and repeats live
+supervision under the seal lock. Automatic atomization records selected
+dependency edges and emits disjoint dependency-closed components, with
+singletons elsewhere and blocked selected premises propagated to selected
+dependents. This is a local installation, not a remote publication.
+
+## 0.7.6 overlay
+
+Chalxius 0.7.6 **Selective Admission Checkpoints** preserves every Candidate,
+fresh-adverse, verifier, Certification, Gateway, and Fact gate while adding one
+bounded Main-only readiness receipt before packaging. An explicit set of at
+most sixteen Research targets is checked against exact ancestry, structural
+reuse, current supervision, assurance, and blockers, then projected into a
+deterministic Candidate batch seed. The default partition is one target per
+unit; Main may combine logically inseparable units. The receipt is nontruth,
+performs no automatic ranking, and creates no Candidate or Fact. This is a
+local installation, not a remote publication.
+
+## 0.7.5 overlay
+
+Chalxius 0.7.5 **Bounded Projections** retains the 0.7.4 truth and routing
+boundaries while making ordinary goal intake, explicit round planning, concise
+attack reporting, and advisory Fact snapshots proportional to the exact data
+they consume. Selected authority remains fully validated; structural envelopes
+carry identity and connectivity only; complete forensic reconstruction remains
+explicit. Round bytes are staged privately and published atomically. Compact
+workers also continue monotonically from completed artifacts through preflight,
+canonical validation, and CHX closure. This local iteration is not a remote
+publication and adds no persistent index, cache, watcher, scheduler, lifecycle
+state, or truth authority.
+
+## 0.7.4 overlay
 
 Chalxius 0.7.4 **Bounded Main Routing** preserves every 0.7.3 startup and truth
 gate while separating concrete worker attack evidence from persistent routing.

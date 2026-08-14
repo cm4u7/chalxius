@@ -265,6 +265,231 @@
         "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_fails_before_expensive_work_without_fresh_adverse"
       }
     },
+    "feature.candidate_preflight_work_elimination": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Candidate-local assurance shape and exact current-assurance statement-interface errors fail before global Research replay, and supervision history is loaded only after production provenance is established, without replacing authoritative validation.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._precheck_candidate_statement_interfaces",
+      "activation_predicate": {
+        "predicate_id": "candidate_local_shape_interface_or_production_supervision_lookup_required",
+        "domain": [
+          "locally_valid_shape",
+          "locally_invalid_shape",
+          "locally_invalid_statement_interface",
+          "language_neutral_typed_interface",
+          "production_supervision_required",
+          "manual_or_historical_research"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-candidate-preflight-work-elimination-2",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_requested_assurance"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "observable_effect": {
+        "effect_id": "candidate_local_failure_precedes_global_replay",
+        "kind": "validation_gate",
+        "description": "A locally malformed Candidate or current-assurance statement interface fails from submitted bytes and immutable selected Research envelopes before full Research replay; valid inputs still reach the complete assurance, supervision, source, adverse, seal, verifier, Certification, Gateway, and Fact gates."
+      },
+      "probes": {
+        "positive": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_language_neutral_interface_passes_early_projection",
+        "predicate_false": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_missing_premise_anchor_fails_before_full_research_replay",
+        "tamper": "tests.test_v5_lifecycle.V5LifecycleTests.test_candidate_release_cannot_hide_linked_existing_adverse_work"
+      }
+    },
+    "feature.reentrant_active_fact_validation_projection": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A command-local active-Fact validation reentry consumes only a local immutable projection while the outer frame retains complete authority replay and requires exact agreement.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.active_fact_paths",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._provisional_active_fact_snapshot",
+      "activation_predicate": {
+        "predicate_id": "active_fact_validation_reenters_through_frozen_authority",
+        "domain": [
+          "outer_validation_only",
+          "reentrant_frozen_authority_check",
+          "provisional_full_mismatch"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-provisional-active-fact-projection-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._provisional_active_fact_snapshot"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.active_fact_paths",
+      "observable_effect": {
+        "effect_id": "reentrant_fact_projection_converges_to_full_validation",
+        "kind": "validation_gate",
+        "description": "Nested frozen authority checks terminate without a persistent cache or recursion-limit change, while local Release, marker, and Fact bytes are checked immediately and the outer complete projection must match exactly."
+      },
+      "probes": {
+        "positive": "tests.test_chx_100_active_fact_inspection_context.CHX100ActiveFactInspectionContextTests.test_reentrant_validation_uses_one_provisional_projection",
+        "predicate_false": "tests.test_chx_100_active_fact_inspection_context.CHX100ActiveFactInspectionContextTests.test_store_fact_read_apis_share_one_v5_active_fact_reconstruction",
+        "tamper": "tests.test_chx_100_active_fact_inspection_context.CHX100ActiveFactInspectionContextTests.test_provisional_projection_mismatch_fails_closed"
+      }
+    },
+    "feature.selective_fact_admission_checkpoint": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Main may freeze a bounded explicit load-bearing Research selection and deterministic dependency-closed Candidate authoring batches before expensive Candidate construction, without ranking, atomizing, or truth effect.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.selective_fact_checkpoint",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._selected_dependency_edges",
+      "activation_predicate": {
+        "predicate_id": "main_requests_selective_fact_admission_checkpoint",
+        "domain": [
+          "explicit_targets_ready",
+          "explicit_targets_blocked",
+          "invalid_or_oversize_selection"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-selective-fact-checkpoint-2",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_selective_fact_checkpoint_record"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.selective_fact_checkpoint",
+      "observable_effect": {
+        "effect_id": "content_addressed_selective_candidate_seed_visible",
+        "kind": "state_transition",
+        "description": "A checkpoint records exact selected ancestry and dependency edges, propagates selected-premise blockers, emits disjoint dependency-closed authoring batches, requires one semantic conclusion per later Fact plus exact Candidate-DAG closure, and creates no Candidate, Decision, admission, or Fact."
+      },
+      "probes": {
+        "positive": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_checkpoint_is_main_owned_idempotent_and_nonauthorizing",
+        "predicate_false": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_checkpoint_reports_stale_target_and_keeps_main_selection_explicit",
+        "tamper": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_atomization_closes_selected_dependencies_and_propagates_blockers"
+      }
+    },
+    "feature.candidate_fact_prepackaging_atomicity": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Prospective Candidate Facts and new candidate_fact worker artifacts fail before expensive replay or ingestion unless they are canonical and expose one semantic conclusion.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_fact_fingerprints_for_adverse",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._canonical_atomic_candidate_fact_bytes",
+      "activation_predicate": {
+        "predicate_id": "prospective_candidate_fact_enters_authoring_or_candidate_preflight",
+        "domain": [
+          "one_semantic_conclusion",
+          "multiple_semantic_conclusions",
+          "noncanonical_candidate_fact_artifact"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-candidate-fact-prepackaging-atomicity-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._canonical_atomic_candidate_fact_bytes"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_fact_fingerprints_for_adverse",
+      "observable_effect": {
+        "effect_id": "non_atomic_candidate_rejected_before_research_replay",
+        "kind": "validation_gate",
+        "description": "One-conclusion Candidate bytes continue to ordinary gates; separable conclusions or noncanonical worker bytes fail before global Research replay, packaging, verifier work, or truth effect."
+      },
+      "probes": {
+        "positive": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_single_claim_canonical_candidate_artifact_passes",
+        "predicate_false": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_explicit_semantic_interface_keeps_one_conclusion_with_premise_clause",
+        "tamper": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_multi_claim_candidate_artifact_fails_worker_preflight"
+      }
+    },
+    "feature.exact_repair_spec_transport": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Main may bind one exact bounded repair specification through copy-on-write Research into the immutable production task card.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_repair_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._normalize_exact_repair_spec",
+      "activation_predicate": {
+        "predicate_id": "main_supplies_exact_repair_specification",
+        "domain": [
+          "exact_spec_present",
+          "legacy_generic_repair",
+          "inexact_or_drifted_spec"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-exact-repair-specification-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_exact_repair_spec_metadata"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
+      "observable_effect": {
+        "effect_id": "exact_repair_instruction_visible_in_task_card",
+        "kind": "routing",
+        "description": "The normalized claim, content, rationale, mode, obligations, and stop conditions are hash-bound in repair Research and visible unchanged in the task card; malformed or drifted input fails closed."
+      },
+      "probes": {
+        "positive": "tests.test_v5_lifecycle.V5LifecycleTests.test_exact_repair_spec_is_hash_bound_into_research_and_task_card",
+        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_v5_optional_research_adapters_remain_cumulative_and_explicit",
+        "tamper": "tests.test_v5_lifecycle.V5LifecycleTests.test_exact_repair_spec_rejects_drift_and_inexact_fields"
+      }
+    },
+    "feature.prospective_candidate_adverse_planner": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Main can plan one exact Candidate-bound adverse refute without reopening constructive production or bypassing later admission gates.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "activation_predicate": {
+        "predicate_id": "main_requests_exact_candidate_bound_adverse_review",
+        "domain": [
+          "active_exact_candidate_target",
+          "ordinary_or_stale_or_scope_drift_target"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-candidate-adverse-round-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._round_manifest"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
+      "observable_effect": {
+        "effect_id": "exact_candidate_bound_refute_round_visible",
+        "kind": "routing",
+        "description": "One active non-stale target with one exact candidate_fact binding and an adverse marker creates or reuses one host-scope-bound ordinary refute round with no truth effect; a validated aborted round is excluded before old round or task-card reconstruction."
+      },
+      "probes": {
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_candidate_adverse_planner_is_exact_and_idempotent",
+        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_plan_round_keeps_refute_out_of_production",
+        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_adverse_retry_skips_aborted_pre_cutover_card"
+      }
+    },
+    "feature.bounded_candidate_adverse_handoff": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Main derives one exact supervised Candidate-Fact attack target and the refute card selects a dedicated compact bootstrap.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.prepare_candidate_adverse_target",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
+      "activation_predicate": {
+        "predicate_id": "canonical_candidate_fact_has_unique_live_research_supervision",
+        "domain": [
+          "exact_supervised_candidate_fact",
+          "missing_ambiguous_stale_or_noncanonical_input"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-candidate-adverse-target-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_candidate_fact_artifact_bytes"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
+      "observable_effect": {
+        "effect_id": "one_command_supervised_candidate_target_and_compact_refute_route",
+        "kind": "routing",
+        "description": "One content-addressed nontruth synthesis binds the canonical Candidate Fact and unique live supervision result; its refute prompt selects the Candidate-adverse bootstrap and never the production bootstrap."
+      },
+      "probes": {
+        "positive": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_prepare_candidate_adverse_target_is_one_main_command",
+        "predicate_false": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_candidate_adverse_prompt_uses_dedicated_bootstrap",
+        "tamper": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_multi_claim_candidate_artifact_fails_worker_preflight"
+      }
+    },
     "feature.host_scope_attack_coverage": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
@@ -319,6 +544,62 @@
         "positive": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_counterexample_creates_case_proposal_and_separate_attack_report",
         "predicate_false": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_reject_keeps_route_unchanged_and_zero_report_is_still_explicit",
         "tamper": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_concise_report_deduplicates_attack_families"
+      }
+    },
+    "feature.production_research_obligation_closure": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "The default production frontier closes only the source Research obligation of an exact valid non-aborted ingestion receipt and rechecks selected obligations under the publication lock.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_production_obligation_ids",
+      "activation_predicate": {
+        "predicate_id": "generic_frontier_source_has_valid_live_production_receipt",
+        "domain": ["valid_receipt", "pending_quarantined_invalid_or_aborted", "completion_race"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-production-research-obligation-closure-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_production_obligation_ids"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
+      "observable_effect": {
+        "effect_id": "completed_source_omitted_from_generic_production_only",
+        "kind": "routing",
+        "description": "The receipt source is absent from the default frontier, its worker result and history remain visible, explicit-ID planning remains available, and a lock-held completion race fails before public round bytes."
+      },
+      "probes": {
+        "positive": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_valid_receipt_closes_source_but_not_worker_result",
+        "predicate_false": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_pending_quarantined_invalid_and_aborted_work_do_not_close",
+        "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
+      }
+    },
+    "feature.main_unbound_research_semantic_reuse": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "The public Main memory-add path reuses one complete identical unbound Research semantic across actor-label drift while every ordinary, operator, task-bound, and assignment-bound write keeps actor-sensitive identity.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
+      "activation_predicate": {
+        "predicate_id": "current_cli_role_is_main_and_research_is_unbound",
+        "domain": ["main_identical_unbound", "ordinary_operator_or_bound", "actor_text_without_main_role"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-main-unbound-research-semantic-reuse-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research"
+      },
+      "consumer_symbol": "mathgraph.cli.main",
+      "observable_effect": {
+        "effect_id": "main_semantic_reuse_without_actor_authority",
+        "kind": "state_transition",
+        "description": "A Main retry with identical normalized unbound semantics returns the existing Research identity under the mutation lock; actor text cannot enable reuse and worker provenance is never collapsed."
+      },
+      "probes": {
+        "positive": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_main_reuses_identical_unbound_semantics_across_actor_labels",
+        "predicate_false": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_ordinary_and_task_bound_writes_keep_actor_identity",
+        "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_cli_uses_authority_role_not_actor_text_for_reuse"
       }
     },
     "feature.two_subround_research_supervision": {
@@ -382,7 +663,7 @@
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
       "summary": "A current machine-bound second-subround supervisor starts from one compact versioned contract and loads broad source, computation, attack-learning, or CHX-repair protocols only when the exact scope or observed event makes them applicable.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._compact_prompt",
       "activation_predicate": {
         "predicate_id": "validated_current_task_card_is_managed_research_supervision",
@@ -442,7 +723,7 @@
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
       "summary": "Production freezes a deterministic partition from selected Research ancestry and validation authoritatively rederives it; a completed component may be supervised while unrelated workers continue, but related integration waits and timing-derived or overlapping coverage fails closed.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._build_logical_supervision_components",
       "activation_predicate": {
         "predicate_id": "component_receipts_complete_independent_of_other_components",

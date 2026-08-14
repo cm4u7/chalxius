@@ -207,6 +207,7 @@ def validate_frozen_background_binding(
     binding: Any,
     *,
     expected_snapshot_relpath: str,
+    snapshot_path_override: Path | None = None,
 ) -> dict[str, Any]:
     required = {
         "binding_revision",
@@ -236,10 +237,14 @@ def validate_frozen_background_binding(
         or binding["load_bearing_rule"] != "return_to_exact_cited_source"
     ):
         raise ValueError("V5 indexed project-background binding is invalid")
-    snapshot_path = contained_path(
-        project_root,
-        binding["snapshot_relpath"],
-        "V5 frozen project-background snapshot",
+    snapshot_path = (
+        snapshot_path_override
+        if snapshot_path_override is not None
+        else contained_path(
+            project_root,
+            binding["snapshot_relpath"],
+            "V5 frozen project-background snapshot",
+        )
     )
     if snapshot_path.is_symlink() or not snapshot_path.is_file():
         raise ValueError("V5 frozen project-background snapshot is missing or unsafe")

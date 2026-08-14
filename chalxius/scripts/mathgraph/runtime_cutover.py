@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -402,6 +403,14 @@ def _round_bindings(project_root: Path) -> list[dict[str, Any]]:
     for round_root in sorted(rounds_root.iterdir(), key=lambda item: item.name):
         if round_root.is_symlink() or not round_root.is_dir():
             raise ValueError("Chalxius project rounds root contains an unsafe entry")
+        # Atomic round construction uses a hidden same-filesystem staging
+        # directory.  It is intentionally not a published round and therefore
+        # has no terminal-state or historical-runtime authority.  A process
+        # interruption may leave one behind; ignore only this exact private
+        # namespace while retaining fail-closed treatment for every other
+        # unexpected entry.
+        if _is_private_round_staging_name(round_root.name):
+            continue
         validate_round_id(round_root.name)
         cards_root = _existing_directory(
             round_root / "task-cards",
@@ -437,6 +446,12 @@ def _round_bindings(project_root: Path) -> list[dict[str, Any]]:
     return bindings
 
 
+def _is_private_round_staging_name(name: str) -> bool:
+    """Recognize only the unpublished atomic-round staging namespace."""
+
+    return re.fullmatch(r"\.round-[^.]+\.staging-[0-9a-f]+", name) is not None
+
+
 def _protected_round_ids(project_root: Path) -> list[str]:
     rounds_root = project_root / "rounds"
     if not rounds_root.exists() and not rounds_root.is_symlink():
@@ -449,6 +464,8 @@ def _protected_round_ids(project_root: Path) -> list[str]:
     for child in sorted(rounds_root.iterdir(), key=lambda item: item.name):
         if child.is_symlink() or not child.is_dir():
             raise ValueError("Chalxius project rounds root contains an unsafe entry")
+        if _is_private_round_staging_name(child.name):
+            continue
         round_ids.append(validate_round_id(child.name))
     return round_ids
 
@@ -1758,16 +1775,7 @@ def _validate_receipt_project_state(
         if raw.get("project_state") != comparable_snapshot:
             raise ValueError("protected project changed after validation receipt")
         round_states = raw.get("round_states")
-        rounds_root = project / "rounds"
-        actual_round_ids = (
-            sorted(
-                child.name
-                for child in rounds_root.iterdir()
-                if child.is_dir() and not child.is_symlink()
-            )
-            if rounds_root.is_dir()
-            else []
-        )
+        actual_round_ids = _protected_round_ids(project)
         if (
             not isinstance(round_states, dict)
             or list(round_states) != actual_round_ids

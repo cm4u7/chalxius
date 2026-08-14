@@ -626,7 +626,7 @@ class V5ExperimentManager(ExperimentManager):
             else RoundInspectionContext()
         )
         round_bindings: dict[str, tuple[Path, dict[str, Any]]] = {}
-        for card_path in sorted(self.store.rounds_dir.glob("*/task-cards/*.json")):
+        for card_path in sorted(self.store.rounds_dir.glob("round-*/task-cards/*.json")):
             try:
                 card = self.store._read_json(card_path)
                 root, assignment = self._canonical_experiment_root(

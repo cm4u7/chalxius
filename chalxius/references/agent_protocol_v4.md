@@ -36,6 +36,18 @@ capsules retain their direct `review_return_path`. A reported access outside the
 allowlist invalidates the run. This is a cooperative audit boundary, not OS
 sandbox enforcement.
 
+Before the verifier capsule, a Main-prepared V5 Candidate-Fact target that
+requires whole-Candidate attack uses `plan-candidate-adverse RESEARCH_ID`.
+This is a distinct Main-only refute lane: it neither reopens constructive
+production nor substitutes for Research supervision, Candidate disposition,
+fresh verification, Certification, or Gateway admission.
+
+For a canonical Candidate Fact returned by supervised production, Main uses
+`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID` to bind the exact Fact
+and unique live supervision result before invoking `plan-candidate-adverse` on
+the returned Research id. The attack worker follows
+`v5_candidate_adverse_worker_bootstrap.md`, never the production bootstrap.
+
 Installing the skill does not authorize migration or cutover of an active
 project. This package starts neither the legacy `$mathgraph-chalk-version` nor
 `$run-multi-agent-mathgraph`; their old writer-exclusivity rule applies only

@@ -1,19 +1,83 @@
-# Chalxius 0.7.4 architecture findings and residual boundaries
+# Chalxius 0.7.15 architecture findings and residual boundaries
 
-This file is the public, nontruth disclosure for Chalxius 0.7.4
-**Bounded Main Routing**. It describes architecture defects and their
-prospective repairs; it is not mathematical evidence and grants no Research,
-Candidate Release, Certification, Gateway, or Fact authority.
+This file is the release, nontruth disclosure for Chalxius 0.7.15
+**Research Obligation Closure**. It describes architecture defects, integrated repairs,
+and intentional residual boundaries; it is not mathematical evidence and
+grants no Research, Candidate Release, Certification, Gateway, or Fact
+authority.
 
-The 0.7.4 integration extends the architecture issues reproduced after the
+## 0.7.15 Research obligation closure
+
+Field run `run-20260813T182913219213Z-39649c18119c` first recorded the two
+mechanisms under task-local identifiers `CHX-001` and `CHX-002`. Those private
+identifiers are source evidence only and are not published as a second issue
+numbering domain. Public release successor
+`run-20260813T234901055084Z-22649ebe6545` inherits the immutable lineage through
+`CHX-031` and owns continuous identifiers `CHX-032` and `CHX-033` for the same
+validated mechanisms.
+
+Final release validation then opened continuous successor
+`run-20260814T001848013126Z-a494126a5017/CHX-034`. One whole-call deletion
+mutant survived because its focused regression mocked only behavior inside the
+deleted call. The repair exercises the real existing preflight path before a
+post-preflight sentinel. It adds no gate or runtime mechanism.
+
+The next complete mutation campaign exposed continuous successor
+`run-20260814T004319766703Z-fdfc7f3fd6e2/CHX-035`. The registered
+`frontier_limit_minus_one` mutant changed the include-history slice, while its
+named regression exercised only the ordinary active-frontier branch. The
+repair adds an exact ordered-prefix and endpoint witness on the mutated branch;
+it changes no production code, release lane, or runtime mechanism.
+
+The integrated repair excludes a source obligation from the default frontier
+only after exact receipt and non-abort validation, repeats that check under the
+round-publication lock, preserves worker-result and explicit/history views, and
+lets only the current Main CLI role request complete-semantic unbound reuse.
+Task/assignment provenance remains distinct and actor text is never authority.
+The exact closed successor-ledger digests are bound in `INHERITANCE.lock.json`;
+all referenced ledgers and their deterministic reports remain nontruth
+operational evidence outside the release package.
+
+No persistent index, background watcher, scheduler, new lifecycle state,
+automatic Candidate construction, verifier substitution, Certification,
+Gateway, or Fact authority is introduced.
+
+The 0.7.5 local-install integration extends the architecture issues reproduced after the
 0.7.2 local installation, including the bounded teaching-document edit in task
 `019fa908-8cf5-7a70-a867-dde76a1c6182`. Its exact current ledger lineage is
 bound in `INHERITANCE.lock.json`; older immutable ledgers are not rewritten.
 That lineage is `run-20260811T013254358017Z-46283133a345` followed by
 `run-20260811T085034084387Z-6c87c04d5462` and the resolved successor
 `run-20260811T191546409764Z-b156c46cab1c`, with the final disclosure repair
-at `run-20260811T193354268477Z-7a6dcfe41bb0` and the 0.7.4 successor
-`run-20260812T073631884601Z-53f28d3790b8`.
+at `run-20260811T193354268477Z-7a6dcfe41bb0`, the 0.7.4 successor
+`run-20260812T073631884601Z-53f28d3790b8`, the three measured predecessors
+`run-20260812T082458508253Z-50fef06fdcab`,
+`run-20260812T084555825183Z-c0da7ae56f95`, and
+`run-20260812T085042959321Z-48034fc56b06`, and the resolved 0.7.5 successor
+`run-20260812T110223791595Z-71cc17e3531b`, followed by the strict-scan repair
+`run-20260812T130915592717Z-6300da6b4bad`, and the selective-admission successor
+`run-20260812T164021036787Z-e3fa69b57a73`, which supersedes
+`run-20260812T134234791817Z-ae0fd96bef2e/CHX-001`.
+
+The selective-admission predecessor is
+`run-20260812T175055302224Z-943735ad5337`. It adds a public Main-only exact
+Candidate-adverse planner, command-local Candidate preflight reuse, and a
+dependency-closed batch seed. CHX-003 through CHX-005 in that task lineage are
+local-install issues and are not remote-publication claims.
+
+The current local-install repair lineage is
+`run-20260812T200026180866Z-ccb9d355783f`. It preserves CHX-005 dependency-
+closed atomization, inherits the 0.7.8 CHX-006 early Candidate-shape repair,
+and owns the 0.7.9 CHX-007 statement-interface precheck and CHX-008 reentrant
+active-Fact reconstruction repair. It is not a remote-publication claim.
+
+The 0.7.10 successor adds project run
+`run-20260812T232944429816Z-e3c8a9130f6f/CHX-009`. Candidate-adverse exact
+retry now excludes a validated aborted work unit before reconstructing its old
+round or task card. Active cards remain current-runtime validated, completed
+cards remain archive validated, and full project audit retains frozen-byte
+coverage. This local repair does not alter automatic selection or dependency-
+closed atomization and is not a remote-publication claim.
 
 ## Public issue enumeration
 
@@ -98,14 +162,186 @@ at `run-20260811T193354268477Z-7a6dcfe41bb0` and the 0.7.4 successor
     reclaim the work. Architecture-caused repetition uses the existing worker
     CHX path; no watcher, timer, lifecycle state, audit, truth gate, or packaging
     prerequisite is added.
+23. **CHX-023 — goal-intake cumulative-scan predecessor.** Ordinary goal intake
+    scanned broad Research state before binding one objective. CHX-026
+    supersedes this measured predecessor.
+24. **CHX-024 — ancestry-scan and partial-round predecessor.** Explicit planning
+    revalidated unused ancestor artifacts and could expose task-card bytes before
+    `round.json`. CHX-027 supersedes both parts of this defect.
+25. **CHX-025 — forensic attack-report predecessor.** The concise Main report
+    reconstructed complete host-scope round coverage before discarding it.
+    CHX-028 supersedes this measured predecessor.
+26. **CHX-026 — content-addressed goal-root projection.** Goal intake now filters
+    immutable Research bytes for exact objective identities, validates structural
+    envelopes for matches, fully validates the selected root, and retains the
+    complete Research audit as an explicit separate path. It supersedes CHX-023.
+27. **CHX-027 — selected authority, structural ancestry, atomic publication.**
+    Selected Research and every direct authority input remain fully checked;
+    unconsumed ancestry supplies only content-addressed connectivity envelopes.
+    A round is built in a private same-filesystem directory and becomes visible
+    by one atomic rename only after staged validation and final liveness checks.
+    It supersedes CHX-024.
+28. **CHX-028 — host-scoped attack case projection.** The default concise report
+    reads exact cases, proposals, decisions, and active rules directly, declares
+    `coverage_status=case-projection` and `scope_complete=false`, and leaves full
+    forensic reconstruction behind the explicit full option. It supersedes
+    CHX-025.
+29. **CHX-029 — monotone worker completion checkpoint.** It extends CHX-022:
+    after all required artifacts exist, the next update is a concrete blocker or
+    preflight result; after preflight passes, the next update completes canonical
+    validation and CHX closure. No watcher or lifecycle state is added.
+30. **CHX-030 — direct active-Fact planning projection.** The current advisory
+    planning snapshot validates active Fact bytes, exact visibility markers,
+    revocations, dependencies, interfaces, acceptance events, and owner heads.
+    Recursive Candidate and verifier provenance remains available through the
+    explicit Fact Evidence audit, and older snapshot revisions remain readable.
+    It extends CHX-026.
+31. **CHX-031 — behavioral producer topology after atomic wrapping.** The
+    private atomic-round implementation became the direct caller of compact
+    prompt and logical-component producers, while two registry edges still
+    named the public wrapper. The registry now points to `_create_round_impl`;
+    the public `create_round` atomic boundary and executable behavior are
+    unchanged. Strict architecture reconnaissance passes after this repair.
+32. **CHX-032 — validated production-obligation closure.** A generic production
+    frontier omits a completed source Research obligation only after validating
+    its exact ingestion receipt, production assignment, non-aborted round, and
+    return. It repeats the selected closure from fresh bytes under the
+    round-publication lock. Worker-result Research, history, explicit-ID
+    continuation, supervision, and all truth gates remain unchanged.
+33. **CHX-033 — explicit Main unbound-Research reuse.** The public Main
+    `memory-add` path may reuse an immutable unbound Research record only when
+    every normalized semantic field except actor is identical. Operator,
+    worker, task-bound, assignment-bound, historical, and semantically distinct
+    writes remain actor-sensitive; actor text grants no authority.
+34. **CHX-034 — whole-call mutation witness for the existing release gate.**
+    The focused release regression now exercises the real mutation-registry
+    preflight before its postcondition sentinel, so deleting the complete call
+    is observable. The mutation registry, release lane set, phase order, normal
+    runtime, and every mathematical and truth boundary remain unchanged.
+35. **CHX-035 — exact-branch ordered-prefix mutation witness.** The focused
+    frontier regression now exercises the exact include-history slice changed
+    by the registered boundary mutant and verifies every positive ordered
+    prefix plus the final endpoint. The repair changes only test evidence; the
+    frontier implementation, registry size, release lanes, runtime behavior,
+    and every mathematical and truth boundary remain unchanged.
 
 CHX-021 and CHX-022 are publication-resolved in the latest immutable ledger.
 They preserve the 0.7.3 **Selective Startup** mechanisms and all prior
 `supersedes` relations without rewriting their evidence.
 
+CHX-023 through CHX-031 were local-install-resolved in the immutable 0.7.5
+lineage, whose publication was intentionally deferred at that time. The
+preceding 0.7.4 **Bounded Main Routing** disclosure and the 0.7.5 **Bounded Projections**
+disclosure remain immutable predecessors. The continuous 0.7.15
+successors make CHX-032 through CHX-035 publication-resolved and are authorized
+for protected global installation followed by GitHub source, tag, and Release
+publication. Pull-request creation or merge remains excluded.
+
+## 0.7.6 selective-admission successor
+
+The separate local-install lineage
+`run-20260812T164021036787Z-e3fa69b57a73/CHX-002` supersedes
+`run-20260812T134234791817Z-ae0fd96bef2e/CHX-001`. It adds one Main-only,
+bounded, content-addressed readiness receipt. At most sixteen explicit Research
+targets are fully checked for ancestry, structural reuse, supervision,
+assurance, and blockers. The receipt includes a singleton-default Candidate
+batch seed, but performs no automatic ranking, Candidate authoring, review
+dispatch, Certification, Gateway admission, or Fact promotion. This private
+task ledger is bound by exact runtime validation but is not spliced into the
+older public CHX-001 through CHX-031 numbering.
+
 These repairs are deliberately simple: no persistent frontier index, background
 watcher, agent reputation, dynamic scoring, second semantic validator, new
 Blackboard/Pulse plane, or automatic PHX adoption is introduced.
+
+## 0.7.14 bounded-handoff successor
+
+Project-bound run `run-20260813T083233526366Z-39d8bc3904ff` groups six
+observations made after the 0.7.13 installation into four reusable mechanisms.
+Its CHX-015 through CHX-020 identifiers belong to that private run and do not
+renumber the public issue enumeration above.
+
+- Main now derives one supervised Candidate-adverse target with
+  `prepare-candidate-adverse-target`; workers do not manually synthesize the
+  target from production and supervision bytes.
+- Candidate-adverse refute cards use a dedicated compact bootstrap rather than
+  the production bootstrap or the ordinary broad preload.
+- Frontier, logical-component, certification, and repair planning reuse only
+  command-local validated projections. Unselected Research ancestry contributes
+  a hash-checked structural envelope; selected or authority-bearing records are
+  still fully validated. Certification performs a distinct fresh recheck while
+  holding its narrow publication lock.
+- Prospective supervisor cards inherit a content-addressed projection of the
+  attacked production card, active Fact premises, and exact source/input
+  capabilities. Repair cards carry the challenged Research artifacts forward.
+  Historical task cards retain their frozen semantics.
+
+These changes do not add automatic Fact selection or atomization, a persistent
+cache, a background scheduler, a second truth path, or a shortened
+Candidate/verifier/Certification/Gateway/Fact path. Seal-lock liveness checks
+remain mandatory. The local installation is authorized; remote publication is
+not.
+
+## 0.7.9 reentrant admission closure successor
+
+The current local-install successor preserves every 0.7.8 truth boundary and
+resolves two adjacent failures observed during selective A-model Fact
+admission. Exact missing-premise statement-interface failures now reject from
+submitted Candidate bytes and immutable selected Research envelopes before
+global Research replay. Valid Candidates still reach the complete assurance,
+source, artifact, adverse, supervision, verifier, Certification, Gateway, and
+Fact gates.
+
+Active-Fact reconstruction now uses a bounded command-local provisional view
+only when full validation reenters through a frozen task-card authority check.
+That view validates local Release, acceptance-marker, and admitted-Fact bytes;
+the outer frame performs full Research, historical-runtime, Decision,
+successor, and lineage replay and requires exact agreement. The same inspection
+context is propagated through approved-computation design and supervision
+replay. The repair neither raises recursion limits nor introduces a persistent
+cache or a second admission authority.
+
+## 0.7.8 early Candidate gate successor
+
+The current local-install successor preserves every 0.7.7 truth and assurance
+boundary while resolving one work-order defect observed during selective
+A-model Fact admission. A singleton Candidate incorrectly labelled as an
+atomic DAG previously spent more than three minutes replaying global Research
+and supervision history before reporting a shape mismatch decidable from the
+submitted Candidate bytes.
+
+Candidate Release now rejects only local cardinality and internal-edge
+mismatches before global replay. This projection is nonauthoritative and cannot
+accept a Candidate: valid inputs continue through the unchanged complete
+assurance validator and every source, adverse, verifier, Certification,
+Gateway, and Fact gate. Supervision-round inventory is also deferred until a
+selected Research record actually proves production-assignment provenance;
+manual and historical Research trigger no unrelated scan.
+
+This release does not make Candidate construction generally constant-time.
+Valid Candidates still pay all exact closure checks justified by their active
+Research, source, artifact, adverse, and supervision surfaces. No persistent
+cache, index, watcher, scheduler, automatic Fact selection, or remote
+publication is introduced.
+
+## 0.7.7 Candidate admission efficiency successor
+
+The current local-install successor preserves the 0.7.6 checkpoint and every
+truth gate while repairing three adjacent interfaces. Main can plan one exact
+Candidate-bound refute through `plan-candidate-adverse`; ordinary production
+still rejects `refute`. One Candidate command reuses only a transient, fully
+validated inspection context and performs a fresh supervision derivation under
+the seal lock. The batch seed now records selected dependency edges, groups
+dependency-connected selected targets into disjoint atomic units, and propagates
+a blocked selected premise to its selected dependents. Independent units remain
+singletons. Automatic ranking, Candidate authoring, verifier dispatch,
+Certification, Gateway admission, and Fact effects remain absent.
+
+The observed A3 Candidate preflight improved from more than 95 seconds to about
+10.52 seconds before reaching an unchanged fail-closed source-artifact gate.
+The speedup removes repeated immutable reconstruction; it does not cache across
+commands and does not weaken dependency, staleness, source, adverse, verifier,
+Certification, or Gateway checks. No remote publication is authorized.
 
 The 0.7.2 integration is owned by project-bound run
 `run-20260811T013254358017Z-46283133a345`: CHX-001 records production-worker

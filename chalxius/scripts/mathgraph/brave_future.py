@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .contracts import (
     ACTIVE_MEMORY_STATUSES,
+    FACT_ID_RE,
     MEMORY_ID_RE,
     SHA256_RE,
     canonical_json_bytes,
@@ -22,6 +23,7 @@ from .contracts import (
     validate_round_id,
 )
 from .campaigns import canonical_research_objective
+from .graph import DependencyGraph
 from .goal_intake import (
     GOAL_INTAKE_EFFECT_KINDS,
     GoalIntakeTransactionStore,
@@ -30,12 +32,14 @@ from .goal_intake import (
     validate_goal_intake_effect,
 )
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
+from .markdown import parse_fact_markdown
 from .v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
 
 BF_POLICY_REVISION = "chalxius-brave-future-policy-1"
 BF_REPAIR_CONTRACT_REVISION = "chalxius-bf-repair-contract-1"
-BF_PLANNING_SNAPSHOT_REVISION = "chalxius-bf-planning-snapshot-2"
+BF_PLANNING_SNAPSHOT_REVISION = "chalxius-bf-planning-snapshot-3"
+BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION = "chalxius-bf-planning-snapshot-2"
 BF_PLANNING_SNAPSHOT_LEGACY_REVISION = "chalxius-bf-planning-snapshot-1"
 BF_FRONTIER_PROJECTION_REVISION = "chalxius-bf-frontier-projection-2"
 BF_FRONTIER_PROJECTION_LEGACY_REVISION = "chalxius-bf-frontier-projection-1"
@@ -362,6 +366,7 @@ def _validate_planning_snapshot(record: Any) -> dict[str, Any]:
     revision = record.get("revision") if isinstance(record, dict) else None
     if revision not in {
         BF_PLANNING_SNAPSHOT_REVISION,
+        BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION,
         BF_PLANNING_SNAPSHOT_LEGACY_REVISION,
     }:
         raise ValueError("Brave Future planning snapshot revision is invalid")
@@ -1048,6 +1053,262 @@ class PlanningSnapshotBuilder:
         return bases, dispositions
 
     def _authority(self) -> dict[str, Any]:
+        """Project the direct active authority bytes without replaying releases.
+
+        Brave Future is advisory-only.  Its default planning snapshot therefore
+        needs the current Fact graph and visibility markers, not a recursive
+        replay of every Candidate, verifier capsule, and frozen artifact that
+        originally established those Facts.  The explicit ``fact-evidence-audit``
+        command retains that full forensic path.
+        """
+
+        project = self.store.project()
+        project_id = self.store.project_id()
+        if (
+            project.get("workflow_evidence_version") != 5
+            or project.get("truth_policy") != "verifier-gated"
+            or not isinstance(project.get("policy_revision"), str)
+        ):
+            raise ValueError("Brave Future requires a V5 verifier-gated project")
+        policy_revision = project["policy_revision"]
+        for label, directory in (
+            ("Fact admissions", self.lifecycle.admissions_dir),
+            ("Fact revocations", self.lifecycle.revocations_dir),
+            ("Fact interfaces", self.store.fact_graph_dir / "interfaces"),
+        ):
+            if directory.is_symlink() or not directory.is_dir():
+                raise ValueError(f"Brave Future {label} directory is missing or unsafe")
+        if (
+            self.lifecycle.contract_path.is_symlink()
+            or not self.lifecycle.contract_path.is_file()
+        ):
+            raise ValueError("Brave Future lifecycle contract is missing or unsafe")
+
+        revoked_ids = self.lifecycle.revoked_fact_ids()
+        revocation_manifest = []
+        for path in sorted(self.lifecycle.revocations_dir.glob("*.json")):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(
+                    "Brave Future revocation projection contains an unsafe entry"
+                )
+            revocation_manifest.append(
+                {
+                    "fact_id": path.stem,
+                    "record_sha256": sha256_bytes(path.read_bytes()),
+                }
+            )
+
+        admitted_facts: dict[str, Any] = {}
+        admitted_markers: dict[str, dict[str, Any]] = {}
+        fact_manifest: list[dict[str, Any]] = []
+        marker_manifest: list[dict[str, Any]] = []
+        for directory in sorted(self.lifecycle.admissions_dir.glob("release-*")):
+            if directory.is_symlink() or not directory.is_dir():
+                raise ValueError(
+                    "Brave Future admission projection contains an unsafe entry"
+                )
+            marker_path = directory / "ACCEPTED.json"
+            if not marker_path.exists():
+                continue
+            if marker_path.is_symlink() or not marker_path.is_file():
+                raise ValueError("Brave Future admission marker is unsafe")
+            marker = self.store._read_json(marker_path)
+            required = {
+                "schema_version",
+                "policy_revision",
+                "project_id",
+                "release_id",
+                "release_sha256",
+                "decision_id",
+                "decision_sha256",
+                "capsule_sha256",
+                "fact_ids",
+                "fact_sha256",
+                "gateway",
+                "reviewer",
+                "accepted_at",
+                "acceptance_id",
+            }
+            if not isinstance(marker, dict) or not required.issubset(marker):
+                raise ValueError("Brave Future admission marker fields are incomplete")
+            release_id = directory.name
+            fact_ids = marker.get("fact_ids")
+            fact_sha256 = marker.get("fact_sha256")
+            semantic = {
+                key: value for key, value in marker.items() if key != "acceptance_id"
+            }
+            if (
+                marker.get("schema_version") != 5
+                or marker.get("policy_revision") != policy_revision
+                or marker.get("project_id") != project_id
+                or marker.get("release_id") != release_id
+                or not release_id.startswith("release-")
+                or marker.get("release_sha256")
+                != release_id.removeprefix("release-")
+                or SHA256_RE.fullmatch(str(marker.get("release_sha256", ""))) is None
+                or marker.get("decision_id")
+                != "decision-" + str(marker.get("decision_sha256", ""))
+                or SHA256_RE.fullmatch(
+                    str(marker.get("decision_sha256", ""))
+                )
+                is None
+                or SHA256_RE.fullmatch(str(marker.get("capsule_sha256", ""))) is None
+                or marker.get("acceptance_id") != "acceptance-" + sha256_json(semantic)
+                or not isinstance(fact_ids, list)
+                or not fact_ids
+                or len(fact_ids) != len(set(fact_ids))
+                or any(
+                    not isinstance(fact_id, str)
+                    or FACT_ID_RE.fullmatch(fact_id) is None
+                    for fact_id in fact_ids
+                )
+                or not isinstance(fact_sha256, dict)
+                or set(fact_sha256) != set(fact_ids)
+                or any(
+                    not isinstance(digest, str)
+                    or SHA256_RE.fullmatch(digest) is None
+                    for digest in fact_sha256.values()
+                )
+            ):
+                raise ValueError("Brave Future admission marker identity is invalid")
+            marker_manifest.append(
+                {
+                    "release_id": release_id,
+                    "acceptance_id": marker["acceptance_id"],
+                    "marker_sha256": sha256_bytes(marker_path.read_bytes()),
+                }
+            )
+            for fact_id in fact_ids:
+                if fact_id in admitted_facts:
+                    raise ValueError("Brave Future authority has duplicate admitted Fact ids")
+                path = directory / "facts" / f"{fact_id}.md"
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("Brave Future admitted Fact is missing or unsafe")
+                payload = path.read_bytes()
+                digest = sha256_bytes(payload)
+                if digest != fact_sha256[fact_id]:
+                    raise ValueError("Brave Future admitted Fact hash mismatch")
+                fact = parse_fact_markdown(payload.decode("utf-8"))
+                errors = fact.validate()
+                if errors or fact.fact_id != fact_id or fact.problem_id != project_id:
+                    raise ValueError(
+                        "Brave Future admitted Fact schema/project mismatch"
+                        + (": " + "; ".join(errors) if errors else "")
+                    )
+                admitted_facts[fact_id] = fact
+                admitted_markers[fact_id] = marker
+                fact_manifest.append(
+                    {
+                        "fact_id": fact_id,
+                        "fact_sha256": digest,
+                        "predecessors_sha256": sha256_json(fact.predecessors),
+                    }
+                )
+
+        unknown_revocations = revoked_ids.difference(admitted_facts)
+        if unknown_revocations:
+            raise ValueError(
+                "Brave Future revocations have no admitted Fact: "
+                + ", ".join(sorted(unknown_revocations))
+            )
+        active_facts = {
+            fact_id: fact
+            for fact_id, fact in admitted_facts.items()
+            if fact_id not in revoked_ids
+        }
+        graph = DependencyGraph(active_facts)
+        missing = graph.missing_predecessors()
+        if missing:
+            raise ValueError(
+                "Brave Future active Fact graph has missing predecessors: "
+                + ", ".join(f"{fact_id}->{prior}" for fact_id, prior in missing)
+            )
+        graph.topological_order()
+
+        interface_manifest = []
+        interfaces_dir = self.store.fact_graph_dir / "interfaces"
+        for fact_id in sorted(active_facts):
+            path = interfaces_dir / f"{fact_id}.json"
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(
+                    "Brave Future active Fact interface is missing or unsafe"
+                )
+            interface_manifest.append(
+                {
+                    "fact_id": fact_id,
+                    "interface_sha256": sha256_bytes(path.read_bytes()),
+                }
+            )
+
+        verification_events = self.store._read_jsonl(self.store.verification_log)
+        events_by_fact: dict[str, list[dict[str, Any]]] = {}
+        for event in verification_events:
+            fact_id = str(event.get("fact_id", ""))
+            events_by_fact.setdefault(fact_id, []).append(event)
+        for fact_id, marker in admitted_markers.items():
+            events = events_by_fact.get(fact_id, [])
+            expected_id = sha256_json(
+                [
+                    "accepted-v5",
+                    fact_id,
+                    marker["release_id"],
+                    marker["decision_id"],
+                    marker["acceptance_id"],
+                ]
+            )
+            if len(events) != 1 or any(
+                events[0].get(key) != expected
+                for key, expected in (
+                    ("event", "accepted"),
+                    ("event_id", expected_id),
+                    ("release_id", marker["release_id"]),
+                    ("decision_id", marker["decision_id"]),
+                    ("capsule_sha256", marker["capsule_sha256"]),
+                    ("acceptance_id", marker["acceptance_id"]),
+                    ("fact_sha256", marker["fact_sha256"][fact_id]),
+                )
+            ):
+                raise ValueError("Brave Future Fact acceptance event mismatch")
+        unknown_event_facts = set(events_by_fact).difference(admitted_markers)
+        if unknown_event_facts:
+            raise ValueError(
+                "Brave Future acceptance events have no admission marker: "
+                + ", ".join(sorted(unknown_event_facts))
+            )
+
+        active_fact_ids = sorted(active_facts)
+        roots = {
+            "facts": self.store.fact_graph_dir / "facts",
+            "interfaces": interfaces_dir,
+            "admissions": self.lifecycle.admissions_dir,
+            "revocations": self.lifecycle.revocations_dir,
+            "verification_log": self.store.verification_log,
+            "lifecycle_contract": self.lifecycle.contract_path,
+        }
+        semantic = {
+            "projection_revision": "chalxius-bf-direct-authority-projection-1",
+            "projection_scope": "direct_active_fact_graph_and_visibility_markers",
+            "full_provenance_audit": "explicit_fact-evidence-audit",
+            "active_fact_count": len(active_fact_ids),
+            "active_fact_ids_sha256": sha256_json(active_fact_ids),
+            "fact_manifest_sha256": sha256_json(
+                sorted(fact_manifest, key=lambda item: item["fact_id"])
+            ),
+            "interface_manifest_sha256": sha256_json(interface_manifest),
+            "admission_marker_manifest_sha256": sha256_json(marker_manifest),
+            "revocation_manifest_sha256": sha256_json(revocation_manifest),
+            "authority_state": (
+                "valid_empty" if not active_fact_ids else "valid_nonempty"
+            ),
+            "authority_owner_heads": {
+                name: _owner_generation_summary(path, project_root=self.store.root)
+                for name, path in roots.items()
+            },
+            "fact_admission_contract_sha256": FACT_ADMISSION_CONTRACT_SHA256,
+        }
+        return {**semantic, "authority_snapshot_sha256": sha256_json(semantic)}
+
+    def _full_authority(self) -> dict[str, Any]:
         audit = self.lifecycle.fact_evidence_audit()
         empty_authority = (
             audit.get("facts") == 0
@@ -1204,6 +1465,7 @@ class PlanningSnapshotBuilder:
         campaign_id = validate_campaign_id(campaign_id)
         if revision not in {
             BF_PLANNING_SNAPSHOT_REVISION,
+            BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION,
             BF_PLANNING_SNAPSHOT_LEGACY_REVISION,
         }:
             raise ValueError("Brave Future planning snapshot revision is unsupported")
@@ -1218,7 +1480,7 @@ class PlanningSnapshotBuilder:
             raise ValueError("Brave Future Campaign status override mismatch")
         # ACTIVE is an informational legacy pointer, never a BF selector or head.
         campaign_status.pop("active", None)
-        records = self.lifecycle.research_records()
+        records = self.lifecycle.research_envelopes()
         bases, dispositions = self._effective_research(records, campaign_id)
         manifest = [
             {
@@ -1327,7 +1589,13 @@ class PlanningSnapshotBuilder:
             ),
             "repair_lineage_manifest_sha256": sha256_json(repair_manifest),
             "authority_snapshot": (
-                self._legacy_authority() if legacy else self._authority()
+                self._legacy_authority()
+                if legacy
+                else (
+                    self._full_authority()
+                    if revision == BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION
+                    else self._authority()
+                )
             ),
             "blackboard_preview_manifest": (
                 legacy_blackboard_manifest if legacy else blackboard_manifest
@@ -1460,7 +1728,7 @@ class RepairLineageProjector:
                 f"{BF_PROJECTION_MEMBER_LIMIT}"
             )
         campaign_id = validate_campaign_id(snapshot["campaign_id"])
-        records = self.lifecycle.research_records()
+        records = self.lifecycle.research_envelopes()
         bases, dispositions = PlanningSnapshotBuilder._effective_research(
             records, campaign_id
         )
@@ -1603,6 +1871,7 @@ class RepairLineageProjector:
                 limit=max(1, len(bases)),
                 include_history=True,
                 campaign_id=campaign_id,
+                _research_records_override=records,
             )
             if bases
             else []

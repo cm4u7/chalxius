@@ -8,11 +8,13 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from mathgraph.brave_future import (
     BF_BLOCKAGE_REVISION,
     BF_DECISION_REVISION,
     BF_GOAL_INTAKE_REVISION,
+    BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION,
     BF_PLANNING_SNAPSHOT_LEGACY_REVISION,
     BF_PLANNING_SNAPSHOT_REVISION,
     BF_REPAIR_CONTRACT_REVISION,
@@ -241,7 +243,7 @@ class BraveFutureTests(unittest.TestCase):
                 ),
             )
 
-    def test_planning_snapshot_v2_writer_and_exact_v1_reader(self) -> None:
+    def test_planning_snapshot_v3_writer_and_exact_v2_v1_readers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             campaign_id = self._campaign(store)
@@ -260,7 +262,22 @@ class BraveFutureTests(unittest.TestCase):
             )
             self.assertEqual(current["revision"], BF_PLANNING_SNAPSHOT_REVISION)
             self.assertIsInstance(current["research_manifest"], dict)
+            self.assertEqual(
+                current["authority_snapshot"]["projection_scope"],
+                "direct_active_fact_graph_and_visibility_markers",
+            )
             self.assertTrue(manager.snapshot_builder.revalidate(current, policy_status))
+
+            full_audit = manager.snapshot_builder.preview(
+                campaign_id=campaign_id,
+                policy_status=policy_status,
+                revision=BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION,
+            )
+            self.assertEqual(
+                full_audit["revision"], BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION
+            )
+            self.assertIn("audit_sha256", full_audit["authority_snapshot"])
+            self.assertEqual(_validate_planning_snapshot(full_audit), full_audit)
 
             legacy = manager.snapshot_builder.preview(
                 campaign_id=campaign_id,
@@ -292,6 +309,17 @@ class BraveFutureTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "exact list"):
                 _validate_planning_snapshot(mixed)
+
+            with patch.object(
+                manager.snapshot_builder.lifecycle,
+                "fact_evidence_audit",
+                side_effect=AssertionError("default snapshot must not run full audit"),
+            ):
+                projected = manager.snapshot_builder.preview(
+                    campaign_id=campaign_id,
+                    policy_status=policy_status,
+                )
+            self.assertEqual(projected["revision"], BF_PLANNING_SNAPSHOT_REVISION)
 
     def test_policy_and_role_boundaries_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

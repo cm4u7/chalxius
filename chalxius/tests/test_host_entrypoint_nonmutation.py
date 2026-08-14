@@ -55,6 +55,26 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
             preflight.assert_called_once()
             run_test.assert_not_called()
 
+        original_preflight = aggressive_bug_audit_module._validate_mutant_targets
+        with (
+            mock.patch.object(aggressive_bug_audit_module, "MUTANTS", ()),
+            mock.patch.object(
+                aggressive_bug_audit_module,
+                "_validate_mutant_targets",
+                wraps=original_preflight,
+            ) as preflight,
+            mock.patch.object(
+                aggressive_bug_audit_module,
+                "_candidate_is_unchanged",
+                side_effect=SystemExit("post-preflight sentinel"),
+            ),
+            mock.patch.object(aggressive_bug_audit_module, "_run_test") as run_test,
+        ):
+            with self.assertRaisesRegex(SystemExit, "post-preflight sentinel"):
+                aggressive_bug_audit_module.main(["--preflight-only"])
+            preflight.assert_called_once()
+            run_test.assert_not_called()
+
     def test_aggressive_audit_child_boundary_and_snapshot_are_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

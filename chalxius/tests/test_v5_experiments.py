@@ -10,6 +10,25 @@ from mathgraph.store import MathGraphStore
 
 
 class V5ExperimentTests(unittest.TestCase):
+    def test_audit_ignores_unpublished_atomic_round_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / "v5"
+            store = MathGraphStore(root)
+            store.initialize(
+                project_id="v5-experiment-private-staging",
+                title="V5 unpublished atomic staging",
+                workflow_evidence_version=5,
+            )
+            staging = (
+                store.rounds_dir
+                / ".round-20260813T000000Z-deadbeef.staging-acde1234"
+                / "task-cards"
+            )
+            staging.mkdir(parents=True)
+            (staging / "partial.json").write_text("{}\n", encoding="utf-8")
+            self.assertTrue(store.experiments().audit_all()["ok"])
+            self.assertTrue(store.audit().current_ok, store.audit().errors)
+
     def test_v5_task_local_experiment_replays_resumes_and_finalizes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"

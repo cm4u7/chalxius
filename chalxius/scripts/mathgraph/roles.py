@@ -22,6 +22,7 @@ ALL_COMMANDS = {
     "revoke",
     "candidate-release",
     "candidate-release-check",
+    "selective-fact-checkpoint",
     "verifier-capsule",
     "certification-record",
     "certification-decision-check",
@@ -32,6 +33,8 @@ ALL_COMMANDS = {
     "adoption-plan",
     "plan-round",
     "plan-supervision-round",
+    "plan-candidate-adverse",
+    "prepare-candidate-adverse-target",
     "plan-computation-execution",
     "project-background-index",
     "project-background-read",
@@ -150,6 +153,7 @@ OPERATOR_COMMANDS = ALL_COMMANDS - {
     "preflight-return",
     "pulse-dispatch",
     "attack-route-decide",
+    "selective-fact-checkpoint",
 }
 
 
@@ -187,6 +191,7 @@ ROLE_COMMANDS = {
         "revoke",
         "candidate-release",
         "candidate-release-check",
+        "selective-fact-checkpoint",
         "verifier-capsule",
         "certification-decision-check",
         "memory-add",
@@ -195,6 +200,8 @@ ROLE_COMMANDS = {
         "adoption-plan",
         "plan-round",
         "plan-supervision-round",
+        "plan-candidate-adverse",
+        "prepare-candidate-adverse-target",
         "plan-computation-execution",
         "project-background-index",
         "project-background-read",

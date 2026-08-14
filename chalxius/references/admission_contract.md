@@ -45,10 +45,16 @@ Admission requires all of the following:
    review plus its content-addressed success receipt;
 12. one immutable Certification Decision bound to the release and capsule;
 13. gateway revalidation of the accepted decision followed by all-or-none Fact
-   visibility; active lineage validation uses a two-phase immutable snapshot so
-   release validation never recursively asks the Fact projection to validate
-   itself, while the admission marker remains the sole visibility switch and
-   post-marker event/interface completion is exact and idempotent; and
+   visibility; active lineage validation uses a two-phase command-local
+   projection so a bounded frozen-authority reentry validates only local
+   Release, marker, and Fact bytes, while the outer frame completes all Research,
+   historical-runtime, Decision, successor, and lineage checks and requires
+   exact provisional/full agreement; one ephemeral admission inspection
+   context may be shared by immutable pre-lock readers, but it is discarded at
+   the publication boundary and a distinct fresh context is created under the
+   mutation lock for historical-release and lineage replay; the admission
+   marker remains the sole visibility switch and post-marker event/interface
+   completion is exact and idempotent; and
 14. cascade revocation plus a clean current graph and workflow audit.
 
 Research, Evidence, Candidate Release, Certification Decision, Paper/Audit,
@@ -59,6 +65,60 @@ Learning records are not Fact premises.
 projection or receipt remain in that nontruth set. The command's one token-bound
 prospective root Research is likewise nontruth and supplies lineage only; BF
 itself still creates no Research, plan, dispatch, or Fact.
+
+## Selective checkpoint and Candidate batch seed
+
+`selective-fact-checkpoint` is a Main-only, nontruth operation before Candidate
+authoring. Its exact input is one object with `schema_version=1`, a nonempty
+`objective`, one to sixteen `target_rationales` containing exact `research_id`
+and nonempty `reason` strings, and zero to thirty-two `excluded_research`
+entries with the same exact fields. Targets and exclusions must be disjoint.
+
+The command fully validates every selected Research record, its ancestry,
+staleness, review-only status, and required current supervision. Unselected
+Research contributes only bounded content-addressed structural envelopes for
+connectivity and invalidation checks. The immutable receipt reports assurance,
+source-use, computation-manifest, obligation-disposition, downstream-reuse,
+and blocker projections. It does not infer mathematical correctness from
+centrality and does not select a target automatically.
+
+Every receipt includes a deterministic Candidate batch seed. It freezes the
+dependency edges among explicitly selected targets and partitions the ready
+set into disjoint dependency-connected **authoring batches**. These batches are
+not Fact atoms: every later Candidate Fact must expose exactly one semantic
+conclusion atom, while an authoring batch may produce several such Facts joined
+by an explicit internal Candidate DAG. Independent targets remain singletons so
+one failed adverse review or verifier decision does not invalidate unrelated
+packaging. A blocked selected premise propagates a checkpoint blocker to each
+selected dependent. Main may later combine independent batches only after
+reviewing their common failure surface and must still preserve one-conclusion
+Fact atomicity plus exact predecessor closure. The seed is planning input only:
+it does not automatically atomize Research, author a Fact statement or proof,
+or waive Candidate preflight, fresh adverse review, verifier coverage,
+Certification, or Gateway admission.
+
+Before Research replay or packaging, every prospective Candidate command applies
+the same cheap semantic gate. If a Fact carries a semantic interface, exactly
+one component may be a conclusion, mathematical claim, or empirical hypothesis;
+premise components may remain separate. Without that interface, exactly one
+`[CLAIM:*]` statement clause is allowed. New 0.7.13 worker cards that require a
+`candidate_fact` artifact also require exact canonical Fact Markdown bytes at
+return preflight. Older frozen task cards retain their original byte contract
+and remain replayable as historical nontruth lineage.
+
+For each exact Candidate-Fact target, Main may call
+`plan-candidate-adverse RESEARCH_ID`. The target must be active, non-stale, bind
+exactly one current `candidate_fact` artifact, and carry
+`independent_adverse_required=true`. The planner is host-scope-bound and
+idempotent for an exact retry. It creates only nontruth refute Research; the
+Candidate disposition and every later truth gate remain mandatory.
+
+When the exact Candidate Fact is a production result that already passed the
+required Research supervision, Main may first call
+`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. The command derives
+the unique live supervision result and creates or reuses one content-addressed
+nontruth synthesis target. It does not perform atomization, Candidate
+packaging, verification, Certification, Gateway admission, or Fact admission.
 
 Reasoning depth does not define the validation blast radius. Current receipts
 may cover unchanged sealed dependencies, but every new or invalidated atomic
