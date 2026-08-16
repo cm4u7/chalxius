@@ -10,9 +10,10 @@ import re
 import secrets
 import sys
 import unicodedata
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Callable, Sequence
+from pathlib import Path, PurePosixPath
+from typing import Any, Callable, Iterator, Sequence
 
 sys.dont_write_bytecode = True
 
@@ -45,6 +46,9 @@ FINDING_CONTRACT_REVISION = "chalxius-chx-run-ledger-3"
 LINEAGE_CONTRACT_REVISION = "chalxius-chx-run-ledger-4"
 REPAIR_CONTRACT_REVISION = "chalxius-chx-run-ledger-5"
 CONTRACT_REVISION = REPAIR_CONTRACT_REVISION
+INVENTORY_CONTRACT_REVISION = "chalxius-chx-ledger-inventory-1"
+GLOBAL_REPAIR_CONTRACT_REVISION = "chalxius-chx-global-integrated-repair-3"
+GLOBAL_REPAIR_INPUT_REVISION = "chalxius-chx-global-integrated-repair-input-3"
 FINDING_CONTRACT_REVISIONS = frozenset(
     {
         FINDING_CONTRACT_REVISION,
@@ -91,6 +95,21 @@ FINDING_ID_RE = re.compile(r"finding-[0-9a-f]{64}")
 RECONNAISSANCE_ID_RE = re.compile(r"reconnaissance-[0-9a-f]{64}")
 TACTICAL_REPAIR_ID_RE = re.compile(r"tactical-repair-[0-9a-f]{64}")
 INTEGRATED_REPAIR_ID_RE = re.compile(r"integrated-repair-[0-9a-f]{64}")
+GLOBAL_REPAIR_ID_RE = re.compile(r"global-repair-[0-9a-f]{64}")
+QUALIFIED_ISSUE_ID_RE = re.compile(
+    r"run-[A-Za-z0-9][A-Za-z0-9._-]{0,127}/CHX-[0-9]{3,}"
+)
+GLOBAL_REPAIR_BASES = frozenset(
+    {
+        "fixed_by_unified_repair",
+        "historical_nonarchitectural",
+        "revalidated_current",
+        "superseded_current",
+    }
+)
+DIGEST_BOUND_REFERENCE_RE = re.compile(
+    r"(candidate|project):([^#]+)#sha256=([0-9a-f]{64})"
+)
 MECHANISM_ID_RE = re.compile(r"mechanism\.[a-z][a-z0-9._-]{0,127}")
 DECISION_ID_RE = re.compile(r"decision\.[a-z][a-z0-9._-]{0,127}")
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
@@ -121,6 +140,166 @@ def _normalize_unicode(value: Any) -> Any:
 
 def _sha256(payload: bytes) -> str:
     return _core_sha256(payload)
+
+
+def _parse_utc_timestamp(value: Any, *, label: str) -> datetime:
+    text = _require_text(value, label, maximum=64)
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{label} is not an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{label} must include an explicit timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _qualified_issue_sort_key(value: str) -> tuple[str, int]:
+    if not isinstance(value, str) or QUALIFIED_ISSUE_ID_RE.fullmatch(value) is None:
+        raise ValueError("qualified CHX issue id is invalid")
+    run_id, issue_id = value.split("/", 1)
+    return run_id, int(issue_id.removeprefix("CHX-"))
+
+
+def _canonical_qualified_issue_ids(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str)
+        or QUALIFIED_ISSUE_ID_RE.fullmatch(item) is None
+        for item in value
+    ):
+        raise ValueError(f"{label} must be a list of qualified CHX issue ids")
+    normalized = sorted(set(value), key=_qualified_issue_sort_key)
+    if value != normalized:
+        raise ValueError(f"{label} must be sorted and duplicate-free")
+    return normalized
+
+
+def _canonical_digest_bound_references(value: Any, label: str) -> list[str]:
+    references = _require_canonical_string_list(value, label, nonempty=True)
+    for reference in references:
+        match = DIGEST_BOUND_REFERENCE_RE.fullmatch(reference)
+        if match is None:
+            raise ValueError(
+                f"{label} entries must use ROOT:relative/path#sha256=DIGEST"
+            )
+        relpath = match.group(2)
+        pure = PurePosixPath(relpath)
+        if (
+            pure.is_absolute()
+            or "\\" in relpath
+            or any(part in {"", ".", ".."} for part in pure.parts)
+            or str(pure) != relpath
+        ):
+            raise ValueError(f"{label} contains an unsafe relative path")
+    return references
+
+
+def _verify_digest_bound_reference(
+    reference: str,
+    *,
+    candidate_root: Path,
+    project_root: Path,
+) -> None:
+    match = DIGEST_BOUND_REFERENCE_RE.fullmatch(reference)
+    if match is None:  # pragma: no cover - syntax validation precedes verification
+        raise ValueError("CHX global repair digest-bound reference is invalid")
+    root = candidate_root if match.group(1) == "candidate" else project_root
+    pure = PurePosixPath(match.group(2))
+    path = root
+    for part in pure.parts:
+        path = path / part
+        if path.is_symlink():
+            raise ValueError("CHX global repair reference traverses a symlink")
+    if not path.is_file():
+        raise ValueError("CHX global repair reference file is missing")
+    resolved = path.resolve(strict=True)
+    if resolved != root and root not in resolved.parents:
+        raise ValueError("CHX global repair reference escaped its declared root")
+    if _sha256(path.read_bytes()) != match.group(3):
+        raise ValueError("CHX global repair reference hash drifted")
+
+
+def _verify_global_repair_references(
+    integration: dict[str, Any],
+    *,
+    project_root: Path,
+) -> None:
+    candidate_root = _resolved_path(integration["candidate_root"])
+    if any(
+        not reference.startswith("project:")
+        for reference in integration["regression_evidence"]
+    ):
+        raise ValueError(
+            "CHX global repair regression evidence must bind project receipts"
+        )
+    references = {
+        *integration["risk_evidence"],
+        *integration["regression_evidence"],
+    }
+    group_for_issue: dict[str, dict[str, Any]] = {}
+    for group in integration["mechanism_groups"]:
+        if any(
+            not reference.startswith("candidate:")
+            for reference in group["implementation_anchors"]
+        ):
+            raise ValueError(
+                "CHX global repair implementation anchors must bind candidate files"
+            )
+        references.update(group["implementation_anchors"])
+        references.update(group["evidence"])
+        for issue_id in group["issue_ids"]:
+            group_for_issue[issue_id] = group
+    regression = set(integration["regression_evidence"])
+    for group in integration["mechanism_groups"]:
+        if not set(group["evidence"]).issubset(regression):
+            raise ValueError(
+                "CHX global repair mechanism evidence must be included in "
+                "global regression evidence"
+            )
+    for disposition in integration["issue_dispositions"]:
+        group = group_for_issue[disposition["qualified_issue_id"]]
+        if not set(disposition["evidence"]).issubset(set(group["evidence"])):
+            raise ValueError(
+                "CHX global repair disposition evidence must be included in "
+                "its mechanism group evidence"
+            )
+        references.update(disposition["evidence"])
+    for reference in sorted(references):
+        _verify_digest_bound_reference(
+            reference,
+            candidate_root=candidate_root,
+            project_root=project_root,
+        )
+
+
+def _global_repair_semantic(event: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: event[key]
+        for key in (
+            "schema_version",
+            "contract_revision",
+            "event",
+            "project_root",
+            "candidate_root",
+            "candidate_version",
+            "candidate_manifest_sha256",
+            "inventory_sha256",
+            "covered_issue_snapshot_sha256",
+            "included_issue_ids",
+            "issue_dispositions",
+            "mechanism_groups",
+            "risk_evidence",
+            "regression_evidence",
+            "supersedes_global_repair_id",
+            "truth_effect",
+            "project_effect",
+        )
+    }
+
+
+def _global_repair_id(event: dict[str, Any]) -> str:
+    return "global-repair-" + _sha256(
+        _canonical_nfc_bytes(_global_repair_semantic(event))
+    )
 
 
 def _event_sha256(event: dict[str, Any]) -> str:
@@ -509,6 +688,233 @@ def _validate_integrated_repair_input(value: Any) -> dict[str, Any]:
                 "CHX integrated regression_evidence",
                 nonempty=True,
             ),
+        }
+    )
+
+
+def _validate_global_repair_input(value: Any) -> dict[str, Any]:
+    """Validate one cross-ledger repair plan without requiring tactical entries.
+
+    Historical task ledgers remain immutable.  This input is the project-wide
+    copy-on-write closure record used when several independent task ledgers
+    must be revalidated and repaired as one mechanism-level operation.
+    """
+
+    expected = {
+        "candidate_root",
+        "candidate_version",
+        "candidate_manifest_sha256",
+        "inventory_sha256",
+        "covered_issue_snapshot_sha256",
+        "included_issue_ids",
+        "issue_dispositions",
+        "mechanism_groups",
+        "risk_evidence",
+        "regression_evidence",
+        "supersedes_global_repair_id",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError("CHX global repair input fields are not exact")
+    candidate_root = _require_text(
+        value.get("candidate_root"),
+        "CHX global repair candidate_root",
+        maximum=4_096,
+    )
+    candidate_path = Path(candidate_root).expanduser()
+    if (
+        not candidate_path.is_absolute()
+        or candidate_path.is_symlink()
+        or not candidate_path.is_dir()
+        or str(candidate_path.resolve(strict=True)) != candidate_root
+    ):
+        raise ValueError("CHX global repair candidate_root is unsafe")
+    candidate_version = _require_text(
+        value.get("candidate_version"),
+        "CHX global repair candidate_version",
+        maximum=64,
+    )
+    candidate_manifest_sha256 = value.get("candidate_manifest_sha256")
+    if not isinstance(candidate_manifest_sha256, str) or SHA256_RE.fullmatch(
+        candidate_manifest_sha256
+    ) is None:
+        raise ValueError("CHX global repair candidate_manifest_sha256 is invalid")
+    inventory_sha256 = value.get("inventory_sha256")
+    if not isinstance(inventory_sha256, str) or SHA256_RE.fullmatch(
+        inventory_sha256
+    ) is None:
+        raise ValueError("CHX global repair inventory_sha256 is invalid")
+    covered_issue_snapshot_sha256 = value.get(
+        "covered_issue_snapshot_sha256"
+    )
+    if not isinstance(
+        covered_issue_snapshot_sha256, str
+    ) or SHA256_RE.fullmatch(covered_issue_snapshot_sha256) is None:
+        raise ValueError(
+            "CHX global repair covered_issue_snapshot_sha256 is invalid"
+        )
+    included = _canonical_qualified_issue_ids(
+        value.get("included_issue_ids"),
+        "CHX global repair included_issue_ids",
+    )
+    if not included:
+        raise ValueError("CHX global repair must cover at least one issue")
+
+    dispositions = value.get("issue_dispositions")
+    if not isinstance(dispositions, list) or not dispositions:
+        raise ValueError("CHX global repair issue_dispositions must be nonempty")
+    normalized_dispositions: list[dict[str, Any]] = []
+    seen_dispositions: set[str] = set()
+    for index, item in enumerate(dispositions, 1):
+        if not isinstance(item, dict) or set(item) != {
+            "qualified_issue_id",
+            "status",
+            "basis",
+            "reason",
+            "evidence",
+        }:
+            raise ValueError(
+                f"CHX global repair issue disposition {index} fields are not exact"
+            )
+        qualified = item.get("qualified_issue_id")
+        if (
+            not isinstance(qualified, str)
+            or QUALIFIED_ISSUE_ID_RE.fullmatch(qualified) is None
+            or qualified in seen_dispositions
+        ):
+            raise ValueError("CHX global repair issue disposition id is invalid")
+        status = item.get("status")
+        if status not in DISPOSITION_STATUSES:
+            raise ValueError("CHX global repair issue disposition status is invalid")
+        basis = item.get("basis")
+        if basis not in GLOBAL_REPAIR_BASES:
+            raise ValueError("CHX global repair issue disposition basis is invalid")
+        if (
+            status == "excluded_nonarchitectural"
+            and basis != "historical_nonarchitectural"
+        ) or (
+            status == "resolved" and basis == "historical_nonarchitectural"
+        ):
+            raise ValueError(
+                "CHX global repair disposition basis/status pairing is invalid"
+            )
+        evidence = _canonical_digest_bound_references(
+            item.get("evidence"),
+            "CHX global repair issue disposition evidence",
+        )
+        normalized_dispositions.append(
+            {
+                "qualified_issue_id": qualified,
+                "status": status,
+                "basis": basis,
+                "reason": _require_text(
+                    item.get("reason"),
+                    "CHX global repair issue disposition reason",
+                ),
+                "evidence": evidence,
+            }
+        )
+        seen_dispositions.add(qualified)
+    normalized_dispositions.sort(
+        key=lambda item: _qualified_issue_sort_key(item["qualified_issue_id"])
+    )
+    if [item["qualified_issue_id"] for item in normalized_dispositions] != included:
+        raise ValueError(
+            "CHX global repair dispositions must cover every included issue exactly once"
+        )
+
+    groups = value.get("mechanism_groups")
+    if not isinstance(groups, list) or not groups:
+        raise ValueError("CHX global repair mechanism_groups must be nonempty")
+    normalized_groups: list[dict[str, Any]] = []
+    group_ids: set[str] = set()
+    covered: set[str] = set()
+    for index, item in enumerate(groups, 1):
+        expected_group = {
+            "group_id",
+            "issue_ids",
+            "summary",
+            "implementation_anchors",
+            "fail_closed_boundary",
+            "evidence",
+        }
+        if not isinstance(item, dict) or set(item) != expected_group:
+            raise ValueError(
+                f"CHX global repair mechanism group {index} fields are not exact"
+            )
+        group_id = item.get("group_id")
+        if (
+            not isinstance(group_id, str)
+            or MECHANISM_ID_RE.fullmatch(group_id) is None
+            or group_id in group_ids
+        ):
+            raise ValueError("CHX global repair mechanism group id is invalid")
+        issue_ids = _canonical_qualified_issue_ids(
+            item.get("issue_ids"),
+            "CHX global repair mechanism group issue_ids",
+        )
+        if not issue_ids or not set(issue_ids).issubset(set(included)):
+            raise ValueError(
+                "CHX global repair mechanism group escaped included issue ids"
+            )
+        if covered.intersection(issue_ids):
+            raise ValueError(
+                "CHX global repair mechanism groups overlap issue ownership"
+            )
+        evidence = _canonical_digest_bound_references(
+            item.get("evidence"),
+            "CHX global repair mechanism group evidence",
+        )
+        normalized_groups.append(
+            {
+                "group_id": group_id,
+                "issue_ids": issue_ids,
+                "summary": _require_text(
+                    item.get("summary"),
+                    "CHX global repair mechanism group summary",
+                ),
+                "implementation_anchors": _canonical_digest_bound_references(
+                    item.get("implementation_anchors"),
+                    "CHX global repair mechanism group implementation_anchors",
+                ),
+                "fail_closed_boundary": _require_text(
+                    item.get("fail_closed_boundary"),
+                    "CHX global repair mechanism group fail_closed_boundary",
+                ),
+                "evidence": evidence,
+            }
+        )
+        group_ids.add(group_id)
+        covered.update(issue_ids)
+    if covered != set(included):
+        raise ValueError(
+            "CHX global repair mechanism groups must cover every included issue"
+        )
+    normalized_groups.sort(key=lambda item: item["group_id"])
+
+    supersedes = value.get("supersedes_global_repair_id")
+    if not isinstance(supersedes, str):
+        raise ValueError("CHX global repair predecessor must be text")
+    if supersedes and GLOBAL_REPAIR_ID_RE.fullmatch(supersedes) is None:
+        raise ValueError("CHX global repair predecessor id is invalid")
+    return _normalize_unicode(
+        {
+            "candidate_root": candidate_root,
+            "candidate_version": candidate_version,
+            "candidate_manifest_sha256": candidate_manifest_sha256,
+            "inventory_sha256": inventory_sha256,
+            "covered_issue_snapshot_sha256": covered_issue_snapshot_sha256,
+            "included_issue_ids": included,
+            "issue_dispositions": normalized_dispositions,
+            "mechanism_groups": normalized_groups,
+            "risk_evidence": _canonical_digest_bound_references(
+                value.get("risk_evidence"),
+                "CHX global repair risk_evidence",
+            ),
+            "regression_evidence": _canonical_digest_bound_references(
+                value.get("regression_evidence"),
+                "CHX global repair regression_evidence",
+            ),
+            "supersedes_global_repair_id": supersedes,
         }
     )
 
@@ -2027,6 +2433,7 @@ def start_ledger(
     inherited_findings: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
     task_card_binding: dict[str, str] | None = None
+    project_path: Path | None = None
     if task_card is not None:
         card = _validate_task_card_runtime(task_card)
         task_card_binding = {
@@ -2150,7 +2557,11 @@ def start_ledger(
         events.append(event)
         previous = event["event_sha256"]
     _validate_events(events, ledger_path=path)
-    _write_new_ledger_events(path, events)
+    if project_path is None:
+        _write_new_ledger_events(path, events)
+    else:
+        with _global_repair_lock(project_path, exclusive=True):
+            _write_new_ledger_events(path, events)
     return ledger_status(path)
 
 
@@ -2662,8 +3073,6 @@ def render_architecture_report(ledger_path: Path | str) -> str:
         "ledger_sha256": _sha256(path.read_bytes()),
         "predecessor_ledger_path": status["predecessor_ledger_path"],
         "predecessor_ledger_sha256": status["predecessor_ledger_sha256"],
-        "predecessor_issue_ids": status["predecessor_issue_ids"],
-        "predecessor_lineage": status["predecessor_lineage"],
         "architecture_report_semantic_sha256": close[
             "architecture_report_semantic_sha256"
         ],
@@ -2675,6 +3084,18 @@ def render_architecture_report(ledger_path: Path | str) -> str:
         "truth_effect": "none",
         "project_effect": "none",
     }
+    # Revision 3 reports predate the transitive-lineage projection.  Their
+    # frozen deterministic bytes intentionally contain only the direct
+    # predecessor path/hash even though the ledger start event already carried
+    # predecessor_issue_ids.  Adding later empty fields would falsely classify
+    # valid immutable historical reports as drifted.
+    if status["contract_revision"] in LINEAGE_CONTRACT_REVISIONS:
+        projection.update(
+            {
+                "predecessor_issue_ids": status["predecessor_issue_ids"],
+                "predecessor_lineage": status["predecessor_lineage"],
+            }
+        )
     if status["contract_revision"] in REPAIR_CONTRACT_REVISIONS:
         projection.update(
             {
@@ -2935,6 +3356,1342 @@ def ledger_status(ledger_path: Path | str) -> dict[str, Any]:
             "architecture_report": verify_architecture_report(path),
         }
     return status
+
+
+def _inventory_semantic_projection(result: dict[str, Any]) -> dict[str, Any]:
+    """Return the complete, pre-global-repair inventory projection."""
+
+    return {
+        key: result[key]
+        for key in (
+            "contract_revision",
+            "project_root",
+            "ledger_root",
+            "ledger_count",
+            "chain_count",
+            "unresolved",
+            "report_compatibility_drift",
+            "lineage_errors",
+            "parallel_issue_free_successors",
+            "parallel_closed_successors",
+            "ignored_supersedes",
+            "active_run_ids",
+            "counts",
+            "truth_effect",
+            "project_effect",
+            "ledgers",
+            "chains",
+        )
+    }
+
+
+def _covered_issue_snapshot_sha256(
+    inventory: dict[str, Any],
+    included_issue_ids: Sequence[str],
+) -> str:
+    """Bind each covered issue to the exact immutable ledger that owns it.
+
+    The full inventory hash remains the record-time quiescent snapshot.  This
+    narrower hash lets a valid repair remain applicable when later ledgers are
+    appended, while still detecting removal, replacement, or byte drift of any
+    ledger that owned an issue covered by the repair.
+    """
+
+    included = _canonical_qualified_issue_ids(
+        list(included_issue_ids),
+        "CHX global repair covered issue snapshot ids",
+    )
+    ledgers = inventory.get("ledgers")
+    if not isinstance(ledgers, list):
+        raise ValueError("CHX covered issue snapshot requires a full inventory")
+    owners: dict[str, dict[str, str]] = {}
+    for ledger in ledgers:
+        if not isinstance(ledger, dict):
+            raise ValueError("CHX covered issue snapshot ledger is malformed")
+        run_id = ledger.get("run_id")
+        digest = ledger.get("sha256")
+        revision = ledger.get("contract_revision")
+        issue_ids = ledger.get("issue_ids")
+        if (
+            not isinstance(run_id, str)
+            or RUN_ID_RE.fullmatch(run_id) is None
+            or not isinstance(digest, str)
+            or SHA256_RE.fullmatch(digest) is None
+            or revision not in SUPPORTED_CONTRACT_REVISIONS
+            or not isinstance(issue_ids, list)
+        ):
+            raise ValueError("CHX covered issue snapshot ledger is malformed")
+        for qualified in issue_ids:
+            if qualified in owners:
+                raise ValueError("CHX covered issue snapshot ownership overlaps")
+            owners[qualified] = {
+                "qualified_issue_id": qualified,
+                "ledger_run_id": run_id,
+                "ledger_sha256": digest,
+                "ledger_contract_revision": revision,
+            }
+    if set(owners).intersection(included) != set(included):
+        raise ValueError("CHX covered issue snapshot issue is missing")
+    projection = {
+        "contract_revision": "chalxius-chx-covered-issue-snapshot-1",
+        "issues": [owners[qualified] for qualified in included],
+    }
+    return _sha256(_canonical_nfc_bytes(projection))
+
+
+def _global_repair_dir(project_root: Path | str) -> Path:
+    project = _resolved_path(project_root)
+    ledger_root = project / DEFAULT_PROJECT_LEDGER_DIR
+    if ledger_root.is_symlink():
+        raise ValueError("CHX global repair ledger root must not be a symlink")
+    return ledger_root / "global-repairs"
+
+
+@contextmanager
+def _global_repair_lock(
+    project_root: Path | str,
+    *,
+    exclusive: bool,
+) -> Iterator[None]:
+    """Lock the existing CHX ledger directory without creating project state."""
+
+    project = _resolved_path(project_root)
+    ledger_root = project / DEFAULT_PROJECT_LEDGER_DIR
+    if ledger_root.is_symlink() or not ledger_root.is_dir():
+        raise ValueError("CHX global repair ledger root is missing or unsafe")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = -1
+    try:
+        descriptor = os.open(ledger_root, flags)
+        if not os.path.samestat(os.fstat(descriptor), ledger_root.stat()):
+            raise ValueError("CHX global repair ledger root changed before lock")
+        fcntl.flock(
+            descriptor,
+            fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH,
+        )
+        yield
+    finally:
+        if descriptor >= 0:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
+
+
+def _candidate_manifest_sha256(candidate_root: Path | str) -> str:
+    root = _resolved_path(candidate_root)
+    manifest = root / "MANIFEST.sha256"
+    if manifest.is_symlink() or not manifest.is_file():
+        raise ValueError("CHX global repair candidate manifest is missing or unsafe")
+    return _sha256(manifest.read_bytes())
+
+
+def _validate_global_repair_candidate(
+    candidate_root: Path | str,
+    *,
+    candidate_version: str,
+    candidate_manifest_sha256: str,
+) -> dict[str, Any]:
+    """Validate the exact candidate tree, not only its manifest identity file."""
+
+    root = _resolved_path(candidate_root)
+    binding = runtime_binding_from_root(root)
+    if binding["skill_root"] != str(root):
+        raise ValueError("CHX global repair candidate root binding drifted")
+    if binding["skill_version"] != candidate_version:
+        raise ValueError("CHX global repair candidate version is stale")
+    if binding["manifest_file_sha256"] != candidate_manifest_sha256:
+        raise ValueError("CHX global repair candidate manifest is stale")
+    return validate_bound_runtime_at(
+        root,
+        binding,
+        verify_manifest_tree=True,
+        require_exact_file_set=True,
+    )
+
+
+def _global_repair_inventory_is_complete(result: dict[str, Any]) -> bool:
+    return (
+        not result["lineage_errors"]
+        and not result["report_compatibility_drift"]
+        and not result["active_run_ids"]
+    )
+
+
+def _require_complete_global_repair_inventory(result: dict[str, Any]) -> None:
+    if result["lineage_errors"]:
+        raise ValueError("CHX global repair inventory has lineage errors")
+    if result["report_compatibility_drift"]:
+        raise ValueError("CHX global repair inventory has report drift")
+    if result["active_run_ids"]:
+        raise ValueError("CHX global repair requires a quiescent closed-ledger inventory")
+
+
+def _validate_global_repair_record(
+    record: Any,
+    *,
+    path: Path,
+    project_root: Path,
+) -> dict[str, Any]:
+    if not isinstance(record, dict):
+        raise ValueError("CHX global repair record must be one object")
+    expected = {
+        "schema_version",
+        "contract_revision",
+        "event",
+        "global_repair_id",
+        "project_root",
+        "candidate_root",
+        "candidate_version",
+        "candidate_manifest_sha256",
+        "inventory_sha256",
+        "covered_issue_snapshot_sha256",
+        "included_issue_ids",
+        "issue_dispositions",
+        "mechanism_groups",
+        "risk_evidence",
+        "regression_evidence",
+        "supersedes_global_repair_id",
+        "truth_effect",
+        "project_effect",
+        "created_at",
+        "record_sha256",
+    }
+    if set(record) != expected:
+        raise ValueError("CHX global repair record fields are not exact")
+    if (
+        record["schema_version"] != 1
+        or record["contract_revision"] != GLOBAL_REPAIR_CONTRACT_REVISION
+        or record["event"] != "global_integrated_repair"
+        or record["truth_effect"] != "none"
+        or record["project_effect"] != "none"
+    ):
+        raise ValueError("CHX global repair record contract or authority is invalid")
+    canonical_project = str(project_root.resolve(strict=True))
+    if record["project_root"] != canonical_project:
+        raise ValueError("CHX global repair project binding drifted")
+    normalized = _validate_global_repair_input(
+        {
+            key: record[key]
+            for key in (
+                "candidate_root",
+                "candidate_version",
+                "candidate_manifest_sha256",
+                "inventory_sha256",
+                "covered_issue_snapshot_sha256",
+                "included_issue_ids",
+                "issue_dispositions",
+                "mechanism_groups",
+                "risk_evidence",
+                "regression_evidence",
+                "supersedes_global_repair_id",
+            )
+        }
+    )
+    if record["global_repair_id"] != _global_repair_id(record):
+        raise ValueError("CHX global repair id mismatch")
+    if path.stem != record["global_repair_id"]:
+        raise ValueError("CHX global repair path/id mismatch")
+    created_at = _require_text(
+        record["created_at"],
+        "CHX global repair created_at",
+        maximum=64,
+    )
+    _parse_utc_timestamp(created_at, label="CHX global repair created_at")
+    if record["record_sha256"] != _sha256(
+        _canonical_nfc_bytes(
+            {key: value for key, value in record.items() if key != "record_sha256"}
+        )
+    ):
+        raise ValueError("CHX global repair record hash mismatch")
+    return {**record, **normalized}
+
+
+def _collect_global_repair_records(
+    project_root: Path | str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    project = _resolved_path(project_root)
+    directory = _global_repair_dir(project)
+    if directory.is_symlink():
+        raise ValueError("CHX global repair directory is unsafe")
+    if not directory.exists():
+        return [], []
+    if not directory.is_dir():
+        raise ValueError("CHX global repair directory is unsafe")
+    records: list[dict[str, Any]] = []
+    ids: set[str] = set()
+    for path in sorted(directory.iterdir(), key=lambda item: item.name):
+        if path.suffix != ".json":
+            raise ValueError("CHX global repair directory contains an unexpected entry")
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("CHX global repair entry is unsafe")
+        record = _validate_global_repair_record(
+            json.loads(path.read_text(encoding="utf-8")),
+            path=path,
+            project_root=project,
+        )
+        if record["global_repair_id"] in ids:
+            raise ValueError("CHX global repair id is duplicated")
+        ids.add(record["global_repair_id"])
+        records.append(record)
+    by_id = {record["global_repair_id"]: record for record in records}
+    for record in records:
+        predecessor = record["supersedes_global_repair_id"]
+        if predecessor and predecessor not in by_id:
+            raise ValueError("CHX global repair predecessor is missing")
+    terminals = [
+        record
+        for record in records
+        if not any(
+            other["supersedes_global_repair_id"] == record["global_repair_id"]
+            for other in records
+        )
+    ]
+    if len(terminals) > 1:
+        raise ValueError("CHX global repair lineage has multiple terminals")
+    if not terminals:
+        return records, []
+    terminal = terminals[0]
+    chain: list[str] = []
+    seen: set[str] = set()
+    current: dict[str, Any] | None = terminal
+    while current is not None:
+        identifier = current["global_repair_id"]
+        if identifier in seen:
+            raise ValueError("CHX global repair lineage contains a cycle")
+        seen.add(identifier)
+        chain.append(identifier)
+        predecessor = current["supersedes_global_repair_id"]
+        current = by_id.get(predecessor) if predecessor else None
+    if len(seen) != len(records):
+        raise ValueError("CHX global repair lineage contains an orphan branch")
+    return records, list(reversed(chain))
+
+
+def _apply_global_repair_projection(
+    result: dict[str, Any],
+    *,
+    project_root: Path,
+) -> dict[str, Any]:
+    records, chain = _collect_global_repair_records(project_root)
+    projection: dict[str, Any] = {
+        "status": "absent",
+        "global_repair_id": "",
+        "covered_issue_count": 0,
+        "uncovered_issue_count": 0,
+        "inventory_sha256": "",
+        "covered_issue_snapshot_sha256": "",
+        "candidate_version": "",
+        "candidate_manifest_sha256": "",
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
+    observed_ids = {
+        issue_id
+        for ledger in result.get("ledgers", [])
+        for issue_id in ledger.get("issue_ids", [])
+    }
+    if not records:
+        projection["uncovered_issue_count"] = len(observed_ids)
+        result["global_repair"] = projection
+        return result
+    latest = next(
+        record
+        for record in records
+        if record["global_repair_id"] == chain[-1]
+    )
+    projection.update(
+        {
+            "global_repair_id": latest["global_repair_id"],
+            "covered_issue_count": len(latest["included_issue_ids"]),
+            "inventory_sha256": latest["inventory_sha256"],
+            "covered_issue_snapshot_sha256": latest[
+                "covered_issue_snapshot_sha256"
+            ],
+            "candidate_version": latest["candidate_version"],
+            "candidate_manifest_sha256": latest["candidate_manifest_sha256"],
+        }
+    )
+    covered_ids = set(latest["included_issue_ids"])
+    projection["uncovered_issue_count"] = (
+        len(observed_ids.difference(covered_ids))
+        if covered_ids.issubset(observed_ids)
+        else len(observed_ids)
+    )
+    candidate_current = False
+    if latest["candidate_root"] == str(_skill_root()):
+        try:
+            _validate_global_repair_candidate(
+                latest["candidate_root"],
+                candidate_version=latest["candidate_version"],
+                candidate_manifest_sha256=latest[
+                    "candidate_manifest_sha256"
+                ],
+            )
+            _verify_global_repair_references(latest, project_root=project_root)
+        except (OSError, ValueError):
+            pass
+        else:
+            candidate_current = True
+    if not candidate_current:
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    if result["lineage_errors"] or result["report_compatibility_drift"]:
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    all_rows = [
+        *result["unresolved"],
+    ]
+    dispositions = {
+        item["qualified_issue_id"]: item
+        for item in latest["issue_dispositions"]
+    }
+    if not covered_ids.issubset(observed_ids):
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    if set(dispositions) != covered_ids:
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    try:
+        current_covered_snapshot = _covered_issue_snapshot_sha256(
+            result,
+            latest["included_issue_ids"],
+        )
+    except ValueError:
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    if current_covered_snapshot != latest["covered_issue_snapshot_sha256"]:
+        projection["status"] = "stale"
+        result["global_repair"] = projection
+        return result
+    for row in all_rows:
+        disposition = dispositions.get(row["qualified_issue_id"])
+        if disposition is None:
+            continue
+        if disposition["status"] == "resolved":
+            row["resolution"] = "resolved_by_global_repair"
+        elif disposition["status"] == "excluded_nonarchitectural":
+            row["resolution"] = "excluded_nonarchitectural"
+    result["unresolved"] = [
+        row for row in all_rows if row["resolution"].startswith("open_")
+    ]
+    for chain_row in result.get("chains", []):
+        chain_row["unresolved_issue_ids"] = [
+            row["qualified_issue_id"]
+            for row in all_rows
+            if row["qualified_issue_id"] in set(chain_row["unresolved_issue_ids"])
+            and row["resolution"].startswith("open_")
+        ]
+    result["counts"]["unresolved_issues"] = len(result["unresolved"])
+    result["counts"]["orphan_open_issues"] = sum(
+        row["resolution"] == "open_orphan" for row in result["unresolved"]
+    )
+    result["counts"]["active_open_issues"] = sum(
+        row["resolution"] == "open_active" for row in result["unresolved"]
+    )
+    result["counts"]["successor_pending_issues"] = sum(
+        row["resolution"] == "open_successor_pending"
+        for row in result["unresolved"]
+    )
+    resolved_count = sum(
+        disposition["status"] == "resolved"
+        for disposition in dispositions.values()
+    )
+    excluded_count = sum(
+        disposition["status"] == "excluded_nonarchitectural"
+        for disposition in dispositions.values()
+    )
+    result["counts"]["global_repaired_issues"] = resolved_count
+    result["counts"]["global_resolved_issues"] = resolved_count
+    result["counts"]["global_excluded_nonarchitectural_issues"] = (
+        excluded_count
+    )
+    result["counts"]["global_disposed_issues"] = (
+        resolved_count + excluded_count
+    )
+    projection["status"] = "current"
+    result["global_repair"] = projection
+    return result
+
+
+def _inventory_project_ledgers_unlocked(
+    project_root: Path | str,
+    *,
+    full: bool = False,
+    include_global: bool = True,
+) -> dict[str, Any]:
+    """Build a read-only closure view over every project-local CHX ledger.
+
+    ``run_closed`` only freezes a ledger; it does not resolve its issues.  This
+    projection follows each predecessor chain and evaluates direct dispositions
+    and unique ``supersedes`` successors without changing any ledger or report.
+    Historical report-renderer drift is surfaced separately from ledger validity.
+    """
+
+    project = _resolved_path(project_root)
+    if project.is_symlink() or not project.is_dir():
+        raise ValueError("CHX inventory project root is missing or unsafe")
+    ledger_root = project / DEFAULT_PROJECT_LEDGER_DIR
+    if ledger_root.is_symlink():
+        raise ValueError("CHX inventory ledger root must not be a symlink")
+    if not ledger_root.exists():
+        result = {
+            "contract_revision": INVENTORY_CONTRACT_REVISION,
+            "project_root": str(project),
+            "ledger_root": str(ledger_root),
+            "ledger_count": 0,
+            "chain_count": 0,
+            "unresolved": [],
+            "report_compatibility_drift": [],
+            "lineage_errors": [],
+            "parallel_issue_free_successors": [],
+            "parallel_closed_successors": [],
+            "ignored_supersedes": [],
+            "active_run_ids": [],
+            "counts": {
+                "active_ledgers": 0,
+                "closed_ledgers": 0,
+                "observed_issues": 0,
+                "unresolved_issues": 0,
+                "orphan_open_issues": 0,
+                "active_open_issues": 0,
+                "successor_pending_issues": 0,
+                "report_compatibility_drift": 0,
+                "ignored_supersedes": 0,
+            },
+            "truth_effect": "none",
+            "project_effect": "none",
+            "ledgers": [],
+            "chains": [],
+        }
+        result["inventory_sha256"] = _sha256(
+            _canonical_nfc_bytes(_inventory_semantic_projection(result))
+        )
+        if include_global:
+            result = _apply_global_repair_projection(
+                result,
+                project_root=project,
+            )
+        if full:
+            pass
+        else:
+            result.pop("ledgers", None)
+            result.pop("chains", None)
+        return result
+    if not ledger_root.is_dir():
+        raise ValueError("CHX inventory ledger root is not a directory")
+
+    records: dict[str, dict[str, Any]] = {}
+    path_to_run: dict[Path, str] = {}
+    for path in sorted(ledger_root.iterdir(), key=lambda item: item.name):
+        if path.suffix != ".jsonl":
+            continue
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("CHX inventory contains an unsafe ledger entry")
+        before = path.read_bytes()
+        events, status = _read_locked(path)
+        if path.read_bytes() != before:
+            raise ValueError("CHX ledger changed during inventory read")
+        run_id = status["run_id"]
+        if run_id in records:
+            raise ValueError("CHX inventory contains a duplicate run id")
+        dispositions = {
+            event["issue_id"]: event
+            for event in events
+            if event["event"] == "issue_disposition"
+        }
+        issues: dict[str, dict[str, Any]] = {}
+        for event in events:
+            if event["event"] != "issue_observed":
+                continue
+            issue_id = event["issue_id"]
+            disposition = dispositions.get(issue_id)
+            issues[issue_id] = {
+                "issue_id": issue_id,
+                "status": (
+                    disposition["status"] if disposition is not None else "open"
+                ),
+                "classification": event["classification"],
+                "relations": list(event.get("relations", [])),
+            }
+        report_status = "not_applicable"
+        report_error = ""
+        if status["contract_revision"] in FINDING_CONTRACT_REVISIONS:
+            if status["state"] != "closed":
+                report_status = "pending"
+            else:
+                try:
+                    verify_architecture_report(path)
+                except (OSError, ValueError) as exc:
+                    report_status = "drifted_or_missing"
+                    report_error = str(exc)
+                else:
+                    report_status = "exact"
+        predecessor_path = status.get("predecessor_ledger_path", "")
+        predecessor = ""
+        if predecessor_path:
+            candidate = Path(predecessor_path).expanduser()
+            if not candidate.is_absolute():
+                candidate = path.parent / candidate
+            predecessor = str(candidate.resolve(strict=False))
+        record = {
+            "run_id": run_id,
+            "path": str(path),
+            "sha256": _sha256(before),
+            "skill_version": status["skill_version"],
+            "contract_revision": status["contract_revision"],
+            "state": status["state"],
+            "predecessor_path": predecessor,
+            "predecessor_sha256": status.get(
+                "predecessor_ledger_sha256", ""
+            ),
+            "predecessor_lineage": status.get("predecessor_lineage", []),
+            "issues": issues,
+            "report_status": report_status,
+            "report_error": report_error,
+        }
+        records[run_id] = record
+        path_to_run[path.resolve(strict=False)] = run_id
+
+    parent: dict[str, str | None] = {}
+    lineage_errors: list[str] = []
+    for run_id, record in records.items():
+        predecessor = record["predecessor_path"]
+        if not predecessor:
+            parent[run_id] = None
+            continue
+        predecessor_run = path_to_run.get(Path(predecessor))
+        if predecessor_run is None:
+            lineage_errors.append(
+                f"{run_id}: predecessor ledger is outside or missing from inventory: "
+                f"{predecessor}"
+            )
+        else:
+            expected_digest = record["predecessor_sha256"]
+            observed_digest = records[predecessor_run]["sha256"]
+            if expected_digest != observed_digest:
+                lineage_errors.append(
+                    f"{run_id}: predecessor ledger digest binding drifted for "
+                    f"{predecessor_run}: expected {expected_digest}, observed "
+                    f"{observed_digest}"
+                )
+        parent[run_id] = predecessor_run
+
+    children: dict[str, list[str]] = {}
+    for run_id, predecessor in parent.items():
+        if predecessor is not None:
+            children.setdefault(predecessor, []).append(run_id)
+    parallel_issue_free_successors: list[dict[str, Any]] = []
+    parallel_closed_successors: list[dict[str, Any]] = []
+    parallel_supersede_sources: dict[str, set[str]] = {}
+
+    def successor_subtree(
+        run_id: str,
+        visiting: tuple[str, ...] = (),
+    ) -> tuple[int, tuple[str, ...]]:
+        """Return the exact closed subtree beneath one direct successor."""
+
+        if run_id in visiting:
+            raise ValueError("CHX inventory predecessor chain contains a cycle")
+        descendant_runs = [run_id]
+        issue_count = len(records[run_id]["issues"])
+        for child_run_id in sorted(children.get(run_id, [])):
+            child_issue_count, child_runs = successor_subtree(
+                child_run_id,
+                visiting + (run_id,),
+            )
+            issue_count += child_issue_count
+            descendant_runs.extend(child_runs)
+        return issue_count, tuple(descendant_runs)
+
+    for predecessor, successor_run_ids in sorted(children.items()):
+        if len(successor_run_ids) > 1:
+            branch_data = [
+                (
+                    successor_run_id,
+                    *successor_subtree(successor_run_id),
+                )
+                for successor_run_id in sorted(successor_run_ids)
+            ]
+            has_active_subtree = any(
+                records[run_id]["state"] == "open"
+                for _, _, descendant_runs in branch_data
+                for run_id in descendant_runs
+            )
+            if has_active_subtree:
+                lineage_errors.append(
+                    f"{predecessor}: predecessor has an active parallel successor subtree; "
+                    "multiple direct successors remain unresolved: "
+                    + ", ".join(sorted(successor_run_ids))
+                )
+                continue
+            ancestor_owners: dict[str, str] = {}
+            ancestor_run: str | None = predecessor
+            while ancestor_run is not None:
+                for issue_id in records[ancestor_run]["issues"]:
+                    ancestor_owners.setdefault(issue_id, ancestor_run)
+                ancestor_run = parent.get(ancestor_run)
+            for successor_run_id, issue_count, descendant_runs in branch_data:
+                projection = {
+                    "predecessor_run_id": predecessor,
+                    "successor_run_id": successor_run_id,
+                    "successor_subtree_run_ids": list(descendant_runs),
+                    "successor_subtree_issue_count": issue_count,
+                }
+                parallel_closed_successors.append(projection)
+                if issue_count == 0:
+                    parallel_issue_free_successors.append(projection)
+                for descendant_run_id in descendant_runs:
+                    for issue in records[descendant_run_id]["issues"].values():
+                        for relation in issue["relations"]:
+                            if relation.get("relation_type") != "supersedes":
+                                continue
+                            target_id = relation.get("issue_id")
+                            owner_run = ancestor_owners.get(target_id)
+                            if owner_run is None:
+                                continue
+                            qualified_target = f"{owner_run}/{target_id}"
+                            parallel_supersede_sources.setdefault(
+                                qualified_target, set()
+                            ).add(successor_run_id)
+    for qualified_target, sources in sorted(parallel_supersede_sources.items()):
+        if len(sources) > 1:
+            lineage_errors.append(
+                f"{qualified_target}: competing supersedes successors across "
+                "parallel branches: "
+                + ", ".join(sorted(sources))
+            )
+    terminals = sorted(
+        (run_id for run_id in records if run_id not in children),
+        key=lambda item: (records[item]["state"] != "open", item),
+    )
+
+    def chain_for(terminal: str) -> list[str]:
+        chain: list[str] = []
+        seen: set[str] = set()
+        current: str | None = terminal
+        while current is not None:
+            if current in seen:
+                raise ValueError("CHX inventory predecessor chain contains a cycle")
+            seen.add(current)
+            chain.append(current)
+            current = parent.get(current)
+        return list(reversed(chain))
+
+    chains: list[dict[str, Any]] = []
+    all_issue_rows: list[dict[str, Any]] = []
+    ignored_supersedes: list[dict[str, str]] = []
+    seen_chain_runs: set[str] = set()
+    for terminal in terminals:
+        chain = chain_for(terminal)
+        seen_chain_runs.update(chain)
+        owners: dict[str, str] = {}
+        issue_map: dict[str, dict[str, Any]] = {}
+        successors: dict[str, list[str]] = {}
+        for run_id in chain:
+            for issue_id, issue in records[run_id]["issues"].items():
+                if issue_id in owners:
+                    raise ValueError(
+                        "CHX inventory issue numbering collides inside a predecessor chain"
+                    )
+                owners[issue_id] = run_id
+                issue_map[issue_id] = {**issue, "run_id": run_id}
+        for issue_id, issue in issue_map.items():
+            for relation in issue["relations"]:
+                if relation.get("relation_type") != "supersedes":
+                    continue
+                target_id = relation.get("issue_id")
+                if target_id not in issue_map:
+                    lineage_errors.append(
+                        f"{owners[issue_id]}/{issue_id}: supersedes absent issue {target_id}"
+                    )
+                    continue
+                if owners[issue_id] == owners[target_id]:
+                    ignored_supersedes.append(
+                        {
+                            "source_qualified_issue_id": (
+                                f"{owners[issue_id]}/{issue_id}"
+                            ),
+                            "target_qualified_issue_id": (
+                                f"{owners[target_id]}/{target_id}"
+                            ),
+                            "reason": "same_ledger_not_strictly_later",
+                        }
+                    )
+                    continue
+                if issue["status"] == "excluded_nonarchitectural":
+                    ignored_supersedes.append(
+                        {
+                            "source_qualified_issue_id": (
+                                f"{owners[issue_id]}/{issue_id}"
+                            ),
+                            "target_qualified_issue_id": (
+                                f"{owners[target_id]}/{target_id}"
+                            ),
+                            "reason": "excluded_successor_has_no_repair_effect",
+                        }
+                    )
+                    continue
+                successors.setdefault(target_id, []).append(issue_id)
+        resolved_cache: dict[str, bool] = {}
+
+        def is_resolved(issue_id: str, visiting: tuple[str, ...] = ()) -> bool:
+            cached = resolved_cache.get(issue_id)
+            if cached is not None:
+                return cached
+            if issue_id in visiting:
+                raise ValueError("CHX inventory supersedes relation contains a cycle")
+            if issue_map[issue_id]["status"] == "resolved":
+                resolved_cache[issue_id] = True
+                return True
+            if issue_map[issue_id]["status"] == "excluded_nonarchitectural":
+                resolved_cache[issue_id] = False
+                return False
+            candidates = sorted(
+                successors.get(issue_id, []),
+                key=lambda item: int(item.removeprefix("CHX-")),
+            )
+            result = len(candidates) == 1 and is_resolved(
+                candidates[0], visiting + (issue_id,)
+            )
+            resolved_cache[issue_id] = result
+            return result
+
+        issue_rows: list[dict[str, Any]] = []
+        terminal_active = records[terminal]["state"] == "open"
+        for issue_id in sorted(
+            issue_map, key=lambda item: int(item.removeprefix("CHX-"))
+        ):
+            issue = issue_map[issue_id]
+            qualified = f"{issue['run_id']}/{issue_id}"
+            direct_status = issue["status"]
+            if direct_status in {"resolved", "excluded_nonarchitectural"}:
+                resolution = (
+                    "excluded_nonarchitectural"
+                    if direct_status == "excluded_nonarchitectural"
+                    else "resolved_direct"
+                )
+            elif is_resolved(issue_id):
+                resolution = "resolved_by_successor"
+            elif terminal_active:
+                resolution = "open_active"
+            elif successors.get(issue_id):
+                resolution = "open_successor_pending"
+            else:
+                resolution = "open_orphan"
+            issue_row = {
+                "qualified_issue_id": qualified,
+                "run_id": issue["run_id"],
+                "issue_id": issue_id,
+                "status": direct_status,
+                "resolution": resolution,
+                "classification": issue["classification"],
+                "successor_issue_ids": [
+                    f"{owners[item]}/{item}" for item in successors.get(issue_id, [])
+                ],
+            }
+            issue_rows.append(issue_row)
+        all_issue_rows.extend(issue_rows)
+        chains.append(
+            {
+                "terminal_run_id": terminal,
+                "run_ids": chain,
+                "active": terminal_active,
+                "issue_count": len(issue_rows),
+                "_issue_ids": [
+                    item["qualified_issue_id"] for item in issue_rows
+                ],
+            }
+        )
+
+    if seen_chain_runs != set(records):
+        missing = sorted(set(records).difference(seen_chain_runs))
+        raise ValueError("CHX inventory could not construct chains: " + ", ".join(missing))
+
+    # A common ancestor appears once in every terminal chain below a closed
+    # parallel split. Consolidate by immutable qualified ownership so counts
+    # are not multiplied by branch count and one unique resolving successor
+    # applies consistently to that ancestor in every chain projection.
+    rows_by_issue: dict[str, list[dict[str, Any]]] = {}
+    for row in all_issue_rows:
+        rows_by_issue.setdefault(row["qualified_issue_id"], []).append(row)
+    resolution_rank = {
+        "open_orphan": 0,
+        "open_successor_pending": 1,
+        "open_active": 2,
+        "resolved_by_successor": 3,
+        "excluded_nonarchitectural": 4,
+        "resolved_direct": 5,
+    }
+    consolidated_rows: dict[str, dict[str, Any]] = {}
+    for qualified, rows in sorted(rows_by_issue.items()):
+        first = rows[0]
+        identity = (
+            first["run_id"],
+            first["issue_id"],
+            first["status"],
+            first["classification"],
+        )
+        if any(
+            (
+                row["run_id"],
+                row["issue_id"],
+                row["status"],
+                row["classification"],
+            )
+            != identity
+            for row in rows[1:]
+        ):
+            raise ValueError(
+                "CHX inventory parallel projections disagree on issue identity"
+            )
+        resolution = max(
+            (row["resolution"] for row in rows),
+            key=lambda value: resolution_rank[value],
+        )
+        consolidated_rows[qualified] = {
+            **first,
+            "resolution": resolution,
+            "successor_issue_ids": sorted(
+                {
+                    successor
+                    for row in rows
+                    for successor in row["successor_issue_ids"]
+                },
+                key=_qualified_issue_sort_key,
+            ),
+        }
+    unresolved = [
+        row
+        for row in consolidated_rows.values()
+        if row["resolution"].startswith("open_")
+    ]
+    for chain in chains:
+        chain["unresolved_issue_ids"] = [
+            qualified
+            for qualified in chain.pop("_issue_ids")
+            if consolidated_rows[qualified]["resolution"].startswith("open_")
+        ]
+
+    ignored_supersedes = [
+        {
+            "source_qualified_issue_id": source,
+            "target_qualified_issue_id": target,
+            "reason": reason,
+        }
+        for source, target, reason in sorted(
+            {
+                (
+                    item["source_qualified_issue_id"],
+                    item["target_qualified_issue_id"],
+                    item["reason"],
+                )
+                for item in ignored_supersedes
+            }
+        )
+    ]
+    ledgers: list[dict[str, Any]] = []
+    for run_id in sorted(records):
+        record = records[run_id]
+        local_open = [
+            f"{run_id}/{issue_id}"
+            for issue_id, issue in sorted(
+                record["issues"].items(),
+                key=lambda item: int(item[0].removeprefix("CHX-")),
+            )
+            if issue["status"] == "open"
+        ]
+        ledgers.append(
+            {
+                key: record[key]
+                for key in (
+                    "run_id",
+                    "path",
+                    "sha256",
+                    "skill_version",
+                    "contract_revision",
+                    "state",
+                    "predecessor_path",
+                    "report_status",
+                )
+            }
+            | {
+                "issue_ids": [
+                    f"{run_id}/{issue_id}" for issue_id in record["issues"]
+                ],
+                "local_open_issue_ids": local_open,
+            }
+        )
+    report_drift = [
+        {
+            "run_id": record["run_id"],
+            "path": record["path"],
+            "error": record["report_error"],
+        }
+        for record in records.values()
+        if record["report_status"] == "drifted_or_missing"
+    ]
+    counts = {
+        "active_ledgers": sum(record["state"] == "open" for record in records.values()),
+        "closed_ledgers": sum(record["state"] == "closed" for record in records.values()),
+        "observed_issues": sum(len(record["issues"]) for record in records.values()),
+        "unresolved_issues": len(unresolved),
+        "orphan_open_issues": sum(item["resolution"] == "open_orphan" for item in unresolved),
+        "active_open_issues": sum(item["resolution"] == "open_active" for item in unresolved),
+        "successor_pending_issues": sum(
+            item["resolution"] == "open_successor_pending" for item in unresolved
+        ),
+        "report_compatibility_drift": len(report_drift),
+        "ignored_supersedes": len(ignored_supersedes),
+    }
+    result = {
+        "contract_revision": INVENTORY_CONTRACT_REVISION,
+        "project_root": str(project),
+        "ledger_root": str(ledger_root),
+        "ledger_count": len(records),
+        "chain_count": len(chains),
+        "unresolved": unresolved,
+        "report_compatibility_drift": report_drift,
+        "lineage_errors": sorted(set(lineage_errors)),
+        "parallel_issue_free_successors": parallel_issue_free_successors,
+        "parallel_closed_successors": parallel_closed_successors,
+        "ignored_supersedes": sorted(
+            ignored_supersedes,
+            key=lambda item: (
+                item["source_qualified_issue_id"],
+                item["target_qualified_issue_id"],
+                item["reason"],
+            ),
+        ),
+        "active_run_ids": sorted(
+            run_id for run_id, record in records.items() if record["state"] == "open"
+        ),
+        "counts": counts,
+        "truth_effect": "none",
+        "project_effect": "none",
+        "ledgers": ledgers,
+        "chains": chains,
+    }
+    result["inventory_sha256"] = _sha256(
+        _canonical_nfc_bytes(_inventory_semantic_projection(result))
+    )
+    if include_global:
+        result = _apply_global_repair_projection(
+            result,
+            project_root=project,
+        )
+    if full:
+        pass
+    else:
+        result.pop("ledgers", None)
+        result.pop("chains", None)
+    return result
+
+
+def inventory_project_ledgers(
+    project_root: Path | str,
+    *,
+    full: bool = False,
+    include_global: bool = True,
+    _lock_held: bool = False,
+) -> dict[str, Any]:
+    """Read a project inventory under the shared CHX writer lock.
+
+    A caller already holding the exclusive global-repair lock uses the private
+    ``_lock_held`` escape hatch to avoid trying to acquire a second flock.
+    The public CLI path always takes a shared lock, so a reader cannot observe
+    a half-written ledger or global-repair record.
+    """
+
+    if _lock_held:
+        return _inventory_project_ledgers_unlocked(
+            project_root,
+            full=full,
+            include_global=include_global,
+        )
+    project = _resolved_path(project_root)
+    ledger_root = project / DEFAULT_PROJECT_LEDGER_DIR
+    if not ledger_root.exists():
+        return _inventory_project_ledgers_unlocked(
+            project,
+            full=full,
+            include_global=include_global,
+        )
+    with _global_repair_lock(project, exclusive=False):
+        return _inventory_project_ledgers_unlocked(
+            project,
+            full=full,
+            include_global=include_global,
+        )
+
+
+def record_global_repair(
+    project_root: Path | str,
+    integration: dict[str, Any],
+) -> dict[str, Any]:
+    """Record one immutable, cross-ledger CHX integrated repair.
+
+    The operation is deliberately separate from per-issue tactical repair. It
+    binds the complete current inventory, assigns every qualified issue to one
+    mechanism group, and writes one content-addressed successor record without
+    mutating any historical JSONL ledger.
+    """
+
+    project = _resolved_path(project_root)
+    if project.is_symlink() or not project.is_dir():
+        raise ValueError("CHX global repair project root is missing or unsafe")
+    normalized = _validate_global_repair_input(integration)
+    if normalized["candidate_root"] != str(_skill_root()):
+        raise ValueError("CHX global repair candidate root does not match this runtime")
+    if normalized["candidate_version"] != _skill_version():
+        raise ValueError("CHX global repair candidate version does not match this runtime")
+    _validate_global_repair_candidate(
+        normalized["candidate_root"],
+        candidate_version=normalized["candidate_version"],
+        candidate_manifest_sha256=normalized["candidate_manifest_sha256"],
+    )
+    _verify_global_repair_references(normalized, project_root=project)
+    with _global_repair_lock(project, exclusive=True):
+        try:
+            base = inventory_project_ledgers(
+                project,
+                full=True,
+                include_global=False,
+                _lock_held=True,
+            )
+            _require_complete_global_repair_inventory(base)
+            if normalized["inventory_sha256"] != base["inventory_sha256"]:
+                raise ValueError("CHX global repair inventory snapshot is stale")
+            observed_ids = sorted(
+                {
+                    issue_id
+                    for ledger in base["ledgers"]
+                    for issue_id in ledger["issue_ids"]
+                },
+                key=_qualified_issue_sort_key,
+            )
+            expected_covered_snapshot = _covered_issue_snapshot_sha256(
+                base,
+                observed_ids,
+            )
+            if (
+                normalized["covered_issue_snapshot_sha256"]
+                != expected_covered_snapshot
+            ):
+                raise ValueError(
+                    "CHX global repair covered issue snapshot is stale"
+                )
+            if normalized["included_issue_ids"] != observed_ids:
+                raise ValueError(
+                    "CHX global repair must cover every observed qualified issue"
+                )
+            records, chain = _collect_global_repair_records(project)
+            if chain:
+                latest = next(
+                    record
+                    for record in records
+                    if record["global_repair_id"] == chain[-1]
+                )
+                if all(latest[key] == value for key, value in normalized.items()):
+                    return {
+                        "global_repair_id": latest["global_repair_id"],
+                        "record_path": str(
+                            _global_repair_dir(project)
+                            / f"{latest['global_repair_id']}.json"
+                        ),
+                        "record_sha256": latest["record_sha256"],
+                        "inventory_sha256": latest["inventory_sha256"],
+                        "covered_issue_snapshot_sha256": latest[
+                            "covered_issue_snapshot_sha256"
+                        ],
+                        "covered_issue_count": len(latest["included_issue_ids"]),
+                        "status": "existing",
+                        "truth_effect": "none",
+                        "project_effect": "none",
+                    }
+            expected_predecessor = chain[-1] if chain else ""
+            if normalized["supersedes_global_repair_id"] != expected_predecessor:
+                raise ValueError(
+                    "CHX global repair predecessor does not name the latest record"
+                )
+            final_base = inventory_project_ledgers(
+                project,
+                full=True,
+                include_global=False,
+                _lock_held=True,
+            )
+            _require_complete_global_repair_inventory(final_base)
+            if final_base["inventory_sha256"] != base["inventory_sha256"]:
+                raise ValueError(
+                    "CHX global repair inventory changed before final write"
+                )
+            final_covered_snapshot = _covered_issue_snapshot_sha256(
+                final_base,
+                normalized["included_issue_ids"],
+            )
+            if (
+                final_covered_snapshot
+                != normalized["covered_issue_snapshot_sha256"]
+            ):
+                raise ValueError(
+                    "CHX global repair covered issue snapshot changed before final write"
+                )
+            final_records, final_chain = _collect_global_repair_records(project)
+            if final_chain != chain or {
+                item["global_repair_id"] for item in final_records
+            } != {item["global_repair_id"] for item in records}:
+                raise ValueError(
+                    "CHX global repair lineage changed before final write"
+                )
+            _validate_global_repair_candidate(
+                normalized["candidate_root"],
+                candidate_version=normalized["candidate_version"],
+                candidate_manifest_sha256=normalized[
+                    "candidate_manifest_sha256"
+                ],
+            )
+            _verify_global_repair_references(normalized, project_root=project)
+            semantic = {
+                "schema_version": 1,
+                "contract_revision": GLOBAL_REPAIR_CONTRACT_REVISION,
+                "event": "global_integrated_repair",
+                "project_root": str(project),
+                **normalized,
+                "truth_effect": "none",
+                "project_effect": "none",
+            }
+            global_repair_id = _global_repair_id(semantic)
+            path = _global_repair_dir(project) / f"{global_repair_id}.json"
+            if path.exists():
+                raise ValueError("CHX global repair record already exists")
+            record = {
+                **semantic,
+                "global_repair_id": global_repair_id,
+                "created_at": _utc_now(),
+            }
+            record["record_sha256"] = _sha256(_canonical_nfc_bytes(record))
+            _validate_global_repair_record(record, path=path, project_root=project)
+            directory = path.parent
+            if directory.is_symlink():
+                raise ValueError("CHX global repair directory is unsafe")
+            directory.mkdir(parents=True, exist_ok=True)
+            temporary = directory / f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(4)}"
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                with os.fdopen(descriptor, "wb", closefd=True) as handle:
+                    handle.write(_canonical_bytes(record))
+                    handle.write(b"\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                _validate_global_repair_candidate(
+                    normalized["candidate_root"],
+                    candidate_version=normalized["candidate_version"],
+                    candidate_manifest_sha256=normalized[
+                        "candidate_manifest_sha256"
+                    ],
+                )
+                _verify_global_repair_references(normalized, project_root=project)
+                os.replace(temporary, path)
+            except BaseException:
+                temporary.unlink(missing_ok=True)
+                raise
+        finally:
+            pass
+    return {
+        "global_repair_id": global_repair_id,
+        "record_path": str(path),
+        "record_sha256": record["record_sha256"],
+        "inventory_sha256": normalized["inventory_sha256"],
+        "covered_issue_snapshot_sha256": normalized[
+            "covered_issue_snapshot_sha256"
+        ],
+        "covered_issue_count": len(observed_ids),
+        "status": "recorded",
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
+
+
+def verify_global_repair(project_root: Path | str) -> dict[str, Any]:
+    """Verify the latest global repair against a fresh project inventory."""
+
+    project = _resolved_path(project_root)
+    base = inventory_project_ledgers(project, full=True, include_global=False)
+    records, chain = _collect_global_repair_records(project)
+    if not records:
+        raise ValueError("CHX global repair record is missing")
+    latest = next(
+        record for record in records if record["global_repair_id"] == chain[-1]
+    )
+    if base["lineage_errors"]:
+        raise ValueError("CHX global repair inventory has lineage errors")
+    if base["report_compatibility_drift"]:
+        raise ValueError("CHX global repair inventory has report drift")
+    if latest["candidate_root"] != str(_skill_root()):
+        raise ValueError("CHX global repair candidate root is not current")
+    if latest["candidate_version"] != _skill_version():
+        raise ValueError("CHX global repair candidate version is not current")
+    try:
+        _validate_global_repair_candidate(
+            latest["candidate_root"],
+            candidate_version=latest["candidate_version"],
+            candidate_manifest_sha256=latest["candidate_manifest_sha256"],
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "CHX global repair candidate manifest is not current"
+        ) from exc
+    _verify_global_repair_references(latest, project_root=project)
+    observed_ids = {
+        issue_id
+        for ledger in base["ledgers"]
+        for issue_id in ledger["issue_ids"]
+    }
+    covered_ids = set(latest["included_issue_ids"])
+    if not covered_ids.issubset(observed_ids):
+        raise ValueError("CHX global repair covered issue set drifted")
+    if (
+        _covered_issue_snapshot_sha256(base, latest["included_issue_ids"])
+        != latest["covered_issue_snapshot_sha256"]
+    ):
+        raise ValueError("CHX global repair covered issue snapshot drifted")
+    disposition_ids = {
+        item["qualified_issue_id"] for item in latest["issue_dispositions"]
+    }
+    if disposition_ids != covered_ids:
+        raise ValueError("CHX global repair disposition coverage drifted")
+    if any(
+        item["status"] not in DISPOSITION_STATUSES
+        for item in latest["issue_dispositions"]
+    ):
+        raise ValueError("CHX global repair contains an unresolved disposition")
+    return {
+        "global_repair_id": latest["global_repair_id"],
+        "record_path": str(
+            _global_repair_dir(project)
+            / f"{latest['global_repair_id']}.json"
+        ),
+        "inventory_sha256": latest["inventory_sha256"],
+        "covered_issue_snapshot_sha256": latest[
+            "covered_issue_snapshot_sha256"
+        ],
+        "covered_issue_count": len(latest["included_issue_ids"]),
+        "uncovered_issue_count": len(observed_ids.difference(covered_ids)),
+        "status": "current",
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
 
 
 def validate_public_disclosure_contract(
@@ -3215,6 +4972,12 @@ def verify_public_disclosure(
                 raise ValueError(
                     "CHX publication supersedes relation is not strictly later"
                 )
+            if source_issue["status"] == "excluded_nonarchitectural":
+                # Exclusion disposes only the source observation.  It is not
+                # evidence that an earlier architectural mechanism was
+                # repaired, so it cannot discharge a predecessor through a
+                # supersedes edge.
+                continue
             superseding_issue_ids.setdefault(target_id, []).append(source_id)
 
     resolution_cache: dict[str, bool] = {}
@@ -3354,6 +5117,30 @@ def _parser() -> argparse.ArgumentParser:
     status = commands.add_parser("status")
     status.add_argument("--ledger", required=True)
 
+    inventory = commands.add_parser(
+        "inventory",
+        help="read-only closure inventory for every project-local CHX ledger",
+    )
+    inventory.add_argument("--project-root", required=True)
+    inventory.add_argument(
+        "--full",
+        action="store_true",
+        help="include every validated ledger and predecessor-chain projection",
+    )
+
+    global_repair = commands.add_parser(
+        "record-global-repair",
+        help="record one immutable cross-ledger integrated CHX repair",
+    )
+    global_repair.add_argument("--project-root", required=True)
+    global_repair.add_argument("--input", required=True)
+
+    verify_global = commands.add_parser(
+        "verify-global-repair",
+        help="verify the latest cross-ledger integrated CHX repair",
+    )
+    verify_global.add_argument("--project-root", required=True)
+
     close = commands.add_parser("close")
     close.add_argument("--ledger", required=True)
 
@@ -3432,6 +5219,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "status":
         result = ledger_status(args.ledger)
+    elif args.command == "inventory":
+        result = inventory_project_ledgers(args.project_root, full=args.full)
+    elif args.command == "record-global-repair":
+        result = record_global_repair(
+            args.project_root,
+            _json_file(args.input),
+        )
+    elif args.command == "verify-global-repair":
+        result = verify_global_repair(args.project_root)
     elif args.command == "close":
         result = close_ledger(args.ledger)
     elif args.command == "report":

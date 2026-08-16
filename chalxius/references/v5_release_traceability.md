@@ -1,4 +1,27 @@
-# Chalxius V5 traceability through 0.7.15 Research Obligation Closure
+# Chalxius V5 traceability through 0.7.16 Bounded Capability Hygiene
+
+## 0.7.16 bounded-capability-hygiene release overlay
+
+- Candidate version: `0.7.16`; release name **Bounded Capability Hygiene**.
+  The overlay preserves the 0.7.15 Research-obligation contract and adds no
+  new truth or admission authority.
+- Schema-v2 repair capability bytes are validated through one command-local,
+  digest-keyed inspection snapshot with a 64 MiB aggregate cap. The snapshot
+  ends at every mutation boundary; lock-held checks always perform a fresh
+  no-follow read, and conflicting declarations for one path fail closed.
+- Textual worker artifacts reject the C0 control-byte family prospectively at
+  return preflight and ingestion. Frozen 0.7.15 cards retain their original
+  behavior; binary artifacts and non-text roles are unchanged.
+- Default Python entrypoints disable bytecode emission before imports. Package
+  startup hygiene removes only the package's own interpreter cache and has no
+  project-record, Research, Candidate, Certification, Gateway, or Fact effect.
+- Closed parallel CHX successor subtrees remain independent qualified chains
+  in the digest-bound project inventory. Active or malformed branches and
+  competing cross-branch `supersedes` successors remain fail-closed.
+- Focused evidence consists of the CHX-016 capability-snapshot tests, the
+  C0/text-artifact tests, terminal-seal regressions, the read-only entrypoint
+  suite, and the CHX inventory/repair suite. The exact release matrix and
+  manifest identity remain the final authority for installation.
 
 ## 0.7.15 research-obligation-closure release overlay
 

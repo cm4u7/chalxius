@@ -6,7 +6,22 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
-## Current 0.7.15 overlay
+## Current 0.7.16 overlay
+
+Chalxius 0.7.16 **Bounded Capability Hygiene** preserves the complete 0.7.15
+Research-obligation closure and makes two bounded runtime repairs. Schema-v2
+repair capabilities are read once per command-local immutable phase under a
+64 MiB aggregate cap, then rechecked freshly across mutation locks. Prospective
+textual worker returns reject C0 control bytes without changing frozen 0.7.15
+cards or binary artifacts. Entry-point bytecode policy is applied before imports
+and package startup hygiene remains limited to generated interpreter cache bytes.
+Closed parallel CHX successor subtrees are represented as independent
+`RUN_ID`-qualified chains, while active subtrees and competing cross-branch
+`supersedes` successors remain fail-closed.
+No persistent authority cache, scheduler, second truth path, or Fact-admission
+shortcut is introduced.
+
+## 0.7.15 overlay
 
 Chalxius 0.7.15 **Research Obligation Closure** preserves the complete 0.7.14
 truth path. The default generic production frontier omits only the source

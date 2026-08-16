@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.7.15 — Research Obligation Closure
+# Chalxius 0.7.16 — Bounded Capability Hygiene
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -121,14 +121,49 @@ ledger before substantive project work. Project-bound ledgers live under
 the skill. Historical runs must not be backfilled.
 
 Record architecture-caused or materially amplified mechanisms, not ordinary
-mathematical difficulty. Make one bounded reusable tactical repair first, then
-coordinate related issues into one integrated repair. Performance issues consult
-PHX before mechanism selection. PHX is advisory and user adoption remains
-explicit. A current card-bound worker ledger projects any genuine finding into
+mathematical difficulty. For an ordinary run-local issue, make one bounded
+reusable tactical repair first, then coordinate related issues into one
+integrated repair. An explicitly requested project-wide historical
+revalidation may instead use the cross-ledger global repair path after validating
+every ledger and every observed qualified issue against one exact current
+candidate; it must not manufacture tactical entries in immutable predecessor
+ledgers. Performance issues consult PHX before mechanism selection. PHX is
+advisory and user adoption remains explicit. A current card-bound worker ledger projects any genuine finding into
 the project's small CHX observation inbox when the return is ingested; a pure
 mathematical challenge creates no architecture observation. This replaces
 reliance on host memory and does not create Blackboard, Pulse, scoring, or truth
 authority.
+
+Before a stage-wide repair or any claim that the project's CHX work is closed,
+run `chx_ledger.py inventory --project-root PROJECT`. Treat issue identity as
+`RUN_ID/CHX-NNN`: numbering is local to one predecessor chain. The read-only
+inventory separates active issues, closed orphan issues, resolved successor
+chains, and historical report-renderer compatibility drift; it never rewrites
+old ledgers or reports. Its default output is bounded; `--full` exposes every
+validated ledger and chain only for an explicit forensic need.
+
+For a user-directed full historical settlement, `record-global-repair` binds
+the complete qualified issue inventory, exact candidate root, version and
+manifest, the revision-3 `covered_issue_snapshot_sha256`, one disposition per
+observed issue, disjoint mechanism groups, and reproducible risk/regression
+evidence.
+Regression evidence must be a digest-bound `project:` receipt; candidate files
+are implementation anchors only. `verify-global-repair` and every later
+inventory read fail closed after covered-ledger, candidate-manifest, lineage,
+or report drift. Exact retries are idempotent. The copy-on-write record lives
+under `PROJECT/chx-ledgers/global-repairs/`, has no truth or project authority,
+and never edits historical JSONL or architecture reports.
+The inventory must contain only closed ledgers with complete predecessor
+lineage. Fully closed parallel successor subtrees remain separate
+`RUN_ID`-qualified chains and are included in the inventory digest; an active
+parallel subtree, malformed lineage, or competing cross-branch `supersedes`
+successors fails closed. Candidate identity means the complete exact manifest
+tree.
+Anchors and evidence are candidate- or project-relative file references bound
+to SHA-256; same-ledger or excluded `supersedes` relations never discharge an
+earlier issue. A later valid zero-issue ledger does not stale an existing
+repair; a later issue remains uncovered until a successor global repair covers
+the expanded issue set.
 
 If `report_required=false`, do not surface CHX bookkeeping to the user. CHX is
 never an audit warning, certification blocker, or reason to redo otherwise
@@ -173,16 +208,23 @@ repair caches implicitly.
    continues. Use at most three failure-informed supervisors: `proof_logic`,
    `source_scope`, `program_math`, and `integration` only for a genuine
    cross-primary interface.
-5. A supervisor challenge opens a later copy-on-write repair round. The repair
+5. Completing one Research subround is not completing the host task. At that
+   boundary validate the exact card, return, ingestion receipt, supervision
+   state, and affected local projection; do not automatically run a whole-
+   project audit. Reserve the full audit for an explicit user request,
+   Candidate/Fact or final-delivery boundary, shared-runtime change, detected
+   drift, or a user-configured cumulative cadence. No fixed round-count
+   threshold is implicit.
+6. A supervisor challenge opens a later copy-on-write repair round. The repair
    Research stores its original worker mode, so abort/replan under `auto` cannot
    turn compute or literature repair into prove.
-6. New V5 Pulse planning is retired. The production/supervision cycle is the only prospective Research collaboration path.
+7. New V5 Pulse planning is retired. The production/supervision cycle is the only prospective Research collaboration path.
    Existing historical Pulse records retain status, audit, dispatch, close, void, and abort compatibility.
-7. Before Candidate packaging, require complete applicable supervision and the
+8. Before Candidate packaging, require complete applicable supervision and the
    fresh Candidate-level adverse gate. Recheck live supervisor results under
    the seal lock, then package once. Iterative repair belongs before expensive
    packaging.
-8. Generic production planning omits only source Research obligations closed by
+9. Generic production planning omits only source Research obligations closed by
    an exact valid, non-aborted production receipt. It retains the worker result,
    history views, and explicit-ID planning. Main `memory-add` reuses identical
    unbound semantics across actor labels only when the current CLI role is Main;

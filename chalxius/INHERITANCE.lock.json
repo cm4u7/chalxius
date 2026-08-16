@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.7.15",
-  "release_codename": "Research Obligation Closure",
-  "release_display_name": "Chalxius 0.7.15 — Research Obligation Closure",
+  "version": "0.7.16",
+  "release_codename": "Bounded Capability Hygiene",
+  "release_display_name": "Chalxius 0.7.16 — Bounded Capability Hygiene",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -689,7 +689,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 92,
-    "protected_tree_sha256": "22cf1593a6e2d2f13e6c32f155250c35422fb4ea40b932e3158227fadf55cb33",
+    "protected_tree_sha256": "8d8c38d41cb308e7dddec01a6f8083836cd1a05dffb4571148b832a3c797d24c",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",

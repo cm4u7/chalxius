@@ -301,6 +301,94 @@ or non-superseding relations fail closed. This permits append-only repair
 succession without allowing a later issue to erase or rewrite predecessor
 history.
 
+## Inventory all task-scoped ledgers before integrated repair
+
+`CHX-001` is local to one predecessor chain. Never report a bare issue id as a
+project-global identity; use `RUN_ID/CHX-NNN`. Before a stage-wide repair or a
+claim that all known CHX issues are closed, run the read-only project inventory:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" inventory \
+  --project-root "$PROJECT"
+```
+
+The inventory validates every project-local JSONL event chain, reconstructs
+each predecessor lineage, and distinguishes direct resolution, resolution by a
+unique final `supersedes` successor, active open issues, closed orphan issues,
+and pending successor chains. It also reports historical architecture-report
+renderer drift separately from ledger validity. The command never closes,
+disposes, rewrites, repairs, or otherwise mutates a ledger, report, or project
+artifact. A closed ledger with an open issue remains visible until exact
+successor or disposition evidence exists.
+
+Only a genuinely later ledger's `resolved` issue may discharge a predecessor
+through `supersedes`. A same-ledger relation and a successor later classified
+`excluded_nonarchitectural` are retained as ignored relationship evidence and
+have no repair effect. Missing or external predecessors, cycles, malformed
+edges, and active parallel successor subtrees are lineage errors. Fully closed
+parallel successor subtrees are retained as independent `RUN_ID`-qualified
+chains in the inventory digest; if two branches offer competing `supersedes`
+successors for one earlier issue, global repair fails closed.
+
+The default projection is bounded to counts, active run ids, unresolved issues,
+lineage errors, and report compatibility drift. Use `--full` only when the
+complete validated ledger and predecessor-chain inventory is required.
+
+### Cross-ledger global repair for explicit historical revalidation
+
+The per-ledger tactical gate remains the ordinary rule for a current revision-5
+issue. When the user explicitly requests a full historical revalidation across
+many immutable ledgers, do not append synthetic tactical records to those old
+task ledgers. Instead, validate the full inventory and record one copy-on-write
+global repair:
+
+```bash
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-global-repair \
+  --project-root "$PROJECT" --input /absolute/path/to/global-repair.json
+python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" verify-global-repair \
+  --project-root "$PROJECT"
+```
+
+The revision-3 input names the exact candidate root, version, manifest SHA-256,
+full pre-repair inventory SHA-256, a `covered_issue_snapshot_sha256` binding
+each covered issue to its owning ledger bytes, every observed `RUN_ID/CHX-NNN`,
+one disposition per issue, disjoint mechanism groups covering all issues, risk
+evidence, regression evidence, and the latest global-repair predecessor id.
+Regression evidence must use digest-bound `project:` receipts; candidate files
+are implementation anchors only. The writer is serialized, an exact concurrent
+retry is idempotent, and every record is content-addressed under
+`PROJECT/chx-ledgers/global-repairs/`. Unexpected files, symlinks, multiple
+terminals, orphan predecessors, covered-ledger drift, candidate-manifest drift,
+inventory drift at record time, or incomplete issue coverage fail closed.
+
+The inventory must be quiescent: every ledger is closed, every predecessor
+lineage is complete, every parallel successor subtree is closed and free of
+competing `supersedes` successors, and every historical report projection is
+readable. Project-bound ledger creation shares the global-repair writer lock,
+and the writer revalidates the complete inventory immediately before the final
+copy-on-write record. Candidate validation verifies every manifest entry and
+the exact candidate file set, not merely the `MANIFEST.sha256` identity file.
+
+Every implementation anchor and risk, regression, group, or issue evidence
+entry is a digest-bound file reference of the form
+`candidate:relative/path#sha256=DIGEST` or
+`project:relative/path#sha256=DIGEST`. Implementation anchors must use the
+candidate root. Issue evidence must be included in its mechanism-group evidence,
+and group evidence must be included in the global regression evidence. A
+`historical_nonarchitectural` basis is valid only for an
+`excluded_nonarchitectural` disposition; every repair or revalidation basis is
+valid only for `resolved`.
+
+The latest valid global repair projects its dispositions over unresolved
+inventory rows without changing any historical JSONL event or deterministic
+architecture report. A later valid zero-issue ledger does not stale the
+projection, and a later issue remains unresolved with an explicit uncovered
+count. Candidate drift, covered-ledger drift, lineage/report drift, or a
+changed global-repair record makes the projection `stale`; create a complete
+successor global repair rather than editing or deleting the old record. This
+path is nontruth architecture accounting only and does not bypass Research,
+Candidate, verifier, Certification, Gateway, or Fact requirements.
+
 ## Immutable successors and deterministic reports
 
 After a predecessor ledger is closed, start a revision-4 successor when later

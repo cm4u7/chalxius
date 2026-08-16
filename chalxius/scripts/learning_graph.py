@@ -23,6 +23,8 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Iterable
 
+sys.dont_write_bytecode = True
+
 
 SCHEMA_VERSION = 2
 SUPPORTED_SCHEMA_VERSIONS = {1, SCHEMA_VERSION}

@@ -19,9 +19,9 @@ import tempfile
 import time
 from typing import Any
 
-from mathgraph.release_contracts import RELEASE_VALIDATION_MATRIX_REVISION
-
 sys.dont_write_bytecode = True
+
+from mathgraph.release_contracts import RELEASE_VALIDATION_MATRIX_REVISION
 
 
 CONTRACT_REVISION = RELEASE_VALIDATION_MATRIX_REVISION

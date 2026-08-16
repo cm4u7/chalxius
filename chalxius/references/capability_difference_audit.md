@@ -33,6 +33,16 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.7.16 bounded-capability-hygiene difference
+
+Version 0.7.16 preserves the 0.7.15 obligation-closure route while bounding
+schema-v2 repair capability reads to one ephemeral digest-keyed snapshot and a
+64 MiB aggregate cap. Mutation boundaries discard the snapshot and recheck
+bytes with a no-follow read. Prospective textual worker artifacts reject C0
+control bytes; historical cards and binary roles retain their frozen behavior.
+The bytecode policy is applied before imports and does not create a persistent
+cache or alter project records.
+
 ## 0.7.15 research-obligation-closure difference
 
 Version 0.7.15 closes two duplicate-work mechanisms without adding a Research

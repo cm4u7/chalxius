@@ -919,7 +919,7 @@
       ]
     },
     "cap.chx_runtime_ledger": {
-      "summary": "Task-scoped append-only CHX finding, issue, reconnaissance, reusable tactical repair, integrated repair, disposition and public-disclosure ledger, with optional exact task-card binding and a nontruth ingestion observation projection.",
+      "summary": "Task-scoped append-only CHX finding, issue, reconnaissance, reusable tactical repair, integrated repair, disposition, public-disclosure and revision-3 cross-ledger global-repair inventory, with optional exact task-card binding and a nontruth ingestion observation projection.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -2873,6 +2873,27 @@
       ]
     },
     "chx:status": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:inventory": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record-global-repair": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:verify-global-repair": {
       "capability_id": "cap.chx_runtime_ledger",
       "status": "canonical",
       "authority_effects": [

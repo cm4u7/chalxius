@@ -64,6 +64,70 @@ class V5LifecycleTests(unittest.TestCase):
         )
         return store
 
+    def _schema_v2_repair_payload(
+        self,
+        lifecycle: V5LifecycleManager,
+        *,
+        source: dict[str, object],
+        input_capabilities: list[dict[str, str]],
+        trigger: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        inspection = lifecycle._bind_inspection_context(None, create=True)
+        assert inspection is not None
+        manifest = lifecycle._repair_input_capability_manifest(
+            source=source,
+            trigger=trigger,
+            explicit_capabilities=input_capabilities,
+            _inspection_context=inspection,
+        )
+        spec = {
+            "schema_version": 2,
+            "claim": "Repair one exact source-bound Research branch.",
+            "content": "Use only the canonical frozen input capabilities.",
+            "rationale": "The repair must preserve exact capability lineage.",
+            "work_mode": "prove",
+            "obligations": [],
+            "stop_conditions": [],
+            "input_capabilities": copy.deepcopy(
+                manifest["input_capabilities"]
+            ),
+        }
+        source_research_id = str(source["research_id"])
+        trigger_research_id = (
+            str(trigger["research_id"]) if trigger is not None else None
+        )
+        related_research_ids = sorted(
+            dict.fromkeys(
+                [
+                    source_research_id,
+                    *(
+                        [trigger_research_id]
+                        if trigger_research_id is not None
+                        else []
+                    ),
+                ]
+            )
+        )
+        return {
+            "kind": "repair",
+            "status": "open",
+            "claim": spec["claim"],
+            "content": spec["content"],
+            "rationale": spec["rationale"],
+            "dependencies": list(source.get("dependencies", [])),
+            "source": f"research:{source_research_id}",
+            "relation": "repairs",
+            "related_research_ids": related_research_ids,
+            "repair_of_research_id": source_research_id,
+            "repair_work_mode": "prove",
+            "trigger_research_id": trigger_research_id,
+            "artifacts": copy.deepcopy(manifest["input_capabilities"]),
+            "source_dependent": bool(manifest["input_capabilities"]),
+            "repair_input_capability_manifest": manifest,
+            "repair_spec": spec,
+            "repair_spec_sha256": sha256_json(spec),
+        }
+
     def test_paper_continuation_plan_lookup_is_ancestry_bounded(self) -> None:
         selected_id = "a" * 12
         ancestor_id = "b" * 12
@@ -1558,6 +1622,448 @@ class V5LifecycleTests(unittest.TestCase):
                 ]["repair_spec_sha256"],
                 sha256_json(spec),
             )
+
+    def test_schema_v2_repair_input_capabilities_close_exactly_in_task_card(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "schema-v2-repair-capabilities")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "One exact source-bound repair remains open.",
+                },
+                actor="proof-worker",
+            )
+            source_path = root / "sources" / "primary-source.txt"
+            source_path.parent.mkdir(parents=True)
+            source_path.write_text("frozen primary source\n", encoding="utf-8")
+            input_capability = {
+                "path": source_path.relative_to(root).as_posix(),
+                "sha256": sha256_bytes(source_path.read_bytes()),
+                "role": "primary_source",
+            }
+            spec = {
+                "schema_version": 2,
+                "claim": "Repair the source-bound claim without widening it.",
+                "content": "Use only the frozen primary source capability.",
+                "rationale": "The repair must retain an exact input boundary.",
+                "work_mode": "prove",
+                "obligations": [
+                    {
+                        "obligation_id": "obl-return-candidate",
+                        "description": "Return one candidate artifact.",
+                        "required_artifact_roles": ["candidate_fact"],
+                        "evidence_types": ["bounded_argument"],
+                        "not_applicable_allowed": False,
+                    }
+                ],
+                "stop_conditions": ["Stop if the frozen input is insufficient."],
+                "input_capabilities": [input_capability],
+            }
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    source["research_id"],
+                    repair_spec=spec,
+                    host_task_scope_id="schema-v2-repair-capabilities",
+                )
+            repair = lifecycle._research_record(planned["research_id"])
+            self.assertEqual(repair["metadata"]["repair_spec"], spec)
+            card = json.loads(
+                Path(str(planned["assignments"][0]["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            expected_task_capability = {
+                **input_capability,
+                "role": f"{repair['research_id']}:primary_source",
+                "source_research_id": repair["research_id"],
+            }
+            repair_capabilities = [
+                item
+                for item in card["mathematical_state"]["related_artifacts"]
+                if item["source_research_id"] == repair["research_id"]
+            ]
+            self.assertEqual(repair_capabilities, [expected_task_capability])
+            self.assertEqual(
+                card["obligations"][0]["required_artifact_roles"],
+                ["candidate_fact"],
+            )
+            self.assertNotIn(
+                f"{repair['research_id']}:candidate_fact",
+                card["assurance_contract"]["related_artifact_roles"],
+            )
+
+            drifted = copy.deepcopy(card)
+            drifted["mathematical_state"]["related_artifacts"] = []
+            drifted["assurance_contract"]["related_artifact_roles"] = []
+            drifted_semantic = {
+                key: value
+                for key, value in drifted.items()
+                if key != "task_card_semantic_sha256"
+            }
+            drifted["task_card_semantic_sha256"] = sha256_json(
+                drifted_semantic
+            )
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ), self.assertRaisesRegex(
+                ValueError,
+                "repair task-card input capability closure drifted",
+            ):
+                lifecycle.validate_task_card(drifted)
+
+            missing_spec = {
+                **spec,
+                "claim": "A missing-capability repair must fail before staging.",
+                "input_capabilities": [],
+            }
+            before_round_entries = {
+                path.name for path in store.rounds_dir.iterdir()
+            }
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires at least one verified input capability",
+            ):
+                lifecycle.create_repair_round(
+                    source["research_id"],
+                    repair_spec=missing_spec,
+                    host_task_scope_id="schema-v2-missing-capability",
+                )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                before_round_entries,
+            )
+
+    def test_schema_v2_repair_direct_write_rejects_noncanonical_capabilities(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "schema-v2-direct-repair-capabilities")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "One direct schema-v2 repair source remains open.",
+                },
+                actor="proof-worker",
+            )
+            source_path = root / "sources" / "direct-source.txt"
+            source_path.parent.mkdir(parents=True)
+            source_path.write_text("frozen direct source\n", encoding="utf-8")
+            input_capability = {
+                "path": source_path.relative_to(root).as_posix(),
+                "sha256": sha256_bytes(source_path.read_bytes()),
+                "role": "a_input",
+            }
+            empty_payload = self._schema_v2_repair_payload(
+                lifecycle,
+                source=source,
+                input_capabilities=[],
+            )
+            before_research_entries = {
+                path.name for path in lifecycle.research_entries_dir.iterdir()
+            }
+            before_round_entries = {
+                path.name for path in store.rounds_dir.iterdir()
+            }
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires at least one verified input capability",
+            ):
+                lifecycle.add_research(
+                    empty_payload,
+                    actor="main",
+                    assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+                )
+            self.assertEqual(
+                {
+                    path.name
+                    for path in lifecycle.research_entries_dir.iterdir()
+                },
+                before_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                before_round_entries,
+            )
+
+            payload = self._schema_v2_repair_payload(
+                lifecycle,
+                source=source,
+                input_capabilities=[input_capability],
+            )
+            hidden_role = {
+                **input_capability,
+                "role": "z_hidden_extra",
+            }
+            hidden_payload = copy.deepcopy(payload)
+            hidden_payload["artifacts"].append(hidden_role)
+            with self.assertRaisesRegex(
+                ValueError,
+                "repair Research artifacts must be the canonical capability list",
+            ):
+                lifecycle.add_research(
+                    hidden_payload,
+                    actor="main",
+                    assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+                )
+            self.assertEqual(
+                {
+                    path.name
+                    for path in lifecycle.research_entries_dir.iterdir()
+                },
+                before_research_entries,
+            )
+
+            repair = lifecycle.add_research(
+                payload,
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            replay_drift = copy.deepcopy(repair)
+            replay_drift["metadata"]["artifacts"].append(hidden_role)
+            with self.assertRaisesRegex(
+                ValueError,
+                "repair Research artifacts must be the canonical capability list",
+            ):
+                lifecycle._validate_research_record(
+                    replay_drift,
+                    path=lifecycle._research_path(repair["research_id"]),
+                )
+
+    def test_schema_v2_repair_lineage_is_exact_on_write_and_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "schema-v2-repair-lineage")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "The source branch requires one exact repair.",
+                },
+                actor="proof-worker",
+            )
+            trigger = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "The supervisor found one exact defect.",
+                },
+                actor="supervisor",
+            )
+            other = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "An unrelated Research record exists.",
+                },
+                actor="researcher",
+            )
+            source_path = root / "sources" / "lineage-source.txt"
+            source_path.parent.mkdir(parents=True)
+            source_path.write_text("frozen lineage source\n", encoding="utf-8")
+            input_capability = {
+                "path": source_path.relative_to(root).as_posix(),
+                "sha256": sha256_bytes(source_path.read_bytes()),
+                "role": "lineage_input",
+            }
+            payload = self._schema_v2_repair_payload(
+                lifecycle,
+                source=source,
+                trigger=trigger,
+                input_capabilities=[input_capability],
+            )
+            cases: list[tuple[str, dict[str, object], str]] = []
+
+            wrong_relation = copy.deepcopy(payload)
+            wrong_relation["relation"] = "supports"
+            cases.append(
+                (
+                    "relation",
+                    wrong_relation,
+                    "schema-v2 repair relation must be repairs",
+                )
+            )
+
+            wrong_source = copy.deepcopy(payload)
+            wrong_source["repair_of_research_id"] = other["research_id"]
+            cases.append(
+                (
+                    "source",
+                    wrong_source,
+                    "source lineage disagrees with capability manifest",
+                )
+            )
+
+            wrong_trigger = copy.deepcopy(payload)
+            wrong_trigger["trigger_research_id"] = other["research_id"]
+            cases.append(
+                (
+                    "trigger",
+                    wrong_trigger,
+                    "trigger lineage disagrees with capability manifest",
+                )
+            )
+
+            wrong_related = copy.deepcopy(payload)
+            wrong_related["related_research_ids"] = [source["research_id"]]
+            cases.append(
+                (
+                    "related",
+                    wrong_related,
+                    "related Research lineage is not exact",
+                )
+            )
+
+            before_research_entries = {
+                path.name for path in lifecycle.research_entries_dir.iterdir()
+            }
+            for label, drifted_payload, message in cases:
+                with self.subTest(lineage=label), self.assertRaisesRegex(
+                    ValueError,
+                    message,
+                ):
+                    lifecycle.add_research(
+                        drifted_payload,
+                        actor="main",
+                        assurance_contract_revision=(
+                            V5_ASSURANCE_CONTRACT_REVISION
+                        ),
+                    )
+            self.assertEqual(
+                {
+                    path.name
+                    for path in lifecycle.research_entries_dir.iterdir()
+                },
+                before_research_entries,
+            )
+
+            missing_source_id = "0" * 12
+            missing_source = copy.deepcopy(payload)
+            missing_manifest = missing_source[
+                "repair_input_capability_manifest"
+            ]
+            missing_manifest["source_research_id"] = missing_source_id
+            missing_manifest_semantic = {
+                key: value
+                for key, value in missing_manifest.items()
+                if key != "manifest_sha256"
+            }
+            missing_manifest["manifest_sha256"] = sha256_json(
+                missing_manifest_semantic
+            )
+            missing_source["repair_of_research_id"] = missing_source_id
+            missing_source["trigger_research_id"] = None
+            missing_source["related_research_ids"] = [missing_source_id]
+            with self.assertRaisesRegex(
+                KeyError,
+                "unknown V5 research entry",
+            ):
+                lifecycle.add_research(
+                    missing_source,
+                    actor="main",
+                    assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+                )
+
+            repair = lifecycle.add_research(
+                payload,
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            replay_drift = copy.deepcopy(repair)
+            replay_drift["relation"] = "supports"
+            with self.assertRaisesRegex(
+                ValueError,
+                "schema-v2 repair relation must be repairs",
+            ):
+                lifecycle._validate_research_record(
+                    replay_drift,
+                    path=lifecycle._research_path(repair["research_id"]),
+                )
+
+    def test_schema_v2_repair_capability_drift_writes_no_round_bytes(self) -> None:
+        for mutation in ("missing", "hash_drift"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "v5"
+                store = self._store(
+                    root,
+                    f"schema-v2-repair-{mutation.replace('_', '-')}",
+                )
+                lifecycle = store.v5_lifecycle()
+                source = lifecycle.add_research(
+                    {
+                        "kind": "proof_attempt",
+                        "claim": "One repair capability must remain live until planning.",
+                    },
+                    actor="proof-worker",
+                )
+                source_path = root / "sources" / "late-drift-source.txt"
+                source_path.parent.mkdir(parents=True)
+                source_path.write_text(
+                    "frozen late-drift source\n",
+                    encoding="utf-8",
+                )
+                input_capability = {
+                    "path": source_path.relative_to(root).as_posix(),
+                    "sha256": sha256_bytes(source_path.read_bytes()),
+                    "role": "late_drift_input",
+                }
+                spec = {
+                    "schema_version": 2,
+                    "claim": "Repair only from the still-live frozen input.",
+                    "content": "Reject any missing or hash-drifted input.",
+                    "rationale": "Round publication requires live exact bytes.",
+                    "work_mode": "prove",
+                    "obligations": [],
+                    "stop_conditions": [],
+                    "input_capabilities": [input_capability],
+                }
+                original_create_production_round = (
+                    lifecycle.create_production_round
+                )
+
+                def mutate_then_plan(*args: object, **kwargs: object) -> object:
+                    if mutation == "missing":
+                        source_path.unlink()
+                    else:
+                        source_path.write_text(
+                            "drifted late source\n",
+                            encoding="utf-8",
+                        )
+                    return original_create_production_round(*args, **kwargs)
+
+                before_round_entries = {
+                    path.name for path in store.rounds_dir.iterdir()
+                }
+                with patch.object(
+                    lifecycle,
+                    "create_production_round",
+                    side_effect=mutate_then_plan,
+                ), patch.object(
+                    lifecycle,
+                    "_validate_bound_runtime_binding",
+                    side_effect=lambda value, **_: value,
+                ), self.assertRaisesRegex(
+                    ValueError,
+                    "Research capability artifact drifted",
+                ):
+                    lifecycle.create_repair_round(
+                        source["research_id"],
+                        repair_spec=spec,
+                        host_task_scope_id=f"schema-v2-{mutation}",
+                    )
+                self.assertEqual(
+                    {path.name for path in store.rounds_dir.iterdir()},
+                    before_round_entries,
+                )
 
     def test_exact_repair_spec_rejects_drift_and_inexact_fields(self) -> None:
         with self.assertRaisesRegex(

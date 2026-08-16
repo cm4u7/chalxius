@@ -1,128 +1,132 @@
-# Validation - Chalxius v0.7.15
+# Validation - Chalxius v0.7.16
 
-This document records software, packaging, CHX/PHX, and protected-installation
-evidence for Chalxius 0.7.15 **Research Obligation Closure**. It does not certify
+This document records software, packaging, CHX, and protected-installation
+evidence for Chalxius 0.7.16 **Bounded Capability Hygiene**. It does not certify
 any mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | `0.7.15` |
-| Release date | `2026-08-14` |
-| Skill manifest entries | `251` |
-| `MANIFEST.sha256` SHA-256 | `84b9521218079357f4a325ef1561adb70b2663259068d0c18cee6f4d820a6e62` |
-| Runtime content SHA-256 | `dacdd1112bd0b9e63f0da46d439acc57b11eb62e7703cc7c9d54b3ccdcc3ccca` |
-| Installed runtime identity | `e1ec1d9a49715506c9018ec4fda46f8be688d2bec0517ad8cab34f6fd39fdfe4` |
-| Archive | `chalxius-0.7.15-research-obligation-closure.tar.gz` |
-| Archive bytes | `2438226` |
-| Archive members | `252` |
-| Archive SHA-256 | `66cb6bfc0ed2b3ee654d53d15eec352bbfcc57b7b8ea56d7608e2ea721c7b05e` |
-| Checksum-file SHA-256 | `ff00d4cf64b77b360ca2e46913cf2c94b68952ecd16526b7d4ca92fa1ea0cb47` |
+| Version | `0.7.16` |
+| Release date | `2026-08-16` |
+| Skill manifest entries | `253` |
+| `MANIFEST.sha256` SHA-256 | `830d0af9b893ba2c1ee2f5fc3e881d59d273375350676292f0882a6d21316693` |
+| Runtime content SHA-256 | `ab6a31b541e6d2e85d6c4471f857ccbb5662aaf49030a320be3229faad3c2f1d` |
+| Installed runtime identity | `fa48d02e07f878d81a3be985310269d5d5419a42a10decf82a65f5305e52dd8b` |
+| Installed archive-tree SHA-256 | `110794a476d6cc9ec8be057b984f1cc56c4d3f8bcd4ead617279d01c07db5221` |
+| Archive | `chalxius-0.7.16-bounded-capability-hygiene.tar.gz` |
+| Archive bytes | `2488196` |
+| Archive members | `254` |
+| Archive SHA-256 | `e1091efb2601738879515af860c3bf8dc331626cac5805b4247eaaaf906eab6c` |
+| Checksum-file SHA-256 | `1c40697dfa3bdfea32b4f5dcd1676533c05349f0046c7876e797d9f5fcc6d4a8` |
 
-The deterministic USTAR archive was built twice from the sorted exact manifest
-and the two byte streams were identical.
+Two independent archive builds from the sorted exact manifest produced the
+same byte stream.
 
 ## Release matrix
 
-The final manifest-bound receipt is
-`release-validation-0.7.15-final2.json`, SHA-256
-`d8d35f1bf296895a1d59689d1bc05b57bec914b2e50add37223c2db5da4f028c`.
+The publication-final manifest-bound receipt is
+`release-validation-final-20260816.json`, SHA-256
+`372e9b0baadd0b0b1e775951de72986ca05f5c4ee88b89e91d5fcaac1d89ca82`.
 It records `ok=true`, `complete_lane_set=true`,
 `one_manifest_identity=true`, and `source_unchanged=true`.
 
 | Lane | Result |
 |---|---|
-| Mutation-registry preflight | PASS; `148/148` exact targets |
-| Architecture reconnaissance | PASS |
+| Mutation-registry preflight | PASS; `145/145` exact targets |
+| Architecture reconnaissance | PASS; strict mode |
 | Behavioral feature gate | PASS |
-| Full discovered suite | PASS; `889/889` tests |
+| Full discovered suite | PASS; `942/942` tests |
 | Bundled self-test | PASS |
-| Aggressive bug audit | PASS; `148/148` registered mutants killed |
+| Aggressive bug audit | PASS; `145/145` registered mutants killed |
 
-All six isolated lane copies retained the exact approved manifest and reported
+All six isolated lane copies retained the approved manifest and reported
 `lane_unchanged=true`.
 
-The focused Research-obligation regression file contains eight tests covering:
+The protected installation was authorized by an earlier successful run over
+the same manifest. Its receipt SHA-256 is
+`481ad4431c274d93741dca209cace3cb113092d1749778d6f15de2edb3a004a1`.
+The later publication-final rerun is additional same-identity evidence; it does
+not rewrite the installation-time receipt.
 
-- Main-only semantic reuse across actor labels;
-- retained actor identity for ordinary and task-bound writes;
-- caller authority instead of display text;
-- valid receipt closure of source obligations only;
-- assignment-local closure;
-- pending, quarantined, invalid, and aborted exclusions;
-- exact-ID planning without generic frontier reconstruction; and
-- fresh lock-held obligation revalidation.
+The standard skill quick validator also passed after confirming PyYAML 6.0.3
+in the invoking Python environment.
 
-## CHX disclosure
+## CHX disclosure and complete project settlement
 
-The public lineage is continuous through CHX-035. The final closed ledger and
-deterministic report are:
+The canonical public lineage remains continuous through CHX-035. The final
+public ledger and deterministic report remain:
 
 | Evidence | SHA-256 |
 |---|---|
 | `run-20260814T004319766703Z-fdfc7f3fd6e2.jsonl` | `4eb2660eee4bc089d0bd50fd7f871ad48a2141ce1c0d587fb3e50625eebbf8af` |
 | `run-20260814T004319766703Z-fdfc7f3fd6e2.architecture-report.md` | `36b515222031f191f79607ccbc09f60927c90279cc3d7daf544b51646fce198e` |
 
-Public-disclosure verification passed. The private ledgers and reports are not
-included in the public package and have no truth effect.
+Later project-local CHX identifiers are RUN_ID-qualified private evidence and
+do not extend the public numbering. Their bodies are not included in the
+archive.
 
-## PHX evaluation and adoption
-
-PHX-002 was evaluated only after protected installation and post-installation
-identity checks.
+The user-directed cross-ledger settlement was refreshed against the final
+manifest after all task ledgers closed:
 
 | Field | Value |
 |---|---|
-| PHX run | `run-20260809T131409541618Z-e6ec115394d1` |
-| Ledger SHA-256 after adoption | `7aa5e1d5a5b18dc405faad665591a297f4c3ae66322a79795defd9d303188a27` |
-| Consultation | `consultation-62a703ac5ffb398ee39b5b66b90d003775812ce0fa951a42e42dd659641af303` |
-| Measurement | `measurement-5d00c8098221212fe654735adce4b72dd304bdc8ab98b0f4ca9f3867654efe96` |
-| Adoption | `adoption-7758607e23b0b6526f67e33932713240c1be68ef6e7fa0ccbd02d745c35afdec` |
-| Outcome | `supported` |
-| Authority | advisory, nontruth, premise-ineligible |
+| Global repair id | `global-repair-75b0125022b0e2697accb8eb401922b2e3ad27564f28e96c38cb71d9e6290043` |
+| Record SHA-256 | `541b20c2905559ceba04c69059c22c83a503e9a859bf5428afbabba34c02a2bc` |
+| Inventory SHA-256 | `61b52a27ff4c3e44c030a444fc5b729d01c60498e38de43bfee6a627b85807c3` |
+| Covered-issue snapshot SHA-256 | `d166166a651d3eee2414744a7c6097add958e61bda034b7c65e6d575c8fa2d77` |
+| Observed qualified issues | `122` |
+| Covered qualified issues | `122` |
+| Uncovered issues | `0` |
+| Active ledgers at settlement | `0` |
+| Lineage/report drift | `0` |
 
-The adoption covers only explicitly Main-originated unbound Research identity
-and validated generic production-obligation closure. It does not authorize a
-Candidate, verifier shortcut, Certification, Gateway action, or Fact.
+This record is copy-on-write, nontruth, premise-ineligible project evidence.
+It is reported here only to distinguish complete local settlement from the
+smaller public disclosure lineage.
 
 ## Protected runtime cutover
 
 The approved project-validation receipt SHA-256 is
-`d8ed812c0391671f40950974d3db33ff00e8a9e6eaed6de10247d0dc7b06c928`.
-It binds the exact candidate manifest, prior 0.7.14 runtime identity, complete
-15-path runtime diff, final release matrix, protected project inventory, and
-one fresh candidate-runtime deep audit.
-
-The installation receipt SHA-256 is
-`2ba4f815611849f4eb3e98a77ed1b8081b0ea65788c01b5da464d7bead863172`.
+`13ad9267e86f9b41bd348055ed166834dd66f8c48d0b0d1e03ef307078599e9c`.
+It binds the exact candidate manifest, prior 0.7.15 runtime identity, complete
+runtime diff, installation-time release matrix, protected project snapshot,
+and one necessary deep audit.
 
 | Field | Result |
 |---|---|
 | Cutover status | `cutover_complete` |
-| Deep project audits | `1` |
-| Duplicate post-swap semantic audits | `0` |
-| Protected terminal rounds | `201` |
-| Preflight audit | `current_ok=true` |
-| Postflight project snapshot | unchanged |
-| Project-state SHA-256 | `e49f11893069389999ff154916e093ad1a59395314736629ce5f75e7f2c89b15` |
-| Installed self-test | PASS |
-| Candidate-to-installed tree diff | no differences |
-| Rollback runtime | `0.7.14` preserved |
-| Installed archive-tree SHA-256 | `cbaa950f8c91a0b534d0630c7646cfe65a04566d26d85f23a6561ebad0a6208f` |
+| Validation mode | `single_deep_audit` |
+| Protected projects | `1` |
+| Protected rounds | `225` terminal: `211` completed, `14` aborted |
+| Project audit | `current_ok=true` at cutover validation |
+| Cutover project-state SHA-256 | `73e856d9ee79c9ae396921674ec384039e115bc0ff1460bd0b4934ff6cf96057` |
+| Candidate-to-installed tree | exact manifest/content identity |
+| Current installed version | `0.7.16` |
+| Current installed runtime identity | `fa48d02e07f878d81a3be985310269d5d5419a42a10decf82a65f5305e52dd8b` |
+| Rollback version | `0.7.15` preserved |
+| System restart | not performed |
+
+The present installed binding and its sealed archive were independently
+resolved after cutover. Closing the later zero-issue release ledger and writing
+the final global CHX settlement changed only nontruth project bookkeeping; it
+does not retroactively alter the cutover snapshot.
 
 ## Cold archive check
 
 A fresh extraction of the public archive passed:
 
-- `251/251` manifest hashes;
-- the bundled self-test; and
+- `253/253` manifest hashes;
+- the bundled self-test;
+- the standard skill quick validator;
+- PyYAML `6.0.3` availability; and
 - absence of `__pycache__` directories and `.pyc` files.
 
 ## Research and truth boundary
 
-The A-model workload is closed as nontruth Research for this release. No
-Candidate Release, Certification Decision, Gateway admission, or Fact was
-created. Hashes establish byte identity, tests establish exercised behavior,
-and mutation results establish detection of registered faults; none proves a
-mathematical theorem.
+The A-model artifacts remain nontruth Research. Version 0.7.16 creates no
+Candidate Release, Certification Decision, Gateway admission, or Fact. Hashes
+establish byte identity, tests establish exercised behavior, and mutation
+results establish detection of registered faults; none proves a mathematical
+theorem.

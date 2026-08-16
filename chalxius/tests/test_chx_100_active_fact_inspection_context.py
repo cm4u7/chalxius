@@ -134,6 +134,93 @@ class CHX100ActiveFactInspectionContextTests(unittest.TestCase):
             self.assertFalse(inspection.active_fact_validation_in_progress)
             self.assertEqual(inspection.active_facts, facts)
 
+    def test_search_reconstructs_one_v5_fact_snapshot_for_the_full_corpus(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / "project"
+            store = MathGraphStore(root)
+            store.initialize(
+                project_id="chx-036-search-inspection",
+                title="Command-local Fact search inspection fixture",
+                workflow_evidence_version=5,
+            )
+            facts = [
+                Fact(
+                    problem_id=store.project_id(),
+                    author="fixture",
+                    predecessors=[],
+                    statement=(
+                        f"[CLAIM:SEARCH_{index}] Searchable Fact {index} holds."
+                    ),
+                    proof=f"Search fixture proof {index}.",
+                )
+                for index in range(80)
+            ]
+            fixture_dir = root / "search-fixtures"
+            fixture_dir.mkdir()
+            active_paths: dict[str, Path] = {}
+            active_facts: dict[str, Fact] = {}
+            for fact in facts:
+                path = fixture_dir / f"{fact.fact_id}.md"
+                path.write_text(serialize_fact(fact), encoding="utf-8")
+                active_paths[fact.fact_id] = path
+                active_facts[fact.fact_id] = fact
+
+            lifecycle = store.v5_lifecycle()
+
+            def reconstruct(
+                *,
+                _inspection_context: RoundInspectionContext,
+            ) -> tuple[dict[str, Fact], dict[str, Path]]:
+                self.assertEqual(store._snapshot_lock_depth, 1)
+                return active_facts, active_paths
+
+            lineage_reconstruction = Mock(side_effect=reconstruct)
+            lineage_validation = Mock(return_value=None)
+            lifecycle._lineage_snapshot = lineage_reconstruction  # type: ignore[method-assign]
+            lifecycle._validate_lineage_snapshot = lineage_validation  # type: ignore[method-assign]
+            before = self._tree_snapshot(root)
+
+            with patch.object(store, "v5_lifecycle", return_value=lifecycle):
+                results = store.search("searchable", limit=30)
+
+            after = self._tree_snapshot(root)
+            self.assertEqual(len(results), 30)
+            self.assertEqual(before, after)
+            self.assertEqual(lineage_reconstruction.call_count, 1)
+            self.assertEqual(lineage_validation.call_count, 1)
+
+    def test_search_fails_before_scoring_when_lineage_validation_fails(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve() / "project"
+            store = MathGraphStore(root)
+            store.initialize(
+                project_id="chx-036-search-fail-closed",
+                title="Fail-closed Fact search fixture",
+                workflow_evidence_version=5,
+            )
+            lifecycle = store.v5_lifecycle()
+            lifecycle._lineage_snapshot = Mock(return_value=({}, {}))  # type: ignore[method-assign]
+            lifecycle._validate_lineage_snapshot = Mock(  # type: ignore[method-assign]
+                side_effect=ValueError("fixture lineage failure")
+            )
+            before = self._tree_snapshot(root)
+
+            with patch.object(store, "v5_lifecycle", return_value=lifecycle):
+                with patch("mathgraph.store.bm25") as scorer:
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "fixture lineage failure",
+                    ):
+                        store.search("searchable", limit=30)
+
+            after = self._tree_snapshot(root)
+            scorer.assert_not_called()
+            self.assertEqual(before, after)
+
     def test_provisional_projection_mismatch_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve() / "project"

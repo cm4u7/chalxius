@@ -1,10 +1,33 @@
-# Chalxius 0.7.15 architecture findings and residual boundaries
+# Chalxius 0.7.16 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.7.15
-**Research Obligation Closure**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.7.16
+**Bounded Capability Hygiene**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.7.16 Bounded capability hygiene
+
+The current overlay keeps repair capability bytes inside one command-local,
+content-addressed inspection context, applies a 64 MiB aggregate byte cap, and
+performs a fresh no-follow read across every mutation boundary. It also rejects
+the newly introduced C0 control-byte family prospectively for textual worker
+artifacts while preserving frozen 0.7.15 card behavior and binary artifacts.
+Python entrypoints disable bytecode emission before imports; package startup
+hygiene is limited to the interpreter's own cache and never changes project
+records. These are runtime-hygiene repairs only: they do not add a truth path,
+authority cache, scheduler, Candidate gate, or Fact admission shortcut.
+
+Project CHX inventory now treats fully closed parallel successor subtrees as
+independent qualified chains instead of rejecting concurrency as a lineage
+fork. The topology is digest-bound. Active or malformed subtrees, missing
+predecessors, cycles, and competing cross-branch `supersedes` successors remain
+fail-closed. This changes lifecycle accounting only and does not reinterpret
+historical issue contents.
+
+The 0.7.16 release remains nontruth architecture work. Existing historical
+ledgers and reports stay immutable, and any unresolved CHX issue is settled only
+through the validated copy-on-write tactical/integrated/global repair routes.
 
 ## 0.7.15 Research obligation closure
 

@@ -373,6 +373,31 @@ class BoundedHandoff0714Tests(unittest.TestCase):
 
             source_path = store.root / "primary-source.pdf"
             source_path.write_bytes(b"version-pinned primary source")
+            source_artifacts = []
+            for source_key, filename, payload in (
+                ("HKR", "hkr-primary.pdf", b"HKR primary bytes"),
+                ("BLR", "blr-primary.pdf", b"BLR primary bytes"),
+                ("DML", "dml-primary.pdf", b"DML primary bytes"),
+            ):
+                source_file = store.root / filename
+                source_file.write_bytes(payload)
+                source_artifacts.append(
+                    {
+                        "source_key": source_key,
+                        "artifact_path": filename,
+                        "artifact_sha256": sha256_bytes(payload),
+                    }
+                )
+            source_evidence_path = store.root / "source-evidence.json"
+            source_evidence_raw = json.dumps(
+                {
+                    "schema_version": 1,
+                    "ledger_kind": "structured_source_evidence",
+                    "source_artifacts": source_artifacts,
+                },
+                sort_keys=True,
+            ).encode("utf-8")
+            source_evidence_path.write_bytes(source_evidence_raw)
             target = lifecycle.add_research(
                 {
                     "kind": "literature",
@@ -384,7 +409,12 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                             "path": "primary-source.pdf",
                             "sha256": sha256_bytes(source_path.read_bytes()),
                             "role": "primary_source",
-                        }
+                        },
+                        {
+                            "path": "source-evidence.json",
+                            "sha256": sha256_bytes(source_evidence_raw),
+                            "role": "source_evidence",
+                        },
                     ],
                 },
                 actor="main",
@@ -465,7 +495,79 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 ]
             }
             self.assertIn("primary-source.pdf", paths)
+            self.assertIn("source-evidence.json", paths)
+            self.assertEqual(
+                {
+                    "hkr-primary.pdf",
+                    "blr-primary.pdf",
+                    "dml-primary.pdf",
+                }.intersection(paths),
+                {
+                    "hkr-primary.pdf",
+                    "blr-primary.pdf",
+                    "dml-primary.pdf",
+                },
+            )
             self.assertIn(assignment["task_card_relpath"], paths)
+
+    def test_structured_source_evidence_requires_all_declared_primary_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            declared = []
+            for source_key, filename, payload in (
+                ("HKR", "hkr.pdf", b"HKR"),
+                ("BLR", "blr.pdf", b"BLR"),
+                ("DML", "dml.pdf", b"DML"),
+            ):
+                path = store.root / filename
+                path.write_bytes(payload)
+                declared.append(
+                    {
+                        "source_key": source_key,
+                        "artifact_path": filename,
+                        "artifact_sha256": sha256_bytes(payload),
+                    }
+                )
+            evidence = store.root / "evidence.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "source_artifacts": declared,
+                    },
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+            card = {
+                "mathematical_state": {
+                    "related_artifacts": [
+                        {
+                            "path": "evidence.json",
+                            "sha256": sha256_bytes(evidence.read_bytes()),
+                            "role": "source_evidence",
+                        }
+                    ]
+                }
+            }
+            capabilities = lifecycle._structured_source_evidence_capabilities_from_card(
+                card=card,
+                origin="source-scope",
+            )
+            self.assertEqual(
+                {item["path"] for item in capabilities},
+                {"hkr.pdf", "blr.pdf", "dml.pdf"},
+            )
+            (store.root / "blr.pdf").unlink()
+            with self.assertRaisesRegex(
+                ValueError,
+                "structured source-evidence source artifact",
+            ):
+                lifecycle._structured_source_evidence_capabilities_from_card(
+                    card=card,
+                    origin="source-scope",
+                )
 
 
 if __name__ == "__main__":
