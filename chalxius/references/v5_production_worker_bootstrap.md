@@ -83,6 +83,13 @@ milestone, record that concrete architecture finding in worker CHX before
 close. Do not turn it into a PHX route or persistent attack rule; Main performs
 that later coordination.
 
+Once every required artifact exists, the next progress milestone must be one
+explicit blocker or the strict preflight result. After preflight passes, the
+next milestone must be canonical byte validation and CHX close. Do not repeat
+"preflight soon", "closing", or equivalent status without a new result. This
+completion checkpoint adds no gate: it only eliminates idle last-mile turns
+while preserving the exact return contract.
+
 ## Frozen authority and work boundary
 
 The exact task card is the capability boundary. Verify its semantic hash and

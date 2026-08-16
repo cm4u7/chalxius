@@ -23,6 +23,8 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+sys.dont_write_bytecode = True
+
 
 SCHEMA_VERSION = 1
 CONTRACT_REVISION = "chalxius-paper-library-1"

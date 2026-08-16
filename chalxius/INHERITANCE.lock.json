@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.7.4",
-  "release_codename": "Bounded Main Routing",
-  "release_display_name": "Chalxius 0.7.4 — Bounded Main Routing",
+  "version": "0.7.16",
+  "release_codename": "Bounded Capability Hygiene",
+  "release_display_name": "Chalxius 0.7.16 — Bounded Capability Hygiene",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -336,6 +336,10 @@
     ],
     "supervisor_bootstrap_revision": "chalxius-v5-supervisor-worker-bootstrap-1",
     "supervisor_bootstrap_activation": "exact_current_machine_bound_supervision_card_only_with_full_protocol_fallback",
+    "candidate_adverse_bootstrap_revision": "chalxius-v5-candidate-adverse-worker-bootstrap-1",
+    "candidate_adverse_bootstrap_activation": "exact_current_machine_bound_candidate_fact_refute_without_research_cycle",
+    "supervised_authority_closure_revision": "chalxius-v5-supervised-authority-closure-1",
+    "supervised_authority_closure": "active_fact_premises_production_task_card_and_exact_input_capabilities_projected_into_current_supervisor_cards",
     "supervisor_protocol_preload": "full_skill_exact_prompt_card_and_compact_bootstrap_then_local_conditional_expansion",
     "supervisor_conditional_protocols": [
       "program_math_computational_verification",
@@ -385,6 +389,10 @@
     "overlapping_scope_coverage": "lock_held_fail_closed_with_same_host_exact_retry_and_aborted_rounds_reserving_no_coverage",
     "supervision_validation": "one_ephemeral_command_local_component_bound_cycle_safe_inspection_context_shared_across_planning_subaudits_with_complete_outer_authority_and_hash_validation",
     "planning_validation_reuse": "one_command_local_context_only_without_persistent_cache_and_with_fresh_lock_held_overlap_and_liveness_recheck",
+    "generic_production_obligation_closure": "valid_nonaborted_ingest_receipt_hides_only_the_receipt_source_research_from_default_frontier_with_fresh_lock_held_recheck",
+    "explicit_research_selection_after_completion": "preserved_exact_id_path_without_generic_frontier_filtering",
+    "main_unbound_research_reuse": "current_main_cli_role_only_complete_normalized_semantics_except_actor_under_mutation_lock",
+    "main_reuse_authority": "cli_role_never_actor_text_with_task_and_assignment_bound_research_excluded",
     "revision_pairing": "current_production_requires_current_allocation_and_components_while_legacy_production_cannot_be_newly_created_or_mixed",
     "partial_write_recovery": "content_addressed_supervisor_research_reused_by_identical_retry_before_single_round_seal",
     "repair_policy": "copy_on_write_next_research_cycle",
@@ -629,7 +637,7 @@
   },
   "bttf_field_repair": {
     "activation": "prospective_except_exact_idempotent_completion_of_existing_partial_admission",
-    "admission_lineage_validation": "two_phase_immutable_snapshot_without_recursive_active_fact_projection",
+    "admission_lineage_validation": "two_phase_command_local_projection_with_bounded_reentry_and_exact_provisional_full_agreement",
     "admission_visibility_switch": "accepted_marker_unchanged",
     "post_marker_completion": "exact_idempotent_event_and_interface_projection",
     "completed_round_runtime_validation": "complete_valid_ingestion_receipts_make_round_historical_without_abort_while_exact_manifest_bound_runtime_bytes_remain_mandatory_at_original_or_host_archive",
@@ -681,7 +689,7 @@
       "assets/vendor/**"
     ],
     "protected_file_count": 92,
-    "protected_tree_sha256": "348d24f984ef75b510587d3013c8ec689d3373f48d3a40cdef47b4977115da9d",
+    "protected_tree_sha256": "8d8c38d41cb308e7dddec01a6f8083836cd1a05dffb4571148b832a3c797d24c",
     "changed_from_0.4.3_runtime_paths": [
       "assets/reader_html_app.js",
       "assets/reader_html_template.html",
@@ -735,6 +743,82 @@
     "fact_admission_change": false,
     "fact_admission_change_scope": "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_paper_continuation_freshness_prospective_paper_research_pipeline_preflight_and_strict_research_draft_composable_verification"
   },
+  "bounded_projection_surface": {
+    "contract_revision": "chalxius-bounded-projection-surface-1",
+    "activation": "prospective_default_for_current_goal_intake_round_planning_attack_report_and_advisory_fact_snapshot",
+    "selected_authority_validation": "complete_exact_content_and_direct_authority_inputs",
+    "structural_envelope_scope": "content_addressed_identity_connectivity_and_typed_invalidation_only_never_mathematical_truth",
+    "full_forensic_paths": [
+      "complete_research_collection_validation",
+      "fact_evidence_audit",
+      "attack_report_full"
+    ],
+    "round_publication": "private_same_filesystem_stage_validate_manifest_last_then_atomic_rename",
+    "worker_completion": "artifacts_then_preflight_or_blocker_then_canonical_validation_and_chx_close",
+    "persistent_index": false,
+    "background_cache": false,
+    "watcher_or_scheduler": false,
+    "new_lifecycle_state": false,
+    "truth_effect": "none",
+    "fact_admission_change": false
+  },
+  "selective_fact_admission_surface": {
+    "contract_revision": "chalxius-v5-selective-fact-checkpoint-2",
+    "batch_seed_revision": "chalxius-v5-candidate-batch-seed-3",
+    "activation": "prospective_main_explicit_only_before_candidate_construction",
+    "maximum_explicit_targets": 16,
+    "maximum_explicit_exclusions": 32,
+    "selection_authority": "main_explicit_only",
+    "automatic_ranking": false,
+    "selected_research_validation": "complete_exact_record_ancestry_staleness_assurance_and_required_supervision",
+    "unselected_research_scope": "structural_identity_connectivity_and_invalidation_envelopes_only",
+    "default_batch_partition": "dependency_connected_authoring_batches_with_singleton_failure_isolation_elsewhere",
+    "partition_semantics": "dependency_closed_authoring_batches_not_fact_atoms",
+    "candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact",
+    "automatic_atomization": false,
+    "candidate_dag_closure_required": true,
+    "batch_merge_authority": "main_only_after_dependency_and_failure_surface_review",
+    "candidate_fact_authoring_required": true,
+    "persistent_index": false,
+    "background_worker": false,
+    "candidate_effect": "none",
+    "certification_effect": "none",
+    "fact_effect": "none",
+    "truth_effect": "none"
+  },
+  "candidate_admission_efficiency_surface": {
+    "contract_revision": "chalxius-v5-candidate-admission-efficiency-6",
+    "public_adverse_target_preparation": "prepare-candidate-adverse-target",
+    "candidate_adverse_target_preparation": "one_main_command_binds_one_canonical_candidate_fact_and_unique_live_supervision_result",
+    "candidate_adverse_bootstrap": "dedicated_compact_refute_contract_never_production_bootstrap",
+    "public_adverse_command": "plan-candidate-adverse",
+    "public_adverse_authority": "main_only_exact_candidate_fact_target",
+    "aborted_candidate_adverse_retry": "validated_abort_excluded_before_round_and_task_card_reconstruction",
+    "production_refute": "rejected",
+    "supervision_lane": "unchanged",
+    "candidate_inspection_reuse": "one_ephemeral_command_context_across_candidate_preparation_successor_validation_and_active_fact_reads",
+    "fact_admission_inspection_reuse": "one_ephemeral_complete_context_before_publication_lock_and_one_distinct_fresh_context_under_lock",
+    "fact_admission_lock_boundary": "no_authority_cache_crosses_lock_with_fresh_lock_held_history_and_lineage_replay",
+    "candidate_local_shape_and_statement_interface_precheck": "nonauthoritative_rejection_only_before_global_research_replay",
+    "candidate_semantic_atomicity_precheck": "exactly_one_semantic_conclusion_atom_before_research_replay_or_packaging",
+    "candidate_fact_worker_bytes": "new_0_7_13_cards_require_exact_canonical_fact_markdown_before_ingestion",
+    "historical_candidate_fact_returns": "retain_frozen_runtime_contract_without_retroactive_rejection",
+    "exact_repair_specification": "optional_main_json_is_normalized_hash_bound_into_repair_research_and_task_card",
+    "manual_research_supervision_inventory": "eliminated_by_content_addressed_main_target_preparation_after_live_supervision",
+    "frontier_projection": "global_structural_envelopes_with_full_validation_only_for_returned_visible_records",
+    "certification_inspection_reuse": "one_ephemeral_prelock_context_and_one_distinct_fresh_lock_held_context",
+    "certification_outer_lock": "disabled_because_certification_record_owns_the_narrow_fresh_publication_lock",
+    "active_fact_validation_reentry": "command_local_provisional_release_marker_fact_projection_followed_by_complete_outer_validation_and_exact_agreement",
+    "approved_computation_context_propagation": "one_inspection_context_across_design_supervision_receipt_disposition_and_nested_task_card_replay",
+    "authoritative_assurance_validation": "unchanged_after_full_candidate_closure",
+    "dependency_closure": "exact_and_unchanged",
+    "stale_route_and_adverse_closure": "exact_and_unchanged",
+    "seal_lock_liveness": "fresh_recomputation_without_preflight_context",
+    "persistent_cache": false,
+    "candidate_effect": "none_until_existing_candidate_release_command",
+    "fact_effect": "none",
+    "truth_effect": "none"
+  },
   "chx_public_disclosure": {
     "contract_revision": "chalxius-chx-public-disclosure-2",
     "included_issue_ids": [
@@ -759,7 +843,20 @@
       "CHX-019",
       "CHX-020",
       "CHX-021",
-      "CHX-022"
+      "CHX-022",
+      "CHX-023",
+      "CHX-024",
+      "CHX-025",
+      "CHX-026",
+      "CHX-027",
+      "CHX-028",
+      "CHX-029",
+      "CHX-030",
+      "CHX-031",
+      "CHX-032",
+      "CHX-033",
+      "CHX-034",
+      "CHX-035"
     ],
     "ledger_lineage": [
       {
@@ -823,15 +920,93 @@
           "CHX-021",
           "CHX-022"
         ]
+      },
+      {
+        "ledger_run_id": "run-20260812T082458508253Z-50fef06fdcab",
+        "ledger_sha256": "94226281c35f8301a5f1cc7dda81c7d369a7b408db418806891981cd6a840469",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T073631884601Z-53f28d3790b8",
+        "included_issue_ids": [
+          "CHX-023"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260812T084555825183Z-c0da7ae56f95",
+        "ledger_sha256": "6df63395959e0083eaf32b5addbae9a7c5bc47c3c104c72b57f1c5c73ce489eb",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T082458508253Z-50fef06fdcab",
+        "included_issue_ids": [
+          "CHX-024"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260812T085042959321Z-48034fc56b06",
+        "ledger_sha256": "5fcdb90d96774a066763ca81e3d15df80782ddfe977286a02db1b2dbe50e6f9f",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T084555825183Z-c0da7ae56f95",
+        "included_issue_ids": [
+          "CHX-025"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260812T110223791595Z-71cc17e3531b",
+        "ledger_sha256": "c726070f456a541a57d1ff4e90927a8103ae3a272025016029f6e3bb7c404dfb",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T085042959321Z-48034fc56b06",
+        "included_issue_ids": [
+          "CHX-026",
+          "CHX-027",
+          "CHX-028",
+          "CHX-029",
+          "CHX-030"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260812T130915592717Z-6300da6b4bad",
+        "ledger_sha256": "31d8119e472de7605f6d261304cee856b2f366aa0c8355cb4209620b7b358267",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T110223791595Z-71cc17e3531b",
+        "included_issue_ids": [
+          "CHX-031"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260813T234901055084Z-22649ebe6545",
+        "ledger_sha256": "ed479d3343e3f4a5722d36e052fe5354cb507d83517741d0c0a1d41368bec104",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260812T130915592717Z-6300da6b4bad",
+        "included_issue_ids": [
+          "CHX-032",
+          "CHX-033"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260814T001848013126Z-a494126a5017",
+        "ledger_sha256": "1220b6b2bf226af4e0dc8c1811944bfb8f399f332a87905398d8717ceb3277a4",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260813T234901055084Z-22649ebe6545",
+        "included_issue_ids": [
+          "CHX-034"
+        ]
+      },
+      {
+        "ledger_run_id": "run-20260814T004319766703Z-fdfc7f3fd6e2",
+        "ledger_sha256": "4eb2660eee4bc089d0bd50fd7f871ad48a2141ce1c0d587fb3e50625eebbf8af",
+        "ledger_contract_revision": "chalxius-chx-run-ledger-5",
+        "predecessor_run_id": "run-20260814T001848013126Z-a494126a5017",
+        "included_issue_ids": [
+          "CHX-035"
+        ]
       }
     ],
-    "latest_issue_id": "CHX-022",
+    "latest_issue_id": "CHX-035",
     "document_contracts": {
       "KNOWN_LIMITATIONS.md": {
         "explicit_issue_enumeration": true,
         "required_markers": [
           "019fa908-8cf5-7a70-a867-dde76a1c6182",
           "Bounded Main Routing",
+          "Bounded Projections",
           "CHX-001",
           "CHX-002",
           "CHX-003",
@@ -854,15 +1029,37 @@
           "CHX-020",
           "CHX-021",
           "CHX-022",
+          "CHX-023",
+          "CHX-024",
+          "CHX-025",
+          "CHX-026",
+          "CHX-027",
+          "CHX-028",
+          "CHX-029",
+          "CHX-030",
+          "CHX-031",
+          "CHX-032",
+          "CHX-033",
+          "CHX-034",
+          "CHX-035",
           "Selective Startup",
           "excluded_nonarchitectural",
           "immutable predecessor",
+          "local-install-resolved",
           "publication-resolved",
           "run-20260811T013254358017Z-46283133a345",
           "run-20260811T085034084387Z-6c87c04d5462",
           "run-20260811T191546409764Z-b156c46cab1c",
           "run-20260811T193354268477Z-7a6dcfe41bb0",
           "run-20260812T073631884601Z-53f28d3790b8",
+          "run-20260812T082458508253Z-50fef06fdcab",
+          "run-20260812T084555825183Z-c0da7ae56f95",
+          "run-20260812T085042959321Z-48034fc56b06",
+          "run-20260812T110223791595Z-71cc17e3531b",
+          "run-20260812T130915592717Z-6300da6b4bad",
+          "run-20260813T234901055084Z-22649ebe6545",
+          "run-20260814T001848013126Z-a494126a5017",
+          "run-20260814T004319766703Z-fdfc7f3fd6e2",
           "supersedes"
         ]
       },
@@ -871,6 +1068,7 @@
         "required_markers": [
           "019fa908-8cf5-7a70-a867-dde76a1c6182",
           "Bounded Main Routing",
+          "Bounded Projections",
           "CHX-001",
           "CHX-002",
           "CHX-003",
@@ -893,13 +1091,35 @@
           "CHX-020",
           "CHX-021",
           "CHX-022",
+          "CHX-023",
+          "CHX-024",
+          "CHX-025",
+          "CHX-026",
+          "CHX-027",
+          "CHX-028",
+          "CHX-029",
+          "CHX-030",
+          "CHX-031",
+          "CHX-032",
+          "CHX-033",
+          "CHX-034",
+          "CHX-035",
           "Selective Startup",
+          "local-install-resolved",
           "nontruth",
           "run-20260811T013254358017Z-46283133a345",
           "run-20260811T085034084387Z-6c87c04d5462",
           "run-20260811T191546409764Z-b156c46cab1c",
           "run-20260811T193354268477Z-7a6dcfe41bb0",
           "run-20260812T073631884601Z-53f28d3790b8",
+          "run-20260812T082458508253Z-50fef06fdcab",
+          "run-20260812T084555825183Z-c0da7ae56f95",
+          "run-20260812T085042959321Z-48034fc56b06",
+          "run-20260812T110223791595Z-71cc17e3531b",
+          "run-20260812T130915592717Z-6300da6b4bad",
+          "run-20260813T234901055084Z-22649ebe6545",
+          "run-20260814T001848013126Z-a494126a5017",
+          "run-20260814T004319766703Z-fdfc7f3fd6e2",
           "supersedes"
         ]
       }

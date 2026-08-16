@@ -78,6 +78,13 @@ amplifies a repeated no-output milestone, record that concrete architecture
 finding in worker CHX before close. Do not turn it into a PHX route or
 persistent attack rule; Main performs that later coordination.
 
+Once the required supervision report exists, the next progress milestone must
+be one explicit blocker or the strict preflight result. After preflight passes,
+the next milestone must be canonical byte validation and CHX close. Do not
+repeat "preflight soon", "closing", or equivalent status without a new result.
+This completion checkpoint adds no gate: it only eliminates idle last-mile
+turns while preserving the exact return contract.
+
 ## Frozen authority and scope
 
 The card is the immutable capability boundary. Verify its semantic hash and use
@@ -92,6 +99,15 @@ Attack the new production Research and its declared artifacts. An admitted
 Fact dependency is a frozen premise, not a default attack target. If exact new
 evidence contradicts one, state the conflict separately for Main to route to an
 authority-governed reopening; do not rewrite or silently invalidate the Fact.
+
+For current cards, `supervised_production_authority` in the source Research
+dossier is the content-addressed projection of each attacked production task
+card. The supervisor's ordinary Fact dependencies and related-artifact
+allowlist include the projection's active premises, production task card, and
+exact input/source capabilities. Use those bytes for premise and source replay;
+do not treat the supervisor Research's own narrower authority snapshot as a
+description of the attacked production route. A missing or hash-drifted closure
+is a capability blocker, not permission to reconstruct it from prose.
 
 Scope meanings are narrow:
 

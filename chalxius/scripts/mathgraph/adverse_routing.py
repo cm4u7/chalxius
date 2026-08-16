@@ -964,6 +964,8 @@ def validate_attack_route_recommendation_report(
         or value["project_effect"] != "report_only"
         or value["routing_change_policy"]
         != "no_route_change_without_main_synthesis"
+        or value["coverage_status"] != "case-projection"
+        or value["scope_complete"] is not False
         or value["report_sha256"] != sha256_json(semantic)
     ):
         raise ValueError("attack-route recommendation report identity is invalid")
@@ -3354,14 +3356,35 @@ class AdverseRoutingManager:
     ) -> dict[str, Any]:
         """Project a few concrete worker failure reports for Main synthesis."""
 
-        full = self.report(host_task_scope_id=host_task_scope_id)
+        self.require_enabled()
+        requested_scope = _require_text(
+            host_task_scope_id, "attack report host task scope id"
+        )
+        scope_id = normalize_host_task_scope_id(
+            requested_scope,
+            workflow_evidence_version=self.store.workflow_evidence_version(),
+        )
+        if scope_id is None:
+            raise RuntimeError("attack report host scope normalization returned null")
+        accepted_scope_ids = {requested_scope, scope_id}
+        state = self._validated_state()
+        proposals_by_case = {
+            item["case_id"]: item for item in state["proposals"]
+        }
+        decisions_by_proposal = {
+            item["proposal_id"]: item for item in state["decisions"]
+        }
         groups: dict[str, dict[str, Any]] = {}
         pending_proposal_ids: set[str] = set()
-        for attack in full["attacks"]:
-            if attack["proposal_status"] != "pending_main_synthesis":
+        for case in state["cases"]:
+            if case["host_task_scope_id"] not in accepted_scope_ids:
                 continue
-            pending_proposal_ids.add(attack["proposal_id"])
-            signature = attack["attack_family"]
+            proposal = proposals_by_case[case["case_id"]]
+            if proposal["proposal_id"] in decisions_by_proposal:
+                continue
+            pending_proposal_ids.add(proposal["proposal_id"])
+            learning = case["attack_learning"]
+            signature = learning["attack_family"]
             if signature not in ATTACK_FAMILY_PLAIN_LANGUAGE:
                 # Unknown families remain in --full. Main never receives an
                 # invented abstraction merely to fill a queue quota.
@@ -3376,12 +3399,14 @@ class AdverseRoutingManager:
             )
             group["entries"].append(
                 {
-                    "proposal_id": attack["proposal_id"],
-                    "failure_mechanism": attack["failure_mechanism"],
-                    "success_boundary": attack["success_boundary"],
+                    "proposal_id": proposal["proposal_id"],
+                    "failure_mechanism": learning["failure_mechanism"],
+                    "success_boundary": learning["success_boundary"],
                 }
             )
-            group["result_kinds"].append(attack["attack_result"])
+            group["result_kinds"].append(
+                case.get("attack_result", "surviving_counterexample")
+            )
 
         ranked = sorted(
             groups.values(),
@@ -3429,9 +3454,9 @@ class AdverseRoutingManager:
             "schema_version": ADVERSE_ROUTING_SCHEMA_VERSION,
             "contract_revision": ATTACK_ROUTE_RECOMMENDATION_REPORT_REVISION,
             "project_id": self.store.project_id(),
-            "host_task_scope_id": full["host_task_scope_id"],
-            "coverage_status": full["coverage_status"],
-            "scope_complete": full["scope_complete"],
+            "host_task_scope_id": scope_id,
+            "coverage_status": "case-projection",
+            "scope_complete": False,
             "recommendation_policy": {
                 "maximum": MAX_ATTACK_ROUTE_RECOMMENDATIONS,
                 "selection": (

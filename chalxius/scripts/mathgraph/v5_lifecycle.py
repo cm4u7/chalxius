@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import stat
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -108,6 +110,7 @@ from .v5_assurance import (
     V5_COMPUTATION_DESIGN_ARTIFACT_ROLES,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
     build_assurance_contract,
+    normalize_obligations,
     validate_computation_design_role_contract,
     validate_assurance_contract,
     validate_return_assurance,
@@ -122,6 +125,21 @@ from .runtime_archive import (
 
 V5_WORKFLOW_EVIDENCE_VERSION = 5
 V5_POLICY_REVISION = "chalxius-v5-minimal-core-2"
+V5_TERMINAL_SEAL_REVISION = "chalxius-v5-terminal-worker-seal-2"
+V5_WRITER_LEASE_REVISION = "chalxius-v5-assignment-writer-lease-1"
+V5_REPAIR_INPUT_CAPABILITY_REVISION = (
+    "chalxius-v5-repair-input-capabilities-1"
+)
+V5_MAX_REPAIR_INPUT_CAPABILITIES = 256
+# A count-only cap is insufficient for capability closure: 256 large files
+# would turn a bounded command into an accidental multi-gigabyte read.  Keep
+# this command-local and aligned with the existing task-card aggregate limit;
+# it is not persisted in the Research schema.
+V5_MAX_REPAIR_INPUT_CAPABILITY_BYTES = 64 * 1024 * 1024
+V5_TEXTUAL_ARTIFACT_SUFFIXES = frozenset(
+    {"", ".json", ".markdown", ".md", ".py", ".txt", ".yaml", ".yml"}
+)
+V5_MARKDOWN_ARTIFACT_SUFFIXES = frozenset({".markdown", ".md"})
 V5_FACT_EVIDENCE_AUDIT_REVISION = "chalxius-v5-fact-evidence-audit-1"
 V5_CERTIFICATION_REPAIR_OUTBOX_REVISION = (
     "chalxius-v5-certification-repair-outbox-1"
@@ -130,6 +148,13 @@ V5_CERTIFICATION_REPAIR_ACTOR = "certification-gateway"
 V5_FRESH_ADVERSE_READINESS_REVISION = (
     "chalxius-candidate-fresh-adverse-readiness-1"
 )
+V5_SELECTIVE_FACT_CHECKPOINT_REVISION = (
+    "chalxius-v5-selective-fact-checkpoint-2"
+)
+V5_MAX_SELECTIVE_FACT_TARGETS = 16
+V5_MAX_SELECTIVE_FACT_EXCLUSIONS = 32
+V5_MAX_SELECTIVE_FACT_GRAPH_RECORDS = 4_096
+V5_MAX_SELECTIVE_FACT_CHECKPOINT_BYTES = 512 * 1_024
 V5_LIFECYCLE_CONTRACT: dict[str, Any] = {
     "schema_version": 1,
     "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
@@ -261,6 +286,9 @@ V5_LEGACY_RESEARCH_SUPERVISION_REVISION = (
     "chalxius-v5-research-supervision-1"
 )
 V5_RESEARCH_SUPERVISION_REVISION = "chalxius-v5-research-supervision-2"
+V5_SUPERVISED_AUTHORITY_CLOSURE_REVISION = (
+    "chalxius-v5-supervised-authority-closure-1"
+)
 V5_LOGICAL_SUPERVISION_COMPONENT_REVISION = (
     "chalxius-v5-logical-supervision-component-1"
 )
@@ -466,6 +494,17 @@ class RoundInspectionContext:
     ] = field(default_factory=dict)
     research_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     all_research_records: list[dict[str, Any]] | None = None
+    ordinary_capability_bytes: dict[tuple[str, str, bool], bytes] = field(
+        default_factory=dict
+    )
+    ordinary_capability_digests_by_path: dict[str, str] = field(
+        default_factory=dict
+    )
+    repair_capability_bytes: dict[tuple[str, str], bytes] = field(
+        default_factory=dict
+    )
+    repair_capability_digests_by_path: dict[str, str] = field(default_factory=dict)
+    repair_capability_total_bytes: int = 0
     research_supervision_validation_stack: set[
         tuple[str, str, str, str, str, str]
     ] = field(default_factory=set)
@@ -480,6 +519,7 @@ class RoundInspectionContext:
     )
     active_fact_paths: dict[str, Path] | None = None
     active_facts: dict[str, Fact] | None = None
+    active_fact_validation_in_progress: bool = False
     revoked_fact_ids: set[str] | None = None
     quarantine_records: list[dict[str, Any]] | None = None
     adverse_cases: dict[str, dict[str, Any]] | None = None
@@ -493,6 +533,7 @@ class RoundInspectionContext:
     round_manifests: dict[str, tuple[Path, dict[str, Any]]] = field(
         default_factory=dict
     )
+    production_obligation_round_ids: dict[str, list[str]] | None = None
 
     def bind_project(self, root: Path | str) -> None:
         canonical = str(Path(root).resolve())
@@ -503,6 +544,28 @@ class RoundInspectionContext:
             raise ValueError(
                 "V5 inspection context belongs to a different project root"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalArtifactSnapshot:
+    source_relpath: str
+    sha256: str
+    role: str | None
+    raw: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalIngestSnapshot:
+    return_path: Path
+    return_relpath: str
+    return_sha256: str
+    return_bytes: bytes
+    payload: dict[str, Any]
+    artifacts: tuple[TerminalArtifactSnapshot, ...]
+
+
+class _WorkerFinalHashMismatch(ValueError):
+    """A caller hash mismatch is not authenticated failure evidence."""
 
 
 @dataclass(slots=True)
@@ -641,6 +704,9 @@ class V5LifecycleManager:
         self.certification_repair_effects_dir = (
             store.root / "certification" / "repair-effects" / "by-decision"
         )
+        self.fact_admission_checkpoints_dir = (
+            self.root / "fact-admission-checkpoints" / "by-id"
+        )
         self.admissions_dir = (
             store.fact_graph_dir / "v5_admissions" / "by-release"
         )
@@ -671,6 +737,7 @@ class V5LifecycleManager:
             self.certification_decisions_dir,
             self.certification_repair_outbox_dir,
             self.certification_repair_effects_dir,
+            self.fact_admission_checkpoints_dir,
             self.admissions_dir,
             self.revocations_dir,
         ):
@@ -749,6 +816,105 @@ class V5LifecycleManager:
             _inspection_context=_inspection_context,
         )
         return record
+
+    def _research_record_envelope(
+        self,
+        research_id: str,
+    ) -> dict[str, Any]:
+        """Validate immutable identity and connectivity without artifact replay.
+
+        This projection is intentionally nonauthoritative.  It is suitable only
+        for connecting an explicitly selected Research record to its ancestry;
+        any selected or otherwise authority-bearing record still uses the full
+        validator.
+        """
+
+        path = self._research_path(research_id)
+        if path.is_symlink() or not path.is_file():
+            raise KeyError(f"unknown V5 research entry: {research_id}")
+        record = self.store._read_json(path)
+        required = {
+            "schema_version",
+            "policy_revision",
+            "project_id",
+            "research_id",
+            "kind",
+            "status",
+            "claim",
+            "content",
+            "rationale",
+            "dependencies",
+            "source",
+            "relation",
+            "related_research_ids",
+            "metadata",
+            "actor",
+            "created_at",
+            "semantic_sha256",
+            "record_sha256",
+        }
+        if not isinstance(record, dict) or set(record) != required:
+            raise ValueError("research envelope fields are not exact")
+        resolved_id = validate_memory_id(
+            _require_nonempty_text(record.get("research_id"), "research id")
+        )
+        if path.stem != resolved_id:
+            raise ValueError("research envelope path/id mismatch")
+        if (
+            record.get("schema_version") != 5
+            or record.get("policy_revision") != V5_POLICY_REVISION
+            or record.get("project_id") != self.store.project_id()
+            or record.get("kind") not in V5_RESEARCH_KINDS
+            or record.get("status") not in MEMORY_STATUSES
+        ):
+            raise ValueError("research envelope identity is invalid")
+        _require_nonempty_text(record.get("claim"), "research claim")
+        for field_name in ("content", "rationale", "source", "actor", "created_at"):
+            if not isinstance(record.get(field_name), str):
+                raise ValueError(f"research {field_name} must be a string")
+        for fact_id in _require_string_list(
+            record.get("dependencies"), "research dependencies"
+        ):
+            validate_fact_id(fact_id)
+        for related_id in _require_string_list(
+            record.get("related_research_ids"), "related research ids"
+        ):
+            validate_memory_id(related_id)
+        relation = record.get("relation")
+        if relation is not None and not isinstance(relation, str):
+            raise ValueError("research relation must be a string or null")
+        if not isinstance(record.get("metadata"), dict):
+            raise ValueError("research metadata must be an object")
+        semantic = {
+            key: record[key]
+            for key in required.difference(
+                {"research_id", "created_at", "semantic_sha256", "record_sha256"}
+            )
+        }
+        semantic_sha = sha256_json(semantic)
+        if (
+            record.get("semantic_sha256") != semantic_sha
+            or resolved_id != semantic_sha[:12]
+        ):
+            raise ValueError("research envelope content identity drifted")
+        record_without_hash = {
+            key: value for key, value in record.items() if key != "record_sha256"
+        }
+        if record.get("record_sha256") != sha256_json(record_without_hash):
+            raise ValueError("research envelope record hash mismatch")
+        return record
+
+    def research_envelopes(self) -> list[dict[str, Any]]:
+        """Return the complete structural Research collection without artifacts."""
+
+        if not self.research_entries_dir.exists():
+            return []
+        records: list[dict[str, Any]] = []
+        for path in sorted(self.research_entries_dir.glob("*.json")):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("research ledger contains an unsafe entry")
+            records.append(self._research_record_envelope(path.stem))
+        return records
 
     def _validate_research_record(
         self,
@@ -833,6 +999,26 @@ class V5LifecycleManager:
         self._research_is_adverse_assignment(record)
         if "workload_profile" in metadata:
             validate_workload_profile(metadata["workload_profile"])
+        self._validate_exact_repair_spec_metadata(
+            kind=record["kind"],
+            metadata=metadata,
+        )
+        repair_manifest = self._validate_repair_input_capability_metadata(
+            kind=record["kind"],
+            metadata=metadata,
+            _inspection_context=_inspection_context,
+        )
+        self._validate_schema_v2_repair_lineage(
+            kind=record["kind"],
+            relation=record["relation"],
+            related_research_ids=record["related_research_ids"],
+            metadata=metadata,
+            _inspection_context=_inspection_context,
+        )
+        self._validate_supervised_production_authority_metadata(
+            metadata,
+            dependencies=record["dependencies"],
+        )
         assurance_revision = metadata.get(
             "assurance_contract_revision",
             V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
@@ -842,6 +1028,10 @@ class V5LifecycleManager:
             V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
         }:
             raise ValueError("research assurance contract revision is invalid")
+        if repair_manifest is not None and assurance_revision != V5_ASSURANCE_CONTRACT_REVISION:
+            raise ValueError(
+                "repair input capability manifest requires current assurance"
+            )
         if assurance_revision == V5_ASSURANCE_CONTRACT_REVISION:
             artifacts = metadata.get("artifacts", [])
             if not isinstance(artifacts, list) or any(
@@ -868,14 +1058,17 @@ class V5LifecycleManager:
                 if role in seen_artifact_roles:
                     raise ValueError("Research artifact roles must be unique")
                 seen_artifact_roles.add(role)
-                artifact_path = contained_path(
-                    self.store.root, relpath, "Research artifact path"
+                artifact_path = self._lexical_contained_path(
+                    relpath, "Research artifact path"
                 )
-                if (
-                    artifact_path.is_symlink()
-                    or not artifact_path.is_file()
-                    or sha256_bytes(artifact_path.read_bytes()) != digest
-                ):
+                try:
+                    self._ordinary_capability_bytes(
+                        artifact_path,
+                        digest,
+                        label="Research artifact",
+                        _inspection_context=_inspection_context,
+                    )
+                except ValueError:
                     raise ValueError("Research artifact is missing, unsafe, or drifted")
             invalidations = metadata.get("route_invalidations", [])
             if not isinstance(invalidations, list) or any(
@@ -899,6 +1092,7 @@ class V5LifecycleManager:
             relation=record["relation"],
             related_research_ids=record["related_research_ids"],
             metadata=metadata,
+            _inspection_context=_inspection_context,
         )
         if "brave_future_repair_contract" in metadata:
             # Prospective only.  Replay performs exact structural validation;
@@ -1090,10 +1284,17 @@ class V5LifecycleManager:
             "work_mode",
             "adverse_assignment",
         }
-        if not isinstance(provenance, dict) or set(provenance) != required:
+        if not isinstance(provenance, dict):
             raise ValueError("Research assignment provenance fields are not exact")
-        if provenance.get("schema_version") != 1:
+        schema_version = provenance.get("schema_version")
+        if schema_version == 1:
+            expected_fields = required
+        elif schema_version == 2:
+            expected_fields = {*required, "writer_lease_id"}
+        else:
             raise ValueError("Research assignment provenance schema is unsupported")
+        if set(provenance) != expected_fields:
+            raise ValueError("Research assignment provenance fields are not exact")
         validate_round_id(
             _require_nonempty_text(provenance.get("round_id"), "provenance round id")
         )
@@ -1118,6 +1319,17 @@ class V5LifecycleManager:
         adverse = provenance.get("adverse_assignment")
         if not isinstance(adverse, bool) or adverse != (work_mode == "refute"):
             raise ValueError("Research adverse-assignment provenance is inconsistent")
+        if schema_version == 2:
+            writer_lease_id = provenance.get("writer_lease_id")
+            if (
+                not isinstance(writer_lease_id, str)
+                or not writer_lease_id.startswith("writer-lease-")
+                or SHA256_RE.fullmatch(
+                    writer_lease_id.removeprefix("writer-lease-")
+                )
+                is None
+            ):
+                raise ValueError("Research writer-lease provenance is invalid")
         task_binding = metadata.get("task_binding")
         if isinstance(task_binding, dict):
             for key in ("round_id", "assignment_id", "task_card_sha256"):
@@ -1125,31 +1337,260 @@ class V5LifecycleManager:
                     raise ValueError(
                         "Research assignment provenance/task binding mismatch"
                     )
+            if schema_version == 2 and task_binding.get(
+                "writer_lease_id"
+            ) != provenance.get("writer_lease_id"):
+                raise ValueError(
+                    "Research writer-lease provenance/task binding mismatch"
+                )
         return adverse
+
+    @staticmethod
+    def _writer_lease_id(
+        *,
+        round_id: str,
+        assignment_id: str,
+        task_card_sha256: str,
+        worker_context_id: str,
+        host_task_scope_id: str,
+    ) -> str:
+        """Derive the assignment/host-scoped writer lease identity.
+
+        The lease is an immutable identity binding, not a permission bit.  A
+        terminal seal records it so a retry or a stale worker can never be
+        mistaken for a different assignment merely because it writes to the
+        same legacy return path.
+        """
+
+        semantic = {
+            "revision": V5_WRITER_LEASE_REVISION,
+            "round_id": round_id,
+            "assignment_id": assignment_id,
+            "task_card_sha256": task_card_sha256,
+            "worker_context_id": worker_context_id,
+            "host_task_scope_id": host_task_scope_id,
+        }
+        return "writer-lease-" + sha256_json(semantic)
+
+    @classmethod
+    def _validate_writer_lease_id(
+        cls,
+        value: Any,
+        *,
+        round_id: str,
+        assignment_id: str,
+        task_card_sha256: str,
+        worker_context_id: str,
+        host_task_scope_id: str,
+    ) -> str:
+        if (
+            not isinstance(value, str)
+            or not value.startswith("writer-lease-")
+            or SHA256_RE.fullmatch(value.removeprefix("writer-lease-")) is None
+        ):
+            raise ValueError("V5 writer lease id is invalid")
+        expected = cls._writer_lease_id(
+            round_id=round_id,
+            assignment_id=assignment_id,
+            task_card_sha256=task_card_sha256,
+            worker_context_id=worker_context_id,
+            host_task_scope_id=host_task_scope_id,
+        )
+        if value != expected:
+            raise ValueError("V5 writer lease binding is invalid")
+        return value
+
+    def _repair_capability_bytes(
+        self,
+        path: Path,
+        digest: str,
+        *,
+        label: str,
+        _inspection_context: RoundInspectionContext | None = None,
+        require_single_link: bool = False,
+    ) -> bytes:
+        """Read one repair capability once inside a command-local snapshot.
+
+        The snapshot is deliberately keyed by the lexical project-relative
+        path and its declared digest.  It is discarded with the inspection
+        context and is never used across a mutation boundary; callers that
+        cross that boundary invoke this helper without a context for a fresh
+        no-follow read.
+        """
+
+        context = self._bind_inspection_context(_inspection_context)
+        if context is None:
+            raw = self._read_regular_bytes_once(
+                path,
+                label=label,
+                containment_root=self.store.root,
+                require_single_link=require_single_link,
+            )
+            if sha256_bytes(raw) != digest:
+                raise ValueError(f"{label} bytes/hash mismatch")
+            return raw
+        try:
+            relative = path.relative_to(self.store.root).as_posix()
+        except ValueError as exc:
+            raise ValueError(f"{label} escapes its project root") from exc
+        previous_digest = context.repair_capability_digests_by_path.get(relative)
+        if previous_digest is not None and previous_digest != digest:
+            raise ValueError(f"{label} path has conflicting declared bytes")
+        key = (relative, digest)
+        cached = context.repair_capability_bytes.get(key)
+        if cached is not None:
+            return cached
+        raw = self._read_regular_bytes_once(
+            path,
+            label=label,
+            containment_root=self.store.root,
+            require_single_link=require_single_link,
+        )
+        if sha256_bytes(raw) != digest:
+            raise ValueError(f"{label} bytes/hash mismatch")
+        projected_total = context.repair_capability_total_bytes + len(raw)
+        if projected_total > V5_MAX_REPAIR_INPUT_CAPABILITY_BYTES:
+            raise ValueError(
+                "repair input capability bytes exceed the 64 MiB aggregate cap"
+            )
+        context.repair_capability_digests_by_path[relative] = digest
+        context.repair_capability_bytes[key] = raw
+        context.repair_capability_total_bytes = projected_total
+        return raw
+
+    def _ordinary_capability_bytes(
+        self,
+        path: Path,
+        digest: str,
+        *,
+        label: str,
+        _inspection_context: RoundInspectionContext | None = None,
+        require_single_link: bool = False,
+    ) -> bytes:
+        """Validate one non-Repair capability without charging Repair budget.
+
+        Ordinary Research, task-card, source, and Fact capabilities retain the
+        same lexical containment, no-follow regular-file read, and SHA-256
+        checks as a schema-v2 Repair input.  Their command-local cache is kept
+        separate so a large valid project cannot consume the bounded Repair
+        closure budget.  A fresh context or no context always re-reads bytes.
+        """
+
+        context = self._bind_inspection_context(_inspection_context)
+        if context is None:
+            raw = self._read_regular_bytes_once(
+                path,
+                label=label,
+                containment_root=self.store.root,
+                require_single_link=require_single_link,
+            )
+            if sha256_bytes(raw) != digest:
+                raise ValueError(f"{label} bytes/hash mismatch")
+            return raw
+        try:
+            relative = path.relative_to(self.store.root).as_posix()
+        except ValueError as exc:
+            raise ValueError(f"{label} escapes its project root") from exc
+        previous_digest = context.ordinary_capability_digests_by_path.get(
+            relative
+        )
+        if previous_digest is not None and previous_digest != digest:
+            raise ValueError(f"{label} path has conflicting declared bytes")
+        key = (relative, digest, require_single_link)
+        cached = context.ordinary_capability_bytes.get(key)
+        if cached is not None:
+            return cached
+        raw = self._read_regular_bytes_once(
+            path,
+            label=label,
+            containment_root=self.store.root,
+            require_single_link=require_single_link,
+        )
+        if sha256_bytes(raw) != digest:
+            raise ValueError(f"{label} bytes/hash mismatch")
+        context.ordinary_capability_digests_by_path[relative] = digest
+        context.ordinary_capability_bytes[key] = raw
+        return raw
+
+    def _schema_v2_repair_capability_manifest(
+        self,
+        record: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any] | None:
+        """Return the validated manifest only for an explicit schema-v2 Repair."""
+
+        metadata = record.get("metadata")
+        if not isinstance(metadata, dict):
+            return None
+        spec = metadata.get("repair_spec")
+        if not isinstance(spec, dict) or spec.get("schema_version") != 2:
+            return None
+        if record.get("kind") != "repair":
+            raise ValueError("schema-v2 repair capability scope requires repair kind")
+        if record.get("relation") != "repairs":
+            raise ValueError(
+                "schema-v2 repair capability scope requires repairs relation"
+            )
+        manifest = self._validate_repair_input_capability_metadata(
+            kind="repair",
+            metadata=metadata,
+            _inspection_context=_inspection_context,
+        )
+        if not isinstance(manifest, dict):
+            raise ValueError("schema-v2 repair capability scope lacks its manifest")
+        return manifest
 
     def _typed_research_artifacts(
         self,
         record: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, str]]:
         if (
             self._research_assurance_revision(record)
             != V5_ASSURANCE_CONTRACT_REVISION
         ):
             return []
-        artifacts = record["metadata"].get("artifacts", [])
+        metadata = record["metadata"]
+        artifacts = metadata.get("artifacts", [])
+        # CHX-038 bounds the declared byte closure of a schema-v2 Repair.
+        # Ordinary current-assurance Research artifacts are historical/source
+        # evidence and may legitimately exceed that one-Repair budget when a
+        # project-wide audit reads many records.  Keep their no-follow/hash
+        # validation, but do not charge them against the Repair snapshot.
+        repair_capability_scope = (
+            self._schema_v2_repair_capability_manifest(
+                record,
+                _inspection_context=_inspection_context,
+            )
+            is not None
+        )
         result: list[dict[str, str]] = []
         for item in artifacts:
-            path = contained_path(
-                self.store.root,
-                item["path"],
-                "Research capability artifact",
+            path = self._lexical_contained_path(
+                item["path"], "Research capability artifact"
             )
-            if (
-                path.is_symlink()
-                or not path.is_file()
-                or sha256_bytes(path.read_bytes()) != item["sha256"]
-            ):
-                raise ValueError("Research capability artifact drifted")
+            try:
+                if repair_capability_scope:
+                    self._repair_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="Research capability artifact",
+                        _inspection_context=_inspection_context,
+                    )
+                else:
+                    self._ordinary_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="Research capability artifact",
+                        _inspection_context=_inspection_context,
+                    )
+            except ValueError as exc:
+                # Preserve the historical Research-record interface while
+                # allowing the shared CHX-016 reader to expose precise errors
+                # to the newer repair-capability callers.
+                raise ValueError("Research capability artifact drifted") from exc
             result.append(
                 {
                     "path": item["path"],
@@ -1159,6 +1600,719 @@ class V5LifecycleManager:
                 }
             )
         return result
+
+    @staticmethod
+    def _normalize_repair_input_capabilities(
+        value: Any,
+    ) -> list[dict[str, str]]:
+        if not isinstance(value, list):
+            raise ValueError("repair input capabilities must be a list")
+        if len(value) > V5_MAX_REPAIR_INPUT_CAPABILITIES:
+            raise ValueError("repair input capabilities exceed the 256-item cap")
+        by_role: dict[str, dict[str, str]] = {}
+        by_path: dict[str, str] = {}
+        candidates: list[dict[str, str]] = []
+        for raw in value:
+            if not isinstance(raw, dict) or set(raw) != {
+                "path",
+                "sha256",
+                "role",
+            }:
+                raise ValueError(
+                    "repair input capability fields must be exact path/sha256/role"
+                )
+            path = _require_nonempty_text(
+                raw["path"], "repair input capability path"
+            )
+            digest = _require_nonempty_text(
+                raw["sha256"], "repair input capability SHA-256"
+            )
+            role = _require_nonempty_text(
+                raw["role"], "repair input capability role"
+            )
+            if len(path) > 4_096 or len(role) > 1_024:
+                raise ValueError("repair input capability path or role exceeds its cap")
+            if SHA256_RE.fullmatch(digest) is None:
+                raise ValueError("repair input capability SHA-256 is invalid")
+            item = {"path": path, "sha256": digest, "role": role}
+            previous_role = by_role.get(role)
+            if previous_role is not None and previous_role != item:
+                raise ValueError("repair input capability role has conflicting bytes")
+            previous_digest = by_path.get(path)
+            if previous_digest is not None and previous_digest != digest:
+                raise ValueError("repair input capability path has conflicting bytes")
+            by_role[role] = item
+            by_path[path] = digest
+            candidates.append(item)
+
+        # One byte capability is sufficient even if several inherited cards
+        # named it under different local roles.  Retain the lexicographically
+        # first role so the union is deterministic and bounded.
+        by_binding: dict[tuple[str, str], dict[str, str]] = {}
+        for item in sorted(
+            candidates,
+            key=lambda current: (
+                current["path"],
+                current["sha256"],
+                current["role"],
+            ),
+        ):
+            by_binding.setdefault((item["path"], item["sha256"]), item)
+        normalized = sorted(
+            by_binding.values(),
+            key=lambda item: (item["role"], item["path"], item["sha256"]),
+        )
+        if len(normalized) > V5_MAX_REPAIR_INPUT_CAPABILITIES:
+            raise ValueError("repair input capabilities exceed the 256-item cap")
+        return normalized
+
+    def _validate_repair_input_capability_files(
+        self,
+        capabilities: list[dict[str, str]],
+        *,
+        bounded_repair: bool = True,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> None:
+        for item in capabilities:
+            try:
+                path = self._lexical_contained_path(
+                    item["path"], "repair input capability path"
+                )
+                if bounded_repair:
+                    self._repair_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="repair input capability",
+                        _inspection_context=_inspection_context,
+                    )
+                else:
+                    self._ordinary_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="repair input capability",
+                        _inspection_context=_inspection_context,
+                    )
+            except ValueError as exc:
+                # Keep the schema-1/2 Research capability interface stable;
+                # direct CHX-016 callers still receive the detailed helper
+                # error when they need to distinguish missing, drifted, or
+                # over-capability inputs.
+                raise ValueError("Research capability artifact drifted") from exc
+
+    def _repair_capabilities_from_frozen_card(
+        self,
+        *,
+        assignment: dict[str, Any],
+        card: dict[str, Any],
+        origin: str,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, str]]:
+        capabilities: list[dict[str, str]] = [
+            {
+                "path": assignment["task_card_relpath"],
+                "sha256": assignment["task_card_sha256"],
+                "role": (
+                    f"{origin}:task_card:{assignment['assignment_id']}"
+                ),
+            }
+        ]
+        mathematical_state = card.get("mathematical_state")
+        if not isinstance(mathematical_state, dict):
+            raise ValueError("repair source task card lacks mathematical state")
+        raw_capabilities = [
+            *mathematical_state.get("related_artifacts", []),
+            *mathematical_state.get("authority_snapshot", {}).get(
+                "capabilities", []
+            ),
+        ]
+        for index, item in enumerate(raw_capabilities, 1):
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("path"), str)
+                or not isinstance(item.get("sha256"), str)
+                or not isinstance(item.get("role"), str)
+            ):
+                raise ValueError("repair source task-card capability is invalid")
+            capabilities.append(
+                {
+                    "path": item["path"],
+                    "sha256": item["sha256"],
+                    "role": f"{origin}:input_{index:03d}:{item['role']}",
+                }
+            )
+        fact_bindings = mathematical_state.get("authority_snapshot", {}).get(
+            "fact_bindings", []
+        )
+        if not isinstance(fact_bindings, list):
+            raise ValueError("repair source task-card Fact bindings are invalid")
+        for binding in fact_bindings:
+            if not isinstance(binding, dict) or binding.get("status") != "active":
+                continue
+            fact_id = validate_fact_id(binding.get("fact_id"))
+            expected_sha = binding.get("fact_sha256")
+            if not isinstance(expected_sha, str) or SHA256_RE.fullmatch(expected_sha) is None:
+                raise ValueError("repair source active Fact binding is invalid")
+            fact_path = self.store.active_fact_path(fact_id)
+            fact_raw = self._repair_capability_bytes(
+                fact_path,
+                expected_sha,
+                label="repair source active Fact",
+                require_single_link=True,
+                _inspection_context=_inspection_context,
+            )
+            capabilities.append(
+                {
+                    "path": fact_path.relative_to(self.store.root).as_posix(),
+                    "sha256": expected_sha,
+                    "role": f"{origin}:active_fact:{fact_id}",
+                }
+            )
+        return capabilities
+
+    def _repair_capabilities_from_assignment_provenance(
+        self,
+        record: dict[str, Any],
+        *,
+        origin: str,
+        _inspection_context: RoundInspectionContext,
+    ) -> list[dict[str, str]]:
+        metadata = record.get("metadata", {})
+        provenance = metadata.get("assignment_provenance")
+        if provenance is None:
+            return []
+        self._research_is_adverse_assignment(record)
+        round_dir, manifest = self._round_manifest(
+            provenance["round_id"],
+            _inspection_context=_inspection_context,
+        )
+        assignment = self._assignment(manifest, provenance["assignment_id"])
+        receipt = self._validated_ingest_receipt(
+            round_dir=round_dir,
+            assignment=assignment,
+            _inspection_context=_inspection_context,
+        )
+        task_binding = metadata.get("task_binding")
+        if (
+            assignment["task_card_sha256"] != provenance["task_card_sha256"]
+            or assignment["worker_id"] != record["actor"]
+            or receipt["research_id"] != record["research_id"]
+            or not isinstance(task_binding, dict)
+            or receipt["return_sha256"] != task_binding.get("return_sha256")
+        ):
+            raise ValueError("repair source assignment provenance drifted")
+        card_path = self._lexical_contained_path(
+            assignment["task_card_relpath"], "repair source task card"
+        )
+        raw_card = self._repair_capability_bytes(
+            card_path,
+            assignment["task_card_sha256"],
+            label="repair source task card",
+            _inspection_context=_inspection_context,
+        )
+        try:
+            card = json.loads(raw_card.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("repair source task card is not valid JSON") from exc
+        capabilities = self._repair_capabilities_from_frozen_card(
+            assignment=assignment,
+            card=card,
+            origin=f"{origin}:{record['research_id']}",
+            _inspection_context=_inspection_context,
+        )
+
+        # A pre-0.7.14 supervisor card may not itself contain the attacked
+        # production inputs.  Follow only its exact, validated source receipt
+        # binding; never infer a production card from prose or recurse through
+        # arbitrary Research relations.
+        source_dossier = card.get("mathematical_state", {}).get(
+            "source_research_dossier", {}
+        )
+        source_metadata = (
+            source_dossier.get("metadata", {})
+            if isinstance(source_dossier, dict)
+            else {}
+        )
+        supervision = source_metadata.get("research_supervision")
+        if supervision is not None:
+            binding = self._validate_research_supervision_binding(
+                supervision,
+                _inspection_context=_inspection_context,
+            )
+            component_id = (
+                binding.get("source_component_id")
+                if binding["revision"] == V5_RESEARCH_SUPERVISION_REVISION
+                else None
+            )
+            source_manifest, descriptors = self._source_round_receipt_descriptors(
+                binding["source_round_id"],
+                source_component_id=component_id,
+                _inspection_context=_inspection_context,
+            )
+            if (
+                source_manifest["manifest_sha256"]
+                != binding["source_round_manifest_sha256"]
+            ):
+                raise ValueError("repair supervision source manifest drifted")
+            descriptor_by_assignment = {
+                item["assignment_id"]: item for item in descriptors
+            }
+            source_assignment_by_id = {
+                item["assignment_id"]: item
+                for item in source_manifest["assignments"]
+            }
+            for descriptor in binding["source_receipts"]:
+                current = descriptor_by_assignment.get(
+                    descriptor["assignment_id"]
+                )
+                if current != descriptor:
+                    raise ValueError("repair supervision source receipt drifted")
+                source_assignment = source_assignment_by_id[
+                    descriptor["assignment_id"]
+                ]
+                source_card_path = self._lexical_contained_path(
+                    source_assignment["task_card_relpath"],
+                    "repair supervised production task card",
+                )
+                source_card_raw = self._repair_capability_bytes(
+                    source_card_path,
+                    source_assignment["task_card_sha256"],
+                    label="repair supervised production task card",
+                    _inspection_context=_inspection_context,
+                )
+                source_card = json.loads(source_card_raw.decode("utf-8"))
+                capabilities.extend(
+                    self._repair_capabilities_from_frozen_card(
+                        assignment=source_assignment,
+                        card=source_card,
+                        origin=(
+                            f"{origin}:{record['research_id']}:"
+                            f"source_receipt:{descriptor['assignment_id']}"
+                        ),
+                        _inspection_context=_inspection_context,
+                    )
+                )
+        return capabilities
+
+    def _repair_input_capability_manifest(
+        self,
+        *,
+        source: dict[str, Any],
+        trigger: dict[str, Any] | None,
+        explicit_capabilities: list[dict[str, str]],
+        _inspection_context: RoundInspectionContext,
+    ) -> dict[str, Any]:
+        capabilities: list[dict[str, str]] = list(explicit_capabilities)
+        for origin, record in (
+            ("source", source),
+            ("trigger", trigger),
+        ):
+            if record is None:
+                continue
+            # Preserve the source record's declared artifact role in the
+            # repair capability closure.  The role is part of the frozen
+            # source contract; prefixing it with an actor/research id here
+            # changes an otherwise byte-identical repair artifact projection
+            # and breaks compatibility with existing source-bound repairs.
+            for item in record.get("metadata", {}).get("artifacts", []):
+                if (
+                    not isinstance(item, dict)
+                    or set(item) != {"path", "sha256", "role"}
+                ):
+                    raise ValueError("repair source artifact binding is invalid")
+                path = self._lexical_contained_path(
+                    item["path"], "repair source artifact path"
+                )
+                raw = self._repair_capability_bytes(
+                    path,
+                    item["sha256"],
+                    label="repair source artifact",
+                    _inspection_context=_inspection_context,
+                )
+                capabilities.append(
+                    {
+                        "path": item["path"],
+                        "sha256": item["sha256"],
+                        "role": item["role"],
+                    }
+                )
+            capabilities.extend(
+                self._repair_capabilities_from_assignment_provenance(
+                    record,
+                    origin=origin,
+                    _inspection_context=_inspection_context,
+                )
+            )
+        normalized = self._normalize_repair_input_capabilities(capabilities)
+        self._validate_repair_input_capability_files(
+            normalized,
+            _inspection_context=_inspection_context,
+        )
+        semantic = {
+            "revision": V5_REPAIR_INPUT_CAPABILITY_REVISION,
+            "source_research_id": source["research_id"],
+            "trigger_research_id": (
+                trigger["research_id"] if trigger is not None else None
+            ),
+            "input_capabilities": normalized,
+            "selection_policy": (
+                "direct_research_plus_one_verified_assignment_or_source_receipt_hop"
+            ),
+            "max_capabilities": V5_MAX_REPAIR_INPUT_CAPABILITIES,
+            "truth_effect": "none",
+        }
+        return {
+            **semantic,
+            "manifest_sha256": sha256_json(semantic),
+        }
+
+    def _structured_source_evidence_capabilities_from_card(
+        self,
+        *,
+        card: dict[str, Any],
+        origin: str,
+    ) -> list[dict[str, str]]:
+        """Expand explicitly declared source-evidence bytes for review cards.
+
+        A source-evidence JSON artifact may name rendered-primary files that
+        are not themselves direct Research artifacts.  Those names are a
+        capability declaration only when they are present in the frozen card's
+        related-artifact set and the JSON has the structured
+        ``source_artifacts`` shape.  Free prose, filenames, and arbitrary
+        metadata never grant a worker read access.
+        """
+
+        mathematical_state = card.get("mathematical_state")
+        if not isinstance(mathematical_state, dict):
+            raise ValueError("source-evidence task card lacks mathematical state")
+        related = mathematical_state.get("related_artifacts", [])
+        if not isinstance(related, list):
+            raise ValueError("source-evidence related artifacts are invalid")
+        expanded: list[dict[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for related_item in related:
+            if not isinstance(related_item, dict):
+                raise ValueError("source-evidence related artifact is invalid")
+            path_value = related_item.get("path")
+            digest_value = related_item.get("sha256")
+            if not isinstance(path_value, str) or not path_value:
+                raise ValueError("source-evidence related artifact path is invalid")
+            if not isinstance(digest_value, str) or SHA256_RE.fullmatch(digest_value) is None:
+                raise ValueError("source-evidence related artifact SHA-256 is invalid")
+            path = self._lexical_contained_path(
+                path_value, "source-evidence related artifact"
+            )
+            raw = self._read_regular_bytes_once(
+                path,
+                label="source-evidence related artifact",
+                containment_root=self.store.root,
+            )
+            if sha256_bytes(raw) != digest_value:
+                raise ValueError("source-evidence related artifact bytes/hash mismatch")
+            if path.suffix.lower() != ".json":
+                continue
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            source_artifacts = (
+                payload.get("source_artifacts")
+                if isinstance(payload, dict)
+                else None
+            )
+            if source_artifacts is None:
+                continue
+            if not isinstance(source_artifacts, list):
+                raise ValueError("structured source-evidence source_artifacts must be a list")
+            for index, source_item in enumerate(source_artifacts, 1):
+                if not isinstance(source_item, dict):
+                    raise ValueError(
+                        f"structured source-evidence item {index} is invalid"
+                    )
+                source_path = source_item.get("artifact_path")
+                source_sha = source_item.get("artifact_sha256")
+                source_key = source_item.get("source_key")
+                if (
+                    not isinstance(source_path, str)
+                    or not source_path
+                    or not isinstance(source_key, str)
+                    or not source_key
+                    or not isinstance(source_sha, str)
+                    or SHA256_RE.fullmatch(source_sha) is None
+                ):
+                    raise ValueError(
+                        f"structured source-evidence item {index} lacks exact source key/path/hash"
+                    )
+                source_file = self._lexical_contained_path(
+                    source_path, "structured source-evidence source artifact"
+                )
+                source_raw = self._read_regular_bytes_once(
+                    source_file,
+                    label="structured source-evidence source artifact",
+                    containment_root=self.store.root,
+                )
+                if sha256_bytes(source_raw) != source_sha:
+                    raise ValueError(
+                        "structured source-evidence source artifact bytes/hash mismatch"
+                    )
+                key = (source_path, source_sha)
+                if key in seen:
+                    continue
+                seen.add(key)
+                expanded.append(
+                    {
+                        "path": source_path,
+                        "sha256": source_sha,
+                        "role": f"{origin}:source_evidence:{source_key}",
+                    }
+                )
+        return sorted(
+            expanded,
+            key=lambda item: (item["role"], item["path"], item["sha256"]),
+        )
+
+    def _validate_repair_input_capability_manifest(
+        self,
+        value: Any,
+        *,
+        bounded_repair: bool = True,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        required = {
+            "revision",
+            "source_research_id",
+            "trigger_research_id",
+            "input_capabilities",
+            "selection_policy",
+            "max_capabilities",
+            "truth_effect",
+            "manifest_sha256",
+        }
+        if not isinstance(value, dict) or set(value) != required:
+            raise ValueError("repair input capability manifest fields are not exact")
+        capabilities = self._normalize_repair_input_capabilities(
+            value["input_capabilities"]
+        )
+        semantic = {key: item for key, item in value.items() if key != "manifest_sha256"}
+        if (
+            value["revision"] != V5_REPAIR_INPUT_CAPABILITY_REVISION
+            or validate_memory_id(value["source_research_id"])
+            != value["source_research_id"]
+            or (
+                value["trigger_research_id"] is not None
+                and validate_memory_id(value["trigger_research_id"])
+                != value["trigger_research_id"]
+            )
+            or value["input_capabilities"] != capabilities
+            or value["selection_policy"]
+            != "direct_research_plus_one_verified_assignment_or_source_receipt_hop"
+            or value["max_capabilities"] != V5_MAX_REPAIR_INPUT_CAPABILITIES
+            or value["truth_effect"] != "none"
+            or value["manifest_sha256"] != sha256_json(semantic)
+        ):
+            raise ValueError("repair input capability manifest is invalid")
+        self._validate_repair_input_capability_files(
+            capabilities,
+            bounded_repair=bounded_repair,
+            _inspection_context=_inspection_context,
+        )
+        return value
+
+    def _validate_repair_input_capability_metadata(
+        self,
+        *,
+        kind: str,
+        metadata: dict[str, Any],
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any] | None:
+        manifest = metadata.get("repair_input_capability_manifest")
+        if manifest is None:
+            return None
+        if kind != "repair":
+            raise ValueError(
+                "repair input capability manifest requires one repair record"
+            )
+        spec = metadata.get("repair_spec")
+        bounded_repair = (
+            isinstance(spec, dict) and spec.get("schema_version") == 2
+        )
+        manifest = self._validate_repair_input_capability_manifest(
+            manifest,
+            bounded_repair=bounded_repair,
+            _inspection_context=_inspection_context,
+        )
+        capabilities = manifest["input_capabilities"]
+        raw_artifacts = metadata.get("artifacts", [])
+        artifacts = self._normalize_repair_input_capabilities(raw_artifacts)
+        if raw_artifacts != artifacts:
+            raise ValueError(
+                "repair Research artifacts must be the canonical capability list"
+            )
+        if artifacts != capabilities:
+            raise ValueError(
+                "repair input capability manifest and Research artifacts disagree"
+            )
+        source_dependent = metadata.get("source_dependent")
+        if not isinstance(source_dependent, bool):
+            raise ValueError("repair source_dependent must be boolean")
+        # A schema-1 repair with no frozen input bytes is a valid non-source
+        # repair.  The capability manifest is still recorded as an explicit
+        # empty closure, but it must not manufacture a source dependency (or
+        # reject the repair merely because the closure is empty).  Once any
+        # capability is present, the repair is necessarily source-dependent.
+        if capabilities and source_dependent is not True:
+            raise ValueError(
+                "repair input capability manifest requires source_dependent=true"
+            )
+        if isinstance(spec, dict) and spec.get("schema_version") == 2:
+            if spec.get("input_capabilities") != capabilities:
+                raise ValueError(
+                    "schema-v2 repair specification and capability manifest disagree"
+                )
+        return manifest
+
+    def _validate_schema_v2_repair_lineage(
+        self,
+        *,
+        kind: str,
+        relation: str | None,
+        related_research_ids: list[str],
+        metadata: dict[str, Any],
+        require_existing: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> None:
+        spec = metadata.get("repair_spec")
+        if not isinstance(spec, dict) or spec.get("schema_version") != 2:
+            return
+        if kind != "repair":
+            raise ValueError("schema-v2 repair lineage requires one repair record")
+        if relation != "repairs":
+            raise ValueError("schema-v2 repair relation must be repairs")
+
+        manifest = metadata.get("repair_input_capability_manifest")
+        if not isinstance(manifest, dict):
+            raise ValueError("schema-v2 repair lineage lacks its capability manifest")
+        source_research_id = validate_memory_id(
+            _require_nonempty_text(
+                metadata.get("repair_of_research_id"),
+                "schema-v2 repair source Research id",
+            )
+        )
+        trigger_research_id = metadata.get("trigger_research_id")
+        if trigger_research_id is not None:
+            trigger_research_id = validate_memory_id(
+                _require_nonempty_text(
+                    trigger_research_id,
+                    "schema-v2 repair trigger Research id",
+                )
+            )
+        if manifest.get("source_research_id") != source_research_id:
+            raise ValueError(
+                "schema-v2 repair source lineage disagrees with capability manifest"
+            )
+        if manifest.get("trigger_research_id") != trigger_research_id:
+            raise ValueError(
+                "schema-v2 repair trigger lineage disagrees with capability manifest"
+            )
+        expected_related = sorted(
+            dict.fromkeys(
+                [
+                    source_research_id,
+                    *(
+                        [trigger_research_id]
+                        if trigger_research_id is not None
+                        else []
+                    ),
+                ]
+            )
+        )
+        if related_research_ids != expected_related:
+            raise ValueError(
+                "schema-v2 repair related Research lineage is not exact"
+            )
+        if require_existing:
+            inspection = self._bind_inspection_context(
+                _inspection_context,
+                create=True,
+            )
+            assert inspection is not None
+            self._inspection_research_record(source_research_id, inspection)
+            if trigger_research_id is not None:
+                self._inspection_research_record(
+                    trigger_research_id,
+                    inspection,
+                )
+
+    def _expected_repair_task_capabilities(
+        self,
+        record: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, str]] | None:
+        """Project one repair manifest into its exact task-card capability shape.
+
+        Repair input capabilities and obligation output roles are deliberately
+        different namespaces.  Only the manifest's path/SHA/role triples are
+        projected here; ``required_artifact_roles`` describes future return
+        artifacts and must never grant an input read capability.
+        """
+
+        manifest = self._validate_repair_input_capability_metadata(
+            kind=record["kind"],
+            metadata=record["metadata"],
+            _inspection_context=_inspection_context,
+        )
+        if manifest is None:
+            return None
+        research_id = record["research_id"]
+        return sorted(
+            [
+                {
+                    "path": item["path"],
+                    "sha256": item["sha256"],
+                    "role": f"{research_id}:{item['role']}",
+                    "source_research_id": research_id,
+                }
+                for item in manifest["input_capabilities"]
+            ],
+            key=lambda item: (
+                item["source_research_id"],
+                item["role"],
+                item["path"],
+                item["sha256"],
+            ),
+        )
+
+    def _validate_repair_task_capability_closure(
+        self,
+        *,
+        record: dict[str, Any],
+        related_artifacts: list[dict[str, str]],
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> None:
+        expected = self._expected_repair_task_capabilities(
+            record,
+            _inspection_context=_inspection_context,
+        )
+        if expected is None:
+            return
+        research_id = record["research_id"]
+        actual = sorted(
+            [
+                item
+                for item in related_artifacts
+                if item.get("source_research_id") == research_id
+            ],
+            key=lambda item: (
+                item.get("source_research_id", ""),
+                item.get("role", ""),
+                item.get("path", ""),
+                item.get("sha256", ""),
+            ),
+        )
+        if actual != expected:
+            raise ValueError(
+                "repair task-card input capability closure drifted"
+            )
 
     @staticmethod
     def _research_is_source_dependent(record: dict[str, Any]) -> bool:
@@ -1402,10 +2556,13 @@ class V5LifecycleManager:
                     union(root_id, related_id)
                 record = record_cache.get(related_id)
                 if record is None:
-                    record = self._inspection_research_record(
-                        related_id,
-                        _inspection_context,
-                    )
+                    # Component construction needs only immutable identity and
+                    # direct Research connectivity for unselected ancestors.
+                    # Full artifact, supervision, runtime, and Fact replay is
+                    # reserved for the selected authority-bearing records.
+                    # This structural envelope is hash-checked and never
+                    # supplies a premise or artifact capability.
+                    record = self._research_record_envelope(related_id)
                     record_cache[related_id] = record
                 pending.extend(record["related_research_ids"])
 
@@ -2129,7 +3286,8 @@ class V5LifecycleManager:
                     "source_research_dossier"
                 ]["metadata"].get("approved_computation_execution")
                 approved = self._validate_approved_computation_execution_binding(
-                    approved
+                    approved,
+                    _inspection_context=inspection,
                 )
                 target_ids.add(approved["design_research_id"])
         if not target_ids.issubset(set(related_research_ids)):
@@ -2342,7 +3500,14 @@ class V5LifecycleManager:
     def _validate_approved_computation_execution_binding(
         self,
         payload: Any,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         required = {
             "revision",
             "design_round_id",
@@ -2413,15 +3578,18 @@ class V5LifecycleManager:
                 raise ValueError(f"approved computation {key} is invalid")
 
         _, design_manifest_preview = self._round_manifest(
-            payload["design_round_id"]
+            payload["design_round_id"],
+            _inspection_context=inspection,
         )
         design_component_id = self._source_component_id_for_assignment(
             design_manifest_preview,
             payload["design_assignment_id"],
+            _inspection_context=inspection,
         )
         design_manifest, design_descriptors = self._source_round_receipt_descriptors(
             payload["design_round_id"],
             source_component_id=design_component_id,
+            _inspection_context=inspection,
         )
         design_matches = [
             item
@@ -2446,14 +3614,18 @@ class V5LifecycleManager:
             != payload["design_record_sha256"]
         ):
             raise ValueError("approved computation design binding drifted")
-        design_record = self._research_record(payload["design_research_id"])
+        design_record = self._inspection_research_record(
+            payload["design_research_id"],
+            inspection,
+        )
         if payload["design_artifacts"] != self._canonical_design_artifacts(
             design_record
         ):
             raise ValueError("approved computation design artifacts drifted")
 
         supervision_dir, supervision_manifest = self._round_manifest(
-            payload["supervision_round_id"]
+            payload["supervision_round_id"],
+            _inspection_context=inspection,
         )
         supervision_cycle = supervision_manifest.get("research_cycle")
         if (
@@ -2471,7 +3643,9 @@ class V5LifecycleManager:
             )
             is not None
             or not self._round_is_completed(
-                supervision_dir, supervision_manifest
+                supervision_dir,
+                supervision_manifest,
+                _inspection_context=inspection,
             )
         ):
             raise ValueError("approved computation supervision round drifted")
@@ -2481,12 +3655,15 @@ class V5LifecycleManager:
         supervision_receipt = self._validated_ingest_receipt(
             round_dir=supervision_dir,
             assignment=supervision_assignment,
+            _inspection_context=inspection,
         )
-        supervision_source = self._research_record(
-            supervision_assignment["research_id"]
+        supervision_source = self._inspection_research_record(
+            supervision_assignment["research_id"],
+            inspection,
         )
         supervision_binding = self._validate_research_supervision_binding(
-            supervision_source.get("metadata", {}).get("research_supervision")
+            supervision_source.get("metadata", {}).get("research_supervision"),
+            _inspection_context=inspection,
         )
         if (
             supervision_binding["supervisor_scope"] != "program_math"
@@ -2503,8 +3680,9 @@ class V5LifecycleManager:
             != payload["supervision_research_id"]
         ):
             raise ValueError("approved computation supervision binding drifted")
-        supervision_record = self._research_record(
-            payload["supervision_research_id"]
+        supervision_record = self._inspection_research_record(
+            payload["supervision_research_id"],
+            inspection,
         )
         if (
             supervision_record["record_sha256"]
@@ -2512,7 +3690,10 @@ class V5LifecycleManager:
         ):
             raise ValueError("approved computation supervision record drifted")
 
-        disposition = self._research_record(payload["disposition_research_id"])
+        disposition = self._inspection_research_record(
+            payload["disposition_research_id"],
+            inspection,
+        )
         if (
             disposition["kind"] != "disposition"
             or disposition["record_sha256"]
@@ -2578,11 +3759,15 @@ class V5LifecycleManager:
         relation: str | None,
         related_research_ids: list[str],
         metadata: dict[str, Any],
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
         raw = metadata.get("approved_computation_execution")
         if raw is None:
             return
-        binding = self._validate_approved_computation_execution_binding(raw)
+        binding = self._validate_approved_computation_execution_binding(
+            raw,
+            _inspection_context=_inspection_context,
+        )
         if kind != "computation" or status != "open" or relation != "executes":
             raise ValueError(
                 "approved computation execution must be an open computation relation"
@@ -2615,6 +3800,7 @@ class V5LifecycleManager:
         task_binding: dict[str, str] | None = None,
         goal_intake_token: str | None = None,
         assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+        reuse_unbound_main_semantics: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         inspection = self._bind_inspection_context(
@@ -2624,6 +3810,12 @@ class V5LifecycleManager:
         assert inspection is not None
         if not isinstance(payload, dict):
             raise ValueError("research input must be one object")
+        if not isinstance(reuse_unbound_main_semantics, bool):
+            raise ValueError("Main Research semantic reuse flag must be boolean")
+        if reuse_unbound_main_semantics and task_binding is not None:
+            raise ValueError(
+                "Main Research semantic reuse requires an unbound Research write"
+            )
         if "id" in payload or "research_id" in payload:
             raise ValueError("research ids are generated internally")
         actor = _require_nonempty_text(actor, "research actor")
@@ -2714,11 +3906,39 @@ class V5LifecycleManager:
             metadata["workload_profile"] = validate_workload_profile(
                 metadata["workload_profile"]
             )
+        self._validate_exact_repair_spec_metadata(
+            kind=kind,
+            metadata=metadata,
+        )
+        repair_manifest = self._validate_repair_input_capability_metadata(
+            kind=kind,
+            metadata=metadata,
+            _inspection_context=inspection,
+        )
+        self._validate_schema_v2_repair_lineage(
+            kind=kind,
+            relation=relation,
+            related_research_ids=related,
+            metadata=metadata,
+            require_existing=True,
+            _inspection_context=inspection,
+        )
+        self._validate_supervised_production_authority_metadata(
+            metadata,
+            dependencies=dependencies,
+        )
         if assurance_contract_revision not in {
             V5_ASSURANCE_CONTRACT_REVISION,
             V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
         }:
             raise ValueError("research assurance contract revision is invalid")
+        if (
+            repair_manifest is not None
+            and assurance_contract_revision != V5_ASSURANCE_CONTRACT_REVISION
+        ):
+            raise ValueError(
+                "repair input capability manifest requires current assurance"
+            )
         metadata["assurance_contract_revision"] = assurance_contract_revision
         if assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION:
             artifacts = metadata.get("artifacts", [])
@@ -2813,7 +4033,13 @@ class V5LifecycleManager:
             ):
                 raise ValueError("research task binding must map strings to strings")
             metadata["task_binding"] = dict(sorted(task_binding.items()))
-        semantic = {
+        if reuse_unbound_main_semantics and (
+            "task_binding" in metadata or "assignment_provenance" in metadata
+        ):
+            raise ValueError(
+                "Main Research semantic reuse cannot consume task- or assignment-bound Research"
+            )
+        semantic_without_actor = {
             "schema_version": 5,
             "policy_revision": V5_POLICY_REVISION,
             "project_id": self.store.project_id(),
@@ -2827,6 +4053,9 @@ class V5LifecycleManager:
             "relation": relation,
             "related_research_ids": related,
             "metadata": metadata,
+        }
+        semantic = {
+            **semantic_without_actor,
             "actor": actor,
         }
         self._research_is_adverse_assignment(semantic)
@@ -2864,6 +4093,42 @@ class V5LifecycleManager:
             )
         path = self._research_path(research_id)
         with self.store.v5_mutation_lock(command="research-add"):
+            # The command-local capability snapshot is only a read-phase
+            # optimization.  Recheck the exact bytes after entering the
+            # mutation boundary so a concurrent source replacement cannot be
+            # published from a stale snapshot.
+            if repair_manifest is not None:
+                self._validate_repair_input_capability_files(
+                    repair_manifest["input_capabilities"]
+                )
+            if reuse_unbound_main_semantics:
+                reusable: list[dict[str, Any]] = []
+                for envelope in self.research_envelopes():
+                    envelope_metadata = envelope["metadata"]
+                    if (
+                        "task_binding" in envelope_metadata
+                        or "assignment_provenance" in envelope_metadata
+                    ):
+                        continue
+                    existing_semantic = {
+                        key: envelope[key]
+                        for key in semantic_without_actor
+                    }
+                    if existing_semantic == semantic_without_actor:
+                        reusable.append(envelope)
+                if reusable:
+                    selected = min(
+                        reusable,
+                        key=lambda item: (item["created_at"], item["research_id"]),
+                    )
+                    existing = self._inspection_research_record(
+                        selected["research_id"],
+                        inspection,
+                    )
+                    self.paper_continuation(
+                        _inspection_context=inspection
+                    )._status_index.reconcile_research(existing)
+                    return existing
             if path.exists():
                 existing = self._inspection_research_record(
                     research_id,
@@ -2943,16 +4208,25 @@ class V5LifecycleManager:
         research_id: str,
         *,
         trigger_research_id: str | None = None,
+        repair_spec: dict[str, Any] | None = None,
         actor: str = "v5-orchestrator",
         host_task_scope_id: str | None = None,
     ) -> dict[str, Any]:
         """Append one repair branch and plan exactly one bounded work unit."""
 
-        source = self._research_record(research_id)
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
+        source = self._inspection_research_record(research_id, inspection)
         related_ids = [source["research_id"]]
         trigger: dict[str, Any] | None = None
         if trigger_research_id is not None:
-            trigger = self._research_record(trigger_research_id)
+            trigger = self._inspection_research_record(
+                trigger_research_id,
+                inspection,
+            )
             related_ids.append(trigger["research_id"])
         related_ids = sorted(dict.fromkeys(related_ids))
         source_provenance = source.get("metadata", {}).get(
@@ -2961,7 +4235,7 @@ class V5LifecycleManager:
         inherited_repair_mode = source.get("metadata", {}).get(
             "repair_work_mode"
         )
-        repair_mode = (
+        repair_mode: str = (
             source_provenance.get("work_mode")
             if isinstance(source_provenance, dict)
             and source_provenance.get("work_mode") in WORK_MODES
@@ -2971,6 +4245,46 @@ class V5LifecycleManager:
                 else "auto"
             )
         )
+        normalized_repair_spec = (
+            None
+            if repair_spec is None
+            else self._normalize_exact_repair_spec(repair_spec)
+        )
+        if (
+            normalized_repair_spec is not None
+            and normalized_repair_spec["work_mode"] != "auto"
+        ):
+            repair_mode = normalized_repair_spec["work_mode"]
+        explicit_input_capabilities = (
+            normalized_repair_spec.get("input_capabilities", [])
+            if normalized_repair_spec is not None
+            else []
+        )
+        repair_input_manifest = self._repair_input_capability_manifest(
+            source=source,
+            trigger=trigger,
+            explicit_capabilities=explicit_input_capabilities,
+            _inspection_context=inspection,
+        )
+        if (
+            normalized_repair_spec is not None
+            and normalized_repair_spec["schema_version"] == 2
+            and not repair_input_manifest["input_capabilities"]
+        ):
+            raise ValueError(
+                "schema-v2 repair specification requires at least one verified "
+                "input capability"
+            )
+        if normalized_repair_spec is not None and normalized_repair_spec["schema_version"] == 2:
+            normalized_repair_spec = {
+                **normalized_repair_spec,
+                "input_capabilities": repair_input_manifest[
+                    "input_capabilities"
+                ],
+            }
+            normalized_repair_spec = self._normalize_exact_repair_spec(
+                normalized_repair_spec
+            )
         copied_metadata = {
             key: source["metadata"][key]
             for key in (
@@ -2985,6 +4299,34 @@ class V5LifecycleManager:
             )
             if key in source["metadata"]
         }
+        # A repair may need the same exact source bytes or other artifacts that
+        # carried the challenged claim.  Preserve that minimum capability
+        # closure directly; do not force Main to synthesize a second Research
+        # head merely to recover bytes already frozen by the source result.
+        copied_metadata["artifacts"] = json.loads(
+            json.dumps(
+                repair_input_manifest["input_capabilities"],
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+        copied_metadata["source_dependent"] = bool(
+            repair_input_manifest["input_capabilities"]
+        )
+        copied_metadata["repair_input_capability_manifest"] = (
+            repair_input_manifest
+        )
+        if normalized_repair_spec is not None:
+            copied_metadata["obligations"] = normalized_repair_spec[
+                "obligations"
+            ]
+            copied_metadata["stop_conditions"] = normalized_repair_spec[
+                "stop_conditions"
+            ]
+            copied_metadata["repair_spec"] = normalized_repair_spec
+            copied_metadata["repair_spec_sha256"] = sha256_json(
+                normalized_repair_spec
+            )
         trigger_note = (
             f" Triggered by Research {trigger['research_id']}: {trigger['claim']}"
             if trigger is not None
@@ -2994,15 +4336,27 @@ class V5LifecycleManager:
             {
                 "kind": "repair",
                 "status": "open",
-                "claim": f"Repair branch for: {source['claim']}",
+                "claim": (
+                    normalized_repair_spec["claim"]
+                    if normalized_repair_spec is not None
+                    else f"Repair branch for: {source['claim']}"
+                ),
                 "content": (
-                    "Re-examine the bounded claim while preserving prior "
-                    "counterexamples, challenges, and evidence."
-                    + trigger_note
+                    normalized_repair_spec["content"]
+                    if normalized_repair_spec is not None
+                    else (
+                        "Re-examine the bounded claim while preserving prior "
+                        "counterexamples, challenges, and evidence."
+                        + trigger_note
+                    )
                 ),
                 "rationale": (
-                    "A new cumulative branch is required; the source Research "
-                    "record remains immutable and readable."
+                    normalized_repair_spec["rationale"]
+                    if normalized_repair_spec is not None
+                    else (
+                        "A new cumulative branch is required; the source Research "
+                        "record remains immutable and readable."
+                    )
                 ),
                 "dependencies": source["dependencies"],
                 "source": f"research:{source['research_id']}",
@@ -3016,12 +4370,15 @@ class V5LifecycleManager:
                 **copied_metadata,
             },
             actor=actor,
+            assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            _inspection_context=inspection,
         )
         planned = self.create_production_round(
             workers=1,
             mode=repair_mode,
             research_ids=[repair["research_id"]],
             host_task_scope_id=host_task_scope_id,
+            _inspection_context=inspection,
         )
         return {
             **planned,
@@ -3031,7 +4388,210 @@ class V5LifecycleManager:
             "trigger_research_id": (
                 trigger["research_id"] if trigger is not None else None
             ),
+            "repair_spec_sha256": repair["metadata"].get(
+                "repair_spec_sha256"
+            ),
+            "repair_input_capability_manifest_sha256": repair["metadata"][
+                "repair_input_capability_manifest"
+            ]["manifest_sha256"],
         }
+
+    @staticmethod
+    def _normalize_exact_repair_spec(value: Any) -> dict[str, Any]:
+        base_required = {
+            "schema_version",
+            "claim",
+            "content",
+            "rationale",
+            "work_mode",
+            "obligations",
+            "stop_conditions",
+        }
+        if not isinstance(value, dict) or not base_required.issubset(value):
+            raise ValueError("exact repair specification fields are not exact")
+        schema_version = value.get("schema_version")
+        if schema_version == 1:
+            required = base_required
+        elif schema_version == 2:
+            required = {*base_required, "input_capabilities"}
+        else:
+            raise ValueError("exact repair specification schema_version is invalid")
+        if set(value) != required:
+            raise ValueError("exact repair specification fields are not exact")
+        claim = _require_nonempty_text(value.get("claim"), "repair spec claim")
+        content = _require_nonempty_text(
+            value.get("content"), "repair spec content"
+        )
+        rationale = _require_nonempty_text(
+            value.get("rationale"), "repair spec rationale"
+        )
+        if len(claim) > 4_096 or len(rationale) > 4_096 or len(content) > 32_768:
+            raise ValueError("exact repair specification prose exceeds its cap")
+        work_mode = value.get("work_mode")
+        if work_mode != "auto" and work_mode not in WORK_MODES:
+            raise ValueError("exact repair specification work_mode is invalid")
+        obligations = value.get("obligations")
+        normalize_obligations(obligations)
+        stop_conditions = _require_string_list(
+            value.get("stop_conditions"), "repair spec stop conditions"
+        )
+        if (
+            len(stop_conditions) > 32
+            or len(stop_conditions) != len(set(stop_conditions))
+            or any(not item.strip() or len(item) > 2_048 for item in stop_conditions)
+        ):
+            raise ValueError("exact repair specification stop conditions are invalid")
+        normalized = {
+            "schema_version": schema_version,
+            "claim": claim,
+            "content": content,
+            "rationale": rationale,
+            "work_mode": work_mode,
+            "obligations": json.loads(
+                json.dumps(obligations, ensure_ascii=False, sort_keys=True)
+            ),
+            "stop_conditions": list(stop_conditions),
+        }
+        if schema_version == 2:
+            normalized["input_capabilities"] = (
+                V5LifecycleManager._normalize_repair_input_capabilities(
+                    value.get("input_capabilities")
+                )
+            )
+        raw = json.dumps(
+            normalized,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if len(raw) > 256 * 1_024:
+            raise ValueError("exact repair specification exceeds 256 KiB")
+        return normalized
+
+    @classmethod
+    def _validate_exact_repair_spec_metadata(
+        cls,
+        *,
+        kind: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        spec = metadata.get("repair_spec")
+        digest = metadata.get("repair_spec_sha256")
+        if spec is None and digest is None:
+            return
+        if kind != "repair" or spec is None or digest is None:
+            raise ValueError(
+                "exact repair specification metadata requires one repair record"
+            )
+        normalized = cls._normalize_exact_repair_spec(spec)
+        if normalized != spec or digest != sha256_json(normalized):
+            raise ValueError("exact repair specification metadata drifted")
+        if normalized["schema_version"] == 2:
+            if not normalized["input_capabilities"]:
+                raise ValueError(
+                    "schema-v2 repair specification requires at least one verified "
+                    "input capability"
+                )
+            manifest = metadata.get("repair_input_capability_manifest")
+            if (
+                not isinstance(manifest, dict)
+                or manifest.get("input_capabilities")
+                != normalized["input_capabilities"]
+            ):
+                raise ValueError(
+                    "schema-v2 repair specification is not bound to its capability manifest"
+                )
+
+    @staticmethod
+    def _validate_supervised_production_authority_metadata(
+        metadata: dict[str, Any],
+        *,
+        dependencies: list[str],
+    ) -> None:
+        payload = metadata.get("supervised_production_authority")
+        if payload is None:
+            return
+        if not isinstance(payload, list) or not payload:
+            raise ValueError(
+                "supervised production authority must be a nonempty list"
+            )
+        seen_assignments: set[str] = set()
+        projected_fact_ids: set[str] = set()
+        for item in payload:
+            semantic_fields = {
+                "revision",
+                "assignment_id",
+                "task_card_path",
+                "task_card_sha256",
+                "active_fact_ids",
+                "capabilities",
+                "truth_effect",
+            }
+            if not isinstance(item, dict) or set(item) != {
+                *semantic_fields,
+                "receipt_sha256",
+            }:
+                raise ValueError(
+                    "supervised production authority fields are not exact"
+                )
+            if (
+                item["revision"] != V5_SUPERVISED_AUTHORITY_CLOSURE_REVISION
+                or item["truth_effect"] != "none"
+            ):
+                raise ValueError("supervised production authority policy is invalid")
+            assignment_id = validate_assignment_id(item["assignment_id"])
+            if assignment_id in seen_assignments:
+                raise ValueError(
+                    "supervised production authority assignments are duplicated"
+                )
+            seen_assignments.add(assignment_id)
+            task_card_path = _require_nonempty_text(
+                item["task_card_path"],
+                "supervised production task-card path",
+            )
+            task_card_sha = _require_nonempty_text(
+                item["task_card_sha256"],
+                "supervised production task-card SHA-256",
+            )
+            if SHA256_RE.fullmatch(task_card_sha) is None or not task_card_path.endswith(
+                f"/{assignment_id}.json"
+            ):
+                raise ValueError(
+                    "supervised production task-card binding is invalid"
+                )
+            fact_ids = _require_string_list(
+                item["active_fact_ids"],
+                "supervised production active Fact ids",
+            )
+            if fact_ids != sorted(set(fact_ids)):
+                raise ValueError(
+                    "supervised production active Fact ids are not canonical"
+                )
+            projected_fact_ids.update(validate_fact_id(value) for value in fact_ids)
+            capabilities = item["capabilities"]
+            if not isinstance(capabilities, list) or any(
+                not isinstance(capability, dict)
+                or set(capability) != {"path", "sha256", "source_role"}
+                or not isinstance(capability["path"], str)
+                or not capability["path"]
+                or not isinstance(capability["source_role"], str)
+                or not capability["source_role"]
+                or not isinstance(capability["sha256"], str)
+                or SHA256_RE.fullmatch(capability["sha256"]) is None
+                for capability in capabilities
+            ):
+                raise ValueError(
+                    "supervised production capabilities are invalid"
+                )
+            semantic = {key: item[key] for key in semantic_fields}
+            if item["receipt_sha256"] != sha256_json(semantic):
+                raise ValueError(
+                    "supervised production authority receipt hash drifted"
+                )
+        if projected_fact_ids != set(dependencies):
+            raise ValueError(
+                "supervisor dependencies do not exactly preserve production Fact premises"
+            )
 
     def research_records(
         self,
@@ -3061,6 +4621,462 @@ class V5LifecycleManager:
         if _inspection_context is not None:
             _inspection_context.all_research_records = records
         return records
+
+    @staticmethod
+    def _checkpoint_reason_items(
+        value: Any,
+        *,
+        label: str,
+        id_field: str,
+        maximum: int,
+    ) -> list[dict[str, str]]:
+        if not isinstance(value, list) or len(value) > maximum:
+            raise ValueError(f"{label} must be a list of at most {maximum} items")
+        normalized: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for index, item in enumerate(value, 1):
+            if not isinstance(item, dict) or set(item) != {id_field, "reason"}:
+                raise ValueError(f"{label} item {index} fields are not exact")
+            research_id = validate_memory_id(
+                _require_nonempty_text(item.get(id_field), f"{label} research id")
+            )
+            if research_id in seen:
+                raise ValueError(f"{label} research ids must be unique")
+            reason = _require_nonempty_text(item.get("reason"), f"{label} reason")
+            if len(reason) > 1_024:
+                raise ValueError(f"{label} reason exceeds 1024 code points")
+            normalized.append({id_field: research_id, "reason": reason})
+            seen.add(research_id)
+        return normalized
+
+    @staticmethod
+    def _selected_dependency_edges(
+        *,
+        target_ids: list[str],
+        structural: dict[str, dict[str, Any]],
+    ) -> list[list[str]]:
+        """Return exact positive-dependency reachability inside a selection.
+
+        Research ancestry also carries attacks, repairs, dispositions, and
+        investigations. Those relations preserve lineage but do not make two
+        Candidate claims one mathematical atom. Unknown relation names remain
+        conservative dependency edges; only the explicit nondependency
+        boundary below is excluded.
+        """
+
+        selected_ids = set(target_ids)
+        nondependency_relations = {
+            "challenges",
+            "copy_on_write_repair",
+            "corrects",
+            "disposes",
+            "investigates",
+            "repairs",
+            "repairs_assurance_of",
+            "responds_to",
+        }
+        edges: set[tuple[str, str]] = set()
+        for target_id in target_ids:
+            pending = [target_id]
+            seen: set[str] = set()
+            while pending:
+                research_id = pending.pop()
+                if research_id in seen:
+                    continue
+                seen.add(research_id)
+                record = structural[research_id]
+                if record.get("relation") in nondependency_relations:
+                    continue
+                for ancestor_id in record["related_research_ids"]:
+                    if ancestor_id in selected_ids and ancestor_id != target_id:
+                        edges.add((ancestor_id, target_id))
+                    pending.append(ancestor_id)
+        return [list(item) for item in sorted(edges)]
+
+    def selective_fact_checkpoint(
+        self,
+        payload: dict[str, Any],
+        *,
+        actor: str,
+    ) -> dict[str, Any]:
+        """Freeze one Main-owned, nontruth selective-admission checkpoint.
+
+        The command validates the explicit targets completely, uses structural
+        envelopes only for unselected topology, and reports facts rather than a
+        score.  It never constructs or authorizes a Candidate Release.
+        """
+
+        required = {
+            "schema_version",
+            "objective",
+            "target_rationales",
+            "excluded_research",
+        }
+        if not isinstance(payload, dict) or set(payload) != required:
+            raise ValueError("selective Fact checkpoint input fields are not exact")
+        if payload.get("schema_version") != 1:
+            raise ValueError("selective Fact checkpoint schema_version must be 1")
+        objective = _require_nonempty_text(
+            payload.get("objective"), "selective Fact checkpoint objective"
+        )
+        if len(objective) > 4_096:
+            raise ValueError("selective Fact checkpoint objective exceeds 4096 code points")
+        actor = _require_nonempty_text(actor, "selective Fact checkpoint actor")
+        targets = self._checkpoint_reason_items(
+            payload.get("target_rationales"),
+            label="selective Fact checkpoint target_rationales",
+            id_field="research_id",
+            maximum=V5_MAX_SELECTIVE_FACT_TARGETS,
+        )
+        if not targets:
+            raise ValueError("selective Fact checkpoint requires at least one target")
+        exclusions = self._checkpoint_reason_items(
+            payload.get("excluded_research"),
+            label="selective Fact checkpoint excluded_research",
+            id_field="research_id",
+            maximum=V5_MAX_SELECTIVE_FACT_EXCLUSIONS,
+        )
+        target_ids = [item["research_id"] for item in targets]
+        excluded_ids = {item["research_id"] for item in exclusions}
+        overlap = sorted(set(target_ids).intersection(excluded_ids))
+        if overlap:
+            raise ValueError(
+                "selective Fact checkpoint targets cannot also be excluded: "
+                + ", ".join(overlap)
+            )
+
+        envelopes = self.research_envelopes()
+        if len(envelopes) > V5_MAX_SELECTIVE_FACT_GRAPH_RECORDS:
+            raise ValueError(
+                "selective Fact checkpoint structural Research graph exceeds "
+                f"{V5_MAX_SELECTIVE_FACT_GRAPH_RECORDS} records"
+            )
+        structural = {item["research_id"]: item for item in envelopes}
+        structural_graph_binding = [
+            {
+                "research_id": item["research_id"],
+                "record_sha256": item["record_sha256"],
+                "related_research_ids": item["related_research_ids"],
+            }
+            for item in sorted(envelopes, key=lambda entry: entry["research_id"])
+        ]
+        structural_graph_sha256 = sha256_json(structural_graph_binding)
+        missing = sorted((set(target_ids) | excluded_ids).difference(structural))
+        if missing:
+            raise ValueError(
+                "selective Fact checkpoint names unknown Research: "
+                + ", ".join(missing)
+            )
+        explicit_records = [self._research_record(item) for item in target_ids]
+        all_records = dict(structural)
+        all_records.update(
+            {item["research_id"]: item for item in explicit_records}
+        )
+        stale_routes = self._route_staleness(all_records)
+
+        ancestors_by_target: dict[str, list[str]] = {}
+        closure: set[str] = set()
+        for target_id in target_ids:
+            ancestors: set[str] = set()
+            pending = list(structural[target_id]["related_research_ids"])
+            while pending:
+                research_id = pending.pop()
+                if research_id in ancestors:
+                    continue
+                if research_id not in structural:
+                    raise ValueError(
+                        "selective Fact checkpoint Research ancestry is incomplete: "
+                        + research_id
+                    )
+                ancestors.add(research_id)
+                pending.extend(structural[research_id]["related_research_ids"])
+            ancestors_by_target[target_id] = sorted(ancestors)
+            closure.add(target_id)
+            closure.update(ancestors)
+
+        descendants_by_parent: dict[str, set[str]] = {
+            research_id: set() for research_id in structural
+        }
+        for child_id, record in structural.items():
+            for parent_id in record["related_research_ids"]:
+                if parent_id not in descendants_by_parent:
+                    raise ValueError(
+                        "selective Fact checkpoint Research parent is missing: "
+                        + parent_id
+                    )
+                descendants_by_parent[parent_id].add(child_id)
+
+        projections: list[dict[str, Any]] = []
+        for target, record in zip(targets, explicit_records, strict=True):
+            target_id = target["research_id"]
+            descendants: set[str] = set()
+            pending = list(descendants_by_parent[target_id])
+            while pending:
+                research_id = pending.pop()
+                if research_id in descendants:
+                    continue
+                descendants.add(research_id)
+                pending.extend(descendants_by_parent[research_id])
+            blockers: list[dict[str, Any]] = []
+            if record["status"] not in ACTIVE_MEMORY_STATUSES:
+                blockers.append(
+                    {
+                        "kind": "research_not_active",
+                        "details": [record["status"]],
+                    }
+                )
+            if target_id in stale_routes:
+                blockers.append(
+                    {
+                        "kind": "route_invalidated",
+                        "details": stale_routes[target_id],
+                    }
+                )
+            if self._research_is_adverse_assignment(record) or isinstance(
+                record.get("metadata", {}).get("research_supervision"), dict
+            ):
+                blockers.append(
+                    {"kind": "review_only_target", "details": [target_id]}
+                )
+            required_supervision: list[str] = []
+            try:
+                required_supervision = sorted(
+                    self._required_supervision_results_for_candidate([record])
+                )
+            except Exception as exc:
+                blockers.append(
+                    {
+                        "kind": "candidate_supervision_not_ready",
+                        "details": [str(exc)],
+                    }
+                )
+            metadata = record.get("metadata", {})
+            artifacts = metadata.get("artifacts", [])
+            source_uses = metadata.get("source_uses", [])
+            dispositions = metadata.get("obligation_dispositions", [])
+            disposition_counts: dict[str, int] = {}
+            if isinstance(dispositions, list):
+                for disposition in dispositions:
+                    if not isinstance(disposition, dict):
+                        continue
+                    status = disposition.get("status")
+                    if isinstance(status, str):
+                        disposition_counts[status] = disposition_counts.get(status, 0) + 1
+            projections.append(
+                {
+                    "research_id": target_id,
+                    "record_sha256": record["record_sha256"],
+                    "kind": record["kind"],
+                    "status": record["status"],
+                    "selection_reason": target["reason"],
+                    "ancestor_ids": ancestors_by_target[target_id],
+                    "downstream_reuse_count": len(descendants),
+                    "downstream_reuse_ids_sha256": sha256_json(sorted(descendants)),
+                    "artifact_count": len(artifacts) if isinstance(artifacts, list) else 0,
+                    "source_use_count": len(source_uses) if isinstance(source_uses, list) else 0,
+                    "assurance_contract_revision": metadata.get("assurance_contract_revision"),
+                    "obligation_disposition_counts": disposition_counts,
+                    "computation_manifest_present": metadata.get("computation_manifest") is not None,
+                    "required_supervision_result_ids": required_supervision,
+                    "checkpoint_status": (
+                        "no_checkpoint_blocker" if not blockers else "blocked"
+                    ),
+                    "blockers": blockers,
+                }
+            )
+
+        structural_binding = [
+            {
+                "research_id": research_id,
+                "record_sha256": structural[research_id]["record_sha256"],
+                "related_research_ids": structural[research_id]["related_research_ids"],
+            }
+            for research_id in sorted(closure)
+        ]
+
+        # Automatic atomization is safe only after the explicitly selected
+        # targets are closed under their own dependency relation. Unselected
+        # background Research remains structural context, but selected targets
+        # joined by ancestry belong to one atomic Candidate unit. A blocked
+        # selected premise also blocks every selected dependent.
+        selected_dependency_edges = self._selected_dependency_edges(
+            target_ids=target_ids,
+            structural=structural,
+        )
+        blockers_by_target = {
+            item["research_id"]: item["blockers"] for item in projections
+        }
+        blocked_selected = {
+            research_id
+            for research_id, blockers in blockers_by_target.items()
+            if blockers
+        }
+        changed = True
+        while changed:
+            changed = False
+            for ancestor_id, target_id in selected_dependency_edges:
+                if ancestor_id not in blocked_selected or target_id in blocked_selected:
+                    continue
+                blockers_by_target[target_id].append(
+                    {
+                        "kind": "selected_dependency_blocked",
+                        "details": [ancestor_id],
+                    }
+                )
+                blocked_selected.add(target_id)
+                changed = True
+        for projection in projections:
+            projection["checkpoint_status"] = (
+                "no_checkpoint_blocker"
+                if not projection["blockers"]
+                else "blocked"
+            )
+
+        ready_ids = sorted(
+            item["research_id"]
+            for item in projections
+            if item["checkpoint_status"] == "no_checkpoint_blocker"
+        )
+        blocked_ids = sorted(
+            item["research_id"]
+            for item in projections
+            if item["checkpoint_status"] == "blocked"
+        )
+        ready_set = set(ready_ids)
+        adjacency: dict[str, set[str]] = {
+            research_id: set() for research_id in ready_ids
+        }
+        for ancestor_id, target_id in selected_dependency_edges:
+            if ancestor_id in ready_set and target_id in ready_set:
+                adjacency[ancestor_id].add(target_id)
+                adjacency[target_id].add(ancestor_id)
+        components: list[list[str]] = []
+        unseen = set(ready_ids)
+        while unseen:
+            root = min(unseen)
+            component: set[str] = set()
+            pending = [root]
+            while pending:
+                research_id = pending.pop()
+                if research_id in component:
+                    continue
+                component.add(research_id)
+                pending.extend(sorted(adjacency[research_id], reverse=True))
+            unseen.difference_update(component)
+            components.append(sorted(component))
+        components.sort(key=lambda item: tuple(item))
+        checkpoint_input = {
+            "schema_version": 1,
+            "objective": objective,
+            "target_rationales": targets,
+            "excluded_research": exclusions,
+        }
+        semantic = {
+            "schema_version": 1,
+            "contract_revision": V5_SELECTIVE_FACT_CHECKPOINT_REVISION,
+            "project_id": self.store.project_id(),
+            "input": checkpoint_input,
+            "selected": projections,
+            "selected_ancestry": structural_binding,
+            "research_graph_record_count": len(structural_graph_binding),
+            "research_graph_envelope_sha256": structural_graph_sha256,
+            "candidate_batch_seed": {
+                "contract_revision": "chalxius-v5-candidate-batch-seed-3",
+                "ready_research_ids": ready_ids,
+                "blocked_research_ids": blocked_ids,
+                "selected_dependency_edges": selected_dependency_edges,
+                "atomization_policy": (
+                    "explicit_one_claim_fact_authoring_with_exact_candidate_dependency_closure"
+                ),
+                "partition_semantics": (
+                    "dependency_closed_authoring_batches_not_fact_atoms"
+                ),
+                "candidate_fact_atomicity_contract": (
+                    "exactly_one_semantic_conclusion_atom_per_fact"
+                ),
+                "automatic_atomization": False,
+                "candidate_dag_closure_required": True,
+                "default_partition": [
+                    {"unit": index, "research_entry_ids": component}
+                    for index, component in enumerate(components, 1)
+                ],
+                "main_approval_required": True,
+                "candidate_fact_authoring_required": True,
+                "candidate_effect": "none",
+            },
+            "selection_authority": "main_explicit_only",
+            "automatic_ranking": False,
+            "candidate_release_preflight_required": True,
+            "candidate_effect": "none",
+            "certification_effect": "none",
+            "fact_effect": "none",
+            "truth_effect": "none",
+            "actor": actor,
+        }
+        semantic_bytes = json.dumps(
+            semantic,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if len(semantic_bytes) > V5_MAX_SELECTIVE_FACT_CHECKPOINT_BYTES:
+            raise ValueError(
+                "selective Fact checkpoint exceeds the 512 KiB semantic limit; "
+                "split the explicit target set"
+            )
+        checkpoint_id = "fact-checkpoint-" + sha256_json(semantic)
+        path = self.fact_admission_checkpoints_dir / f"{checkpoint_id}.json"
+        with self.store.v5_mutation_lock(command="selective-fact-checkpoint"):
+            if path.exists():
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("selective Fact checkpoint path is unsafe")
+                record = self.store._read_json(path)
+            else:
+                record = {
+                    **semantic,
+                    "checkpoint_id": checkpoint_id,
+                    "created_at": _utc_now(),
+                }
+                record["record_sha256"] = sha256_json(record)
+                self.store._write_json_once(path, record)
+            self._validate_selective_fact_checkpoint_record(
+                record,
+                expected_semantic=semantic,
+                expected_checkpoint_id=checkpoint_id,
+            )
+        return {
+            "checkpoint_id": checkpoint_id,
+            "checkpoint_path": str(path),
+            "record_sha256": record["record_sha256"],
+            "selected": projections,
+            "candidate_batch_seed": record["candidate_batch_seed"],
+            "selection_authority": record["selection_authority"],
+            "truth_effect": "none",
+        }
+
+    @staticmethod
+    def _validate_selective_fact_checkpoint_record(
+        record: Any,
+        *,
+        expected_semantic: dict[str, Any],
+        expected_checkpoint_id: str,
+    ) -> None:
+        if not isinstance(record, dict):
+            raise ValueError("selective Fact checkpoint record is invalid")
+        existing_semantic = {
+            key: value
+            for key, value in record.items()
+            if key not in {"checkpoint_id", "created_at", "record_sha256"}
+        }
+        existing_without_hash = {
+            key: value for key, value in record.items() if key != "record_sha256"
+        }
+        if (
+            existing_semantic != expected_semantic
+            or record.get("checkpoint_id") != expected_checkpoint_id
+            or record.get("record_sha256") != sha256_json(existing_without_hash)
+        ):
+            raise ValueError("selective Fact checkpoint immutable record drifted")
 
     def novelty_record(
         self,
@@ -3282,6 +5298,8 @@ class V5LifecycleManager:
     def _release_research_records(
         self,
         explicit_records: list[dict[str, Any]],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, Any]]:
         """Include linked adverse work without creating another review layer.
 
@@ -3292,7 +5310,12 @@ class V5LifecycleManager:
         Unrelated project-wide challenges remain outside the release.
         """
 
-        records = {item["research_id"]: item for item in self.research_records()}
+        records = {
+            item["research_id"]: item
+            for item in self.research_records(
+                _inspection_context=_inspection_context,
+            )
+        }
         selected = {item["research_id"] for item in explicit_records}
         branch = set(selected)
         pending = list(selected)
@@ -3331,6 +5354,8 @@ class V5LifecycleManager:
     def _required_supervision_results_for_candidate(
         self,
         explicit_records: list[dict[str, Any]],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> set[str]:
         """Require completed, ingested subround-2 review before Candidate work.
 
@@ -3342,26 +5367,12 @@ class V5LifecycleManager:
         """
 
         required_result_ids: set[str] = set()
-        inspection = RoundInspectionContext()
-        supervision_manifests: list[tuple[Path, dict[str, Any]]] = []
-        if self.store.rounds_dir.exists():
-            for candidate_dir in sorted(self.store.rounds_dir.glob("round-*")):
-                if candidate_dir.is_symlink() or not candidate_dir.is_dir():
-                    continue
-                round_dir, manifest = self._round_manifest(
-                    candidate_dir.name,
-                    _inspection_context=inspection,
-                )
-                cycle = manifest.get("research_cycle")
-                if (
-                    isinstance(cycle, dict)
-                    and cycle.get("subround") == "supervision"
-                    and self.store.reasoning_modes().work_unit_abort(
-                        manifest["round_id"]
-                    )
-                    is None
-                ):
-                    supervision_manifests.append((round_dir, manifest))
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        supervision_manifests: list[tuple[Path, dict[str, Any]]] | None = None
 
         checked_components: set[tuple[str, str | None]] = set()
         for record in explicit_records:
@@ -3386,6 +5397,28 @@ class V5LifecycleManager:
                 != "production"
             ):
                 continue
+            if supervision_manifests is None:
+                supervision_manifests = []
+                if self.store.rounds_dir.exists():
+                    for candidate_dir in sorted(
+                        self.store.rounds_dir.glob("round-*")
+                    ):
+                        if candidate_dir.is_symlink() or not candidate_dir.is_dir():
+                            continue
+                        round_dir, manifest = self._round_manifest(
+                            candidate_dir.name,
+                            _inspection_context=inspection,
+                        )
+                        cycle = manifest.get("research_cycle")
+                        if (
+                            isinstance(cycle, dict)
+                            and cycle.get("subround") == "supervision"
+                            and self.store.reasoning_modes().work_unit_abort(
+                                manifest["round_id"]
+                            )
+                            is None
+                        ):
+                            supervision_manifests.append((round_dir, manifest))
             assignment_matches = [
                 assignment
                 for assignment in production_manifest["assignments"]
@@ -3438,7 +5471,7 @@ class V5LifecycleManager:
                 matching_results: list[str] = []
                 pending_rounds: list[str] = []
                 for supervision_round_dir, supervision_manifest in (
-                    supervision_manifests
+                    supervision_manifests or []
                 ):
                     cycle = supervision_manifest["research_cycle"]
                     if (
@@ -3773,6 +5806,7 @@ class V5LifecycleManager:
         *,
         round_id: str,
         _inspection_context: RoundInspectionContext | None = None,
+        _materialized_round_dir: Path | None = None,
     ) -> dict[str, Any]:
         _inspection_context = self._bind_inspection_context(
             _inspection_context
@@ -3814,10 +5848,14 @@ class V5LifecycleManager:
         digest = scope.get("snapshot_sha256")
         if not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
             raise ValueError("V5 Campaign snapshot hash is invalid")
-        snapshot_path = contained_path(
-            self.store.root,
-            expected_relpath,
-            "V5 Campaign snapshot path",
+        snapshot_path = (
+            _materialized_round_dir / "context" / "campaign.snapshot.json"
+            if _materialized_round_dir is not None
+            else contained_path(
+                self.store.root,
+                expected_relpath,
+                "V5 Campaign snapshot path",
+            )
         )
         if snapshot_path.is_symlink() or not snapshot_path.is_file():
             raise ValueError("V5 Campaign snapshot is missing or unsafe")
@@ -3858,10 +5896,14 @@ class V5LifecycleManager:
         include_history: bool = False,
         campaign_id: str | None = None,
         _inspection_context: RoundInspectionContext | None = None,
+        _research_records_override: list[dict[str, Any]] | None = None,
+        _exclude_production_review_only: bool = False,
     ) -> list[dict[str, Any]]:
         _inspection_context = self._bind_inspection_context(
-            _inspection_context
+            _inspection_context,
+            create=True,
         )
+        assert _inspection_context is not None
         if limit < 1:
             raise ValueError("frontier limit must be positive")
         if campaign_id is not None:
@@ -3869,9 +5911,18 @@ class V5LifecycleManager:
             self.store.campaigns().status(campaign_id)
         bases: dict[str, dict[str, Any]] = {}
         dispositions: dict[str, dict[str, Any]] = {}
-        for record in self.research_records(
-            _inspection_context=_inspection_context
-        ):
+        # Frontier scoring needs immutable identity, metadata, and direct
+        # connectivity for the complete ledger, not a replay of every artifact,
+        # supervision round, historical runtime, and Fact authority.  Validate
+        # structural envelopes globally, then fully validate only the visible
+        # records returned to Main.  This is a read optimization, never an
+        # authority or premise cache.
+        records = (
+            _research_records_override
+            if _research_records_override is not None
+            else self.research_envelopes()
+        )
+        for record in records:
             if record["kind"] == "disposition":
                 target_id = record["metadata"].get("target_research_id")
                 if isinstance(target_id, str):
@@ -3911,6 +5962,11 @@ class V5LifecycleManager:
                 projection["route_invalidated_by"] = []
             if not include_history and projection["status"] not in ACTIVE_MEMORY_STATUSES:
                 continue
+            if (
+                _exclude_production_review_only
+                and self._production_entry_is_review_only(projection)
+            ):
+                continue
             readiness = (
                 1.0
                 if all(
@@ -3944,7 +6000,153 @@ class V5LifecycleManager:
                 item["research_id"],
             )
         )
-        return visible[:limit]
+        if not include_history and _research_records_override is None:
+            selected = []
+            cursor = 0
+            while cursor < len(visible) and len(selected) < limit:
+                batch = visible[cursor : cursor + max(limit, 8)]
+                completed = self._validated_completed_production_obligation_ids(
+                    {item["research_id"] for item in batch},
+                    _inspection_context=_inspection_context,
+                )
+                selected.extend(
+                    item
+                    for item in batch
+                    if item["research_id"] not in completed
+                )
+                cursor += len(batch)
+            selected = selected[:limit]
+        else:
+            selected = visible[:limit]
+        if _research_records_override is None:
+            fully_validated: list[dict[str, Any]] = []
+            for projection in selected:
+                record = self._inspection_research_record(
+                    projection["research_id"],
+                    _inspection_context,
+                )
+                projection_fields = {
+                    "status",
+                    "latest_disposition_id",
+                    "latest_disposition_note",
+                    "route_status",
+                    "route_invalidated_by",
+                    "decision_profile",
+                    "decision_factors",
+                    "score_model",
+                    "score_role",
+                    "readiness",
+                    "score",
+                    "id",
+                }
+                preserved = {
+                    key: projection[key]
+                    for key in projection_fields
+                    if key in projection
+                }
+                fully_validated.append({**record, **preserved})
+            return fully_validated
+        return selected
+
+    def _validated_completed_production_obligation_ids(
+        self,
+        candidate_ids: set[str],
+        *,
+        _inspection_context: RoundInspectionContext,
+    ) -> set[str]:
+        """Derive closed generic-frontier obligations from existing authority.
+
+        A receipt closes the source assignment's Research obligation, not the
+        cumulative Research produced by ingestion. Invalid, missing,
+        quarantined, or aborted work supplies no closure evidence.
+        """
+
+        if not candidate_ids or not self.store.rounds_dir.is_dir():
+            return set()
+        if _inspection_context.production_obligation_round_ids is None:
+            round_ids_by_research: dict[str, list[str]] = {}
+            for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+                manifest_path = round_dir / "round.json"
+                if (
+                    round_dir.is_symlink()
+                    or not round_dir.is_dir()
+                    or manifest_path.is_symlink()
+                    or not manifest_path.is_file()
+                ):
+                    continue
+                try:
+                    preview = self.store._read_json(manifest_path)
+                except (OSError, ValueError, json.JSONDecodeError):
+                    continue
+                cycle = preview.get("research_cycle")
+                assignments = preview.get("assignments")
+                if (
+                    not isinstance(cycle, dict)
+                    or cycle.get("subround") != "production"
+                    or not isinstance(assignments, list)
+                ):
+                    continue
+                for assignment in assignments:
+                    if not isinstance(assignment, dict):
+                        continue
+                    research_id = assignment.get("research_id")
+                    if (
+                        not isinstance(research_id, str)
+                        or MEMORY_ID_RE.fullmatch(research_id) is None
+                        or assignment.get("assignment_role") == "paired_adverse"
+                    ):
+                        continue
+                    round_ids_by_research.setdefault(research_id, []).append(
+                        round_dir.name
+                    )
+            _inspection_context.production_obligation_round_ids = {
+                research_id: sorted(set(round_ids))
+                for research_id, round_ids in round_ids_by_research.items()
+            }
+        completed: set[str] = set()
+        candidate_round_ids = sorted(
+            {
+                round_id
+                for research_id in candidate_ids
+                for round_id in _inspection_context.production_obligation_round_ids.get(
+                    research_id, []
+                )
+            }
+        )
+        for round_id in candidate_round_ids:
+            try:
+                validated_dir, manifest = self._round_manifest(
+                    round_id,
+                    _inspection_context=_inspection_context,
+                )
+            except (KeyError, OSError, ValueError):
+                continue
+            if _inspection_context.round_aborts.get(round_id) is not None:
+                continue
+            for assignment in manifest["assignments"]:
+                research_id = assignment["research_id"]
+                if (
+                    research_id not in candidate_ids
+                    or assignment.get("assignment_role") == "paired_adverse"
+                ):
+                    continue
+                receipt_path = (
+                    validated_dir
+                    / "returns"
+                    / f"{assignment['assignment_id']}.receipt.json"
+                )
+                if receipt_path.is_symlink() or not receipt_path.is_file():
+                    continue
+                try:
+                    self._validated_ingest_receipt(
+                        round_dir=validated_dir,
+                        assignment=assignment,
+                        _inspection_context=_inspection_context,
+                    )
+                except (KeyError, OSError, ValueError):
+                    continue
+                completed.add(research_id)
+        return completed
 
     def _explicit_research_projections(
         self,
@@ -3970,9 +6172,13 @@ class V5LifecycleManager:
             research_id = pending.pop()
             if research_id in lineage:
                 continue
-            record = self._inspection_research_record(
-                research_id,
-                _inspection_context,
+            record = (
+                self._inspection_research_record(
+                    research_id,
+                    _inspection_context,
+                )
+                if research_id in requested
+                else self._research_record_envelope(research_id)
             )
             lineage[research_id] = record
             pending.extend(
@@ -4012,9 +6218,13 @@ class V5LifecycleManager:
                 )
                 if not might_dispose and not might_invalidate:
                     continue
-                record = self._inspection_research_record(
-                    path.stem,
-                    _inspection_context,
+                record = (
+                    self._inspection_research_record(
+                        path.stem,
+                        _inspection_context,
+                    )
+                    if might_dispose
+                    else self._research_record_envelope(path.stem)
                 )
                 if might_dispose and record["kind"] == "disposition":
                     target_id = record.get("metadata", {}).get(
@@ -4452,6 +6662,7 @@ class V5LifecycleManager:
         round_id: str,
         raw: bytes | None,
         selected_chunk_ids: list[str],
+        _materialized_round_dir: Path | None = None,
     ) -> dict[str, Any] | None:
         if raw is None:
             if selected_chunk_ids:
@@ -4463,7 +6674,13 @@ class V5LifecycleManager:
         snapshot_relpath = self._background_snapshot_relpath(
             round_id, source_sha256
         )
-        snapshot_path = self.store.root / snapshot_relpath
+        snapshot_path = (
+            _materialized_round_dir
+            / "context"
+            / Path(snapshot_relpath).name
+            if _materialized_round_dir is not None
+            else self.store.root / snapshot_relpath
+        )
         self.store._write_bytes_once(snapshot_path, raw)
         return build_frozen_background_binding(
             raw=raw,
@@ -4574,10 +6791,694 @@ class V5LifecycleManager:
             / f"{validate_assignment_id(assignment_id)}.json"
         )
 
+    def _terminal_bundle_dir(
+        self,
+        round_dir: Path,
+        assignment_id: str,
+    ) -> Path:
+        """Return the private, content-addressed terminal bundle location.
+
+        Worker-facing return and artifact paths remain compatible with older
+        cards.  A successful current ingest additionally publishes a sealed
+        copy below this assignment-owned directory.  The directory is created
+        by one atomic rename, so a duplicate finalizer cannot replace a live
+        terminal bundle.
+        """
+
+        return round_dir / "terminal" / validate_assignment_id(assignment_id)
+
+    def _terminal_seal_path(self, round_dir: Path, assignment_id: str) -> Path:
+        return self._terminal_bundle_dir(round_dir, assignment_id) / "seal.json"
+
+    @staticmethod
+    def _tree_inventory(path: Path) -> list[tuple[Path, os.stat_result]]:
+        """Inventory one regular-file/directory tree without following links."""
+
+        try:
+            root_stat = path.lstat()
+        except OSError as exc:
+            raise ValueError("terminal worker path is missing or unsafe") from exc
+        root_device = root_stat.st_dev
+        inventory: list[tuple[Path, os.stat_result]] = []
+
+        def inspect(candidate: Path) -> None:
+            try:
+                current = candidate.lstat()
+            except OSError as exc:
+                raise ValueError(
+                    "terminal worker tree changed during inventory"
+                ) from exc
+            if stat.S_ISLNK(current.st_mode):
+                raise ValueError("terminal worker tree contains a symlink")
+            if current.st_dev != root_device:
+                raise ValueError("terminal worker tree crosses a device boundary")
+            if stat.S_ISREG(current.st_mode):
+                if current.st_nlink != 1:
+                    raise ValueError(
+                        "terminal worker tree contains a multiply linked file"
+                    )
+            elif not stat.S_ISDIR(current.st_mode):
+                raise ValueError("terminal worker tree contains a special entry")
+            inventory.append((candidate, current))
+
+        inspect(path)
+        if stat.S_ISDIR(root_stat.st_mode):
+            try:
+                for current_root, directories, files in os.walk(
+                    path,
+                    topdown=True,
+                    followlinks=False,
+                ):
+                    directories.sort()
+                    files.sort()
+                    current_path = Path(current_root)
+                    for name in [*directories, *files]:
+                        inspect(current_path / name)
+            except OSError as exc:
+                raise ValueError(
+                    "terminal worker tree changed during inventory"
+                ) from exc
+        return inventory
+
+    @staticmethod
+    def _apply_readonly_inventory(
+        inventory: list[tuple[Path, os.stat_result]],
+    ) -> None:
+        """Apply chmod only after the complete target inventory is accepted."""
+
+        deduplicated: dict[Path, os.stat_result] = {}
+        for path, original in inventory:
+            existing = deduplicated.get(path)
+            if existing is not None and (
+                existing.st_dev != original.st_dev
+                or existing.st_ino != original.st_ino
+                or stat.S_IFMT(existing.st_mode) != stat.S_IFMT(original.st_mode)
+            ):
+                raise ValueError("terminal worker tree inventory identity conflicts")
+            deduplicated[path] = original
+
+        files = sorted(
+            (
+                (path, original)
+                for path, original in deduplicated.items()
+                if stat.S_ISREG(original.st_mode)
+            ),
+            key=lambda item: str(item[0]),
+        )
+        directories = sorted(
+            (
+                (path, original)
+                for path, original in deduplicated.items()
+                if stat.S_ISDIR(original.st_mode)
+            ),
+            key=lambda item: (-len(item[0].parts), str(item[0])),
+        )
+        for path, original in [*files, *directories]:
+            try:
+                current = path.lstat()
+            except OSError as exc:
+                raise ValueError(
+                    "terminal worker tree changed before permission sealing"
+                ) from exc
+            if (
+                current.st_dev != original.st_dev
+                or current.st_ino != original.st_ino
+                or stat.S_IFMT(current.st_mode) != stat.S_IFMT(original.st_mode)
+                or (
+                    stat.S_ISREG(current.st_mode)
+                    and current.st_nlink != 1
+                )
+            ):
+                raise ValueError(
+                    "terminal worker tree changed before permission sealing"
+                )
+            os.chmod(
+                path,
+                stat.S_IMODE(current.st_mode) & ~0o222,
+                follow_symlinks=False,
+            )
+
+    @classmethod
+    def _readonly_paths(cls, paths: list[Path]) -> None:
+        inventories: list[tuple[Path, os.stat_result]] = []
+        seen: set[Path] = set()
+        for path in paths:
+            if path in seen:
+                continue
+            seen.add(path)
+            inventories.extend(cls._tree_inventory(path))
+        cls._apply_readonly_inventory(inventories)
+
+    @classmethod
+    def _readonly_tree(cls, path: Path) -> None:
+        """Make one fully inventoried worker tree read-only."""
+
+        cls._readonly_paths([path])
+
+    @classmethod
+    def _validate_readonly_tree(cls, path: Path) -> list[tuple[Path, os.stat_result]]:
+        inventory = cls._tree_inventory(path)
+        if any(stat.S_IMODE(item.st_mode) & 0o222 for _, item in inventory):
+            raise ValueError("terminal worker sealed tree became writable")
+        return inventory
+
+    def _lexical_contained_path(self, relative: str, label: str) -> Path:
+        contained_path(self.store.root, relative, label)
+        return self.store.root / Path(relative)
+
+    @staticmethod
+    def _read_regular_bytes_once(
+        path: Path,
+        *,
+        label: str,
+        containment_root: Path | None = None,
+        require_single_link: bool = False,
+    ) -> bytes:
+        """Read one stable regular-file snapshot through a no-follow descriptor."""
+        descriptor = -1
+        directory_descriptors: list[int] = []
+        try:
+            flags = os.O_RDONLY
+            if hasattr(os, "O_CLOEXEC"):
+                flags |= os.O_CLOEXEC
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+
+            if containment_root is not None:
+                try:
+                    relative = path.relative_to(containment_root)
+                except ValueError as exc:
+                    raise ValueError(f"{label} escapes its root") from exc
+                if (
+                    not relative.parts
+                    or not hasattr(os, "O_NOFOLLOW")
+                ):
+                    raise ValueError(
+                        f"{label} requires no-follow directory-descriptor support"
+                    )
+                directory_flags = flags
+                if hasattr(os, "O_DIRECTORY"):
+                    directory_flags |= os.O_DIRECTORY
+                try:
+                    root_descriptor = os.open(containment_root, directory_flags)
+                except (OSError, TypeError) as exc:
+                    raise ValueError(
+                        f"{label} root is missing or unsafe"
+                    ) from exc
+                directory_descriptors.append(root_descriptor)
+                root_stat = os.fstat(root_descriptor)
+                if not stat.S_ISDIR(root_stat.st_mode):
+                    raise ValueError(f"{label} root is missing or unsafe")
+                parent_descriptor = root_descriptor
+                for part in relative.parts[:-1]:
+                    try:
+                        next_descriptor = os.open(
+                            part,
+                            directory_flags,
+                            dir_fd=parent_descriptor,
+                        )
+                    except (OSError, TypeError) as exc:
+                        raise ValueError(
+                            f"{label} parent is missing or unsafe"
+                        ) from exc
+                    directory_descriptors.append(next_descriptor)
+                    component = os.fstat(next_descriptor)
+                    if (
+                        not stat.S_ISDIR(component.st_mode)
+                        or component.st_dev != root_stat.st_dev
+                    ):
+                        raise ValueError(f"{label} parent is unsafe")
+                    parent_descriptor = next_descriptor
+                try:
+                    descriptor = os.open(
+                        relative.parts[-1],
+                        flags,
+                        dir_fd=parent_descriptor,
+                    )
+                except (OSError, TypeError) as exc:
+                    raise ValueError(f"{label} is missing or unsafe") from exc
+                opened = os.fstat(descriptor)
+                if opened.st_dev != root_stat.st_dev:
+                    raise ValueError(f"{label} crosses a device boundary")
+            else:
+                try:
+                    before = path.lstat()
+                except OSError as exc:
+                    raise ValueError(f"{label} is missing or unsafe") from exc
+                if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(
+                    before.st_mode
+                ):
+                    raise ValueError(f"{label} is missing or unsafe")
+                if require_single_link and before.st_nlink != 1:
+                    raise ValueError(f"{label} is multiply linked")
+                try:
+                    descriptor = os.open(path, flags)
+                except OSError as exc:
+                    raise ValueError(f"{label} is missing or unsafe") from exc
+                opened = os.fstat(descriptor)
+                if (
+                    opened.st_dev != before.st_dev
+                    or opened.st_ino != before.st_ino
+                ):
+                    raise ValueError(f"{label} changed before snapshot")
+
+            opened = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or (require_single_link and opened.st_nlink != 1)
+            ):
+                raise ValueError(f"{label} changed before snapshot")
+            chunks: list[bytes] = []
+            while True:
+                chunk = os.read(descriptor, 1024 * 1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            after = os.fstat(descriptor)
+            if (
+                after.st_dev != opened.st_dev
+                or after.st_ino != opened.st_ino
+                or after.st_size != opened.st_size
+                or after.st_mtime_ns != opened.st_mtime_ns
+                or after.st_ctime_ns != opened.st_ctime_ns
+                or (require_single_link and after.st_nlink != 1)
+            ):
+                raise ValueError(f"{label} changed while snapshotting")
+            return b"".join(chunks)
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            for directory_descriptor in reversed(directory_descriptors):
+                os.close(directory_descriptor)
+
+    def _validate_terminal_seal(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+        required: bool = False,
+        staged_bundle_dir: Path | None = None,
+    ) -> dict[str, Any] | None:
+        """Validate the sealed terminal authority without trusting source paths."""
+
+        published_bundle_dir = self._terminal_bundle_dir(
+            round_dir, assignment["assignment_id"]
+        )
+        bundle_dir = published_bundle_dir
+        if staged_bundle_dir is not None:
+            expected_prefix = (
+                f".terminal-{assignment['assignment_id']}.staging-"
+            )
+            if (
+                staged_bundle_dir.parent != published_bundle_dir.parent
+                or not staged_bundle_dir.name.startswith(expected_prefix)
+            ):
+                raise ValueError("terminal worker staging path is invalid")
+            bundle_dir = staged_bundle_dir
+        if not os.path.lexists(bundle_dir):
+            if required:
+                raise ValueError("prospective terminal worker seal is missing")
+            return None
+        seal_path = bundle_dir / "seal.json"
+        if not os.path.lexists(seal_path):
+            raise ValueError("terminal worker seal is missing")
+        inventory = self._validate_readonly_tree(bundle_dir)
+        raw_seal = self._read_regular_bytes_once(
+            seal_path,
+            label="terminal worker seal",
+            containment_root=bundle_dir,
+            require_single_link=True,
+        )
+        try:
+            seal = json.loads(raw_seal.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("terminal worker seal is not valid UTF-8 JSON") from exc
+        required = {
+            "schema_version",
+            "policy_revision",
+            "terminal_seal_revision",
+            "project_id",
+            "round_id",
+            "assignment_id",
+            "task_card_sha256",
+            "worker_context_id",
+            "host_task_scope_id",
+            "writer_lease_id",
+            "source_return_relpath",
+            "source_return_sha256",
+            "sealed_return_relpath",
+            "sealed_return_sha256",
+            "artifacts",
+            "sealed_at",
+            "seal_sha256",
+        }
+        if set(seal) != required:
+            raise ValueError("terminal worker seal fields are not exact")
+        if (
+            seal["schema_version"] != 1
+            or seal["policy_revision"] != V5_POLICY_REVISION
+            or seal["terminal_seal_revision"] != V5_TERMINAL_SEAL_REVISION
+            or assignment.get("terminal_seal_revision")
+            != V5_TERMINAL_SEAL_REVISION
+            or seal["project_id"] != self.store.project_id()
+            or seal["round_id"] != round_dir.name
+            or seal["assignment_id"] != assignment["assignment_id"]
+            or seal["task_card_sha256"] != assignment["task_card_sha256"]
+            or seal["worker_context_id"] != assignment["worker_context_id"]
+            or seal["host_task_scope_id"] != assignment["host_task_scope_id"]
+        ):
+            raise ValueError("terminal worker seal binding is invalid")
+        self._validate_writer_lease_id(
+            seal["writer_lease_id"],
+            round_id=round_dir.name,
+            assignment_id=assignment["assignment_id"],
+            task_card_sha256=assignment["task_card_sha256"],
+            worker_context_id=assignment["worker_context_id"],
+            host_task_scope_id=assignment["host_task_scope_id"],
+        )
+        if seal["writer_lease_id"] != assignment.get("writer_lease_id"):
+            raise ValueError("terminal worker seal writer lease drifted")
+        for field_name in (
+            "source_return_sha256",
+            "sealed_return_sha256",
+        ):
+            if SHA256_RE.fullmatch(seal[field_name]) is None:
+                raise ValueError(f"terminal worker seal {field_name} is invalid")
+        _parse_utc_timestamp(seal["sealed_at"], label="terminal worker seal sealed_at")
+        semantic = {key: value for key, value in seal.items() if key != "seal_sha256"}
+        if seal["seal_sha256"] != sha256_json(semantic):
+            raise ValueError("terminal worker seal hash mismatch")
+        if seal["source_return_relpath"] != assignment["return_relpath"]:
+            raise ValueError("terminal worker source return binding drifted")
+        contained_path(
+            self.store.root,
+            seal["source_return_relpath"],
+            "terminal worker source return path",
+        )
+        sealed_return = contained_path(
+            self.store.root,
+            seal["sealed_return_relpath"],
+            "terminal worker sealed return path",
+        )
+        expected_published_return = published_bundle_dir / "return.json"
+        if sealed_return != expected_published_return.resolve():
+            raise ValueError("terminal worker sealed return path is invalid")
+        expected_return = bundle_dir / "return.json"
+        sealed_return_bytes = self._read_regular_bytes_once(
+            expected_return,
+            label="terminal worker sealed return",
+            containment_root=bundle_dir,
+            require_single_link=True,
+        )
+        if (
+            seal["sealed_return_sha256"] != seal["source_return_sha256"]
+            or sha256_bytes(sealed_return_bytes) != seal["sealed_return_sha256"]
+        ):
+            raise ValueError("terminal worker sealed return drifted")
+        artifacts = seal["artifacts"]
+        if not isinstance(artifacts, list):
+            raise ValueError("terminal worker seal artifacts must be a list")
+        expected_files = {"seal.json", "return.json"}
+        seen_source_paths: set[str] = set()
+        seen_sealed_paths: set[str] = set()
+        for index, item in enumerate(artifacts):
+            if not isinstance(item, dict) or set(item) not in (
+                {"source_path", "sealed_path", "sha256"},
+                {"source_path", "sealed_path", "sha256", "role"},
+            ):
+                raise ValueError("terminal worker seal artifact fields are not exact")
+            for key in ("source_path", "sealed_path"):
+                if not isinstance(item[key], str):
+                    raise ValueError("terminal worker seal artifact path is invalid")
+            if "role" in item and (
+                not isinstance(item["role"], str) or not item["role"].strip()
+            ):
+                raise ValueError("terminal worker seal artifact role is invalid")
+            if SHA256_RE.fullmatch(item["sha256"]) is None:
+                raise ValueError("terminal worker seal artifact SHA-256 is invalid")
+            if item["source_path"] in seen_source_paths:
+                raise ValueError("terminal worker seal duplicates a source artifact")
+            if item["sealed_path"] in seen_sealed_paths:
+                raise ValueError("terminal worker seal duplicates a sealed artifact")
+            seen_source_paths.add(item["source_path"])
+            seen_sealed_paths.add(item["sealed_path"])
+            contained_path(
+                self.store.root,
+                item["source_path"],
+                "terminal worker source artifact path",
+            )
+            sealed = contained_path(
+                self.store.root,
+                item["sealed_path"],
+                "terminal worker sealed artifact path",
+            )
+            expected_name = f"{index:04d}-{Path(item['source_path']).name}"
+            expected_published_artifact = (
+                published_bundle_dir / "artifacts" / expected_name
+            )
+            if sealed != expected_published_artifact.resolve():
+                raise ValueError("terminal worker sealed artifact path is invalid")
+            expected_artifact = bundle_dir / "artifacts" / expected_name
+            sealed_bytes = self._read_regular_bytes_once(
+                expected_artifact,
+                label="terminal worker sealed artifact",
+                containment_root=bundle_dir,
+                require_single_link=True,
+            )
+            if sha256_bytes(sealed_bytes) != item["sha256"]:
+                raise ValueError("terminal worker sealed artifact drifted")
+            expected_files.add(f"artifacts/{expected_name}")
+        actual_files = {
+            path.relative_to(bundle_dir).as_posix()
+            for path, item in inventory
+            if stat.S_ISREG(item.st_mode)
+        }
+        actual_directories = {
+            path.relative_to(bundle_dir).as_posix() or "."
+            for path, item in inventory
+            if stat.S_ISDIR(item.st_mode)
+        }
+        if actual_files != expected_files or actual_directories != {".", "artifacts"}:
+            raise ValueError("terminal worker sealed tree file set drifted")
+        return seal
+
+    def _prepare_terminal_seal(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+        snapshot: TerminalIngestSnapshot,
+    ) -> dict[str, Any]:
+        """Publish one immutable return/artifact bundle under the ingest lock."""
+
+        source_artifact_paths = [
+            item.source_relpath for item in snapshot.artifacts
+        ]
+        if len(source_artifact_paths) != len(set(source_artifact_paths)):
+            raise ValueError("terminal ingest duplicates a source artifact")
+
+        existing = self._validate_terminal_seal(
+            round_dir=round_dir,
+            assignment=assignment,
+        )
+        if existing is not None:
+            expected_artifacts = [
+                {
+                    "source_path": item.source_relpath,
+                    "sha256": item.sha256,
+                    **({"role": item.role} if item.role is not None else {}),
+                }
+                for item in snapshot.artifacts
+            ]
+            existing_artifacts = [
+                {
+                    "source_path": item["source_path"],
+                    "sha256": item["sha256"],
+                    **({"role": item["role"]} if "role" in item else {}),
+                }
+                for item in existing["artifacts"]
+            ]
+            if (
+                existing["source_return_sha256"] != snapshot.return_sha256
+                or existing_artifacts != expected_artifacts
+            ):
+                raise ValueError(
+                    "terminal ingest conflict: sealed bytes differ from this finalization"
+                )
+            return existing
+        assignment_id = assignment["assignment_id"]
+        bundle_dir = self._terminal_bundle_dir(round_dir, assignment_id)
+        if os.path.lexists(bundle_dir):
+            raise ValueError("terminal worker bundle already exists without a valid seal")
+        bundle_dir.parent.mkdir(parents=True, exist_ok=True)
+        staging = bundle_dir.parent / (
+            f".terminal-{assignment_id}.staging-"
+            f"{sha256_json([assignment_id, snapshot.return_sha256, time.time_ns()])[:16]}"
+        )
+        staging.mkdir(parents=True, exist_ok=False)
+        try:
+            staged_artifacts = staging / "artifacts"
+            staged_artifacts.mkdir()
+            sealed_return = staging / "return.json"
+            self.store._write_bytes_once(sealed_return, snapshot.return_bytes)
+            sealed_bindings: list[dict[str, str]] = []
+            for index, item in enumerate(snapshot.artifacts):
+                destination = (
+                    staged_artifacts
+                    / f"{index:04d}-{Path(item.source_relpath).name}"
+                )
+                self.store._write_bytes_once(destination, item.raw)
+                binding = {
+                    "source_path": item.source_relpath,
+                    "sealed_path": str(
+                        (bundle_dir / "artifacts" / destination.name)
+                        .relative_to(self.store.root)
+                    ),
+                    "sha256": item.sha256,
+                }
+                if item.role is not None:
+                    binding["role"] = item.role
+                sealed_bindings.append(binding)
+            sealed_return_relpath = str(
+                (bundle_dir / "return.json").relative_to(self.store.root)
+            )
+            semantic = {
+                "schema_version": 1,
+                "policy_revision": V5_POLICY_REVISION,
+                "terminal_seal_revision": V5_TERMINAL_SEAL_REVISION,
+                "project_id": self.store.project_id(),
+                "round_id": round_dir.name,
+                "assignment_id": assignment_id,
+                "task_card_sha256": assignment["task_card_sha256"],
+                "worker_context_id": assignment["worker_context_id"],
+                "host_task_scope_id": assignment["host_task_scope_id"],
+                "writer_lease_id": assignment["writer_lease_id"],
+                "source_return_relpath": assignment["return_relpath"],
+                "source_return_sha256": snapshot.return_sha256,
+                "sealed_return_relpath": sealed_return_relpath,
+                "sealed_return_sha256": snapshot.return_sha256,
+                "artifacts": sealed_bindings,
+                "sealed_at": _utc_now(),
+            }
+            seal = {**semantic, "seal_sha256": sha256_json(semantic)}
+            self.store._write_json_once(staging / "seal.json", seal)
+            self._readonly_tree(staging)
+            validated = self._validate_terminal_seal(
+                round_dir=round_dir,
+                assignment=assignment,
+                required=True,
+                staged_bundle_dir=staging,
+            )
+            assert validated is not None
+            # This rename is the publication boundary and the final fallible
+            # operation.  The destination becomes visible only after the
+            # complete staged tree is already read-only and fully validated.
+            os.replace(staging, bundle_dir)
+            return validated
+        except Exception:
+            if os.path.lexists(staging):
+                for current_root, directories, _ in os.walk(
+                    staging, topdown=False, followlinks=False
+                ):
+                    for name in directories:
+                        directory = Path(current_root) / name
+                        if not directory.is_symlink():
+                            os.chmod(
+                                directory,
+                                stat.S_IMODE(directory.lstat().st_mode) | 0o700,
+                                follow_symlinks=False,
+                            )
+                    current = Path(current_root)
+                    if not current.is_symlink():
+                        os.chmod(
+                            current,
+                            stat.S_IMODE(current.lstat().st_mode) | 0o700,
+                            follow_symlinks=False,
+                        )
+                shutil.rmtree(staging)
+            raise
+
+    def _terminal_source_diagnostics(
+        self,
+        *,
+        assignment: dict[str, Any],
+        seal: dict[str, Any],
+    ) -> list[str]:
+        """Report source drift without making mutable worker paths authoritative."""
+
+        diagnostics: set[str] = set()
+
+        def inspect_file(relative: str, digest: str, label: str) -> None:
+            try:
+                path = self._lexical_contained_path(relative, label)
+                item = path.lstat()
+                if (
+                    stat.S_ISLNK(item.st_mode)
+                    or not stat.S_ISREG(item.st_mode)
+                    or item.st_nlink != 1
+                ):
+                    diagnostics.add(f"{label}:unsafe")
+                    return
+                raw = self._read_regular_bytes_once(
+                    path,
+                    label=label,
+                    containment_root=self.store.root,
+                    require_single_link=True,
+                )
+                if sha256_bytes(raw) != digest:
+                    diagnostics.add(f"{label}:bytes_drifted")
+            except (OSError, ValueError):
+                diagnostics.add(f"{label}:missing_or_unstable")
+
+        inspect_file(
+            seal["source_return_relpath"],
+            seal["source_return_sha256"],
+            "source_return",
+        )
+        for index, item in enumerate(seal["artifacts"]):
+            inspect_file(
+                item["source_path"],
+                item["sha256"],
+                f"source_artifact_{index}",
+            )
+        for field_name, label in (
+            ("artifact_dir_relpath", "source_artifact_root"),
+            ("work_dir_relpath", "source_work_root"),
+        ):
+            relative = assignment.get(field_name)
+            if not isinstance(relative, str):
+                continue
+            try:
+                path = self._lexical_contained_path(relative, label)
+                item = path.lstat()
+                if not stat.S_ISDIR(item.st_mode) or stat.S_ISLNK(item.st_mode):
+                    diagnostics.add(f"{label}:unsafe")
+            except (OSError, ValueError):
+                diagnostics.add(f"{label}:missing_or_unstable")
+        return sorted(diagnostics)
+
     @staticmethod
     def _runtime_binding() -> dict[str, Any]:
         skill_root = Path(__file__).resolve().parents[2]
         return runtime_binding_from_root(skill_root)
+
+    @staticmethod
+    def _task_card_skill_version_at_least(
+        card: dict[str, Any],
+        minimum: tuple[int, int, int],
+    ) -> bool:
+        """Gate prospective contracts without rewriting historical returns."""
+
+        runtime_binding = card.get("runtime_binding")
+        if not isinstance(runtime_binding, dict):
+            return False
+        skill_version = runtime_binding.get("skill_version")
+        if not isinstance(skill_version, str):
+            return False
+        match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", skill_version.strip())
+        if match is None:
+            return False
+        return tuple(int(part) for part in match.groups()) >= minimum
 
     @staticmethod
     def _validate_bound_runtime_binding(
@@ -4996,6 +7897,7 @@ class V5LifecycleManager:
         *,
         card: dict[str, Any],
         source_research: dict[str, Any],
+        _materialized_round_dir: Path | None = None,
     ) -> dict[str, Any]:
         selection = card.get("context_selection")
         required = {
@@ -5196,6 +8098,13 @@ class V5LifecycleManager:
                 self.store.root,
                 background,
                 expected_snapshot_relpath=expected_snapshot_relpath,
+                snapshot_path_override=(
+                    _materialized_round_dir
+                    / "context"
+                    / Path(expected_snapshot_relpath).name
+                    if _materialized_round_dir is not None
+                    else None
+                ),
             )
         expected = self._context_selection_binding(
             blackboard_selection=blackboard_selection,
@@ -5214,6 +8123,7 @@ class V5LifecycleManager:
         historical_runtime: bool = False,
         _runtime_validation_cache: set[tuple[bool, str]] | None = None,
         _inspection_context: RoundInspectionContext | None = None,
+        _materialized_round_dir: Path | None = None,
     ) -> dict[str, Any]:
         _inspection_context = self._bind_inspection_context(
             _inspection_context
@@ -5346,6 +8256,7 @@ class V5LifecycleManager:
                 card["campaign_scope"],
                 round_id=round_id,
                 _inspection_context=_inspection_context,
+                _materialized_round_dir=_materialized_round_dir,
             )
             if scope["campaign_id"] != card["campaign_id"]:
                 raise ValueError("V5 task-card Campaign scope/id mismatch")
@@ -5529,6 +8440,7 @@ class V5LifecycleManager:
                 self._validate_context_selection(
                     card=card,
                     source_research=source_research,
+                    _materialized_round_dir=_materialized_round_dir,
                 )
         if "assurance_contract" in card:
             contract = validate_assurance_contract(card["assurance_contract"])
@@ -5549,6 +8461,13 @@ class V5LifecycleManager:
                     "V5 task-card related_artifacts must be exact capability objects"
                 )
             roles: set[str] = set()
+            repair_capability_scope = (
+                self._schema_v2_repair_capability_manifest(
+                    source_research,
+                    _inspection_context=_inspection_context,
+                )
+                is not None
+            )
             for item in related_artifacts:
                 validate_memory_id(item["source_research_id"])
                 _require_nonempty_text(item["role"], "related artifact role")
@@ -5559,17 +8478,28 @@ class V5LifecycleManager:
                 roles.add(item["role"])
                 if SHA256_RE.fullmatch(item["sha256"]) is None:
                     raise ValueError("V5 task-card related artifact hash is invalid")
-                path = contained_path(
-                    self.store.root,
-                    item["path"],
-                    "V5 task-card related artifact",
+                path = self._lexical_contained_path(
+                    item["path"], "V5 task-card related artifact"
                 )
-                if (
-                    path.is_symlink()
-                    or not path.is_file()
-                    or sha256_bytes(path.read_bytes()) != item["sha256"]
-                ):
-                    raise ValueError("V5 task-card related artifact drifted")
+                if repair_capability_scope:
+                    self._repair_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="V5 task-card related artifact",
+                        _inspection_context=_inspection_context,
+                    )
+                else:
+                    self._ordinary_capability_bytes(
+                        path,
+                        item["sha256"],
+                        label="V5 task-card related artifact",
+                        _inspection_context=_inspection_context,
+                    )
+            self._validate_repair_task_capability_closure(
+                record=source_research,
+                related_artifacts=related_artifacts,
+                _inspection_context=_inspection_context,
+            )
             if sorted(roles) != contract["related_artifact_roles"]:
                 raise ValueError(
                     "V5 task-card related artifact roles disagree with assurance contract"
@@ -5594,6 +8524,13 @@ class V5LifecycleManager:
                     self.store.root,
                     background,
                     expected_snapshot_relpath=expected_snapshot_relpath,
+                    snapshot_path_override=(
+                        _materialized_round_dir
+                        / "context"
+                        / Path(expected_snapshot_relpath).name
+                        if _materialized_round_dir is not None
+                        else None
+                    ),
                 )
             else:
                 expected_fields = {
@@ -5654,7 +8591,13 @@ class V5LifecycleManager:
         if card.get("task_card_semantic_sha256") != sha256_json(semantic):
             raise ValueError("V5 task card semantic hash mismatch")
         if expected_path is not None:
-            canonical = self._task_card_path(round_id, assignment_id)
+            canonical = (
+                _materialized_round_dir
+                / "task-cards"
+                / f"{assignment_id}.json"
+                if _materialized_round_dir is not None
+                else self._task_card_path(round_id, assignment_id)
+            )
             if expected_path.resolve() != canonical.resolve():
                 raise ValueError("V5 task card path is noncanonical")
         return card
@@ -5771,6 +8714,23 @@ class V5LifecycleManager:
                     "shape, CHX start/close path, preflight, canonical byte-copy, "
                     "validation, and authority boundaries.\n\n"
                 )
+            elif (
+                cycle is None
+                and card["work_mode"] == "refute"
+                and card["mathematical_state"]["source_research_dossier"][
+                    "metadata"
+                ].get("independent_adverse_required")
+                is True
+            ):
+                assurance_note = (
+                    "Exact Candidate-adverse startup contract: "
+                    "references/v5_candidate_adverse_worker_bootstrap.md. "
+                    "This refute assignment is not production and must not load the "
+                    "production bootstrap. Attack only the one exact canonical "
+                    "candidate_fact and its frozen supervision lineage. Use the exact "
+                    "worker-return shape, CHX path, preflight, canonical byte-copy, "
+                    "validation, and nontruth boundaries in that compact contract.\n\n"
+                )
             else:
                 assurance_note = (
                     "Scoped production startup contract: "
@@ -5871,6 +8831,7 @@ class V5LifecycleManager:
         campaign_id: str | None = None,
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Plan constructive Research subround 1 without changing legacy cards."""
 
@@ -5888,6 +8849,289 @@ class V5LifecycleManager:
             host_task_scope_id=host_task_scope_id,
             background_chunk_ids=background_chunk_ids,
             research_cycle=self.production_research_cycle_binding(),
+            _inspection_context=_inspection_context,
+        )
+
+    def prepare_candidate_adverse_target(
+        self,
+        production_research_id: str,
+        *,
+        actor: str = "v5-candidate-adverse-preparer",
+    ) -> dict[str, Any]:
+        """Create or reuse the exact nontruth target for Candidate attack.
+
+        The preparation is deliberately narrow.  It accepts one active
+        production result containing one canonical Candidate Fact, derives the
+        unique live completed Research-supervision result, and publishes one
+        content-addressed synthesis Research entry.  It does not atomize a
+        claim, plan the attack, package a Candidate, invoke a verifier, create a
+        Certification Decision, or admit a Fact.
+        """
+
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
+        production_research_id = validate_memory_id(production_research_id)
+        production = self._inspection_research_record(
+            production_research_id,
+            inspection,
+        )
+        if production["status"] not in ACTIVE_MEMORY_STATUSES:
+            raise ValueError("Candidate production Research must be active")
+        if self._research_is_adverse_assignment(production):
+            raise ValueError("Candidate production Research cannot be adverse work")
+        artifacts = production.get("metadata", {}).get("artifacts", [])
+        candidate_facts = [
+            item for item in artifacts if item.get("role") == "candidate_fact"
+        ]
+        if len(candidate_facts) != 1:
+            raise ValueError(
+                "Candidate production Research must bind exactly one candidate_fact"
+            )
+        candidate_binding = candidate_facts[0]
+        candidate_path = contained_path(
+            self.store.root,
+            candidate_binding["path"],
+            "Candidate adverse target Fact path",
+        )
+        if candidate_path.is_symlink() or not candidate_path.is_file():
+            raise ValueError("Candidate adverse target Fact is missing or unsafe")
+        raw = candidate_path.read_bytes()
+        if sha256_bytes(raw) != candidate_binding["sha256"]:
+            raise ValueError("Candidate adverse target Fact hash drifted")
+        fact = self._validate_candidate_fact_artifact_bytes(raw)
+
+        required_supervision = self._required_supervision_results_for_candidate(
+            [production],
+            _inspection_context=inspection,
+        )
+        if len(required_supervision) != 1:
+            raise ValueError(
+                "Candidate adverse preparation requires exactly one live "
+                "completed supervision result"
+            )
+        supervision_id = next(iter(required_supervision))
+        supervision = self._inspection_research_record(
+            supervision_id,
+            inspection,
+        )
+        if not self._research_is_adverse_assignment(supervision):
+            raise ValueError(
+                "Candidate adverse preparation supervision is not independent refute work"
+            )
+
+        payload = {
+            "kind": "synthesis",
+            "status": "open",
+            "claim": (
+                f"Exact canonical Fact {fact.fact_id} is ready for fresh "
+                "whole-Candidate adverse review."
+            ),
+            "content": (
+                "This Main preparation reuses the exact canonical Candidate Fact "
+                "bytes and binds the unique live Research-supervision result. "
+                "It adds no mathematical conclusion."
+            ),
+            "rationale": (
+                "Whole-Candidate adverse review must target the exact one-conclusion "
+                "Fact after Research supervision and before Candidate packaging."
+            ),
+            "dependencies": [],
+            "source": "",
+            "relation": "prepares_candidate_from",
+            "related_research_ids": sorted(
+                [production_research_id, supervision_id]
+            ),
+            "independent_adverse_required": True,
+            "adverse_domain_profile": "mathematics",
+            "source_dependent": False,
+            "route_invalidations": [],
+            "artifacts": [candidate_binding],
+        }
+        target = self.add_research(
+            payload,
+            actor=actor,
+            assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            _inspection_context=inspection,
+        )
+        return {
+            "research_id": target["research_id"],
+            "production_research_id": production_research_id,
+            "supervision_research_id": supervision_id,
+            "fact_id": fact.fact_id,
+            "candidate_fact_sha256": candidate_binding["sha256"],
+            "next_command": (
+                "plan-candidate-adverse " + target["research_id"]
+            ),
+            "project_effect": "one_nontruth_research_target",
+            "truth_effect": "none",
+        }
+
+    def plan_candidate_adverse_round(
+        self,
+        research_id: str,
+        *,
+        host_task_scope_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Plan one fresh refute card for an exact Candidate-Fact target.
+
+        This lane is intentionally outside both constructive production and
+        Research supervision.  It creates ordinary nontruth Research work and
+        cannot replace Candidate disposition, verifier, Certification,
+        Gateway, or Fact admission.
+        """
+
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
+        research_id = validate_memory_id(research_id)
+        target = self._inspection_research_record(research_id, inspection)
+        metadata = target.get("metadata")
+        if not isinstance(metadata, dict):
+            raise ValueError("Candidate adverse target metadata is invalid")
+        if target.get("status") not in ACTIVE_MEMORY_STATUSES:
+            raise ValueError("Candidate adverse target must be active Research")
+        all_records = {
+            item["research_id"]: item
+            for item in self.research_records(
+                _inspection_context=inspection,
+            )
+        }
+        stale_routes = self._route_staleness(all_records)
+        if research_id in stale_routes:
+            raise ValueError(
+                "Candidate adverse target is stale; create a copy-on-write "
+                "repair before planning another attack"
+            )
+        if self._research_is_adverse_assignment(target):
+            raise ValueError("Candidate adverse target cannot itself be adverse work")
+        if metadata.get("independent_adverse_required") is not True:
+            raise ValueError(
+                "Candidate adverse target must require independent adverse review"
+            )
+        self._typed_research_artifacts(
+            target,
+            _inspection_context=inspection,
+        )
+        artifacts = metadata.get("artifacts", [])
+        candidate_facts = [
+            item for item in artifacts if item["role"] == "candidate_fact"
+        ]
+        if len(candidate_facts) != 1:
+            raise ValueError(
+                "Candidate adverse target must bind exactly one candidate_fact artifact"
+            )
+
+        target_binding = candidate_facts[0]
+        # The 0.7.14 Main preparation path promises canonical Fact bytes and
+        # therefore receives the matching consumer-side check here.  Older
+        # hand-authored adverse targets retain their frozen pre-0.7.14 contract;
+        # they remain exact-hash checked by _typed_research_artifacts above.
+        if target.get("relation") == "prepares_candidate_from":
+            target_path = contained_path(
+                self.store.root,
+                target_binding["path"],
+                "Candidate adverse target Fact path",
+            )
+            if target_path.is_symlink() or not target_path.is_file():
+                raise ValueError("Candidate adverse target Fact is missing or unsafe")
+            target_raw = target_path.read_bytes()
+            if sha256_bytes(target_raw) != target_binding["sha256"]:
+                raise ValueError("Candidate adverse target Fact hash drifted")
+            self._validate_candidate_fact_artifact_bytes(target_raw)
+        normalized_host_scope = normalize_host_task_scope_id(
+            host_task_scope_id,
+            workflow_evidence_version=5,
+            project_id=self.store.project_id(),
+            local_seed={
+                "research_ids": [research_id],
+                "requested_mode": "refute",
+                "campaign_id": None,
+                "background_chunk_ids": [],
+                "research_cycle": None,
+            },
+        )
+        if normalized_host_scope is None:
+            raise RuntimeError("Candidate adverse host scope allocation returned null")
+        active_matches: list[dict[str, Any]] = []
+        for candidate_dir in sorted(self.store.rounds_dir.glob("round-*")):
+            if candidate_dir.is_symlink() or not candidate_dir.is_dir():
+                continue
+            # An immutable abort authority permanently removes this work unit
+            # from exact-retry ownership.  Exclude it before reconstructing
+            # the old round or reading worker cards: after a runtime cutover,
+            # an aborted card is historical evidence, not an active card that
+            # must match the new runtime.  Full project audit retains the
+            # independent responsibility for the frozen aborted bytes.
+            if (
+                self.store.reasoning_modes().work_unit_abort(
+                    candidate_dir.name
+                )
+                is not None
+            ):
+                continue
+            round_dir, manifest = self._round_manifest(
+                candidate_dir.name,
+                _inspection_context=inspection,
+            )
+            if manifest.get("research_cycle") is not None:
+                continue
+            for assignment in manifest["assignments"]:
+                if assignment["research_id"] != research_id:
+                    continue
+                card_path = self._task_card_path(
+                    manifest["round_id"],
+                    assignment["assignment_id"],
+                )
+                if card_path.is_symlink() or not card_path.is_file():
+                    raise ValueError("Candidate adverse task card is missing")
+                card = self.validate_task_card(
+                    self.store._read_json(card_path),
+                    expected_path=card_path,
+                    historical_runtime=self._round_is_completed(
+                        round_dir,
+                        manifest,
+                        _inspection_context=inspection,
+                    ),
+                    _inspection_context=inspection,
+                )
+                if card["work_mode"] != "refute":
+                    continue
+                card_bindings = [
+                    item
+                    for item in card["mathematical_state"][
+                        "source_research_dossier"
+                    ]["metadata"].get("artifacts", [])
+                    if item.get("role") == "candidate_fact"
+                ]
+                if card_bindings != [target_binding]:
+                    continue
+                if manifest["host_task_scope_id"] != normalized_host_scope:
+                    raise ValueError(
+                        "Candidate adverse exact retry belongs to a different host scope"
+                    )
+                active_matches.append(
+                    self.round_status(
+                        manifest["round_id"],
+                        _inspection_context=inspection,
+                    )
+                )
+        if len(active_matches) > 1:
+            raise ValueError("Candidate adverse planning has multiple live exact retries")
+        if active_matches:
+            return active_matches[0]
+
+        return self.create_round(
+            workers=1,
+            mode="refute",
+            research_ids=[research_id],
+            host_task_scope_id=normalized_host_scope,
+            research_cycle=None,
+            _inspection_context=inspection,
         )
 
     def _existing_cycle_round_for_research(
@@ -6066,6 +9310,80 @@ class V5LifecycleManager:
         source_assignment_by_id = {
             item["assignment_id"]: item for item in source_manifest["assignments"]
         }
+        current_closure = all(
+            self._task_card_skill_version_at_least(
+                self.store._read_json(
+                    contained_path(
+                        self.store.root,
+                        assignment["task_card_relpath"],
+                        "supervised production task card",
+                    )
+                ),
+                (0, 7, 14),
+            )
+            for assignment in source_assignment_by_id.values()
+        )
+        # Freeze the attacked production authority into the supervisor's normal
+        # task-card capability machinery.  Output Research alone does not own
+        # the production card's admitted-Fact premises or its input-source
+        # allowlist.  Carry those exact bytes and active premise ids forward so
+        # the supervisor can replay the attacked route without reconstructing
+        # authority from prose or asking Main for an ad-hoc repair card.
+        source_authority_by_assignment: dict[str, dict[str, Any]] = {}
+        source_task_cards_by_assignment: dict[str, dict[str, Any]] = {}
+        for descriptor in (descriptors if current_closure else []):
+            assignment = source_assignment_by_id[descriptor["assignment_id"]]
+            task_card_path = contained_path(
+                self.store.root,
+                assignment["task_card_relpath"],
+                "supervised production task card",
+            )
+            task_card_raw = task_card_path.read_bytes()
+            if sha256_bytes(task_card_raw) != assignment["task_card_sha256"]:
+                raise ValueError("supervised production task-card hash drifted")
+            task_card = self.store._read_json(task_card_path)
+            source_task_cards_by_assignment[descriptor["assignment_id"]] = task_card
+            mathematical_state = task_card["mathematical_state"]
+            fact_ids = sorted(
+                binding["fact_id"]
+                for binding in mathematical_state["authority_snapshot"][
+                    "fact_bindings"
+                ]
+                if binding["status"] == "active"
+            )
+            capabilities = [
+                {
+                    "path": assignment["task_card_relpath"],
+                    "sha256": assignment["task_card_sha256"],
+                    "source_role": "production_task_card",
+                }
+            ]
+            for capability in [
+                *mathematical_state.get("related_artifacts", []),
+                *mathematical_state["authority_snapshot"].get(
+                    "capabilities", []
+                ),
+            ]:
+                capabilities.append(
+                    {
+                        "path": capability["path"],
+                        "sha256": capability["sha256"],
+                        "source_role": capability["role"],
+                    }
+                )
+            semantic = {
+                "revision": V5_SUPERVISED_AUTHORITY_CLOSURE_REVISION,
+                "assignment_id": descriptor["assignment_id"],
+                "task_card_path": assignment["task_card_relpath"],
+                "task_card_sha256": assignment["task_card_sha256"],
+                "active_fact_ids": fact_ids,
+                "capabilities": capabilities,
+                "truth_effect": "none",
+            }
+            source_authority_by_assignment[descriptor["assignment_id"]] = {
+                **semantic,
+                "receipt_sha256": sha256_json(semantic),
+            }
         campaign_scope = source_manifest.get("campaign_scope")
         campaign_id = (
             campaign_scope["campaign_id"] if campaign_scope is not None else None
@@ -6109,6 +9427,62 @@ class V5LifecycleManager:
             related_ids = {
                 item["result_research_id"] for item in scoped_receipts
             }
+            supervised_fact_ids: set[str] = set()
+            supervised_capabilities: dict[
+                tuple[str, str], dict[str, str]
+            ] = {}
+            supervised_authority: list[dict[str, Any]] = []
+            for descriptor in (scoped_receipts if current_closure else []):
+                receipt = source_authority_by_assignment[
+                    descriptor["assignment_id"]
+                ]
+                supervised_authority.append(receipt)
+                supervised_fact_ids.update(receipt["active_fact_ids"])
+                for capability in receipt["capabilities"]:
+                    key = (capability["path"], capability["sha256"])
+                    if key in supervised_capabilities:
+                        continue
+                    role_index = len(supervised_capabilities) + 1
+                    supervised_capabilities[key] = {
+                        "path": capability["path"],
+                        "sha256": capability["sha256"],
+                        "role": (
+                            f"supervised_input_{role_index:03d}:"
+                            f"{descriptor['assignment_id']}:"
+                            f"{capability['source_role']}"
+                        ),
+                    }
+                if scope == "source_scope":
+                    source_card = source_task_cards_by_assignment.get(
+                        descriptor["assignment_id"]
+                    )
+                    if source_card is None:
+                        raise ValueError(
+                            "source-scope supervision lacks its frozen production task card"
+                        )
+                    for capability in self._structured_source_evidence_capabilities_from_card(
+                        card=source_card,
+                        origin=f"{descriptor['assignment_id']}",
+                    ):
+                        key = (capability["path"], capability["sha256"])
+                        if key in supervised_capabilities:
+                            continue
+                        role_index = len(supervised_capabilities) + 1
+                        supervised_capabilities[key] = {
+                            "path": capability["path"],
+                            "sha256": capability["sha256"],
+                            "role": (
+                                f"supervised_input_{role_index:03d}:"
+                                f"{descriptor['assignment_id']}:"
+                                f"{capability['role']}"
+                            ),
+                        }
+            supervised_artifacts = list(supervised_capabilities.values())
+            if len(supervised_artifacts) > 256:
+                raise ValueError(
+                    "supervised production authority exceeds the task-card "
+                    "artifact capability limit"
+                )
             required_roles: set[str] = set()
             if scope == "program_math":
                 for descriptor in scoped_receipts:
@@ -6194,6 +9568,15 @@ class V5LifecycleManager:
                 ],
                 "truth_effect": "none",
             }
+            if current_closure:
+                payload.update(
+                    {
+                        "dependencies": sorted(supervised_fact_ids),
+                        "artifacts": supervised_artifacts,
+                        "source_dependent": bool(supervised_artifacts),
+                        "supervised_production_authority": supervised_authority,
+                    }
+                )
             if required_roles:
                 payload["decision_profile"] = dict(
                     V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE
@@ -6496,6 +9879,38 @@ class V5LifecycleManager:
         research_cycle: dict[str, Any] | None = None,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
+        """Plan one round while keeping incomplete materialization private."""
+
+        before = set(self.store.rounds_dir.glob(".round-*.staging-*"))
+        try:
+            return self._create_round_impl(
+                workers=workers,
+                mode=mode,
+                research_ids=research_ids,
+                campaign_id=campaign_id,
+                host_task_scope_id=host_task_scope_id,
+                background_chunk_ids=background_chunk_ids,
+                research_cycle=research_cycle,
+                _inspection_context=_inspection_context,
+            )
+        finally:
+            after = set(self.store.rounds_dir.glob(".round-*.staging-*"))
+            for path in sorted(after.difference(before)):
+                if path.is_dir() and not path.is_symlink():
+                    shutil.rmtree(path)
+
+    def _create_round_impl(
+        self,
+        *,
+        workers: int,
+        mode: str = "auto",
+        research_ids: list[str] | None = None,
+        campaign_id: str | None = None,
+        host_task_scope_id: str | None = None,
+        background_chunk_ids: list[str] | None = None,
+        research_cycle: dict[str, Any] | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
         inspection = self._bind_inspection_context(
             _inspection_context,
             create=True,
@@ -6601,18 +10016,12 @@ class V5LifecycleManager:
                 research_cycle is not None
                 and research_cycle["subround"] == "production"
             ):
-                selected = [
-                    item
-                    for item in self.frontier(
-                        limit=max(
-                            self._json_count(self.research_entries_dir),
-                            workers,
-                        ),
-                        campaign_id=campaign_id,
-                        _inspection_context=inspection,
-                    )
-                    if not self._production_entry_is_review_only(item)
-                ][:workers]
+                selected = self.frontier(
+                    limit=workers,
+                    campaign_id=campaign_id,
+                    _inspection_context=inspection,
+                    _exclude_production_review_only=True,
+                )
             else:
                 selected = self.frontier(
                     limit=workers,
@@ -6650,6 +10059,40 @@ class V5LifecycleManager:
 
         with self.store.v5_mutation_lock(command="plan-round"):
             self._validate_selected_execution_authority_liveness(selected)
+            # Re-read repair capabilities under the write boundary.  The
+            # preflight inspection may reuse immutable bytes, but publication
+            # must never rely on that snapshot after another writer could have
+            # changed the declared inputs.
+            for selected_record in selected:
+                selected_metadata = selected_record.get("metadata", {})
+                if not isinstance(selected_metadata, dict):
+                    raise ValueError("selected Research metadata is invalid")
+                self._validate_repair_input_capability_metadata(
+                    kind=selected_record["kind"],
+                    metadata=selected_metadata,
+                )
+            if (
+                research_ids is None
+                and research_cycle is not None
+                and research_cycle["subround"] == "production"
+            ):
+                lock_inspection = self._bind_inspection_context(
+                    RoundInspectionContext(),
+                    create=True,
+                )
+                assert lock_inspection is not None
+                newly_completed = (
+                    self._validated_completed_production_obligation_ids(
+                        {item["research_id"] for item in selected},
+                        _inspection_context=lock_inspection,
+                    )
+                )
+                if newly_completed:
+                    raise ValueError(
+                        "generic production frontier changed before round creation; "
+                        "completed Research obligations: "
+                        + ", ".join(sorted(newly_completed))
+                    )
             if (
                 research_cycle is not None
                 and research_cycle["subround"] == "supervision"
@@ -6716,10 +10159,25 @@ class V5LifecycleManager:
                 )
                 for research_id, record in source_records.items()
             }
+            typed_artifacts_by_research: dict[
+                str, list[dict[str, str]]
+            ] = {}
             for research_id, record in source_records.items():
+                typed_artifacts = self._typed_research_artifacts(
+                    record,
+                    _inspection_context=inspection,
+                )
+                # Validate the repair-specific path/SHA/role closure before a
+                # staging round directory or any other round byte is created.
+                self._validate_repair_task_capability_closure(
+                    record=record,
+                    related_artifacts=typed_artifacts,
+                    _inspection_context=inspection,
+                )
+                typed_artifacts_by_research[research_id] = typed_artifacts
                 if (
                     self._research_is_source_dependent(record)
-                    and not self._typed_research_artifacts(record)
+                    and not typed_artifacts
                     and not authority_snapshots[research_id]["capabilities"]
                 ):
                     raise ValueError(
@@ -6878,7 +10336,11 @@ class V5LifecycleManager:
                     snapshot_relpath=campaign_snapshot_relpath,
                     snapshot_sha256=sha256_bytes(campaign_snapshot_raw),
                 )
-            round_dir = self.store.rounds_dir / round_id
+            final_round_dir = self.store.rounds_dir / round_id
+            round_dir = self.store.rounds_dir / (
+                f".{round_id}.staging-"
+                f"{sha256_json([round_id, time.time_ns(), os.getpid()])[:12]}"
+            )
             assignments_dir = round_dir / "assignments"
             task_cards_dir = round_dir / "task-cards"
             returns_dir = round_dir / "returns"
@@ -6899,13 +10361,14 @@ class V5LifecycleManager:
                 and campaign_snapshot_relpath is not None
             ):
                 self.store._write_bytes_once(
-                    self.store.root / campaign_snapshot_relpath,
+                    context_dir / "campaign.snapshot.json",
                     campaign_snapshot_raw,
                 )
             project_background = self._freeze_project_background(
                 round_id=round_id,
                 raw=background_raw,
                 selected_chunk_ids=selected_background_chunks,
+                _materialized_round_dir=round_dir,
             )
 
             mode_status = self.store.reasoning_modes().status()
@@ -6958,9 +10421,19 @@ class V5LifecycleManager:
                 )
                 prompt_relpath = f"rounds/{round_id}/assignments/{assignment_id}.md"
                 task_card_relpath = f"rounds/{round_id}/task-cards/{assignment_id}.json"
+                # Keep the historical worker return contract stable.  The
+                # terminal seal is a separate immutable projection, so a
+                # current assignment does not need to change the path that
+                # existing worker/orchestrator code writes.
                 return_relpath = f"rounds/{round_id}/returns/{assignment_id}.json"
                 artifact_dir_relpath = f"rounds/{round_id}/artifacts/{assignment_id}"
                 work_dir_relpath = f"rounds/{round_id}/work/{assignment_id}"
+                # Materialize assignment-owned writer roots before dispatch.
+                # Terminalization can then revoke directory writes and atomic
+                # replacement instead of leaving a stale worker able to
+                # recreate a path after ingest.
+                (artifacts_dir / assignment_id).mkdir(exist_ok=False)
+                (work_dir / assignment_id).mkdir(exist_ok=False)
                 requested_spaces = entry["metadata"].get(
                     "blackboard_write_space_ids"
                 )
@@ -7016,7 +10489,9 @@ class V5LifecycleManager:
                 ]
                 research_context = []
                 related_artifacts: list[dict[str, str]] = []
-                related_artifacts.extend(self._typed_research_artifacts(entry))
+                related_artifacts.extend(
+                    typed_artifacts_by_research[entry["research_id"]]
+                )
                 for related_id in entry["related_research_ids"]:
                     related_record = self._inspection_research_record(
                         related_id,
@@ -7038,7 +10513,10 @@ class V5LifecycleManager:
                         }
                     )
                     related_artifacts.extend(
-                        self._typed_research_artifacts(related_record)
+                        self._typed_research_artifacts(
+                            related_record,
+                            _inspection_context=inspection,
+                        )
                     )
                 deduplicated_related_artifacts: dict[
                     tuple[str, str], dict[str, str]
@@ -7208,19 +10686,27 @@ class V5LifecycleManager:
                     **card_semantic,
                     "task_card_semantic_sha256": sha256_json(card_semantic),
                 }
-                card_path = self.store.root / task_card_relpath
+                card_path = task_cards_dir / f"{assignment_id}.json"
                 self.store._write_json_once(card_path, card)
                 self.validate_task_card(
                     card,
                     expected_path=card_path,
                     _runtime_validation_cache=runtime_validation_cache,
+                    _materialized_round_dir=round_dir,
                 )
                 task_card_sha = sha256_bytes(card_path.read_bytes())
                 prompt = self._compact_prompt(
                     card=card, task_card_sha256=task_card_sha
                 )
-                prompt_path = self.store.root / prompt_relpath
+                prompt_path = assignments_dir / f"{assignment_id}.md"
                 self.store._write_text_atomic(prompt_path, prompt)
+                writer_lease_id = self._writer_lease_id(
+                    round_id=round_id,
+                    assignment_id=assignment_id,
+                    task_card_sha256=task_card_sha,
+                    worker_context_id=worker_context_id,
+                    host_task_scope_id=host_task_scope_id,
+                )
                 assignment_semantic = {
                     "assignment_id": assignment_id,
                     "research_id": entry["research_id"],
@@ -7239,6 +10725,8 @@ class V5LifecycleManager:
                     "worker_context_id": worker_context_id,
                     "assignment_role": assignment_role,
                     "independent_adverse_pair": pair_binding,
+                    "terminal_seal_revision": V5_TERMINAL_SEAL_REVISION,
+                    "writer_lease_id": writer_lease_id,
                 }
                 assignment = {
                     **assignment_semantic,
@@ -7299,6 +10787,9 @@ class V5LifecycleManager:
                 "manifest_sha256": sha256_json(manifest_semantic),
             }
             self.store._write_json_once(round_dir / "round.json", manifest)
+            if final_round_dir.exists() or final_round_dir.is_symlink():
+                raise ValueError("V5 round target already exists")
+            os.replace(round_dir, final_round_dir)
         return self.round_status(
             round_id,
             _inspection_context=inspection,
@@ -7448,6 +10939,17 @@ class V5LifecycleManager:
                     "independent_adverse_pair",
                     "assignment_sha256",
                 }
+                if "terminal_seal_revision" in assignment:
+                    assignment_fields.add("terminal_seal_revision")
+                if "writer_lease_id" in assignment:
+                    assignment_fields.add("writer_lease_id")
+                if (
+                    ("terminal_seal_revision" in assignment)
+                    != ("writer_lease_id" in assignment)
+                ):
+                    raise ValueError(
+                        "current terminal assignments must bind exactly one writer lease"
+                    )
                 if set(assignment) != assignment_fields:
                     raise ValueError(
                         "current V5 assignment allocation fields are not exact"
@@ -7461,6 +10963,21 @@ class V5LifecycleManager:
                     or not assignment["worker_context_id"].strip()
                 ):
                     raise ValueError("V5 assignment host/context/role binding is invalid")
+                if (
+                    "terminal_seal_revision" in assignment
+                    and assignment["terminal_seal_revision"]
+                    != V5_TERMINAL_SEAL_REVISION
+                ):
+                    raise ValueError("V5 assignment terminal-seal revision is invalid")
+                if "terminal_seal_revision" in assignment:
+                    self._validate_writer_lease_id(
+                        assignment.get("writer_lease_id"),
+                        round_id=round_dir.name,
+                        assignment_id=assignment_id,
+                        task_card_sha256=assignment["task_card_sha256"],
+                        worker_context_id=assignment["worker_context_id"],
+                        host_task_scope_id=assignment["host_task_scope_id"],
+                    )
             assignment_semantic = {
                 key: value
                 for key, value in assignment.items()
@@ -7755,6 +11272,11 @@ class V5LifecycleManager:
             "architecture_observation_ids",
             "architecture_observation_policy",
         }
+        terminal_seal_fields = {
+            "terminal_seal_revision",
+            "terminal_seal_sha256",
+            "writer_lease_id",
+        }
         if not isinstance(receipt, dict):
             raise ValueError("V5 ingestion receipt must be one object")
         receipt_fields = set(receipt)
@@ -7763,6 +11285,10 @@ class V5LifecycleManager:
         has_architecture_observations = bool(
             receipt_fields.intersection(architecture_observation_fields)
         )
+        terminal_seal_required = (
+            assignment.get("terminal_seal_revision")
+            == V5_TERMINAL_SEAL_REVISION
+        )
         expected_fields = set(base_fields)
         if has_attack:
             expected_fields.update(attack_fields)
@@ -7770,6 +11296,8 @@ class V5LifecycleManager:
             expected_fields.update(program_math_fields)
         if has_architecture_observations:
             expected_fields.update(architecture_observation_fields)
+        if terminal_seal_required:
+            expected_fields.update(terminal_seal_fields)
         if receipt_fields != expected_fields:
             raise ValueError("V5 ingestion receipt fields are not exact")
         if (
@@ -7783,6 +11311,17 @@ class V5LifecycleManager:
             or receipt.get("outcome") not in V5_RETURN_OUTCOMES
         ):
             raise ValueError("V5 ingestion receipt binding is invalid")
+        if terminal_seal_required:
+            self._validate_writer_lease_id(
+                receipt.get("writer_lease_id"),
+                round_id=round_dir.name,
+                assignment_id=assignment_id,
+                task_card_sha256=assignment["task_card_sha256"],
+                worker_context_id=assignment["worker_context_id"],
+                host_task_scope_id=assignment["host_task_scope_id"],
+            )
+            if receipt["writer_lease_id"] != assignment.get("writer_lease_id"):
+                raise ValueError("V5 ingestion receipt writer lease drifted")
         for field_name in ("task_card_sha256", "return_sha256"):
             value = receipt.get(field_name)
             if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
@@ -7796,17 +11335,42 @@ class V5LifecycleManager:
             )
         )
         self._inspection_research_record(research_id, _inspection_context)
-        return_path = contained_path(
-            self.store.root,
-            assignment["return_relpath"],
-            "V5 ingested return path",
-        )
-        if (
-            return_path.is_symlink()
-            or not return_path.is_file()
-            or sha256_bytes(return_path.read_bytes()) != receipt["return_sha256"]
-        ):
-            raise ValueError("V5 ingested return bytes/hash mismatch")
+        if terminal_seal_required:
+            terminal_seal_sha256 = receipt.get("terminal_seal_sha256")
+            if (
+                receipt.get("terminal_seal_revision")
+                != V5_TERMINAL_SEAL_REVISION
+                or not isinstance(terminal_seal_sha256, str)
+                or SHA256_RE.fullmatch(terminal_seal_sha256) is None
+            ):
+                raise ValueError("V5 ingestion receipt terminal seal is invalid")
+            seal = self._validate_terminal_seal(
+                round_dir=round_dir,
+                assignment=assignment,
+                required=True,
+            )
+            assert seal is not None
+            if (
+                seal["seal_sha256"] != terminal_seal_sha256
+                or seal["sealed_return_sha256"] != receipt["return_sha256"]
+            ):
+                raise ValueError(
+                    "V5 ingestion receipt terminal seal is mismatched "
+                    "(return bytes/hash mismatch)"
+                )
+        else:
+            return_path = contained_path(
+                self.store.root,
+                assignment["return_relpath"],
+                "V5 ingested return path",
+            )
+            if (
+                return_path.is_symlink()
+                or not return_path.is_file()
+                or sha256_bytes(return_path.read_bytes())
+                != receipt["return_sha256"]
+            ):
+                raise ValueError("V5 ingested return bytes/hash mismatch")
 
         expected_effect = "one_cumulative_research_entry"
         if has_attack:
@@ -8055,8 +11619,25 @@ class V5LifecycleManager:
             assignment_id = assignment["assignment_id"]
             return_path = self.store.root / assignment["return_relpath"]
             receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+            terminal_source_diagnostics: list[str] = []
             if receipt_path.exists():
                 state = "ingested"
+                if (
+                    assignment.get("terminal_seal_revision")
+                    == V5_TERMINAL_SEAL_REVISION
+                ):
+                    seal = self._validate_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        required=True,
+                    )
+                    assert seal is not None
+                    terminal_source_diagnostics = (
+                        self._terminal_source_diagnostics(
+                            assignment=assignment,
+                            seal=seal,
+                        )
+                    )
             elif assignment_id in quarantined:
                 state = "quarantined"
             elif abort is not None:
@@ -8076,6 +11657,7 @@ class V5LifecycleManager:
                         self.store.root / assignment["prompt_relpath"]
                     ),
                     "return_path": str(return_path),
+                    "terminal_source_diagnostics": terminal_source_diagnostics,
                 }
             )
         status = {
@@ -8525,6 +12107,7 @@ class V5LifecycleManager:
         assignment_id: str,
         payload: Any,
         return_path: Path,
+        artifact_snapshots: list[TerminalArtifactSnapshot] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("V5 worker return must be one object")
@@ -8544,6 +12127,10 @@ class V5LifecycleManager:
         }
         round_dir, manifest = self._round_manifest(round_id)
         assignment = self._assignment(manifest, assignment_id)
+        terminal_seal_required = (
+            assignment.get("terminal_seal_revision")
+            == V5_TERMINAL_SEAL_REVISION
+        )
         card = self.store._read_json(
             self.store.root / assignment["task_card_relpath"]
         )
@@ -8650,6 +12237,10 @@ class V5LifecycleManager:
         total_bytes = 0
         seen_roles: set[str] = set()
         artifact_bytes_by_sha256: dict[str, bytes] = {}
+        artifact_bytes_by_path: dict[str, bytes] = {}
+        textual_c0_gate_enabled = self._task_card_skill_version_at_least(
+            card, (0, 7, 16)
+        )
         artifact_root = contained_path(
             self.store.root,
             capability["artifact_dir_relpath"],
@@ -8662,6 +12253,7 @@ class V5LifecycleManager:
                 raise ValueError("V5 worker artifact fields must be strings")
             if SHA256_RE.fullmatch(item["sha256"]) is None:
                 raise ValueError("V5 worker artifact hash is invalid")
+            role: str | None = None
             if assurance_enabled:
                 role = _require_nonempty_text(
                     item["role"], "V5 worker artifact role"
@@ -8680,7 +12272,24 @@ class V5LifecycleManager:
                 ) from exc
             if artifact_path.is_symlink() or not artifact_path.is_file():
                 raise ValueError("V5 worker artifact is missing or unsafe")
-            raw_artifact = artifact_path.read_bytes()
+            raw_artifact = artifact_bytes_by_path.get(item["path"])
+            if raw_artifact is None:
+                read_path = (
+                    self._lexical_contained_path(
+                        item["path"], "V5 worker artifact path"
+                    )
+                    if terminal_seal_required
+                    else artifact_path
+                )
+                raw_artifact = self._read_regular_bytes_once(
+                    read_path,
+                    label="V5 worker artifact",
+                    containment_root=(
+                        self.store.root if terminal_seal_required else None
+                    ),
+                    require_single_link=terminal_seal_required,
+                )
+                artifact_bytes_by_path[item["path"]] = raw_artifact
             size = len(raw_artifact)
             if size > capability["max_file_bytes"]:
                 raise ValueError("V5 worker artifact exceeds per-file cap")
@@ -8691,6 +12300,35 @@ class V5LifecycleManager:
             if existing_bytes is not None and existing_bytes != raw_artifact:
                 raise ValueError("V5 worker artifact SHA-256 collision")
             artifact_bytes_by_sha256[item["sha256"]] = raw_artifact
+            suffix = artifact_path.suffix.lower()
+            if textual_c0_gate_enabled and suffix in V5_TEXTUAL_ARTIFACT_SUFFIXES:
+                allowed_controls = (
+                    {0x0A, 0x0D}
+                    if suffix in V5_MARKDOWN_ARTIFACT_SUFFIXES
+                    else {0x09, 0x0A, 0x0D}
+                )
+                for offset, byte in enumerate(raw_artifact):
+                    if byte < 0x20 and byte not in allowed_controls:
+                        raise ValueError(
+                            "V5 worker textual artifact contains forbidden control "
+                            f"byte; role={role or 'untyped'}; path={item['path']}; "
+                            f"byte=0x{byte:02x}; offset={offset}"
+                        )
+            if (
+                assurance_enabled
+                and role == "candidate_fact"
+                and self._task_card_skill_version_at_least(card, (0, 7, 13))
+            ):
+                self._validate_candidate_fact_artifact_bytes(raw_artifact)
+            if artifact_snapshots is not None:
+                artifact_snapshots.append(
+                    TerminalArtifactSnapshot(
+                        source_relpath=item["path"],
+                        sha256=item["sha256"],
+                        role=role,
+                        raw=raw_artifact,
+                    )
+                )
         if total_bytes > capability["max_total_bytes"]:
             raise ValueError("V5 worker artifacts exceed total-byte cap")
         if assurance_enabled:
@@ -8709,6 +12347,71 @@ class V5LifecycleManager:
                 raise ValueError("V5 worker draft return is missing or unsafe")
         return payload
 
+    def _snapshot_return(
+        self,
+        *,
+        round_id: str,
+        assignment_id: str,
+        input_path: Path | None = None,
+        expected_sha256: str | None = None,
+    ) -> TerminalIngestSnapshot:
+        """Read, hash, parse, and validate one return/artifact snapshot once."""
+
+        _, manifest = self._round_manifest(round_id)
+        assignment = self._assignment(manifest, assignment_id)
+        canonical_return = self._lexical_contained_path(
+            assignment["return_relpath"], "V5 canonical worker return path"
+        )
+        if input_path is None:
+            return_path = canonical_return
+        else:
+            supplied = Path(input_path).expanduser()
+            return_path = (
+                supplied
+                if supplied.is_absolute()
+                else (Path.cwd() / supplied).absolute()
+            )
+        terminal_seal_required = (
+            assignment.get("terminal_seal_revision")
+            == V5_TERMINAL_SEAL_REVISION
+        )
+        canonical_input = return_path.absolute() == canonical_return.absolute()
+        raw_return = self._read_regular_bytes_once(
+            return_path,
+            label="V5 worker return",
+            containment_root=(
+                self.store.root
+                if terminal_seal_required and canonical_input
+                else None
+            ),
+            require_single_link=terminal_seal_required and canonical_input,
+        )
+        return_sha256 = sha256_bytes(raw_return)
+        if expected_sha256 is not None and return_sha256 != expected_sha256:
+            raise _WorkerFinalHashMismatch(
+                "worker final handoff hash does not match return bytes"
+            )
+        try:
+            payload = json.loads(raw_return.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("V5 worker return is not valid UTF-8 JSON") from exc
+        artifact_snapshots: list[TerminalArtifactSnapshot] = []
+        self._validate_return_payload(
+            round_id=round_id,
+            assignment_id=assignment_id,
+            payload=payload,
+            return_path=return_path,
+            artifact_snapshots=artifact_snapshots,
+        )
+        return TerminalIngestSnapshot(
+            return_path=return_path,
+            return_relpath=assignment["return_relpath"],
+            return_sha256=return_sha256,
+            return_bytes=raw_return,
+            payload=payload,
+            artifacts=tuple(artifact_snapshots),
+        )
+
     def preflight_return(
         self,
         *,
@@ -8717,32 +12420,18 @@ class V5LifecycleManager:
         input_path: Path | None = None,
     ) -> dict[str, Any]:
         self.store.reasoning_modes().require_work_unit_active(round_id)
-        _, manifest = self._round_manifest(round_id)
-        assignment = self._assignment(manifest, assignment_id)
-        return_path = (
-            Path(input_path).expanduser().resolve()
-            if input_path is not None
-            else (self.store.root / assignment["return_relpath"])
-        )
-        if return_path.is_symlink() or not return_path.is_file():
-            raise ValueError("V5 worker return is missing or unsafe")
-        try:
-            payload = json.loads(return_path.read_text(encoding="utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ValueError("V5 worker return is not valid UTF-8 JSON") from exc
-        self._validate_return_payload(
+        snapshot = self._snapshot_return(
             round_id=round_id,
             assignment_id=assignment_id,
-            payload=payload,
-            return_path=return_path,
+            input_path=input_path,
         )
         return {
             "valid": True,
             "round_id": round_id,
             "assignment_id": assignment_id,
-            "return_path": str(return_path),
-            "return_sha256": sha256_bytes(return_path.read_bytes()),
-            "outcome": payload["outcome"],
+            "return_path": str(snapshot.return_path),
+            "return_sha256": snapshot.return_sha256,
+            "outcome": snapshot.payload["outcome"],
         }
 
     def _quarantine(
@@ -9085,19 +12774,27 @@ class V5LifecycleManager:
         round_dir, manifest = self._round_manifest(round_id)
         assignment = self._assignment(manifest, assignment_id)
         receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
-        if receipt_path.exists():
-            return self.store._read_json(receipt_path)
-        self.store.reasoning_modes().require_work_unit_active(round_id)
         with self.store.v5_mutation_lock(command="ingest-return"):
+            if receipt_path.exists():
+                receipt = self._validated_ingest_receipt(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                )
+                if receipt["return_sha256"] != worker_final_sha256:
+                    raise ValueError(
+                        "terminal ingest conflict: assignment already finalized "
+                        "with a different return SHA-256"
+                    )
+                return {**receipt, "status": "ingested"}
+            self.store.reasoning_modes().require_work_unit_active(round_id)
             try:
-                preflight = self.preflight_return(
+                snapshot = self._snapshot_return(
                     round_id=round_id,
                     assignment_id=assignment_id,
+                    expected_sha256=worker_final_sha256,
                 )
-                if preflight["return_sha256"] != worker_final_sha256:
-                    raise ValueError(
-                        "worker final handoff hash does not match return bytes"
-                    )
+            except _WorkerFinalHashMismatch:
+                raise
             except Exception as exc:
                 quarantine = self._quarantine(
                     round_id=round_id,
@@ -9112,8 +12809,7 @@ class V5LifecycleManager:
                     "effect": quarantine["effect"],
                     "next_safe_command": quarantine["next_safe_command"],
                 }
-            return_path = self.store.root / assignment["return_relpath"]
-            payload = json.loads(return_path.read_text(encoding="utf-8"))
+            payload = snapshot.payload
             kind_by_outcome = {
                 "proof": "proof_attempt",
                 "counterexample": "counterexample",
@@ -9125,11 +12821,33 @@ class V5LifecycleManager:
             card = self.store._read_json(
                 self.store.root / assignment["task_card_relpath"]
             )
+            terminal_seal: dict[str, Any] | None = None
+            if (
+                assignment.get("terminal_seal_revision")
+                == V5_TERMINAL_SEAL_REVISION
+            ):
+                terminal_seal = self._prepare_terminal_seal(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    snapshot=snapshot,
+                )
             assurance_revision = (
                 card["assurance_contract"]["revision"]
                 if "assurance_contract" in card
                 else V5_LEGACY_ASSURANCE_CONTRACT_REVISION
             )
+            sealed_artifacts = [
+                {
+                    "path": item["sealed_path"],
+                    "sha256": item["sha256"],
+                    **({"role": item["role"]} if "role" in item else {}),
+                }
+                for item in (
+                    terminal_seal["artifacts"]
+                    if terminal_seal is not None
+                    else []
+                )
+            ]
             assurance_metadata: dict[str, Any] = {}
             if "assurance_contract" in card:
                 research_assurance = payload["research_assurance"]
@@ -9160,7 +12878,11 @@ class V5LifecycleManager:
                     "related_research_ids": [assignment["research_id"]],
                     "worker_outcome": payload["outcome"],
                     "narrative": payload["narrative"],
-                    "artifacts": payload["artifacts"],
+                    "artifacts": (
+                        sealed_artifacts
+                        if terminal_seal is not None
+                        else payload["artifacts"]
+                    ),
                     **(
                         {"campaign_id": card["campaign_id"]}
                         if card.get("campaign_id") is not None
@@ -9171,13 +12893,18 @@ class V5LifecycleManager:
                         "requested_claim_relation"
                     ],
                     "assignment_provenance": {
-                        "schema_version": 1,
+                        "schema_version": 2 if terminal_seal is not None else 1,
                         "round_id": round_id,
                         "assignment_id": assignment_id,
                         "worker_id": assignment["worker_id"],
                         "task_card_sha256": assignment["task_card_sha256"],
                         "work_mode": card["work_mode"],
                         "adverse_assignment": card["work_mode"] == "refute",
+                        **(
+                            {"writer_lease_id": assignment["writer_lease_id"]}
+                            if terminal_seal is not None
+                            else {}
+                        ),
                     },
                 },
                 actor=assignment["worker_id"],
@@ -9188,7 +12915,12 @@ class V5LifecycleManager:
                     "blackboard_snapshot_sha256": assignment[
                         "blackboard_snapshot_sha256"
                     ],
-                    "return_sha256": worker_final_sha256,
+                    "return_sha256": snapshot.return_sha256,
+                    **(
+                        {"writer_lease_id": assignment["writer_lease_id"]}
+                        if terminal_seal is not None
+                        else {}
+                    ),
                 },
                 assurance_contract_revision=assurance_revision,
             )
@@ -9208,7 +12940,7 @@ class V5LifecycleManager:
                         assignment=assignment,
                         payload=payload,
                         attack_research_id=research["research_id"],
-                        return_sha256=worker_final_sha256,
+                        return_sha256=snapshot.return_sha256,
                     )
                 elif payload["outcome"] == "counterexample":
                     attack_capture = self.store.adverse_routes().capture_counterexample(
@@ -9216,12 +12948,12 @@ class V5LifecycleManager:
                         assignment=assignment,
                         payload=payload,
                         counterexample_research_id=research["research_id"],
-                        return_sha256=worker_final_sha256,
+                        return_sha256=snapshot.return_sha256,
                     )
             architecture_observation_ids = self._capture_worker_chx_observations(
                 round_id=round_id,
                 assignment=assignment,
-                return_sha256=worker_final_sha256,
+                return_sha256=snapshot.return_sha256,
             )
             receipt_semantic = {
                 "schema_version": 5,
@@ -9230,11 +12962,19 @@ class V5LifecycleManager:
                 "round_id": round_id,
                 "assignment_id": assignment_id,
                 "task_card_sha256": assignment["task_card_sha256"],
-                "return_sha256": worker_final_sha256,
+                "return_sha256": snapshot.return_sha256,
                 "outcome": payload["outcome"],
                 "research_id": research["research_id"],
                 "effect": "one_cumulative_research_entry",
             }
+            if terminal_seal is not None:
+                receipt_semantic.update(
+                    {
+                        "terminal_seal_revision": V5_TERMINAL_SEAL_REVISION,
+                        "terminal_seal_sha256": terminal_seal["seal_sha256"],
+                        "writer_lease_id": assignment["writer_lease_id"],
+                    }
+                )
             if attack_capture is not None:
                 receipt_semantic.update(
                     {
@@ -10138,6 +13878,7 @@ class V5LifecycleManager:
         verification_plan: dict[str, Any],
         assurance_contract_revision: str,
         require_geometric_stage_typing: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> tuple[
         dict[str, Fact],
         dict[str, bytes],
@@ -10157,7 +13898,7 @@ class V5LifecycleManager:
             if errors:
                 raise ValueError("; ".join(errors))
             if fact.problem_id != self.store.project_id():
-                raise ValueError("Candidate Release Fact belongs to another project")
+                raise ValueError("Candidate Fact belongs to another project")
             raw = validate_fact_round_trip(fact).encode("utf-8")
             if fact.fact_id in facts:
                 raise ValueError("Candidate Release has a duplicate Fact id")
@@ -10212,7 +13953,9 @@ class V5LifecycleManager:
                 )
             facts[fact.fact_id] = fact
             rendered[fact.fact_id] = raw
-        active = self.store.facts()
+        active = self.store.facts(
+            _inspection_context=_inspection_context,
+        )
         collisions = sorted(set(facts).intersection(active))
         if collisions:
             raise ValueError(
@@ -10243,7 +13986,11 @@ class V5LifecycleManager:
         def interface_lookup(fact_id: str) -> dict[str, Any]:
             if fact_id in candidate_interfaces:
                 return candidate_interfaces[fact_id]
-            return self.store.statement_interface(fact_id, materialize=False)
+            return self.store.statement_interface(
+                fact_id,
+                materialize=False,
+                _inspection_context=_inspection_context,
+            )
 
         def legacy_premise_resolver(
             source_fact_id: str,
@@ -10436,15 +14183,10 @@ class V5LifecycleManager:
         seen: set[str] = set()
         for payload in fact_payloads:
             fact = Fact.from_dict(payload)
-            errors = fact.validate()
-            if errors:
-                raise ValueError("; ".join(errors))
-            if fact.problem_id != self.store.project_id():
-                raise ValueError("Candidate Release Fact belongs to another project")
+            raw = self._canonical_atomic_candidate_fact_bytes(fact)
             if fact.fact_id in seen:
                 raise ValueError("Candidate Release has a duplicate Fact id")
             seen.add(fact.fact_id)
-            raw = validate_fact_round_trip(fact).encode("utf-8")
             bindings.append(
                 {
                     "fact_id": fact.fact_id,
@@ -10452,6 +14194,148 @@ class V5LifecycleManager:
                 }
             )
         return sorted(bindings, key=lambda item: item["fact_id"])
+
+    def _canonical_atomic_candidate_fact_bytes(self, fact: Fact) -> bytes:
+        """Validate the cheap prospective Fact-byte and atomicity boundary."""
+
+        errors = fact.validate()
+        if errors:
+            raise ValueError("; ".join(errors))
+        if fact.problem_id != self.store.project_id():
+            raise ValueError("Candidate Fact belongs to another project")
+        clauses = extract_statement_clauses(fact.statement, require_v4=True)
+        if fact.semantic_interface:
+            placeholder = sha256_json(
+                ["v5-candidate-atomicity-interface", fact.fact_id]
+            )
+            semantic_interface = build_statement_interface(
+                fact=fact,
+                stored_fact_sha256=sha256_bytes(
+                    validate_fact_round_trip(fact).encode("utf-8")
+                ),
+                acceptance_event_sha256=placeholder,
+                admission_review_id=placeholder,
+                workflow_evidence_version=5,
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            semantic_components = [
+                item["semantic_contract"]
+                for item in semantic_interface["clauses"]
+                if item.get("semantic_contract", {}).get("component_kind")
+                in {"conclusion", "mathematical_claim", "empirical_hypothesis"}
+            ]
+            semantic_atoms = len(semantic_components)
+            atomicity_source = "semantic conclusion components"
+        else:
+            semantic_atoms = len(clauses)
+            atomicity_source = "[CLAIM:*] statement clauses"
+        if semantic_atoms != 1:
+            raise ValueError(
+                "Candidate Fact must expose exactly one semantic conclusion "
+                f"atom through {atomicity_source}; split separable conclusions "
+                "into separate Facts and bind their predecessor edges"
+            )
+        return validate_fact_round_trip(fact).encode("utf-8")
+
+    def _validate_candidate_fact_artifact_bytes(self, raw: bytes) -> Fact:
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("candidate_fact artifact must be UTF-8") from exc
+        try:
+            fact = parse_fact_markdown(text)
+            canonical = self._canonical_atomic_candidate_fact_bytes(fact)
+        except ValueError as exc:
+            raise ValueError(f"candidate_fact artifact is invalid: {exc}") from exc
+        if raw != canonical:
+            raise ValueError(
+                "candidate_fact artifact bytes are not the exact canonical Fact "
+                "Markdown serialization"
+            )
+        return fact
+
+    def _precheck_candidate_assurance_shape(
+        self,
+        *,
+        fact_payloads: Any,
+        assurance: Any,
+    ) -> list[dict[str, str]]:
+        """Reject local Candidate/assurance shape errors before global replay.
+
+        This projection is deliberately nonauthoritative.  It validates the
+        exact Candidate Fact identities needed by the already-cheap adverse
+        gate and checks only cardinality and internal-edge predicates that are
+        decidable from the submitted bytes.  The complete assurance validator
+        still runs after Research, source, artifact, and predecessor closure.
+        """
+
+        bindings = self._candidate_fact_fingerprints_for_adverse(fact_payloads)
+        if not isinstance(assurance, dict):
+            return bindings
+        granularity = assurance.get("validation_granularity")
+        if granularity not in V5_VALIDATION_GRANULARITIES:
+            return bindings
+        candidate_ids = {item["fact_id"] for item in bindings}
+        facts = [Fact.from_dict(item) for item in fact_payloads]
+        has_internal_edge = any(
+            predecessor in candidate_ids
+            for fact in facts
+            for predecessor in fact.predecessors
+        )
+        if granularity == "monolithic_theorem" and len(candidate_ids) != 1:
+            raise ValueError(
+                "monolithic_theorem requires exactly one candidate Fact"
+            )
+        if granularity == "atomic_fact_dag" and (
+            len(candidate_ids) < 2 or not has_internal_edge
+        ):
+            raise ValueError(
+                "atomic_fact_dag requires multiple candidates and an internal edge"
+            )
+        if granularity == "nodewise_proof_dag" and (
+            len(candidate_ids) < 2 or not has_internal_edge
+        ):
+            raise ValueError(
+                "nodewise_proof_dag requires multiple candidates and an internal edge"
+            )
+        return bindings
+
+    def _precheck_candidate_statement_interfaces(
+        self,
+        *,
+        fact_payloads: Any,
+        explicit_research_envelopes: list[dict[str, Any]],
+    ) -> None:
+        """Reject local current-assurance interface errors before global replay.
+
+        This is a rejection-only projection.  Immutable Research envelopes are
+        sufficient to prove that an explicitly selected branch uses the
+        current assurance contract, and the submitted Fact bytes are sufficient
+        to construct its statement interface.  Every surviving input is still
+        reconstructed after the complete Research and artifact closure.
+        """
+
+        if not any(
+            self._research_assurance_revision(record)
+            == V5_ASSURANCE_CONTRACT_REVISION
+            for record in explicit_research_envelopes
+        ):
+            return
+        if not isinstance(fact_payloads, list):
+            return
+        for payload in fact_payloads:
+            if not isinstance(payload, dict):
+                continue
+            fact = Fact.from_dict(payload)
+            errors = fact.validate()
+            if errors:
+                raise ValueError("; ".join(errors))
+            rendered = validate_fact_round_trip(fact).encode("utf-8")
+            self._candidate_interface(
+                fact,
+                rendered,
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
 
     def _lightweight_adverse_assignment_binding(
         self,
@@ -10649,42 +14533,17 @@ class V5LifecycleManager:
                 "fresh adverse task card does not bind the exact Candidate Fact bytes"
             )
 
-        receipt = self.store._read_json(receipt_path)
+        receipt = self._validated_ingest_receipt(
+            round_dir=round_dir,
+            assignment=assignment,
+        )
         if (
             not isinstance(receipt, dict)
-            or receipt.get("schema_version") != 5
-            or receipt.get("policy_revision") != V5_POLICY_REVISION
-            or receipt.get("project_id") != self.store.project_id()
-            or receipt.get("round_id") != round_id
-            or receipt.get("assignment_id") != assignment_id
             or receipt.get("task_card_sha256") != provenance["task_card_sha256"]
             or receipt.get("research_id") != adverse["research_id"]
             or receipt.get("return_sha256") != task_binding.get("return_sha256")
-            or receipt.get("outcome") not in V5_RETURN_OUTCOMES
-            or not isinstance(receipt.get("return_sha256"), str)
-            or SHA256_RE.fullmatch(receipt["return_sha256"]) is None
         ):
             raise ValueError("fresh adverse ingest receipt binding is invalid")
-        receipt_semantic = {
-            key: value
-            for key, value in receipt.items()
-            if key not in {"receipt_id", "created_at"}
-        }
-        if receipt.get("receipt_id") != "research-ingest-" + sha256_json(
-            receipt_semantic
-        ):
-            raise ValueError("fresh adverse ingest receipt hash mismatch")
-        return_path = contained_path(
-            self.store.root,
-            assignment.get("return_relpath"),
-            "fresh adverse return path",
-        )
-        if (
-            return_path.is_symlink()
-            or not return_path.is_file()
-            or sha256_bytes(return_path.read_bytes()) != receipt["return_sha256"]
-        ):
-            raise ValueError("fresh adverse return bytes/hash mismatch")
 
         return {
             "target_research_id": target["research_id"],
@@ -11028,8 +14887,25 @@ class V5LifecycleManager:
             raise ValueError(
                 "Candidate Release research ids must be nonempty and unique"
             )
+        candidate_fact_bindings = self._precheck_candidate_assurance_shape(
+            fact_payloads=payload.get("candidates"),
+            assurance=payload.get("requested_assurance"),
+        )
+        explicit_research_envelopes = [
+            self._research_record_envelope(item) for item in research_ids
+        ]
+        self._precheck_candidate_statement_interfaces(
+            fact_payloads=payload.get("candidates"),
+            explicit_research_envelopes=explicit_research_envelopes,
+        )
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
         explicit_research_records = [
-            self._research_record(item) for item in research_ids
+            self._inspection_research_record(item, inspection)
+            for item in research_ids
         ]
         supervision_review_only_ids = sorted(
             item["research_id"]
@@ -11051,11 +14927,15 @@ class V5LifecycleManager:
             )
         required_supervision_result_ids = (
             self._required_supervision_results_for_candidate(
-                explicit_research_records
+                explicit_research_records,
+                _inspection_context=inspection,
             )
         )
         all_research_records = {
-            item["research_id"]: item for item in self.research_records()
+            item["research_id"]: item
+            for item in self.research_records(
+                _inspection_context=inspection,
+            )
         }
         stale_routes = self._route_staleness(all_research_records)
         stale_selected = {
@@ -11073,7 +14953,8 @@ class V5LifecycleManager:
                 f"repair branch first: {details}"
             )
         research_records = self._release_research_records(
-            explicit_research_records
+            explicit_research_records,
+            _inspection_context=inspection,
         )
         bound_research_ids = {
             record["research_id"] for record in research_records
@@ -11087,9 +14968,6 @@ class V5LifecycleManager:
                 "supervision results: "
                 + ", ".join(missing_supervision_results)
             )
-        candidate_fact_bindings = self._candidate_fact_fingerprints_for_adverse(
-            payload.get("candidates")
-        )
         fresh_adverse_readiness = self._fresh_adverse_readiness(
             research_ids=research_ids,
             candidate_fact_bindings=candidate_fact_bindings,
@@ -11204,6 +15082,7 @@ class V5LifecycleManager:
             require_geometric_stage_typing=(
                 "geometric_stage_typing" in research_logic_signals
             ),
+            _inspection_context=inspection,
         )
         if candidate_fact_bindings != sorted(
             (
@@ -11239,9 +15118,14 @@ class V5LifecycleManager:
             validate_successor_contracts(
                 successor_input,
                 candidates=facts,
-                active_facts=self.store.facts(),
+                active_facts=self.store.facts(
+                    _inspection_context=inspection,
+                ),
                 active_fact_sha256=lambda fact_id: sha256_bytes(
-                    self.store.active_fact_path(fact_id).read_bytes()
+                    self.store.active_fact_path(
+                        fact_id,
+                        _inspection_context=inspection,
+                    ).read_bytes()
                 ),
             )
             if assurance_contract_revision == V5_ASSURANCE_CONTRACT_REVISION
@@ -11593,7 +15477,10 @@ class V5LifecycleManager:
             if research_id in disposed_ids:
                 raise ValueError("challenge disposition is duplicated")
             disposed_ids.add(research_id)
-            challenge = self._research_record(research_id)
+            challenge = self._inspection_research_record(
+                research_id,
+                inspection,
+            )
             if (
                 challenge["kind"]
                 not in {"challenge", "counterexample", "obstacle"}
@@ -11687,9 +15574,14 @@ class V5LifecycleManager:
                 artifacts=validation_artifacts,
                 authorized_artifact_roles=authorized_roles,
                 active_fact_file_sha256=lambda fact_id: sha256_bytes(
-                    self.store.active_fact_path(fact_id).read_bytes()
+                    self.store.active_fact_path(
+                        fact_id,
+                        _inspection_context=inspection,
+                    ).read_bytes()
                 ),
-                revoked_fact_ids=self.revoked_fact_ids(),
+                revoked_fact_ids=self.revoked_fact_ids(
+                    _inspection_context=inspection,
+                ),
             )
             if research_draft_preflight["normalized_assurance"] != assurance:
                 raise ValueError(
@@ -13107,7 +16999,15 @@ class V5LifecycleManager:
             raise ValueError(
                 "Certification Decision fields are not exact: missing=/release_id"
             )
-        release = self.release(release_id)
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
+        release = self.release(
+            release_id,
+            _inspection_context=inspection,
+        )
         strict_research_draft = _is_research_draft_assurance_revision(
             release["requested_assurance"].get("contract_revision")
         )
@@ -13124,7 +17024,11 @@ class V5LifecycleManager:
         )
         if payload.get("schema_version") != 5:
             raise ValueError("Certification Decision schema_version must be 5")
-        capsule = self.verifier_capsule(release["release_id"])
+        capsule = self.verifier_capsule(
+            release["release_id"],
+            _release=release,
+            _inspection_context=inspection,
+        )
         if (
             payload.get("release_sha256") != release["release_sha256"]
             or payload.get("capsule_sha256") != capsule["capsule_sha256"]
@@ -13459,6 +17363,27 @@ class V5LifecycleManager:
             # Recheck under the publication lock.  Besides making concurrent
             # submissions single-writer, this is the explicit retry boundary
             # that may finish a previously interrupted repair side effect.
+            locked_inspection = self._bind_inspection_context(
+                RoundInspectionContext(),
+                create=True,
+            )
+            assert locked_inspection is not None
+            locked_release = self.release(
+                release_id,
+                _inspection_context=locked_inspection,
+            )
+            locked_capsule = self.verifier_capsule(
+                release_id,
+                _release=locked_release,
+                _inspection_context=locked_inspection,
+            )
+            if (
+                locked_release["release_sha256"] != release["release_sha256"]
+                or locked_capsule["capsule_sha256"] != capsule["capsule_sha256"]
+            ):
+                raise ValueError(
+                    "Certification Release or capsule changed before publication"
+                )
             existing_for_release: list[dict[str, Any]] = []
             for path in sorted(
                 self.certification_decisions_dir.glob("decision-*.json")
@@ -13470,6 +17395,7 @@ class V5LifecycleManager:
                 existing = self.decision(
                     path.stem,
                     validate_bindings=False,
+                    _inspection_context=locked_inspection,
                 )
                 if existing["release_id"] == release["release_id"]:
                     existing_for_release.append(existing)
@@ -13878,37 +17804,250 @@ class V5LifecycleManager:
             if set(admitted_paths) != own_fact_ids:
                 raise ValueError("V5 admission Fact set drifted between validation phases")
 
+    def _provisional_active_fact_snapshot(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext,
+    ) -> tuple[dict[str, Fact], dict[str, Path]]:
+        """Build a command-local admission projection at a re-entry boundary.
+
+        The projection validates only immutable local Release, marker, and Fact
+        bytes.  It is never persisted and never completes active-Fact
+        validation.  Its sole purpose is to let descendant frozen task cards
+        compare their exact Fact authority while the outer frame remains
+        responsible for full Release, Research, Decision, successor, and
+        lineage replay.
+        """
+
+        revoked = self.revoked_fact_ids(
+            _inspection_context=_inspection_context
+        )
+        facts: dict[str, Fact] = {}
+        paths: dict[str, Path] = {}
+        if not self.admissions_dir.exists():
+            return facts, paths
+        for directory in sorted(self.admissions_dir.glob("release-*")):
+            if directory.is_symlink() or not directory.is_dir():
+                raise ValueError("V5 admission store contains an unsafe entry")
+            marker_path = directory / "ACCEPTED.json"
+            if not marker_path.exists():
+                continue
+            if marker_path.is_symlink() or not marker_path.is_file():
+                raise ValueError("V5 admission marker is missing or unsafe")
+            release_path = self._release_path(directory.name)
+            if release_path.is_symlink() or not release_path.is_file():
+                raise ValueError("V5 admission names a missing Candidate Release")
+            release = self.store._read_json(release_path)
+            if not isinstance(release, dict):
+                raise ValueError("Candidate Release record must be one object")
+            release_record_only = {
+                "release_id",
+                "release_sha256",
+                "created_at",
+                "record_sha256",
+            }
+            release_semantic = {
+                key: value
+                for key, value in release.items()
+                if key not in release_record_only
+            }
+            release_sha = sha256_json(release_semantic)
+            if (
+                release.get("schema_version") != 5
+                or release.get("policy_revision") != V5_POLICY_REVISION
+                or release.get("project_id") != self.store.project_id()
+                or release.get("truth_effect") != "none"
+                or release.get("release_id") != directory.name
+                or release.get("release_id") != "release-" + release_sha
+                or release.get("release_sha256") != release_sha
+            ):
+                raise ValueError("Candidate Release local identity is invalid")
+            release_without_hash = {
+                key: value
+                for key, value in release.items()
+                if key != "record_sha256"
+            }
+            if release.get("record_sha256") != sha256_json(
+                release_without_hash
+            ):
+                raise ValueError("Candidate Release local record hash mismatch")
+            candidates = release.get("candidates")
+            if not isinstance(candidates, list) or not candidates:
+                raise ValueError("Candidate Release candidates are invalid")
+            candidate_by_id: dict[str, dict[str, Any]] = {}
+            candidate_order: list[str] = []
+            for candidate in candidates:
+                if not isinstance(candidate, dict) or set(candidate) != {
+                    "fact_id",
+                    "fact_sha256",
+                    "fact_markdown",
+                }:
+                    raise ValueError(
+                        "Candidate Release candidate fields are not exact"
+                    )
+                raw = candidate["fact_markdown"].encode("utf-8")
+                if sha256_bytes(raw) != candidate["fact_sha256"]:
+                    raise ValueError("Candidate Release Fact bytes/hash mismatch")
+                fact = parse_fact_markdown(candidate["fact_markdown"])
+                if fact.fact_id != candidate["fact_id"]:
+                    raise ValueError("Candidate Release Fact id mismatch")
+                if fact.fact_id in candidate_by_id:
+                    raise ValueError("Candidate Release Fact ids are duplicated")
+                candidate_order.append(fact.fact_id)
+                candidate_by_id[fact.fact_id] = candidate
+            if candidate_order != release.get("fact_ids"):
+                raise ValueError("Candidate Release Fact order is inconsistent")
+
+            marker = self.store._read_json(marker_path)
+            marker_required = {
+                "schema_version",
+                "policy_revision",
+                "project_id",
+                "release_id",
+                "release_sha256",
+                "decision_id",
+                "decision_sha256",
+                "capsule_sha256",
+                "fact_ids",
+                "fact_sha256",
+                "gateway",
+                "reviewer",
+                "accepted_at",
+                "acceptance_id",
+            }
+            if _is_research_draft_assurance_revision(
+                release.get("requested_assurance", {}).get(
+                    "contract_revision"
+                )
+            ):
+                marker_required.update(
+                    {
+                        "parallel_verification_aggregate_id",
+                        "parallel_verification_aggregate_record_sha256",
+                    }
+                )
+            if not isinstance(marker, dict) or set(marker) != marker_required:
+                raise ValueError("V5 admission marker fields are not exact")
+            marker_semantic = {
+                key: value
+                for key, value in marker.items()
+                if key != "acceptance_id"
+            }
+            if (
+                marker.get("schema_version") != 5
+                or marker.get("policy_revision") != V5_POLICY_REVISION
+                or marker.get("project_id") != self.store.project_id()
+                or marker.get("release_id") != directory.name
+                or marker.get("release_sha256") != release_sha
+                or marker.get("fact_ids") != candidate_order
+                or marker.get("acceptance_id")
+                != "acceptance-" + sha256_json(marker_semantic)
+            ):
+                raise ValueError("V5 admission local identity is invalid")
+            _parse_utc_timestamp(
+                marker.get("accepted_at"), label="V5 admission accepted_at"
+            )
+            expected_sha = {
+                fact_id: candidate_by_id[fact_id]["fact_sha256"]
+                for fact_id in candidate_order
+            }
+            if marker.get("fact_sha256") != expected_sha:
+                raise ValueError("V5 admission local Fact hash map mismatch")
+            for fact_id in candidate_order:
+                path = directory / "facts" / f"{fact_id}.md"
+                candidate = candidate_by_id[fact_id]
+                if (
+                    path.is_symlink()
+                    or not path.is_file()
+                    or path.read_text(encoding="utf-8")
+                    != candidate["fact_markdown"]
+                    or sha256_bytes(path.read_bytes())
+                    != candidate["fact_sha256"]
+                ):
+                    raise ValueError(
+                        "V5 admitted Fact bytes differ from Candidate Release"
+                    )
+                fact = parse_fact_markdown(candidate["fact_markdown"])
+                errors = fact.validate()
+                if errors:
+                    raise ValueError(
+                        f"invalid provisionally visible V5 Fact {fact_id}: "
+                        + "; ".join(errors)
+                    )
+                if (
+                    fact.fact_id != fact_id
+                    or fact.problem_id != self.store.project_id()
+                ):
+                    raise ValueError(
+                        "provisionally visible V5 Fact id/project mismatch"
+                    )
+                if fact_id in revoked:
+                    continue
+                if fact_id in paths:
+                    raise ValueError(
+                        f"V5 Fact {fact_id} has multiple active admissions"
+                    )
+                paths[fact_id] = path
+                facts[fact_id] = fact
+        return facts, paths
+
     def active_fact_paths(
         self,
         *,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Path]:
         _inspection_context = self._bind_inspection_context(
-            _inspection_context
+            _inspection_context,
+            create=True,
         )
+        assert _inspection_context is not None
         if (
-            _inspection_context is not None
-            and _inspection_context.active_fact_paths is not None
+            _inspection_context.active_fact_paths is not None
         ):
             return _inspection_context.active_fact_paths
-        facts, paths = self._lineage_snapshot(
-            _inspection_context=_inspection_context
-        )
-        self._validate_lineage_snapshot(
-            facts,
-            paths,
-            _inspection_context=_inspection_context,
-        )
-        if _inspection_context is not None:
+        if _inspection_context.active_fact_validation_in_progress:
+            facts, paths = self._provisional_active_fact_snapshot(
+                _inspection_context=_inspection_context
+            )
             _inspection_context.active_fact_paths = paths
             _inspection_context.active_facts = facts
-        return paths
+            return paths
+        _inspection_context.active_fact_validation_in_progress = True
+        try:
+            facts, paths = self._lineage_snapshot(
+                _inspection_context=_inspection_context
+            )
+            self._validate_lineage_snapshot(
+                facts,
+                paths,
+                _inspection_context=_inspection_context,
+            )
+            provisional_paths = _inspection_context.active_fact_paths
+            provisional_facts = _inspection_context.active_facts
+            if provisional_paths is not None and provisional_paths != paths:
+                raise ValueError(
+                    "provisional active-Fact paths drifted from full validation"
+                )
+            if provisional_facts is not None and provisional_facts != facts:
+                raise ValueError(
+                    "provisional active-Fact content drifted from full validation"
+                )
+            _inspection_context.active_fact_paths = paths
+            _inspection_context.active_facts = facts
+            return paths
+        except Exception:
+            _inspection_context.active_fact_paths = None
+            _inspection_context.active_facts = None
+            raise
+        finally:
+            _inspection_context.active_fact_validation_in_progress = False
 
     def _preflight_post_admission_history(
         self,
         *,
         release: dict[str, Any],
         accepted_at: str,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
         """Prove that a prospective admission cannot rewrite sealed history.
 
@@ -13917,6 +18056,11 @@ class V5LifecycleManager:
         absent from every already-sealed release snapshot.
         """
 
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert _inspection_context is not None
         accepted = _parse_utc_timestamp(
             accepted_at, label="prospective V5 admission accepted_at"
         )
@@ -13928,7 +18072,10 @@ class V5LifecycleManager:
         for path in sorted(self.candidate_releases_dir.glob("release-*.json")):
             if path.is_symlink() or not path.is_file():
                 raise ValueError("V5 Candidate Release store contains an unsafe entry")
-            historical = self.release(path.stem)
+            historical = self.release(
+                path.stem,
+                _inspection_context=_inspection_context,
+            )
             historical_created = _parse_utc_timestamp(
                 historical.get("created_at"), label="Candidate Release created_at"
             )
@@ -13936,8 +18083,14 @@ class V5LifecycleManager:
                 raise ValueError(
                     "prospective V5 admission does not postdate sealed release history"
                 )
-        facts, paths = self._lineage_snapshot()
-        self._validate_lineage_snapshot(facts, paths)
+        facts, paths = self._lineage_snapshot(
+            _inspection_context=_inspection_context,
+        )
+        self._validate_lineage_snapshot(
+            facts,
+            paths,
+            _inspection_context=_inspection_context,
+        )
 
     def fact_admit(
         self,
@@ -13947,19 +18100,46 @@ class V5LifecycleManager:
         gateway: str,
     ) -> dict[str, Any]:
         gateway = _require_nonempty_text(gateway, "V5 admission gateway")
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
         directory = self._admission_dir(release_id)
         marker_path = directory / "ACCEPTED.json"
         if marker_path.exists():
-            marker, _ = self._validated_admission(release_id)
+            marker, _ = self._validated_admission(
+                release_id,
+                _inspection_context=inspection,
+            )
             if marker["decision_id"] != decision_id or marker["gateway"] != gateway:
                 raise ValueError(
                     "Candidate Release was already admitted with different evidence"
                 )
-            self._materialize_admission_projections(marker)
+            admitted_release = self.release(
+                release_id,
+                _inspection_context=inspection,
+            )
+            self._materialize_admission_projections(
+                marker,
+                release=admitted_release,
+            )
             return marker
-        release = self.release(release_id, _deep_dependencies=True)
-        decision = self.decision(decision_id, validate_bindings=False)
-        capsule = self.verifier_capsule(release_id)
+        release = self.release(
+            release_id,
+            _deep_dependencies=True,
+            _inspection_context=inspection,
+        )
+        decision = self.decision(
+            decision_id,
+            validate_bindings=False,
+            _inspection_context=inspection,
+        )
+        capsule = self.verifier_capsule(
+            release_id,
+            _release=release,
+            _inspection_context=inspection,
+        )
         if (
             decision["release_id"] != release_id
             or decision["verdict"] != "correct"
@@ -14027,6 +18207,7 @@ class V5LifecycleManager:
                 "geometric_stage_typing"
                 in release.get("applicable_assurance_checks", [])
             ),
+            _inspection_context=inspection,
         )
         if (
             order != release["fact_ids"]
@@ -14085,8 +18266,19 @@ class V5LifecycleManager:
         )
         self._preflight_admission_projections(projection_plan)
         with self.store.v5_mutation_lock(command="fact-admit"):
+            # The publication phase gets a fresh snapshot under the mutation
+            # lock.  Consumers inside that phase share it, but no pre-lock
+            # authority cache is promoted across the liveness boundary.
+            locked_inspection = self._bind_inspection_context(
+                RoundInspectionContext(),
+                create=True,
+            )
+            assert locked_inspection is not None
             if marker_path.exists():
-                existing, _ = self._validated_admission(release_id)
+                existing, _ = self._validated_admission(
+                    release_id,
+                    _inspection_context=locked_inspection,
+                )
                 if (
                     existing["decision_id"] != decision_id
                     or existing["gateway"] != gateway
@@ -14094,11 +18286,19 @@ class V5LifecycleManager:
                     raise ValueError(
                         "Candidate Release was already admitted with different evidence"
                     )
-                self._materialize_admission_projections(existing)
+                admitted_release = self.release(
+                    release_id,
+                    _inspection_context=locked_inspection,
+                )
+                self._materialize_admission_projections(
+                    existing,
+                    release=admitted_release,
+                )
                 return existing
             self._preflight_post_admission_history(
                 release=release,
                 accepted_at=accepted_at,
+                _inspection_context=locked_inspection,
             )
             facts_dir = directory / "facts"
             facts_dir.mkdir(parents=True, exist_ok=True)

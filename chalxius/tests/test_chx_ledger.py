@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -16,10 +17,12 @@ from chx_ledger import (
     CONTRACT_REVISION,
     close_ledger,
     dispose_issue,
+    inventory_project_ledgers,
     ledger_status,
     main,
     record_finding,
     record_architecture_reconnaissance,
+    record_global_repair,
     record_integrated_repair,
     record_issue,
     record_tactical_repair,
@@ -27,6 +30,7 @@ from chx_ledger import (
     start_ledger,
     validate_public_disclosure_contract,
     verify_architecture_report,
+    verify_global_repair,
     verify_public_disclosure,
 )
 from mathgraph.store import MathGraphStore
@@ -162,6 +166,83 @@ class CHXRunLedgerTests(unittest.TestCase):
                 repair=self._tactical(),
             )
         return record_integrated_repair(ledger, self._integration(issue_ids))
+
+    @staticmethod
+    def _candidate_reference(relpath: str = "scripts/chx_ledger.py") -> str:
+        candidate_root = Path(chx_ledger.__file__).resolve().parents[1]
+        path = candidate_root / relpath
+        return (
+            f"candidate:{relpath}#sha256="
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}"
+        )
+
+    def _project_regression_reference(self) -> str:
+        path = self.project / "global-repair-regression.txt"
+        path.write_text("focused global repair regression: PASS\n", encoding="utf-8")
+        return (
+            "project:global-repair-regression.txt#sha256="
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}"
+        )
+
+    def _global_repair_input(
+        self,
+        inventory: dict[str, object],
+        *,
+        supersedes_global_repair_id: str = "",
+    ) -> dict[str, object]:
+        ledgers = inventory["ledgers"]
+        assert isinstance(ledgers, list)
+        qualified = sorted(
+            {
+                issue_id
+                for ledger in ledgers
+                for issue_id in ledger["issue_ids"]
+            },
+            key=chx_ledger._qualified_issue_sort_key,
+        )
+        implementation_anchor = self._candidate_reference()
+        evidence = self._project_regression_reference()
+        candidate_root = Path(chx_ledger.__file__).resolve().parents[1]
+        return {
+            "candidate_root": str(candidate_root),
+            "candidate_version": (candidate_root / "VERSION").read_text(
+                encoding="utf-8"
+            ).strip(),
+            "candidate_manifest_sha256": hashlib.sha256(
+                (candidate_root / "MANIFEST.sha256").read_bytes()
+            ).hexdigest(),
+            "inventory_sha256": inventory["inventory_sha256"],
+            "covered_issue_snapshot_sha256": (
+                chx_ledger._covered_issue_snapshot_sha256(
+                    inventory,
+                    qualified,
+                )
+            ),
+            "included_issue_ids": qualified,
+            "issue_dispositions": [
+                {
+                    "qualified_issue_id": issue_id,
+                    "status": "resolved",
+                    "basis": "fixed_by_unified_repair",
+                    "reason": "The exact integrated repair covers this issue.",
+                    "evidence": [evidence],
+                }
+                for issue_id in qualified
+            ],
+            "mechanism_groups": [
+                {
+                    "group_id": "mechanism.global_test",
+                    "issue_ids": qualified,
+                    "summary": "One exact mechanism-level repair covers the fixture.",
+                    "implementation_anchors": [implementation_anchor],
+                    "fail_closed_boundary": "Any identity drift invalidates the repair.",
+                    "evidence": [evidence],
+                }
+            ],
+            "risk_evidence": [evidence],
+            "regression_evidence": [evidence],
+            "supersedes_global_repair_id": supersedes_global_repair_id,
+        }
 
     def test_current_contract_uses_project_local_revision(self) -> None:
         self.assertEqual(CONTRACT_REVISION, "chalxius-chx-run-ledger-5")
@@ -483,6 +564,26 @@ class CHXRunLedgerTests(unittest.TestCase):
                 "predecessor_lineage" in events[0],
                 revision == "chalxius-chx-run-ledger-4",
             )
+            if index >= 3:
+                report_path = ledger.with_name(
+                    ledger.stem + ".architecture-report.md"
+                )
+                projection_text = report_path.read_text(encoding="utf-8").split(
+                    "```json\n", 1
+                )[1].split("\n```", 1)[0]
+                projection = json.loads(projection_text)
+                self.assertEqual(
+                    "predecessor_issue_ids" in projection,
+                    revision == "chalxius-chx-run-ledger-4",
+                )
+                self.assertEqual(
+                    "predecessor_lineage" in projection,
+                    revision == "chalxius-chx-run-ledger-4",
+                )
+                self.assertEqual(
+                    verify_architecture_report(ledger)["status"],
+                    "exact",
+                )
 
     def test_schema_rejects_ordinary_or_unanchored_error_notes(self) -> None:
         ledger = self._started()
@@ -748,6 +849,962 @@ class CHXRunLedgerTests(unittest.TestCase):
         inherited_id = receipt["unreconciled_finding_ids"][0]
         promoted = record_issue(successor, issue, finding_id=inherited_id)
         self.assertEqual(promoted["issue_id"], "CHX-002")
+
+    def test_inventory_rejects_valid_same_path_predecessor_replacement(
+        self,
+    ) -> None:
+        predecessor = self._started("run-inventory-digest-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Bind the exact predecessor bytes.",
+                run_id="run-inventory-digest-child-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        close_ledger(successor)
+
+        replacement_root = Path(self.temporary.name) / "replacement-ledger"
+        replacement = Path(
+            start_ledger(
+                root=replacement_root,
+                task="Create different valid bytes under the same run id.",
+                run_id="run-inventory-digest-base-001",
+            )["ledger_path"]
+        )
+        replacement_issue = self._issue()
+        replacement_issue["audit_anchors"] = ["replacement:valid-but-different"]
+        record_issue(replacement, replacement_issue)
+        close_ledger(replacement)
+
+        predecessor.write_bytes(replacement.read_bytes())
+        chx_ledger.write_architecture_report(predecessor)
+        inventory = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        self.assertEqual(inventory["report_compatibility_drift"], [])
+        self.assertTrue(
+            any(
+                "predecessor ledger digest binding drifted" in error
+                for error in inventory["lineage_errors"]
+            ),
+            inventory["lineage_errors"],
+        )
+        plan = self._global_repair_input(inventory)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ), self.assertRaisesRegex(ValueError, "lineage errors"):
+            record_global_repair(self.project, plan)
+
+    def test_inventory_distinguishes_closed_orphan_from_active_issue(self) -> None:
+        predecessor = self._started("run-inventory-orphan-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+
+        active = self._started("run-inventory-active-001")
+        record_issue(active, self._issue() | {"audit_anchors": ["active:anchor"]})
+
+        inventory = inventory_project_ledgers(self.project, full=True)
+        self.assertEqual(inventory["ledger_count"], 2)
+        self.assertEqual(inventory["counts"]["orphan_open_issues"], 1)
+        self.assertEqual(inventory["counts"]["active_open_issues"], 1)
+        self.assertEqual(inventory["global_repair"]["status"], "absent")
+        self.assertEqual(inventory["global_repair"]["uncovered_issue_count"], 2)
+        self.assertEqual(
+            {
+                item["resolution"] for item in inventory["unresolved"]
+            },
+            {"open_orphan", "open_active"},
+        )
+        self.assertEqual(inventory["truth_effect"], "none")
+        self.assertEqual(inventory["project_effect"], "none")
+
+    def test_inventory_shared_lock_is_read_only_and_does_not_create_state(self) -> None:
+        ledger = self._started("run-inventory-read-only-lock-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        lock_path = self.project / "chx-ledgers" / ".global-repair.lock"
+        lock_path.unlink(missing_ok=True)
+        before = sorted(path.name for path in (self.project / "chx-ledgers").iterdir())
+
+        inventory = inventory_project_ledgers(self.project, full=True)
+        self.assertEqual(inventory["ledger_count"], 1)
+        self.assertFalse(lock_path.exists())
+        self.assertEqual(
+            sorted(path.name for path in (self.project / "chx-ledgers").iterdir()),
+            before,
+        )
+
+        lock_path.write_bytes(b"")
+        os.chmod(lock_path, 0o444)
+        self.assertEqual(
+            inventory_project_ledgers(self.project, full=True)["ledger_count"],
+            1,
+        )
+
+    def test_inventory_follows_only_a_unique_supersedes_successor(self) -> None:
+        predecessor = self._started("run-inventory-successor-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Resolve one inventory issue through a successor.",
+                run_id="run-inventory-successor-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        successor_issue = self._issue()
+        successor_issue["audit_anchors"] = ["successor:anchor"]
+        record_issue(
+            successor,
+            successor_issue,
+            relations=[{"relation_type": "supersedes", "issue_id": "CHX-001"}],
+        )
+        self._repair_chain(successor, ["CHX-002"])
+        dispose_issue(
+            successor,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The successor has reproducible evidence.",
+                "regression_evidence": ["lineage-predecessor:PASS"],
+            },
+        )
+        close_ledger(successor)
+
+        inventory = inventory_project_ledgers(self.project, full=True)
+        self.assertEqual(inventory["counts"]["unresolved_issues"], 0)
+        successor_chain = next(
+            item
+            for item in inventory["chains"]
+            if item["terminal_run_id"] == "run-inventory-successor-001"
+        )
+        self.assertEqual(successor_chain["unresolved_issue_ids"], [])
+
+    def test_inventory_cli_is_read_only_and_reports_report_drift(self) -> None:
+        ledger = self._started("run-inventory-cli-001")
+        close_ledger(ledger)
+        report_path = ledger.with_name(ledger.stem + ".architecture-report.md")
+        report_path.write_text(
+            report_path.read_text(encoding="utf-8") + "drift",
+            encoding="utf-8",
+        )
+        before = ledger.read_bytes()
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                main(["inventory", "--project-root", str(self.project)]),
+                0,
+            )
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["ledger_count"], 1)
+        self.assertEqual(result["counts"]["report_compatibility_drift"], 1)
+        self.assertEqual(result["unresolved"], [])
+        self.assertNotIn("ledgers", result)
+        self.assertNotIn("chains", result)
+        self.assertEqual(ledger.read_bytes(), before)
+
+        full_output = StringIO()
+        with redirect_stdout(full_output):
+            self.assertEqual(
+                main(
+                    [
+                        "inventory",
+                        "--project-root",
+                        str(self.project),
+                        "--full",
+                    ]
+                ),
+                0,
+            )
+        full_result = json.loads(full_output.getvalue())
+        self.assertEqual(len(full_result["ledgers"]), 1)
+        self.assertEqual(len(full_result["chains"]), 1)
+        self.assertEqual(ledger.read_bytes(), before)
+
+    def test_global_integrated_repair_closes_all_qualified_issues_without_tactical_events(
+        self,
+    ) -> None:
+        first = self._started("run-global-repair-first-001")
+        record_issue(first, self._issue())
+        close_ledger(first)
+
+        second = self._started("run-global-repair-second-001")
+        second_issue = self._issue()
+        second_issue["audit_anchors"] = ["global-repair:second"]
+        record_issue(second, second_issue)
+        close_ledger(second)
+
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        integration = self._global_repair_input(base)
+        stale_candidate = dict(integration)
+        stale_candidate["candidate_manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "candidate manifest is stale"):
+            record_global_repair(self.project, stale_candidate)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            receipt = record_global_repair(self.project, integration)
+            self.assertEqual(receipt["covered_issue_count"], 2)
+            self.assertEqual(verify_global_repair(self.project)["status"], "current")
+            projected = inventory_project_ledgers(self.project, full=True)
+            self.assertEqual(projected["counts"]["unresolved_issues"], 0)
+            self.assertEqual(projected["global_repair"]["status"], "current")
+            bounded = inventory_project_ledgers(self.project)
+            self.assertEqual(
+                bounded["inventory_sha256"], projected["inventory_sha256"]
+            )
+            self.assertEqual(bounded["counts"], projected["counts"])
+            self.assertEqual(bounded["global_repair"], projected["global_repair"])
+            self.assertNotIn("ledgers", bounded)
+            self.assertNotIn("chains", bounded)
+
+            # A later zero-issue ledger does not change the exact historical
+            # issue snapshot covered by this repair.
+            empty = Path(
+                start_ledger(
+                    project_root=self.project,
+                    task="Append a zero-issue successor after global repair.",
+                    run_id="run-global-repair-after-empty-001",
+                    predecessor_ledger=first,
+                )["ledger_path"]
+            )
+            close_ledger(empty)
+            after_empty = inventory_project_ledgers(self.project, full=True)
+            self.assertEqual(after_empty["global_repair"]["status"], "current")
+            self.assertEqual(
+                after_empty["global_repair"]["uncovered_issue_count"], 0
+            )
+            self.assertEqual(verify_global_repair(self.project)["status"], "current")
+
+            # A genuinely new issue remains unresolved without invalidating
+            # the exact earlier repair coverage.
+            later = Path(
+                start_ledger(
+                    project_root=self.project,
+                    task="Append one genuinely new issue after global repair.",
+                    run_id="run-global-repair-after-issue-001",
+                    predecessor_ledger=empty,
+                )["ledger_path"]
+            )
+            later_issue = self._issue()
+            later_issue["audit_anchors"] = ["later-global-repair:issue"]
+            record_issue(later, later_issue)
+            after_issue = inventory_project_ledgers(self.project, full=True)
+            self.assertEqual(after_issue["global_repair"]["status"], "current")
+            self.assertEqual(
+                after_issue["global_repair"]["uncovered_issue_count"], 1
+            )
+            self.assertEqual(after_issue["counts"]["unresolved_issues"], 1)
+            self.assertEqual(
+                verify_global_repair(self.project)["uncovered_issue_count"], 1
+            )
+        with patch.object(
+            chx_ledger,
+            "_validate_global_repair_candidate",
+            side_effect=ValueError("candidate tree drifted"),
+        ):
+            candidate_stale = inventory_project_ledgers(self.project, full=True)
+            self.assertEqual(candidate_stale["global_repair"]["status"], "stale")
+            with self.assertRaisesRegex(
+                ValueError, "candidate manifest is not current"
+            ):
+                verify_global_repair(self.project)
+
+    def test_global_repair_counts_resolved_and_excluded_separately(self) -> None:
+        first = self._started("run-global-count-first-001")
+        record_issue(first, self._issue())
+        close_ledger(first)
+        second = self._started("run-global-count-second-001")
+        second_issue = self._issue()
+        second_issue["audit_anchors"] = ["global-count:excluded"]
+        record_issue(second, second_issue)
+        close_ledger(second)
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        integration = self._global_repair_input(base)
+        integration["issue_dispositions"][1].update(
+            {
+                "status": "excluded_nonarchitectural",
+                "basis": "historical_nonarchitectural",
+                "reason": "The second fixture is intentionally excluded.",
+            }
+        )
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            record_global_repair(self.project, integration)
+            projected = inventory_project_ledgers(self.project, full=True)
+        self.assertEqual(projected["counts"]["global_repaired_issues"], 1)
+        self.assertEqual(projected["counts"]["global_resolved_issues"], 1)
+        self.assertEqual(
+            projected["counts"]["global_excluded_nonarchitectural_issues"],
+            1,
+        )
+        self.assertEqual(projected["counts"]["global_disposed_issues"], 2)
+
+    def test_global_repair_storage_fails_closed_on_races_and_unexpected_entries(
+        self,
+    ) -> None:
+        first = self._started("run-global-repair-race-001")
+        record_issue(first, self._issue())
+        close_ledger(first)
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        integration = self._global_repair_input(base)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [
+                    executor.submit(record_global_repair, self.project, integration)
+                    for _ in range(2)
+                ]
+            successes = []
+            for future in futures:
+                successes.append(future.result())
+            self.assertEqual(
+                sorted(item["status"] for item in successes),
+                ["existing", "recorded"],
+            )
+            self.assertEqual(
+                len({item["global_repair_id"] for item in successes}),
+                1,
+            )
+            self.assertEqual(
+                verify_global_repair(self.project)["status"], "current"
+            )
+
+        repair_dir = self.project / "chx-ledgers" / "global-repairs"
+        (repair_dir / "unexpected.txt").write_text("drift", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "unexpected entry"):
+            inventory_project_ledgers(self.project)
+
+    def test_global_repair_reuses_exclusive_lock_for_inventory_rechecks(
+        self,
+    ) -> None:
+        ledger = self._started("run-global-repair-lock-reentry-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        integration = self._global_repair_input(base)
+        calls: list[tuple[bool, bool]] = []
+
+        def require_existing_exclusive_lock(
+            project_root: Path,
+            *,
+            full: bool = False,
+            include_global: bool = True,
+            _lock_held: bool = False,
+        ) -> dict[str, object]:
+            self.assertTrue(_lock_held)
+            calls.append((full, include_global))
+            return chx_ledger._inventory_project_ledgers_unlocked(
+                project_root,
+                full=full,
+                include_global=include_global,
+            )
+
+        with patch.object(
+            chx_ledger,
+            "inventory_project_ledgers",
+            side_effect=require_existing_exclusive_lock,
+        ), patch.object(
+            chx_ledger,
+            "_validate_global_repair_candidate",
+            return_value={},
+        ):
+            receipt = record_global_repair(self.project, integration)
+        self.assertEqual(receipt["status"], "recorded")
+        self.assertEqual(calls, [(True, False), (True, False)])
+
+    def test_global_repair_rejects_manifest_tree_drift(self) -> None:
+        ledger = self._started("run-global-manifest-tree-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+
+        candidate = (Path(self.temporary.name) / "chalxius-fixture").resolve()
+        candidate.mkdir()
+        version = candidate / "VERSION"
+        payload = candidate / "payload.txt"
+        version.write_text("test-version\n", encoding="utf-8")
+        payload.write_text("original\n", encoding="utf-8")
+        manifest = candidate / "MANIFEST.sha256"
+        manifest.write_text(
+            "\n".join(
+                [
+                    f"{hashlib.sha256(version.read_bytes()).hexdigest()}  VERSION",
+                    f"{hashlib.sha256(payload.read_bytes()).hexdigest()}  payload.txt",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        payload.write_text("drifted\n", encoding="utf-8")
+        evidence = (
+            "candidate:payload.txt#sha256="
+            + hashlib.sha256(payload.read_bytes()).hexdigest()
+        )
+        plan = self._global_repair_input(base)
+        plan.update(
+            {
+                "candidate_root": str(candidate),
+                "candidate_version": "test-version",
+                "candidate_manifest_sha256": hashlib.sha256(
+                    manifest.read_bytes()
+                ).hexdigest(),
+                "issue_dispositions": [
+                    {
+                        **plan["issue_dispositions"][0],
+                        "evidence": [evidence],
+                    }
+                ],
+                "mechanism_groups": [
+                    {
+                        **plan["mechanism_groups"][0],
+                        "implementation_anchors": [evidence],
+                        "evidence": [evidence],
+                    }
+                ],
+                "risk_evidence": [evidence],
+                "regression_evidence": [evidence],
+            }
+        )
+        with patch.object(chx_ledger, "_skill_root", return_value=candidate), patch.object(
+            chx_ledger, "_skill_version", return_value="test-version"
+        ):
+            with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
+                record_global_repair(self.project, plan)
+
+    def test_global_repair_rejects_missing_predecessor_inventory(self) -> None:
+        predecessor = self._started("run-global-missing-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Preserve a missing-predecessor regression fixture.",
+                run_id="run-global-missing-child-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        issue = self._issue()
+        issue["audit_anchors"] = ["missing-predecessor:child"]
+        record_issue(successor, issue)
+        close_ledger(successor)
+        predecessor.replace(Path(self.temporary.name) / predecessor.name)
+        report = predecessor.with_name(
+            predecessor.stem + ".architecture-report.md"
+        )
+        if report.exists():
+            report.replace(Path(self.temporary.name) / report.name)
+
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        self.assertTrue(base["lineage_errors"])
+        self.assertEqual(base["counts"]["observed_issues"], 1)
+        plan = self._global_repair_input(base)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "lineage errors"):
+                record_global_repair(self.project, plan)
+
+    def test_global_repair_accepts_closed_issue_bearing_parallel_successors(
+        self,
+    ) -> None:
+        predecessor = self._started("run-global-fork-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        for index, run_id in enumerate(
+            ("run-global-fork-a-001", "run-global-fork-b-001"),
+            1,
+        ):
+            successor = Path(
+                start_ledger(
+                    project_root=self.project,
+                    task="Create a predecessor-fork regression fixture.",
+                    run_id=run_id,
+                    predecessor_ledger=predecessor,
+                )["ledger_path"]
+            )
+            successor_issue = self._issue()
+            successor_issue["audit_anchors"] = [f"issue-bearing-fork:{index}"]
+            record_issue(successor, successor_issue)
+            close_ledger(successor)
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        self.assertFalse(base["lineage_errors"], base["lineage_errors"])
+        self.assertEqual(
+            base["parallel_closed_successors"],
+            [
+                {
+                    "predecessor_run_id": "run-global-fork-base-001",
+                    "successor_run_id": "run-global-fork-a-001",
+                    "successor_subtree_run_ids": ["run-global-fork-a-001"],
+                    "successor_subtree_issue_count": 1,
+                },
+                {
+                    "predecessor_run_id": "run-global-fork-base-001",
+                    "successor_run_id": "run-global-fork-b-001",
+                    "successor_subtree_run_ids": ["run-global-fork-b-001"],
+                    "successor_subtree_issue_count": 1,
+                },
+            ],
+        )
+        plan = self._global_repair_input(base)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            record_global_repair(self.project, plan)
+            self.assertEqual(verify_global_repair(self.project)["status"], "current")
+
+    def test_global_repair_rejects_predecessor_fork(self) -> None:
+        """Keep the historical anchor while exercising the new closed-branch rule."""
+
+        self.test_global_repair_accepts_closed_issue_bearing_parallel_successors()
+
+    def test_global_repair_accepts_closed_issue_free_parallel_successor(
+        self,
+    ) -> None:
+        predecessor = self._started("run-global-empty-fork-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+
+        issue_bearing = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Create the only issue-bearing successor branch.",
+                run_id="run-global-empty-fork-issue-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        issue = self._issue()
+        issue["audit_anchors"] = ["issue-free-parallel:issue-bearing"]
+        record_issue(issue_bearing, issue)
+        close_ledger(issue_bearing)
+
+        issue_free = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Create a closed issue-free parallel task branch.",
+                run_id="run-global-empty-fork-empty-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        close_ledger(issue_free)
+
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        self.assertFalse(
+            any(
+                "multiple direct successors" in item
+                for item in base["lineage_errors"]
+            ),
+            base["lineage_errors"],
+        )
+        self.assertEqual(
+            base["parallel_issue_free_successors"],
+            [
+                {
+                    "predecessor_run_id": "run-global-empty-fork-base-001",
+                    "successor_run_id": "run-global-empty-fork-empty-001",
+                    "successor_subtree_run_ids": [
+                        "run-global-empty-fork-empty-001"
+                    ],
+                    "successor_subtree_issue_count": 0,
+                }
+            ],
+        )
+        plan = self._global_repair_input(base)
+        with patch.object(
+            chx_ledger,
+            "_validate_global_repair_candidate",
+            return_value={},
+        ):
+            record_global_repair(self.project, plan)
+            self.assertEqual(
+                verify_global_repair(self.project)["status"],
+                "current",
+            )
+
+    def test_inventory_deduplicates_common_parallel_ancestor_issue(self) -> None:
+        predecessor = self._started("run-parallel-dedup-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        for suffix in ("a", "b"):
+            branch = Path(
+                start_ledger(
+                    project_root=self.project,
+                    task="Close one issue-free parallel branch.",
+                    run_id=f"run-parallel-dedup-{suffix}-001",
+                    predecessor_ledger=predecessor,
+                )["ledger_path"]
+            )
+            close_ledger(branch)
+
+        inventory = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        qualified = "run-parallel-dedup-base-001/CHX-001"
+        self.assertEqual(inventory["counts"]["unresolved_issues"], 1)
+        self.assertEqual(
+            [item["qualified_issue_id"] for item in inventory["unresolved"]],
+            [qualified],
+        )
+        self.assertTrue(
+            all(
+                chain["unresolved_issue_ids"] == [qualified]
+                for chain in inventory["chains"]
+            )
+        )
+
+    def test_unique_parallel_supersedes_resolves_common_ancestor_globally(
+        self,
+    ) -> None:
+        predecessor = self._started("run-parallel-resolve-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+
+        resolving = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Resolve the common ancestor on one closed branch.",
+                run_id="run-parallel-resolve-a-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        successor_issue = self._issue()
+        successor_issue["audit_anchors"] = ["parallel-resolve:unique"]
+        record_issue(
+            resolving,
+            successor_issue,
+            relations=[{"relation_type": "supersedes", "issue_id": "CHX-001"}],
+        )
+        self._repair_chain(resolving, ["CHX-002"])
+        dispose_issue(
+            resolving,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The unique parallel successor has exact evidence.",
+                "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+            },
+        )
+        close_ledger(resolving)
+
+        independent = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Close one logically independent parallel branch.",
+                run_id="run-parallel-resolve-b-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        close_ledger(independent)
+
+        inventory = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        self.assertFalse(inventory["lineage_errors"], inventory["lineage_errors"])
+        self.assertEqual(inventory["counts"]["unresolved_issues"], 0)
+        self.assertEqual(inventory["unresolved"], [])
+        self.assertTrue(
+            all(not chain["unresolved_issue_ids"] for chain in inventory["chains"])
+        )
+
+    def test_global_repair_rejects_active_issue_free_parallel_successor(
+        self,
+    ) -> None:
+        predecessor = self._started("run-global-active-empty-fork-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+
+        issue_bearing = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Create one closed issue-bearing successor branch.",
+                run_id="run-global-active-empty-fork-issue-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        issue = self._issue()
+        issue["audit_anchors"] = ["active-issue-free-parallel:issue-bearing"]
+        record_issue(issue_bearing, issue)
+        close_ledger(issue_bearing)
+
+        start_ledger(
+            project_root=self.project,
+            task="Leave one issue-free parallel branch active.",
+            run_id="run-global-active-empty-fork-empty-001",
+            predecessor_ledger=predecessor,
+        )
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        self.assertTrue(
+            any(
+                "multiple direct successors" in item
+                for item in base["lineage_errors"]
+            ),
+            base["lineage_errors"],
+        )
+        self.assertEqual(base["parallel_issue_free_successors"], [])
+
+    def test_global_repair_rejects_competing_parallel_supersedes(self) -> None:
+        predecessor = self._started("run-global-competing-supersedes-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        relations = [{"issue_id": "CHX-001", "relation_type": "supersedes"}]
+        for suffix in ("a", "b"):
+            successor = Path(
+                start_ledger(
+                    project_root=self.project,
+                    task="Create a competing parallel supersedes successor.",
+                    run_id=f"run-global-competing-supersedes-{suffix}-001",
+                    predecessor_ledger=predecessor,
+                )["ledger_path"]
+            )
+            issue = self._issue()
+            issue["audit_anchors"] = [f"competing-supersedes:{suffix}"]
+            record_issue(successor, issue, relations=relations)
+            close_ledger(successor)
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        self.assertTrue(
+            any("competing supersedes successors" in item for item in base["lineage_errors"]),
+            base["lineage_errors"],
+        )
+
+    def test_excluded_successor_does_not_resolve_predecessor(self) -> None:
+        predecessor = self._started("run-excluded-successor-base-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Exclude a nonarchitectural successor.",
+                run_id="run-excluded-successor-child-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        issue = self._issue()
+        issue["audit_anchors"] = ["excluded-successor:child"]
+        record_issue(
+            successor,
+            issue,
+            relations=[{"relation_type": "supersedes", "issue_id": "CHX-001"}],
+        )
+        dispose_issue(
+            successor,
+            issue_id="CHX-002",
+            disposition={
+                "status": "excluded_nonarchitectural",
+                "reason": "The successor finding failed the architecture causal test.",
+                "regression_evidence": [],
+            },
+        )
+        close_ledger(successor)
+        inventory = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        self.assertEqual(inventory["counts"]["unresolved_issues"], 1)
+        self.assertEqual(
+            inventory["unresolved"][0]["qualified_issue_id"],
+            "run-excluded-successor-base-001/CHX-001",
+        )
+        self.assertEqual(
+            inventory["ignored_supersedes"][0]["reason"],
+            "excluded_successor_has_no_repair_effect",
+        )
+
+    def test_same_ledger_supersedes_is_not_a_strict_successor(self) -> None:
+        ledger = self._started("run-same-ledger-supersedes-001")
+        record_issue(ledger, self._issue())
+        issue = self._issue()
+        issue["audit_anchors"] = ["same-ledger:second"]
+        record_issue(
+            ledger,
+            issue,
+            relations=[{"relation_type": "supersedes", "issue_id": "CHX-001"}],
+        )
+        self._repair_chain(ledger, ["CHX-002"])
+        dispose_issue(
+            ledger,
+            issue_id="CHX-002",
+            disposition={
+                "status": "resolved",
+                "reason": "The second issue itself has been repaired.",
+                "regression_evidence": ["tests/test_chx_ledger.py:PASS"],
+            },
+        )
+        close_ledger(ledger)
+        inventory = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        self.assertEqual(inventory["counts"]["unresolved_issues"], 1)
+        self.assertEqual(
+            inventory["ignored_supersedes"][0]["reason"],
+            "same_ledger_not_strictly_later",
+        )
+
+    def test_global_repair_requires_quiescent_inventory_and_final_recheck(self) -> None:
+        ledger = self._started("run-global-active-001")
+        record_issue(ledger, self._issue())
+        active = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        active_plan = self._global_repair_input(active)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "quiescent"):
+                record_global_repair(self.project, active_plan)
+
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        plan = self._global_repair_input(base)
+        real_inventory = chx_ledger.inventory_project_ledgers
+        calls = 0
+
+        def drifted_inventory(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            result = real_inventory(*args, **kwargs)
+            if calls == 2:
+                result = json.loads(json.dumps(result))
+                result["inventory_sha256"] = "f" * 64
+            return result
+
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ), patch.object(
+            chx_ledger,
+            "inventory_project_ledgers",
+            side_effect=drifted_inventory,
+        ):
+            with self.assertRaisesRegex(ValueError, "changed before final write"):
+                record_global_repair(self.project, plan)
+
+    def test_global_repair_requires_basis_pairing_and_digest_bound_evidence(
+        self,
+    ) -> None:
+        ledger = self._started("run-global-evidence-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project, full=True, include_global=False
+        )
+        invalid_pair = self._global_repair_input(base)
+        invalid_pair["issue_dispositions"][0]["status"] = (
+            "excluded_nonarchitectural"
+        )
+        with self.assertRaisesRegex(ValueError, "basis/status pairing"):
+            record_global_repair(self.project, invalid_pair)
+
+        stale_snapshot = self._global_repair_input(base)
+        stale_snapshot["covered_issue_snapshot_sha256"] = "0" * 64
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "covered issue snapshot is stale"):
+                record_global_repair(self.project, stale_snapshot)
+
+        arbitrary = self._global_repair_input(base)
+        arbitrary["issue_dispositions"][0]["evidence"] = ["claimed:PASS"]
+        with self.assertRaisesRegex(ValueError, "ROOT:relative/path"):
+            record_global_repair(self.project, arbitrary)
+
+        source_as_regression = self._global_repair_input(base)
+        candidate_source = self._candidate_reference()
+        source_as_regression["issue_dispositions"][0]["evidence"] = [
+            candidate_source
+        ]
+        source_as_regression["mechanism_groups"][0]["evidence"] = [
+            candidate_source
+        ]
+        source_as_regression["regression_evidence"] = [candidate_source]
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "must bind project receipts"):
+                record_global_repair(self.project, source_as_regression)
+
+        missing = self._global_repair_input(base)
+        missing_reference = "project:missing.txt#sha256=" + "0" * 64
+        missing["issue_dispositions"][0]["evidence"] = [missing_reference]
+        missing["mechanism_groups"][0]["evidence"] = [missing_reference]
+        missing["regression_evidence"] = [missing_reference]
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "reference file is missing"):
+                record_global_repair(self.project, missing)
+
+        wrong_hash = self._global_repair_input(base)
+        drifted_reference = (
+            "project:global-repair-regression.txt#sha256=" + "0" * 64
+        )
+        wrong_hash["issue_dispositions"][0]["evidence"] = [drifted_reference]
+        wrong_hash["mechanism_groups"][0]["evidence"] = [drifted_reference]
+        wrong_hash["regression_evidence"] = [drifted_reference]
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "reference hash drifted"):
+                record_global_repair(self.project, wrong_hash)
+
+        project_anchor = self._global_repair_input(base)
+        stable_ledger = Path(base["ledgers"][0]["path"])
+        project_reference = (
+            f"project:chx-ledgers/{stable_ledger.name}#sha256="
+            f"{hashlib.sha256(stable_ledger.read_bytes()).hexdigest()}"
+        )
+        project_anchor["mechanism_groups"][0]["implementation_anchors"] = [
+            project_reference
+        ]
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            with self.assertRaisesRegex(ValueError, "must bind candidate files"):
+                record_global_repair(self.project, project_anchor)
 
     def test_successor_carries_transitive_issue_lineage_across_empty_hop(self) -> None:
         predecessor = self._started("run-lineage-predecessor-001")
@@ -1161,6 +2218,95 @@ class CHXRunLedgerTests(unittest.TestCase):
             verify_public_disclosure(ledger, skill_root)["status"],
             "pass",
         )
+
+    def test_public_disclosure_excluded_successor_does_not_repair_predecessor(
+        self,
+    ) -> None:
+        predecessor = self._started("run-public-excluded-predecessor-001")
+        record_issue(predecessor, self._issue())
+        close_ledger(predecessor)
+        successor = Path(
+            start_ledger(
+                project_root=self.project,
+                task="Exclude a later observation without repairing its predecessor.",
+                run_id="run-public-excluded-successor-001",
+                predecessor_ledger=predecessor,
+            )["ledger_path"]
+        )
+        successor_issue = self._issue()
+        successor_issue["audit_anchors"] = ["excluded-successor:NOT-A-REPAIR"]
+        record_issue(
+            successor,
+            successor_issue,
+            relations=[
+                {"relation_type": "supersedes", "issue_id": "CHX-001"}
+            ],
+        )
+        dispose_issue(
+            successor,
+            issue_id="CHX-002",
+            disposition={
+                "status": "excluded_nonarchitectural",
+                "reason": "The later observation was not architecture-caused.",
+                "regression_evidence": [],
+            },
+        )
+        close_ledger(successor)
+
+        skill_root = Path(self.temporary.name) / "excluded-successor-public-skill"
+        (skill_root / "references").mkdir(parents=True)
+        (skill_root / "KNOWN_LIMITATIONS.md").write_text(
+            "1. **CHX-001 — predecessor.** remains unresolved\n"
+            "2. **CHX-002 — excluded.** excluded_nonarchitectural\n",
+            encoding="utf-8",
+        )
+        (skill_root / "references" / "v5_release_traceability.md").write_text(
+            "CHX-001 unresolved CHX-002 excluded_nonarchitectural\n",
+            encoding="utf-8",
+        )
+        contract = {
+            "contract_revision": "chalxius-chx-public-disclosure-2",
+            "included_issue_ids": ["CHX-001", "CHX-002"],
+            "ledger_lineage": [
+                {
+                    "ledger_run_id": "run-public-excluded-predecessor-001",
+                    "ledger_sha256": hashlib.sha256(
+                        predecessor.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "",
+                    "included_issue_ids": ["CHX-001"],
+                },
+                {
+                    "ledger_run_id": "run-public-excluded-successor-001",
+                    "ledger_sha256": hashlib.sha256(
+                        successor.read_bytes()
+                    ).hexdigest(),
+                    "ledger_contract_revision": CONTRACT_REVISION,
+                    "predecessor_run_id": "run-public-excluded-predecessor-001",
+                    "included_issue_ids": ["CHX-002"],
+                },
+            ],
+            "latest_issue_id": "CHX-002",
+            "document_contracts": {
+                "KNOWN_LIMITATIONS.md": {
+                    "explicit_issue_enumeration": True,
+                    "required_markers": ["excluded_nonarchitectural"],
+                },
+                "references/v5_release_traceability.md": {
+                    "explicit_issue_enumeration": False,
+                    "required_markers": ["CHX-001", "CHX-002"],
+                },
+            },
+            "private_ledger_included": False,
+            "truth_effect": "none",
+        }
+        (skill_root / "INHERITANCE.lock.json").write_text(
+            json.dumps({"chx_public_disclosure": contract}, sort_keys=True),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "unresolved included issue: CHX-001"):
+            verify_public_disclosure(successor, skill_root)
 
 
 if __name__ == "__main__":

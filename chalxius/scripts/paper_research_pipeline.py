@@ -6,7 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any
+
+sys.dont_write_bytecode = True
 
 from mathgraph.paper_research_pipeline import (
     atomic_write_json,

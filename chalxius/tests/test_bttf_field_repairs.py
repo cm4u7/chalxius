@@ -371,9 +371,25 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     "proof_unit_conservation": [],
                 }
             ]
-            release = lifecycle.candidate_release(
-                payload, producer="field-repair-producer"
-            )
+            original_lineage_snapshot = lifecycle._lineage_snapshot
+            with (
+                patch.object(store, "v5_lifecycle", return_value=lifecycle),
+                patch.object(
+                    lifecycle,
+                    "_lineage_snapshot",
+                    wraps=original_lineage_snapshot,
+                ) as lineage_snapshot,
+            ):
+                release = lifecycle.candidate_release(
+                    payload, producer="field-repair-producer"
+                )
+            top_level_snapshots = [
+                call
+                for call in lineage_snapshot.call_args_list
+                if call.kwargs.get("admitted_before") is None
+                and call.kwargs.get("exclude_release_ids") is None
+            ]
+            self.assertEqual(len(top_level_snapshots), 1)
             self._admit_release(lifecycle, release, gateway="second-gateway")
             self.assertEqual(
                 set(store.fact_ids()), {predecessor.fact_id, successor.fact_id}
@@ -1404,6 +1420,142 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 [],
             )
             self.assertIn(repaired_fact.fact_id, store.fact_ids())
+            self.assertTrue(lifecycle.audit().current_ok)
+
+    def test_fact_admit_reuses_one_snapshot_per_side_of_publication_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(
+                Path(temporary) / "project",
+                "fact-admit-inspection-reuse",
+            )
+            lifecycle = store.v5_lifecycle()
+            predecessor = Fact(
+                problem_id=store.project_id(),
+                author="first-producer",
+                predecessors=[],
+                statement="[CLAIM:ROOT] The first admitted premise holds.",
+                proof="Direct first proof.",
+            )
+            _, first_release = self._legacy_fact_release(store, [predecessor])
+            self._admit_release(
+                lifecycle,
+                first_release,
+                gateway="first-gateway",
+            )
+
+            successor = Fact(
+                problem_id=store.project_id(),
+                author="second-producer",
+                predecessors=[],
+                statement=(
+                    "[CLAIM:ROOT] A second independent conclusion holds."
+                ),
+                proof="Direct second proof.",
+            )
+            research = lifecycle.add_research(
+                {"kind": "proof_attempt", "claim": successor.statement},
+                actor="second-producer",
+            )
+            second_release = lifecycle.candidate_release(
+                self._release_payload(
+                    [successor],
+                    [research["research_id"]],
+                ),
+                producer="second-producer",
+            )
+            decision = lifecycle.certification_record(
+                self._correct_decision(lifecycle, second_release)
+            )
+
+            observed: dict[str, list[object | None]] = {
+                "prepare": [],
+                "capsule": [],
+                "history": [],
+                "lineage": [],
+                "lineage_validate": [],
+            }
+            real_prepare = lifecycle._prepare_candidate_facts
+            real_capsule = lifecycle.verifier_capsule
+            real_history = lifecycle._preflight_post_admission_history
+            real_lineage = lifecycle._lineage_snapshot
+            real_lineage_validate = lifecycle._validate_lineage_snapshot
+
+            def observe_prepare(*args: object, **kwargs: object) -> object:
+                observed["prepare"].append(kwargs.get("_inspection_context"))
+                return real_prepare(*args, **kwargs)
+
+            def observe_capsule(*args: object, **kwargs: object) -> object:
+                observed["capsule"].append(kwargs.get("_inspection_context"))
+                return real_capsule(*args, **kwargs)
+
+            def observe_history(*args: object, **kwargs: object) -> object:
+                observed["history"].append(kwargs.get("_inspection_context"))
+                return real_history(*args, **kwargs)
+
+            def observe_lineage(*args: object, **kwargs: object) -> object:
+                observed["lineage"].append(kwargs.get("_inspection_context"))
+                return real_lineage(*args, **kwargs)
+
+            def observe_lineage_validate(
+                *args: object,
+                **kwargs: object,
+            ) -> object:
+                observed["lineage_validate"].append(
+                    kwargs.get("_inspection_context")
+                )
+                return real_lineage_validate(*args, **kwargs)
+
+            with (
+                patch.object(
+                    lifecycle,
+                    "_prepare_candidate_facts",
+                    side_effect=observe_prepare,
+                ),
+                patch.object(
+                    lifecycle,
+                    "verifier_capsule",
+                    side_effect=observe_capsule,
+                ),
+                patch.object(
+                    lifecycle,
+                    "_preflight_post_admission_history",
+                    side_effect=observe_history,
+                ),
+                patch.object(
+                    lifecycle,
+                    "_lineage_snapshot",
+                    side_effect=observe_lineage,
+                ),
+                patch.object(
+                    lifecycle,
+                    "_validate_lineage_snapshot",
+                    side_effect=observe_lineage_validate,
+                ),
+            ):
+                marker = lifecycle.fact_admit(
+                    release_id=second_release["release_id"],
+                    decision_id=decision["decision_id"],
+                    gateway="second-gateway",
+                )
+
+            outer = observed["prepare"][0]
+            locked = observed["history"][0]
+            self.assertIsNotNone(outer)
+            self.assertIsNotNone(locked)
+            self.assertIsNot(outer, locked)
+            self.assertIs(observed["capsule"][0], outer)
+            self.assertTrue(observed["lineage"])
+            self.assertTrue(observed["lineage_validate"])
+            self.assertTrue(
+                all(context is locked for context in observed["lineage"])
+            )
+            self.assertTrue(
+                all(
+                    context is locked
+                    for context in observed["lineage_validate"]
+                )
+            )
+            self.assertEqual(marker["fact_ids"], [successor.fact_id])
             self.assertTrue(lifecycle.audit().current_ok)
 
 

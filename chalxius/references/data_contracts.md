@@ -480,15 +480,18 @@ scope-bearing citation claims must therefore remain in the hashed proof text.
 
 ## Automatic repair branches
 
-`plan-repair-round MEMORY_ID --trigger-memory-id CHALLENGE_ID` creates two new exploration entries:
+For a V5 project, `plan-repair-round MEMORY_ID` creates one copy-on-write repair
+Research branch and plans one bound production work unit. The optional
+`--trigger-memory-id CHALLENGE_ID` binds the triggering Research record. The
+optional `--input REPAIR_SPEC.json` carries an exact schema-v1 object with only
+`schema_version`, `claim`, `content`, `rationale`, `work_mode`, `obligations`,
+and `stop_conditions`. The normalized object and its SHA-256 are stored in the
+repair Research metadata and therefore in the immutable task-card dossier. No
+worker or planner may replace that exact instruction with a generic repair
+summary. The repair remains Research until it traverses the ordinary Candidate,
+verifier, Certification, and Gateway path.
 
-1. a minimal correction that changes the fewest load-bearing symbols, hypotheses, domains, or
-   quantifiers forced by the challenge;
-2. a strongest-defensible replacement that attacks overstrong variants and minimizes
-   counterexamples.
-
-It then plans one bound worker round for the two branches. Both remain exploration until separately
-submitted, reviewed, and admitted.
+Older V4 projects retain their historical two-branch repair adapter.
 
 ## Novelty ledger
 

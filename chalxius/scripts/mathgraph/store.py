@@ -260,6 +260,7 @@ from .evidence import EvidencePlane
 from .profile_closure import ProfileClosureManager
 from .modes import ReasoningModeManager
 from .v5_lifecycle import (
+    RoundInspectionContext,
     V5_LEGACY_TRUTH_WRITER_COMMANDS,
     V5_POLICY_REVISION,
     V5_WORKFLOW_EVIDENCE_VERSION,
@@ -618,7 +619,12 @@ class MathGraphStore:
                 return
             if self.lock_path.is_symlink() or not self.lock_path.is_file():
                 raise ValueError("project snapshot lock is missing or unsafe")
-            handle = self.lock_path.open("r+b")
+            # A shared snapshot is a read-only capability.  Opening the
+            # existing lock for update needlessly rejects frozen/read-only
+            # project views even though flock(LOCK_SH) works on a read
+            # descriptor.  Writers still use mutation_lock's exclusive
+            # read/write handle.
+            handle = self.lock_path.open("rb")
             if fcntl is not None:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
             self._snapshot_lock_handle = handle
@@ -3577,8 +3583,22 @@ class MathGraphStore:
             return revoked
 
     def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
-        fact_ids = self.fact_ids()
-        raw = [self.get_raw_fact(fact_id) for fact_id in fact_ids]
+        if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION:
+            inspection = RoundInspectionContext()
+            with self.snapshot_lock():
+                fact_ids = self.fact_ids(
+                    _inspection_context=inspection,
+                )
+                raw = [
+                    self.get_raw_fact(
+                        fact_id,
+                        _inspection_context=inspection,
+                    )
+                    for fact_id in fact_ids
+                ]
+        else:
+            fact_ids = self.fact_ids()
+            raw = [self.get_raw_fact(fact_id) for fact_id in fact_ids]
         scores = bm25(query, raw)
         ranked = sorted(zip(fact_ids, raw, scores), key=lambda item: (-item[2], item[0]))
         return [
@@ -4584,7 +4604,7 @@ class MathGraphStore:
         experiments = self.experiments()
         audited_governance: set[str] = set()
         for task_card_path in sorted(
-            self.rounds_dir.glob("*/task-cards/*.json")
+            self.rounds_dir.glob("round-*/task-cards/*.json")
         ):
             try:
                 task_card = self._read_json(task_card_path)

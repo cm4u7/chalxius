@@ -86,20 +86,36 @@ def _goal_root_research(
 ) -> tuple[dict[str, Any], str]:
     """Create or reuse the one Research root for an ordinary goal."""
 
-    matches = []
-    for record in store.v5_lifecycle().research_records():
-        metadata = record.get("metadata", {})
-        marker = metadata.get("goal_intake_root") if isinstance(metadata, dict) else None
-        if marker == {
-            "campaign_id": intake["campaign_id"],
-            "objective_sha256": intake["objective_sha256"],
-        }:
-            matches.append(record)
+    lifecycle = store.v5_lifecycle()
+    entries_dir = lifecycle.research_entries_dir
+    marker = {
+        "campaign_id": intake["campaign_id"],
+        "objective_sha256": intake["objective_sha256"],
+    }
+    marker_tokens = [value.encode("ascii") for value in marker.values()]
+    matches: list[dict[str, Any]] = []
+    for path in sorted(entries_dir.glob("*.json")):
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("research ledger contains an unsafe entry")
+        raw = path.read_bytes()
+        if not all(token in raw for token in marker_tokens):
+            continue
+        envelope = lifecycle._research_record_envelope(path.stem)
+        metadata = envelope.get("metadata", {})
+        if metadata.get("goal_intake_root") == marker:
+            matches.append(envelope)
     if len(matches) > 1:
         raise ValueError("ordinary research goal has multiple bound Research roots")
     if matches:
-        return matches[0], "none_existing_root_reused"
-    record = store.v5_lifecycle().add_research(
+        return lifecycle._research_record(matches[0]["research_id"]), (
+            "none_existing_root_reused"
+        )
+    existing_ids = {
+        path.stem
+        for path in entries_dir.glob("*.json")
+        if path.is_file() and not path.is_symlink()
+    }
+    record = lifecycle.add_research(
         {
             "kind": "direction",
             "claim": intake["objective"],
@@ -116,7 +132,12 @@ def _goal_root_research(
         actor=actor,
         goal_intake_token=intake["intake_token"],
     )
-    return record, "goal_intake_root_research_bound"
+    effect = (
+        "none_existing_root_reused"
+        if record["research_id"] in existing_ids
+        else "goal_intake_root_research_bound"
+    )
+    return record, effect
 
 
 def _v5_fact_bundle_release(
@@ -488,6 +509,12 @@ def _command_requires_mutation_lock(args: argparse.Namespace) -> bool:
         # The orchestrator owns one complete validation/effect/pulse-failure
         # transaction so CLI exceptions cannot escape outside its lock.
         return False
+    if args.command == "certification-record":
+        # Certification owns a narrow lock around fresh seal-time replay and
+        # Decision publication.  Holding the outer project lock during the
+        # expensive neutral-input validation would serialize unrelated reads
+        # and duplicate the same lock boundary.
+        return False
     if args.command == "blackboard-reindex":
         return bool(args.apply)
     return args.command not in READ_ONLY_COMMANDS
@@ -839,6 +866,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--producer", required=True)
 
+    p = sub.add_parser("selective-fact-checkpoint")
+    p.add_argument(
+        "--input",
+        required=True,
+        help="explicit target rationale JSON; writes one nontruth checkpoint only",
+    )
+    p.add_argument("--actor", required=True)
+
     p = sub.add_parser("verifier-capsule")
     p.add_argument("release_id")
 
@@ -985,6 +1020,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="repeat one to three times; omitted selects sparse applicable scopes",
     )
     p.add_argument("--host-task-scope-id")
+    p = sub.add_parser("plan-candidate-adverse")
+    p.add_argument("research_id")
+    p.add_argument("--host-task-scope-id")
+    p = sub.add_parser("prepare-candidate-adverse-target")
+    p.add_argument("production_research_id")
+    p.add_argument("--actor", default="v5-candidate-adverse-preparer")
     p = sub.add_parser("plan-computation-execution")
     p.add_argument("source_round_id")
     p.add_argument("assignment_id")
@@ -1081,6 +1122,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("plan-repair-round")
     p.add_argument("memory_id")
     p.add_argument("--trigger-memory-id")
+    p.add_argument(
+        "--input",
+        help="exact bounded repair specification JSON",
+    )
     p = sub.add_parser("novelty-record")
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
@@ -1968,6 +2013,13 @@ def main(argv: list[str] | None = None) -> int:
                     preflight_only=True,
                 )
             )
+        elif args.command == "selective-fact-checkpoint":
+            _print_json(
+                store.v5_lifecycle().selective_fact_checkpoint(
+                    _json_file(args.input),
+                    actor=args.actor,
+                )
+            )
         elif args.command == "verifier-capsule":
             _print_json(store.v5_lifecycle().verifier_capsule(args.release_id))
         elif args.command == "certification-record":
@@ -2008,6 +2060,7 @@ def main(argv: list[str] | None = None) -> int:
                     _json_file(args.input),
                     actor=args.actor,
                     goal_intake_token=args.goal_intake_token,
+                    reuse_unbound_main_semantics=args.role == "main",
                     assurance_contract_revision=(
                         V5_ASSURANCE_CONTRACT_REVISION
                         if args.current_assurance
@@ -2124,6 +2177,30 @@ def main(argv: list[str] | None = None) -> int:
                     source_component_id=args.source_component_id,
                     supervisor_scopes=args.supervisor_scopes,
                     host_task_scope_id=normalized_host_scope,
+                )
+            )
+        elif args.command == "plan-candidate-adverse":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("plan-candidate-adverse requires a V5 project")
+            normalized_host_scope = normalize_host_task_scope_id(
+                args.host_task_scope_id,
+                workflow_evidence_version=store.workflow_evidence_version(),
+            )
+            _print_json(
+                store.v5_lifecycle().plan_candidate_adverse_round(
+                    args.research_id,
+                    host_task_scope_id=normalized_host_scope,
+                )
+            )
+        elif args.command == "prepare-candidate-adverse-target":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError(
+                    "prepare-candidate-adverse-target requires a V5 project"
+                )
+            _print_json(
+                store.v5_lifecycle().prepare_candidate_adverse_target(
+                    args.production_research_id,
+                    actor=args.actor,
                 )
             )
         elif args.command == "plan-computation-execution":
@@ -2429,6 +2506,9 @@ def main(argv: list[str] | None = None) -> int:
                     store.v5_lifecycle().create_repair_round(
                         args.memory_id,
                         trigger_research_id=args.trigger_memory_id,
+                        repair_spec=(
+                            _json_file(args.input) if args.input else None
+                        ),
                     )
                 )
             else:

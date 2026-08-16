@@ -15,6 +15,24 @@ import mathgraph.runtime_cutover as runtime_cutover_module
 
 
 SOURCE_SCRIPTS = Path(runtime_cutover_module.__file__).resolve().parents[1]
+PUBLIC_HELP_ENTRYPOINTS = (
+    "aggressive_bug_audit.py",
+    "architecture_reconnaissance.py",
+    "archive_runtime.py",
+    "behavioral_feature_gate.py",
+    "chx_ledger.py",
+    "learning_graph.py",
+    "mgraph_cli.py",
+    "notation_inventory.py",
+    "paper_library.py",
+    "paper_research_pipeline.py",
+    "phx_ledger.py",
+    "prepare_verifier_capsule.py",
+    "release_validation.py",
+    "runtime_cutover.py",
+    "runtime_cutover_project_validation.py",
+    "submit_neutral_review.py",
+)
 
 
 class HostEntrypointNonMutationTests(unittest.TestCase):
@@ -52,6 +70,26 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(SystemExit, "preflight sentinel"):
                 aggressive_bug_audit_module.main([])
+            preflight.assert_called_once()
+            run_test.assert_not_called()
+
+        original_preflight = aggressive_bug_audit_module._validate_mutant_targets
+        with (
+            mock.patch.object(aggressive_bug_audit_module, "MUTANTS", ()),
+            mock.patch.object(
+                aggressive_bug_audit_module,
+                "_validate_mutant_targets",
+                wraps=original_preflight,
+            ) as preflight,
+            mock.patch.object(
+                aggressive_bug_audit_module,
+                "_candidate_is_unchanged",
+                side_effect=SystemExit("post-preflight sentinel"),
+            ),
+            mock.patch.object(aggressive_bug_audit_module, "_run_test") as run_test,
+        ):
+            with self.assertRaisesRegex(SystemExit, "post-preflight sentinel"):
+                aggressive_bug_audit_module.main(["--preflight-only"])
             preflight.assert_called_once()
             run_test.assert_not_called()
 
@@ -140,12 +178,7 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
             environment = dict(os.environ)
             environment.pop("PYTHONDONTWRITEBYTECODE", None)
             environment.pop("PYTHONPYCACHEPREFIX", None)
-            for name in (
-                "archive_runtime.py",
-                "chx_ledger.py",
-                "runtime_cutover.py",
-                "runtime_cutover_project_validation.py",
-            ):
+            for name in PUBLIC_HELP_ENTRYPOINTS:
                 outcome = subprocess.run(
                     [sys.executable, str(scripts / name), "--help"],
                     cwd=root,
@@ -156,8 +189,71 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
                     check=False,
                 )
                 self.assertEqual(outcome.returncode, 0, outcome.stdout)
+            probe = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import runpy, sys; "
+                        "runpy.run_path(sys.argv[1], run_name='bytecode_probe')"
+                    ),
+                    str(scripts / "self_test.py"),
+                ],
+                cwd=root,
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(probe.returncode, 0, probe.stdout)
+            package_probe = subprocess.run(
+                [sys.executable, "-m", "mathgraph", "--help"],
+                cwd=root,
+                env={**environment, "PYTHONPATH": str(scripts)},
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+            self.assertEqual(package_probe.returncode, 0, package_probe.stdout)
             self.assertEqual(list(root.rglob("__pycache__")), [])
             self.assertEqual(list(root.rglob("*.pyc")), [])
+
+    def test_read_only_runtime_tolerates_a_preexisting_package_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scripts = root / "scripts"
+            shutil.copytree(
+                SOURCE_SCRIPTS,
+                scripts,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            package = scripts / "mathgraph"
+            cache = package / "__pycache__" / (
+                f"__init__.{sys.implementation.cache_tag}.pyc"
+            )
+            cache.parent.mkdir()
+            cache.write_bytes(b"stale cache bytes")
+            for path in sorted(package.rglob("*"), reverse=True):
+                os.chmod(path, 0o555 if path.is_dir() else 0o444)
+            os.chmod(package, 0o555)
+            try:
+                outcome = subprocess.run(
+                    [sys.executable, "-c", "import mathgraph; print('ok')"],
+                    cwd=root,
+                    env={**os.environ, "PYTHONPATH": str(scripts)},
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=False,
+                )
+                self.assertEqual(outcome.returncode, 0, outcome.stdout)
+                self.assertIn("ok", outcome.stdout)
+            finally:
+                for path in [package, *package.rglob("*")]:
+                    if path.exists() and not path.is_symlink():
+                        os.chmod(path, 0o700 if path.is_dir() else 0o600)
 
 
 if __name__ == "__main__":

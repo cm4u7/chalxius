@@ -12,6 +12,7 @@ from mathgraph.contracts import sha256_bytes
 from mathgraph.runtime_archive import archive_runtime, runtime_binding_from_root
 from mathgraph.runtime_cutover import (
     _project_state_snapshot,
+    _protected_round_ids,
     _round_bindings,
     _validate_release_matrix_evidence,
     build_cutover_project_validation_receipt,
@@ -357,6 +358,23 @@ class RuntimeCutoverTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "mixes legacy and runtime-bound"):
                 _round_bindings(project)
 
+    def test_round_bindings_ignore_only_private_atomic_staging_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary).resolve() / "project"
+            rounds = project / "rounds"
+            staging = rounds / ".round-20260813T000000Z-deadbeef.staging-acde1234"
+            (staging / "task-cards").mkdir(parents=True)
+            (staging / "task-cards" / "partial.json").write_text(
+                "{}\n", encoding="utf-8"
+            )
+            self.assertEqual(_round_bindings(project), [])
+            self.assertEqual(_protected_round_ids(project), [])
+
+            unexpected = rounds / ".unexpected-private-directory"
+            unexpected.mkdir()
+            with self.assertRaisesRegex(ValueError, "invalid round id"):
+                _round_bindings(project)
+
     def test_round_bindings_strictly_validate_present_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary).resolve() / "protected-project"
@@ -506,6 +524,14 @@ class RuntimeCutoverTests(unittest.TestCase):
                 cards / "a01.json",
                 {"runtime_binding": historical_binding},
             )
+            staging = (
+                project
+                / "rounds"
+                / ".round-20260101T000001Z-deadbeef.staging-acde1234"
+                / "task-cards"
+            )
+            staging.mkdir(parents=True)
+            self._write_json(staging / "partial.json", {})
             project_validation_calls = 0
 
             def multiversion_project(

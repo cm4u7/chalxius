@@ -80,8 +80,8 @@ RESEARCH_TWO_SUBROUND_TEST_MODULE = (
 MUTANTS = (
     Mutant(
         name="frontier_limit_minus_one",
-        old="        return visible[:limit]\n",
-        new="        return visible[: max(0, limit - 1)]\n",
+        old="        selected = visible[:limit]\n",
+        new="        selected = visible[: max(0, limit - 1)]\n",
         test=(
             f"{TEST_MODULE}."
             "test_frontier_limits_and_explicit_last_entry_have_no_truncation_error"
@@ -1040,44 +1040,20 @@ MUTANTS = (
         target="mathgraph/runtime_cutover.py",
     ),
     Mutant(
-        name="runtime_cutover_entrypoint_writes_bytecode_before_validation",
-        old="sys.dont_write_bytecode = True\n",
-        new="sys.dont_write_bytecode = False\n",
+        name="mathgraph_package_bytecode_suppression_removed",
+        old=(
+            "sys.dont_write_bytecode = True\n"
+            "_self_cache = importlib.util.cache_from_source(__file__)\n"
+        ),
+        new=(
+            "sys.dont_write_bytecode = False\n"
+            "_self_cache = importlib.util.cache_from_source(__file__)\n"
+        ),
         test=(
             f"{HOST_ENTRYPOINT_TEST_MODULE}."
             "test_default_python_entrypoints_do_not_create_bytecode"
         ),
-        target="runtime_cutover.py",
-    ),
-    Mutant(
-        name="runtime_cutover_project_validation_entrypoint_writes_bytecode",
-        old="sys.dont_write_bytecode = True\n",
-        new="sys.dont_write_bytecode = False\n",
-        test=(
-            f"{HOST_ENTRYPOINT_TEST_MODULE}."
-            "test_default_python_entrypoints_do_not_create_bytecode"
-        ),
-        target="runtime_cutover_project_validation.py",
-    ),
-    Mutant(
-        name="runtime_archive_entrypoint_writes_bytecode_before_validation",
-        old="sys.dont_write_bytecode = True\n",
-        new="sys.dont_write_bytecode = False\n",
-        test=(
-            f"{HOST_ENTRYPOINT_TEST_MODULE}."
-            "test_default_python_entrypoints_do_not_create_bytecode"
-        ),
-        target="archive_runtime.py",
-    ),
-    Mutant(
-        name="chx_ledger_entrypoint_writes_bytecode_before_runtime_validation",
-        old="sys.dont_write_bytecode = True\n",
-        new="sys.dont_write_bytecode = False\n",
-        test=(
-            f"{HOST_ENTRYPOINT_TEST_MODULE}."
-            "test_default_python_entrypoints_do_not_create_bytecode"
-        ),
-        target="chx_ledger.py",
+        target="mathgraph/__init__.py",
     ),
     Mutant(
         name="runtime_cutover_project_inventory_confirmation_bypassed",

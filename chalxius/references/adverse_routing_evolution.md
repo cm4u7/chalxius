@@ -250,6 +250,22 @@ adverse assignment or a separately planned primary `refute` can satisfy the
 gate. Missing or inherited actor labels cannot. Failure is
 `fresh_adverse_missing` and occurs before high-cost release work.
 
+For a prospectively prepared Candidate-Fact target, Main uses the public,
+Main-only command:
+
+```bash
+"$MGRAPH" --root "$PROJECT" --role main \
+  plan-candidate-adverse RESEARCH_ID \
+  --host-task-scope-id HOST_TASK_SCOPE_ID
+```
+
+The target must be active, non-stale, bind exactly one current
+`candidate_fact` artifact, and explicitly require independent adverse review.
+An exact retry in the same host scope returns the existing live or completed
+round; a scope drift, stale target, missing byte binding, ordinary production
+claim, or duplicate live exact retry fails closed. This command does not change
+the constructive-only first Research subround or the supervision lane.
+
 The sealed readiness receipt instructs the fresh verifier to adjudicate every
 bound adverse disposition. It does not ask the verifier to rerun packaging and
 does not make the adverse return true. A mathematical verifier finding may

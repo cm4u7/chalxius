@@ -38,6 +38,15 @@ class CHX107SnapshotBoundInspectionTests(unittest.TestCase):
                 finally:
                     os.close(descriptor)
 
+    def test_read_only_fact_search_needs_no_write_access_to_lock_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary), "snapshot-read-only-search")
+            os.chmod(store.lock_path, 0o444)
+            try:
+                self.assertEqual(store.search("no matching fact"), [])
+            finally:
+                os.chmod(store.lock_path, 0o600)
+
     def test_snapshot_lock_is_reentrant_under_the_writer_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary), "snapshot-reentrant")

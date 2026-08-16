@@ -23,14 +23,13 @@ import sys
 import tempfile
 from typing import Any, Iterable
 
+sys.dont_write_bytecode = True
+
 from mathgraph.release_contracts import (
     ARCHITECTURE_RECONNAISSANCE_REVISION as RECONNAISSANCE_REVISION,
     CAPABILITY_TOPOLOGY_REGISTRY_REVISION as CAPABILITY_REGISTRY_REVISION,
     validate_release_audit_revision_bindings,
 )
-
-sys.dont_write_bytecode = True
-
 
 CAPABILITY_REGISTRY_PATH = PurePosixPath(
     "references/capability_topology_registry.json"

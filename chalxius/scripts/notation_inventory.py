@@ -16,6 +16,8 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.dont_write_bytecode = True
+
 
 CONTROL_WORDS = {
     "begin",

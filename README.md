@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.7.4](https://github.com/cm4u7/chalxius/releases/tag/v0.7.4) ·
+[📦 Download v0.7.16](https://github.com/cm4u7/chalxius/releases/tag/v0.7.16) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -135,14 +135,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.7.4-bounded-main-routing.tar.gz`
-- `chalxius-0.7.4-bounded-main-routing.tar.gz.sha256`
+- `chalxius-0.7.16-bounded-capability-hygiene.tar.gz`
+- `chalxius-0.7.16-bounded-capability-hygiene.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.7.4-bounded-main-routing.tar.gz.sha256
-tar -xzf chalxius-0.7.4-bounded-main-routing.tar.gz
+shasum -a 256 -c chalxius-0.7.16-bounded-capability-hygiene.tar.gz.sha256
+tar -xzf chalxius-0.7.16-bounded-capability-hygiene.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -408,6 +408,49 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.7.16: Bounded Capability Hygiene
+
+Repair capabilities now use one exact command-local inspection context with a
+64 MiB aggregate byte cap, no-follow reads, and mandatory invalidation across
+mutation boundaries. Terminal worker bundles become the sole post-ingest
+authority, gated textual artifacts reject unsafe C0 control bytes, and public
+read paths suppress bytecode before local imports without creating lock files
+or project state.
+
+Fact search reuses one freshly validated active-Fact projection per read-only
+command. Project CHX inventory accepts fully closed parallel successor chains
+as separate RUN_ID-qualified histories while still rejecting active, drifted,
+cyclic, missing, unsafe, or competing-supersedes branches. The public CHX
+disclosure remains continuous through CHX-035; later project-local ledgers are
+private nontruth evidence and are not distributed.
+
+The exact 253-entry manifest passed all six release lanes, 942 tests, and all
+145 registered mutants. The deterministic 254-member archive passed a fresh
+253/253 manifest check, self-test, cache/bytecode hygiene, and the standard
+skill quick validator with PyYAML 6.0.3. No Candidate, Certification Decision,
+Gateway admission, or Fact is created by this architecture release.
+
+## v0.7.15: Research Obligation Closure
+
+A valid, non-aborted production ingestion receipt now closes only its source
+Research obligation in the generic frontier. Pending, quarantined, invalid,
+aborted, differently bound, and worker-result Research remains visible. A
+fresh final-lock recheck prevents a receipt completed after selection from
+creating a duplicate public round.
+
+Explicitly Main-originated unbound Research is also idempotent when every
+normalized semantic field except actor is identical. Ordinary, Operator,
+task-bound, assignment-bound, historical, and semantically distinct writes
+remain actor-sensitive; actor display text never grants Main authority.
+
+This release publishes the validated local successor line after v0.7.4,
+including compact role bootstraps, selective Fact-readiness batching without
+automatic atomization, early Candidate work elimination, command-local
+inspection reuse, and protected receipt-bound runtime cutover. The exact
+251-entry manifest passed all six release lanes, 889 tests, and all 148
+registered mutants. The A-model workload remains nontruth Research: no
+Candidate, Certification Decision, Gateway admission, or Fact was created.
 
 ## v0.7.4: Bounded Main Routing
 

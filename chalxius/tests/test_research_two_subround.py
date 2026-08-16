@@ -1535,16 +1535,22 @@ class ResearchTwoSubroundTests(unittest.TestCase):
 
             def abort_on_locked_recheck(
                 records: list[dict[str, object]],
+                *,
+                _inspection_context: object | None = None,
             ) -> set[str]:
                 nonlocal required_supervision_calls
                 required_supervision_calls += 1
                 if required_supervision_calls == 2:
+                    self.assertIsNone(_inspection_context)
                     store.reasoning_modes().abort_work_unit(
                         round_id=supervision["round_id"],
                         actor="main",
                         reason="Exercise the seal-time supervision liveness gate.",
                     )
-                return original_required_supervision(records)
+                return original_required_supervision(
+                    records,
+                    _inspection_context=_inspection_context,
+                )
 
             with patch.object(
                 lifecycle,
@@ -1983,6 +1989,8 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "Candidate Release",
                 "First-output checkpoint",
                 "consecutive status-only updates",
+                "Once every required artifact exists",
+                "canonical byte validation and CHX close",
             ):
                 self.assertIn(required_boundary, production_contract)
             supervisor_prompt = Path(
@@ -2018,6 +2026,8 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "Candidate Release, fresh Candidate adverse review",
                 "First-output checkpoint",
                 "consecutive",
+                "Once the required supervision report exists",
+                "canonical byte validation and CHX close",
             ):
                 self.assertIn(required_boundary, compact_contract)
 
