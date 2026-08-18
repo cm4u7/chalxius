@@ -46,6 +46,11 @@ COMMUNICATION_SUBJECT_KINDS = {
     "report",
     "verification_bundle",
 }
+# Historical project work stores source/advisory material below this
+# non-Campaign namespace.  It is deliberately excluded from the Campaign id
+# projection but remains an explicitly recognized, safe directory rather than
+# an invitation to ignore arbitrary unknown entries.
+RESERVED_CAMPAIGN_STORE_DIRECTORIES = {"inputs"}
 LEGACY_V4_SCORE_FIELDS = {
     "priority",
     "novelty",
@@ -300,6 +305,12 @@ class CampaignStore:
         campaign_ids: list[str] = []
         for path in sorted(self.root.iterdir(), key=lambda item: item.name):
             if path.name == "ACTIVE":
+                continue
+            if path.name in RESERVED_CAMPAIGN_STORE_DIRECTORIES:
+                if path.is_symlink() or not path.is_dir():
+                    raise ValueError(
+                        f"reserved campaign store entry is unsafe: {path.name}"
+                    )
                 continue
             if CAMPAIGN_ID_RE.fullmatch(path.name) is None:
                 raise ValueError(

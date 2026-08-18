@@ -3012,16 +3012,19 @@ class AdverseRoutingManager:
                         )
                     role = control.get("assignment_role", "primary")
                     pair_binding = control.get("independent_adverse_pair")
-                    receipt_path = (
-                        round_dir / "returns" / f"{assignment_id}.receipt.json"
-                    )
                     return_path = self.store.root / assignment["return_relpath"]
+                    product = None
                     receipt = None
-                    if receipt_path.exists():
-                        receipt = lifecycle._validated_ingest_receipt(
+                    try:
+                        product, receipt = lifecycle._research_product_for_assignment(
                             round_dir=round_dir,
+                            manifest=manifest,
                             assignment=assignment,
                         )
+                    except ValueError as exc:
+                        if "worker Research product is missing" not in str(exc):
+                            raise
+                    if product is not None:
                         assignment_state = "ingested"
                     elif assignment_id in quarantined:
                         assignment_state = "quarantined"
@@ -3085,8 +3088,8 @@ class AdverseRoutingManager:
                                 else None
                             ),
                             "result_research_id": (
-                                receipt.get("research_id")
-                                if isinstance(receipt, dict)
+                                product.get("research_id")
+                                if isinstance(product, dict)
                                 else None
                             ),
                             "host_task_scope_id": scope_id,

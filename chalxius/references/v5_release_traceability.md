@@ -1,4 +1,30 @@
-# Chalxius V5 traceability through 0.7.16 Bounded Capability Hygiene
+# Chalxius V5 traceability through 0.8.0 MathGraph First
+
+## 0.8.0 mathgraph-first release overlay
+
+- Candidate version: `0.8.0`; release name **MathGraph First**. The graph's
+  content hashes, dependencies, provenance, workflow stage, and owner
+  boundaries are the cross-version compatibility basis.
+- Runtime identity, installation path, historical archive, and obsolete
+  receipt metadata remain diagnostic provenance only. Ordinary graph reads,
+  Research continuation, and append-only nontruth writes do not require a
+  runtime-compatibility closure, adapter, migration copy, or mode-init ceremony.
+- Worker-ingestion receipts are workflow markers, not a second capability or
+  mathematical authority. A complete, hash-valid Research product with frozen
+  assignment provenance may be consumed by component supervision, status, the
+  generic frontier, computation lineage, and fresh-adverse binding when its
+  derived receipt is missing or incomplete. Missing products, wrong stages,
+  owner/hash drift, and independent verifier/Certification/Gateway/Fact
+  failures still block at their owning boundaries.
+- Malformed graph hashes, missing dependencies, wrong workflow stage, and Fact
+  authority violations still fail at their owning boundaries. Candidate,
+  adverse, verifier, Certification, Gateway, and Fact semantics are unchanged.
+- Release and rollback tooling remains deployment diagnostics; it cannot become
+  a second graph data plane or a mathematical authority gate.
+- In this release workflow, explicit publication includes merging the reviewed
+  release change into `main` by default unless the user explicitly excludes
+  merge. Installation remains a separate authorization, and publication never
+  authorizes an unrelated or unreviewed change.
 
 ## 0.7.16 bounded-capability-hygiene release overlay
 

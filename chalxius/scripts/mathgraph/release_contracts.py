@@ -18,7 +18,7 @@ ARCHITECTURE_RECONNAISSANCE_REVISION = (
 CAPABILITY_TOPOLOGY_REGISTRY_REVISION = (
     "chalxius-capability-topology-registry-3"
 )
-RELEASE_VALIDATION_MATRIX_REVISION = "chalxius-release-validation-matrix-4"
+RELEASE_VALIDATION_MATRIX_REVISION = "chalxius-release-validation-matrix-6"
 
 
 def validate_release_audit_revision_bindings(

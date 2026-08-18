@@ -116,9 +116,7 @@ from .v5_assurance import (
     validate_return_assurance,
 )
 from .runtime_archive import (
-    resolve_historical_runtime,
     runtime_binding_from_root,
-    validate_bound_runtime_at,
     validate_runtime_binding,
 )
 
@@ -494,6 +492,12 @@ class RoundInspectionContext:
     ] = field(default_factory=dict)
     research_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     all_research_records: list[dict[str, Any]] | None = None
+    # A command-local index of worker-produced Research products.  This is a
+    # read optimization and recovery projection only; it is never persisted
+    # and never replaces the immutable Research records or their hashes.
+    research_products_by_assignment: dict[
+        tuple[str, str], list[dict[str, Any]]
+    ] | None = None
     ordinary_capability_bytes: dict[tuple[str, str, bool], bytes] = field(
         default_factory=dict
     )
@@ -1786,18 +1790,25 @@ class V5LifecycleManager:
             _inspection_context=_inspection_context,
         )
         assignment = self._assignment(manifest, provenance["assignment_id"])
-        receipt = self._validated_ingest_receipt(
+        product, receipt = self._research_product_for_assignment(
             round_dir=round_dir,
+            manifest=manifest,
             assignment=assignment,
             _inspection_context=_inspection_context,
         )
         task_binding = metadata.get("task_binding")
+        product_binding = product.get("metadata", {}).get("task_binding", {})
+        product_return_sha = (
+            receipt["return_sha256"]
+            if receipt is not None
+            else product_binding.get("return_sha256")
+        )
         if (
             assignment["task_card_sha256"] != provenance["task_card_sha256"]
             or assignment["worker_id"] != record["actor"]
-            or receipt["research_id"] != record["research_id"]
+            or product["research_id"] != record["research_id"]
             or not isinstance(task_binding, dict)
-            or receipt["return_sha256"] != task_binding.get("return_sha256")
+            or product_return_sha != task_binding.get("return_sha256")
         ):
             raise ValueError("repair source assignment provenance drifted")
         card_path = self._lexical_contained_path(
@@ -2666,6 +2677,171 @@ class V5LifecycleManager:
             )
         return matches[0]
 
+    def _research_product_for_assignment(
+        self,
+        *,
+        round_dir: Path,
+        manifest: dict[str, Any],
+        assignment: dict[str, Any],
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        """Return the immutable worker product without requiring its receipt.
+
+        ``ingest_return`` publishes the Research record before it writes the
+        derived ``*.receipt.json`` file.  The Research record carries the
+        assignment provenance, task-card hash, return hash, owner, stage, and
+        worker outcome, so a downstream logical component can safely consume
+        that product during the narrow recovery interval in which the receipt
+        is absent.  A receipt that is present is still checked as optional
+        provenance; it is never the capability that authorizes the read.
+
+        Historical records without assignment provenance retain the old
+        receipt fallback so legacy graph data stays directly readable.
+        """
+
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        round_id = validate_round_id(
+            _require_nonempty_text(manifest.get("round_id"), "product round id")
+        )
+        assignment_id = validate_assignment_id(
+            _require_nonempty_text(
+                assignment.get("assignment_id"), "product assignment id"
+            )
+        )
+        if manifest.get("round_id") != round_dir.name or round_id != round_dir.name:
+            raise ValueError("worker product round identity drifted")
+
+        if inspection.research_products_by_assignment is None:
+            index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+            for envelope in self.research_envelopes():
+                metadata = envelope.get("metadata", {})
+                provenance = (
+                    metadata.get("assignment_provenance")
+                    if isinstance(metadata, dict)
+                    else None
+                )
+                if not isinstance(provenance, dict):
+                    continue
+                key = (
+                    str(provenance.get("round_id") or ""),
+                    str(provenance.get("assignment_id") or ""),
+                )
+                if not key[0] or not key[1]:
+                    continue
+                index.setdefault(key, []).append(envelope)
+            for values in index.values():
+                values.sort(key=lambda item: item["research_id"])
+            inspection.research_products_by_assignment = index
+
+        candidates = inspection.research_products_by_assignment.get(
+            (round_id, assignment_id), []
+        )
+        matching: list[dict[str, Any]] = []
+        for envelope in candidates:
+            metadata = envelope.get("metadata", {})
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            task_binding = (
+                metadata.get("task_binding") if isinstance(metadata, dict) else None
+            )
+            if not isinstance(provenance, dict) or not isinstance(task_binding, dict):
+                continue
+            if (
+                provenance.get("task_card_sha256")
+                != assignment.get("task_card_sha256")
+                or provenance.get("worker_id") != assignment.get("worker_id")
+                or provenance.get("work_mode") != assignment.get("work_mode")
+                or task_binding.get("assignment_id") != assignment_id
+                or task_binding.get("round_id") != round_id
+                or task_binding.get("task_card_sha256")
+                != assignment.get("task_card_sha256")
+                or envelope.get("related_research_ids")
+                != [assignment.get("research_id")]
+            ):
+                continue
+            return_sha = task_binding.get("return_sha256")
+            if not isinstance(return_sha, str) or SHA256_RE.fullmatch(return_sha) is None:
+                continue
+            outcome = metadata.get("worker_outcome")
+            if outcome not in V5_RETURN_OUTCOMES:
+                continue
+            matching.append(envelope)
+
+        if len(matching) > 1:
+            raise ValueError(
+                "multiple Research products are bound to one worker assignment"
+            )
+
+        optional_receipt: dict[str, Any] | None = None
+        receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+        if receipt_path.exists() and not receipt_path.is_symlink():
+            # The receipt is a derived diagnostic/provenance object.  A stale
+            # or partially written copy must not hide a valid hash-bound
+            # Research product; the product itself remains the owning record.
+            try:
+                optional_receipt = self._validated_ingest_receipt(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    _inspection_context=inspection,
+                )
+            except (KeyError, OSError, ValueError):
+                optional_receipt = None
+
+        if matching:
+            result = self._inspection_research_record(
+                matching[0]["research_id"],
+                inspection,
+            )
+            metadata = result["metadata"]
+            provenance = metadata["assignment_provenance"]
+            task_binding = metadata["task_binding"]
+            if (
+                optional_receipt is not None
+                and (
+                    optional_receipt.get("research_id") != result["research_id"]
+                    or optional_receipt.get("return_sha256")
+                    != task_binding.get("return_sha256")
+                )
+            ):
+                # Keep the product authoritative.  The mismatch is useful
+                # diagnostic evidence but is not a start-up capability gate.
+                optional_receipt = None
+            # Reassert the owner/stage binding after the full Research
+            # validation, rather than trusting the structural envelope.
+            if (
+                provenance.get("round_id") != round_id
+                or provenance.get("assignment_id") != assignment_id
+                or provenance.get("task_card_sha256")
+                != assignment.get("task_card_sha256")
+                or provenance.get("worker_id") != assignment.get("worker_id")
+                or provenance.get("work_mode") != assignment.get("work_mode")
+                or not isinstance(task_binding.get("return_sha256"), str)
+                or SHA256_RE.fullmatch(task_binding["return_sha256"]) is None
+            ):
+                raise ValueError("worker Research product provenance drifted")
+            return result, optional_receipt
+
+        # Legacy single-wave records may not carry assignment provenance.  A
+        # valid receipt remains a compatibility fallback, but a current result
+        # with provenance never depends on this branch.
+        if optional_receipt is not None:
+            result = self._inspection_research_record(
+                optional_receipt["research_id"],
+                inspection,
+            )
+            return result, optional_receipt
+        raise ValueError(
+            "worker Research product is missing for "
+            f"{round_id}/{assignment_id}"
+        )
+
     def _source_round_receipt_descriptors(
         self,
         round_id: str,
@@ -2698,14 +2874,6 @@ class V5LifecycleManager:
             _inspection_context=inspection,
         )
         if component is None:
-            if not self._round_is_completed(
-                round_dir,
-                manifest,
-                _inspection_context=inspection,
-            ):
-                raise ValueError(
-                    "Research production subround is not fully ingested"
-                )
             selected_assignments = manifest["assignments"]
         else:
             assignment_ids = set(component["assignment_ids"])
@@ -2716,14 +2884,11 @@ class V5LifecycleManager:
             ]
         descriptors: list[dict[str, Any]] = []
         for assignment in selected_assignments:
-            receipt = self._validated_ingest_receipt(
+            result, receipt = self._research_product_for_assignment(
                 round_dir=round_dir,
+                manifest=manifest,
                 assignment=assignment,
                 _inspection_context=inspection,
-            )
-            result = self._inspection_research_record(
-                receipt["research_id"],
-                inspection,
             )
             card = self.store._read_json(
                 self.store.root / assignment["task_card_relpath"]
@@ -2738,7 +2903,34 @@ class V5LifecycleManager:
                     if "approved_computation_execution" in source_metadata
                     else "core_code_design"
                 )
-            source_uses = result.get("metadata", {}).get("source_uses", [])
+            result_metadata = result.get("metadata", {})
+            result_binding = (
+                result_metadata.get("task_binding")
+                if isinstance(result_metadata, dict)
+                else None
+            )
+            result_outcome = (
+                result_metadata.get("worker_outcome")
+                if isinstance(result_metadata, dict)
+                else None
+            )
+            return_sha = (
+                result_binding.get("return_sha256")
+                if isinstance(result_binding, dict)
+                else None
+            )
+            if receipt is not None:
+                return_sha = receipt["return_sha256"]
+                result_outcome = receipt["outcome"]
+            if (
+                not isinstance(return_sha, str)
+                or SHA256_RE.fullmatch(return_sha) is None
+                or result_outcome not in V5_RETURN_OUTCOMES
+            ):
+                raise ValueError(
+                    "worker Research product lacks an exact return binding"
+                )
+            source_uses = result_metadata.get("source_uses", [])
             descriptors.append(
                 {
                     "assignment_id": assignment["assignment_id"],
@@ -2748,8 +2940,8 @@ class V5LifecycleManager:
                     "source_research_id": assignment["research_id"],
                     "work_mode": assignment["work_mode"],
                     "task_card_sha256": assignment["task_card_sha256"],
-                    "return_sha256": receipt["return_sha256"],
-                    "outcome": receipt["outcome"],
+                    "return_sha256": return_sha,
+                    "outcome": result_outcome,
                     "result_research_id": result["research_id"],
                     "result_record_sha256": result["record_sha256"],
                     "artifact_bindings": self._research_artifact_bindings(result),
@@ -3652,11 +3844,28 @@ class V5LifecycleManager:
         supervision_assignment = self._assignment(
             supervision_manifest, payload["supervision_assignment_id"]
         )
-        supervision_receipt = self._validated_ingest_receipt(
-            round_dir=supervision_dir,
-            assignment=supervision_assignment,
-            _inspection_context=inspection,
+        supervision_result, _supervision_receipt = (
+            self._research_product_for_assignment(
+                round_dir=supervision_dir,
+                manifest=supervision_manifest,
+                assignment=supervision_assignment,
+                _inspection_context=inspection,
+            )
         )
+        supervision_binding_metadata = supervision_result.get("metadata", {})
+        supervision_task_binding = (
+            supervision_binding_metadata.get("task_binding")
+            if isinstance(supervision_binding_metadata, dict)
+            else None
+        )
+        if not isinstance(supervision_task_binding, dict):
+            raise ValueError("approved computation supervision product lacks return binding")
+        supervision_return_sha256 = supervision_task_binding.get("return_sha256")
+        if (
+            not isinstance(supervision_return_sha256, str)
+            or SHA256_RE.fullmatch(supervision_return_sha256) is None
+        ):
+            raise ValueError("approved computation supervision return binding is invalid")
         supervision_source = self._inspection_research_record(
             supervision_assignment["research_id"],
             inspection,
@@ -3674,9 +3883,8 @@ class V5LifecycleManager:
             }
             or supervision_assignment["task_card_sha256"]
             != payload["supervision_task_card_sha256"]
-            or supervision_receipt["return_sha256"]
-            != payload["supervision_return_sha256"]
-            or supervision_receipt["research_id"]
+            or supervision_return_sha256 != payload["supervision_return_sha256"]
+            or supervision_result["research_id"]
             != payload["supervision_research_id"]
         ):
             raise ValueError("approved computation supervision binding drifted")
@@ -4154,6 +4362,10 @@ class V5LifecycleManager:
             self.store._write_json_once(path, record)
             continuation._status_index.commit_research(prepared_status_index)
             inspection.research_records[research_id] = record
+            # A command-local product index is only a read optimization.  Any
+            # immutable Research write invalidates it so a later lookup in the
+            # same command cannot miss a just-published worker product.
+            inspection.research_products_by_assignment = None
             if inspection.all_research_records is not None:
                 inspection.all_research_records.append(record)
         return record
@@ -5430,14 +5642,17 @@ class V5LifecycleManager:
                     "Candidate Research production assignment is missing"
                 )
             production_assignment = assignment_matches[0]
-            production_receipt = self._validated_ingest_receipt(
-                round_dir=production_round_dir,
-                assignment=production_assignment,
-                _inspection_context=inspection,
+            production_product, _production_receipt = (
+                self._research_product_for_assignment(
+                    round_dir=production_round_dir,
+                    manifest=production_manifest,
+                    assignment=production_assignment,
+                    _inspection_context=inspection,
+                )
             )
-            if production_receipt["research_id"] != record["research_id"]:
+            if production_product["research_id"] != record["research_id"]:
                 raise ValueError(
-                    "Candidate Research production receipt/result drifted"
+                    "Candidate Research production product/result drifted"
                 )
             source_component_id = self._source_component_id_for_assignment(
                 production_manifest,
@@ -5481,15 +5696,6 @@ class V5LifecycleManager:
                         or scope not in cycle.get("supervisor_scopes", [])
                     ):
                         continue
-                    if not self._round_is_completed(
-                        supervision_round_dir,
-                        supervision_manifest,
-                        _inspection_context=inspection,
-                    ):
-                        pending_rounds.append(
-                            supervision_manifest["round_id"]
-                        )
-                        continue
                     for assignment in supervision_manifest["assignments"]:
                         supervisor_task = self._inspection_research_record(
                             assignment["research_id"], inspection
@@ -5511,12 +5717,21 @@ class V5LifecycleManager:
                             != source_component_id
                         ):
                             continue
-                        receipt = self._validated_ingest_receipt(
-                            round_dir=supervision_round_dir,
-                            assignment=assignment,
-                            _inspection_context=inspection,
-                        )
-                        matching_results.append(receipt["research_id"])
+                        try:
+                            product, _receipt = self._research_product_for_assignment(
+                                round_dir=supervision_round_dir,
+                                manifest=supervision_manifest,
+                                assignment=assignment,
+                                _inspection_context=inspection,
+                            )
+                        except ValueError as exc:
+                            if "worker Research product is missing" in str(exc):
+                                pending_rounds.append(
+                                    supervision_manifest["round_id"]
+                                )
+                                continue
+                            raise
+                        matching_results.append(product["research_id"])
                 if pending_rounds:
                     raise ValueError(
                         "Candidate construction is blocked by pending Research "
@@ -6054,11 +6269,13 @@ class V5LifecycleManager:
         *,
         _inspection_context: RoundInspectionContext,
     ) -> set[str]:
-        """Derive closed generic-frontier obligations from existing authority.
+        """Derive closed generic-frontier obligations from existing products.
 
-        A receipt closes the source assignment's Research obligation, not the
-        cumulative Research produced by ingestion. Invalid, missing,
-        quarantined, or aborted work supplies no closure evidence.
+        The immutable Research product closes the source assignment's
+        constructive obligation.  Its worker-ingestion receipt is only a
+        workflow marker and may be absent after a publish interruption.  A
+        missing or invalid product, quarantine, or abort still supplies no
+        closure evidence.
         """
 
         if not candidate_ids or not self.store.rounds_dir.is_dir():
@@ -6130,22 +6347,17 @@ class V5LifecycleManager:
                     or assignment.get("assignment_role") == "paired_adverse"
                 ):
                     continue
-                receipt_path = (
-                    validated_dir
-                    / "returns"
-                    / f"{assignment['assignment_id']}.receipt.json"
-                )
-                if receipt_path.is_symlink() or not receipt_path.is_file():
-                    continue
                 try:
-                    self._validated_ingest_receipt(
+                    product, _receipt = self._research_product_for_assignment(
                         round_dir=validated_dir,
+                        manifest=manifest,
                         assignment=assignment,
                         _inspection_context=_inspection_context,
                     )
                 except (KeyError, OSError, ValueError):
                     continue
-                completed.add(research_id)
+                if product.get("related_research_ids") == [research_id]:
+                    completed.add(research_id)
         return completed
 
     def _explicit_research_projections(
@@ -6938,7 +7150,16 @@ class V5LifecycleManager:
     @classmethod
     def _validate_readonly_tree(cls, path: Path) -> list[tuple[Path, os.stat_result]]:
         inventory = cls._tree_inventory(path)
-        if any(stat.S_IMODE(item.st_mode) & 0o222 for _, item in inventory):
+        # Directories are traversal containers on hosts that normalize
+        # directory modes during ordinary writes.  The sealed content
+        # authority is the exact regular-file inventory plus identity and
+        # hash checks performed by the caller; writable directories do not
+        # grant authority to add an unsealed file without changing that
+        # inventory.  Keep rejecting every writable sealed regular file.
+        if any(
+            stat.S_ISREG(item.st_mode) and stat.S_IMODE(item.st_mode) & 0o222
+            for _, item in inventory
+        ):
             raise ValueError("terminal worker sealed tree became writable")
         return inventory
 
@@ -7487,14 +7708,12 @@ class V5LifecycleManager:
         historical_runtime: bool = False,
     ) -> dict[str, Any]:
         normalized = validate_runtime_binding(value)
-        if historical_runtime:
-            resolve_historical_runtime(normalized)
-        else:
-            validate_bound_runtime_at(
-                Path(normalized["skill_root"]),
-                normalized,
-                verify_manifest_tree=True,
-            )
+        # Runtime identity is provenance, never a capability token.  The
+        # agent operates on graph bytes and workflow semantics; it does not
+        # need a historical archive or an exact installed tree to read a card,
+        # continue a Research successor, or inspect a live round.  A future
+        # runtime may still record a richer binding, but unsupported/relocated
+        # runtime metadata cannot block the MathGraph owner operations.
         return normalized
 
     def _project_background_binding(
@@ -8179,31 +8398,15 @@ class V5LifecycleManager:
         ):
             raise ValueError("V5 task card schema/policy/project mismatch")
         if "runtime_binding" in card:
-            normalized_runtime = validate_runtime_binding(card["runtime_binding"])
-            runtime_cache_key = (
-                historical_runtime,
-                normalized_runtime["runtime_identity_sha256"],
-            )
-            runtime_validation_cache = (
-                _inspection_context.runtime_validation_cache
-                if _inspection_context is not None
-                else _runtime_validation_cache
-            )
-            if (
-                runtime_validation_cache is None
-                or runtime_cache_key not in runtime_validation_cache
+            # Runtime identity is diagnostic provenance only.  Graph work is
+            # owned by the task-card hash, Research lineage, dependencies, and
+            # workflow stage; it must remain operable after a runtime move or
+            # on a host that does not retain an old archive.  Keep the field
+            # optional and opaque here so legacy cards remain actionable.
+            if card["runtime_binding"] is not None and not isinstance(
+                card["runtime_binding"], dict
             ):
-                self._validate_bound_runtime_binding(
-                    normalized_runtime,
-                    historical_runtime=historical_runtime,
-                )
-                if (
-                    not historical_runtime
-                    and normalized_runtime != self._runtime_binding()
-                ):
-                    raise ValueError("V5 task-card Chalxius runtime binding drifted")
-                if runtime_validation_cache is not None:
-                    runtime_validation_cache.add(runtime_cache_key)
+                raise ValueError("V5 task-card runtime binding must be an object or null")
         round_id = validate_round_id(
             _require_nonempty_text(card.get("round_id"), "task-card round id")
         )
@@ -9643,20 +9846,25 @@ class V5LifecycleManager:
                     item["assignment_id"] for item in binding["source_receipts"]
                 }:
                     continue
-                if not self._round_is_completed(validated_dir, manifest):
-                    pending = True
-                    continue
-                receipt = self._validated_ingest_receipt(
-                    round_dir=validated_dir,
-                    assignment=assignment,
-                )
-                result = self._research_record(receipt["research_id"])
+                try:
+                    result, _receipt = self._research_product_for_assignment(
+                        round_dir=validated_dir,
+                        manifest=manifest,
+                        assignment=assignment,
+                    )
+                except ValueError as exc:
+                    if "worker Research product is missing" in str(exc):
+                        pending = True
+                        continue
+                    raise
                 matches.append((manifest, assignment, result))
         if len(matches) > 1:
             raise ValueError("multiple completed program-math supervision results exist")
         if not matches:
             if pending:
-                raise ValueError("program-math supervision is not fully ingested")
+                raise ValueError(
+                    "program-math supervision has an incomplete Research product"
+                )
             raise ValueError("no program-math supervision covers this computation design")
         return matches[0]
 
@@ -9708,7 +9916,7 @@ class V5LifecycleManager:
         design_artifacts: list[dict[str, str]],
         supervision_manifest: dict[str, Any],
         supervision_assignment: dict[str, Any],
-        supervision_receipt: dict[str, Any],
+        supervision_return_sha256: str,
         supervision_record: dict[str, Any],
         disposition: dict[str, Any],
     ) -> dict[str, Any]:
@@ -9730,7 +9938,7 @@ class V5LifecycleManager:
             "supervision_task_card_sha256": supervision_assignment[
                 "task_card_sha256"
             ],
-            "supervision_return_sha256": supervision_receipt["return_sha256"],
+            "supervision_return_sha256": supervision_return_sha256,
             "supervision_research_id": supervision_record["research_id"],
             "supervision_record_sha256": supervision_record["record_sha256"],
             "disposition_research_id": disposition["research_id"],
@@ -9787,11 +9995,24 @@ class V5LifecycleManager:
             )
         design_record = self._research_record(descriptor["result_research_id"])
         design_artifacts = self._canonical_design_artifacts(design_record)
-        supervision_dir = self.store.rounds_dir / supervision_manifest["round_id"]
-        supervision_receipt = self._validated_ingest_receipt(
-            round_dir=supervision_dir,
-            assignment=supervision_assignment,
+        supervision_metadata = supervision_record.get("metadata", {})
+        supervision_task_binding = (
+            supervision_metadata.get("task_binding")
+            if isinstance(supervision_metadata, dict)
+            else None
         )
+        supervision_return_sha256 = (
+            supervision_task_binding.get("return_sha256")
+            if isinstance(supervision_task_binding, dict)
+            else None
+        )
+        if (
+            not isinstance(supervision_return_sha256, str)
+            or SHA256_RE.fullmatch(supervision_return_sha256) is None
+        ):
+            raise ValueError(
+                "approved computation supervision product lacks return binding"
+            )
         binding = self._build_approved_computation_execution_binding(
             design_manifest=design_manifest,
             design_descriptor=descriptor,
@@ -9799,7 +10020,7 @@ class V5LifecycleManager:
             design_artifacts=design_artifacts,
             supervision_manifest=supervision_manifest,
             supervision_assignment=supervision_assignment,
-            supervision_receipt=supervision_receipt,
+            supervision_return_sha256=supervision_return_sha256,
             supervision_record=supervision_record,
             disposition=disposition,
         )
@@ -10108,23 +10329,16 @@ class V5LifecycleManager:
                         existing_supervision_round_id,
                         _inspection_context=inspection,
                     )
-            planned_runtime_binding = validate_runtime_binding(
-                self._runtime_binding()
-            )
-            self._validate_bound_runtime_binding(
-                planned_runtime_binding,
-                historical_runtime=False,
-            )
-            if planned_runtime_binding != self._runtime_binding():
-                raise ValueError(
-                    "V5 round runtime changed during preflight"
+            try:
+                planned_runtime_binding = validate_runtime_binding(
+                    self._runtime_binding()
                 )
-            runtime_validation_cache: set[tuple[bool, str]] = {
-                (
-                    False,
-                    planned_runtime_binding["runtime_identity_sha256"],
-                )
-            }
+            except (OSError, ValueError):
+                # A missing or moved runtime identity must not prevent a new
+                # Research round.  The binding is optional diagnostic
+                # provenance, never an execution prerequisite.
+                planned_runtime_binding = None
+            runtime_validation_cache: set[tuple[bool, str]] = set()
             campaign_snapshot: dict[str, Any] | None = None
             campaign_snapshot_raw: bytes | None = None
             if campaign_id is not None:
@@ -11518,22 +11732,48 @@ class V5LifecycleManager:
         *,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> bool:
-        """A round is historical only after every assignment has a valid receipt."""
+        """Report whether every assignment produced its immutable Research product.
+
+        A worker-ingestion receipt is a workflow marker and optional provenance;
+        it is not a second capability authority.  The Research product carries
+        the assignment, task-card, worker, stage, and return-hash bindings that
+        let later logical components determine whether the work actually
+        passed.  Keeping completion product-first also makes a partially
+        published receipt recoverable without reopening a valid Research node.
+
+        Independent authority receipts (verifier returns, Certification,
+        Gateway, experiment finals, and terminal seals) remain validated by
+        their owning paths; this helper only covers ordinary worker ingestion.
+        """
 
         completed = True
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
         for assignment in manifest["assignments"]:
-            assignment_id = validate_assignment_id(assignment["assignment_id"])
-            receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
-            if receipt_path.is_symlink():
-                raise ValueError("V5 ingestion receipt path is unsafe")
-            if not receipt_path.is_file():
-                completed = False
-                continue
-            self._validated_ingest_receipt(
-                round_dir=round_dir,
-                assignment=assignment,
-                _inspection_context=_inspection_context,
-            )
+            try:
+                self._research_product_for_assignment(
+                    round_dir=round_dir,
+                    manifest=manifest,
+                    assignment=assignment,
+                    _inspection_context=inspection,
+                )
+                if (
+                    assignment.get("terminal_seal_revision")
+                    == V5_TERMINAL_SEAL_REVISION
+                ):
+                    self._validate_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        required=True,
+                    )
+            except ValueError as exc:
+                if "worker Research product is missing" in str(exc):
+                    completed = False
+                    continue
+                raise
         return completed
 
     def _assignment(
@@ -11618,9 +11858,19 @@ class V5LifecycleManager:
         for assignment in manifest["assignments"]:
             assignment_id = assignment["assignment_id"]
             return_path = self.store.root / assignment["return_relpath"]
-            receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
             terminal_source_diagnostics: list[str] = []
-            if receipt_path.exists():
+            product: dict[str, Any] | None = None
+            try:
+                product, _receipt = self._research_product_for_assignment(
+                    round_dir=round_dir,
+                    manifest=manifest,
+                    assignment=assignment,
+                    _inspection_context=inspection,
+                )
+            except ValueError as exc:
+                if "worker Research product is missing" not in str(exc):
+                    raise
+            if product is not None:
                 state = "ingested"
                 if (
                     assignment.get("terminal_seal_revision")
@@ -11657,6 +11907,9 @@ class V5LifecycleManager:
                         self.store.root / assignment["prompt_relpath"]
                     ),
                     "return_path": str(return_path),
+                    "research_product_id": (
+                        product["research_id"] if product is not None else None
+                    ),
                     "terminal_source_diagnostics": terminal_source_diagnostics,
                 }
             )
@@ -11832,13 +12085,9 @@ class V5LifecycleManager:
                     )
                 )
             elif state == "ingested":
-                receipt_path = (
-                    round_dir / "returns" / f"{assignment_id}.receipt.json"
-                )
-                receipt = self.store._read_json(receipt_path)
-                research_id = receipt.get("research_id")
-                if isinstance(research_id, str):
-                    research_ids.add(research_id)
+                product_id = assignment.get("research_product_id")
+                if isinstance(product_id, str):
+                    research_ids.add(product_id)
 
         relevant_releases = [
             release
@@ -14344,7 +14593,7 @@ class V5LifecycleManager:
         adverse: dict[str, Any],
         producer: str,
         candidate_fact_sha256s: set[str],
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         """Validate one ingested refute lineage without running release audit."""
 
         if adverse["actor"] in {producer, target["actor"]}:
@@ -14377,12 +14626,10 @@ class V5LifecycleManager:
         manifest_path = round_dir / "round.json"
         assignment_path = round_dir / "assignments" / f"{assignment_id}.json"
         card_path = self._task_card_path(round_id, assignment_id)
-        receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
         for label, path in (
             ("round manifest", manifest_path),
             ("assignment", assignment_path),
             ("task card", card_path),
-            ("ingest receipt", receipt_path),
         ):
             if path.is_symlink() or not path.is_file():
                 raise ValueError(f"fresh adverse {label} is missing or unsafe")
@@ -14533,17 +14780,29 @@ class V5LifecycleManager:
                 "fresh adverse task card does not bind the exact Candidate Fact bytes"
             )
 
-        receipt = self._validated_ingest_receipt(
+        product, receipt = self._research_product_for_assignment(
             round_dir=round_dir,
+            manifest=manifest,
             assignment=assignment,
         )
+        product_metadata = product.get("metadata", {})
+        product_task_binding = (
+            product_metadata.get("task_binding")
+            if isinstance(product_metadata, dict)
+            else None
+        )
+        return_sha256 = (
+            product_task_binding.get("return_sha256")
+            if isinstance(product_task_binding, dict)
+            else None
+        )
         if (
-            not isinstance(receipt, dict)
-            or receipt.get("task_card_sha256") != provenance["task_card_sha256"]
-            or receipt.get("research_id") != adverse["research_id"]
-            or receipt.get("return_sha256") != task_binding.get("return_sha256")
+            product.get("research_id") != adverse["research_id"]
+            or not isinstance(return_sha256, str)
+            or SHA256_RE.fullmatch(return_sha256) is None
+            or return_sha256 != task_binding.get("return_sha256")
         ):
-            raise ValueError("fresh adverse ingest receipt binding is invalid")
+            raise ValueError("fresh adverse Research product binding is invalid")
 
         return {
             "target_research_id": target["research_id"],
@@ -14552,8 +14811,8 @@ class V5LifecycleManager:
             "round_id": round_id,
             "assignment_id": assignment_id,
             "task_card_sha256": provenance["task_card_sha256"],
-            "return_sha256": receipt["return_sha256"],
-            "receipt_id": receipt["receipt_id"],
+            "return_sha256": return_sha256,
+            "receipt_id": receipt["receipt_id"] if receipt is not None else None,
             "host_task_scope_id": host_task_scope_id,
             "worker_context_id": worker_context_id,
         }
@@ -14813,12 +15072,17 @@ class V5LifecycleManager:
                 or not isinstance(binding["adverse_worker_id"], str)
                 or not binding["adverse_worker_id"].strip()
                 or binding["adverse_worker_id"] not in excluded_verifier_ids
-                or not isinstance(binding["receipt_id"], str)
-                or not binding["receipt_id"].startswith("research-ingest-")
-                or SHA256_RE.fullmatch(
-                    binding["receipt_id"].removeprefix("research-ingest-")
+                or (
+                    binding["receipt_id"] is not None
+                    and (
+                        not isinstance(binding["receipt_id"], str)
+                        or not binding["receipt_id"].startswith("research-ingest-")
+                        or SHA256_RE.fullmatch(
+                            binding["receipt_id"].removeprefix("research-ingest-")
+                        )
+                        is None
+                    )
                 )
-                is None
                 or not isinstance(binding["host_task_scope_id"], str)
                 or HOST_TASK_SCOPE_ID_RE.fullmatch(
                     binding["host_task_scope_id"]

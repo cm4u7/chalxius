@@ -141,6 +141,7 @@ class UnifiedReasoningModeTests(unittest.TestCase):
         )
         return first, second
 
+    @unittest.skip("0.8.0 removes the legacy read-only and upgrade-copy gate")
     def test_v3_is_read_only_but_dry_run_upgrade_remains_available(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
@@ -280,17 +281,15 @@ class UnifiedReasoningModeTests(unittest.TestCase):
             interface_path.unlink()
 
             strict = MathGraphStore(root)
-            before = project_tree_snapshot(root)
-            with self.assertRaisesRegex(ValueError, "V1-V3 is read-only"):
-                strict.statement_interface(fact.fact_id)
-            self.assertEqual(before, project_tree_snapshot(root))
-
-            interface = strict.statement_interface(
-                fact.fact_id,
-                materialize=False,
-            )
+            interface = strict.statement_interface(fact.fact_id)
+            self.assertTrue(interface_path.is_file())
             self.assertEqual(interface["fact_id"], fact.fact_id)
             self.assertEqual(interface["schema_version"], 3)
+            before = project_tree_snapshot(root)
+            self.assertEqual(
+                strict.statement_interface(fact.fact_id, materialize=False),
+                interface,
+            )
             self.assertTrue(strict.audit().current_ok)
             strict.reasoning_modes().status()
             strict.blackboard().reindex(apply=False)
@@ -474,7 +473,7 @@ class UnifiedReasoningModeTests(unittest.TestCase):
             )
             self.assertTrue(store.audit().ok)
 
-    def test_legacy_chalk_v4_requires_explicit_mode_init(self) -> None:
+    def test_legacy_chalk_v4_graph_is_native_and_mode_binding_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             store = MathGraphStore(root)
@@ -490,14 +489,18 @@ class UnifiedReasoningModeTests(unittest.TestCase):
             self.assertFalse(status["initialized"])
             self.assertEqual(
                 status["compatibility"],
-                "legacy_chalk_v4_read_only_until_mode_init",
+                "native_graph_operation_mode_optional",
             )
             audit = store.audit()
             self.assertTrue(audit.ok)
             self.assertTrue(
                 any("legacy" in warning for warning in audit.warnings)
             )
-            with self.assertRaisesRegex(ValueError, "read-only"):
+            store.memory_add(
+                {"kind": "direction", "claim": "Native modeless graph work."},
+                actor="main",
+            )
+            with self.assertRaisesRegex(ValueError, "mode-init"):
                 store.reasoning_modes().binding_for_new_work_unit(
                     adoption_binding=adoption_binding(workload_profile())
                 )
@@ -595,6 +598,7 @@ class UnifiedReasoningModeTests(unittest.TestCase):
             self.assertEqual(before, project_tree_snapshot(root))
             self.assertFalse(strict.reasoning_modes().has_any_state())
 
+    @unittest.skip("0.8.0 removes mode-init as a legacy graph write gate")
     def test_modeless_v4_all_public_writers_fail_before_bytes_change(
         self,
     ) -> None:
@@ -813,17 +817,11 @@ class UnifiedReasoningModeTests(unittest.TestCase):
             interface_path.unlink()
 
             strict = MathGraphStore(root)
-            before = project_tree_snapshot(root)
-            with self.assertRaisesRegex(ValueError, "read-only"):
-                strict.statement_interface(fact_id)
-            self.assertEqual(before, project_tree_snapshot(root))
-
-            pure_interface = strict.statement_interface(
-                fact_id,
-                materialize=False,
-            )
+            pure_interface = strict.statement_interface(fact_id)
+            self.assertTrue(interface_path.is_file())
             self.assertEqual(pure_interface["fact_id"], fact_id)
             self.assertEqual(pure_interface["schema_version"], 4)
+            before = project_tree_snapshot(root)
             read_matrix = {
                 "audit": strict.audit,
                 "mode status": strict.reasoning_modes().status,

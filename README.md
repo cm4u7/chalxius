@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.7.16](https://github.com/cm4u7/chalxius/releases/tag/v0.7.16) ·
+[📦 Download v0.8.0](https://github.com/cm4u7/chalxius/releases/tag/v0.8.0) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -135,14 +135,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.7.16-bounded-capability-hygiene.tar.gz`
-- `chalxius-0.7.16-bounded-capability-hygiene.tar.gz.sha256`
+- `chalxius-0.8.0-mathgraph-first.tar.gz`
+- `chalxius-0.8.0-mathgraph-first.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.7.16-bounded-capability-hygiene.tar.gz.sha256
-tar -xzf chalxius-0.7.16-bounded-capability-hygiene.tar.gz
+shasum -a 256 -c chalxius-0.8.0-mathgraph-first.tar.gz.sha256
+tar -xzf chalxius-0.8.0-mathgraph-first.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -408,6 +408,29 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.8.0: MathGraph First
+
+The MathGraph is now the forward-compatibility surface. Valid node and edge
+hashes, dependencies, provenance, workflow stages, and owner boundaries let
+agents operate legacy and current graphs directly across runtime upgrades.
+Runtime locations, archives, migration ceremonies, and ordinary
+worker-ingestion receipts are diagnostic or process provenance rather than
+ordinary graph-operation gates.
+
+The retired runtime-compatibility closure and its adapter/migration path are
+removed. A complete hash-bound Research product with valid assignment
+provenance remains consumable even when a derived worker receipt is absent.
+Malformed graph hashes, missing dependencies, wrong-stage or owner/hash drift,
+Candidate adverse review, verifier, Certification, Gateway, and Fact
+authority checks remain at their owning boundaries.
+
+The exact 253-entry manifest passed the routine matrix: changed-surface
+tests 28/28, semantic mutations 15/15, graph/runtime focus 35/35, self-test,
+strict architecture reconnaissance, cold archive verification, and
+cache/bytecode checks. The installed 0.8.0 tree matches the validated
+candidate. No Candidate, Certification Decision, Gateway admission, or Fact
+was created by this architecture release.
 
 ## v0.7.16: Bounded Capability Hygiene
 

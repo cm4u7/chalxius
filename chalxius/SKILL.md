@@ -3,11 +3,34 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.7.16 — Bounded Capability Hygiene
+# Chalxius 0.8.0 — MathGraph First
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
-`operate-mathgraph-unified` name is schema compatibility only.
+`operate-mathgraph-unified` name is schema compatibility only. Cross-version
+operation is defined by the MathGraph itself: node and edge identity, content
+hashes, dependencies, provenance, workflow stage, and owner boundaries. A
+runtime path, installation identity, archive locator, or obsolete receipt is
+diagnostic provenance, not a prerequisite for ordinary graph work.
+
+## Forward-upgrade rule
+
+Future releases do not owe runtime or procedural forward compatibility. An
+upgrade may replace or remove old adapters, migration ceremonies, runtime
+identity checks, and administrative gates when the MathGraph semantic surface
+remains operable. The continuity obligation is semantic: an agent must be able
+to interpret and operate valid node/edge hashes, dependencies, provenance,
+workflow stages, and owner boundaries. Mathematical-safety and Fact-authority
+checks stay at their owning boundaries; procedural legality is not a second
+truth path.
+
+Worker-ingestion receipts are workflow markers only. They document that a
+return passed through ingestion and provide optional replay provenance, but do
+not grant a Research capability or mathematical status. A complete hash-bound
+Research product with valid assignment provenance can be consumed by later
+workflow stages when its derived receipt is absent; missing products,
+stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
+terminal-seal, or final-experiment checks remain blocking at their own owners.
 
 ## Start through the smallest applicable contract
 
@@ -209,8 +232,9 @@ repair caches implicitly.
    `source_scope`, `program_math`, and `integration` only for a genuine
    cross-primary interface.
 5. Completing one Research subround is not completing the host task. At that
-   boundary validate the exact card, return, ingestion receipt, supervision
-   state, and affected local projection; do not automatically run a whole-
+   boundary validate the exact card, hash-bound Research product, supervision
+   state, and affected local projection; treat a worker-ingestion receipt as
+   optional provenance rather than a startup capability gate; do not automatically run a whole-
    project audit. Reserve the full audit for an explicit user request,
    Candidate/Fact or final-delivery boundary, shared-runtime change, detected
    drift, or a user-configured cumulative cadence. No fixed round-count
@@ -225,7 +249,7 @@ repair caches implicitly.
    the seal lock, then package once. Iterative repair belongs before expensive
    packaging.
 9. Generic production planning omits only source Research obligations closed by
-   an exact valid, non-aborted production receipt. It retains the worker result,
+   an exact valid, non-aborted production Research product. It retains the worker result,
    history views, and explicit-ID planning. Main `memory-add` reuses identical
    unbound semantics across actor labels only when the current CLI role is Main;
    actor text never grants that authority.
@@ -339,14 +363,15 @@ Paper, Fact, Audit, Blackboard, or Learning Graph authority.
 
 ## Runtime, release, and installation
 
-Active cards bind the complete current manifest and runtime identity. Historical
-terminal cards may resolve only through the immutable external runtime archive.
-Install or roll back only through the protected runtime cutover with the
-required project inventory and validation receipt. Do not mutate the installed
-runtime in place.
+Runtime identity and archive records may explain where a card or release was
+created, but they do not authorize or deny ordinary graph operations. Agents
+continue a legacy graph directly when its content hashes, dependencies,
+provenance, and workflow owner checks are valid; no adapter, migration copy, or
+mode-init ceremony is needed merely to read or append graph work. Release and
+rollback tools remain deployment diagnostics and must not become a second truth
+path or a graph-operation gate.
 
 Architecture releases use failure-informed validation: changed files, affected
 boundaries, manifest/inventory, focused regression, self-test, and only the
 broader suite justified by shared-runtime risk. Install the validated candidate
-locally before publication. Publication does not imply merging a pull request;
-merge requires explicit user authorization.
+locally before publication. For this release workflow, an explicit publication request includes merging the corresponding reviewed change into `main` by default; the user may explicitly exclude merge. Installation and publication remain separate authorizations, and publication never authorizes an unreviewed or unrelated change.

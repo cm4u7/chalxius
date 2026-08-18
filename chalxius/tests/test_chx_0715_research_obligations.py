@@ -289,7 +289,7 @@ class ResearchObligationClosureTests(unittest.TestCase):
             self.assertIn(second["research_id"], active_ids)
             self.assertIn(receipt["research_id"], active_ids)
 
-    def test_pending_quarantined_invalid_and_aborted_work_do_not_close(self) -> None:
+    def test_pending_quarantined_and_aborted_work_do_not_close_but_receipt_drift_does_not_reopen_product(self) -> None:
         for state in ("pending", "quarantined", "invalid", "aborted"):
             with self.subTest(state=state), tempfile.TemporaryDirectory() as temporary:
                 store = self._store(
@@ -344,7 +344,35 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 active_ids = {
                     item["research_id"] for item in lifecycle.frontier(limit=20)
                 }
-                self.assertIn(source["research_id"], active_ids)
+                if state == "invalid":
+                    # The receipt is only a workflow marker.  Its tampering is
+                    # diagnostic, but the independently hash-bound Research
+                    # product still closes the source obligation.
+                    self.assertNotIn(source["research_id"], active_ids)
+                else:
+                    self.assertIn(source["research_id"], active_ids)
+
+    def test_missing_worker_product_does_not_close_source_obligation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {"claim": "A missing product must remain actionable."},
+                actor="main",
+            )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[source["research_id"]],
+                host_task_scope_id="missing-product-obligation",
+            )
+            assignment = planned["assignments"][0]
+            receipt = self._ingest_plain_assignment(store, planned, assignment)
+            (lifecycle.research_entries_dir / f"{receipt['research_id']}.json").unlink()
+            active_ids = {
+                item["research_id"] for item in lifecycle.frontier(limit=20)
+            }
+            self.assertIn(source["research_id"], active_ids)
 
     def test_explicit_id_planning_does_not_call_generic_frontier(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

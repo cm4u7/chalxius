@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .adoption import (
     TRIGGERED_FEATURES,
@@ -1312,9 +1313,7 @@ class ReasoningModeManager:
         ):
             return {
                 "initialized": False,
-                "compatibility": (
-                    "legacy_v1_v3_read_only_requires_upgrade_project_copy"
-                ),
+                "compatibility": "native_graph_operation_no_upgrade_required",
                 "reasoning_modes": list(REASONING_MODES),
                 "reasoning_mode_policy_sha256": MODE_POLICY_SHA256,
                 "fact_admission_contract_sha256": (
@@ -1324,7 +1323,7 @@ class ReasoningModeManager:
         if not self.has_any_state():
             return {
                 "initialized": False,
-                "compatibility": "legacy_chalk_v4_read_only_until_mode_init",
+                "compatibility": "native_graph_operation_mode_optional",
                 "reasoning_modes": list(REASONING_MODES),
                 "reasoning_mode_policy_sha256": MODE_POLICY_SHA256,
                 "fact_admission_contract_sha256": (
@@ -1354,6 +1353,25 @@ class ReasoningModeManager:
             "future_work_units_only": True,
         }
 
+    @contextmanager
+    def _lifecycle_mutation_lock(self, *, command: str) -> Iterator[None]:
+        """Use the lock owned by the current workflow lifecycle.
+
+        Public mode operations are lifecycle operations, not legacy-writer
+        calls.  Keeping the choice here means an agent can call the API
+        directly on a V5 graph; callers do not need to know about an adapter
+        or wrap the operation in a second compatibility protocol.  V4 keeps
+        its existing lock semantics while V5 receives the named lifecycle
+        authority required by the store.
+        """
+
+        if self.store.workflow_evidence_version() == 5:
+            with self.store.v5_mutation_lock(command=command):
+                yield
+        else:
+            with self.store.mutation_lock():
+                yield
+
     def switch(
         self,
         *,
@@ -1366,7 +1384,7 @@ class ReasoningModeManager:
             raise ValueError("mode switch actor must be nonempty")
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("mode switch reason must be nonempty")
-        with self.store.mutation_lock():
+        with self._lifecycle_mutation_lock(command="mode-switch"):
             current = self.status()
             if not current["initialized"]:
                 raise ValueError("run mode-init before switching modes")
@@ -1417,8 +1435,8 @@ class ReasoningModeManager:
         current = self.status()
         if not current["initialized"]:
             raise ValueError(
-                "legacy Chalk V4 project is read-only in the unified engine; "
-                "run mode-init before planning new work"
+                "reasoning-mode binding is unavailable until mode-init; "
+                "ordinary graph operations remain available"
             )
         execution_profile = build_execution_profile(
             reasoning_mode=current["reasoning_mode"],
@@ -1448,7 +1466,7 @@ class ReasoningModeManager:
         if not round_path.is_file() or round_path.is_symlink():
             raise ValueError("work-unit round manifest is missing or unsafe")
         abort_path = self.abort_dir / f"{round_id}.json"
-        with self.store.mutation_lock():
+        with self._lifecycle_mutation_lock(command="work-unit-abort"):
             semantic = {
                 "schema_version": 1,
                 "policy_revision": UNIFIED_POLICY_REVISION,

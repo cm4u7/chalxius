@@ -241,10 +241,11 @@ creates a second Fact authority.
 Before Candidate artifact normalization, source audit, capsule construction,
 or sealing, the prospective fresh-adverse readiness gate inspects only
 content-hashed Research headers, canonical Candidate Fact bytes, and the exact
-refute assignment/card/return/receipt lineage. For each maximal selected
+refute assignment/card/return/Research-product lineage. For each maximal selected
 constructive branch with `independent_adverse_required=true`, one later
 independent refute must directly target that branch head, freeze every exact
-Candidate Fact hash in its task-card capabilities, be non-aborted and ingested,
+Candidate Fact hash in its task-card capabilities, be non-aborted and have a
+hash-valid Research product,
 appear in `adverse_actor_ids`, and have a Candidate disposition. A paired
 adverse assignment or a separately planned primary `refute` can satisfy the
 gate. Missing or inherited actor labels cannot. Failure is
@@ -305,7 +306,7 @@ The full coverage/case audit remains available for internal diagnosis:
 ```
 
 That full form retains every validated scope round, assignment, task card,
-return/receipt state, paired adverse coverage record, case, technical witness,
+return/Research-product state (with any receipt as optional provenance), paired adverse coverage record, case, technical witness,
 proposal status, and the explicit worker-reported nontruth boundary. It is not
 the normal user-facing report.
 
@@ -411,7 +412,7 @@ quantifier, modality, negation/operator scope, or exception conditions drift.
 
 One further fixed family,
 `baseline_program_math_semantic_alignment`, is appended only to the generated
-review of a successfully ingested computation-bearing Research return. The
+review of a computation-bearing Research product that passed its worker stage. The
 scope check requires an actual positive computation-stage count, the generated
 `program_math_review` metadata, and exact capability-bound
 `computation_source` and `computation_output` artifacts. A claim that merely

@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
+import aggressive_bug_audit
 import release_validation
 
 
@@ -53,34 +54,80 @@ class ReleaseValidationTests(unittest.TestCase):
             )
             (first / "unexpected.txt").write_text("drift\n", encoding="utf-8")
             self.assertFalse((second / "unexpected.txt").exists())
-            lanes = release_validation._default_lanes(release_validation.sys.executable)
-            phases = {lane.name: lane.phase for lane in lanes}
-            self.assertLess(
-                phases["architecture_reconnaissance"], phases["full_suite"]
+            routine = release_validation._default_lanes(
+                release_validation.sys.executable
             )
-            self.assertLess(
-                phases["architecture_reconnaissance"], phases["self_test"]
+            phases = {lane.name: lane.phase for lane in routine}
+            self.assertEqual(
+                set(phases), release_validation.ROUTINE_LANE_NAMES
             )
-            self.assertLess(
-                phases["architecture_reconnaissance"],
-                phases["behavioral_feature_gate"],
-            )
-            self.assertLess(
-                phases["behavioral_feature_gate"], phases["full_suite"]
-            )
-            self.assertLess(
-                phases["behavioral_feature_gate"], phases["self_test"]
-            )
-            self.assertGreater(phases["aggressive_bug_audit"], phases["full_suite"])
+            self.assertEqual(phases["self_test"], phases["changed_surface_tests"])
             self.assertGreater(phases["aggressive_bug_audit"], phases["self_test"])
-            self.assertLess(
-                phases["mutant_registry_preflight"], phases["full_suite"]
+            self.assertGreater(
+                phases["aggressive_bug_audit"],
+                phases["changed_surface_tests"],
             )
-            self.assertLess(
-                phases["mutant_registry_preflight"], phases["self_test"]
+            self.assertFalse(
+                {
+                    "architecture_reconnaissance",
+                    "behavioral_feature_gate",
+                    "full_suite",
+                }
+                & set(phases)
             )
 
-    def test_current_mutant_registry_preflight_is_cheap_read_only_lane(self) -> None:
+            forensic = release_validation._default_lanes(
+                release_validation.sys.executable, forensic=True
+            )
+            forensic_phases = {lane.name: lane.phase for lane in forensic}
+            self.assertEqual(
+                set(forensic_phases), release_validation.FORENSIC_LANE_NAMES
+            )
+            self.assertLess(
+                forensic_phases["architecture_reconnaissance"],
+                forensic_phases["full_suite"],
+            )
+            self.assertLess(
+                forensic_phases["behavioral_feature_gate"],
+                forensic_phases["full_suite"],
+            )
+            self.assertGreater(
+                forensic_phases["aggressive_bug_audit"],
+                forensic_phases["full_suite"],
+            )
+            self.assertLess(
+                forensic_phases["mutant_registry_preflight"],
+                forensic_phases["full_suite"],
+            )
+
+    def test_routine_mutation_profile_is_semantic_and_forensic_is_opt_in(self) -> None:
+        routine = release_validation._default_lanes(release_validation.sys.executable)
+        routine_by_name = {lane.name: lane for lane in routine}
+        self.assertEqual(routine_by_name["aggressive_bug_audit"].mutation_profile, "semantic")
+        self.assertIn("--profile", routine_by_name["aggressive_bug_audit"].command)
+        self.assertIn("semantic", routine_by_name["aggressive_bug_audit"].command)
+        self.assertIn("changed_surface_tests", routine_by_name)
+        self.assertNotIn("mutant_registry_preflight", routine_by_name)
+        self.assertNotIn("full_suite", routine_by_name)
+
+        forensic = release_validation._default_lanes(
+            release_validation.sys.executable, forensic=True
+        )
+        forensic_by_name = {lane.name: lane for lane in forensic}
+        self.assertEqual(
+            forensic_by_name["aggressive_bug_audit"].mutation_profile, "full"
+        )
+        self.assertIn("full", forensic_by_name["aggressive_bug_audit"].command)
+        self.assertIn("full_suite", forensic_by_name)
+
+    def test_semantic_registry_is_bounded_without_removing_forensic_registry(self) -> None:
+        semantic = aggressive_bug_audit._mutants_for_profile("semantic")
+        full = aggressive_bug_audit._mutants_for_profile("full")
+        self.assertEqual(len(semantic), 15)
+        self.assertEqual(len(full), 133)
+        self.assertTrue({item.name for item in semantic} <= {item.name for item in full})
+
+    def test_current_mutant_registry_preflight_is_cheap_read_only_diagnostic(self) -> None:
         candidate = Path(release_validation.__file__).resolve().parents[1]
         before = release_validation._snapshot(candidate)
         environment = dict(os.environ)
@@ -107,30 +154,37 @@ class ReleaseValidationTests(unittest.TestCase):
         )
         self.assertEqual(before, release_validation._snapshot(candidate))
 
-    def test_failed_architecture_phase_has_explicit_bounded_skip_records(self) -> None:
+    def test_failed_routine_baseline_has_explicit_bounded_skip_records(self) -> None:
         manifest_sha256 = "a" * 64
         lanes = release_validation._default_lanes(release_validation.sys.executable)
-        architecture = next(
-            lane for lane in lanes if lane.name == "architecture_reconnaissance"
+        self_test = next(
+            lane for lane in lanes if lane.name == "self_test"
         )
+        changed_surface = next(
+            lane for lane in lanes if lane.name == "changed_surface_tests"
+        )
+        audit = next(lane for lane in lanes if lane.name == "aggressive_bug_audit")
         results = [
             {
-                "lane": architecture.name,
-                "phase": architecture.phase,
+                "lane": self_test.name,
+                "phase": self_test.phase,
                 "manifest_sha256": manifest_sha256,
                 "lane_unchanged": True,
                 "ok": False,
-            }
-        ]
-        results.extend(
+            },
+            {
+                "lane": changed_surface.name,
+                "phase": changed_surface.phase,
+                "manifest_sha256": manifest_sha256,
+                "lane_unchanged": True,
+                "ok": True,
+            },
             release_validation._skipped_lane_result(
-                lane=lane,
+                lane=audit,
                 manifest_sha256=manifest_sha256,
-                failed_phase=architecture.phase,
-            )
-            for lane in lanes
-            if lane is not architecture
-        )
+                failed_phase=self_test.phase,
+            ),
+        ]
         report = release_validation._aggregate(
             expected_lanes=lanes,
             manifest_sha256=manifest_sha256,
@@ -138,20 +192,27 @@ class ReleaseValidationTests(unittest.TestCase):
             source_unchanged=True,
         )
         self.assertFalse(report["ok"])
-        self.assertTrue(report["architecture_gate_before_baseline"])
-        self.assertTrue(
-            report["behavioral_gate_after_architecture_before_baseline"]
+        self.assertEqual(
+            [
+                item["lane"]
+                for item in report["lanes"]
+                if item.get("skipped_due_to_prior_phase") is True
+            ],
+            ["aggressive_bug_audit"],
         )
         self.assertEqual(
-            report["skipped_lanes"],
-            sorted(lane.name for lane in lanes if lane is not architecture),
+            set(report),
+            {
+                "schema_version",
+                "contract_revision",
+                "manifest_sha256",
+                "source_unchanged",
+                "lanes",
+                "truth_effect",
+                "ok",
+            },
         )
-        self.assertTrue(
-            all(
-                result.get("skipped_due_to_prior_phase") is True
-                for result in results[1:]
-            )
-        )
+        self.assertTrue(results[-1]["skipped_due_to_prior_phase"])
 
     def test_lane_runner_suppresses_bytecode_and_rejects_any_lane_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -1144,12 +1144,14 @@ class PaperContinuationManager:
         assignment = self.lifecycle._assignment(
             manifest, provenance["assignment_id"]
         )
-        receipt = self.lifecycle._validated_ingest_receipt(
+        product, _receipt = self.lifecycle._research_product_for_assignment(
             round_dir=round_dir,
+            manifest=manifest,
             assignment=assignment,
+            _inspection_context=self._inspection_context,
         )
-        if receipt["research_id"] != result["research_id"]:
-            raise ValueError("Paper disposition result/ingestion receipt mismatch")
+        if product["research_id"] != result["research_id"]:
+            raise ValueError("Paper disposition result/worker product mismatch")
 
     def _validate_dialectical_analysis(
         self,

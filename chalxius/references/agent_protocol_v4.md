@@ -7,6 +7,12 @@
 > automatically. Every mode uses the same V5 Candidate Release, Certification
 > Decision, and Fact gateway.
 
+> **0.8.0 override.** The historical runtime-binding paragraphs in this
+> reference describe older release contracts only. Current agents use graph
+> semantics as the compatibility surface; runtime identity, archive location,
+> adapter, migration, and procedural forward-compatibility checks are not
+> prerequisites for ordinary graph work.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 

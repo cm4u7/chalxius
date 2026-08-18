@@ -586,7 +586,7 @@ class V5LifecycleTests(unittest.TestCase):
                 workflow_evidence_version=5,
             )
             with self.assertRaisesRegex(
-                ValueError, "explicit lifecycle or capability adapter"
+                ValueError, "owning lifecycle operation|direct legacy truth writers"
             ):
                 store.memory_add(
                     {"kind": "direction", "claim": "unscoped write"},

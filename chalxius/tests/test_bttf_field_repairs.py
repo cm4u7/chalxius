@@ -683,7 +683,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
             self.assertIn(assignment["worker_id"], release["excluded_verifier_ids"])
             self.assertEqual(store.adverse_routes().report(host_task_scope_id="test")["attacks"], [])
 
-    def test_chx002_task_card_binds_candidate_runtime_and_ledger_fails_closed(self) -> None:
+    def test_chx002_task_card_keeps_hash_binding_without_runtime_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "project"
             store = self._store(root, "chx002")
@@ -718,15 +718,20 @@ class BTTFFieldRepairTests(unittest.TestCase):
             mismatch = copy.deepcopy(card["runtime_binding"])
             mismatch["skill_version"] = "0.4.3"
             with patch.object(chx_ledger, "_runtime_binding", return_value=mismatch):
-                with self.assertRaisesRegex(ValueError, "does not match"):
-                    chx_ledger.start_ledger(
-                        project_root=root,
-                        task="Mismatched worker runtime.",
-                        run_id="run-runtime-mismatch-001",
-                        task_card=card_path,
-                    )
-            self.assertFalse(
-                (root / "chx-ledgers" / "run-runtime-mismatch-001.jsonl").exists()
+                mismatched_started = chx_ledger.start_ledger(
+                    project_root=root,
+                    task="Mismatched worker runtime metadata.",
+                    run_id="run-runtime-mismatch-001",
+                    task_card=card_path,
+                )
+            mismatch_event = json.loads(
+                Path(mismatched_started["ledger_path"]).read_text(
+                    encoding="utf-8"
+                ).splitlines()[0]
+            )
+            self.assertEqual(
+                mismatch_event["task_card_binding"]["task_card_sha256"],
+                sha256_bytes(card_path.read_bytes()),
             )
             started = chx_ledger.start_ledger(
                 project_root=root,
@@ -736,7 +741,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
             )
             self.assertEqual(started["skill_version"], current_version)
 
-    def test_chx_worker_ledger_rehashes_the_task_card_runtime_before_writing(self) -> None:
+    def test_chx_worker_ledger_keeps_task_card_hash_after_runtime_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             runtime_root = base / "candidate" / "chalxius"
@@ -752,7 +757,11 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 encoding="utf-8",
             )
             binding = runtime_binding_from_root(runtime_root)
-            semantic = {"runtime_binding": binding}
+            semantic = {
+                "round_id": "round-runtime-tree-drift-001",
+                "assignment_id": "a01-runtime-tree-drift",
+                "runtime_binding": binding,
+            }
             card = {
                 **semantic,
                 "task_card_semantic_sha256": sha256_json(semantic),
@@ -765,16 +774,24 @@ class BTTFFieldRepairTests(unittest.TestCase):
             payload_path.write_text("worker runtime drifted\n", encoding="utf-8")
             project_root = base / "worker-project"
             with patch.object(chx_ledger, "_skill_root", return_value=runtime_root):
-                with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
-                    chx_ledger.start_ledger(
-                        project_root=project_root,
-                        task="Reject a drifted worker runtime.",
-                        run_id="run-runtime-tree-drift-001",
-                        task_card=card_path,
-                    )
-            self.assertFalse(project_root.exists())
+                started = chx_ledger.start_ledger(
+                    project_root=project_root,
+                    task="Keep a drifted runtime as diagnostic metadata.",
+                    run_id="run-runtime-tree-drift-001",
+                    task_card=card_path,
+                )
+            started_event = json.loads(
+                Path(started["ledger_path"]).read_text(encoding="utf-8").splitlines()[0]
+            )
+            self.assertEqual(
+                started_event["task_card_binding"]["task_card_semantic_sha256"],
+                card["task_card_semantic_sha256"],
+            )
+            self.assertTrue(
+                (project_root / "chx-ledgers" / "run-runtime-tree-drift-001.jsonl").exists()
+            )
 
-    def test_round_runtime_preflight_fails_before_any_project_write(self) -> None:
+    def test_round_runtime_drift_does_not_gate_project_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             root = base / "project"
@@ -801,27 +818,18 @@ class BTTFFieldRepairTests(unittest.TestCase):
             )
             binding = runtime_binding_from_root(runtime_root)
             payload_path.write_text("planner runtime drifted\n", encoding="utf-8")
-            before = {
-                path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
-                for path in root.rglob("*")
-                if path.is_file()
-            }
             with patch.object(lifecycle, "_runtime_binding", return_value=binding):
-                with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
-                    lifecycle.create_round(
-                        workers=1,
-                        research_ids=[research["research_id"]],
-                    )
+                planned = lifecycle.create_round(
+                    workers=1,
+                    research_ids=[research["research_id"]],
+                )
+            card = store._read_json(Path(planned["assignments"][0]["task_card_path"]))
             self.assertEqual(
-                before,
-                {
-                    path.relative_to(root).as_posix(): sha256_bytes(path.read_bytes())
-                    for path in root.rglob("*")
-                    if path.is_file()
-                },
+                card["runtime_binding"]["runtime_identity_sha256"],
+                binding["runtime_identity_sha256"],
             )
 
-    def test_runtime_binding_is_scanned_once_per_bounded_round_phase(self) -> None:
+    def test_runtime_binding_is_not_scanned_during_graph_round_planning(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve() / "project"
             store = self._store(root, "runtime-validation-dedup")
@@ -842,11 +850,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 wraps=lifecycle._validate_bound_runtime_binding,
             ) as validator:
                 lifecycle.create_round(workers=2, research_ids=research_ids)
-            self.assertEqual(
-                validator.call_count,
-                2,
-                "creation and returned status may each scan one unique runtime once",
-            )
+            self.assertEqual(validator.call_count, 0)
 
     def test_chx004_inventory_and_append_target_are_explicit_read_only_routes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -989,7 +993,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 )
             )
 
-    def test_chx001_aborted_round_uses_exact_bound_runtime_not_current_runtime(self) -> None:
+    def test_chx001_aborted_round_keeps_graph_accessible_without_bound_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             self.enterContext(
@@ -1034,8 +1038,8 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     research_ids=[research["research_id"]],
                 )
 
-            with self.assertRaisesRegex(ValueError, "runtime binding drifted"):
-                lifecycle.round_status(planned["round_id"])
+            active = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(active["work_unit_state"], "active")
             with store.v5_mutation_lock(command="work-unit-abort"):
                 store.reasoning_modes().abort_work_unit(
                     round_id=planned["round_id"],
@@ -1048,26 +1052,25 @@ class BTTFFieldRepairTests(unittest.TestCase):
             self.assertTrue(lifecycle.audit().current_ok)
 
             version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
-                lifecycle.round_status(planned["round_id"])
+            with patch(
+                "mathgraph.runtime_archive.resolve_historical_runtime",
+                side_effect=AssertionError("historical runtime lookup is forbidden"),
+            ):
+                status_after_drift = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(status_after_drift["work_unit_state"], "aborted")
 
-            version_path.write_text("0.4.4\n", encoding="utf-8")
-            archived = archive_runtime(bound_root, bound_runtime)
-            self.assertTrue(archived["created"])
-            self.assertEqual(
-                Path(archived["archive_path"]), historical_archive_path(bound_runtime)
-            )
-            version_path.write_text("0.6.1\n", encoding="utf-8")
-            recovered = lifecycle.round_status(planned["round_id"])
+            bound_root.rename(base / "removed-bound-chalxius")
+            with patch.dict(
+                os.environ,
+                {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "foreign-archive")},
+            ), patch(
+                "mathgraph.runtime_archive.resolve_historical_runtime",
+                side_effect=AssertionError("historical runtime lookup is forbidden"),
+            ):
+                recovered = lifecycle.round_status(planned["round_id"])
             self.assertEqual(recovered["work_unit_state"], "aborted")
 
-            archived_payload = historical_archive_path(bound_runtime) / "runtime_payload.txt"
-            archived_payload.chmod(0o600)
-            archived_payload.write_text("tampered archive\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "no valid content-addressed"):
-                lifecycle.round_status(planned["round_id"])
-
-    def test_active_round_never_uses_historical_runtime_archive(self) -> None:
+    def test_active_round_runtime_metadata_is_diagnostic_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             self.enterContext(
@@ -1111,14 +1114,14 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     workers=1,
                     research_ids=[source["research_id"]],
                 )
-            archive_runtime(bound_root, bound_runtime)
             payload_path.write_text("active runtime payload drifted\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "manifest entry drifted"):
-                lifecycle.round_status(planned["round_id"])
-            payload_path.write_text("active runtime payload\n", encoding="utf-8")
             version_path.write_text("0.6.1\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "runtime identity drifted"):
-                lifecycle.round_status(planned["round_id"])
+            with patch(
+                "mathgraph.runtime_archive.resolve_historical_runtime",
+                side_effect=AssertionError("historical runtime lookup is forbidden"),
+            ):
+                status = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(status["work_unit_state"], "active")
 
     def test_schema2_runtime_archive_is_content_addressed_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1160,7 +1163,7 @@ class BTTFFieldRepairTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "no valid content-addressed"):
                 resolve_historical_runtime(binding)
 
-    def test_completed_round_uses_valid_receipts_as_historical_runtime_boundary(self) -> None:
+    def test_completed_round_keeps_graph_accessible_without_bound_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary).resolve()
             self.enterContext(
@@ -1275,13 +1278,15 @@ class BTTFFieldRepairTests(unittest.TestCase):
             receipt_path.write_text(original_receipt, encoding="utf-8")
 
             version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "bound Chalxius runtime identity drifted"):
-                lifecycle.round_status(planned["round_id"])
-
-            version_path.write_text("0.4.4\n", encoding="utf-8")
-            archive_runtime(bound_root, bound_runtime)
-            version_path.write_text("0.6.1\n", encoding="utf-8")
-            recovered = lifecycle.round_status(planned["round_id"])
+            bound_root.rename(base / "removed-bound-chalxius")
+            with patch.dict(
+                os.environ,
+                {"CHALXIUS_RUNTIME_ARCHIVE_ROOT": str(base / "foreign-archive")},
+            ), patch(
+                "mathgraph.runtime_archive.resolve_historical_runtime",
+                side_effect=AssertionError("historical runtime lookup is forbidden"),
+            ):
+                recovered = lifecycle.round_status(planned["round_id"])
             self.assertEqual(recovered["work_unit_state"], "completed")
             self.assertEqual(recovered["ingested_count"], 1)
 

@@ -655,7 +655,9 @@ def _validate_release_matrix_evidence(
             ) >= (0, 6, 5)
         except ValueError as error:
             raise ValueError("candidate skill version is not numeric semver") from error
-        if revision == "chalxius-release-validation-matrix-4":
+        if revision == "chalxius-release-validation-matrix-6":
+            expected_lanes = set()
+        elif revision == "chalxius-release-validation-matrix-4":
             expected_lanes = {
                 "architecture_reconnaissance",
                 "mutant_registry_preflight",
@@ -686,10 +688,73 @@ def _validate_release_matrix_evidence(
             "chalxius-release-validation-matrix-2",
             "chalxius-release-validation-matrix-3",
             "chalxius-release-validation-matrix-4",
+            "chalxius-release-validation-matrix-6",
         }
         if current_architecture_gate_required:
-            revision_valid = revision == "chalxius-release-validation-matrix-4"
-        if revision == "chalxius-release-validation-matrix-4":
+            required_revision = (
+                "chalxius-release-validation-matrix-6"
+                if tuple(int(part) for part in version_parts[:3]) >= (0, 8, 0)
+                else "chalxius-release-validation-matrix-4"
+            )
+            revision_valid = revision == required_revision
+        lanes_is_list = isinstance(lanes, list)
+        if revision == "chalxius-release-validation-matrix-6":
+            if not lanes_is_list:
+                architecture_valid = False
+            else:
+                lane_phases = {
+                    entry.get("lane"): entry.get("phase")
+                    for entry in lanes
+                    if isinstance(entry, dict)
+                }
+                lane_profiles = {
+                    entry.get("lane"): entry.get("mutation_profile")
+                    for entry in lanes
+                    if isinstance(entry, dict)
+                }
+                routine_phases = {
+                    "self_test": 1,
+                    "changed_surface_tests": 1,
+                    "aggressive_bug_audit": 2,
+                }
+                routine_profiles = {
+                    "self_test": None,
+                    "changed_surface_tests": None,
+                    "aggressive_bug_audit": "semantic",
+                }
+                forensic_phases = {
+                    "architecture_reconnaissance": 1,
+                    "mutant_registry_preflight": 1,
+                    "behavioral_feature_gate": 2,
+                    "self_test": 3,
+                    "full_suite": 3,
+                    "aggressive_bug_audit": 4,
+                }
+                forensic_profiles = {
+                    "architecture_reconnaissance": None,
+                    "mutant_registry_preflight": "full",
+                    "behavioral_feature_gate": None,
+                    "self_test": None,
+                    "full_suite": None,
+                    "aggressive_bug_audit": "full",
+                }
+                if (
+                    lane_phases == routine_phases
+                    and lane_profiles == routine_profiles
+                    and len(lanes) == len(routine_phases)
+                ):
+                    expected_lanes = set(routine_phases)
+                    architecture_valid = True
+                elif (
+                    lane_phases == forensic_phases
+                    and lane_profiles == forensic_profiles
+                    and len(lanes) == len(forensic_phases)
+                ):
+                    expected_lanes = set(forensic_phases)
+                    architecture_valid = True
+                else:
+                    architecture_valid = False
+        elif revision == "chalxius-release-validation-matrix-4":
             architecture_valid = (
                 payload.get("architecture_gate_before_baseline") is True
                 and payload.get(
@@ -758,14 +823,19 @@ def _validate_release_matrix_evidence(
             )
         else:
             architecture_valid = True
+        if revision == "chalxius-release-validation-matrix-6":
+            receipt_shape_valid = payload.get("source_unchanged") is True
+        else:
+            receipt_shape_valid = (
+                payload.get("complete_lane_set") is True
+                and payload.get("one_manifest_identity") is True
+            )
         if (
             not revision_valid
             or payload.get("manifest_sha256") != candidate_manifest_sha256
             or payload.get("ok") is not True
-            or payload.get("complete_lane_set") is not True
-            or payload.get("one_manifest_identity") is not True
-            or payload.get("source_unchanged") is not True
-            or not isinstance(lanes, list)
+            or not receipt_shape_valid
+            or not lanes_is_list
             or {entry.get("lane") for entry in lanes} != expected_lanes
             or not architecture_valid
             or any(

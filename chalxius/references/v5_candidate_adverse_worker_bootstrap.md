@@ -10,11 +10,16 @@ Use this path only when the immutable task card has all of these literal facts:
 
 - `work_mode="refute"`;
 - no `research_cycle` field;
-- current `assurance_contract` and `runtime_binding`;
+- current `assurance_contract`;
 - `mathematical_state.source_research_dossier.metadata.independent_adverse_required=true`;
 - exactly one authorized `candidate_fact` byte object after path/hash
   deduplication;
-- exact-card worker CHX startup succeeds under the bound candidate root.
+- exact-card worker CHX startup accepts the task-card semantic hash and owner
+  boundary.
+
+`runtime_binding`, when present, is diagnostic provenance only and cannot make
+the current runtime or a historical archive a prerequisite for this refute
+operation.
 
 Any missing, ambiguous, legacy, or inconsistent selector fails closed to the
 ordinary route in `SKILL.md`. This assignment is not Research production and

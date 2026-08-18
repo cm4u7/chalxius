@@ -1,6 +1,20 @@
 # Chalxius portable deployment
 
-The 0.7.16 `Bounded Capability Hygiene` release artifact contains one self-contained `chalxius`
+## 0.8.0 MathGraph First
+
+The `0.8.0` **MathGraph First** artifact is self-contained and carries no
+live project, credentials, service dependency, bytecode, or symlink. Graph
+semantics—not installation history—provide forward operation across runtime
+releases: content hashes, dependency references, provenance, workflow stage,
+and owner boundaries remain authoritative. Runtime identity and archive paths
+are optional diagnostics for release and rollback only; they never block
+ordinary graph reads, Research continuation, or append-only nontruth writes.
+
+No legacy adapter, migration copy, compatibility database, or second graph
+data plane is part of this release. Malformed graph state and truth-boundary
+violations still fail at their owning checks.
+
+The historical 0.7.16 `Bounded Capability Hygiene` release artifact contains one self-contained `chalxius`
 skill,
 no live project, credentials, service dependency, bytecode, or symlink. Python
 3.11+ is required. The native local Paper/Evidence Library CLI is bundled under
@@ -10,7 +24,7 @@ predecessor, coordinator, and standalone companion skills are not runtime
 dependencies.
 
 It preserves the predecessor's 0.7.15 **Research Obligation Closure** contract
-for frozen cards and historical runtime identities.
+for historical cards. It is not the active 0.8.0 graph-operation contract.
 
 The release retains the prospective Research commands:
 `plan-supervision-round SOURCE_ROUND_ID [--component-id COMPONENT_ID]` and
@@ -108,7 +122,7 @@ If a separately authorized release archive contains `MANIFEST.sha256`, run
 `INHERITANCE.lock.json` against the named source manifests. A workspace
 candidate without a release manifest must not be represented as packaged.
 
-For a complete release matrix, prefer the manifest-bound coordinator and write
+For the routine release matrix, prefer the manifest-bound coordinator and write
 its receipt outside the candidate:
 
 ```bash
@@ -119,17 +133,40 @@ python3 scripts/release_validation.py \
 ```
 
 It constructs canonical manifest-only lane copies, isolates temporary and
-runtime-archive state, runs the complete mutation-registry applicability check
-beside architecture reconnaissance in phase 1, runs compatible baseline checks
-in parallel only after the cheap gates pass, then runs the snapshot-sensitive
-mutation audit behind a phase barrier. Every lane and the source must retain one
-exact identity. Run
-`python3 scripts/aggressive_bug_audit.py` directly only when the narrower
-mutation evidence is required; it independently suppresses bytecode, compares
-one exact pre/post path-kind-mode-content snapshot, and fails on drift. Before
-any baseline subprocess, its mutant registry preflight checks every target and
-old fragment exactly once, so a stale plan fails cheaply rather than consuming
-the full audit budget.
+runtime-archive state, and runs only three routine lanes: self-test,
+changed-surface tests for the release coordinator and entrypoint boundaries,
+and the semantic mutation audit after those checks. The audit performs its own
+semantic registry preflight before spawning any baseline or mutant test, so a
+separate routine preflight lane would duplicate work.
+Every lane and the source must retain one exact identity. The semantic profile
+protects graph frontier and Fact authority, computation truncation,
+source/adverse provenance, worker return integrity, verifier signatures, and
+Research continuity without requiring an agent to satisfy a large
+administrative registry. The registry preflight still checks each selected
+target and old fragment exactly once, so a stale semantic probe fails cheaply
+rather than consuming the audit budget.
+
+The routine receipt records only the manifest identity, source nonmutation, and
+the actual per-lane name, phase, profile, and result. Cutover derives the
+routine or forensic shape from those raw lane facts; it does not require a
+second set of scope or schedule flags that could drift from the executed
+matrix.
+
+The complete 134-probe registry, full suite, behavior-feature gate, and
+whole-tree architecture reconnaissance are diagnostic forensic work, not a
+routine release gate. Use the complete matrix only when an explicit
+investigation justifies the cost:
+
+```bash
+python3 scripts/aggressive_bug_audit.py --profile full
+python3 scripts/release_validation.py \
+  --candidate-root "$SKILL_ROOT" \
+  --expected-manifest-sha256 APPROVED_MANIFEST_FILE_SHA256 \
+  --forensic \
+  --receipt /absolute/path/to/forensic-release-validation-receipt.json
+```
+
+Both profiles run in isolated copies and leave the candidate unchanged.
 
 ## Preserve runtime continuity before every global cutover
 
@@ -638,4 +675,7 @@ mode, and report mode event, repair advice, audit state, and
 Candidate Release/Certification/Fact boundary. Close the ledger and apply conditional
 feedback without changing any project status. Installation,
 global replacement, packaging, migration, and cutover each require separate
-explicit authorization.
+explicit authorization. An explicit publication request includes merging the
+corresponding reviewed release change into `main` by default unless the user
+explicitly excludes merge; it never authorizes an unrelated or unreviewed
+change.

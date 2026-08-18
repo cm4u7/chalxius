@@ -498,33 +498,17 @@ class MathGraphStore:
             if self._v5_mutation_depth > 0:
                 return
             raise ValueError(
-                "V5 writes require an explicit lifecycle or capability adapter; "
-                "legacy V4 writers are read-only on a V5 project"
+                "V5 writes require the owning lifecycle operation; direct "
+                "legacy truth writers cannot mutate a V5 project"
             )
-        if workflow_version < 4:
-            if not self._legacy_workflow_fixture:
-                raise ValueError(
-                    "legacy workflow V1-V3 is read-only in the unified engine; "
-                    "use upgrade-project-copy before any mutation"
-                )
+        # Pre-V5 graph roots are native graph inputs, not migration targets.
+        # Their append-only/nontruth writers may continue to operate directly
+        # on the existing bytes.  Semantic owners still enforce their own
+        # workflow and Fact authority checks; this lock only serializes the
+        # write.  No version-specific adapter, rewriter, or mode-init ceremony
+        # is needed merely to continue a legacy graph.
+        if workflow_version < V5_WORKFLOW_EVIDENCE_VERSION:
             return
-        if (
-            self._inherited_chalk_fixture
-            or self._uninitialized_v4_mutation_depth > 0
-        ):
-            return
-        try:
-            status = self.reasoning_modes().status()
-        except Exception as exc:
-            raise ValueError(
-                "legacy Chalk V4 project has invalid or partial unified-mode "
-                "governance and is read-only"
-            ) from exc
-        if not status.get("initialized"):
-            raise ValueError(
-                "legacy Chalk V4 project is read-only in the unified engine; "
-                "run mode-init explicitly before any new write"
-            )
 
     @contextmanager
     def _uninitialized_v4_transition_lock(self) -> Iterator[None]:
@@ -550,7 +534,7 @@ class MathGraphStore:
 
     @contextmanager
     def v5_mutation_lock(self, *, command: str) -> Iterator[None]:
-        """Authorize one named V5 adapter while blocking legacy truth writers."""
+        """Authorize one named V5 owner operation while blocking legacy writers."""
 
         self.require_initialized()
         if self.workflow_evidence_version() != V5_WORKFLOW_EVIDENCE_VERSION:

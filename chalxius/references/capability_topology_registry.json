@@ -842,7 +842,7 @@
       ]
     },
     "cap.runtime_continuity": {
-      "summary": "Sealed historical runtime archive, compatibility closure, protected-project validation and atomic cutover.",
+      "summary": "Release and rollback diagnostics with protected-project validation; runtime history never gates ordinary graph operations.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -864,7 +864,6 @@
       "tests": [
         "tests/test_runtime_archive.py",
         "tests/test_runtime_cutover.py",
-        "tests/test_runtime_compatibility.py",
         "tests/test_host_entrypoint_nonmutation.py"
       ],
       "activation_paths": [
@@ -1525,15 +1524,6 @@
         "state_owner"
       ]
     },
-    "mathgraph.runtime_compatibility": {
-      "capability_id": "cap.runtime_continuity",
-      "path": "scripts/mathgraph/runtime_compatibility.py",
-      "roles": [
-        "domain_service",
-        "validation_tool"
-      ],
-      "standalone_reason": "Release compatibility validator intentionally exercised by the isolated self-test and external cutover validation surfaces."
-    },
     "mathgraph.runtime_cutover": {
       "capability_id": "cap.runtime_continuity",
       "path": "scripts/mathgraph/runtime_cutover.py",
@@ -1646,7 +1636,7 @@
       "standalone_entry_symbols": [
         "architecture_reconnaissance.main"
       ],
-      "standalone_reason": "Read-only full-tree capability, import, CLI, state and duplicate inventory used as the phase-one release gate."
+      "standalone_reason": "Read-only full-tree capability, import, CLI, state and duplicate inventory used by explicit forensic release validation, not the routine matrix."
     },
     "mathgraph.release_contracts": {
       "capability_id": "cap.release_assurance",
@@ -1665,7 +1655,7 @@
       "standalone_entry_symbols": [
         "behavioral_feature_gate.main"
       ],
-      "standalone_reason": "Executes the registry-bound positive, predicate-false, and tamper probes after static architecture closure and before the baseline suite."
+      "standalone_reason": "Executes the registry-bound positive, predicate-false, and tamper probes in the explicit forensic release matrix."
     },
     "release_validation": {
       "capability_id": "cap.release_assurance",

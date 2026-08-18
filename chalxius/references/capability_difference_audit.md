@@ -33,7 +33,26 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
-## 0.7.16 bounded-capability-hygiene difference
+## 0.8.0 MathGraph-first difference
+
+Version 0.8.0 makes graph semantics the forward-compatibility principle. The
+runtime-compatibility closure and its protected-tree validator are removed;
+legacy graph records remain directly operable when their content hashes,
+dependencies, provenance, and workflow owners are valid. Runtime archives and
+cutover tools remain deployment diagnostics only. This removes a procedural
+gate, not a mathematical-safety boundary: malformed graph state, wrong-stage
+artifacts, missing dependencies, adverse/verifier failures, and Fact authority
+violations still fail at their owning checks.
+
+The same simplification applies to ordinary worker-ingestion receipts. They
+record that the ingestion step was traversed, but do not grant a product
+capability or truth status. Current product provenance and hashes are the
+reusable boundary; a missing derived receipt is recoverable, while a missing
+Research product or a provenance/stage/owner mismatch remains a real workflow
+failure. Verifier, Certification, Gateway, Fact, terminal-seal, and final
+experiment records keep their independent stage checks.
+
+## Historical 0.7.16 bounded-capability-hygiene difference
 
 Version 0.7.16 preserves the 0.7.15 obligation-closure route while bounding
 schema-v2 repair capability reads to one ephemeral digest-keyed snapshot and a

@@ -106,7 +106,7 @@ class CHX084BatchRoundStatusTests(unittest.TestCase):
             self.assertEqual(payload["round_states"], {round_id: "active"})
             self.assertEqual(list(payload["round_states"]), [round_id])
 
-    def test_batch_shares_historical_runtime_validation_across_rounds(self) -> None:
+    def test_batch_does_not_require_historical_runtime_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             with patch.object(
@@ -137,11 +137,10 @@ class CHX084BatchRoundStatusTests(unittest.TestCase):
             )
             self.assertEqual(
                 validator.call_count,
-                1,
-                "one bounded batch phase must validate one shared historical "
-                "runtime identity only once",
+                0,
+                "historical runtime identity is diagnostic provenance only and "
+                "must not gate direct graph operations",
             )
-            self.assertTrue(validator.call_args.kwargs["historical_runtime"])
 
     def test_active_round_is_not_filtered_from_cutover_input(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
