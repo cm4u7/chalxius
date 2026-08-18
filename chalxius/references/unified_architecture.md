@@ -1,5 +1,27 @@
 # Chalxius Back to the Future / Evidence candidate architecture
 
+> **0.8.0 MathGraph-first override.** The historical release overlays below
+> preserve old runtime procedures as lineage evidence. They do not govern
+> current graph operations. Future upgrades need not preserve those procedures;
+> valid node/edge hashes, dependencies, provenance, workflow stages, and owner
+> boundaries are the compatibility surface.
+
+### Receipt role in the 0.8.0 overlay
+
+Worker-ingestion receipts are process markers: they record that a return was
+accepted by the ingestion step and provide convenient provenance for replay.
+They are not a second Research capability, a mathematical conclusion, or an
+admission authority.  When a hash-valid Research product already carries its
+assignment provenance, task-card hash, worker/stage binding, and return hash,
+supervision, status projection, frontier obligation checks, and fresh-adverse
+lineage may consume that product even if the derived worker receipt is absent
+or was published incompletely.  A missing Research product still blocks the
+corresponding workflow transition.  Independent verifier returns,
+Certification/Gateway decisions, Fact admission, terminal seals, and final
+experiment receipts retain their own owning checks because those records mark
+distinct workflow stages; none becomes mathematical truth merely by being a
+receipt.
+
 ## One engine, three execution profiles
 
 Chalxius is the only active research runtime. `fast`, `auto`, and `deep` vary
@@ -91,12 +113,15 @@ witnesses rather than authority: validation reloads the exact selected Research
 records and rederives the connected components, so a forged but internally
 self-consistent repartition fails closed.
 
-As soon as every assignment in one component is ingested, Main may run
+As soon as every assignment in one component has a validated Research product,
+Main may run
 `plan-supervision-round SOURCE_ROUND --component-id COMPONENT` while workers in
 unrelated components continue. The flag is optional only when the production
 round has one component. Component membership is frozen before dispatch and is
 never inferred from which returns happen to be present. The planner hash-binds
-the source manifest, component identity, and complete component receipt set,
+the source manifest, component identity, and complete component product
+descriptors (the historical `source_receipts` field name is retained for
+schema readability),
 then selects at most three applicable supervisors from the static reproduced-
 failure registry. `program_math` applies to computation design or output,
 `proof_logic` to proof-bearing work, and `source_scope` to literature or exact

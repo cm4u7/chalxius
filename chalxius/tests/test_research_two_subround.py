@@ -354,6 +354,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
         source_round_id: str,
         *,
         source_component_id: str | None = None,
+        drop_receipt: bool = False,
     ) -> tuple[dict[str, object], dict[str, object]]:
         lifecycle = store.v5_lifecycle()
         supervision = lifecycle.create_supervision_round(
@@ -430,6 +431,8 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             worker_final_sha256=sha256_bytes(return_path.read_bytes()),
         )
         self.assertEqual(receipt["status"], "ingested", receipt)
+        if drop_receipt:
+            return_path.with_suffix(".receipt.json").unlink()
         return supervision, receipt
 
     def _execution_payload(
@@ -577,7 +580,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             lifecycle = store.v5_lifecycle()
             design, assignment, source_bytes, dependency_bytes = self._design_round(store)
             _, supervision_receipt = self._ingest_supervision(
-                store, design["round_id"]
+                store, design["round_id"], drop_receipt=True
             )
             with self.assertRaisesRegex(ValueError, "explicitly disposed"):
                 lifecycle.create_computation_execution_round(
@@ -1807,6 +1810,9 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 if second_assignment["assignment_id"] in item["assignment_ids"]
             )
             self._ingest_plain_assignment(store, planned, first_assignment)
+            Path(str(first_assignment["return_path"])).with_suffix(
+                ".receipt.json"
+            ).unlink()
 
             status = lifecycle.round_status(planned["round_id"])
             self.assertEqual(status["work_unit_state"], "active")
@@ -1822,7 +1828,9 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 supervision["research_cycle"]["source_component_id"],
                 first_component["component_id"],
             )
-            with self.assertRaisesRegex(ValueError, "receipt is missing"):
+            with self.assertRaisesRegex(
+                ValueError, "worker Research product is missing"
+            ):
                 lifecycle.create_supervision_round(
                     planned["round_id"],
                     source_component_id=second_component["component_id"],
@@ -1871,12 +1879,20 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 source_assignment,
                 outcome="evidence",
             )
-            with self.assertRaisesRegex(ValueError, "receipt is missing"):
+            Path(str(source_assignment["return_path"])).with_suffix(
+                ".receipt.json"
+            ).unlink()
+            with self.assertRaisesRegex(
+                ValueError, "worker Research product is missing"
+            ):
                 lifecycle.create_supervision_round(
                     planned["round_id"],
                     supervisor_scopes=["integration"],
                 )
             self._ingest_plain_assignment(store, planned, proof_assignment)
+            Path(str(proof_assignment["return_path"])).with_suffix(
+                ".receipt.json"
+            ).unlink()
             supervision = lifecycle.create_supervision_round(
                 planned["round_id"],
                 supervisor_scopes=["integration"],

@@ -6,7 +6,22 @@
 > `v5_release_traceability.md`; this historical section does not grant V4
 > authority inside a V5 project.
 
-## Current 0.7.16 overlay
+## Current 0.8.0 overlay
+
+Chalxius 0.8.0 **MathGraph First** keeps the graph itself as the cross-version
+compatibility surface. Content hashes, dependency references, creation/session
+provenance, workflow stage, and owning lifecycle boundaries remain exact.
+Runtime identity, installation paths, historical archives, and obsolete
+receipts are diagnostic provenance only; they cannot block ordinary graph
+reads, Research continuation, or append-only nontruth writes. No adapter,
+migration copy, compatibility database, or second graph data plane is added.
+Candidate, adverse, verifier, Certification, Gateway, and Fact authority is
+unchanged.
+Future upgrades need not preserve runtime or procedural forward compatibility;
+only the graph semantic surface and the owner-bound mathematical workflow are
+continuity obligations.
+
+## Historical 0.7.16 overlay
 
 Chalxius 0.7.16 **Bounded Capability Hygiene** preserves the complete 0.7.15
 Research-obligation closure and makes two bounded runtime repairs. Schema-v2

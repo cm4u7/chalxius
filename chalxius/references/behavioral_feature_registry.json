@@ -570,7 +570,7 @@
       },
       "probes": {
         "positive": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_valid_receipt_closes_source_but_not_worker_result",
-        "predicate_false": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_pending_quarantined_invalid_and_aborted_work_do_not_close",
+        "predicate_false": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_pending_quarantined_and_aborted_work_do_not_close_but_receipt_drift_does_not_reopen_product",
         "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
       }
     },

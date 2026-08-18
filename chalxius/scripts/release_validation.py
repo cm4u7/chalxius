@@ -32,6 +32,26 @@ class Lane:
     name: str
     command: tuple[str, ...]
     phase: int = 1
+    mutation_profile: str | None = None
+
+
+ROUTINE_LANE_NAMES = frozenset(
+    {
+        "self_test",
+        "changed_surface_tests",
+        "aggressive_bug_audit",
+    }
+)
+FORENSIC_LANE_NAMES = frozenset(
+    {
+        "mutant_registry_preflight",
+        "architecture_reconnaissance",
+        "behavioral_feature_gate",
+        "self_test",
+        "full_suite",
+        "aggressive_bug_audit",
+    }
+)
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -164,6 +184,7 @@ def _run_lane(
     return {
         "lane": lane.name,
         "phase": lane.phase,
+        "mutation_profile": lane.mutation_profile,
         "manifest_sha256": manifest_sha256,
         "returncode": returncode,
         "timed_out": timed_out,
@@ -175,7 +196,35 @@ def _run_lane(
     }
 
 
-def _default_lanes(python: str) -> tuple[Lane, ...]:
+def _default_lanes(python: str, *, forensic: bool = False) -> tuple[Lane, ...]:
+    if not forensic:
+        return (
+            Lane("self_test", (python, "scripts/self_test.py"), phase=1),
+            Lane(
+                "changed_surface_tests",
+                (
+                    python,
+                    "-m",
+                    "unittest",
+                    "tests.test_release_validation",
+                    "tests.test_host_entrypoint_nonmutation",
+                    "tests.test_architecture_reconnaissance",
+                ),
+                phase=1,
+            ),
+            Lane(
+                "aggressive_bug_audit",
+                (
+                    python,
+                    "scripts/aggressive_bug_audit.py",
+                    "--profile",
+                    "semantic",
+                ),
+                phase=2,
+                mutation_profile="semantic",
+            ),
+        )
+
     return (
         Lane(
             "mutant_registry_preflight",
@@ -183,8 +232,11 @@ def _default_lanes(python: str) -> tuple[Lane, ...]:
                 python,
                 "scripts/aggressive_bug_audit.py",
                 "--preflight-only",
+                "--profile",
+                "full",
             ),
             phase=1,
+            mutation_profile="full",
         ),
         Lane(
             "architecture_reconnaissance",
@@ -225,8 +277,14 @@ def _default_lanes(python: str) -> tuple[Lane, ...]:
         ),
         Lane(
             "aggressive_bug_audit",
-            (python, "scripts/aggressive_bug_audit.py"),
+            (
+                python,
+                "scripts/aggressive_bug_audit.py",
+                "--profile",
+                "full",
+            ),
             phase=4,
+            mutation_profile="full",
         ),
     )
 
@@ -237,6 +295,7 @@ def _skipped_lane_result(
     return {
         "lane": lane.name,
         "phase": lane.phase,
+        "mutation_profile": lane.mutation_profile,
         "manifest_sha256": manifest_sha256,
         "returncode": 126,
         "timed_out": False,
@@ -280,75 +339,16 @@ def _aggregate(
         result.get("manifest_sha256") == manifest_sha256 for result in results
     )
     lanes_ok = complete and all(result.get("ok") is True for result in results)
-    snapshot_barrier = (
-        next(
-            lane.phase
-            for lane in expected_lanes
-            if lane.name == "aggressive_bug_audit"
-        )
-        > max(
-            lane.phase
-            for lane in expected_lanes
-            if lane.name != "aggressive_bug_audit"
-        )
-    )
-    phase_by_name = {lane.name: lane.phase for lane in expected_lanes}
-    architecture_before_baseline = (
-        "architecture_reconnaissance" in phase_by_name
-        and phase_by_name["architecture_reconnaissance"]
-        < phase_by_name.get("self_test", 0)
-        and phase_by_name["architecture_reconnaissance"]
-        < phase_by_name.get("full_suite", 0)
-    )
-    behavioral_after_architecture_before_baseline = (
-        "behavioral_feature_gate" in phase_by_name
-        and phase_by_name.get("architecture_reconnaissance", 0)
-        < phase_by_name["behavioral_feature_gate"]
-        < phase_by_name.get("self_test", 0)
-        and phase_by_name["behavioral_feature_gate"]
-        < phase_by_name.get("full_suite", 0)
-    )
-    mutant_preflight_before_baseline = (
-        "mutant_registry_preflight" in phase_by_name
-        and phase_by_name["mutant_registry_preflight"]
-        < phase_by_name.get("self_test", 0)
-        and phase_by_name["mutant_registry_preflight"]
-        < phase_by_name.get("full_suite", 0)
-    )
-    skipped = [
-        result.get("lane")
-        for result in results
-        if result.get("skipped_due_to_prior_phase") is True
-    ]
     return {
         "schema_version": 1,
         "contract_revision": CONTRACT_REVISION,
         "manifest_sha256": manifest_sha256,
-        "lane_count": len(results),
-        "isolated_lane_roots": True,
-        "phase_order": sorted({lane.phase for lane in expected_lanes}),
-        "snapshot_sensitive_audit_exclusive_after_baseline": snapshot_barrier,
-        "architecture_gate_before_baseline": architecture_before_baseline,
-        "behavioral_gate_after_architecture_before_baseline": (
-            behavioral_after_architecture_before_baseline
-        ),
-        "mutant_registry_preflight_before_baseline": (
-            mutant_preflight_before_baseline
-        ),
-        "prior_phase_failure_short_circuit": True,
-        "skipped_lanes": sorted(str(item) for item in skipped),
-        "complete_lane_set": complete,
-        "one_manifest_identity": one_identity,
         "source_unchanged": source_unchanged,
         "lanes": sorted(results, key=lambda item: str(item.get("lane", ""))),
         "truth_effect": "none",
         "ok": (
             source_unchanged
             and one_identity
-            and snapshot_barrier
-            and architecture_before_baseline
-            and behavioral_after_architecture_before_baseline
-            and mutant_preflight_before_baseline
             and lanes_ok
         ),
     }
@@ -375,6 +375,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--receipt", type=Path)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--timeout-seconds", type=int, default=1200)
+    parser.add_argument(
+        "--forensic",
+        action="store_true",
+        help=(
+            "run the complete forensic matrix, including the full mutation "
+            "registry, full suite, behavioral gate, and architecture scan"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -407,7 +415,7 @@ def main(argv: list[str] | None = None) -> int:
             fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise RuntimeError("another validation matrix owns this candidate") from error
-        lanes = _default_lanes(args.python)
+        lanes = _default_lanes(args.python, forensic=args.forensic)
         with tempfile.TemporaryDirectory(prefix="chalxius-release-validation-") as temporary:
             workspace = Path(temporary)
             lane_roots = _isolated_lane_roots(

@@ -12,9 +12,12 @@ facts:
 
 - `research_cycle.subround="production"`;
 - `work_mode` is `prove`, `literature`, `compute`, or `interpret`;
-- the card contains the current `assurance_contract` and `runtime_binding`;
-- worker CHX accepts that exact card under the candidate root named by the
-  runtime binding.
+- the card contains the current `assurance_contract`;
+- worker CHX accepts the exact task-card semantic hash and workflow owner.
+
+`runtime_binding` may be present as diagnostic provenance, but it is not an
+applicability condition. A moved installation or missing historical archive
+does not redirect this graph operation into a migration or compatibility path.
 
 Production `refute` is not eligible: it belongs to the second logical subround.
 If any condition is absent, inconsistent, legacy, or unvalidated, stop the

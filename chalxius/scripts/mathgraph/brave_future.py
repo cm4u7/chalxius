@@ -2173,11 +2173,13 @@ class BlockageValidator:
             )
             if assignment is None or assignment["task_card_sha256"] != task_sha:
                 raise ValueError("blockage attempt is not bound to the frozen task card")
-            receipt = self.lifecycle._validated_ingest_receipt(
-                round_dir=round_dir, assignment=assignment
+            product, _receipt = self.lifecycle._research_product_for_assignment(
+                round_dir=round_dir,
+                manifest=manifest,
+                assignment=assignment,
             )
-            if receipt["research_id"] not in result_ids:
-                raise ValueError("blockage result ids omit the ingested Research result")
+            if product["research_id"] not in result_ids:
+                raise ValueError("blockage result ids omit the worker Research product")
             for research_id in result_ids:
                 record = records.get(research_id)
                 if record is None or record.get("metadata", {}).get("campaign_id") != campaign_id:

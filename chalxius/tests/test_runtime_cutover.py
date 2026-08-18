@@ -208,7 +208,7 @@ class RuntimeCutoverTests(unittest.TestCase):
         )
         return receipt_path, sha256_bytes(receipt_path.read_bytes())
 
-    def test_065_requires_behavioral_gate_matrix_and_preserves_legacy_readability(self) -> None:
+    def test_current_matrix_simplifies_080_and_preserves_legacy_readability(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             manifest_sha256 = "d" * 64
@@ -263,6 +263,27 @@ class RuntimeCutoverTests(unittest.TestCase):
                             "phase_order": [1, 2, 3, 4],
                         }
                     )
+                if revision.endswith("-6"):
+                    payload.update(
+                        {
+                            "source_unchanged": True,
+                            "lanes": [
+                                {
+                                    "lane": name,
+                                    "phase": phase,
+                                    "mutation_profile": (
+                                        "semantic"
+                                        if name == "aggressive_bug_audit"
+                                        else None
+                                    ),
+                                    "manifest_sha256": manifest_sha256,
+                                    "ok": True,
+                                    "lane_unchanged": True,
+                                }
+                                for name, phase in lanes
+                            ],
+                        }
+                    )
                 digest = self._write_json(path, payload)
                 return [{"path": str(path), "sha256": digest}]
 
@@ -285,6 +306,7 @@ class RuntimeCutoverTests(unittest.TestCase):
                 ),
                 1,
             )
+
             with self.assertRaisesRegex(ValueError, "release-validation evidence"):
                 _validate_release_matrix_evidence(
                     matrix2,
@@ -330,6 +352,31 @@ class RuntimeCutoverTests(unittest.TestCase):
                 ),
                 1,
             )
+
+            matrix6 = evidence(
+                "chalxius-release-validation-matrix-6",
+                (
+                    ("self_test", 1),
+                    ("changed_surface_tests", 1),
+                    ("aggressive_bug_audit", 2),
+                ),
+            )
+            self.assertEqual(
+                len(
+                    _validate_release_matrix_evidence(
+                        matrix6,
+                        candidate_manifest_sha256=manifest_sha256,
+                        candidate_skill_version="0.8.0",
+                    )
+                ),
+                1,
+            )
+            with self.assertRaisesRegex(ValueError, "release-validation evidence"):
+                _validate_release_matrix_evidence(
+                    matrix4,
+                    candidate_manifest_sha256=manifest_sha256,
+                    candidate_skill_version="0.8.0",
+                )
 
     def test_round_bindings_preserve_absent_legacy_field_but_reject_mixed_round(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

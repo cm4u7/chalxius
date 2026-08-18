@@ -1,12 +1,33 @@
-# Chalxius 0.7.16 architecture findings and residual boundaries
+# Chalxius 0.8.0 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.7.16
-**Bounded Capability Hygiene**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.0
+**MathGraph First**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
 
-## 0.7.16 Bounded capability hygiene
+## 0.8.0 MathGraph First
+
+Cross-version operation is carried by the MathGraph: node and edge content
+hashes, dependency references, creation/session provenance, workflow stage, and
+owner boundaries. Runtime identity, installation paths, historical archives,
+and obsolete receipts are diagnostic provenance only. No runtime-compatibility
+closure, legacy adapter, migration copy, compatibility database, or second
+graph data plane is required for ordinary graph reads, Research continuation,
+or append-only nontruth writes.
+
+The simplification does not weaken mathematical safety. Malformed graph state,
+hash drift, missing dependencies, wrong-stage artifacts, failed adverse or
+verifier work, and Candidate/Certification/Gateway/Fact authority violations
+still fail at their owning boundaries. Release and rollback tools remain
+deployment diagnostics and do not authorize graph or Fact operations.
+
+For this release workflow, an explicit publication request includes merging
+the corresponding reviewed release change into `main` by default unless the
+user explicitly excludes merge. Installation remains separately authorized;
+publication never authorizes an unrelated or unreviewed change.
+
+## Historical 0.7.16 Bounded capability hygiene
 
 The current overlay keeps repair capability bytes inside one command-local,
 content-addressed inspection context, applies a 64 MiB aggregate byte cap, and

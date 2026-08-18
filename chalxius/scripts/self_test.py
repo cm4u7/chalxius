@@ -51,7 +51,6 @@ from mathgraph.reader_html import (  # noqa: E402
     render_reader_html,
 )
 from mathgraph.roles import allowed_commands, allowed_commands_for_workflow  # noqa: E402
-from mathgraph.runtime_compatibility import validate_runtime_compatibility  # noqa: E402
 from mathgraph.store import MathGraphStore  # noqa: E402
 
 
@@ -288,9 +287,6 @@ def main() -> int:
         (skill_root / "INHERITANCE.lock.json").read_text(encoding="utf-8")
     )
     validate_release_audit_revision_bindings(skill_root)
-    validate_runtime_compatibility(
-        skill_root, inheritance_lock["runtime_compatibility"]
-    )
     validate_public_disclosure_contract(skill_root)
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
     skill_line_count = len(skill_text.splitlines())
@@ -362,7 +358,9 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.7.16 — Bounded Capability Hygiene",
+            "# Chalxius 0.8.0 — MathGraph First",
+            "Future releases do not owe runtime or procedural forward compatibility.",
+            "Mathematical-safety and Fact-authority",
             "Start through the smallest applicable contract",
             "references/v5_production_worker_bootstrap.md",
             "references/v5_supervisor_worker_bootstrap.md",
@@ -379,7 +377,7 @@ def main() -> int:
             "fresh Candidate-level adverse gate",
             "Chalxius Learner only when the user explicitly asks",
             "Grill Me Code",
-            "Publication does not imply merging a pull request",
+            "explicit publication request includes merging the corresponding reviewed change into `main` by default",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -388,8 +386,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.7.16"',
-            '"release_codename": "Bounded Capability Hygiene"',
+            '"version": "0.8.0"',
+            '"release_codename": "MathGraph First"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -453,7 +451,7 @@ def main() -> int:
             '"maximum_active_current_rules_per_project": 16',
             '"oversize_policy": "semantic_compression_required_truncation_forbidden"',
             '"attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx"',
-            '"worker_runtime_binding": "new_task_card_exact_candidate_root_version_manifest_file_hash_and_full_manifest_tree_fail_closed_before_ledger_creation"',
+            '"worker_runtime_binding": "optional_diagnostic_provenance_content_hash_and_workflow_owner_checks_remain_exact"',
             '"automatic_inheritance": false',
             '"admission_lineage_validation": "two_phase_command_local_projection_with_bounded_reentry_and_exact_provisional_full_agreement"',
             '"candidate_local_shape_and_statement_interface_precheck": "nonauthoritative_rejection_only_before_global_research_replay"',
@@ -485,8 +483,10 @@ def main() -> int:
             '"duplicate_body_adjudication_revision": "chalxius-duplicate-body-adjudication-1"',
             '"replace_with_authoritative_mechanism"',
             '"contract_revision": "chalxius-runtime-archive-2"',
-            '"closure_contract_revision": "chalxius-runtime-compatibility-closure-1"',
-            '"active_and_write_policy": "full_manifest_exact_current_live_runtime_only_archive_forbidden_with_plan_round_preflight_before_project_writes"',
+            '"forward_upgrade_policy": "future_releases_need_not_preserve_runtime_or_procedural_compatibility;_graph_semantics_are_the_compatibility_surface"',
+            '"procedural_compatibility_requirement": false',
+            '"ordinary_graph_operation": "runtime_identity_and_archive_location_are_diagnostic_only"',
+            '"active_and_write_policy": "graph_semantics_and_owner_boundaries_not_runtime_history"',
             '"contract_revision": "chalxius-bounded-projection-surface-1"',
             '"selected_authority_validation": "complete_exact_content_and_direct_authority_inputs"',
             '"persistent_index": false',
@@ -618,7 +618,7 @@ def main() -> int:
             "`$chalxius`, not through standalone `$grill-me`",
         ),
         "references/v5_release_traceability.md": (
-            "0.7.16 bounded-capability-hygiene release overlay",
+            "0.8.0 mathgraph-first release overlay",
             "0.7.15 research-obligation-closure release overlay",
             "0.7.14 bounded-handoff local-install overlay",
             "0.7.13 admission-frontload local-install overlay",
@@ -678,9 +678,9 @@ def main() -> int:
             "If `report_required=false`, say nothing about the CHX ledger",
             "Loading some 0.4.1-or-later bytes",
             "--task-card /exact/card.json",
-            "older global Chalxius runtime must fail closed",
-            "host-managed archive outside skill discovery",
-            "not an authority cache",
+            "`runtime_binding` field is retained only as diagnostic provenance",
+            "missing archive or changed runtime may",
+            "must not be read as a runtime-compatibility mandate",
         ),
         "references/external_source_reliability.md": (
             "current-status assessment may be `not_assessed`",
@@ -717,8 +717,8 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            "0.7.16",
-            "Bounded Capability Hygiene",
+            "0.8.0",
+            "MathGraph First",
             "0.7.15",
             "Research Obligation Closure",
             "64 MiB aggregate",

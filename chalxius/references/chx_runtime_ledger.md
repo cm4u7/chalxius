@@ -8,6 +8,15 @@ The ledger is host operational evidence only: `truth_effect=none` and
 
 ## Compatibility boundary
 
+For 0.8.0, compatibility is semantic rather than procedural. Future releases
+may replace runtime layouts, adapters, migration ceremonies, and administrative
+gates without preserving those old protocols. A current or legacy graph remains
+operable when its node/edge hashes, dependencies, provenance, workflow stage,
+and owner boundaries can be interpreted. Runtime identity and archive paths are
+diagnostic provenance only; they cannot gate CHX startup, graph reads, Research
+continuation, or graph writes. The remaining paragraphs preserve the historical
+ledger-revision rules and must not be read as a runtime-compatibility mandate.
+
 The rule applies prospectively to runs started after the 0.4.1 activation boundary.
 Runs already underway under 0.4.0 must not be backfilled, migrated, reopened, or
 reclassified. A missing CHX runtime ledger on such a run is
@@ -63,11 +72,11 @@ Keep the returned `ledger_path` for the whole run. Exactly one of
 host-procedure blocker: do not claim a compliant 0.4.1 run, and disclose the
 failure in the final response.
 
-For a newly frozen 0.4.4 worker card, invoke the `chx_ledger.py` located under
-the candidate skill root bound by that card and add `--task-card /exact/card.json`.
-Startup validates the card semantic hash, canonical skill-root identity,
-expected `VERSION`, `MANIFEST.sha256` file hash, and every manifest-listed
-runtime byte before it creates a ledger.
+For a newly frozen worker card, invoke the `chx_ledger.py` located under the
+available skill root and add `--task-card /exact/card.json`. Startup validates
+the card semantic hash and owner-bound workflow fields before creating a
+ledger. Any `runtime_binding` field is retained only as diagnostic provenance;
+its absence, relocation, or version drift is not a CHX startup failure.
 For current revision-5 worker ledgers, the start event also stores the exact
 round id, assignment id, task-card file SHA-256, and task-card semantic SHA-256.
 The field is optional for existing revision-5 ledgers, so no historical bytes or
@@ -77,25 +86,12 @@ to a small content-addressed `chx-observations/by-id/` projection. That inbox is
 nontruth and pending coordination; it does not promote an issue, consult or
 adopt PHX, alter project authority, or create Blackboard/Pulse state. A closed
 ledger with no finding produces no observation object.
-An older global Chalxius runtime must fail closed instead of starting a
-wrong-version worker ledger. This is prospective: historical cards and running
-0.4.0/0.4.3 work have no new field, warning, invalidation, or redo obligation.
-When newer Chalxius bytes inspect a terminal round, status and audit verify the
-card's exact frozen VERSION, manifest, and all manifest-listed bytes instead of
-comparing it only to the caller's current runtime. If the mutable original root
-has been replaced, schema-1 and schema-2 cards may resolve through the
-host-managed archive outside skill discovery. Resolution requires both one
-sealed exact-file-set content object and one immutable identity-registry record;
-the task card cannot select the host trust root, and archived code is never
-imported or executed. A terminal round is either joined
-to a validated abort or has a complete assignment set whose ingestion receipts,
-return bytes, Research records, and optional adverse/program-math side records
-all validate. Missing or damaged receipts leave the round active or fail closed;
-an active round, worker ledger, return path, experiment, Pulse, and every write
-still require exact current-runtime equality. Missing, linked, writable,
-extra, tampered, cross-device, or registry-mismatched archive data fails closed.
-One successful scan may be shared only by identical identities inside the same
-bounded phase; it is not an authority cache. Completion never requires an
+Historical cards and terminal rounds remain readable through their own frozen
+content, receipts, and graph lineage. A missing archive or changed runtime may
+reduce diagnostic detail, but it does not make a valid graph operation require
+an upgrade, migration, or compatibility closure. Hash drift, missing
+dependencies, malformed receipts, wrong-stage artifacts, and Fact-authority
+violations still fail at their owning boundaries. Completion never requires an
 artificial abort and never rewrites the frozen round.
 
 ## Record every discovery before classifying it

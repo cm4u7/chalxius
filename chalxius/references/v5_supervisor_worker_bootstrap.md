@@ -14,8 +14,12 @@ facts:
 - `work_mode="refute"`;
 - `mathematical_state.source_research_dossier.metadata.research_supervision`
   is present;
-- the card has a current `runtime_binding`, and worker CHX startup accepts that
-  exact card under the candidate root named by the binding.
+- the exact task-card semantic hash and workflow owner are accepted by worker
+  CHX.
+
+`runtime_binding`, when present, is diagnostic provenance only. It does not
+make a current installation or historical archive a prerequisite for
+supervision.
 
 If any condition is absent, inconsistent, legacy, or unvalidated, stop the
 compact path and use the ordinary full protocol routed by `SKILL.md`. Never
@@ -68,7 +72,7 @@ activate the other broad references.
 
 After startup and exact-card binding, the next progress milestone must be the
 required `research_supervision_report` artifact or one explicit blocker naming
-the missing capability, receipt, or premise. Do not emit consecutive
+the missing capability, Research product, or premise. Do not emit consecutive
 status-only updates such as "reviewing", "writing the report", or "almost at
 preflight" while the authorized artifact directory remains empty. Main may
 reclaim a supervisor that repeats a no-output milestone. This is a bounded
@@ -90,9 +94,11 @@ turns while preserving the exact return contract.
 The card is the immutable capability boundary. Verify its semantic hash and use
 only its frozen read capabilities, artifact directory, return path, and size
 caps. The `research_supervision` binding identifies the exact source round,
-logical component, receipt-set hash, supervisor scope, and source receipts. The
+logical component, product-descriptor hash, supervisor scope, and source
+Research products. The historical `source_receipts` field name is retained for
+schema compatibility; it does not require a separate receipt file. The
 adjacent `failure_informed_assurance` binding identifies the exact static
-failure family and concise attack focus. Cover every bound receipt and no
+failure family and concise attack focus. Cover every bound product descriptor and no
 timing-derived subset.
 
 Attack the new production Research and its declared artifacts. An admitted
@@ -164,7 +170,7 @@ another required output role, this report is the only returned artifact. It
 must identify:
 
 - the supervisor scope and failure-family focus;
-- every frozen receipt and reviewed artifact hash;
+- every frozen product descriptor and reviewed artifact hash;
 - each attack actually performed and its result;
 - one of: clean bounded result, concrete defect, surviving counterexample, or
   explicit blocker;

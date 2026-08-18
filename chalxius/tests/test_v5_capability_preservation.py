@@ -5,28 +5,32 @@ import json
 import unittest
 from pathlib import Path
 
-from mathgraph.runtime_compatibility import validate_runtime_compatibility
-
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 
 
 class V5CapabilityPreservationTests(unittest.TestCase):
-    def test_044_runtime_extension_is_exact_and_legacy_behavior_is_explicit(self) -> None:
+    def test_080_mathgraph_first_compatibility_is_semantic_and_runtime_free(self) -> None:
         lock = json.loads(
             (SKILL_ROOT / "INHERITANCE.lock.json").read_text(encoding="utf-8")
         )
-        compatibility = lock["runtime_compatibility"]
-        closure = validate_runtime_compatibility(SKILL_ROOT, compatibility)
-        self.assertEqual(compatibility["baseline"], "chalxius-0.4.3")
-        self.assertEqual(closure["status"], "current")
+        self.assertNotIn("runtime_compatibility", lock)
+        compatibility = lock["mathgraph_first_compatibility"]
         self.assertEqual(
-            closure["changed_path_inventory_sha256"],
-            compatibility["changed_path_inventory_sha256"],
+            compatibility["basis"],
+            "content_hashes_dependencies_provenance_workflow_and_owner_boundaries",
         )
-        self.assertIn(
-            "scripts/mathgraph/paper_research_reliability.py",
-            closure["protected_file_paths"],
+        self.assertEqual(
+            compatibility["forward_upgrade_policy"],
+            "future_releases_need_not_preserve_runtime_or_procedural_compatibility;_graph_semantics_are_the_compatibility_surface",
+        )
+        self.assertFalse(compatibility["procedural_compatibility_requirement"])
+        self.assertEqual(
+            compatibility["runtime_role"],
+            "diagnostic_provenance_only",
+        )
+        self.assertEqual(
+            compatibility["legacy_operation"],
+            "direct_graph_semantics_without_adapter_or_migration",
         )
         self.assertEqual(
             compatibility["project_schema_change"],

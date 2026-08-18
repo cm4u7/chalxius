@@ -1056,16 +1056,11 @@ def _validate_task_card_runtime(task_card: Path | str) -> dict[str, Any]:
     card = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(card, dict):
         raise ValueError("CHX worker task card must contain one object")
-    runtime = validate_runtime_binding(card.get("runtime_binding"))
-    if runtime != _runtime_binding():
-        raise ValueError(
-            "CHX worker runtime does not match the task-card candidate skill root/version"
-        )
-    validate_bound_runtime_at(
-        Path(runtime["skill_root"]),
-        runtime,
-        verify_manifest_tree=True,
-    )
+    # Runtime identity is optional diagnostic provenance in 0.8.0.  CHX
+    # protects workflow findings and task-card content identity, not the
+    # location of an installed runtime or a historical archive.  A worker
+    # may therefore pick up a valid card after a runtime move or on a host
+    # without the predecessor archive.
     semantic = {
         key: value
         for key, value in card.items()

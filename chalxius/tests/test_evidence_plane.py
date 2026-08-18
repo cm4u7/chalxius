@@ -1069,7 +1069,7 @@ class EvidencePlaneTests(unittest.TestCase):
                     inconsistent_verify.stderr,
                 )
 
-    def test_old_runtime_bound_round_does_not_block_fact_evidence_bridge(
+    def test_old_runtime_bound_round_remains_operable_for_fact_evidence_bridge(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1157,7 +1157,10 @@ class EvidencePlaneTests(unittest.TestCase):
                         research_ids=[research["research_id"]],
                     )
 
-                self.assertFalse(source.audit().current_ok)
+                # 0.8.0 treats the old binding as diagnostic provenance.  A
+                # runtime move must not invalidate an otherwise sound graph or
+                # force a migration before the Evidence bridge can read it.
+                self.assertTrue(source.audit().current_ok)
                 destination = self.helper._store(
                     base / "destination", "OLD-V5-DESTINATION"
                 )

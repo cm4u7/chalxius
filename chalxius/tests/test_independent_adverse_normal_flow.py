@@ -462,6 +462,12 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                 assignment_id=assignment["assignment_id"],
                 worker_final_sha256=return_sha,
             )
+            # The Research product is the reusable lineage boundary.  The
+            # derived worker receipt is only a workflow marker and may be
+            # missing after an interrupted publication.
+            Path(str(assignment["return_path"])).with_suffix(
+                ".receipt.json"
+            ).unlink()
 
             payload = {
                 "schema_version": 5,

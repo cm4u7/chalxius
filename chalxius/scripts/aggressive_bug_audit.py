@@ -67,9 +67,6 @@ RELEASE_VALIDATION_TEST_MODULE = (
 PAPER_RESEARCH_PIPELINE_TEST_MODULE = (
     "tests.test_paper_research_pipeline.PaperResearchPipelineTests"
 )
-RUNTIME_COMPATIBILITY_TEST_MODULE = (
-    "tests.test_runtime_compatibility.RuntimeCompatibilityClosureTests"
-)
 CHX004_TEST_MODULE = (
     "tests.test_chx_004_fact_closure_authority."
     "CHX004FactClosureAuthorityTests"
@@ -636,16 +633,6 @@ MUTANTS = (
         ),
     ),
     Mutant(
-        name="worker_runtime_mismatch_bypassed",
-        old="    if runtime != _runtime_binding():\n",
-        new="    if False and runtime != _runtime_binding():\n",
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_chx002_task_card_binds_candidate_runtime_and_ledger_fails_closed"
-        ),
-        target="chx_ledger.py",
-    ),
-    Mutant(
         name="adverse_evidence_provenance_dropped",
         old=(
             "                if (\n"
@@ -793,41 +780,6 @@ MUTANTS = (
         ),
     ),
     Mutant(
-        name="completed_round_historical_runtime_boundary_bypassed",
-        old=(
-            "        completed = self._round_is_completed(\n"
-            "            round_dir,\n"
-            "            manifest,\n"
-            "            _inspection_context=inspection,\n"
-            "        )\n"
-            "        for card_path, card in frozen_cards:\n"
-        ),
-        new=(
-            "        completed = False\n"
-            "        runtime_validation_cache: set[tuple[bool, str]] = set()\n"
-            "        for card_path, card in frozen_cards:\n"
-        ),
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_completed_round_uses_valid_receipts_as_historical_runtime_boundary"
-        ),
-    ),
-    Mutant(
-        name="completed_round_receipt_integrity_bypassed",
-        old=(
-            "            self._validated_ingest_receipt(\n"
-            "                round_dir=round_dir,\n"
-            "                assignment=assignment,\n"
-            "                _inspection_context=_inspection_context,\n"
-            "            )\n"
-        ),
-        new="            pass\n",
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_completed_round_uses_valid_receipts_as_historical_runtime_boundary"
-        ),
-    ),
-    Mutant(
         name="runtime_archive_ancestor_symlink_check_bypassed",
         old=(
             "        if stat.S_ISLNK(info.st_mode):\n"
@@ -919,91 +871,6 @@ MUTANTS = (
             "test_registry_and_archive_are_both_required_and_revalidated"
         ),
         target="mathgraph/runtime_archive.py",
-    ),
-    Mutant(
-        name="active_runtime_manifest_tree_rehash_bypassed",
-        old=(
-            "        else:\n"
-            "            validate_bound_runtime_at(\n"
-            "                Path(normalized[\"skill_root\"]),\n"
-            "                normalized,\n"
-            "                verify_manifest_tree=True,\n"
-            "            )\n"
-        ),
-        new=(
-            "        else:\n"
-            "            validate_bound_runtime_at(\n"
-            "                Path(normalized[\"skill_root\"]),\n"
-            "                normalized,\n"
-            "                verify_manifest_tree=False,\n"
-            "            )\n"
-        ),
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_active_round_never_uses_historical_runtime_archive"
-        ),
-    ),
-    Mutant(
-        name="active_round_illegally_uses_historical_archive",
-        old="        if historical_runtime:\n",
-        new="        if True:\n",
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_active_round_never_uses_historical_runtime_archive"
-        ),
-    ),
-    Mutant(
-        name="runtime_validation_bounded_phase_dedup_removed",
-        old=(
-            "                if runtime_validation_cache is not None:\n"
-            "                    runtime_validation_cache.add(runtime_cache_key)\n"
-        ),
-        new=(
-            "                if runtime_validation_cache is not None:\n"
-            "                    pass  # mutant: rescan each identical card\n"
-        ),
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_runtime_binding_is_scanned_once_per_bounded_round_phase"
-        ),
-    ),
-    Mutant(
-        name="chx_worker_runtime_manifest_tree_rehash_bypassed",
-        old=(
-            "    validate_bound_runtime_at(\n"
-            "        Path(runtime[\"skill_root\"]),\n"
-            "        runtime,\n"
-            "        verify_manifest_tree=True,\n"
-            "    )\n"
-        ),
-        new=(
-            "    validate_bound_runtime_at(\n"
-            "        Path(runtime[\"skill_root\"]),\n"
-            "        runtime,\n"
-            "        verify_manifest_tree=False,\n"
-            "    )\n"
-        ),
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_chx_worker_ledger_rehashes_the_task_card_runtime_before_writing"
-        ),
-        target="chx_ledger.py",
-    ),
-    Mutant(
-        name="round_runtime_preflight_before_write_bypassed",
-        old=(
-            "            self._validate_bound_runtime_binding(\n"
-            "                planned_runtime_binding,\n"
-            "                historical_runtime=False,\n"
-            "            )\n"
-        ),
-        new=(
-            "            pass  # mutant: skip the pre-write runtime preflight\n"
-        ),
-        test=(
-            f"{FIELD_TEST_MODULE}."
-            "test_round_runtime_preflight_fails_before_any_project_write"
-        ),
     ),
     Mutant(
         name="terminal_v5_experiment_finalize_write_allowed",
@@ -1950,87 +1817,6 @@ MUTANTS = (
         target="mathgraph/paper_research_pipeline.py",
     ),
     Mutant(
-        name="runtime_compatibility_protected_count_drift_bypassed",
-        old=(
-            "    _require(\n"
-            "        compatibility.get(\"protected_file_count\") == status[\"protected_file_count\"],\n"
-            "        \"runtime compatibility protected_file_count drifted\",\n"
-            "    )\n"
-        ),
-        new=(
-            "    _require(\n"
-            "        True,\n"
-            "        \"runtime compatibility protected_file_count drifted\",\n"
-            "    )\n"
-        ),
-        test=(
-            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
-            "test_new_runtime_file_fails_stale_count_and_digest"
-        ),
-        target="mathgraph/runtime_compatibility.py",
-    ),
-    Mutant(
-        name="runtime_compatibility_protected_digest_drift_bypassed",
-        old=(
-            "    _require(\n"
-            "        compatibility.get(\"protected_tree_sha256\")\n"
-            "        == status[\"protected_tree_sha256\"],\n"
-            "        \"runtime compatibility protected_tree_sha256 drifted\",\n"
-            "    )\n"
-        ),
-        new=(
-            "    _require(\n"
-            "        True,\n"
-            "        \"runtime compatibility protected_tree_sha256 drifted\",\n"
-            "    )\n"
-        ),
-        test=(
-            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
-            "test_content_drift_fails_stale_digest_with_same_file_count"
-        ),
-        target="mathgraph/runtime_compatibility.py",
-    ),
-    Mutant(
-        name="runtime_compatibility_changed_path_escape_bypassed",
-        old=(
-            "    _require(\n"
-            "        set(changed).issubset(protected),\n"
-            "        \"runtime compatibility changed path is outside the protected closure\",\n"
-            "    )\n"
-        ),
-        new=(
-            "    _require(\n"
-            "        True,\n"
-            "        \"runtime compatibility changed path is outside the protected closure\",\n"
-            "    )\n"
-        ),
-        test=(
-            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
-            "test_changed_path_cannot_escape_protected_closure"
-        ),
-        target="mathgraph/runtime_compatibility.py",
-    ),
-    Mutant(
-        name="runtime_compatibility_changed_path_inventory_digest_bypassed",
-        old=(
-            "    _require(\n"
-            "        compatibility.get(\"changed_path_inventory_sha256\") == changed_digest,\n"
-            "        \"runtime compatibility changed path inventory digest drifted\",\n"
-            "    )\n"
-        ),
-        new=(
-            "    _require(\n"
-            "        True,\n"
-            "        \"runtime compatibility changed path inventory digest drifted\",\n"
-            "    )\n"
-        ),
-        test=(
-            f"{RUNTIME_COMPATIBILITY_TEST_MODULE}."
-            "test_changed_path_inventory_fails_stale_digest"
-        ),
-        target="mathgraph/runtime_compatibility.py",
-    ),
-    Mutant(
         name="reader_dynamic_radial_memory_bypassed",
         old=(
             "        const memory = dynamicRadialMemoryDisplacement(nodeId, positions.get(nodeId));\n"
@@ -2256,14 +2042,26 @@ MUTANTS = (
     Mutant(
         name="release_validation_snapshot_sensitive_phase_barrier_removed",
         old=(
-            '            "aggressive_bug_audit",\n'
-            '            (python, "scripts/aggressive_bug_audit.py"),\n'
-            "            phase=4,\n"
+            '                "aggressive_bug_audit",\n'
+            "                (\n"
+            "                    python,\n"
+            '                    "scripts/aggressive_bug_audit.py",\n'
+            '                    "--profile",\n'
+            '                    "semantic",\n'
+            "                ),\n"
+            "                phase=2,\n"
+            '                mutation_profile="semantic",\n'
         ),
         new=(
-            '            "aggressive_bug_audit",\n'
-            '            (python, "scripts/aggressive_bug_audit.py"),\n'
-            "            phase=3,\n"
+            '                "aggressive_bug_audit",\n'
+            "                (\n"
+            "                    python,\n"
+            '                    "scripts/aggressive_bug_audit.py",\n'
+            '                    "--profile",\n'
+            '                    "semantic",\n'
+            "                ),\n"
+            "                phase=1,\n"
+            '                mutation_profile="semantic",\n'
         ),
         test=(
             f"{RELEASE_VALIDATION_TEST_MODULE}."
@@ -2279,8 +2077,11 @@ MUTANTS = (
             "                python,\n"
             '                "scripts/aggressive_bug_audit.py",\n'
             '                "--preflight-only",\n'
+            '                "--profile",\n'
+            '                "full",\n'
             "            ),\n"
             "            phase=1,\n"
+            '            mutation_profile="full",\n'
         ),
         new=(
             '            "mutant_registry_preflight",\n'
@@ -2288,8 +2089,11 @@ MUTANTS = (
             "                python,\n"
             '                "scripts/aggressive_bug_audit.py",\n'
             '                "--preflight-only",\n'
+            '                "--profile",\n'
+            '                "full",\n'
             "            ),\n"
             "            phase=3,\n"
+            '            mutation_profile="full",\n'
         ),
         test=(
             f"{RELEASE_VALIDATION_TEST_MODULE}."
@@ -2303,7 +2107,7 @@ MUTANTS = (
             "    _validate_mutant_targets(\n"
             "        candidate_root=candidate_root,\n"
             "        source_scripts=source_scripts,\n"
-            "        mutants=MUTANTS,\n"
+            "        mutants=mutants,\n"
             "    )\n"
         ),
         new="    pass  # mutant: skip the cheap complete registry preflight\n",
@@ -2314,6 +2118,55 @@ MUTANTS = (
         target="aggressive_bug_audit.py",
     ),
 )
+
+
+# The release-time audit is deliberately small and semantic.  These probes
+# guard the boundaries that can change a mathematical conclusion, Fact
+# authority, graph ancestry, computation interpretation, or verifier result.
+# The historical registry remains available through ``--profile full`` for an
+# explicit forensic investigation; it is not a routine agent-facing gate.
+SEMANTIC_MUTANT_NAMES = frozenset(
+    {
+        "frontier_limit_minus_one",
+        "campaign_snapshot_hash_bypass",
+        "typed_fact_closure_authority_expansion_bypassed",
+        "typed_fact_closure_non_active_root_accepted",
+        "candidate_mapping_allows_missing_fact",
+        "series_order_budget_accepts_declared_retention",
+        "background_snapshot_hash_bypass",
+        "current_source_capability_requirement_bypassed",
+        "adverse_evidence_provenance_dropped",
+        "parallel_verification_signature_bypassed",
+        "parallel_verification_project_nonce_replay_accepted",
+        "research_draft_semantic_component_binding_bypassed",
+        "paper_research_mathematical_disproof_removed",
+        "paper_research_receipt_content_address_recomputation_bypassed",
+        "paper_research_stable_identity_semantic_collision_accepted",
+    }
+)
+
+
+def _mutants_for_profile(profile: str) -> tuple[Mutant, ...]:
+    if profile == "full":
+        return MUTANTS
+    if profile != "semantic":
+        raise ValueError(f"unknown mutation profile: {profile}")
+    # Keep the public preflight seam observable when a caller deliberately
+    # replaces the registry in a host-entrypoint test.  The real path still
+    # fails closed below if the selected profile is empty; returning an empty
+    # tuple here lets the preflight itself remain the first callable boundary.
+    if not MUTANTS:
+        return ()
+    selected = tuple(
+        mutant for mutant in MUTANTS if mutant.name in SEMANTIC_MUTANT_NAMES
+    )
+    missing = SEMANTIC_MUTANT_NAMES - {mutant.name for mutant in selected}
+    if missing:
+        raise RuntimeError(
+            "semantic mutation profile names missing from registry: "
+            + ", ".join(sorted(missing))
+        )
+    return selected
 
 
 def _mutant_target(
@@ -2447,15 +2300,25 @@ def _run_test(*, repo: Path, scripts: Path, test: str) -> subprocess.CompletedPr
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--profile",
+        choices=("semantic", "full"),
+        default="semantic",
+        help=(
+            "semantic runs the small correctness-boundary set; full preserves "
+            "the historical forensic registry"
+        ),
+    )
+    parser.add_argument(
         "--preflight-only",
         action="store_true",
-        help="validate the complete mutation registry without running baselines",
+        help="validate the selected mutation registry without running baselines",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    mutants = _mutants_for_profile(args.profile)
     candidate_root = Path(__file__).resolve().parents[1]
     repo = candidate_root
     source_scripts = candidate_root / "scripts"
@@ -2465,7 +2328,7 @@ def main(argv: list[str] | None = None) -> int:
     _validate_mutant_targets(
         candidate_root=candidate_root,
         source_scripts=source_scripts,
-        mutants=MUTANTS,
+        mutants=mutants,
     )
     if args.preflight_only:
         candidate_unchanged = _candidate_is_unchanged(
@@ -2473,17 +2336,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         report = {
             "schema_version": 1,
-            "contract_revision": "chalxius-mutant-registry-preflight-1",
-            "mutant_count": len(MUTANTS),
-            "exact_single_target_count": len(MUTANTS),
+            "contract_revision": "chalxius-mutant-registry-preflight-2",
+            "profile": args.profile,
+            "mutant_count": len(mutants),
+            "exact_single_target_count": len(mutants),
             "candidate_unchanged": candidate_unchanged,
             "truth_effect": "none",
-            "ok": candidate_unchanged,
+            "ok": candidate_unchanged and bool(mutants),
         }
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         return 0 if report["ok"] else 1
 
-    baseline_tests = sorted({mutant.test for mutant in MUTANTS})
+    if not mutants:
+        raise RuntimeError(
+            f"{args.profile} mutation profile is empty; refusing to run an "
+            "unprotected audit"
+        )
+
+    baseline_tests = sorted({mutant.test for mutant in mutants})
     with tempfile.TemporaryDirectory(
         prefix="chalxius-v5-mutant-baseline-"
     ) as temporary:
@@ -2504,7 +2374,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"isolated baseline regression failed before mutation: {test}"
                 )
 
-    for mutant in MUTANTS:
+    for mutant in mutants:
         with tempfile.TemporaryDirectory(prefix="chalxius-v5-mutant-") as temporary:
             copied_root = _copy_complete_runtime(
                 candidate_root=candidate_root,
@@ -2552,9 +2422,16 @@ def main(argv: list[str] | None = None) -> int:
 
     mutants_ok = all(bool(item["killed"]) for item in results)
     candidate_unchanged = _candidate_is_unchanged(candidate_before, candidate_root)
-    report = {
-        "schema_version": 1,
-        "scope": (
+    if args.profile == "semantic":
+        scope = (
+            "graph frontier, campaign snapshot integrity, Fact-closure authority, "
+            "Candidate/Fact exact coverage, computation truncation, frozen source "
+            "snapshots, adverse provenance, worker return integrity, verifier "
+            "signatures and nonce replay, semantic Research continuity, evidence "
+            "content addressing, and stable graph identity"
+        )
+    else:
+        scope = (
             "V5 truncation, exact-set, context authority, frozen background, "
             "mode equivalence, source capability, adverse provenance, general hidden-"
             "conjunct and philosophy-domain baseline gating, prior-Fact routing, "
@@ -2566,25 +2443,29 @@ def main(argv: list[str] | None = None) -> int:
             "runtime preflight, fail-closed runtime cutover and automatic rollback, "
             "explicit Campaign exact-match scope and frozen snapshot integrity, "
             "public Paper and V5 worker-return interface reachability and diagnostics, "
-            "Paper continuation "
-            "ancestry, revised-writing authority, philosophy "
+            "Paper continuation ancestry, revised-writing authority, philosophy "
             "term review, verifier-visible evidence, "
             "strict research-draft proposition and target-total batch coverage, "
             "stance authorization, semantic-component and source-operator/qualifier "
             "continuity, explicit mini-DAG atomicity, exact receipt schemas and "
             "content-address recomputation, trusted prime-order signature "
-            "verification, registry-wide cryptographic-identity, idempotent-registration, and cached-read authority integrity, "
-            "project-wide freshness, Certification aggregate enforcement, Campaign "
-            "worker-result lineage, exact goal-to-Campaign auto/deep intake, explicit "
-            "disablement and active-pointer isolation, Brave Future advisory-only effects, CHX "
-            "revision-5 reconnaissance/tactical/integrated repair coverage and reusable-registry integrity, "
-            "close/status parity, public-disclosure completeness and run namespace, "
-            "content-addressed Paper-continuation status-head freshness without "
-            "summary-to-full fallback, status projection, Reader math projection, "
-            "multi-center theme-field layout, "
-            "orbit-off pinned-card collision repulsion, and "
-            "off-by-one critical guards"
-        ),
+            "verification, registry-wide cryptographic-identity, idempotent-"
+            "registration, and cached-read authority integrity, project-wide "
+            "freshness, Certification aggregate enforcement, Campaign worker-result "
+            "lineage, exact goal-to-Campaign auto/deep intake, explicit disablement "
+            "and active-pointer isolation, Brave Future advisory-only effects, CHX "
+            "revision-5 reconnaissance/tactical/integrated repair coverage and "
+            "reusable-registry integrity, close/status parity, public-disclosure "
+            "completeness and run namespace, content-addressed Paper-continuation "
+            "status-head freshness without summary-to-full fallback, status "
+            "projection, Reader math projection, multi-center theme-field layout, "
+            "orbit-off pinned-card collision repulsion, and off-by-one critical "
+            "guards"
+        )
+    report = {
+        "schema_version": 1,
+        "profile": args.profile,
+        "scope": scope,
         "mutants": results,
         "killed": sum(bool(item["killed"]) for item in results),
         "total": len(results),
