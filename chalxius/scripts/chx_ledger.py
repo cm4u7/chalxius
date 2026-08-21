@@ -3386,7 +3386,7 @@ def _covered_issue_snapshot_sha256(
 ) -> str:
     """Bind each covered issue to the exact immutable ledger that owns it.
 
-    The full inventory hash remains the record-time quiescent snapshot.  This
+    The full inventory hash remains the exact record-time snapshot.  This
     narrower hash lets a valid repair remain applicable when later ledgers are
     appended, while still detecting removal, replacement, or byte drift of any
     ledger that owned an issue covered by the repair.
@@ -3511,21 +3511,11 @@ def _validate_global_repair_candidate(
     )
 
 
-def _global_repair_inventory_is_complete(result: dict[str, Any]) -> bool:
-    return (
-        not result["lineage_errors"]
-        and not result["report_compatibility_drift"]
-        and not result["active_run_ids"]
-    )
-
-
-def _require_complete_global_repair_inventory(result: dict[str, Any]) -> None:
+def _require_global_repair_inventory_integrity(result: dict[str, Any]) -> None:
     if result["lineage_errors"]:
         raise ValueError("CHX global repair inventory has lineage errors")
     if result["report_compatibility_drift"]:
         raise ValueError("CHX global repair inventory has report drift")
-    if result["active_run_ids"]:
-        raise ValueError("CHX global repair requires a quiescent closed-ledger inventory")
 
 
 def _validate_global_repair_record(
@@ -4019,18 +4009,6 @@ def _inventory_project_ledgers_unlocked(
                 )
                 for successor_run_id in sorted(successor_run_ids)
             ]
-            has_active_subtree = any(
-                records[run_id]["state"] == "open"
-                for _, _, descendant_runs in branch_data
-                for run_id in descendant_runs
-            )
-            if has_active_subtree:
-                lineage_errors.append(
-                    f"{predecessor}: predecessor has an active parallel successor subtree; "
-                    "multiple direct successors remain unresolved: "
-                    + ", ".join(sorted(successor_run_ids))
-                )
-                continue
             ancestor_owners: dict[str, str] = {}
             ancestor_run: str | None = predecessor
             while ancestor_run is not None:
@@ -4044,9 +4022,14 @@ def _inventory_project_ledgers_unlocked(
                     "successor_subtree_run_ids": list(descendant_runs),
                     "successor_subtree_issue_count": issue_count,
                 }
-                parallel_closed_successors.append(projection)
-                if issue_count == 0:
-                    parallel_issue_free_successors.append(projection)
+                subtree_active = any(
+                    records[descendant_run_id]["state"] == "open"
+                    for descendant_run_id in descendant_runs
+                )
+                if not subtree_active:
+                    parallel_closed_successors.append(projection)
+                    if issue_count == 0:
+                        parallel_issue_free_successors.append(projection)
                 for descendant_run_id in descendant_runs:
                     for issue in records[descendant_run_id]["issues"].values():
                         for relation in issue["relations"]:
@@ -4465,7 +4448,7 @@ def record_global_repair(
                 include_global=False,
                 _lock_held=True,
             )
-            _require_complete_global_repair_inventory(base)
+            _require_global_repair_inventory_integrity(base)
             if normalized["inventory_sha256"] != base["inventory_sha256"]:
                 raise ValueError("CHX global repair inventory snapshot is stale")
             observed_ids = sorted(
@@ -4526,7 +4509,7 @@ def record_global_repair(
                 include_global=False,
                 _lock_held=True,
             )
-            _require_complete_global_repair_inventory(final_base)
+            _require_global_repair_inventory_integrity(final_base)
             if final_base["inventory_sha256"] != base["inventory_sha256"]:
                 raise ValueError(
                     "CHX global repair inventory changed before final write"

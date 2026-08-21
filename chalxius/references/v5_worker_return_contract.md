@@ -301,11 +301,15 @@ and genuinely needed; it must not stand in for a missing premise or inference.
 
 ## Commands and effects
 
+Let `MGRAPH` name the executable `scripts/mgraph` shell entry under the exact
+Chalxius root selected for this task. Invoke it directly rather than through a
+Python interpreter or a bare command assumed to be on `PATH`.
+
 ```bash
-mgraph --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
+"$MGRAPH" --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
   --input DRAFT.json
-mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
-mgraph --root PROJECT --role main ingest-return ROUND_ID ASSIGNMENT_ID
+"$MGRAPH" --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
+"$MGRAPH" --root PROJECT --role main ingest-return ROUND_ID ASSIGNMENT_ID
 ```
 
 `preflight-return` is read-only and may inspect a noncanonical draft. Copy the

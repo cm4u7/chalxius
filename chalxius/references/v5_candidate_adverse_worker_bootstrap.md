@@ -77,6 +77,11 @@ challenge with non-null `attack_learning`, read
 
 ## Exact return
 
+Let `MGRAPH` be the exact selected Chalxius root's executable
+`scripts/mgraph` shell entry. Invoke `"$MGRAPH" --root PROJECT ...` directly;
+do not pass the shell entry to Python and do not assume that a bare `mgraph`
+name exists on `PATH`.
+
 Write one schema-5 return to the exact card path with these fields:
 
 - `schema_version`, `project_id`, `round_id`, `assignment_id`, `worker_id`;

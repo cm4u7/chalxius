@@ -1,10 +1,60 @@
-# Chalxius 0.8.6 architecture findings and residual boundaries
+# Chalxius 0.8.7 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.6
-**Bounded PHX Repair**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.7
+**Main Observation and CHX Snapshot**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.7 Main Observation and CHX Snapshot
+
+Main now receives the complete lightweight performance instruction: directly
+notice both visible worker progress and the end-to-end elapsed time of commands
+or work units already exposed by the host. Unexpectedly long duration relative
+to apparent complexity or a recent comparable operation is a diagnostic signal
+to inspect for repeated validation, broad rescans, or idle work. It is not an
+automatic failure, timeout, or admission decision.
+
+This closes an instruction-surface omission in 0.8.6. It adds no timer, daemon,
+watcher, polling loop, heartbeat, numeric threshold, persistent performance
+state, receipt, lifecycle state, or mathematical gate.
+
+Global CHX repair no longer treats every unclosed foreign ledger as proof of
+live work or as a prerequisite that another task must close. One repair binds
+the exact current inventory and every issue already observed, including issues
+inside open or abandoned ledgers. If a covered open ledger later changes, the
+old covered-ledger snapshot becomes stale and the new bytes remain visible for
+an incremental successor. Malformed lineage, report drift, incomplete issue
+coverage, competing cross-branch `supersedes`, candidate drift, and evidence
+drift still fail closed.
+
+Four reproduced runtime costs are removed at their existing owner boundaries.
+An independent Research append with no Fact dependencies no longer reconstructs
+the unrelated active-Fact lineage. A selective checkpoint reuses one
+command-local inspection across its explicit targets; the field five-target
+canary fell from about 82.9 seconds to 3.01 seconds. Exact supervision retry
+filters unrelated manifests and returns the existing round before rebuilding
+planner Research; the same field retry fell from roughly 10--17 seconds to
+1.63 seconds. A historical partial-supervisor Research replay also completed a
+new round in 2.40 seconds on an APFS clone. These are local diagnostic canaries,
+not timing guarantees, persistent caches, automatic pass conditions, or truth
+evidence.
+
+Supervision capability closure is now scope-sensitive. Proof-logic,
+program-math, and integration cards bind the exact production card, applicable
+output artifacts, and active Fact premises without copying source-only
+baseline bytes; source-scope cards retain the exact source capability closure.
+Artifact capability is also decided by exact project-relative path, SHA-256,
+and role structure rather than a historical assurance-revision label. Exact
+legacy declarations therefore remain usable directly, while missing,
+malformed, unsafe, or hash-drifted bytes still provide no capability.
+
+For ordinary content-addressed capabilities, byte identity is authoritative.
+FileProvider/APFS mtime or ctime changes during an unchanged read no longer
+create false artifact drift; device, inode, file type, size, containment, link,
+and final SHA-256 checks remain exact. Current worker bootstraps also invoke the
+selected skill root's executable `scripts/mgraph` shell entry directly. They do
+not pass that shell entry to Python or assume a global `mgraph` PATH alias.
 
 ## 0.8.6 Bounded PHX Repair
 

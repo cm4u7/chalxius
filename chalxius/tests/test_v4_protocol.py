@@ -1192,6 +1192,51 @@ class V4ProtocolTests(unittest.TestCase):
 
 
 class SkillCollaborationPolicyTests(unittest.TestCase):
+    def test_current_worker_commands_use_the_bound_shell_entrypoint(self) -> None:
+        skill_root = Path(__file__).resolve().parents[1]
+        contract_texts = [
+            (skill_root / "references" / name).read_text(encoding="utf-8")
+            for name in (
+                "v5_candidate_adverse_worker_bootstrap.md",
+                "v5_production_worker_bootstrap.md",
+                "v5_supervisor_worker_bootstrap.md",
+                "v5_worker_return_contract.md",
+            )
+        ]
+        for contract in contract_texts:
+            self.assertIn('"$MGRAPH" --root PROJECT', contract)
+            self.assertRegex(
+                contract,
+                r"executable\s+`scripts/mgraph` shell entry",
+            )
+        contracts = "\n".join(contract_texts)
+        self.assertNotIn("\nmgraph --root PROJECT", contracts)
+
+    def test_main_performance_observation_includes_elapsed_time_without_monitor(self) -> None:
+        skill_root = Path(__file__).resolve().parents[1]
+        skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        adapter = (
+            skill_root / "references" / "multi_agent_adapter.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "directly observes both worker progress and the elapsed duration",
+            skill,
+        )
+        self.assertIn(
+            "unexpectedly slow for its apparent complexity or a recent comparable",
+            skill,
+        )
+        self.assertIn("end-to-end elapsed time", adapter)
+        for forbidden_mechanism in (
+            "creates a timer",
+            "creates a daemon",
+            "creates a watcher",
+            "creates a numeric threshold",
+            "creates persistent performance state",
+        ):
+            self.assertNotIn(forbidden_mechanism, skill + "\n" + adapter)
+
     def test_v5_retires_new_pulse_planning_while_v4_policy_stays_bounded(self) -> None:
         skill_root = Path(__file__).resolve().parents[1]
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")

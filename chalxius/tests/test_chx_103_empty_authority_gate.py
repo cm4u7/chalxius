@@ -63,6 +63,61 @@ class CHX103EmptyAuthorityGateTests(unittest.TestCase):
             self.assertIsNone(snapshot["attack_target"])
             self.assertEqual(snapshot["capabilities"], [])
 
+    def test_independent_research_append_does_not_open_active_fact_closure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(
+                Path(temporary).resolve(),
+                "chx-independent-research-append",
+            )
+            lifecycle = store.v5_lifecycle()
+
+            with patch.object(
+                store,
+                "fact_ids",
+                side_effect=AssertionError(
+                    "independent Research reconstructed unrelated active Facts"
+                ),
+            ) as fact_ids:
+                research = lifecycle.add_research(
+                    {
+                        "kind": "insight",
+                        "claim": "One independent nontruth Research result.",
+                    },
+                    actor="main",
+                )
+
+            fact_ids.assert_not_called()
+            self.assertEqual(research["dependencies"], [])
+            self.assertEqual(research["status"], "open")
+
+    def test_research_with_fact_dependency_retains_active_fact_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(
+                Path(temporary).resolve(),
+                "chx-dependent-research-append",
+            )
+            lifecycle = store.v5_lifecycle()
+            fact_id = "4" * 16
+            inspection = RoundInspectionContext()
+
+            with patch.object(
+                store,
+                "fact_ids",
+                return_value=[fact_id],
+            ) as fact_ids:
+                research = lifecycle.add_research(
+                    {
+                        "kind": "proof_attempt",
+                        "claim": "One nontruth Research result using an active Fact.",
+                        "dependencies": [fact_id],
+                    },
+                    actor="main",
+                    _inspection_context=inspection,
+                )
+
+            fact_ids.assert_called_once_with(_inspection_context=inspection)
+            self.assertEqual(research["dependencies"], [fact_id])
+
     def test_nonempty_authority_retains_complete_context_aware_reads(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import copy
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +21,7 @@ from mathgraph.v5_lifecycle import (
     V5_REPAIR_INPUT_CAPABILITY_REVISION,
     V5_ASSURANCE_CONTRACT_REVISION,
 )
+from mathgraph.v5_assurance import V5_LEGACY_ASSURANCE_CONTRACT_REVISION
 
 
 class CHX0716CapabilitySnapshotTests(unittest.TestCase):
@@ -142,6 +145,46 @@ class CHX0716CapabilitySnapshotTests(unittest.TestCase):
             self.assertEqual(len(typed), 2)
             self.assertEqual(context.repair_capability_total_bytes, 0)
 
+    def test_exact_legacy_artifacts_are_capabilities_by_structure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary))
+            path = store.root / "legacy-source.pdf"
+            raw = b"frozen legacy source bytes\n"
+            path.write_bytes(raw)
+            research = store.v5_lifecycle().add_research(
+                {
+                    "kind": "literature",
+                    "claim": "Read one exact historical source capability.",
+                    "artifacts": [
+                        {
+                            "path": path.relative_to(store.root).as_posix(),
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "role": "primary_source",
+                        }
+                    ],
+                    "source_dependent": True,
+                },
+                actor="main",
+                assurance_contract_revision=(
+                    V5_LEGACY_ASSURANCE_CONTRACT_REVISION
+                ),
+            )
+
+            planned = store.v5_lifecycle().create_production_round(
+                workers=1,
+                mode="literature",
+                research_ids=[research["research_id"]],
+                host_task_scope_id="legacy-exact-capability-host",
+            )
+            card = Path(planned["assignments"][0]["task_card_path"])
+            related = json.loads(card.read_text(encoding="utf-8"))[
+                "mathematical_state"
+            ]["related_artifacts"]
+            self.assertEqual(
+                [item["path"] for item in related],
+                ["legacy-source.pdf"],
+            )
+
     def test_ordinary_artifacts_remain_fail_closed_for_hash_and_symlink_drift(
         self,
     ) -> None:
@@ -180,6 +223,52 @@ class CHX0716CapabilitySnapshotTests(unittest.TestCase):
                         ordinary,
                         _inspection_context=RoundInspectionContext(),
                     )
+
+    def test_ordinary_artifact_accepts_metadata_only_localization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary))
+            path = store.root / "ordinary-localized.txt"
+            raw = b"content-addressed ordinary bytes\n"
+            path.write_bytes(raw)
+            ordinary = {
+                "research_id": "ordinary-localized",
+                "metadata": {
+                    "assurance_contract_revision": V5_ASSURANCE_CONTRACT_REVISION,
+                    "artifacts": [
+                        {
+                            "path": path.relative_to(store.root).as_posix(),
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "role": "source",
+                        }
+                    ],
+                },
+            }
+            original_read = v5_lifecycle_module.os.read
+            localized = False
+
+            def localizing_read(descriptor: int, size: int) -> bytes:
+                nonlocal localized
+                chunk = original_read(descriptor, size)
+                if chunk and not localized:
+                    localized = True
+                    metadata = path.stat()
+                    os.utime(
+                        path,
+                        ns=(metadata.st_atime_ns, metadata.st_mtime_ns + 1_000_000),
+                    )
+                return chunk
+
+            with patch.object(
+                v5_lifecycle_module.os,
+                "read",
+                side_effect=localizing_read,
+            ):
+                typed = store.v5_lifecycle()._typed_research_artifacts(
+                    ordinary,
+                    _inspection_context=RoundInspectionContext(),
+                )
+            self.assertTrue(localized)
+            self.assertEqual(typed[0]["sha256"], hashlib.sha256(raw).hexdigest())
 
     def test_repair_artifacts_still_consume_the_bounded_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -260,8 +260,13 @@ mathematical-program attack belongs in the report.
 
 Write a mutable draft under the card's work directory. Then run:
 
+Let `MGRAPH` name the executable `scripts/mgraph` shell entry under the exact
+Chalxius root whose `SKILL.md` was selected at startup. Invoke that shell entry
+directly; do not pass it to a Python interpreter and do not assume a bare
+`mgraph` command is present on `PATH`.
+
 ```bash
-mgraph --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
+"$MGRAPH" --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
   --input /absolute/path/to/draft.json
 ```
 
@@ -271,7 +276,7 @@ canonical return path does not exist, then copy the draft bytes without
 reserialization. Confirm byte equality and SHA-256, and run:
 
 ```bash
-mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
+"$MGRAPH" --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
 ```
 
 `validate-return` reads one bounded snapshot of the canonical return and its

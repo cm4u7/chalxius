@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.6 — Bounded PHX Repair
+# Chalxius 0.8.7 — Main Observation and CHX Snapshot
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -54,6 +54,32 @@ task cards. Main must still launch each selected worker through the host and
 confirm that the worker actually started; a plan or card is not dispatch.
 This is an operating instruction, not a new receipt, compatibility layer, or
 mathematical gate.
+
+The 0.8.7 repair makes performance observation equally explicit. Main directly
+notices the end-to-end elapsed time of commands and work units already visible
+through ordinary host interaction. An operation that is unexpectedly slow for
+its apparent complexity or compared with a recent comparable operation is a
+performance diagnostic signal: inspect it for repeated validation, broad
+rescans, or idle work. This is Main's judgment, not a numeric acceptance
+threshold or a new monitoring subsystem.
+
+The same repair removes reproduced work rather than monitoring it. One
+selective checkpoint shares a command-local inspection across its explicit
+targets; an exact supervision retry filters unrelated manifests and returns the
+existing round before rebuilding supervisor Research; and an independent
+Research append with no Fact dependencies does not open the active-Fact
+lineage. Proof-logic, program-math, and integration supervisors receive the
+exact production card, selected production outputs, and active Fact premises
+without preloading source-only baseline bytes; source-scope supervision alone
+projects those exact source capabilities. Historical Research artifacts that
+already form exact project-relative path/SHA-256/role capabilities remain
+directly operable regardless of their old assurance label. These projections
+never persist across commands or mutation
+boundaries. Ordinary content-addressed capabilities use their bytes and final
+SHA-256 as authority, so harmless mtime/ctime-only localization does not count
+as artifact drift while device, inode, type, size, link, containment, and hash
+checks remain exact. Current worker examples bind the selected skill root's
+executable `scripts/mgraph` shell entry instead of assuming a PATH alias.
 
 Main may author the exact canonical Candidate Fact bytes, including a canonical
 Fact file inside a sealed Main-authored Candidate Release. Worker authorship,
@@ -195,10 +221,13 @@ revalidation may instead use the cross-ledger global repair path after validatin
 every ledger and every observed qualified issue against one exact current
 candidate; it must not manufacture tactical entries in immutable predecessor
 ledgers. Performance issues consult PHX before mechanism selection. Main
-observes worker progress only through the ordinary visible host interaction and
-may reclaim or redirect a worker that stops producing useful visible progress.
-This instruction creates no timer, daemon, watcher, numeric threshold,
-heartbeat record, or lifecycle/admission gate. PHX is advisory and user
+directly observes both worker progress and the elapsed duration of commands or
+work units through ordinary visible host interaction. Main may reclaim or
+redirect a worker that stops producing useful visible progress, and treats an
+operation unexpectedly slow for its apparent complexity or a recent comparable
+run as a diagnostic signal worth inspecting. This instruction creates no timer,
+daemon, watcher, numeric threshold, heartbeat record, persistent performance
+state, or lifecycle/admission gate. PHX is advisory and user
 adoption remains explicit. A current card-bound worker ledger projects any genuine finding into
 the project's small CHX observation inbox when the return is ingested; a pure
 mathematical challenge creates no architecture observation. This replaces
@@ -224,17 +253,22 @@ inventory read fail closed after covered-ledger, candidate-manifest, lineage,
 or report drift. Exact retries are idempotent. The copy-on-write record lives
 under `PROJECT/chx-ledgers/global-repairs/`, has no truth or project authority,
 and never edits historical JSONL or architecture reports.
-The inventory must contain only closed ledgers with complete predecessor
-lineage. Fully closed parallel successor subtrees remain separate
-`RUN_ID`-qualified chains and are included in the inventory digest; an active
-parallel subtree, malformed lineage, or competing cross-branch `supersedes`
-successors fails closed. Candidate identity means the complete exact manifest
-tree.
+The inventory binds the exact bytes currently visible and may include open
+ledgers; an open flag is not proof that a task remains active and is not a
+global-repair gate. Independent open or abandoned ledgers remain visible, and
+every issue already observed in them must still receive an exact disposition.
+Closed parallel successor subtrees remain separate `RUN_ID`-qualified
+projections; open parallel subtrees stay represented by their ordinary ledger
+and chain snapshot. Malformed predecessor lineage or competing cross-branch
+`supersedes` successors still fails closed. Candidate identity means the
+complete exact manifest tree.
 Anchors and evidence are candidate- or project-relative file references bound
 to SHA-256; same-ledger or excluded `supersedes` relations never discharge an
 earlier issue. A later valid zero-issue ledger does not stale an existing
-repair; a later issue remains uncovered until a successor global repair covers
-the expanded issue set.
+repair, and an issue in a newly appended ledger remains uncovered until a
+successor global repair covers it. Any later mutation of an open ledger whose
+issues were covered naturally stales that exact covered-ledger snapshot; it
+does not erase or silently hide the new bytes.
 
 If `report_required=false`, do not surface CHX bookkeeping to the user. CHX is
 never an audit warning, certification blocker, or reason to redo otherwise

@@ -11,6 +11,11 @@
 > visible to Main through the active host only. Chalxius creates no timer,
 > daemon, watcher, heartbeat, numeric threshold, persistent performance state,
 > or lifecycle/admission gate for it.
+>
+> **0.8.7 current-V5 performance clarification.** The instruction explicitly
+> includes end-to-end elapsed time already visible in host command/work-unit
+> results, as well as visible worker progress. Unexpectedly long duration is a
+> Main diagnostic signal, not an automatic timeout, failure, or gate.
 
 The Python engine owns durable state; the active host session owns live agent processes. Map the host
 to spawn-worker, follow-up, wait/list, and fresh-verifier operations. In Codex these are the native

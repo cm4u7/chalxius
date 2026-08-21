@@ -7,7 +7,39 @@ operations remain valid when graph identity, hashes, dependencies, provenance,
 workflow stage, and owner boundaries are interpretable. The historical rows
 record what older releases did; they are not current graph-operation gates.
 
-The 0.8.6 Bounded PHX Repair overlay makes current orchestration explicit:
+The 0.8.7 Main Observation and CHX Snapshot overlay completes the current
+orchestration instruction: Main directly notices both ordinary visible worker
+progress and the end-to-end elapsed time of commands or work units already
+shown by the host. Unexpectedly long duration relative to apparent complexity
+or a recent comparable operation is a diagnostic signal, not an automatic
+timeout, failure, lifecycle state, or admission gate. No timer, daemon, watcher,
+polling loop, heartbeat, numeric threshold, persistent performance state,
+receipt, or compatibility layer is introduced.
+
+The same overlay removes open-ledger status as a global-CHX-repair gate. The
+repair remains bound to one exact current inventory and every already observed
+qualified issue. Covered open-ledger mutation stales the prior snapshot, while
+malformed lineage, report drift, incomplete issue coverage, competing
+cross-branch `supersedes`, candidate drift, and evidence drift remain strict
+errors. This changes nontruth architecture accounting only.
+
+It also removes reproduced administrative expansion at existing boundaries:
+an independent Research append with no Fact dependencies does not reconstruct
+active Facts; selective checkpoint targets share one ephemeral inspection;
+exact supervision retry filters unrelated manifests and returns before
+rebuilding planner Research; mtime/ctime-only capability localization does not
+override exact bytes and SHA-256; and current worker commands execute the bound
+`scripts/mgraph` shell entry. There is no persistent cache, new runtime state,
+compatibility adapter, monitoring service, or truth-authority change.
+
+Supervisor cards also project capabilities by selected scope instead of
+copying every production baseline: proof/program/integration retain the exact
+production card, applicable outputs, and active Fact premises; source-scope
+retains the exact source closure. Historical Research artifacts with exact
+project-relative path/SHA-256/role structure are capabilities by graph
+semantics, not by a runtime-era assurance label.
+
+The 0.8.6 Bounded PHX Repair overlay made the remaining orchestration explicit:
 Main selects load-bearing Research ids and separately launches/confirms workers
 after planning; Main-authored canonical Candidate Fact bytes are valid inputs
 while provenance remains nontruth lineage; canonical return validation is a

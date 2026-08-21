@@ -1,5 +1,39 @@
 # Chalxius portable deployment
 
+## 0.8.7 Main Observation and CHX Snapshot
+
+The `0.8.7` **Main Observation and CHX Snapshot** artifact closes the remaining
+instruction gap without adding a monitoring subsystem. Main directly notices
+the end-to-end elapsed time of commands and work units already visible through
+ordinary host interaction. Unexpectedly long duration relative to apparent
+complexity or a recent comparable operation is a diagnostic signal to inspect,
+not an automatic failure or admission decision. There is no timer, daemon,
+watcher, polling loop, heartbeat, numeric threshold, persistent performance
+state, receipt, lifecycle state, or mathematical gate.
+
+Global CHX repair now accepts an exact inventory containing open ledgers. It
+still requires a disposition for every already observed qualified issue, but
+does not infer from an open flag that a task remains active or has veto power.
+A later change to a covered open ledger stales the bound snapshot and remains
+visible for an incremental successor.
+
+The artifact also removes repeated work on current graph paths: empty-Fact-
+dependency Research appends skip active-Fact reconstruction, selective
+checkpoints share one command-local inspection across selected targets, and an
+exact supervision retry returns before rebuilding its already published
+planner Research. Ordinary capability reads retain exact bytes and SHA-256
+authority while accepting harmless mtime/ctime-only FileProvider localization.
+Worker contracts resolve and execute the chosen installation's
+`scripts/mgraph` shell entry directly. None of these changes adds a persistent
+cache, monitor, compatibility layer, or project migration.
+
+Supervision cards now carry only the capabilities applicable to their selected
+scope: proof/program/integration use the exact production card, selected
+outputs, and active Fact premises, while source-scope retains exact source
+bytes. Historical Research needs no migration when its artifacts already have
+exact project-relative path, SHA-256, and role semantics; those bytes remain
+directly usable despite an old assurance label.
+
 ## 0.8.6 Bounded PHX Repair
 
 The `0.8.6` **Bounded PHX Repair** artifact makes Main's current host duties

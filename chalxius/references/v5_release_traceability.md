@@ -1,4 +1,48 @@
-# Chalxius V5 traceability through 0.8.6 Bounded PHX Repair
+# Chalxius V5 traceability through 0.8.7 Main Observation and CHX Snapshot
+
+## 0.8.7 main-observation-and-CHX-snapshot release overlay
+
+- Candidate version: `0.8.7`; release name **Main Observation and CHX Snapshot**.
+- Main directly notices both ordinary visible worker progress and the
+  end-to-end elapsed time of commands or work units already shown by the host.
+- Unexpectedly long duration relative to apparent complexity or a recent
+  comparable operation is a diagnostic signal to inspect for repeated
+  validation, broad rescans, or idle work. It is not an automatic failure,
+  timeout, or admission decision.
+- No timer, daemon, watcher, polling loop, heartbeat, numeric threshold,
+  persistent performance state, receipt, compatibility layer, lifecycle state,
+  Research/Candidate/Certification/Gateway condition, or Fact gate is added.
+- Cross-ledger global repair binds one exact current inventory snapshot and all
+  issues already observed without requiring every foreign ledger to be closed.
+  Open state is not treated as proof of live work or as cleanup authority.
+- A later mutation of a covered open ledger changes its bound bytes and makes
+  the earlier projection stale. New bytes remain visible for a successor;
+  malformed lineage, report drift, incomplete coverage, competing
+  cross-branch `supersedes`, candidate drift, and evidence drift remain errors.
+- The 0.8.6 mathematical and software authority boundaries are unchanged.
+- An independent Research append with no Fact dependencies skips active-Fact
+  reconstruction; nonempty dependencies retain the complete active-Fact
+  validation.
+- One selective checkpoint shares a command-local inspection across its exact
+  targets. On the same five-target APFS-clone canary that previously took about
+  82.9 seconds, the repaired path completed in 3.01 seconds with
+  `selected_count=5` and no truth effect.
+- Supervision overlap arbitration first filters raw manifests by the exact
+  source/component tokens and exact retry returns the existing round before
+  rebuilding supervisor Research. The same exact-retry canary moved from about
+  10--17 seconds to 1.63 seconds. A historical partial-supervisor Research
+  replay completed a new round in 2.40 seconds on an isolated clone.
+- Ordinary capability snapshots ignore mtime/ctime-only localization while
+  preserving containment, regular-file/no-follow, device, inode, size, link,
+  and final SHA-256 checks. Current worker instructions bind and execute the
+  selected skill root's `scripts/mgraph` shell entry directly.
+- Proof-logic, program-math, and integration supervisors project the exact
+  production card, selected output artifacts, and active Fact premises without
+  copying source-only baseline artifacts. Source-scope supervision retains the
+  exact source closure. Exact path/SHA-256/role artifacts remain capabilities
+  independently of a historical assurance-revision label.
+- All timings are local diagnostics, not release acceptance thresholds,
+  cross-machine guarantees, mathematical evidence, or persistent state.
 
 ## 0.8.6 bounded-PHX-repair release overlay
 

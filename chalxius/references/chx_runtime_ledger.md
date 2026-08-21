@@ -321,10 +321,11 @@ Only a genuinely later ledger's `resolved` issue may discharge a predecessor
 through `supersedes`. A same-ledger relation and a successor later classified
 `excluded_nonarchitectural` are retained as ignored relationship evidence and
 have no repair effect. Missing or external predecessors, cycles, malformed
-edges, and active parallel successor subtrees are lineage errors. Fully closed
-parallel successor subtrees are retained as independent `RUN_ID`-qualified
-chains in the inventory digest; if two branches offer competing `supersedes`
-successors for one earlier issue, global repair fails closed.
+edges are lineage errors. Open parallel successor subtrees remain ordinary
+exact ledger/chain snapshots rather than blocking unrelated cleanup. Fully
+closed parallel successor subtrees also receive the compact closed-subtree
+projection; if two branches offer competing `supersedes` successors for one
+earlier issue, global repair still fails closed.
 
 The default projection is bounded to counts, active run ids, unresolved issues,
 lineage errors, and report compatibility drift. Use `--full` only when the
@@ -357,13 +358,17 @@ retry is idempotent, and every record is content-addressed under
 terminals, orphan predecessors, covered-ledger drift, candidate-manifest drift,
 inventory drift at record time, or incomplete issue coverage fail closed.
 
-The inventory must be quiescent: every ledger is closed, every predecessor
-lineage is complete, every parallel successor subtree is closed and free of
-competing `supersedes` successors, and every historical report projection is
-readable. Project-bound ledger creation shares the global-repair writer lock,
-and the writer revalidates the complete inventory immediately before the final
-copy-on-write record. Candidate validation verifies every manifest entry and
-the exact candidate file set, not merely the `MANIFEST.sha256` identity file.
+The inventory is an exact current snapshot, not a liveness census. Open ledgers
+may be included because an open flag does not prove that a task is active and
+does not grant it veto power over unrelated cleanup. Every already observed
+qualified issue, including one in an open or abandoned ledger, must receive an
+exact disposition. Predecessor lineage must be complete, competing
+cross-branch `supersedes` successors remain invalid, and every applicable
+historical report projection must be readable. Project-bound ledger creation
+shares the global-repair writer lock, and the writer revalidates the complete
+inventory immediately before the final copy-on-write record. Candidate
+validation verifies every manifest entry and the exact candidate file set, not
+merely the `MANIFEST.sha256` identity file.
 
 Every implementation anchor and risk, regression, group, or issue evidence
 entry is a digest-bound file reference of the form
@@ -378,12 +383,15 @@ valid only for `resolved`.
 The latest valid global repair projects its dispositions over unresolved
 inventory rows without changing any historical JSONL event or deterministic
 architecture report. A later valid zero-issue ledger does not stale the
-projection, and a later issue remains unresolved with an explicit uncovered
-count. Candidate drift, covered-ledger drift, lineage/report drift, or a
-changed global-repair record makes the projection `stale`; create a complete
-successor global repair rather than editing or deleting the old record. This
-path is nontruth architecture accounting only and does not bypass Research,
-Candidate, verifier, Certification, Gateway, or Fact requirements.
+projection, and a later issue in a new ledger remains unresolved with an
+explicit uncovered count. If a covered open ledger is later appended or
+closed, its bound bytes change and the old projection becomes `stale`; the new
+bytes remain visible and require a successor snapshot. Candidate drift,
+covered-ledger drift, lineage/report drift, or a changed global-repair record
+also makes the projection `stale`; create a complete successor global repair
+rather than editing or deleting the old record. This path is nontruth
+architecture accounting only and does not bypass Research, Candidate,
+verifier, Certification, Gateway, or Fact requirements.
 
 ## Immutable successors and deterministic reports
 
