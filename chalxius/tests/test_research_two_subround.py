@@ -18,6 +18,7 @@ from chx_ledger import (
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.model import Fact
 from mathgraph.store import MathGraphStore
+from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
 
 class ResearchTwoSubroundTests(unittest.TestCase):
@@ -1869,6 +1870,54 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     supervisor_scopes=["proof_logic"],
                 )
 
+    def test_proof_supervision_projects_outputs_not_unrelated_baselines(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            baseline = store.root / "scope-independent-baseline.md"
+            baseline.write_text(
+                "A frozen input baseline that the proof reviewer need not preload.\n",
+                encoding="utf-8",
+            )
+            target = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Prove one bounded statement from a declared baseline.",
+                    "artifacts": [
+                        self._artifact(store, baseline, "historical_baseline")
+                    ],
+                    "logic_signals": ["proof_logic"],
+                },
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            production = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[target["research_id"]],
+                host_task_scope_id="proof-scope-production-host",
+            )
+            assignment = production["assignments"][0]
+            self._ingest_plain_assignment(store, production, assignment)
+
+            supervision = lifecycle.create_supervision_round(
+                production["round_id"],
+                supervisor_scopes=["proof_logic"],
+                host_task_scope_id="proof-scope-supervision-host",
+            )
+            card = json.loads(
+                Path(
+                    str(supervision["assignments"][0]["task_card_path"])
+                ).read_text(encoding="utf-8")
+            )
+            paths = {
+                item["path"]
+                for item in card["mathematical_state"]["related_artifacts"]
+            }
+            self.assertNotIn("scope-independent-baseline.md", paths)
+            self.assertIn(assignment["task_card_relpath"], paths)
+            self.assertTrue(any(path.endswith("worker-report.md") for path in paths))
+
     def test_related_component_waits_and_integration_sees_complete_component(
         self,
     ) -> None:
@@ -2276,6 +2325,14 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 planned["round_id"],
                 supervisor_scopes=["source_scope"],
                 host_task_scope_id="coverage-component-supervision-host",
+            )
+            unrelated_dir = (
+                store.rounds_dir / "round-20260101T000000Z-deadbeef"
+            )
+            unrelated_dir.mkdir()
+            (unrelated_dir / "round.json").write_text(
+                '{"unrelated_round":true}\n',
+                encoding="utf-8",
             )
             repeated = lifecycle.create_supervision_round(
                 planned["round_id"],

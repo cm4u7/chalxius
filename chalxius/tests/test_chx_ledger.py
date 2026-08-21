@@ -1545,7 +1545,7 @@ class CHXRunLedgerTests(unittest.TestCase):
             all(not chain["unresolved_issue_ids"] for chain in inventory["chains"])
         )
 
-    def test_global_repair_rejects_active_issue_free_parallel_successor(
+    def test_global_repair_accepts_active_issue_free_parallel_successor(
         self,
     ) -> None:
         predecessor = self._started("run-global-active-empty-fork-base-001")
@@ -1565,7 +1565,7 @@ class CHXRunLedgerTests(unittest.TestCase):
         record_issue(issue_bearing, issue)
         close_ledger(issue_bearing)
 
-        start_ledger(
+        active = start_ledger(
             project_root=self.project,
             task="Leave one issue-free parallel branch active.",
             run_id="run-global-active-empty-fork-empty-001",
@@ -1576,14 +1576,26 @@ class CHXRunLedgerTests(unittest.TestCase):
             full=True,
             include_global=False,
         )
-        self.assertTrue(
-            any(
-                "multiple direct successors" in item
-                for item in base["lineage_errors"]
-            ),
-            base["lineage_errors"],
+        self.assertFalse(base["lineage_errors"], base["lineage_errors"])
+        self.assertIn(
+            "run-global-active-empty-fork-empty-001",
+            base["active_run_ids"],
         )
         self.assertEqual(base["parallel_issue_free_successors"], [])
+        self.assertEqual(
+            [
+                item["successor_run_id"]
+                for item in base["parallel_closed_successors"]
+            ],
+            ["run-global-active-empty-fork-issue-001"],
+        )
+        self.assertTrue(Path(active["ledger_path"]).is_file())
+        plan = self._global_repair_input(base)
+        with patch.object(
+            chx_ledger, "_validate_global_repair_candidate", return_value={}
+        ):
+            record_global_repair(self.project, plan)
+            self.assertEqual(verify_global_repair(self.project)["status"], "current")
 
     def test_global_repair_rejects_competing_parallel_supersedes(self) -> None:
         predecessor = self._started("run-global-competing-supersedes-base-001")
@@ -1683,7 +1695,9 @@ class CHXRunLedgerTests(unittest.TestCase):
             "same_ledger_not_strictly_later",
         )
 
-    def test_global_repair_requires_quiescent_inventory_and_final_recheck(self) -> None:
+    def test_global_repair_accepts_active_snapshot_and_stales_on_later_mutation(
+        self,
+    ) -> None:
         ledger = self._started("run-global-active-001")
         record_issue(ledger, self._issue())
         active = inventory_project_ledgers(
@@ -1693,9 +1707,21 @@ class CHXRunLedgerTests(unittest.TestCase):
         with patch.object(
             chx_ledger, "_validate_global_repair_candidate", return_value={}
         ):
-            with self.assertRaisesRegex(ValueError, "quiescent"):
-                record_global_repair(self.project, active_plan)
+            receipt = record_global_repair(self.project, active_plan)
+            self.assertEqual(receipt["status"], "recorded")
+            self.assertEqual(verify_global_repair(self.project)["status"], "current")
 
+            later = self._issue()
+            later["audit_anchors"] = ["active-global-snapshot:later-issue"]
+            record_issue(ledger, later)
+            inventory = inventory_project_ledgers(self.project, full=True)
+            self.assertEqual(inventory["global_repair"]["status"], "stale")
+            with self.assertRaisesRegex(ValueError, "covered issue snapshot drifted"):
+                verify_global_repair(self.project)
+
+    def test_global_repair_rechecks_inventory_before_final_write(self) -> None:
+        ledger = self._started("run-global-final-recheck-001")
+        record_issue(ledger, self._issue())
         close_ledger(ledger)
         base = inventory_project_ledgers(
             self.project, full=True, include_global=False

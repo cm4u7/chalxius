@@ -33,6 +33,51 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.7 Main Observation and CHX Snapshot difference
+
+The active Main instruction now names both signals available without a
+monitoring subsystem: visible worker progress and the end-to-end elapsed time
+of commands or work units already shown by the host. An operation unexpectedly
+slow for its apparent complexity or a recent comparable run prompts bounded
+diagnosis of repeated validation, broad rescans, or idle work. It does not
+automatically fail, block, or alter any graph node.
+
+No timer, daemon, watcher, polling loop, heartbeat, numeric threshold,
+persistent performance state, receipt, compatibility layer, lifecycle state,
+or mathematical gate is introduced.
+
+Cross-ledger CHX cleanup now binds exact current bytes and all already observed
+issues without first requiring every foreign task ledger to close. Open status
+is not interpreted as liveness. A later change to a covered open ledger stales
+the old snapshot, so this simplification cannot hide newly appended issues.
+Malformed lineage, report drift, incomplete coverage, competing cross-branch
+`supersedes`, candidate drift, and evidence drift remain errors.
+
+The current runtime also removes four reproduced false expansions. Empty-Fact-
+dependency Research writes do not open the active-Fact closure. Explicit
+selective checkpoints reuse one command-local inspection across their targets,
+and exact supervision retries prefilter unrelated manifests and return before
+rebuilding planner Research. Ordinary content-addressed capability reads accept
+mtime/ctime-only localization when every byte and structural identity check
+still agrees. Worker instructions bind the selected runtime's executable
+`scripts/mgraph` shell entry instead of relying on a global PATH alias. No
+persistent cache, compatibility layer, monitor, or extra lifecycle state is
+added.
+
+Supervisor input is now projected by its selected failure family. Proof-logic,
+program-math, and integration cards no longer preload source-only baseline
+bytes; they retain the production card, applicable output artifacts, and active
+Fact premises, while source-scope cards retain the exact source closure.
+Likewise, an exact project-relative path/SHA-256/role declaration is a Research
+capability by graph semantics even when its frozen record carries an older
+assurance label. No migration copy or compatibility adapter is introduced.
+
+Local APFS-clone canaries measured the five-target checkpoint at 3.01 seconds
+after an earlier 82.9-second observation, the exact supervision retry at 1.63
+seconds after repeated 10--17-second observations, and one historical partial-
+supervisor Research replay at 2.40 seconds. These numbers diagnose the repaired
+work surfaces only; they are not portable performance promises or authority.
+
 ## 0.8.6 Bounded PHX Repair difference
 
 The current orchestration contract now separates selection, planning, and

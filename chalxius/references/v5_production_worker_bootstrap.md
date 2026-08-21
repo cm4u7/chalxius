@@ -184,8 +184,13 @@ Follow `v5_worker_return_contract.md` literally. In particular:
 
 Write a mutable draft only in the work directory. Run read-only preflight:
 
+Let `MGRAPH` name the executable `scripts/mgraph` shell entry under the exact
+Chalxius root whose `SKILL.md` was selected at startup. Invoke that shell entry
+directly; do not pass it to a Python interpreter and do not assume a bare
+`mgraph` command is present on `PATH`.
+
 ```bash
-mgraph --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
+"$MGRAPH" --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
   --input /absolute/path/to/draft.json
 ```
 
@@ -193,7 +198,7 @@ After it passes, confirm the canonical return path is absent, copy the passing
 draft bytes without reserialization, verify byte equality and SHA-256, then run:
 
 ```bash
-mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
+"$MGRAPH" --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
 ```
 
 `validate-return` reads one bounded snapshot of the canonical return and its

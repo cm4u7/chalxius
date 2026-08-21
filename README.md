@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.8.6](https://github.com/cm4u7/chalxius/releases/tag/v0.8.6) ·
+[📦 Download v0.8.7](https://github.com/cm4u7/chalxius/releases/tag/v0.8.7) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -135,14 +135,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.8.6-bounded-phx-repair.tar.gz`
-- `chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256`
+- `chalxius-0.8.7-main-observation-chx-snapshot.tar.gz`
+- `chalxius-0.8.7-main-observation-chx-snapshot.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256
-tar -xzf chalxius-0.8.6-bounded-phx-repair.tar.gz
+shasum -a 256 -c chalxius-0.8.7-main-observation-chx-snapshot.tar.gz.sha256
+tar -xzf chalxius-0.8.7-main-observation-chx-snapshot.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -408,6 +408,33 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.8.7: Main Observation and CHX Snapshot
+
+Main now directly notices ordinary visible worker progress and end-to-end
+elapsed time already exposed by host command or work-unit results. Unexpected
+duration is a diagnostic signal to inspect repeated validation, broad rescans,
+or idle work; it is not an automatic timeout or acceptance threshold.
+
+The same PHX cleanup removes reproduced procedural friction at its owners:
+independent Research skips unrelated active-Fact reconstruction, selective
+checkpoints share command-local inspection, exact supervision retries return
+before broad rebuilding, and proof/program/integration supervision loads only
+its production card, selected outputs, and active Fact premises. Exact legacy
+path/hash/role artifacts remain operable independently of historical assurance
+labels, unchanged APFS/FileProvider-localized bytes retain hash authority, and
+workers invoke the selected installation's executable shell entry.
+
+The post-install global CHX snapshot covers all 156 observed qualified issues:
+150 are resolved, 6 are excluded as nonarchitectural, and 0 remain unresolved
+or uncovered. Historical ledger bytes were not rewritten; later mutation of a
+covered ledger stales the snapshot. No compatibility layer, timer, daemon,
+watcher, scheduler, persistent cache, new lifecycle state, receipt gate, or
+mathematical gate was added.
+
+The exact 256-entry tree passed 162 affected regressions, the release matrix,
+all 15 semantic mutants, strict architecture reconnaissance, exact global
+installation, deterministic archive construction, and cold verification.
 
 ## v0.8.6: Bounded PHX Repair
 

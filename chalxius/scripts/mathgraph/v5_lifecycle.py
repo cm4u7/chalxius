@@ -555,6 +555,9 @@ class RoundInspectionContext:
     round_manifests: dict[str, tuple[Path, dict[str, Any]]] = field(
         default_factory=dict
     )
+    supervision_manifests_by_production_round: dict[
+        str, list[tuple[Path, dict[str, Any]]]
+    ] = field(default_factory=dict)
     production_obligation_round_ids: dict[str, list[str]] | None = None
 
     def bind_project(self, root: Path | str) -> None:
@@ -1578,13 +1581,26 @@ class V5LifecycleManager:
         *,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, str]]:
-        if (
-            self._research_assurance_revision(record)
-            != V5_ASSURANCE_CONTRACT_REVISION
+        metadata = record.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return []
+        artifacts = metadata.get("artifacts", [])
+        # Capability is a property of the declared path/SHA-256/role graph,
+        # not of the historical assurance label on the Research record. Old
+        # records that already carry exact capabilities remain directly usable;
+        # malformed declarations still fail when the capability is selected.
+        if not isinstance(artifacts, list) or any(
+            not isinstance(item, dict)
+            or set(item) != {"path", "sha256", "role"}
+            or not isinstance(item["path"], str)
+            or not item["path"]
+            or not isinstance(item["sha256"], str)
+            or SHA256_RE.fullmatch(item["sha256"]) is None
+            or not isinstance(item["role"], str)
+            or not item["role"]
+            for item in artifacts
         ):
             return []
-        metadata = record["metadata"]
-        artifacts = metadata.get("artifacts", [])
         # CHX-038 bounds the declared byte closure of a schema-v2 Repair.
         # Ordinary current-assurance Research artifacts are historical/source
         # evidence and may legitimately exceed that one-Repair budget when a
@@ -4135,15 +4151,21 @@ class V5LifecycleManager:
             payload.get("dependencies", []), "research dependencies"
         )
         dependencies = sorted(dict.fromkeys(validate_fact_id(item) for item in dependencies))
-        active_facts = set(
-            self.store.fact_ids(_inspection_context=inspection)
-        )
-        missing_facts = sorted(set(dependencies).difference(active_facts))
-        if missing_facts:
-            raise ValueError(
-                "research dependencies are not active V5 Facts: "
-                + ", ".join(missing_facts)
+        # Applicability comes before authority expansion.  An independent
+        # nontruth Research append has no Fact premise to validate, so opening
+        # the complete active-Fact lineage would let unrelated historical
+        # Research and artifact closure veto this write.  Nonempty dependency
+        # sets retain the complete active-Fact validation below.
+        if dependencies:
+            active_facts = set(
+                self.store.fact_ids(_inspection_context=inspection)
             )
+            missing_facts = sorted(set(dependencies).difference(active_facts))
+            if missing_facts:
+                raise ValueError(
+                    "research dependencies are not active V5 Facts: "
+                    + ", ".join(missing_facts)
+                )
         related = _require_string_list(
             payload.get("related_research_ids", []), "related research ids"
         )
@@ -5005,6 +5027,11 @@ class V5LifecycleManager:
         score.  It never constructs or authorizes a Candidate Release.
         """
 
+        inspection = self._bind_inspection_context(
+            RoundInspectionContext(),
+            create=True,
+        )
+        assert inspection is not None
         required = {
             "schema_version",
             "objective",
@@ -5066,7 +5093,13 @@ class V5LifecycleManager:
                 "selective Fact checkpoint names unknown Research: "
                 + ", ".join(missing)
             )
-        explicit_records = [self._research_record(item) for item in target_ids]
+        explicit_records = [
+            self._research_record(
+                item,
+                _inspection_context=inspection,
+            )
+            for item in target_ids
+        ]
         all_records = dict(structural)
         all_records.update(
             {item["research_id"]: item for item in explicit_records}
@@ -5140,7 +5173,10 @@ class V5LifecycleManager:
             required_supervision: list[str] = []
             try:
                 required_supervision = sorted(
-                    self._required_supervision_results_for_candidate([record])
+                    self._required_supervision_results_for_candidate(
+                        [record],
+                        _inspection_context=inspection,
+                    )
                 )
             except Exception as exc:
                 blockers.append(
@@ -5708,9 +5744,9 @@ class V5LifecycleManager:
             create=True,
         )
         assert inspection is not None
-        supervision_manifests: dict[
-            str, list[tuple[Path, dict[str, Any]]]
-        ] = {}
+        supervision_manifests = (
+            inspection.supervision_manifests_by_production_round
+        )
 
         checked_components: set[tuple[str, str | None]] = set()
         for record in explicit_records:
@@ -7406,12 +7442,15 @@ class V5LifecycleManager:
                     break
                 chunks.append(chunk)
             after = os.fstat(descriptor)
+            # Byte identity is the authority. FileProvider/APFS may localize
+            # unchanged bytes and update mtime/ctime while this descriptor is
+            # open; those metadata-only changes must not reject a valid
+            # content-addressed capability. Device, inode, type, size, link
+            # count, and the caller's final SHA-256 still fail closed.
             if (
                 after.st_dev != opened.st_dev
                 or after.st_ino != opened.st_ino
                 or after.st_size != opened.st_size
-                or after.st_mtime_ns != opened.st_mtime_ns
-                or after.st_ctime_ns != opened.st_ctime_ns
                 or (require_single_link and after.st_nlink != 1)
             ):
                 raise changed_error(f"{label} changed while snapshotting")
@@ -10131,6 +10170,20 @@ class V5LifecycleManager:
         for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
             if round_dir.is_symlink() or not round_dir.is_dir():
                 continue
+            manifest_path = round_dir / "round.json"
+            if manifest_path.is_symlink() or not manifest_path.is_file():
+                raise ValueError("round ledger contains an unsafe manifest")
+            raw_manifest = self._read_regular_bytes_once(
+                manifest_path,
+                label="Research supervision overlap manifest",
+            )
+            if cycle["source_round_id"].encode("ascii") not in raw_manifest:
+                continue
+            if (
+                source_component_id is not None
+                and source_component_id.encode("ascii") not in raw_manifest
+            ):
+                continue
             _, manifest = self._round_manifest(
                 round_dir.name,
                 _inspection_context=inspection,
@@ -10248,6 +10301,31 @@ class V5LifecycleManager:
             ]
         self._validate_research_cycle_binding(cycle)
 
+        # An exact retry already has immutable supervisor Research and round
+        # bytes. Rebuilding the same planner Research first would recursively
+        # revalidate unrelated graph history before discovering that nothing
+        # needs to be written. Resolve the existing cycle under the ordinary
+        # mutation lock and return it before any add_research call. A missing
+        # explicit/environment host scope still follows the normal deterministic
+        # local-allocation path below.
+        early_host_scope = normalize_host_task_scope_id(
+            host_task_scope_id,
+            workflow_evidence_version=5,
+        )
+        if early_host_scope is not None:
+            with self.store.v5_mutation_lock(command="plan-supervision-round"):
+                existing_round_id = (
+                    self._authoritative_supervision_retry_or_overlap(
+                        research_cycle=cycle,
+                        host_task_scope_id=early_host_scope,
+                    )
+                )
+                if existing_round_id is not None:
+                    return self.round_status(
+                        existing_round_id,
+                        _inspection_context=inspection,
+                    )
+
         source_assignment_by_id = {
             item["assignment_id"]: item for item in source_manifest["assignments"]
         }
@@ -10292,6 +10370,11 @@ class V5LifecycleManager:
                 ]
                 if binding["status"] == "active"
             )
+            # Every supervisor can follow the exact production card and the
+            # active Fact premises it names. Scope-independent baseline bytes
+            # are not copied into proof/program/integration cards merely
+            # because they appeared in the production context; source-scope
+            # supervision projects them below where they are applicable.
             capabilities = [
                 {
                     "path": assignment["task_card_relpath"],
@@ -10299,19 +10382,6 @@ class V5LifecycleManager:
                     "source_role": "production_task_card",
                 }
             ]
-            for capability in [
-                *mathematical_state.get("related_artifacts", []),
-                *mathematical_state["authority_snapshot"].get(
-                    "capabilities", []
-                ),
-            ]:
-                capabilities.append(
-                    {
-                        "path": capability["path"],
-                        "sha256": capability["sha256"],
-                        "source_role": capability["role"],
-                    }
-                )
             semantic = {
                 "revision": V5_SUPERVISED_AUTHORITY_CLOSURE_REVISION,
                 "assignment_id": descriptor["assignment_id"],
@@ -10374,9 +10444,49 @@ class V5LifecycleManager:
             ] = {}
             supervised_authority: list[dict[str, Any]] = []
             for descriptor in (scoped_receipts if current_closure else []):
-                receipt = source_authority_by_assignment[
+                base_receipt = source_authority_by_assignment[
                     descriptor["assignment_id"]
                 ]
+                receipt = base_receipt
+                source_card = source_task_cards_by_assignment.get(
+                    descriptor["assignment_id"]
+                )
+                if source_card is None:
+                    raise ValueError(
+                        "supervision lacks its frozen production task card"
+                    )
+                if scope == "source_scope":
+                    source_state = source_card["mathematical_state"]
+                    source_capabilities = list(base_receipt["capabilities"])
+                    for capability in [
+                        *source_state.get("related_artifacts", []),
+                        *source_state["authority_snapshot"].get(
+                            "capabilities", []
+                        ),
+                    ]:
+                        source_capabilities.append(
+                            {
+                                "path": capability["path"],
+                                "sha256": capability["sha256"],
+                                "source_role": capability["role"],
+                            }
+                        )
+                    scoped_semantic = {
+                        key: base_receipt[key]
+                        for key in (
+                            "revision",
+                            "assignment_id",
+                            "task_card_path",
+                            "task_card_sha256",
+                            "active_fact_ids",
+                            "truth_effect",
+                        )
+                    }
+                    scoped_semantic["capabilities"] = source_capabilities
+                    receipt = {
+                        **scoped_semantic,
+                        "receipt_sha256": sha256_json(scoped_semantic),
+                    }
                 supervised_authority.append(receipt)
                 supervised_fact_ids.update(receipt["active_fact_ids"])
                 for capability in receipt["capabilities"]:
@@ -10394,13 +10504,6 @@ class V5LifecycleManager:
                         ),
                     }
                 if scope == "source_scope":
-                    source_card = source_task_cards_by_assignment.get(
-                        descriptor["assignment_id"]
-                    )
-                    if source_card is None:
-                        raise ValueError(
-                            "source-scope supervision lacks its frozen production task card"
-                        )
                     for capability in self._structured_source_evidence_capabilities_from_card(
                         card=source_card,
                         origin=f"{descriptor['assignment_id']}",

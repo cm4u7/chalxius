@@ -23,6 +23,12 @@
 > `certification-record`. Historical V4 dispatch and duration-notice paragraphs
 > below remain archive contracts rather than current V5 instructions.
 
+> **0.8.7 current-V5 performance clarification.** Main directly notices the
+> end-to-end elapsed time of commands and work units already visible through the
+> host. Unexpectedly long duration relative to apparent complexity or a recent
+> comparable operation is a diagnostic signal, not a timeout, numeric threshold,
+> receipt, lifecycle state, or admission gate.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 

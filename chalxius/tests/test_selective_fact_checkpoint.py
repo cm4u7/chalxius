@@ -212,6 +212,50 @@ class SelectiveFactCheckpointTests(unittest.TestCase):
                 )
             self.assertEqual(checkpoint["selected"][0]["research_id"], target["research_id"])
 
+    def test_checkpoint_reuses_one_inspection_context_across_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            targets = [
+                lifecycle.add_research(
+                    {"kind": "proof_attempt", "claim": f"Selected claim {index}."},
+                    actor="worker",
+                )
+                for index in range(2)
+            ]
+            payload = {
+                "schema_version": 1,
+                "objective": "Inspect two independent selected claims once.",
+                "target_rationales": [
+                    {
+                        "research_id": item["research_id"],
+                        "reason": "Explicit Main selection.",
+                    }
+                    for item in targets
+                ],
+                "excluded_research": [],
+            }
+            contexts: list[object] = []
+            original = lifecycle._required_supervision_results_for_candidate
+
+            def capture(records: list[dict[str, object]], **kwargs: object) -> set[str]:
+                contexts.append(kwargs.get("_inspection_context"))
+                return original(records, **kwargs)
+
+            with patch.object(
+                lifecycle,
+                "_required_supervision_results_for_candidate",
+                side_effect=capture,
+            ):
+                checkpoint = lifecycle.selective_fact_checkpoint(
+                    payload,
+                    actor="main",
+                )
+            self.assertEqual(len(checkpoint["selected"]), 2)
+            self.assertEqual(len(contexts), 2)
+            self.assertIsNotNone(contexts[0])
+            self.assertIs(contexts[0], contexts[1])
+
     def test_atomization_closes_selected_dependencies_and_propagates_blockers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")

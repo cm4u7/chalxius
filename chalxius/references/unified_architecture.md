@@ -6,6 +6,25 @@
 > valid node/edge hashes, dependencies, provenance, workflow stages, and owner
 > boundaries are the compatibility surface.
 
+> **0.8.7 Main-observation-and-CHX-snapshot override.** Main directly notices the
+> end-to-end elapsed time of commands and work units already visible through the
+> host. Unexpectedly long duration relative to apparent complexity or a recent
+> comparable operation is a diagnostic signal only. It creates no timer,
+> daemon, watcher, polling loop, heartbeat, numeric threshold, persistent state,
+> receipt, compatibility layer, lifecycle state, or truth gate.
+> Cross-ledger CHX repair likewise binds exact current bytes and every observed
+> issue without treating open foreign ledgers as live-task vetoes. Covered
+> open-ledger mutation stales the old snapshot rather than hiding new bytes.
+> Independent Research with no Fact premise skips active-Fact reconstruction;
+> selective checkpoints and exact supervision retry reuse only command-local
+> validated projections; ordinary capability bytes remain authoritative over
+> mtime/ctime-only localization; and workers invoke the selected runtime's
+> executable `scripts/mgraph` shell entry. Supervisor capabilities are
+> scope-sensitive, so proof/program/integration do not preload source-only
+> baselines, and exact path/SHA-256/role artifacts remain directly operable
+> regardless of a historical assurance label. None adds persistent state or a new
+> authority boundary.
+
 > **0.8.6 bounded-PHX override.** Current load-bearing work starts from
 > Research ids explicitly selected by Main. A planner freezes assignments and
 > cards but does not launch workers; Main launches and confirms them through the
@@ -371,9 +390,12 @@ semantically invalid return is quarantined locally; other valid returns remain
 independently ingestible and cumulative.
 
 Main may inspect ordinary visible host progress and reclaim or redirect a
-worker that stops producing useful output. This performance instruction is
-visible to Main only; it creates no worker timer, background daemon, watcher,
-heartbeat, numeric threshold, persistent state, or Candidate/admission gate.
+worker that stops producing useful output. Main also notices the end-to-end
+elapsed time already visible for host commands and work units; unexpectedly
+long duration is a diagnostic signal relative to apparent complexity or a
+recent comparable operation. This performance instruction is visible to Main
+only; it creates no worker timer, background daemon, watcher, heartbeat,
+numeric threshold, persistent state, or Candidate/admission gate.
 
 One prospective normal-flow allocation seam is exact and domain-general.
 `workers` counts constructive production primaries, and the production
