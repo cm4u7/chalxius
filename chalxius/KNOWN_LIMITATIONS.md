@@ -1,10 +1,117 @@
-# Chalxius 0.8.0 architecture findings and residual boundaries
+# Chalxius 0.8.6 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.0
-**MathGraph First**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.6
+**Bounded PHX Repair**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.6 Bounded PHX Repair
+
+Load-bearing selection and execution are now stated as separate Main
+responsibilities. Main explicitly names the Research ids, then treats planning
+and immutable card creation only as preparation. Main must launch each worker
+through the host and confirm the start. No durable dispatch receipt, scheduler,
+compatibility shim, or additional mathematical gate is introduced; direct OS
+process identity remains a cooperative host boundary.
+
+Candidate Fact authorship is producer- and container-neutral. Main may author
+canonical Fact bytes, seal them in a Candidate Release, and select that
+canonical Fact file, while actor and provenance metadata remain nontruth
+lineage rather than correctness evidence. The current Main-only form is
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+It fixes `actor="main"`, accepts no `--actor` override, canonical-validates and
+consumes those exact project-contained bytes, and
+derives every applicable completed supervision id for the selected Research;
+the valid set may be empty only when no supervision scope applies. The command
+still creates nontruth preparation only. Adverse review/disposition, a fresh
+verifier, Gateway-owned `certification-record`, and Gateway admission remain
+mandatory and separate.
+
+Canonical return validation observes one bounded snapshot. A transient
+`ENOENT` or `ESTALE` before a safe canonical return/artifact view exists may be
+retried without quarantine. Unsafe filesystem objects and visible malformed,
+hash-drifted, schema-invalid, or semantically invalid bytes remain fail-closed
+and locally quarantinable. Filesystem visibility can still fluctuate outside a
+single snapshot; retry does not attest to worker identity or mathematical
+quality.
+
+Performance observation is deliberately an ordinary Main-visible instruction.
+Main may reclaim or redirect work that stops making visible progress, but
+Chalxius supplies no timer, daemon, watcher, heartbeat, numeric threshold, or
+persistent performance state. PHX remains advisory; this repair does not turn
+performance guidance into lifecycle or admission authority.
+
+## 0.8.5 Terminalized Worker Lifecycle
+
+After the immutable terminal seal is published, V5 performs a copy-on-write
+terminalization of the assignment-owned return, artifact, and work paths. The
+canonical successors are rebuilt from sealed bytes and made read-only; the
+detached worker paths and their hash-bound marker are nontruth recovery data.
+This projection is best-effort and replayable after the Research product and
+receipt are written, so a host filesystem race cannot become a mathematical or
+admission gate. Ordinary stale direct writes therefore fail without changing
+the sealed Research authority. A worker holding an already-open writable file
+descriptor or an uncooperative process can outlive filesystem permissions;
+Main must reclaim that worker, and the shared returns parent remains a known
+atomic-replacement boundary. Neither limitation changes Research, Candidate,
+Certification, Gateway, or Fact ownership.
+
+## 0.8.4 Semantic Graph Handoff
+
+Candidate Release now closes only the explicitly selected constructive branch,
+its responding adverse work, and completed supervision products. Generic
+historical `related_research_ids` remain readable provenance but do not expand
+a local Candidate into administrative project history.
+
+Source-scope supervision recognizes exact path/hash source declarations by
+semantic shape. Canonical, compact, and historical path field spellings are
+accepted only when every declared concrete file has the same SHA-256. A locator
+alone remains non-authorizing. Historical Research, cards, source evidence,
+Candidate Releases, Decisions, admissions, and Facts are not rewritten.
+
+## 0.8.3 Canonical Handoff
+
+The worker/Main hash-transcription defect is repaired at the interface boundary.
+Workers still declare an explicit final handoff, while Main derives the return
+hash from the canonical bytes it reads. A legacy supplied hash remains an
+optional equality assertion. Receipts retain the derived hash so tampering,
+replay, and byte drift remain visible. The remaining boundary is intentional:
+the worker must still identify the assignment and declare `status="final"`;
+file appearance alone is not a final handoff.
+
+## 0.8.2 Explicit Route Boundaries
+
+`route_invalidations` now names exact stale Research targets only. A broad
+`related_research_ids` reference may record source, provenance, context, or an
+ordinary dependency, but it no longer transmits route staleness to every later
+record. This prevents false hiding of independent Research while retaining the
+explicit invalidator and the stale status of the named target.
+
+The routine global installer is deliberately narrow. It validates the full
+candidate manifest, self-test, and focused regressions, then archives and
+atomically swaps the discovery runtime with one direct rollback copy outside
+skill discovery. It does not inspect or alter projects. Protected-project
+cutover remains an explicit forensic option, not a default installation gate.
+The residual boundary is intentional: exact-target invalidation cannot express
+a future transitive semantic invalidation relation until that relation is
+modeled as its own explicit graph edge and tested independently.
+
+## 0.8.1 Scoped Candidate Adversity
+
+Fresh Candidate adverse obligations are no longer inherited from arbitrary
+historical `related_research_ids` ancestors. A current Candidate derives them
+only from its explicitly selected, constructive Research heads whose own
+metadata literally requires independent adverse review. If several such heads
+are selected, the target set is reduced to maximal selected heads. The actual
+review remains strict: it must directly respond to that target, bind the exact
+Candidate Fact bytes, use an independent actor, carry a valid disposition, and
+remain excluded from the verifier. Historical readiness revision 1 records
+remain readable; newly created readiness records use revision 2.
+
+This is a scope repair, not a relaxation of Fact authority. It removes only an
+unrelated administrative inheritance path and introduces no new state,
+receipt, planner, cache, or truth route.
 
 ## 0.8.0 MathGraph First
 

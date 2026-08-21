@@ -4,6 +4,13 @@
 > `execution_profile`. The adapter supplies mechanics; it does not independently
 > require a panel or pulse. Deep requires all applicable features, auto follows
 > deterministic triggers, and fast leaves applicable high-cost features opt-in.
+>
+> **0.8.6 current-V5 performance boundary.** The historical V4 duration-notice
+> mechanics retained below are compatibility documentation, not current V5
+> worker monitoring. Current performance observation is an ordinary instruction
+> visible to Main through the active host only. Chalxius creates no timer,
+> daemon, watcher, heartbeat, numeric threshold, persistent performance state,
+> or lifecycle/admission gate for it.
 
 The Python engine owns durable state; the active host session owns live agent processes. Map the host
 to spawn-worker, follow-up, wait/list, and fresh-verifier operations. In Codex these are the native
@@ -20,8 +27,12 @@ multi-agent tools. Prefer `fork_turns="none"` when the generated file is self-co
 
 ## Prospective Research production and supervisors
 
-For new V5 public Research, launch subround-1 assignments from `plan-round` and
-ingest each exact return independently. Do not share mutable peer context. The
+For new V5 public Research, `plan-round` and `plan-supervision-round` write
+immutable assignments/cards only; neither command dispatches or confirms a
+worker. Main must use the active host to launch each assigned worker and confirm
+that it received the exact card before treating the work as live. Launch the
+subround-1 assignments returned by `plan-round` and ingest each exact return
+independently. Do not share mutable peer context. The
 production manifest freezes logical components from selected Research ancestry.
 When one component is complete, run
 `plan-supervision-round SOURCE_ROUND --component-id COMPONENT` and launch its
@@ -211,7 +222,8 @@ the exact draft bytes without reserialization to the canonical return, then run:
 "$MGRAPH" --root "$PROJECT" --role worker validate-return ROUND_ID ASSIGNMENT_ID
 ```
 
-It reports the returned `return_sha256` in its explicit final handoff, never editing the return or
+It reports a final `assignment_id`/`status` handoff; `return_sha256` is optional
+legacy provenance and is not copied into the Main command. Never edit the return or
 artifacts afterward. Do not substitute generic JSON parsing for this command, and do not treat file
 appearance or a `draft_present` status as a final handoff.
 
@@ -251,13 +263,13 @@ assignment's designated artifact directory. Formula-bearing facts must use a bou
 Collect by manifest identity:
 
 ```bash
-"$MGRAPH" --root "$PROJECT" --role main ingest-return ROUND_ID ASSIGNMENT_ID \
-  --worker-final-sha256 WORKER_FINAL_SHA256
+"$MGRAPH" --root "$PROJECT" --role main ingest-return ROUND_ID ASSIGNMENT_ID
 ```
 
-Never ingest an arbitrary path or a hash inferred by the main agent before an explicit worker-final
-handoff. Ingestion reruns the same validator, compares the handed-off hash with the current bytes,
-records the artifact hashes, and makes the return and declared artifacts read-only. Exact replay is
+Never ingest an arbitrary path or a return without an explicit worker-final
+handoff. Ingestion reruns the same validator, derives the canonical hash from
+the current bytes, optionally compares a supplied legacy assertion, records the
+artifact hashes, and makes the return and declared artifacts read-only. Exact replay is
 idempotent; a modified replay fails. If a worker
 returns prose or malformed JSON, ask once for repair at the same designated path, but only before an
 ingest receipt exists. After receipt creation, the assignment prompt, worker return, and receipt form

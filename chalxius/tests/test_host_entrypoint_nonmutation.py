@@ -4,6 +4,7 @@ import os
 import hashlib
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,7 @@ PUBLIC_HELP_ENTRYPOINTS = (
     "behavioral_feature_gate.py",
     "chx_ledger.py",
     "learning_graph.py",
+    "local_install.py",
     "mgraph_cli.py",
     "notation_inventory.py",
     "paper_library.py",
@@ -36,6 +38,21 @@ PUBLIC_HELP_ENTRYPOINTS = (
 
 
 class HostEntrypointNonMutationTests(unittest.TestCase):
+    def test_prepare_verifier_capsule_is_directly_executable(self) -> None:
+        entrypoint = SOURCE_SCRIPTS / "prepare_verifier_capsule.py"
+        self.assertTrue(entrypoint.stat().st_mode & stat.S_IXUSR)
+        outcome = subprocess.run(
+            [str(entrypoint), "--help"],
+            cwd=SOURCE_SCRIPTS.parent,
+            env=dict(os.environ),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertEqual(outcome.returncode, 0, outcome.stdout)
+        self.assertIn("--capsule-root", outcome.stdout)
+
     def test_mutant_registry_preflight_runs_before_any_test_subprocess(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

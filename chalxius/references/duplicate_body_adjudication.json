@@ -120,6 +120,16 @@
       ],
       "reason": "The small helper remains local to state-specific locking, path, and compatibility boundaries; centralizing it would couple owners without removing a duplicate capability."
     },
+    "5bebbc9e7982f2b2d170058915774925d4226ed1efe22c39a25dc928d3bd0171": {
+      "authoritative_owner": "",
+      "category": "state_boundary_local",
+      "decision": "retain_local",
+      "definitions": [
+        "mathgraph.local_install:_fsync_directory",
+        "mathgraph.runtime_cutover:_fsync_directory"
+      ],
+      "reason": "The ordinary local installer and the explicit forensic cutover retain separate atomic-swap boundaries; sharing this five-line durability helper would couple the fast path back to the forensic runtime module."
+    },
     "7bf494de3b0d23c72078fc209c387599325beeaab5f1a90c8aafd7ad187e41ba": {
       "authoritative_owner": "",
       "category": "standalone_portability",

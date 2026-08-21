@@ -241,16 +241,16 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "A marked Candidate branch must fail cheaply unless one later independent ingested refute binds its exact canonical Candidate Fact bytes and disposition.",
+      "summary": "An explicitly selected marked constructive Candidate head must fail cheaply unless one later independent ingested refute binds its exact canonical Candidate Fact bytes and disposition; historical ancestry does not create a new target.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._fresh_adverse_readiness",
       "activation_predicate": {
-        "predicate_id": "maximal_selected_research_branch_requires_independent_adverse",
+        "predicate_id": "maximal_explicitly_selected_research_head_requires_independent_adverse",
         "domain": ["required_and_ready", "required_and_missing", "predicate_false", "candidate_bytes_changed"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-candidate-fresh-adverse-readiness-1",
+        "type_id": "chalxius-candidate-fresh-adverse-readiness-2",
         "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_fresh_adverse_readiness"
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.release",
@@ -463,14 +463,16 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Main derives one exact supervised Candidate-Fact attack target and the refute card selects a dedicated compact bootstrap.",
+      "summary": "Main selects one load-bearing Research head and one canonical Candidate Fact regardless of author provenance; every applicable completed supervision result is bound and the refute card selects a dedicated compact bootstrap.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.prepare_candidate_adverse_target",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
       "activation_predicate": {
-        "predicate_id": "canonical_candidate_fact_has_unique_live_research_supervision",
+        "predicate_id": "main_selects_canonical_candidate_fact_with_applicable_live_research_supervision",
         "domain": [
-          "exact_supervised_candidate_fact",
-          "missing_ambiguous_stale_or_noncanonical_input"
+          "exact_main_selected_research_and_candidate_fact",
+          "manual_research_with_zero_applicable_supervision",
+          "production_research_with_all_applicable_supervision",
+          "missing_stale_or_noncanonical_input"
         ],
         "conditional": true
       },
@@ -480,9 +482,9 @@
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
       "observable_effect": {
-        "effect_id": "one_command_supervised_candidate_target_and_compact_refute_route",
+        "effect_id": "one_command_main_selected_candidate_target_and_compact_refute_route",
         "kind": "routing",
-        "description": "One content-addressed nontruth synthesis binds the canonical Candidate Fact and unique live supervision result; its refute prompt selects the Candidate-adverse bootstrap and never the production bootstrap."
+        "description": "One content-addressed nontruth synthesis binds the Main-selected canonical Candidate Fact and every applicable completed supervision result without treating worker authorship as capability; its refute prompt selects the Candidate-adverse bootstrap and never the production bootstrap."
       },
       "probes": {
         "positive": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_prepare_candidate_adverse_target_is_one_main_command",
@@ -955,6 +957,39 @@
       "boundary_reason": "No current mechanism covers the old panel, Pulse, Paper/Audit, novelty, Campaign, computation, and synthesis bundle as one equivalent automatic profile. File presence must not reactivate it.",
       "guard_symbol": "",
       "boundary_probe": "tests.test_research_draft_contracts.ResearchDraftContractTests.test_domain_profiles_specialize_one_lifecycle_without_dropping_obligations"
+    },
+    "feature.structured_source_evidence_semantic_projection": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Source-scope supervision consumes frozen source capabilities by exact path/hash semantics across graph-era field spellings without rewriting historical records.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._structured_source_evidence_capabilities_from_card",
+      "activation_predicate": {
+        "predicate_id": "frozen_related_json_declares_source_key_concrete_path_and_sha256",
+        "domain": [
+          "canonical_artifact_path",
+          "compact_path",
+          "historical_authorized_and_returned_paths",
+          "locator_only_or_drifted_paths"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-structured-source-evidence-semantic-projection-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._structured_source_evidence_capabilities_from_card"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "observable_effect": {
+        "effect_id": "field_spelling_independent_exact_source_capability",
+        "kind": "routing",
+        "description": "Every concrete path declared by one source item must be project-contained and byte-equal to its one SHA-256; deterministic path selection then supplies the supervisor capability, while locator-only metadata remains non-authorizing."
+      },
+      "probes": {
+        "positive": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_normalizes_frozen_field_spellings",
+        "predicate_false": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_skips_locator_only_and_rejects_path_drift",
+        "tamper": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_requires_all_declared_primary_bytes"
+      }
     },
     "feature.active_campaign_implicit_selection": {
       "classification": "deprecated",

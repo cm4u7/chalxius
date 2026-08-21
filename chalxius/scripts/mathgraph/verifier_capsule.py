@@ -198,10 +198,13 @@ def _resolve_v5_capsule(
 ) -> tuple[Any, dict[str, Any], dict[str, Any]]:
     # Lazy import avoids a package cycle for the compatibility V4 materializer.
     from .store import MathGraphStore
+    from .v5_lifecycle import RoundInspectionContext
 
     store = MathGraphStore(project)
     lifecycle = store.v5_lifecycle()
+    inspection = RoundInspectionContext()
     explicit: dict[str, Any] | None = None
+    release: dict[str, Any] | None = None
     if capsule_json is not None:
         capsule_path = Path(capsule_json).resolve()
         if capsule_path.is_symlink() or not capsule_path.is_file():
@@ -211,26 +214,39 @@ def _resolve_v5_capsule(
         )
         release_id = explicit.get("release_id")
     if capsule_id is not None:
-        matches = [
-            lifecycle.verifier_capsule(release["release_id"])
-            for release in lifecycle.releases()
-            if lifecycle.verifier_capsule(release["release_id"])["capsule_id"]
-            == capsule_id
-        ]
+        matches: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        for candidate_release in lifecycle.releases(
+            _inspection_context=inspection,
+        ):
+            candidate_capsule = lifecycle.verifier_capsule(
+                candidate_release["release_id"],
+                _release=candidate_release,
+                _inspection_context=inspection,
+            )
+            if candidate_capsule["capsule_id"] == capsule_id:
+                matches.append((candidate_release, candidate_capsule))
         if len(matches) != 1:
             raise ValueError("V5 capsule id does not resolve to one Candidate Release")
-        computed = matches[0]
+        release, computed = matches[0]
         release_id = computed["release_id"]
     else:
         if not isinstance(release_id, str):
             raise ValueError("V5 materialization requires a release id")
-        computed = lifecycle.verifier_capsule(release_id)
+        release = lifecycle.release(
+            release_id,
+            _inspection_context=inspection,
+        )
+        computed = lifecycle.verifier_capsule(
+            release_id,
+            _release=release,
+            _inspection_context=inspection,
+        )
     _validate_v5_capsule_identity(computed)
     if explicit is not None and explicit != computed:
         raise ValueError(
             "explicit V5 capsule does not exactly equal the project-recomputed capsule"
         )
-    release = lifecycle.release(str(release_id))
+    assert release is not None
     return lifecycle, release, computed
 
 

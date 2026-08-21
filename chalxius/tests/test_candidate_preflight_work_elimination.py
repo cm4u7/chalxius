@@ -9,7 +9,10 @@ from mathgraph.contracts import sha256_bytes
 from mathgraph.interfaces import SEMANTIC_INTERFACE_REVISION
 from mathgraph.model import Fact
 from mathgraph.store import MathGraphStore
-from mathgraph.v5_lifecycle import V5_ASSURANCE_CONTRACT_REVISION
+from mathgraph.v5_lifecycle import (
+    RoundInspectionContext,
+    V5_ASSURANCE_CONTRACT_REVISION,
+)
 
 
 class CandidatePreflightWorkEliminationTests(unittest.TestCase):
@@ -259,6 +262,58 @@ class CandidatePreflightWorkEliminationTests(unittest.TestCase):
                     set(),
                 )
             round_lookup.assert_not_called()
+
+    def test_candidate_adverse_projection_validates_only_related_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            selected = lifecycle.add_research(
+                {"kind": "proof_attempt", "claim": "Selected constructive result."},
+                actor="main",
+            )
+            adverse = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Bounded challenge to the selected result.",
+                    "relation": "challenges",
+                    "related_research_ids": [selected["research_id"]],
+                },
+                actor="supervisor",
+            )
+            for index in range(6):
+                lifecycle.add_research(
+                    {"kind": "direction", "claim": f"Unrelated branch {index}."},
+                    actor="main",
+                )
+            malformed_unrelated = lifecycle.research_entries_dir / (
+                "f" * 12 + ".json"
+            )
+            malformed_unrelated.write_text("not unrelated JSON\n", encoding="utf-8")
+
+            original = lifecycle._inspection_research_record
+            validated: list[str] = []
+
+            def counted(
+                research_id: str,
+                inspection: RoundInspectionContext,
+            ) -> dict[str, object]:
+                validated.append(research_id)
+                return original(research_id, inspection)
+
+            with patch.object(
+                lifecycle,
+                "_inspection_research_record",
+                side_effect=counted,
+            ):
+                records = lifecycle._release_research_records(
+                    [selected],
+                    _inspection_context=RoundInspectionContext(),
+                )
+            self.assertEqual(
+                {item["research_id"] for item in records},
+                {selected["research_id"], adverse["research_id"]},
+            )
+            self.assertEqual(validated, [adverse["research_id"]])
 
     @staticmethod
     def _current_research(lifecycle: object) -> dict[str, object]:

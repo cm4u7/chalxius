@@ -7,7 +7,7 @@ explicitly verifier-gated.
 
 **[🚀 Explore the live cases](https://cm4u7.github.io/chalxius/)** ·
 [📚 Read the use cases](USE_CASES.md) ·
-[📦 Download v0.8.0](https://github.com/cm4u7/chalxius/releases/tag/v0.8.0) ·
+[📦 Download v0.8.6](https://github.com/cm4u7/chalxius/releases/tag/v0.8.6) ·
 [✅ See validation](VALIDATION.md) ·
 [🏗️ Architecture](ARCHITECTURE.md) ·
 [🧾 Resolved CHX mechanisms](chalxius/KNOWN_LIMITATIONS.md)
@@ -135,14 +135,14 @@ forces running work to restart under a newer contract.
 
 Download these adjacent release assets:
 
-- `chalxius-0.8.0-mathgraph-first.tar.gz`
-- `chalxius-0.8.0-mathgraph-first.tar.gz.sha256`
+- `chalxius-0.8.6-bounded-phx-repair.tar.gz`
+- `chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256`
 
 Then run:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.0-mathgraph-first.tar.gz.sha256
-tar -xzf chalxius-0.8.0-mathgraph-first.tar.gz
+shasum -a 256 -c chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256
+tar -xzf chalxius-0.8.6-bounded-phx-repair.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 ```
@@ -408,6 +408,34 @@ key. It fails if the output is inside the source project, if a source identifier
 or source text survives, or if any node content field is not a 64-character
 hash. Supplying a private key file enables repeatable mapping, but that key must
 never be published.
+
+## v0.8.6: Bounded PHX Repair
+
+Main now selects load-bearing Research and exact canonical Candidate Fact
+bytes directly. Planning creates immutable cards but does not count as
+dispatch; Main launches and confirms workers through the ordinary host
+interaction. Author, worker, and container provenance remains lineage rather
+than a mathematical capability gate.
+
+Candidate and verifier work now share only a command-local immutable
+inspection context. Transient canonical-return visibility races are retryable
+without false quarantine, while unsafe or malformed bytes still fail closed.
+Role-aware help preserves the same authorization boundary, with Gateway as the
+sole owner of Certification publication and Fact admission.
+
+On the same local-F0 fixture, the successful Candidate path fell from about
+91.7 seconds to 12.80 seconds, verifier capsule generation from about 134
+seconds to 6.35 seconds, and host materialization from about 210 seconds to
+6.72 seconds, with semantic ids unchanged. These are Main-visible diagnostic
+observations, not thresholds; no timer, watcher, daemon, or persistent
+performance state was added.
+
+This release is cumulative from public 0.8.0 and includes the 0.8.1 through
+0.8.5 scoped-adversity, exact-route, canonical-handoff, semantic-handoff, and
+terminalized-worker changes. The exact 256-entry manifest passed the routine
+matrix, 175 repair regressions, all 15 semantic mutants, 102 feature probes,
+strict architecture reconnaissance, deterministic archive build, and cold
+verification.
 
 ## v0.8.0: MathGraph First
 

@@ -880,8 +880,9 @@ run the exact ingestion-schema validator:
 {validate_command}
 ```
 
-Use the returned `return_sha256` in your explicit final handoff, then do not edit the return or its
-declared artifacts again.
+Use the explicit final handoff: `assignment_id` and `status="final"`; then do not edit the return
+or its declared artifacts again. The canonical ingestion owner derives `return_sha256`; a legacy
+supplied hash is only an optional equality assertion.
 File existence alone is only a draft signal and does not authorize ingestion.
 """
 
@@ -1380,21 +1381,23 @@ def ingest_return(
     round_id: str,
     assignment_id: str,
     *,
-    worker_final_sha256: str,
+    worker_final_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Ingest one canonical return inside its complete pulse transaction.
 
-    A matching worker-final hash establishes that the canonical bytes are the
-    handoff being ingested.  Only failures after that identity check can
-    become durable core-failure evidence.  Mutable draft preflight and the
+    The canonical owner derives the return hash from the exact bytes it reads.
+    A supplied legacy worker-final hash is an additional equality assertion,
+    not an identity source. Only failures after the canonical identity check
+    can become durable core-failure evidence. Mutable draft preflight and the
     read-only canonical validator never enter this path.
     """
 
-    if not isinstance(worker_final_sha256, str) or SHA256_RE.fullmatch(
-        worker_final_sha256
-    ) is None:
+    if worker_final_sha256 is not None and (
+        not isinstance(worker_final_sha256, str)
+        or SHA256_RE.fullmatch(worker_final_sha256) is None
+    ):
         raise ValueError(
-            "worker_final_sha256 must be 64 lowercase hex characters"
+            "worker_final_sha256 must be omitted or 64 lowercase hex characters"
         )
     with store.mutation_lock():
         store.reasoning_modes().require_work_unit_active(round_id)
@@ -1414,19 +1417,23 @@ def ingest_return(
             raise FileNotFoundError(return_path)
         raw = return_path.read_bytes()
         return_sha256 = sha256_bytes(raw)
-        if worker_final_sha256 != return_sha256:
+        if (
+            worker_final_sha256 is not None
+            and worker_final_sha256 != return_sha256
+        ):
             raise ValueError(
                 "worker final SHA-256 does not match the current return "
                 "bytes; wait for an explicit final handoff or repair the "
                 "un-ingested draft"
             )
+        canonical_final_sha256 = return_sha256
         receipt_path = return_path.with_suffix(".receipt.json")
         try:
             return _ingest_return_locked(
                 store,
                 round_id,
                 assignment_id,
-                worker_final_sha256=worker_final_sha256,
+                worker_final_sha256=canonical_final_sha256,
             )
         except Exception as exc:
             if (
@@ -1439,7 +1446,7 @@ def ingest_return(
                         round_id=round_id,
                         assignment_id=assignment_id,
                         return_sha256=return_sha256,
-                        worker_final_sha256=worker_final_sha256,
+                        worker_final_sha256=canonical_final_sha256,
                         error_class=type(exc).__name__,
                         error_message=(
                             str(exc) or type(exc).__name__
@@ -1470,12 +1477,15 @@ def _ingest_return_locked(
     round_id: str,
     assignment_id: str,
     *,
-    worker_final_sha256: str,
+    worker_final_sha256: str | None = None,
 ) -> dict[str, Any]:
-    if not isinstance(worker_final_sha256, str) or SHA256_RE.fullmatch(
-        worker_final_sha256
-    ) is None:
-        raise ValueError("worker_final_sha256 must be 64 lowercase hex characters")
+    if worker_final_sha256 is not None and (
+        not isinstance(worker_final_sha256, str)
+        or SHA256_RE.fullmatch(worker_final_sha256) is None
+    ):
+        raise ValueError(
+            "worker_final_sha256 must be omitted or 64 lowercase hex characters"
+        )
     validated = validate_return(store, round_id, assignment_id)
     round_dir, manifest = _round_manifest(store, round_id)
     assignment = _assignment(manifest, assignment_id)
@@ -1484,11 +1494,12 @@ def _ingest_return_locked(
     raw = return_path.read_bytes()
     payload = json.loads(raw.decode("utf-8"))
     return_sha = validated["return_sha256"]
-    if worker_final_sha256 != return_sha:
+    if worker_final_sha256 is not None and worker_final_sha256 != return_sha:
         raise ValueError(
             "worker final SHA-256 does not match the current return bytes; "
             "wait for an explicit final handoff or repair the un-ingested draft"
         )
+    canonical_final_sha256 = return_sha
     if receipt_path.exists():
         receipt = store._read_json(receipt_path)
         if manifest.get("schema_version") == 4:
@@ -1498,7 +1509,10 @@ def _ingest_return_locked(
         if receipt.get("assignment_id") != assignment_id:
             raise ValueError("receipt belongs to another assignment")
         recorded_final_sha = receipt.get("worker_final_sha256")
-        if recorded_final_sha is not None and recorded_final_sha != worker_final_sha256:
+        if (
+            recorded_final_sha is not None
+            and recorded_final_sha != canonical_final_sha256
+        ):
             raise ValueError("worker final SHA-256 differs from the ingest receipt")
         if manifest.get("schema_version") >= 3 and receipt.get("artifacts") != validated["artifacts"]:
             raise ValueError("declared artifacts changed after ingestion")
@@ -1687,7 +1701,7 @@ def _ingest_return_locked(
             "assignment_sha256": assignment["assignment_sha256"],
             "return_relpath": assignment["return_relpath"],
             "return_sha256": return_sha,
-            "worker_final_sha256": worker_final_sha256,
+            "worker_final_sha256": canonical_final_sha256,
             "return_locked": True,
             "outcome": outcome,
             **(

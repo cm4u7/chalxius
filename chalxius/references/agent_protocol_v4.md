@@ -13,6 +13,16 @@
 > adapter, migration, and procedural forward-compatibility checks are not
 > prerequisites for ordinary graph work.
 
+> **0.8.6 current-V5 override.** Main explicitly names load-bearing Research
+> ids. Planning freezes assignments and cards but is not dispatch; Main must
+> launch and confirm each worker through the host. Main may author canonical
+> Candidate Fact bytes, and provenance metadata does not establish their
+> mathematics. Current `validate-return` is a bounded snapshot with retryable
+> transient visibility, current performance observation is Main-visible only
+> with no timer, daemon, or numeric threshold, and Gateway alone owns
+> `certification-record`. Historical V4 dispatch and duration-notice paragraphs
+> below remain archive contracts rather than current V5 instructions.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 
@@ -27,8 +37,8 @@ coordination boundaries:
 - memory, blackboard objects, worker returns, computations, and votes remain exploration;
 - a Research entry or compatibility submission is only nontruth input until it
   is sealed into one exact V5 Candidate Release; and
-- only a fresh verifier's immutable Certification Decision followed by exact
-  gateway admission creates a V5 Fact.
+- only a fresh verifier return followed by the Gateway-owned immutable
+  Certification Decision and exact Gateway admission creates a V5 Fact.
 
 Before that fresh dispatch, the host should run
 `scripts/prepare_verifier_capsule.py`. For V4 it materializes the exact frozen
@@ -48,10 +58,13 @@ This is a distinct Main-only refute lane: it neither reopens constructive
 production nor substitutes for Research supervision, Candidate disposition,
 fresh verification, Certification, or Gateway admission.
 
-For a canonical Candidate Fact returned by supervised production, Main uses
-`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID` to bind the exact Fact
-and unique live supervision result before invoking `plan-candidate-adverse` on
-the returned Research id. The attack worker follows
+For a canonical Candidate Fact selected by Main, Main uses
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`
+to consume the exact project-contained bytes and bind every applicable
+completed supervision result for that Research target before invoking
+`plan-candidate-adverse` on the returned Research id. Main may author those
+canonical bytes; producer/container/author labels and other provenance metadata
+preserve lineage but do not certify the statement. The attack worker follows
 `v5_candidate_adverse_worker_bootstrap.md`, never the production bootstrap.
 
 Installing the skill does not authorize migration or cutover of an active
@@ -65,7 +78,7 @@ kernel and one writable project root.
 Keep these channels distinct:
 
 1. The control plane is the compact worker prompt, strict JSON task card, bounded host follow-ups,
-   and the exact worker-final handoff.
+   and the minimal worker-final handoff.
 2. The mathematical-state plane is one frozen, bounded blackboard snapshot shared by every worker
    in the round.
 3. The narrative plane is the worker's bounded rationale, narrative summary, and intuition.
@@ -104,7 +117,7 @@ is `required`, communication is one durable two-wave pulse:
    repeated check, and the concrete correction or explicit no-correction boundary.
 
 A mutable draft may fail `preflight-return` without changing the pulse. After
-main supplies the matching worker-final hash, each complete return is handled
+main reads the canonical bytes and derives their hash, each complete return is handled
 independently: a valid return enters cumulative Research and a malformed or
 semantically invalid peer receives an immutable local quarantine receipt. It
 does not erase or invalidate earlier valid contributions. A whole-pulse abort
@@ -145,7 +158,14 @@ coordinates share a task-relative host timeline; overlaps count once even across
 `CODEX_THREAD_ID`; planning fails before writing a round when no stable source exists. Campaign and
 memory IDs remain event provenance, so one host task can cross campaign boundaries without
 splitting or double-counting its clock.
-V5 uses the same normalizer with one prospective fallback: when neither an explicit value nor
+This host-observed duration-notice mechanism is historical V4 behavior only.
+Current V5 does not inherit its timer or threshold. Main may observe visible
+worker progress in the ordinary host interaction and reclaim or redirect a
+stalled worker, but Chalxius creates no background watcher, daemon, heartbeat,
+performance receipt, or lifecycle/admission gate for that observation.
+
+V5 uses the same host-scope normalizer, but not the historical clock. With one
+prospective fallback, when neither an explicit value nor
 either environment channel exists, `plan-round` deterministically allocates a non-null local scope
 from the exact project and planning request before any round write, returns that scope, and freezes
 it into the round, every assignment, and every card. Reuse the returned scope explicitly for later
@@ -359,8 +379,14 @@ finish before merge. A validation error has zero ingestion effect.
 
 ## Prospective Research production and supervision
 
-`plan-round` creates constructive production subround 1. It rejects explicit or
-automatically selected `refute` work and never appends a paired adverse worker.
+For load-bearing work, Main supplies the exact Research ids explicitly (the
+current CLI repeats `--memory-id RESEARCH_ID`). `plan-round` creates
+constructive production subround-1 assignments and cards. It rejects explicit
+or automatically selected `refute` work and never appends a paired adverse worker.
+Planning does not launch a process: Main must send each exact prompt/card to a
+real host worker and confirm that it actually started before describing the
+assignment as dispatched. This operational confirmation adds no graph record
+or mathematical gate.
 Proof, literature, insight, interpretation, and computation-design returns are
 independently ingested and later eligible for supervision. A worker may record a
 boundary, obstruction, or counterexample discovered while doing its assigned
@@ -378,7 +404,8 @@ Main may run:
 Omit `--component-id` only when the source round has one component. The command
 binds the exact source manifest, immutable component id/hash, and complete
 component receipt-set hash, and creates one to three scoped `refute`
-supervisors selected from a static reproduced-failure registry. Workers in
+supervisor assignments/cards selected from a static reproduced-failure
+registry. Main then launches and confirms each actual supervisor. Workers in
 unrelated components may continue concurrently. `program_math` applies to
 computation design/output, `proof_logic` to proof-bearing work, and
 `source_scope` to literature or exact source use. `integration` applies only
@@ -455,9 +482,12 @@ through `plan-supervision-round` for the explicit second subround.
 
 ## Round procedure
 
-1. Add or select actionable memory and inspect the active campaign.
-2. Run `plan-round`; all assignments in that round receive the same frozen snapshot.
-3. Give each context-free worker only its generated prompt and paths.
+1. Add Research, inspect any active Campaign, and explicitly name every
+   load-bearing Research id selected for this work.
+2. Run `plan-round`; all assignments in that round receive the same frozen
+   snapshot. The returned assignments and cards are a plan, not dispatch.
+3. Launch each context-free worker through the host with only its generated
+   prompt and paths, and confirm the worker actually started.
 4. The worker writes artifacts only in its artifact directory and a mutable return draft below its
    work directory. Before the canonical return exists, run:
 
@@ -470,19 +500,25 @@ through `plan-supervision-round` for the explicit second subround.
    mode semantics, artifact, blackboard-delta, and pulse-review validator. Success and failure have
    zero project write effect. Only a passing draft may be copied byte-for-byte, without
    reserialization, to the designated canonical return path.
-5. Run `validate-return` on those canonical bytes.
+5. Run `validate-return` on those canonical bytes. It observes one bounded
+   read-only return/artifact snapshot. If the safe snapshot is temporarily not
+   visible because of `ENOENT` or `ESTALE`, leave the intended bytes in place
+   and retry after visibility stabilizes; that transient result creates no
+   quarantine. A symlink, escape, special or otherwise unsafe filesystem
+   object, or visible malformed/hash-drifted/schema-invalid/semantically invalid
+   bytes remain fail-closed and use the ordinary local-quarantine path.
 6. After the worker stops editing, obtain exactly:
 
    ```json
    {
      "assignment_id": "a01-0123456789ab-compute",
-     "return_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
      "status": "final"
    }
    ```
 
-7. Run `ingest-return` with that exact hash. An identical successful retry is idempotent; changed
-   bytes fail. A matching-hash core validation failure is also replay-safe terminal evidence:
+7. Run `ingest-return`; the canonical ingestion owner derives the return hash from the exact bytes.
+   An optional legacy `return_sha256` is checked as an equality assertion only. An identical
+   successful retry is idempotent; changed bytes fail. A matching-hash core validation failure is also replay-safe terminal evidence:
    retry observes the same aborted pulse and cannot create a second failure/abort pair. A wrong
    caller-supplied hash does not authenticate canonical final bytes and creates no failure evidence.
 8. Inspect the receipt, blackboard transaction, memory status, round status, frontier, and `audit`.

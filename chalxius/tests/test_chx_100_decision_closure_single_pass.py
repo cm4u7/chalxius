@@ -21,7 +21,11 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from mathgraph.contracts import sha256_bytes, sha256_json
-from mathgraph.v5_lifecycle import V5LifecycleManager, V5_POLICY_REVISION
+from mathgraph.v5_lifecycle import (
+    RoundInspectionContext,
+    V5LifecycleManager,
+    V5_POLICY_REVISION,
+)
 
 
 class _ReadOnlyStore:
@@ -89,9 +93,16 @@ class CHX100DecisionClosureSinglePassTests(unittest.TestCase):
             }
             historical_closure_validator = Mock(return_value=closure_output)
             validation_outputs: list[dict[str, object]] = []
+            validation_contexts: list[RoundInspectionContext | None] = []
 
-            def validated_release(requested_release_id: str) -> dict[str, object]:
+            def validated_release(
+                requested_release_id: str,
+                *,
+                _inspection_context: RoundInspectionContext | None = None,
+                **_: object,
+            ) -> dict[str, object]:
                 self.assertEqual(requested_release_id, release_id)
+                validation_contexts.append(_inspection_context)
                 validated = historical_closure_validator()
                 validation_outputs.append(copy.deepcopy(validated))
                 return copy.deepcopy(release)
@@ -104,10 +115,14 @@ class CHX100DecisionClosureSinglePassTests(unittest.TestCase):
             # Construct the exact expected binding once, outside the measured
             # decision-verification operation, then reset every call counter.
             expected_capsule = lifecycle.verifier_capsule(release_id)
+            self.assertIsInstance(
+                validation_contexts[-1], RoundInspectionContext
+            )
             lifecycle.release.reset_mock()
             lifecycle._require_current_paper_continuation_release.reset_mock()
             historical_closure_validator.reset_mock()
             validation_outputs.clear()
+            validation_contexts.clear()
 
             semantic = {
                 "schema_version": 5,

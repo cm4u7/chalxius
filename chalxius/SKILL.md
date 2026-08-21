@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.0 — MathGraph First
+# Chalxius 0.8.6 — Bounded PHX Repair
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -31,6 +31,42 @@ Research product with valid assignment provenance can be consumed by later
 workflow stages when its derived receipt is absent; missing products,
 stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
 terminal-seal, or final-experiment checks remain blocking at their own owners.
+
+Candidate-level fresh-adverse review is scoped to the explicitly selected
+constructive Research heads that themselves carry
+`independent_adverse_required=true`. Historical `related_research_ids` may
+still establish dependency and provenance, but they do not silently inherit a
+remote adverse obligation into a different Candidate. When multiple marked
+heads are explicitly selected, only maximal selected heads require separate
+fresh reviews; direct Candidate-byte binding, independent actor, disposition,
+and verifier exclusion remain exact.
+
+Structured source-evidence capabilities are interpreted by their graph
+semantics, not one runtime-era field spelling. Current `artifact_path` and
+`artifact_sha256`, compact `path` and `sha256`, and the historical
+`card_authorized_path` plus `returned_copy_path` declaration are equivalent
+only when every declared concrete path exists inside the project and has the
+same declared SHA-256. A locator by itself never grants file capability.
+
+The 0.8.6 repair keeps orchestration explicit. Main names the load-bearing
+Research ids, and a planning command creates only immutable assignments and
+task cards. Main must still launch each selected worker through the host and
+confirm that the worker actually started; a plan or card is not dispatch.
+This is an operating instruction, not a new receipt, compatibility layer, or
+mathematical gate.
+
+Main may author the exact canonical Candidate Fact bytes, including a canonical
+Fact file inside a sealed Main-authored Candidate Release. Worker authorship,
+container identity, and other provenance metadata remain useful lineage, but
+none is a mathematical validity gate. Main calls
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+The public command fixes the actor to Main and accepts no `--actor` override.
+It consumes those exact canonical Fact bytes and binds every
+applicable completed supervision result for the selected Research (possibly
+none when no supervision scope applies); it does not infer, rewrite, or
+validate the theorem merely from provenance. Fresh adverse work, its
+disposition, a fresh verifier, Gateway-owned `certification-record`, and Gateway
+Fact admission remain separate mandatory boundaries.
 
 ## Start through the smallest applicable contract
 
@@ -111,7 +147,8 @@ repaired copy-on-write, never rewritten.
 
 ## Selective Fact-admission checkpoint
 
-Before expensive Candidate construction, Main may run
+Before expensive Candidate construction, Main explicitly selects the
+load-bearing Research targets and may run
 `selective-fact-checkpoint --input FILE` over at most sixteen explicitly named
 Research targets. The checkpoint fully validates each selected Research record
 and its direct readiness requirements, uses structural envelopes only for
@@ -123,18 +160,25 @@ The default batch partition first closes the explicitly selected dependency
 graph. Dependency-connected ready targets remain in one atomic unit, while
 independent ready targets remain singleton failure-isolation units. Main may
 combine independent units only after reviewing their logical dependency and
-failure surfaces. Every resulting Candidate still requires independently
-authored Fact statements or a typed mini-DAG, fresh Candidate adverse review
-when applicable, verifier coverage, Certification, and Gateway admission. The
-checkpoint is nontruth and creates no Candidate, Decision, admission, or Fact.
+failure surfaces. Every resulting Candidate still requires exact canonical
+Fact statements or a typed mini-DAG authored or selected by Main, fresh
+Candidate adverse review when applicable, verifier coverage, Certification,
+and Gateway admission. The checkpoint is nontruth and creates no Candidate,
+Decision, admission, or Fact.
 
-For a ready target that binds exactly one current `candidate_fact` artifact and
-requires independent adverse review, Main uses
-`plan-candidate-adverse RESEARCH_ID`. The command is separate from constructive
-production and Research supervision, is exact-retry idempotent within one host
-scope, and creates only ordinary nontruth refute work. Candidate disposition,
-fresh verifier review, Certification, Gateway, and Fact admission remain
-mandatory.
+For a selected ready Research target and exact project-relative canonical Fact,
+Main first runs
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`,
+whose actor is fixed to Main, then passes the returned Research id to
+`plan-candidate-adverse RESEARCH_ID`.
+The canonical bytes may be Main-authored; their author/provenance fields do not
+establish mathematical validity. Preparation binds every applicable completed
+supervision result, while planning is separate from constructive production and
+Research supervision, exact-retry idempotent within one host scope, and creates
+only a nontruth refute assignment and card. Main must actually launch and
+confirm the adverse worker.
+Candidate disposition, fresh verifier review, Gateway-owned Certification, and
+Gateway Fact admission remain mandatory.
 
 ## CHX and PHX
 
@@ -150,8 +194,12 @@ integrated repair. An explicitly requested project-wide historical
 revalidation may instead use the cross-ledger global repair path after validating
 every ledger and every observed qualified issue against one exact current
 candidate; it must not manufacture tactical entries in immutable predecessor
-ledgers. Performance issues consult PHX before mechanism selection. PHX is
-advisory and user adoption remains explicit. A current card-bound worker ledger projects any genuine finding into
+ledgers. Performance issues consult PHX before mechanism selection. Main
+observes worker progress only through the ordinary visible host interaction and
+may reclaim or redirect a worker that stops producing useful visible progress.
+This instruction creates no timer, daemon, watcher, numeric threshold,
+heartbeat record, or lifecycle/admission gate. PHX is advisory and user
+adoption remains explicit. A current card-bound worker ledger projects any genuine finding into
 the project's small CHX observation inbox when the return is ingested; a pure
 mathematical challenge creates no architecture observation. This replaces
 reliance on host memory and does not create Blackboard, Pulse, scoring, or truth
@@ -222,10 +270,12 @@ repair caches implicitly.
 2. For a research draft, freeze the artifact, reconstruct the complete
    load-bearing target DAG, preserve its domain and quantifiers, and expose any
    weaker theorem as a typed gap rather than a solution to the original target.
-3. Production subround 1 dispatches constructive proof, literature, insight,
-   interpretation, or computation-design workers. It never dispatches refute.
-   Explicit Research IDs use the exact-ID planning path and do not rebuild the
-   unrelated global frontier.
+3. Main explicitly names the load-bearing Research IDs. Production subround 1
+   plans constructive proof, literature, insight, interpretation, or
+   computation-design assignments and never plans refute. Explicit Research
+   IDs use the exact-ID path and do not rebuild the unrelated global frontier.
+   Planning and card creation are not dispatch: Main must launch each worker
+   through the host and confirm the actual start.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
    continues. Use at most three failure-informed supervisors: `proof_logic`,
@@ -291,9 +341,18 @@ work may demand stricter current-status evidence when it is load-bearing.
 Candidate preflight binds exact statements, proofs, active predecessor closure,
 sources, computation evidence, internal mini-DAGs, supervision, adverse work,
 and dispositions. Send only the frozen verifier capsule to a fresh verifier.
-Certification records one immutable decision; Gateway alone admits accepted
-Facts. Never weaken a missing gate because a mode is fast or a result is
-plausible.
+The verifier returns review bytes but does not publish Certification.
+`certification-record` is Gateway-owned and records one immutable decision;
+Gateway separately revalidates and admits accepted Facts. Never weaken a
+missing gate because a mode is fast or a result is plausible.
+
+`validate-return` is one bounded read-only snapshot of the canonical return and
+its declared artifacts. A transient `ENOENT` or `ESTALE` visibility failure
+before that safe snapshot exists may be retried after the same paths stabilize,
+without quarantine. An unsafe filesystem object or visible malformed,
+hash-drifted, schema-invalid, or semantically invalid bytes remain fail-closed
+and retain the ordinary local-quarantine path. Snapshot retry is not a worker
+receipt or admission shortcut.
 
 One Candidate command may reuse one ephemeral fully validated inspection
 context across its immutable Research, adverse, and historical-runtime
@@ -374,4 +433,11 @@ path or a graph-operation gate.
 Architecture releases use failure-informed validation: changed files, affected
 boundaries, manifest/inventory, focused regression, self-test, and only the
 broader suite justified by shared-runtime risk. Install the validated candidate
-locally before publication. For this release workflow, an explicit publication request includes merging the corresponding reviewed change into `main` by default; the user may explicitly exclude merge. Installation and publication remain separate authorizations, and publication never authorizes an unreviewed or unrelated change.
+locally before publication. The default host-global path is
+`scripts/local_install.py`: it validates one complete candidate tree, runs the
+self-test and the two changed-surface regressions, archives the prior runtime,
+atomically swaps `/Users/<user>/.codex/skills/chalxius`, and keeps one direct
+rollback copy outside skill discovery. It never reads or mutates a project and
+does not require a project audit, release matrix, or worker receipt. The older
+`scripts/runtime_cutover.py` remains an explicit forensic/protected-project
+deployment tool. For this release workflow, an explicit publication request includes merging the corresponding reviewed change into `main` by default; the user may explicitly exclude merge. Installation and publication remain separate authorizations, and publication never authorizes an unreviewed or unrelated change.

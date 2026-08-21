@@ -1573,24 +1573,23 @@ class RoundWorkflowTests(unittest.TestCase):
                 worker_final_sha256="0" * 64,
             )
         self.assertFalse(return_path.with_suffix(".receipt.json").exists())
-        final_sha = sha256_bytes(return_path.read_bytes())
         receipt = ingest_return(
             self.store,
             manifest["round_id"],
             assignment["assignment_id"],
-            worker_final_sha256=final_sha,
         )
         memory_events = self.store.memory_log.read_text(encoding="utf-8")
         replay = ingest_return(
             self.store,
             manifest["round_id"],
             assignment["assignment_id"],
-            worker_final_sha256=final_sha,
         )
         self.assertEqual(replay, receipt)
         self.assertEqual(self.store.memory_log.read_text(encoding="utf-8"), memory_events)
         self.assertEqual(receipt["status"], "ingested")
-        self.assertEqual(receipt["worker_final_sha256"], final_sha)
+        self.assertEqual(
+            receipt["worker_final_sha256"], sha256_bytes(return_path.read_bytes())
+        )
         self.assertTrue(receipt["return_locked"])
         self.assertEqual(return_path.stat().st_mode & 0o222, 0)
         self.assertEqual(
@@ -2061,6 +2060,70 @@ class GraphRoleAndCliTests(unittest.TestCase):
         self.assertNotIn("memory-add", allowed_commands("worker"))
         self.assertNotIn("record-review", allowed_commands("worker"))
         self.assertNotIn("admit", allowed_commands("worker"))
+
+    def test_top_level_help_projects_explicit_role_without_changing_choices(
+        self,
+    ) -> None:
+        output = StringIO()
+        with (
+            patch.dict(os.environ, {"MGRAPH_ROLE": "worker"}),
+            redirect_stdout(output),
+            self.assertRaises(SystemExit) as stopped,
+        ):
+            main(
+                [
+                    "--root",
+                    "/tmp/help-only-project",
+                    "--role",
+                    "gateway",
+                    "--help",
+                ]
+            )
+        self.assertEqual(stopped.exception.code, 0)
+        help_text = " ".join(output.getvalue().split())
+        self.assertIn("certification-record", help_text)
+        self.assertNotIn("candidate-release", help_text)
+        self.assertNotIn("preflight-return", help_text)
+
+        parser = build_parser(help_role="verifier")
+        parsed = parser.parse_args(
+            [
+                "--root",
+                "/tmp/help-only-project",
+                "--role",
+                "verifier",
+                "status",
+            ]
+        )
+        self.assertEqual(parsed.command, "status")
+        with redirect_stderr(StringIO()):
+            self.assertEqual(
+                main(
+                    [
+                        "--root",
+                        "/tmp/help-only-project",
+                        "--role",
+                        "verifier",
+                        "status",
+                    ]
+                ),
+                3,
+            )
+
+    def test_top_level_help_projects_environment_verifier_boundary(self) -> None:
+        output = StringIO()
+        with (
+            patch.dict(os.environ, {"MGRAPH_ROLE": "verifier"}),
+            redirect_stdout(output),
+            self.assertRaises(SystemExit) as stopped,
+        ):
+            main(["--root", "/tmp/help-only-project", "--help"])
+        self.assertEqual(stopped.exception.code, 0)
+        help_text = " ".join(output.getvalue().split())
+        self.assertIn("no project-shell commands", help_text)
+        self.assertIn("external capsule", help_text)
+        self.assertNotIn("certification-record", help_text)
+        self.assertNotIn("paper-continuation-plan", help_text)
 
     def test_cli_requires_root_and_has_no_context_or_packet_output_option(self) -> None:
         parser = build_parser()

@@ -1084,7 +1084,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertNotIn(None, contexts)
             self.assertEqual(1, len({id(context) for context in contexts}))
 
-    def test_exact_invalidator_review_lane_does_not_reactivate_stale_routes(self) -> None:
+    def test_exact_invalidator_review_lane_keeps_contextual_descendants_current(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -1114,7 +1114,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 )
             }
             self.assertNotIn(invalidated_id, active_ids)
-            self.assertNotIn(ordinary_descendant["research_id"], active_ids)
+            self.assertIn(ordinary_descendant["research_id"], active_ids)
             self.assertIn(invalidator_id, active_ids)
 
             supervision = lifecycle.create_supervision_round(
@@ -1205,7 +1205,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 [orphaned[0]["research_id"]],
             )
 
-    def test_supervision_lane_rejects_unreviewed_external_invalidator(self) -> None:
+    def test_supervision_lane_accepts_stale_source_with_explicit_invalidator(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -1222,12 +1222,11 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 actor="main",
             )
 
-            with self.assertRaisesRegex(ValueError, "not active V5 Research"):
-                lifecycle.create_supervision_round(
-                    design["round_id"],
-                    supervisor_scopes=["program_math"],
-                    host_task_scope_id="external-invalidator-host",
-                )
+            supervision = lifecycle.create_supervision_round(
+                design["round_id"],
+                supervisor_scopes=["program_math"],
+                host_task_scope_id="external-invalidator-host",
+            )
             orphaned = [
                 item
                 for item in lifecycle.research_records()
@@ -1237,6 +1236,10 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 == design["round_id"]
             ]
             self.assertEqual(len(orphaned), 1)
+            self.assertEqual(
+                supervision["assignments"][0]["research_id"],
+                orphaned[0]["research_id"],
+            )
             history = {
                 item["research_id"]: item
                 for item in lifecycle.frontier(
@@ -1245,11 +1248,21 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 )
             }
             self.assertEqual(
-                history[orphaned[0]["research_id"]]["route_invalidated_by"],
+                history[assignment["research_id"]]["route_status"],
+                "stale_pending_copy_on_write_repair",
+            )
+            self.assertEqual(
+                history[assignment["research_id"]]["route_invalidated_by"],
                 [external_invalidator["research_id"]],
             )
+            self.assertEqual(
+                history[orphaned[0]["research_id"]]["route_status"], "current"
+            )
+            self.assertEqual(
+                history[orphaned[0]["research_id"]]["route_invalidated_by"], []
+            )
 
-    def test_invalidator_and_repair_are_path_barriers_not_route_reactivation(self) -> None:
+    def test_route_invalidations_are_explicit_targets_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -1346,9 +1359,10 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "current",
             )
             self.assertEqual(
-                history[mixed_direct["research_id"]]["route_invalidated_by"],
-                sorted([first["research_id"], second["research_id"]]),
+                history[mixed_direct["research_id"]]["route_status"],
+                "current",
             )
+            self.assertEqual(history[mixed_direct["research_id"]]["route_invalidated_by"], [])
             self.assertEqual(history[repair["research_id"]]["route_status"], "current")
 
     def test_invalidator_branch_supports_disposition_execution_and_repair(self) -> None:
@@ -1464,6 +1478,14 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 store,
                 design["round_id"],
             )
+            unrelated_dir = (
+                store.rounds_dir / "round-20260101T000000Z-deadbeef"
+            )
+            unrelated_dir.mkdir()
+            (unrelated_dir / "round.json").write_text(
+                '{"unrelated_round":true}\n',
+                encoding="utf-8",
+            )
             self.assertEqual(
                 lifecycle._required_supervision_results_for_candidate(
                     [constructive_result]
@@ -1528,13 +1550,13 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 }
             ]
             payload["adverse_actor_ids"] = [
-                lifecycle._research_record(supervisor_task_id)["actor"],
                 supervision["assignments"][0]["worker_id"],
             ]
             original_required_supervision = (
                 lifecycle._required_supervision_results_for_candidate
             )
             required_supervision_calls = 0
+            observed_inspections: list[object | None] = []
 
             def abort_on_locked_recheck(
                 records: list[dict[str, object]],
@@ -1543,8 +1565,13 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             ) -> set[str]:
                 nonlocal required_supervision_calls
                 required_supervision_calls += 1
+                observed_inspections.append(_inspection_context)
                 if required_supervision_calls == 2:
-                    self.assertIsNone(_inspection_context)
+                    self.assertIsNotNone(_inspection_context)
+                    self.assertIsNot(
+                        _inspection_context,
+                        observed_inspections[0],
+                    )
                     store.reasoning_modes().abort_work_unit(
                         round_id=supervision["round_id"],
                         actor="main",

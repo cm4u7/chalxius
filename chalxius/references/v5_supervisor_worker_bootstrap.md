@@ -21,6 +21,11 @@ facts:
 make a current installation or historical archive a prerequisite for
 supervision.
 
+The assignment and card prove only that Main planned this supervision. They are
+not dispatch evidence. Main must launch this worker through the host and
+confirm the actual start before using this bootstrap; that confirmation creates
+no new graph receipt or mathematical gate.
+
 If any condition is absent, inconsistent, legacy, or unvalidated, stop the
 compact path and use the ordinary full protocol routed by `SKILL.md`. Never
 infer supervision from prose, filenames, assignment timing, or the worker role.
@@ -76,11 +81,14 @@ the missing capability, Research product, or premise. Do not emit consecutive
 status-only updates such as "reviewing", "writing the report", or "almost at
 preflight" while the authorized artifact directory remains empty. Main may
 reclaim a supervisor that repeats a no-output milestone. This is a bounded
-communication rule, not a watcher, timer, lifecycle state, audit, truth gate,
-or packaging prerequisite. If the work contract itself causes or materially
-amplifies a repeated no-output milestone, record that concrete architecture
-finding in worker CHX before close. Do not turn it into a PHX route or
-persistent attack rule; Main performs that later coordination.
+communication rule, not a worker-side monitoring mechanism, lifecycle state,
+audit, truth gate, or packaging prerequisite. Main observes only milestones
+visible through ordinary host interaction. Chalxius creates no timer, daemon,
+watcher, heartbeat, numeric threshold, or persisted performance state. If the
+work contract itself causes or materially amplifies a repeated no-output
+milestone, record that concrete architecture finding in worker CHX before
+close. Do not turn it into a PHX route or persistent attack rule; Main performs
+that later coordination.
 
 Once the required supervision report exists, the next progress milestone must
 be one explicit blocker or the strict preflight result. After preflight passes,
@@ -266,8 +274,17 @@ reserialization. Confirm byte equality and SHA-256, and run:
 mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
 ```
 
-Close worker CHX, then hand off exactly `assignment_id`, `return_sha256`, and
-`status`. Main alone ingests the exact hash. Ingestion creates cumulative
-nontruth Research only. Candidate Release, fresh Candidate adverse review,
-verifier, Certification Decision, Gateway, and Fact admission remain distinct
-and unchanged.
+`validate-return` reads one bounded snapshot of the canonical return and its
+declared artifacts. A transient `ENOENT` or `ESTALE` before a safe snapshot is
+visible may be retried after the same paths stabilize and creates no quarantine.
+A symlink, escape, special or otherwise unsafe object, or visible malformed,
+hash-drifted, schema-invalid, or semantically invalid bytes remains fail-closed
+and follows the ordinary local-quarantine path.
+
+Close worker CHX, then hand off exactly `assignment_id` and `status`. The legacy
+`return_sha256` field is optional; Main derives the canonical hash during
+ingestion and treats a supplied value only as an equality assertion. Ingestion creates cumulative
+nontruth Research only. Candidate Release, fresh Candidate adverse review, and
+later truth stages remain distinct; a fresh verifier returns review bytes,
+while Gateway owns
+`certification-record` and the later Fact admission.

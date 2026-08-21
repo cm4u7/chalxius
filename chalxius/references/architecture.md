@@ -37,8 +37,9 @@ counterexample -> two-branch repair round -> same ordinary verifier gate
    and a typed relation: `proves`, `refutes`, `strengthens`, `weakens`, `replaces`, or `unrelated`.
 7. A V4 worker first runs the shared read-only `preflight-return` core on mutable work-directory
    bytes; only a passing draft is copied exactly to the manifest-bound canonical return.
-   Ingestion additionally requires its explicit worker-final SHA-256 and locks the return plus every
-   declared artifact read-only. Undeclared or out-of-directory artifacts fail validation.
+   Ingestion derives the canonical return SHA-256 and locks the return plus every declared artifact
+   read-only; an optional legacy worker-final hash is only an equality assertion. Undeclared or
+   out-of-directory artifacts fail validation.
 8. In V4, active campaign proof targets derive `TARGETS.txt`; target certificates bind every closure
    file and audit rejects an independently edited projection.
 9. Revocation removes all transitive descendants and preserves historical acceptance evidence.

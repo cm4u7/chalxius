@@ -90,19 +90,12 @@ class BoundedHandoff0714Tests(unittest.TestCase):
             raw = validate_fact_round_trip(fact).encode("utf-8")
             path = store.root / "candidate.md"
             path.write_bytes(raw)
-            production = lifecycle.add_research(
+            selected = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",
-                    "claim": "Produce the exact Candidate Fact.",
-                    "artifacts": [
-                        {
-                            "path": "candidate.md",
-                            "sha256": sha256_bytes(raw),
-                            "role": "candidate_fact",
-                        }
-                    ],
+                    "claim": "Establish the selected mathematical result.",
                 },
-                actor="producer",
+                actor="main-synthesis",
                 assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
             )
             supervision = lifecycle.add_research(
@@ -110,7 +103,7 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     "kind": "challenge",
                     "claim": "The bounded supervision result is clean.",
                     "relation": "challenges",
-                    "related_research_ids": [production["research_id"]],
+                    "related_research_ids": [selected["research_id"]],
                 },
                 actor="supervisor",
             )
@@ -132,13 +125,21 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     side_effect=supervised_only,
                 ):
                     prepared = lifecycle.prepare_candidate_adverse_target(
-                        production["research_id"]
+                        selected["research_id"],
+                        candidate_fact_path="candidate.md",
                     )
             record = lifecycle._research_record(prepared["research_id"])
             self.assertTrue(record["metadata"]["independent_adverse_required"])
             self.assertEqual(
                 set(record["related_research_ids"]),
-                {production["research_id"], supervision["research_id"]},
+                {selected["research_id"], supervision["research_id"]},
+            )
+            self.assertEqual(
+                prepared["selected_research_id"], selected["research_id"]
+            )
+            self.assertEqual(
+                prepared["supervision_research_ids"],
+                [supervision["research_id"]],
             )
             self.assertEqual(record["metadata"]["artifacts"][0]["sha256"], sha256_bytes(raw))
             planned = lifecycle.plan_candidate_adverse_round(
@@ -157,7 +158,7 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     "claim": "Prepared target with noncanonical Fact bytes.",
                     "relation": "prepares_candidate_from",
                     "related_research_ids": [
-                        production["research_id"],
+                        selected["research_id"],
                         supervision["research_id"],
                     ],
                     "independent_adverse_required": True,
@@ -238,10 +239,19 @@ class BoundedHandoff0714Tests(unittest.TestCase):
 
     def test_certification_owns_narrow_lock_and_reads_stay_unlocked(self) -> None:
         parser = build_parser()
-        base = ["--root", "/tmp/project", "--role", "main"]
-        frontier = parser.parse_args([*base, "frontier"])
+        frontier = parser.parse_args(
+            ["--root", "/tmp/project", "--role", "main", "frontier"]
+        )
         certification = parser.parse_args(
-            [*base, "certification-record", "--input", "decision.json"]
+            [
+                "--root",
+                "/tmp/project",
+                "--role",
+                "gateway",
+                "certification-record",
+                "--input",
+                "decision.json",
+            ]
         )
         mutation = Namespace(command="memory-add")
         self.assertFalse(_command_requires_mutation_lock(frontier))
@@ -568,6 +578,114 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     card=card,
                     origin="source-scope",
                 )
+
+    def test_structured_source_evidence_normalizes_frozen_field_spellings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            payload = b"historical source bytes"
+            authorized = store.root / "authorized.pdf"
+            returned = store.root / "returned.pdf"
+            path_variant = store.root / "path-variant.pdf"
+            authorized.write_bytes(payload)
+            returned.write_bytes(payload)
+            path_variant.write_bytes(payload)
+            digest = sha256_bytes(payload)
+            evidence = store.root / "evidence.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "source_artifacts": [
+                            {
+                                "source_key": "HISTORICAL",
+                                "card_authorized_path": "authorized.pdf",
+                                "returned_copy_path": "returned.pdf",
+                                "artifact_sha256": digest,
+                            },
+                            {
+                                "source_key": "PATH_VARIANT",
+                                "path": "path-variant.pdf",
+                                "sha256": digest,
+                            },
+                        ]
+                    },
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+            card = {
+                "mathematical_state": {
+                    "related_artifacts": [
+                        {
+                            "path": "evidence.json",
+                            "sha256": sha256_bytes(evidence.read_bytes()),
+                            "role": "source_evidence",
+                        }
+                    ]
+                }
+            }
+            capabilities = lifecycle._structured_source_evidence_capabilities_from_card(
+                card=card,
+                origin="source-scope",
+            )
+            self.assertEqual(
+                {item["path"] for item in capabilities},
+                {"returned.pdf", "path-variant.pdf"},
+            )
+
+    def test_structured_source_evidence_skips_locator_only_and_rejects_path_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            authorized = store.root / "authorized.pdf"
+            returned = store.root / "returned.pdf"
+            authorized.write_bytes(b"source bytes")
+            returned.write_bytes(b"drifted bytes")
+            digest = sha256_bytes(authorized.read_bytes())
+
+            def card_for(source_item: dict[str, str]) -> dict[str, object]:
+                evidence = store.root / "evidence.json"
+                evidence.write_text(
+                    json.dumps({"source_artifacts": [source_item]}, sort_keys=True),
+                    encoding="utf-8",
+                )
+                return {
+                    "mathematical_state": {
+                        "related_artifacts": [
+                            {
+                                "path": "evidence.json",
+                                "sha256": sha256_bytes(evidence.read_bytes()),
+                                "role": "source_evidence",
+                            }
+                        ]
+                    }
+                }
+
+            with self.assertRaisesRegex(ValueError, "bytes/hash mismatch"):
+                lifecycle._structured_source_evidence_capabilities_from_card(
+                    card=card_for(
+                        {
+                            "source_key": "DRIFT",
+                            "card_authorized_path": "authorized.pdf",
+                            "returned_copy_path": "returned.pdf",
+                            "artifact_sha256": digest,
+                        }
+                    ),
+                    origin="source-scope",
+                )
+            self.assertEqual(
+                lifecycle._structured_source_evidence_capabilities_from_card(
+                    card=card_for(
+                        {
+                            "source_key": "LOCATOR_ONLY",
+                            "locator": "Appendix A",
+                            "artifact_sha256": digest,
+                        }
+                    ),
+                    origin="source-scope",
+                ),
+                [],
+            )
 
 
 if __name__ == "__main__":

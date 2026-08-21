@@ -1,98 +1,126 @@
-# Chalxius v0.8.0 — MathGraph First
+# Chalxius v0.8.6 — Bounded PHX Repair
 
-Chalxius 0.8.0 makes the MathGraph the forward-compatibility surface. A
-valid graph can be read and extended across runtime upgrades from its node and
-edge hashes, dependencies, provenance, workflow stages, and owner boundaries.
-Runtime locations, archives, migration ceremonies, and ordinary
-worker-ingestion receipts remain diagnostic or process provenance; they are not
-prerequisites for ordinary graph work or mathematical status.
+Chalxius 0.8.6 removes several procedural and provenance couplings while
+keeping mathematical correctness and Fact authority at their existing owners.
+Main selects the load-bearing Research and exact canonical Candidate Fact;
+planning creates cards but does not pretend to dispatch workers. Provenance
+remains lineage rather than a capability gate.
+
+This public release is cumulative from the prior public 0.8.0 release and
+contains the 0.8.1 through 0.8.6 runtime changes.
 
 ## What changed
 
-- Legacy and current graph records are operated directly when their semantic
-  hashes, dependencies, provenance, stage, and owner checks are valid.
-- The retired runtime-compatibility closure and its adapter/migration gate are
-  removed from ordinary graph operations.
-- A missing derived worker-ingestion receipt no longer blocks a complete
-  hash-bound Research product with valid assignment provenance. Missing
-  products, wrong-stage artifacts, owner/hash drift, verifier failures,
-  Certification, Gateway, and Fact-authority violations still fail at their
-  owning boundaries.
-- Sealed writable directories remain readable as directory metadata; writable
-  sealed regular files remain rejected. The preserved campaigns/inputs
-  directory is accepted only as the declared non-Campaign input surface.
-- Historical metadata and unfinished valid worker returns remain readable
-  without rewriting mathematical Research or creating a second data plane.
+- **prepare-candidate-adverse-target** now takes a Main-selected Research id
+  and exact project-relative canonical Fact. The Fact may be Main-authored.
+  Every applicable completed supervision result is derived and bound; author,
+  container, and worker provenance do not establish mathematical validity.
+- Main must explicitly launch and confirm workers after planning. This is a
+  visible operating instruction, not a scheduler, receipt, timer, watcher, or
+  new lifecycle gate.
+- A transient canonical-return ENOENT or ESTALE during one snapshot is
+  retryable without false quarantine. Symlinks, unsafe objects, malformed
+  bytes, schema errors, and hash drift still fail closed.
+- Candidate and verifier commands reuse one command-local immutable inspection
+  context. It never persists across commands or crosses the final mutation
+  lock. Candidate collection first applies exact local identity projections,
+  then fully validates only records that can affect the selected branch.
+- Role-aware help exposes only the relevant command projection while runtime
+  authorization remains unchanged. Verifiers return review bytes; Gateway
+  exclusively owns **certification-record** and Fact admission.
+- The semantic mutation registry was rebound to the current local projection.
+  A refute assignment that returns an evidence outcome remains adverse and
+  cannot disappear from a Candidate.
 
 The truth path is unchanged:
 
-Research → Candidate Release → Certification Decision → Fact
+**Research → Candidate Release → Certification Decision → Fact**
+
+## Cumulative 0.8.x surface
+
+- 0.8.1 scopes fresh Candidate adversity to explicitly selected constructive
+  heads.
+- 0.8.2 makes route invalidation exact and introduces the project-free local
+  installer.
+- 0.8.3 derives worker/Main handoff hashes from canonical return bytes.
+- 0.8.4 interprets graph/source capability by semantic content rather than one
+  historical field spelling.
+- 0.8.5 terminalizes worker returns through immutable copy-on-write bundles.
+- 0.8.6 applies the bounded PHX repair described above.
+
+## Main-visible performance
+
+The same local-F0 Candidate Release and verifier capsule were used before and
+after the repair. Semantic ids remained unchanged.
+
+| Operation | Prior | 0.8.6 |
+|---|---:|---:|
+| Candidate Release successful path | ~91.7 s | 12.80 s |
+| Public verifier capsule | ~134 s | 6.35 s |
+| Host capsule materialization | ~210 s | 6.72 s |
+
+These are machine- and project-specific measurements, not fixed thresholds.
+Chalxius adds no performance daemon or persistent timing state; Main observes
+ordinary elapsed time and treats unexpectedly slow simple operations as a
+diagnostic signal.
 
 ## Validation
 
-The frozen 253-entry manifest and 254-file runtime tree passed:
+The frozen 256-entry manifest and 257-member archive passed:
 
-- strict architecture reconnaissance with zero errors and zero warnings;
-- bundled self-test;
-- changed-surface tests: 28/28;
-- semantic mutation profile: 15/15;
-- graph/runtime lifecycle focus: 35/35;
-- deterministic archive generation and cold extraction;
-- manifest, cache, and bytecode checks.
+- routine release matrix: self-test, 29 changed-surface tests, and 15 semantic
+  mutants;
+- 175 repair-focused regressions;
+- behavioral feature gate: 40 features and 102 probes;
+- strict architecture reconnaissance: zero errors and zero warnings, with the
+  candidate and installed trees identical;
+- deterministic double archive build, cold 256/256 manifest verification, and
+  cold self-test;
+- cache and bytecode hygiene.
 
-The routine matrix receipt uses
-chalxius-release-validation-matrix-6 and has SHA-256
-6d9f8e04968c67888e9b140209c6486d669e93b341a5b1b154d70ea36bc79fda.
-Two valid unfinished worker returns were ingested as nontruth Research:
-round-20260816T094813Z-079a0e70 and
-round-20260817T040553Z-d50b6f19.
+The routine matrix receipt SHA-256 is
+**fa27cfa0f3d244ecd407f55dfd6ee446940ac20fc25389de8a6926864001df18**.
+The software checks establish exercised runtime behavior; they do not certify
+any mathematical claim.
 
 ## Installation
 
-The validated 0.8.0 tree is installed globally as version 0.8.0.
+The exact validated tree is installed globally as version 0.8.6 through the
+project-free local installer.
 
 | Item | SHA-256 or value |
 |---|---|
-| Installed runtime identity | 943a66bc9d5ec76f5622de5b13cfda800e26c349e8b210fb63d00eae16ba32da |
-| Installed runtime content | 7f951b3ef3dfd168ce91b2ed5a424af698a1601325ee0c79346fc054c3a63f84 |
-| Installed archive-tree identity | a85671c716eabd1249bc49f63238a6e18550b9f8afc517ed70399b423bddbfc9 |
-| Prior runtime identity | 82fe34deaf8d7d09899918e9507e1f0743d85fc4b0596c8cff80bdd246ff57de |
-| Rollback | preserved as chalxius-prior-0.8.0 |
+| Manifest | 0afb65d4259b80cf6ab59596a4e95bc417335053d4d96e014ac786efd4f92088 |
+| Runtime content | 8e30d9bc55f6524ddc48212aa04c639fde213d44173087121d734239af6e649d |
+| Installed runtime identity | 1cafa6ae3a68fcc10fbc0b7e43a4435e936371be1ce18ff1d896f1ed8fed480c |
+| Installed archive-tree identity | 5b565098279eb5f6bd7731624e271fc3a45076acc43070b55b3fd1d68fd6c85b |
+| 0.8.5 archive | preserved in the content-addressed runtime archive |
 
-The installed tree matches the validated candidate exactly. No system restart
-was performed.
+No project was read or written by installation, and no system restart was
+performed.
 
 ## Public distribution
 
-The release archive is:
+The release assets are:
 
-- chalxius-0.8.0-mathgraph-first.tar.gz
-- chalxius-0.8.0-mathgraph-first.tar.gz.sha256
+- **chalxius-0.8.6-bounded-phx-repair.tar.gz**
+- **chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256**
 
-The deterministic archive has 254 members, 2,496,311 bytes, and SHA-256
-44f5badf9d20d0f871d278f24da2e46da668be8c821f2086c2bdd9538f629fca.
-The checksum file has SHA-256
-d41fdcc2e68afc7dce35ad639deb7ee11f6208b73d2c69665b2efefe9c6dd6b1.
+The deterministic archive has 257 members, 2,527,296 bytes, and SHA-256
+**a8507d2b8b7c1293e9ee37a7b35530359bf9d1644ed491e3e0fc2d7430ce6c56**.
 
 To verify a downloaded archive:
 
-```sh
-shasum -a 256 -c chalxius-0.8.0-mathgraph-first.tar.gz.sha256
-tar -xzf chalxius-0.8.0-mathgraph-first.tar.gz
-cd chalxius
-shasum -a 256 -c MANIFEST.sha256
-PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/self_test.py
-```
-
-Replacing an active global runtime is a protected cutover operation. Do not
-replace a runtime that owns frozen task cards without an explicit, validated
-cutover.
+    shasum -a 256 -c chalxius-0.8.6-bounded-phx-repair.tar.gz.sha256
+    tar -xzf chalxius-0.8.6-bounded-phx-repair.tar.gz
+    cd chalxius
+    shasum -a 256 -c MANIFEST.sha256
+    PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/self_test.py
 
 ## CHX and truth boundary
 
-The public CHX disclosure remains the continuous CHX-001 through CHX-035
-lineage. Current release bookkeeping is nontruth operational evidence and is
-not included as a second public issue namespace. No Candidate Release,
-Certification Decision, Gateway admission, or Fact was created by this
-architecture release. Hashes establish byte identity; tests establish only
-the exercised software behavior.
+The published historical CHX disclosure remains CHX-001 through CHX-035.
+Current project-scoped ledgers are not embedded in this software release, and a
+new global historical-repair record is not claimed while foreign task ledgers
+remain open. No Candidate Release, Certification Decision, Gateway admission,
+or Fact was created by this architecture release.

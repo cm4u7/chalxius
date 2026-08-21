@@ -197,16 +197,18 @@ Before the canonical return exists, the worker runs
 `preflight-return ROUND ASSIGNMENT --input WORK_DRAFT.json` on exact draft bytes below its work
 directory. Preflight, `validate-return`, and ingestion share one complete validator; preflight
 success or failure writes no project state. The worker copies passing bytes without reserialization
-to the canonical return, runs `validate-return`, reports its `return_sha256`, and stops editing.
-A merely present return is a draft.
+to the canonical return, runs `validate-return`, hands off only its `assignment_id` and
+`status="final"`, and stops editing. Main derives the canonical return hash during ingestion; a
+legacy supplied `return_sha256` is optional provenance and only an equality assertion. A merely
+present return is a draft.
 `ingest-return` reruns validation, records the return and artifact hashes, and makes all declared
 files read-only. Counterexamples become `challenged`, evidence `supported`, and dead ends `dead_end`;
 none is a proof premise.
-For a pulse-bound core commitment, main ingestion with a matching worker-final SHA converts any
-complete validation, graph, or pulse-semantic exception into one immutable
+For a pulse-bound core commitment, main ingestion derives the canonical return SHA-256 before it
+converts any complete validation, graph, or pulse-semantic exception into one immutable
 `core-failures/<commitment_id>.json` record and an abort receipt that binds its content hash.
-The failure record binds the assignment, canonical return hash, worker-final hash, error class, and
-original error message. Optional-commitment failures create no whole-pulse abort. A canonical core
+The failure record binds the assignment, canonical return hash, derived finalization hash, error
+class, and original error message. Optional-commitment failures create no whole-pulse abort. A canonical core
 return without an ingestion receipt is not ready state: barrier and closure require ingest or abort.
 For collaboration pulses, even that canonical draft is also an irreversible ordering signal:
 `pulse-plan` must already exist for Wave 1, and host dispatch must already exist for Wave 2.

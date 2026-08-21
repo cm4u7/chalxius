@@ -434,10 +434,79 @@ class ResearchObligationClosureTests(unittest.TestCase):
                     )
 
             public_rounds = sorted(store.rounds_dir.glob("round-*"))
-            self.assertEqual([path.name for path in public_rounds], [pending["round_id"]])
+            self.assertEqual(
+                [path.name for path in public_rounds], [pending["round_id"]]
+            )
 
-    def test_terminal_seal_owns_authority_and_source_drift_is_diagnostic(self) -> None:
-        """CHX-037: mutable worker paths never regain terminal authority."""
+    def test_transient_canonical_return_or_artifact_visibility_is_retryable(self) -> None:
+        for missing_kind in ("return", "artifact"):
+            with self.subTest(missing_kind=missing_kind), tempfile.TemporaryDirectory() as temporary:
+                store = self._store(
+                    Path(temporary) / "project",
+                    project_id=f"chx-0715-visibility-{missing_kind}",
+                )
+                lifecycle = store.v5_lifecycle()
+                source = lifecycle.add_research(
+                    {"claim": f"Keep a transient {missing_kind} handoff retryable."},
+                    actor="main",
+                )
+                planned = lifecycle.create_production_round(
+                    workers=1,
+                    mode="prove",
+                    research_ids=[source["research_id"]],
+                    host_task_scope_id=f"visibility-{missing_kind}",
+                )
+                assignment = planned["assignments"][0]
+                return_path = self._write_plain_assignment(
+                    store, planned, assignment
+                )
+                preflight = lifecycle.preflight_return(
+                    round_id=str(planned["round_id"]),
+                    assignment_id=str(assignment["assignment_id"]),
+                )
+                self.assertTrue(preflight["valid"])
+                payload = json.loads(return_path.read_text(encoding="utf-8"))
+                missing_path = (
+                    return_path
+                    if missing_kind == "return"
+                    else store.root / payload["artifacts"][0]["path"]
+                )
+                held_path = missing_path.with_name(missing_path.name + ".held")
+                missing_path.rename(held_path)
+
+                round_dir = store.rounds_dir / str(planned["round_id"])
+                assignment_id = str(assignment["assignment_id"])
+                receipt_path = (
+                    round_dir / "returns" / f"{assignment_id}.receipt.json"
+                )
+                terminal_dir = round_dir / "terminal" / assignment_id
+                research_count = len(lifecycle.research_records())
+                quarantine_count = len(list(lifecycle.quarantine_dir.glob("*.json")))
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "not stably visible; retry ingest-return",
+                ):
+                    lifecycle.ingest_return(
+                        round_id=str(planned["round_id"]),
+                        assignment_id=assignment_id,
+                    )
+                self.assertFalse(receipt_path.exists())
+                self.assertFalse(terminal_dir.exists())
+                self.assertEqual(len(lifecycle.research_records()), research_count)
+                self.assertEqual(
+                    len(list(lifecycle.quarantine_dir.glob("*.json"))),
+                    quarantine_count,
+                )
+
+                held_path.rename(missing_path)
+                receipt = lifecycle.ingest_return(
+                    round_id=str(planned["round_id"]),
+                    assignment_id=assignment_id,
+                )
+                self.assertEqual(receipt["status"], "ingested")
+
+    def test_terminal_seal_cow_revokes_worker_paths_and_keeps_authority(self) -> None:
+        """CHX-037: post-final worker paths are COW-detached and read-only."""
 
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project", project_id="chx-037")
@@ -472,22 +541,91 @@ class ResearchObligationClosureTests(unittest.TestCase):
             source_artifact = store.root / seal["artifacts"][0]["source_path"]
             sealed_artifact = store.root / seal["artifacts"][0]["sealed_path"]
             original = sealed_artifact.read_bytes()
-            source_artifact.write_text("bypassed stale write\n", encoding="utf-8")
+            return_before = Path(str(assignment["return_path"])).read_bytes()
+            receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+            receipt_before = receipt_path.read_bytes()
+            research_path = (
+                lifecycle.research_entries_dir / f"{receipt['research_id']}.json"
+            )
+            research_before = research_path.read_bytes()
+            work_root = store.root / str(assignment["work_dir_relpath"])
+            with self.assertRaises(OSError):
+                source_artifact.write_text(
+                    "bypassed stale write\n", encoding="utf-8"
+                )
+            with self.assertRaises(OSError):
+                Path(str(assignment["return_path"])).write_text(
+                    "bypassed stale return\n", encoding="utf-8"
+                )
+            with self.assertRaises(OSError):
+                (work_root / "stale.md").write_text(
+                    "bypassed stale draft\n", encoding="utf-8"
+                )
             status = lifecycle.round_status(str(planned["round_id"]))
             projected = next(
                 item
                 for item in status["assignments"]
                 if item["assignment_id"] == assignment_id
             )
-            self.assertIn(
-                "source_artifact_0:bytes_drifted",
-                projected["terminal_source_diagnostics"],
-            )
+            self.assertEqual(projected["terminal_source_diagnostics"], [])
+            self.assertEqual(projected["terminalized_lease_marker"], "valid")
             self.assertEqual(sealed_artifact.read_bytes(), original)
+            self.assertEqual(source_artifact.read_bytes(), original)
+            self.assertEqual(Path(str(assignment["return_path"])).read_bytes(), return_before)
+            self.assertEqual(receipt_path.read_bytes(), receipt_before)
+            self.assertEqual(research_path.read_bytes(), research_before)
             self.assertEqual(
                 (store.root / result["metadata"]["artifacts"][0]["path"]).read_bytes(),
                 original,
             )
+            marker = lifecycle._validate_terminalized_lease_marker(
+                round_dir=round_dir,
+                assignment=assignment,
+                seal=seal,
+                required=True,
+            )
+            self.assertIsNotNone(marker)
+            assert marker is not None
+            self.assertEqual(marker["truth_effect"], "none")
+            self.assertEqual(marker["project_effect"], "none")
+
+    def test_terminal_source_drift_remains_diagnostic_after_explicit_admin_override(self) -> None:
+        """A deliberate chmod override is visible but cannot rewrite authority."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project", project_id="chx-037-diagnostic")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {"claim": "Keep post-final source drift diagnostic only."},
+                actor="main",
+            )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[source["research_id"]],
+                host_task_scope_id="chx-037-diagnostic",
+            )
+            assignment = planned["assignments"][0]
+            receipt = self._ingest_plain_assignment(store, planned, assignment)
+            round_dir = store.rounds_dir / str(planned["round_id"])
+            seal = json.loads(
+                (round_dir / "terminal" / str(assignment["assignment_id"]) / "seal.json")
+                .read_text(encoding="utf-8")
+            )
+            source_artifact = store.root / seal["artifacts"][0]["source_path"]
+            sealed_artifact = store.root / seal["artifacts"][0]["sealed_path"]
+            source_artifact.chmod(0o600)
+            source_artifact.write_text("explicit admin drift\n", encoding="utf-8")
+            projected = lifecycle.round_status(str(planned["round_id"]))["assignments"][0]
+            self.assertIn(
+                "source_artifact_0:bytes_drifted",
+                projected["terminal_source_diagnostics"],
+            )
+            self.assertEqual(
+                sealed_artifact.read_bytes(),
+                b"One bounded constructive result is frozen for supervision.\n",
+            )
+            self.assertEqual(projected["research_product_id"], receipt["research_id"])
 
     def test_terminal_seal_replay_is_idempotent_and_conflicts_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -521,6 +659,7 @@ class ResearchObligationClosureTests(unittest.TestCase):
             self.assertEqual(results[0]["receipt_id"], results[1]["receipt_id"])
             self.assertTrue(all(item["status"] == "ingested" for item in results))
 
+            return_path.chmod(0o600)
             return_path.write_text('{"conflict":true}', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "terminal ingest conflict"):
                 lifecycle.ingest_return(
@@ -573,10 +712,98 @@ class ResearchObligationClosureTests(unittest.TestCase):
             projected = lifecycle.round_status(str(planned["round_id"]))[
                 "assignments"
             ][0]
-            self.assertIn(
-                "source_artifact_0:bytes_drifted",
-                projected["terminal_source_diagnostics"],
+            self.assertEqual(projected["terminal_source_diagnostics"], [])
+            self.assertEqual(projected["terminalized_lease_marker"], "valid")
+
+    def test_terminal_cow_failure_recovers_from_sealed_bundle(self) -> None:
+        """A COW projection failure does not block Research and retries safely."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project", project_id="chx-037-cow-retry")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {"claim": "Recover terminalization from the sealed bundle."},
+                actor="main",
             )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[source["research_id"]],
+                host_task_scope_id="chx-037-cow-retry",
+            )
+            assignment = planned["assignments"][0]
+            return_path = self._write_plain_assignment(store, planned, assignment)
+            return_sha = sha256_bytes(return_path.read_bytes())
+            round_dir = store.rounds_dir / str(planned["round_id"])
+            assignment_id = str(assignment["assignment_id"])
+            artifact_root = store.root / str(assignment["artifact_dir_relpath"])
+            bundle_dir = round_dir / "terminal" / assignment_id
+            receipt_path = round_dir / "returns" / f"{assignment_id}.receipt.json"
+            real_replace = os.replace
+            injected = False
+
+            def fail_cow_artifact_publish(source_path: object, destination: object) -> None:
+                nonlocal injected
+                source = Path(source_path)  # type: ignore[arg-type]
+                target = Path(destination)  # type: ignore[arg-type]
+                if (
+                    not injected
+                    and target == artifact_root
+                    and source.name.startswith(f".{artifact_root.name}.terminalizing-")
+                ):
+                    injected = True
+                    raise OSError("injected COW artifact publication failure")
+                real_replace(source_path, destination)  # type: ignore[arg-type]
+
+            with patch(
+                "mathgraph.v5_lifecycle.os.replace",
+                side_effect=fail_cow_artifact_publish,
+            ):
+                first_receipt = lifecycle.ingest_return(
+                    round_id=str(planned["round_id"]),
+                    assignment_id=assignment_id,
+                    worker_final_sha256=return_sha,
+                )
+
+            self.assertTrue(injected)
+            self.assertTrue(bundle_dir.is_dir())
+            self.assertEqual(first_receipt["status"], "ingested")
+            self.assertEqual(first_receipt["terminalized_lease_status"], "pending")
+            self.assertTrue(receipt_path.exists())
+            self.assertEqual(len(lifecycle.research_records()), 2)
+            marker_path = round_dir / "terminalized" / f"{assignment_id}.json"
+            self.assertFalse(marker_path.exists())
+            pending_status = lifecycle.round_status(str(planned["round_id"]))
+            self.assertEqual(
+                pending_status["assignments"][0]["terminalized_lease_marker"],
+                "missing",
+            )
+            self.assertIn(
+                "terminalized_lease_marker:missing",
+                pending_status["assignments"][0]["terminal_source_diagnostics"],
+            )
+            # The legacy shared ``returns`` parent still permits an
+            # uncooperative atomic replacement; retry must recover from the
+            # terminal bundle rather than trusting that stale path.
+            stale_return = return_path.parent / ".stale-return.json"
+            stale_return.write_bytes(b"stale atomic replacement")
+            os.replace(stale_return, return_path)
+
+            receipt = lifecycle.ingest_return(
+                round_id=str(planned["round_id"]),
+                assignment_id=assignment_id,
+                worker_final_sha256=return_sha,
+            )
+            self.assertEqual(receipt["status"], "ingested")
+            self.assertEqual(
+                return_path.read_bytes(),
+                (bundle_dir / "return.json").read_bytes(),
+            )
+            self.assertTrue(marker_path.is_file())
+            self.assertTrue(receipt_path.is_file())
+            self.assertEqual(len(lifecycle.research_records()), 2)
+            status = lifecycle.round_status(str(planned["round_id"]))
+            self.assertEqual(status["assignments"][0]["terminalized_lease_marker"], "valid")
 
     def test_terminal_prepublication_failure_leaves_no_bundle_and_retries(
         self,

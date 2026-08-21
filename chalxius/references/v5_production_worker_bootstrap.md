@@ -19,6 +19,11 @@ facts:
 applicability condition. A moved installation or missing historical archive
 does not redirect this graph operation into a migration or compatibility path.
 
+The assignment and card prove only that Main planned this work. They are not
+dispatch evidence. Main must launch this worker through the host and confirm
+the actual start before using this bootstrap; that confirmation creates no new
+graph receipt or mathematical gate.
+
 Production `refute` is not eligible: it belongs to the second logical subround.
 If any condition is absent, inconsistent, legacy, or unvalidated, stop the
 compact path and use the ordinary full protocol routed by `SKILL.md`. Never
@@ -80,11 +85,13 @@ source, or premise. Do not emit consecutive status-only updates such as
 directory remains empty. If a first artifact cannot yet be produced, state the
 single blocker and stop expanding scope. Main may reclaim a worker that repeats
 a no-output milestone. This is a communication and work-elimination rule, not a
-watcher, timer, lifecycle state, truth gate, or packaging prerequisite. If the
-work contract itself causes or materially amplifies a repeated no-output
-milestone, record that concrete architecture finding in worker CHX before
-close. Do not turn it into a PHX route or persistent attack rule; Main performs
-that later coordination.
+worker-side monitoring mechanism, lifecycle state, truth gate, or packaging
+prerequisite. Main observes only milestones visible through ordinary host
+interaction. Chalxius creates no timer, daemon, watcher, heartbeat, numeric
+threshold, or persisted performance state. If the work contract itself causes
+or materially amplifies a repeated no-output milestone, record that concrete
+architecture finding in worker CHX before close. Do not turn it into a PHX
+route or persistent attack rule; Main performs that later coordination.
 
 Once every required artifact exists, the next progress milestone must be one
 explicit blocker or the strict preflight result. After preflight passes, the
@@ -108,7 +115,8 @@ list. Reuse one artifact for multiple obligations only when the card permits
 the same canonical role and the artifact genuinely discharges each obligation.
 
 Research output is nontruth. It does not create a Candidate Release,
-Certification Decision, Gateway acceptance, or Fact.
+Certification Decision, Gateway acceptance, or Fact. A later verifier returns
+review bytes only; Gateway alone owns `certification-record` and Fact admission.
 
 ## Computation boundary
 
@@ -188,6 +196,14 @@ draft bytes without reserialization, verify byte equality and SHA-256, then run:
 mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
 ```
 
-Close worker CHX and hand off exactly `assignment_id`, `return_sha256`, and
-`status`. Main alone ingests the exact hash. A defect is repaired in a later
+`validate-return` reads one bounded snapshot of the canonical return and its
+declared artifacts. A transient `ENOENT` or `ESTALE` before a safe snapshot is
+visible may be retried after the same paths stabilize and creates no quarantine.
+A symlink, escape, special or otherwise unsafe object, or visible malformed,
+hash-drifted, schema-invalid, or semantically invalid bytes remains fail-closed
+and follows the ordinary local-quarantine path.
+
+Close worker CHX and hand off exactly `assignment_id` and `status`. The legacy
+`return_sha256` field is optional; Main derives the canonical hash during
+ingestion and treats a supplied value only as an equality assertion. A defect is repaired in a later
 copy-on-write Research cycle; there is no live Pulse or Blackboard repair bus.

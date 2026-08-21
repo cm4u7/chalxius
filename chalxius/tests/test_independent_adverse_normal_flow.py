@@ -63,6 +63,24 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
         return store.v5_lifecycle().add_research(payload, actor="main")
 
     @staticmethod
+    def _write_candidate_fact(
+        store: MathGraphStore,
+        path: Path,
+        *,
+        claim_id: str,
+    ) -> bytes:
+        fact = Fact(
+            problem_id=store.project_id(),
+            author="candidate-producer",
+            predecessors=[],
+            statement=f"[CLAIM:{claim_id}] The exact Candidate target holds.",
+            proof="Direct proof over the frozen Candidate boundary.",
+        )
+        raw = validate_fact_round_trip(fact).encode("utf-8")
+        path.write_bytes(raw)
+        return raw
+
+    @staticmethod
     def _roles(planned: dict) -> tuple[list[dict], list[dict]]:
         primary = [
             item
@@ -416,6 +434,114 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                     )
             expensive.assert_not_called()
 
+    def test_fresh_adverse_ignores_unselected_marked_ancestor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "fresh-adverse-scope")
+            lifecycle = store.v5_lifecycle()
+            records = {
+                "selected": {
+                    "research_id": "selected",
+                    "kind": "proof_attempt",
+                    "metadata": {"independent_adverse_required": False},
+                    "related_research_ids": ["remote-ancestor"],
+                },
+                "remote-ancestor": {
+                    "research_id": "remote-ancestor",
+                    "kind": "proof_attempt",
+                    "metadata": {"independent_adverse_required": True},
+                    "related_research_ids": [],
+                },
+            }
+            with patch.object(
+                lifecycle, "_lightweight_research_records", return_value=records
+            ):
+                readiness = lifecycle._fresh_adverse_readiness(
+                    research_ids=["selected"],
+                    candidate_fact_bindings=[{"fact_id": "f", "fact_sha256": "a" * 64}],
+                    challenge_dispositions=[],
+                    adverse_actor_ids=[],
+                    producer="candidate-producer",
+                )
+            self.assertEqual(readiness["status"], "not_required")
+            self.assertEqual(readiness["required_target_research_ids"], [])
+
+    def test_fresh_adverse_keeps_only_maximal_selected_marked_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "fresh-adverse-maximal")
+            lifecycle = store.v5_lifecycle()
+            records = {
+                "ancestor": {
+                    "research_id": "ancestor",
+                    "kind": "proof_attempt",
+                    "metadata": {"independent_adverse_required": True},
+                    "related_research_ids": [],
+                },
+                "descendant": {
+                    "research_id": "descendant",
+                    "kind": "proof_attempt",
+                    "metadata": {"independent_adverse_required": True},
+                    "related_research_ids": ["ancestor"],
+                },
+                "adverse": {
+                    "research_id": "adverse",
+                    "kind": "counterexample",
+                    "metadata": {},
+                    "related_research_ids": ["descendant"],
+                    "relation": "responds_to",
+                    "created_at": "2026-08-19T00:00:00Z",
+                    "actor": "independent-adverse-worker",
+                    "_adverse": True,
+                },
+            }
+
+            def is_adverse(record: dict) -> bool:
+                return bool(record.get("_adverse"))
+
+            binding = {
+                "target_research_id": "descendant",
+                "adverse_research_id": "adverse",
+                "adverse_worker_id": "independent-adverse-worker",
+                "round_id": "round-test",
+                "assignment_id": "assignment-test",
+                "task_card_sha256": "b" * 64,
+                "return_sha256": "c" * 64,
+                "receipt_id": None,
+                "host_task_scope_id": "hosttask-test",
+                "worker_context_id": "context-test",
+            }
+            with (
+                patch.object(
+                    lifecycle, "_lightweight_research_records", return_value=records
+                ),
+                patch.object(
+                    lifecycle, "_research_is_adverse_assignment", side_effect=is_adverse
+                ),
+                patch.object(
+                    lifecycle,
+                    "_lightweight_adverse_assignment_binding",
+                    return_value=binding,
+                ),
+            ):
+                readiness = lifecycle._fresh_adverse_readiness(
+                    research_ids=["ancestor", "descendant"],
+                    candidate_fact_bindings=[{"fact_id": "f", "fact_sha256": "a" * 64}],
+                    challenge_dispositions=[
+                        {
+                            "research_id": "adverse",
+                            "disposition": "nonblocking_with_reason",
+                            "rationale": "The direct adverse result is retained for verifier adjudication.",
+                        }
+                    ],
+                    adverse_actor_ids=["independent-adverse-worker"],
+                    producer="candidate-producer",
+                )
+            self.assertEqual(
+                readiness["required_target_research_ids"], ["descendant"]
+            )
+            self.assertEqual(
+                readiness["adverse_bindings"][0]["target_research_id"], "descendant"
+            )
+
     def test_candidate_release_accepts_only_exact_candidate_bound_refute(
         self,
     ) -> None:
@@ -568,7 +694,9 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             store = self._store(root, "candidate-adverse-planner")
             lifecycle = store.v5_lifecycle()
             fact_path = root / "candidate-fact.md"
-            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            self._write_candidate_fact(
+                store, fact_path, claim_id="CANDIDATE_ADVERSE_PLANNER"
+            )
             research = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",
@@ -645,7 +773,9 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertIn("not allowed", error)
 
             stale_path = root / "stale-candidate-fact.md"
-            stale_path.write_text("# Stale Candidate Fact\n", encoding="utf-8")
+            self._write_candidate_fact(
+                store, stale_path, claim_id="STALE_CANDIDATE_ADVERSE"
+            )
             stale_target = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",
@@ -689,7 +819,9 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             store = self._store(root, "candidate-adverse-aborted-cutover")
             lifecycle = store.v5_lifecycle()
             fact_path = root / "candidate-fact.md"
-            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            self._write_candidate_fact(
+                store, fact_path, claim_id="CANDIDATE_ADVERSE_ABORTED"
+            )
             research = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",
@@ -744,7 +876,9 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             store = self._store(root, "candidate-adverse-active-retry")
             lifecycle = store.v5_lifecycle()
             fact_path = root / "candidate-fact.md"
-            fact_path.write_text("# Exact Candidate Fact\n", encoding="utf-8")
+            self._write_candidate_fact(
+                store, fact_path, claim_id="CANDIDATE_ADVERSE_ACTIVE"
+            )
             research = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",

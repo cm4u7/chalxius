@@ -894,20 +894,22 @@ def validate_final_handoff(payload: dict[str, Any]) -> dict[str, str]:
         raise ValueError("final handoff must be one JSON object")
     require_exact_keys(
         payload,
-        required={"assignment_id", "return_sha256", "status"},
+        required={"assignment_id", "status"},
+        optional={"return_sha256"},
         label="worker final handoff",
     )
     assignment_id = require_string(payload, "assignment_id")
     if ASSIGNMENT_ID_RE.fullmatch(assignment_id) is None:
         raise ValueError("final handoff assignment_id is invalid")
-    digest = _require_sha256(payload, "return_sha256")
     if payload.get("status") != "final":
         raise ValueError("final handoff status must be 'final'")
-    return {
+    result = {
         "assignment_id": assignment_id,
-        "return_sha256": digest,
         "status": "final",
     }
+    if "return_sha256" in payload:
+        result["return_sha256"] = _require_sha256(payload, "return_sha256")
+    return result
 
 
 def validate_control_followup(payload: dict[str, Any]) -> dict[str, Any]:
@@ -953,8 +955,9 @@ def compact_worker_prompt(
         "Blackboard objects, memory, drafts, computations, and votes are not truth.\n\n"
         "Draft below the designated work directory and run `preflight-return --input` "
         "before copying those exact bytes to the designated return. Then run "
-        "`validate-return` and hand off exactly `assignment_id`, `return_sha256`, "
-        "and `status=\"final\"`.\n"
+        "`validate-return` and hand off exactly `assignment_id` and "
+        "`status=\"final\"`. `return_sha256` is optional legacy provenance; "
+        "canonical ingestion computes the binding hash itself.\n"
     )
     if len(rendered.encode("utf-8")) >= 4096:
         raise ValueError("static v4 worker prompt must be smaller than 4 KiB")

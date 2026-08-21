@@ -1,197 +1,76 @@
-Verify Chalxius 0.7.1 — Scoped Supervisor Bootstrap as one self-contained skill. Read SKILL.md
-and its directly applicable references completely, validate
-INHERITANCE.lock.json and MANIFEST.sha256, run scripts/self_test.py, the full
-unit suite, and scripts/aggressive_bug_audit.py. The aggressive mutation audit
-is release-time only and must not be added to normal Research, Pulse,
-computation, or Reader execution.
+Chalxius 0.8.6 — Bounded PHX Repair
 
-Confirm the 0.7.1 efficiency boundary: supervisor selection is static and
-failure-family informed; plain interpretive insight has no blanket proof gate;
-integration requires distinct primary scopes; new Research cards default to one
-Blackboard root node and zero writes; new V5 Pulse planning fails before state
-creation; and an exact current supervision card selects the manifest-bound
-compact supervisor bootstrap while production and non-supervision workers keep
-the ordinary full contract. Verify that conditional computation, source,
-attack-learning, CHX-repair, and unprojected assurance branches fail closed.
-Preserve explicit Blackboard promotion/writes, V4 and historical
-Pulse completion, Candidate fresh adverse, verifier, Certification, Gateway,
-Fact, exact runtime/card/return, abort, and lock-held final-write gates.
+This is a deployment and runtime-handoff guide. It is not mathematical
+evidence and has no Research, Candidate, Certification, Gateway, or Fact
+authority.
 
-For every Chalxius run started after the 0.4.1 activation boundary, start one
-task-scoped CHX architecture ledger before substantive work and close it
-immediately before final reporting. Store project-bound ledgers at
-PROJECT/chx-ledgers/ and projectless ledgers in private host state outside the
-skill. The project-local directory has no audit, certification, or truth
-authority. Record only problems caused or materially amplified by Chalxius
-architecture. Revisions 3–5 record every discovered mechanism first as a stable
-finding and reconcile it transactionally; revisions 4–5 preserve digest-bound
-successor lineage. Revision 5 additionally requires one prior full-tree
-reconnaissance receipt, exactly one reusable tactical repair per resolved issue,
-and a latest integrated repair covering all resolved issues with one derived
-mechanism registry plus coordination, risk, and regression evidence. Report qualifying entries when
-`report_required=true`; when it is false, say nothing. Do not backfill, reclassify, invalidate,
-or request rework from a task already underway under 0.4.0, even if that task
-later loads some 0.4.1-or-later bytes.
+## Normal global local installation
 
-Do not install, package, migrate, or cut over without separate explicit user
-authorization. Never start original Danus, pre-Chalxius Chalk, or the retired
-coordinator as a parallel runtime. Original Danus 0.2.9 and later versions are
-behavioral and performance references only; no source module, writer, receipt,
-review, runtime, or Fact authority is inherited.
+For an explicitly authorized ordinary host-global update, run:
 
-Before every authorized global cutover or rollback, use
-scripts/runtime_cutover.py with an explicit protected-project inventory (or the
-explicit no-project assertion), approved candidate manifest hash, rollback
-root, and host archive root. The gate must verify terminal status/audit, archive
-the prior runtime, swap, revalidate and archive the installed runtime, reuse the
-approved project-validation receipt rather than repeat semantic reconstruction,
-and automatically restore the prior install on failure.
-Historical archives
-are validation data only: never import or execute them, never use them for a
-worker or write, and never rewrite frozen cards or any graph-plane authority.
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B \
+  /absolute/path/to/candidate/scripts/local_install.py
+```
 
-Initialize new work as workflow-evidence V5. A V5 root starts with an empty
-Fact Graph. V4 projects and predecessor artifacts remain readable but have no
-V5 authority and must not be migrated in place or silently recertified.
+The installer validates the complete candidate manifest, runs the candidate
+self-test and the focused route/install regressions, archives the prior
+runtime, atomically replaces `~/.codex/skills/chalxius`, self-tests the
+installed copy, and retains one immediate rollback tree at
+`~/.codex/skill-rollbacks/chalxius-current`.
 
-Use auto unless the user explicitly chooses fast or deep. Mode switches affect
-future work units only and never change certification strength. In V5,
-profile-closure-status and profile-closure-record provide repair advice and
-append nontruth Research only; they are not a universal checklist, closure
-receipt, or admission authority. Activate Paper, novelty, campaigns,
-experiments, Pulse, or other optional capabilities only when useful to the
-bounded task.
+It performs zero project reads and zero project writes. Do not require a
+project audit, protected-project inventory, worker receipt, release matrix,
+full test suite, or mutation audit merely to install a routine local candidate.
+Use `--dry-run` when the same candidate validation is needed without changing
+the installed runtime.
 
-Deep increases applicable research depth; it does not make unchanged history
-subject to unconditional whole-project validation. Revalidate the necessity-
-derived changed target/predecessor/defeater/source/interface/writing/admission
-closure and reuse current content-addressed receipts for unchanged sealed state.
-Missing, stale, drifted, ambiguous, schema-changed, or forensic state falls back
-to full validation, and every new or invalidated atomic claim still receives
-fresh verification.
+If the post-swap self-test fails, the installer restores the prior runtime.
+Historical archives are validation data only: never import or execute them,
+never use them as a worker runtime, and never rewrite frozen cards or MathGraph
+nodes.
 
-Order the automatic V5 frontier with the compact four-factor model and project
-historical eight-metric Research without rewriting it. Scores are priority
-only, have no cutoff, and never make an explicit Research id unschedulable.
-Do not silently reconnect campaign filtering, repair-leaf collapse, or V4
-execution-profile feature activation without the user's separate decision.
-The user-approved 0.4.4 L1 connection may seed one exact task from a promoted
-Blackboard query with complete origin lineage. L2 accepts exact mode enums only
-and may apply a hint automatically only when its assurance/adverse signature
-equals the kind-derived default; explicit user mode wins.
+## Protected-project or forensic cutover
 
-Every worker task card must retain three communication planes: compact control,
-one frozen mathematical-state view, and bounded narrative. Bind exact Research,
-predecessor interfaces, Blackboard snapshot, capabilities, artifact limits,
-return path, and final-hash contract. Preflight a repairable draft, ingest only
-the exact worker-final SHA-256, and quarantine a malformed return locally.
-Main compiles task context, Operator governs and may explicitly override, and
-the dedicated Host role retains only its trusted dispatch/status/audit surface.
-Production Research never auto-appends a paired refute worker. A branch marked
-`independent_adverse_required` instead receives the later exact-Candidate
-adverse review before sealing; its result is nontruth Research, not a second
-verifier or truth gate.
-Explicit work-unit abort stops future managed return, experiment, Pulse
-commitment, and dispatch for that round while preserving accumulated evidence.
+Use `scripts/runtime_cutover.py` only when the user explicitly requests a
+protected-project or forensic deployment. That command retains its project
+inventory, exact validation receipt, and deeper evidence requirements. It is
+not the default global installation route.
 
-New V5 Pulse planning is retired; use the frozen production/supervision cycle.
-Retain V4 Pulse and status, audit, dispatch, close, void, or abort for an
-already-created record so historical work is not stranded. Pulse coordination
-cannot certify a Fact. Host dispatch must fail closed unless a trusted issuer
-and the exact fresh-context contract are bound.
+Publication, remote push, tagging, and merge require their own explicit user
+authorization. Installation alone does not authorize any of them.
 
-The only truth path is Research -> Candidate Release -> Certification Decision
--> Fact. A Candidate Release automatically binds all existing challenge,
-counterexample, and obstacle Research linked to its selected branch and must
-dispose each one. Do not add a second adverse-review layer to the truth path. Seal
-exact candidate bytes, source and computation artifacts, predecessor uses,
-Paper/Audit refs, proof-lineage contracts, and requested checks. A continuation-
-descended release also seals one content-addressed capsule over current status,
-changed closure, Paper/source/writing evidence, dispositions, and Candidate
-interfaces; stale or ambiguous state gets an observable full-validation fallback.
-Use the neutral V5 materializer and give a different fresh verifier only its
-allowlisted inputs and complete decision template. The verifier writes
-`output/review-draft.json`; only host-controlled `host/submit_review.py` may run
-the standalone preflight, quarantine invalid bytes, and atomically publish the
-immutable canonical review plus receipts. Gateway admission must
-revalidate the exact accepted decision; missing evidence leaves an explicit
-candidate or blocker in every reasoning mode.
+## Runtime and route boundaries
 
-For paper-led work, distinguish a research draft from an external finished
-publication. Decompose a draft into its full proposition-total Paper DAG,
-research and repair it nodewise, and publish one atomic target-total disposition
-batch. Philosophy alone preserves argumentative stance absent exact Operator
-authorization. Mathematics instead preserves the exact target, hypotheses,
-domains, and quantifiers while recording proof, disproof, obstruction, or typed
-weaker progress; a weaker result never closes the unchanged root. Then
-admit the complete mapped Candidate DAG before continuing from its Fact Graph.
-External finished publications remain Evidence until explicit bridge and fresh
-admission. Preserve source, reconstruction, Audit, Blackboard, Research, Fact,
-Reader, and Learning labels and correct graph mistakes copy-on-write.
+Ordinary graph work is governed by MathGraph hashes, dependencies, provenance,
+workflow stage, and owner boundaries. Runtime paths, archive locations, and
+obsolete receipt metadata are diagnostic provenance; they do not block valid
+graph reads or append-only nontruth work.
 
-Brave Future remains advisory BF-1 through BF-3 only. Under `auto` or `deep`, an
-ordinary user objective triggers exact goal intake without Campaign jargon: the
-public command creates or reuses one token-bound prospective root Research, but
-the BF transaction itself creates no Research. It may
-project strict repair lineage over the existing four-factor frontier and write
-one atomic nontruth reassessment transaction. It never reads ACTIVE, creates a
-round, dispatches, closes a Campaign, or affects Candidate,
-Certification, Gateway, Reader, Learner, or Fact. Reject plan_one and execute_one.
+`route_invalidations` names exact stale Research targets. The broad
+`related_research_ids` field may preserve source, contextual, or provenance
+links, but it is not an invalidation-transmission relation. A later semantic
+closure rule must be modeled and tested as a distinct explicit relation.
 
-Classify every discovered behavior orphan before release. Keep and integrate
-normal-flow authority with positive/predicate-false/tamper closure; keep manual,
-hosted, or compatibility surfaces only with an explicit bound; replace dormant
-duplicates through one named authoritative mechanism; retire obsolete owners.
-An import, registration, or test reference does not prove operational reachability.
+## Mathematical workflow boundary
 
-For load-bearing computation, retain immutable commands, implementations,
-versions, checkpoints, artifacts, exact output hashes, and independent replay.
-For a series product coefficient [t^p] product_i f_i, derive each factor's
-minimum retained order from p minus the other factor valuations and require a
-strictly deeper bound replay. A prose-only truncation certificate is
-insufficient.
+The only truth path is:
 
-For every actual current computation stage, also bind formula-to-code anchor,
-mathematical and iteration domains, object representation and multiplicity,
-approximation budget, output interpretation, and independent semantic checks.
-If adverse routing is enabled, queue the scoped future program-math refutation
-review only after successful ingestion with exact source/output artifacts.
-Ordinary challenges retain eight baseline rules. Never import CHX architecture
-issues into attack routing, and never activate a proposed route without the
-user's decision.
+`Research -> Candidate Release -> Certification Decision -> Fact`
 
-Generate or refresh PROJECT_BACKGROUND.md only after an explicit user
-instruction. Once that single Markdown summary exists, Reader retains its
-projection while a new task card freezes a complete exact-byte index and an
-immutable round-local source snapshot without embedding the body. Main/Operator
-may inspect current chunks; a worker needs its exact frozen task card. After
-context compaction, reread the card/index and retrieve exact chunks again. If
-the file is absent, continue without synthesizing it. It remains nontruth; every
-load-bearing use returns to the exact cited source.
+Production is constructive. Supervision is the later logical review subround;
+it may begin as soon as its own component is ready and need not wait for
+unrelated production. Candidate adverse review, an independent verifier,
+Certification, Gateway admission, and Fact admission retain their own
+mathematical-safety responsibilities. Administrative receipts are optional
+workflow markers, not a second truth path.
 
-Preserve Reader packet schema v1 and renderer revision 20. The deterministic V5
-projection may show Fact, Research, Certification, current and superseded
-Paper/Audit, Blackboard, and project-background objects with exact native
-authority labels. Only admitted Fact-plane nodes are premises. Export remains
-one fixed, offline, self-contained HTML file with no persistence, network,
-model call, watcher, sidecar, or graph writeback. V5 readable Fact summaries
-may humanize interface anchors and delimit only the bounded historical ASCII
-math grammar; formal/original text and hashes remain exact. Dragged cards remain
-anchors while only their bounded radial-memory neighborhood settles.
+For a current computation, bind formula-to-code, mathematical domain,
+representation, approximation/truncation convention, output interpretation,
+and an independent mathematical check. Do not allocate a computation merely to
+repeat an already available derivation.
 
-Activate Chalxius Learner only for explicit academic teaching or testing. It
-may read frozen Fact, Paper/Audit, and Blackboard snapshots but writes nontruth
-learning state only. Grill Me Code remains a separate explicit programming
-assistant with no research or graph authority.
-
-Before delivery, run project audit and mode-status on any exercised project,
-run the complete candidate validation set, refresh the final manifest only
-after all candidate bytes are frozen, and report candidate versus Fact-admitted
-claims precisely. Deliver the append-only architecture issue ledger alongside
-the candidate. Do not mark an architecture issue resolved without a
-reproducible regression; do not add ordinary host or mathematical mistakes that
-the architecture neither caused nor materially amplified.
-
-Optimize administrative scans, indices, hashes, and routine audits toward one
-to two minutes; a rare explained run may approach four. This is not a brittle
-wall-clock gate and never limits substantive research, proof, or computation.
+CHX records architecture-caused or architecture-amplified failures. PHX is
+advisory global route memory. Neither is Fact authority or a reason to block
+otherwise valid mathematical work. Prefer removing duplicate work and
+accidental coupling over adding another gate, cache, or lifecycle mechanism.
