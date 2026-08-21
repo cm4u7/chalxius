@@ -710,7 +710,31 @@ def _authorized_fact_graph_append_target(
     }
 
 
-def build_parser() -> argparse.ArgumentParser:
+def _explicit_help_role(argv: list[str]) -> str | None:
+    """Return the last explicit ``--role`` value without parsing commands."""
+
+    explicit_role: str | None = None
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token == "--role" and index + 1 < len(argv):
+            explicit_role = argv[index + 1]
+            index += 2
+            continue
+        if token.startswith("--role="):
+            explicit_role = token.partition("=")[2]
+        index += 1
+    return explicit_role
+
+
+def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
+    role_from_environment = os.environ.get("MGRAPH_ROLE")
+    projected_role = role_from_environment if help_role is None else help_role
+    if projected_role not in KNOWN_ROLES:
+        projected_role = None
+    projected_commands = (
+        allowed_commands(projected_role) if projected_role is not None else None
+    )
     parser = argparse.ArgumentParser(
         prog="mgraph",
         description=(
@@ -730,7 +754,6 @@ def build_parser() -> argparse.ArgumentParser:
             "PROJECT/host_adapter.json is used when present"
         ),
     )
-    role_from_environment = os.environ.get("MGRAPH_ROLE")
     parser.add_argument(
         "--role",
         default=role_from_environment,
@@ -740,7 +763,24 @@ def build_parser() -> argparse.ArgumentParser:
             "operator, main, host, worker, paper-auditor, verifier, or gateway"
         ),
     )
-    sub = parser.add_subparsers(dest="command", required=True)
+    subparser_options: dict[str, Any] = {
+        "dest": "command",
+        "required": True,
+    }
+    if projected_commands is not None:
+        if projected_commands:
+            subparser_options["metavar"] = (
+                "{" + ",".join(sorted(projected_commands)) + "}"
+            )
+            subparser_options["help"] = (
+                f"commands available to role {projected_role!r}"
+            )
+        else:
+            subparser_options["metavar"] = "<external-capsule-only>"
+            subparser_options["help"] = (
+                "no project-shell commands; external capsule only"
+            )
+    sub = parser.add_subparsers(**subparser_options)
 
     p = sub.add_parser("init")
     p.add_argument("--project-id", required=True)
@@ -1024,8 +1064,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("research_id")
     p.add_argument("--host-task-scope-id")
     p = sub.add_parser("prepare-candidate-adverse-target")
-    p.add_argument("production_research_id")
-    p.add_argument("--actor", default="v5-candidate-adverse-preparer")
+    p.add_argument("selected_research_id")
+    p.add_argument(
+        "--candidate-fact",
+        required=True,
+        help="project-relative path to Main-selected canonical Fact Markdown",
+    )
     p = sub.add_parser("plan-computation-execution")
     p.add_argument("source_round_id")
     p.add_argument("assignment_id")
@@ -1080,8 +1124,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("assignment_id")
     p.add_argument(
         "--worker-final-sha256",
-        required=True,
-        help="SHA-256 reported in the worker's explicit final handoff",
+        help=(
+            "Optional legacy SHA-256 assertion from the worker final handoff; "
+            "when omitted, ingestion derives the hash from canonical return bytes"
+        ),
     )
 
     p = sub.add_parser("attack-route-enable")
@@ -1622,11 +1668,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lint-receipt", required=True)
     p.add_argument("--adoption-binding", required=True)
 
+    if projected_commands is not None:
+        # argparse stores the displayed subcommand descriptions separately
+        # from its real parser choices.  Filter only that help projection;
+        # every registered parser remains available for the authorization
+        # check in main().
+        sub._choices_actions[:] = [
+            action
+            for action in sub._choices_actions
+            if action.dest in projected_commands
+        ]
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+    explicit_help_role = _explicit_help_role(effective_argv)
+    help_role = (
+        os.environ.get("MGRAPH_ROLE")
+        if explicit_help_role is None
+        else explicit_help_role
+    )
+    args = build_parser(help_role=help_role).parse_args(effective_argv)
     potential_bound_worker_query = (
         args.role == "worker"
         and args.command in V4_BOUND_WORKER_QUERY_COMMANDS
@@ -2199,8 +2263,9 @@ def main(argv: list[str] | None = None) -> int:
                 )
             _print_json(
                 store.v5_lifecycle().prepare_candidate_adverse_target(
-                    args.production_research_id,
-                    actor=args.actor,
+                    args.selected_research_id,
+                    candidate_fact_path=args.candidate_fact,
+                    actor="main",
                 )
             )
         elif args.command == "plan-computation-execution":

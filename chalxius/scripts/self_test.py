@@ -286,6 +286,29 @@ def main() -> int:
     inheritance_lock = json.loads(
         (skill_root / "INHERITANCE.lock.json").read_text(encoding="utf-8")
     )
+    release_version = inheritance_lock.get("version")
+    release_codename = inheritance_lock.get("release_codename")
+    release_display_name = inheritance_lock.get("release_display_name")
+    if (
+        not isinstance(release_version, str)
+        or release_version != current_skill_version
+        or not isinstance(release_codename, str)
+        or not release_codename.strip()
+        or release_display_name
+        != f"Chalxius {current_skill_version} — {release_codename}"
+    ):
+        raise RuntimeError(
+            "VERSION, INHERITANCE.lock.json version/codename, and release display "
+            "name must describe one current Chalxius release"
+        )
+    current_release_heading = f"# {release_display_name}"
+    current_traceability_marker = (
+        f"Candidate version: `{current_skill_version}`; release name "
+        f"**{release_codename}**."
+    )
+    current_portable_deployment_marker = (
+        f"The `{current_skill_version}` **{release_codename}** artifact"
+    )
     validate_release_audit_revision_bindings(skill_root)
     validate_public_disclosure_contract(skill_root)
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -341,12 +364,14 @@ def main() -> int:
         skill_root / "scripts" / "paperlib",
         skill_root / "scripts" / "paper_library.py",
         skill_root / "scripts" / "archive_runtime.py",
+        skill_root / "scripts" / "local_install.py",
         skill_root / "scripts" / "runtime_cutover.py",
         skill_root / "scripts" / "runtime_cutover_project_validation.py",
         skill_root / "scripts" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_reliability.py",
         skill_root / "scripts" / "mathgraph" / "runtime_archive.py",
+        skill_root / "scripts" / "mathgraph" / "local_install.py",
         skill_root / "scripts" / "mathgraph" / "runtime_cutover.py",
     )
     policy_texts = {
@@ -358,9 +383,11 @@ def main() -> int:
     identity_requirements = {
         "SKILL.md": (
             "name: chalxius",
-            "# Chalxius 0.8.0 — MathGraph First",
+            current_release_heading,
             "Future releases do not owe runtime or procedural forward compatibility.",
             "Mathematical-safety and Fact-authority",
+            "Candidate-level fresh-adverse review is scoped to the explicitly selected",
+            "Historical `related_research_ids` may",
             "Start through the smallest applicable contract",
             "references/v5_production_worker_bootstrap.md",
             "references/v5_supervisor_worker_bootstrap.md",
@@ -377,6 +404,7 @@ def main() -> int:
             "fresh Candidate-level adverse gate",
             "Chalxius Learner only when the user explicitly asks",
             "Grill Me Code",
+            "scripts/local_install.py",
             "explicit publication request includes merging the corresponding reviewed change into `main` by default",
         ),
         "agents/openai.yaml": (
@@ -386,8 +414,8 @@ def main() -> int:
         ),
         "INHERITANCE.lock.json": (
             '"skill_name": "chalxius"',
-            '"version": "0.8.0"',
-            '"release_codename": "MathGraph First"',
+            f'"version": "{current_skill_version}"',
+            f'"release_codename": "{release_codename}"',
             '"authority": "cross_project_nontruth_sidecar"',
             '"library_runtime": "bundled_native_local_cli"',
             '"library_cli": "scripts/paperlib"',
@@ -458,7 +486,7 @@ def main() -> int:
             '"active_fact_validation_reentry": "command_local_provisional_release_marker_fact_projection_followed_by_complete_outer_validation_and_exact_agreement"',
             '"fact_admission_inspection_reuse": "one_ephemeral_complete_context_before_publication_lock_and_one_distinct_fresh_context_under_lock"',
             '"fact_admission_lock_boundary": "no_authority_cache_crosses_lock_with_fresh_lock_held_history_and_lineage_replay"',
-            '"contract_revision": "chalxius-v5-candidate-admission-efficiency-6"',
+            '"contract_revision": "chalxius-v5-candidate-admission-efficiency-7"',
             '"contract_revision": "chalxius-v5-selective-fact-checkpoint-2"',
             '"batch_seed_revision": "chalxius-v5-candidate-batch-seed-3"',
             '"candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact"',
@@ -618,6 +646,9 @@ def main() -> int:
             "`$chalxius`, not through standalone `$grill-me`",
         ),
         "references/v5_release_traceability.md": (
+            current_traceability_marker,
+            "0.8.2 explicit-route-boundaries release overlay",
+            "scripts/local_install.py",
             "0.8.0 mathgraph-first release overlay",
             "0.7.15 research-obligation-closure release overlay",
             "0.7.14 bounded-handoff local-install overlay",
@@ -717,6 +748,9 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
+            current_portable_deployment_marker,
+            "0.8.2 Explicit Route Boundaries",
+            "scripts/local_install.py",
             "0.8.0",
             "MathGraph First",
             "0.7.15",
@@ -745,6 +779,17 @@ def main() -> int:
             "--archive-root",
             "--expected-runtime-identity",
             "read_json_file_nofollow",
+        ),
+        "scripts/local_install.py": (
+            "Install this Chalxius candidate globally through the default fast path.",
+            "perform_local_install",
+            "--dry-run",
+        ),
+        "scripts/mathgraph/local_install.py": (
+            'LOCAL_INSTALL_CONTRACT_REVISION = "chalxius-global-local-install-1"',
+            "It never reads or mutates a project.",
+            "direct rollback root must remain outside skill discovery",
+            "local install failed and the prior installation was restored",
         ),
         "scripts/mathgraph/runtime_archive.py": (
             'RUNTIME_ARCHIVE_REVISION = "chalxius-runtime-archive-2"',
@@ -1763,21 +1808,18 @@ def main() -> int:
             "paper_logic_mirror",
         ),
         "assets/DEPLOY_PROMPT.txt": (
-            "workflow-evidence V5",
-            "starts with an empty",
-            "three communication planes",
-            "quarantine a malformed return locally",
-            "New V5 Pulse planning is retired",
-            "Research -> Candidate Release -> Certification Decision",
-            "Do not add a second adverse-review layer",
-            "factor valuations",
-            "release-time only",
-            "PROJECT_BACKGROUND.md",
-            "only after an explicit user",
-            "complete exact-byte index",
-            "profile-closure-status",
-            "repair advice",
-            "later loads some 0.4.1-or-later bytes",
+            f"Chalxius {current_skill_version} — {release_codename}",
+            "Normal global local installation",
+            "zero project reads and zero project writes",
+            "scripts/runtime_cutover.py",
+            "Publication, remote push, tagging, and merge",
+            "`route_invalidations` names exact stale Research targets",
+            "Research -> Candidate Release -> Certification Decision -> Fact",
+            "Production is constructive.",
+            "independent verifier",
+            "Administrative receipts are optional",
+            "formula-to-code",
+            "advisory global route memory",
         ),
         "references/reasoning_modes.md": (
             "future-only switch",
@@ -2625,10 +2667,13 @@ def main() -> int:
             v4_store,
             v4_manifest["round_id"],
             v4_assignment["assignment_id"],
-            worker_final_sha256=v4_validated["return_sha256"],
         )
         if (
             v4_receipt.get("schema_version") != 4
+            or v4_receipt.get("return_sha256")
+            != v4_preflight["return_sha256"]
+            or v4_receipt.get("worker_final_sha256")
+            != v4_preflight["return_sha256"]
             or evidence_node["node_id"] not in v4_store.blackboard().nodes()
             or v4_store.fact_ids()
         ):

@@ -468,7 +468,7 @@ class CollaborationPulseAbortTests(unittest.TestCase):
     def test_cli_ingest_failure_records_abort_without_deadlock(
         self,
     ) -> None:
-        _, final_sha256 = self._write_graph_preflight_failure()
+        self._write_graph_preflight_failure()
         assignment = self.round["assignments"][0]
         stdout = StringIO()
         stderr = StringIO()
@@ -482,8 +482,6 @@ class CollaborationPulseAbortTests(unittest.TestCase):
                     "ingest-return",
                     self.round["round_id"],
                     assignment["assignment_id"],
-                    "--worker-final-sha256",
-                    final_sha256,
                 ]
             )
         self.assertEqual(code, 2)

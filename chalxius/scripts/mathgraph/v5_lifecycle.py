@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import json
 import os
 import re
@@ -125,6 +126,14 @@ V5_WORKFLOW_EVIDENCE_VERSION = 5
 V5_POLICY_REVISION = "chalxius-v5-minimal-core-2"
 V5_TERMINAL_SEAL_REVISION = "chalxius-v5-terminal-worker-seal-2"
 V5_WRITER_LEASE_REVISION = "chalxius-v5-assignment-writer-lease-1"
+# This marker is deliberately outside the terminal seal.  It records the
+# nontruth worker-lifecycle projection produced after the immutable terminal
+# bundle has been published; it never participates in Research, Candidate, or
+# Fact authority.  The route is the existing PHX-001 robust-lifecycle lesson
+# (qualified route run-20260809T131409541618Z-e6ec115394d1/PHX-001, lookup
+# receipt search-0be33afd4cb098325d66c3af5327fba62b384f46b720596166220c247d83d241),
+# constrained by PHX-005 owner-boundary preservation (same run/PHX-005).
+V5_TERMINALIZED_LEASE_REVISION = "chalxius-v5-terminalized-lease-1"
 V5_REPAIR_INPUT_CAPABILITY_REVISION = (
     "chalxius-v5-repair-input-capabilities-1"
 )
@@ -144,7 +153,16 @@ V5_CERTIFICATION_REPAIR_OUTBOX_REVISION = (
 )
 V5_CERTIFICATION_REPAIR_ACTOR = "certification-gateway"
 V5_FRESH_ADVERSE_READINESS_REVISION = (
+    "chalxius-candidate-fresh-adverse-readiness-2"
+)
+V5_FRESH_ADVERSE_READINESS_LEGACY_REVISION = (
     "chalxius-candidate-fresh-adverse-readiness-1"
+)
+V5_FRESH_ADVERSE_READINESS_REVISIONS = frozenset(
+    {
+        V5_FRESH_ADVERSE_READINESS_LEGACY_REVISION,
+        V5_FRESH_ADVERSE_READINESS_REVISION,
+    }
 )
 V5_SELECTIVE_FACT_CHECKPOINT_REVISION = (
     "chalxius-v5-selective-fact-checkpoint-2"
@@ -570,6 +588,15 @@ class TerminalIngestSnapshot:
 
 class _WorkerFinalHashMismatch(ValueError):
     """A caller hash mismatch is not authenticated failure evidence."""
+
+
+class _CanonicalSourceNotVisible(ValueError):
+    """A canonical worker source was not stably visible for one snapshot.
+
+    This is an ephemeral read classification, not a weaker validator or a
+    persistent workflow state.  Unsafe file types, symlinks, malformed bytes,
+    and content/hash failures continue through the ordinary quarantine path.
+    """
 
 
 @dataclass(slots=True)
@@ -2039,31 +2066,91 @@ class V5LifecycleManager:
                     raise ValueError(
                         f"structured source-evidence item {index} is invalid"
                     )
-                source_path = source_item.get("artifact_path")
-                source_sha = source_item.get("artifact_sha256")
                 source_key = source_item.get("source_key")
-                if (
-                    not isinstance(source_path, str)
-                    or not source_path
-                    or not isinstance(source_key, str)
-                    or not source_key
-                    or not isinstance(source_sha, str)
-                    or SHA256_RE.fullmatch(source_sha) is None
-                ):
+                if not isinstance(source_key, str) or not source_key:
                     raise ValueError(
                         f"structured source-evidence item {index} lacks exact source key/path/hash"
                     )
-                source_file = self._lexical_contained_path(
-                    source_path, "structured source-evidence source artifact"
-                )
-                source_raw = self._read_regular_bytes_once(
-                    source_file,
-                    label="structured source-evidence source artifact",
-                    containment_root=self.store.root,
-                )
-                if sha256_bytes(source_raw) != source_sha:
+
+                # Older frozen cards use ``path``/``sha256`` or the explicit
+                # ``card_authorized_path``/``returned_copy_path`` pair.  These
+                # spellings carry the same capability when their bytes agree;
+                # normalize them at the read boundary instead of forcing a
+                # historical-card rewrite.  A locator without a concrete file
+                # remains deliberately non-authorizing.
+                hash_values: list[tuple[str, str]] = []
+                for hash_field in ("artifact_sha256", "sha256"):
+                    hash_value = source_item.get(hash_field)
+                    if hash_value is None:
+                        continue
+                    if (
+                        not isinstance(hash_value, str)
+                        or SHA256_RE.fullmatch(hash_value) is None
+                    ):
+                        raise ValueError(
+                            f"structured source-evidence item {index} has invalid source hash"
+                        )
+                    hash_values.append((hash_field, hash_value))
+                if not hash_values:
+                    # A locator-only entry is navigation metadata, not a
+                    # capability.  It must not block concrete bytes declared
+                    # elsewhere on the frozen card.
+                    continue
+                if len({value for _, value in hash_values}) != 1:
                     raise ValueError(
-                        "structured source-evidence source artifact bytes/hash mismatch"
+                        f"structured source-evidence item {index} lacks exact source key/path/hash"
+                    )
+                source_sha = hash_values[0][1]
+
+                path_fields = (
+                    "returned_copy_path",
+                    "artifact_path",
+                    "path",
+                    "card_authorized_path",
+                )
+                declared_paths: list[tuple[str, str]] = []
+                for path_field in path_fields:
+                    path_value = source_item.get(path_field)
+                    if path_value is None:
+                        continue
+                    if not isinstance(path_value, str) or not path_value:
+                        raise ValueError(
+                            f"structured source-evidence item {index} has invalid source path"
+                        )
+                    declared_paths.append((path_field, path_value))
+                if not declared_paths:
+                    # A valid digest paired only with a locator is still
+                    # non-authorizing metadata; concrete card artifacts remain
+                    # the authority for worker reads.
+                    continue
+
+                # Validate every declared spelling.  This prevents a stale
+                # returned copy or card path from silently shadowing the
+                # selected deterministic path.
+                for _, source_path_value in declared_paths:
+                    source_file = self._lexical_contained_path(
+                        source_path_value,
+                        "structured source-evidence source artifact",
+                    )
+                    source_raw = self._read_regular_bytes_once(
+                        source_file,
+                        label="structured source-evidence source artifact",
+                        containment_root=self.store.root,
+                    )
+                    if sha256_bytes(source_raw) != source_sha:
+                        raise ValueError(
+                            "structured source-evidence source artifact bytes/hash mismatch"
+                        )
+
+                source_path = next(
+                    path_value
+                    for field in path_fields
+                    for declared_field, path_value in declared_paths
+                    if declared_field == field
+                )
+                if not source_path:
+                    raise ValueError(
+                        f"structured source-evidence item {index} lacks exact source key/path/hash"
                     )
                 key = (source_path, source_sha)
                 if key in seen:
@@ -5515,53 +5602,90 @@ class V5LifecycleManager:
     ) -> list[dict[str, Any]]:
         """Include linked adverse work without creating another review layer.
 
-        A release author chooses its constructive Research anchors.  Their
-        ancestor chain identifies the research branch.  Every adverse record
-        that directly targets that branch is then bound automatically, so an
-        existing challenge cannot be hidden by omitting its id from the input.
-        Unrelated project-wide challenges remain outside the release.
+        A release author chooses its constructive Research anchors.  Every
+        adverse record that directly targets an anchor, or an already-bound
+        adverse record, is then bound automatically, so an existing challenge
+        cannot be hidden by omitting its id from the input.
+
+        Generic ``related_research_ids`` on a constructive result are not an
+        ancestry relation.  They may point to planning, repair, or source-
+        capability records whose own related ids span old project history.
+        Walking those edges backwards would turn a local Candidate into a
+        project-wide administrative closure.  Mathematical provenance remains
+        available through the selected Research artifacts and metadata.
         """
 
-        records = {
-            item["research_id"]: item
-            for item in self.research_records(
-                _inspection_context=_inspection_context,
-            )
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        selected_records = {
+            item["research_id"]: item for item in explicit_records
         }
-        selected = {item["research_id"] for item in explicit_records}
-        branch = set(selected)
-        pending = list(selected)
-        while pending:
-            current = records[pending.pop()]
-            for related_id in current["related_research_ids"]:
-                if related_id not in branch:
-                    branch.add(related_id)
-                    pending.append(related_id)
+        branch = set(selected_records)
+        raw_inventory: list[tuple[Path, bytes]] = []
+        if self.research_entries_dir.exists():
+            for path in sorted(self.research_entries_dir.glob("*.json")):
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("research ledger contains an unsafe entry")
+                if path.stem in selected_records:
+                    continue
+                raw_inventory.append(
+                    (
+                        path,
+                        self._read_regular_bytes_once(
+                            path,
+                            label="Candidate Research ledger entry",
+                        ),
+                    )
+                )
+        loaded: dict[str, dict[str, Any]] = {}
 
         adverse_kinds = {"challenge", "counterexample", "obstacle"}
         changed = True
         while changed:
             changed = False
-            for research_id, record in records.items():
+            branch_tokens = [item.encode("ascii") for item in branch]
+            for path, raw in raw_inventory:
+                research_id = path.stem
+                if research_id in branch or not any(
+                    token in raw for token in branch_tokens
+                ):
+                    continue
+                record = loaded.get(research_id)
+                if record is None:
+                    record = self._inspection_research_record(
+                        research_id,
+                        inspection,
+                    )
+                    loaded[research_id] = record
                 if (
                     record["kind"] not in adverse_kinds
                     and not self._research_is_adverse_assignment(record)
-                ) or research_id in selected:
-                    continue
-                if research_id in branch or set(record["related_research_ids"]).intersection(
-                    branch
                 ):
-                    selected.add(research_id)
+                    continue
+                if not set(record["related_research_ids"]).intersection(branch):
+                    continue
+                # The planner's challenge is an administrative bridge to the
+                # actual supervisor return, not adverse mathematical work.
+                # Keep its id as a transient link so the return can be found,
+                # but do not make the planner task itself (or its historical
+                # input package) part of the release.
+                if (
+                    record.get("actor") == "v5-research-supervisor-planner"
+                    and not self._research_is_adverse_assignment(record)
+                ):
                     branch.add(research_id)
-                    pending = list(record["related_research_ids"])
-                    while pending:
-                        related_id = pending.pop()
-                        if related_id in branch:
-                            continue
-                        branch.add(related_id)
-                        pending.extend(records[related_id]["related_research_ids"])
                     changed = True
-        return [records[research_id] for research_id in sorted(selected)]
+                    continue
+                selected_records[research_id] = record
+                branch.add(research_id)
+                changed = True
+        return [
+            selected_records[research_id]
+            for research_id in sorted(selected_records)
+        ]
 
     def _required_supervision_results_for_candidate(
         self,
@@ -5584,7 +5708,9 @@ class V5LifecycleManager:
             create=True,
         )
         assert inspection is not None
-        supervision_manifests: list[tuple[Path, dict[str, Any]]] | None = None
+        supervision_manifests: dict[
+            str, list[tuple[Path, dict[str, Any]]]
+        ] = {}
 
         checked_components: set[tuple[str, str | None]] = set()
         for record in explicit_records:
@@ -5609,13 +5735,22 @@ class V5LifecycleManager:
                 != "production"
             ):
                 continue
-            if supervision_manifests is None:
-                supervision_manifests = []
+            if production_round_id not in supervision_manifests:
+                matching_manifests: list[tuple[Path, dict[str, Any]]] = []
                 if self.store.rounds_dir.exists():
                     for candidate_dir in sorted(
                         self.store.rounds_dir.glob("round-*")
                     ):
                         if candidate_dir.is_symlink() or not candidate_dir.is_dir():
+                            continue
+                        manifest_path = candidate_dir / "round.json"
+                        if manifest_path.is_symlink() or not manifest_path.is_file():
+                            raise ValueError("round ledger contains an unsafe manifest")
+                        raw_manifest = self._read_regular_bytes_once(
+                            manifest_path,
+                            label="Research supervision round manifest",
+                        )
+                        if production_round_id.encode("ascii") not in raw_manifest:
                             continue
                         round_dir, manifest = self._round_manifest(
                             candidate_dir.name,
@@ -5630,7 +5765,8 @@ class V5LifecycleManager:
                             )
                             is None
                         ):
-                            supervision_manifests.append((round_dir, manifest))
+                            matching_manifests.append((round_dir, manifest))
+                supervision_manifests[production_round_id] = matching_manifests
             assignment_matches = [
                 assignment
                 for assignment in production_manifest["assignments"]
@@ -5686,7 +5822,7 @@ class V5LifecycleManager:
                 matching_results: list[str] = []
                 pending_rounds: list[str] = []
                 for supervision_round_dir, supervision_manifest in (
-                    supervision_manifests or []
+                    supervision_manifests.get(production_round_id, [])
                 ):
                     cycle = supervision_manifest["research_cycle"]
                     if (
@@ -5754,13 +5890,12 @@ class V5LifecycleManager:
         """Project explicit route invalidations without rewriting Research.
 
         A current-contract adverse/dead-end Research entry may invalidate exact
-        earlier Research ids.  Staleness propagates forward through every path
-        that still reaches the invalidated target, but the exact invalidator and
-        a later copy-on-write repair of that target are path barriers.  This
-        keeps ordinary descendants of the bad route stale while allowing work
-        about the invalidation or its repair to proceed without pretending that
-        the old target became valid.  Historical bytes and statuses are never
-        rewritten.
+        earlier Research ids.  The field is an explicit invalidation list, not
+        a dependency edge.  In particular, ``related_research_ids`` is a
+        general provenance/context relation and must never make a later route
+        stale by transitive inference.  A future semantic invalidation edge may
+        define its own transmission rule; it must not reuse this broad relation.
+        Historical bytes and statuses are never rewritten.
         """
 
         invalidations: list[tuple[str, str, str]] = []
@@ -5774,43 +5909,9 @@ class V5LifecycleManager:
                         (target_id, invalidator_id, record["created_at"])
                     )
 
-        children_by_parent: dict[str, set[str]] = {
-            research_id: set() for research_id in records
-        }
-        for child_id, record in records.items():
-            for parent_id in record["related_research_ids"]:
-                if parent_id in children_by_parent:
-                    children_by_parent[parent_id].add(child_id)
-        invalidator_barriers_by_target: dict[str, set[str]] = {}
-        for target_id, invalidator_id, _ in invalidations:
-            invalidator_barriers_by_target.setdefault(target_id, set()).add(
-                invalidator_id
-            )
         stale: dict[str, list[str]] = {}
-        for target_id, invalidator_id, invalidated_at in invalidations:
-            pending = [target_id]
-            seen: set[str] = set()
-            while pending:
-                research_id = pending.pop()
-                if (
-                    research_id in seen
-                    or research_id in invalidator_barriers_by_target[target_id]
-                ):
-                    continue
-                candidate = records[research_id]
-                repaired = (
-                    candidate["kind"] == "repair"
-                    and candidate["created_at"] > invalidated_at
-                    and candidate.get("metadata", {}).get(
-                        "repair_of_research_id"
-                    )
-                    == target_id
-                )
-                if repaired:
-                    continue
-                seen.add(research_id)
-                stale.setdefault(research_id, []).append(invalidator_id)
-                pending.extend(sorted(children_by_parent[research_id], reverse=True))
+        for target_id, invalidator_id, _invalidated_at in invalidations:
+            stale.setdefault(target_id, []).append(invalidator_id)
         return {
             research_id: sorted(dict.fromkeys(invalidator_ids))
             for research_id, invalidator_ids in stale.items()
@@ -7174,10 +7275,33 @@ class V5LifecycleManager:
         label: str,
         containment_root: Path | None = None,
         require_single_link: bool = False,
+        retryable_visibility: bool = False,
     ) -> bytes:
         """Read one stable regular-file snapshot through a no-follow descriptor."""
         descriptor = -1
         directory_descriptors: list[int] = []
+        transient_errnos = {errno.ENOENT}
+        if hasattr(errno, "ESTALE"):
+            transient_errnos.add(errno.ESTALE)
+
+        def read_error(message: str, exc: BaseException) -> ValueError:
+            if (
+                retryable_visibility
+                and isinstance(exc, OSError)
+                and exc.errno in transient_errnos
+            ):
+                return _CanonicalSourceNotVisible(
+                    f"{label} is not stably visible; retry ingest-return"
+                )
+            return ValueError(message)
+
+        def changed_error(message: str) -> ValueError:
+            if retryable_visibility:
+                return _CanonicalSourceNotVisible(
+                    f"{label} changed during its snapshot; retry ingest-return"
+                )
+            return ValueError(message)
+
         try:
             flags = os.O_RDONLY
             if hasattr(os, "O_CLOEXEC"):
@@ -7203,8 +7327,8 @@ class V5LifecycleManager:
                 try:
                     root_descriptor = os.open(containment_root, directory_flags)
                 except (OSError, TypeError) as exc:
-                    raise ValueError(
-                        f"{label} root is missing or unsafe"
+                    raise read_error(
+                        f"{label} root is missing or unsafe", exc
                     ) from exc
                 directory_descriptors.append(root_descriptor)
                 root_stat = os.fstat(root_descriptor)
@@ -7219,8 +7343,8 @@ class V5LifecycleManager:
                             dir_fd=parent_descriptor,
                         )
                     except (OSError, TypeError) as exc:
-                        raise ValueError(
-                            f"{label} parent is missing or unsafe"
+                        raise read_error(
+                            f"{label} parent is missing or unsafe", exc
                         ) from exc
                     directory_descriptors.append(next_descriptor)
                     component = os.fstat(next_descriptor)
@@ -7237,7 +7361,9 @@ class V5LifecycleManager:
                         dir_fd=parent_descriptor,
                     )
                 except (OSError, TypeError) as exc:
-                    raise ValueError(f"{label} is missing or unsafe") from exc
+                    raise read_error(
+                        f"{label} is missing or unsafe", exc
+                    ) from exc
                 opened = os.fstat(descriptor)
                 if opened.st_dev != root_stat.st_dev:
                     raise ValueError(f"{label} crosses a device boundary")
@@ -7245,7 +7371,9 @@ class V5LifecycleManager:
                 try:
                     before = path.lstat()
                 except OSError as exc:
-                    raise ValueError(f"{label} is missing or unsafe") from exc
+                    raise read_error(
+                        f"{label} is missing or unsafe", exc
+                    ) from exc
                 if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(
                     before.st_mode
                 ):
@@ -7255,20 +7383,22 @@ class V5LifecycleManager:
                 try:
                     descriptor = os.open(path, flags)
                 except OSError as exc:
-                    raise ValueError(f"{label} is missing or unsafe") from exc
+                    raise read_error(
+                        f"{label} is missing or unsafe", exc
+                    ) from exc
                 opened = os.fstat(descriptor)
                 if (
                     opened.st_dev != before.st_dev
                     or opened.st_ino != before.st_ino
                 ):
-                    raise ValueError(f"{label} changed before snapshot")
+                    raise changed_error(f"{label} changed before snapshot")
 
             opened = os.fstat(descriptor)
             if (
                 not stat.S_ISREG(opened.st_mode)
                 or (require_single_link and opened.st_nlink != 1)
             ):
-                raise ValueError(f"{label} changed before snapshot")
+                raise changed_error(f"{label} changed before snapshot")
             chunks: list[bytes] = []
             while True:
                 chunk = os.read(descriptor, 1024 * 1024)
@@ -7284,7 +7414,7 @@ class V5LifecycleManager:
                 or after.st_ctime_ns != opened.st_ctime_ns
                 or (require_single_link and after.st_nlink != 1)
             ):
-                raise ValueError(f"{label} changed while snapshotting")
+                raise changed_error(f"{label} changed while snapshotting")
             return b"".join(chunks)
         finally:
             if descriptor >= 0:
@@ -7677,6 +7807,589 @@ class V5LifecycleManager:
             except (OSError, ValueError):
                 diagnostics.add(f"{label}:missing_or_unstable")
         return sorted(diagnostics)
+
+    def _terminalized_root(self, round_dir: Path) -> Path:
+        """Return the nontruth worker-terminalization projection root.
+
+        This root is intentionally a sibling of ``terminal/<assignment>``.
+        The terminal seal keeps its exact file-set contract, while this
+        separate marker/detached tree records the operational copy-on-write
+        transition.  Nothing below this root is a Research or graph authority.
+        """
+
+        return round_dir / "terminalized"
+
+    def _terminalized_marker_path(
+        self,
+        round_dir: Path,
+        assignment_id: str,
+    ) -> Path:
+        return (
+            self._terminalized_root(round_dir)
+            / f"{validate_assignment_id(assignment_id)}.json"
+        )
+
+    def _terminalized_detached_paths(
+        self,
+        round_dir: Path,
+        assignment: dict[str, Any],
+    ) -> dict[str, Path]:
+        """Derive deterministic detached worker paths for COW retries.
+
+        The writer lease suffix makes a stale path from a different assignment
+        impossible to silently reuse.  A deterministic name (rather than a
+        timestamp) lets a retry recover after a process dies between the
+        atomic detach and canonical replacement.
+        """
+
+        assignment_id = validate_assignment_id(assignment["assignment_id"])
+        lease = assignment.get("writer_lease_id")
+        if (
+            not isinstance(lease, str)
+            or not lease.startswith("writer-lease-")
+            or SHA256_RE.fullmatch(lease.removeprefix("writer-lease-")) is None
+        ):
+            raise ValueError("terminalized worker lease is invalid")
+        suffix = lease.removeprefix("writer-lease-")[:16]
+        base = self._terminalized_root(round_dir) / "detached" / assignment_id
+        return {
+            "return": base / f"return-{suffix}.json",
+            "artifacts": base / f"artifacts-{suffix}",
+            "work": base / f"work-{suffix}",
+        }
+
+    @staticmethod
+    def _terminalized_semantic(
+        *,
+        project_id: str,
+        round_id: str,
+        assignment: dict[str, Any],
+        seal: dict[str, Any],
+        detached_paths: dict[str, Path],
+        project_root: Path,
+    ) -> dict[str, Any]:
+        """Build the exact nontruth lease-marker semantic payload."""
+
+        source_paths = {
+            "return": assignment["return_relpath"],
+            "artifacts": assignment["artifact_dir_relpath"],
+            "work": assignment["work_dir_relpath"],
+        }
+        detached = {
+            key: value.relative_to(project_root).as_posix()
+            for key, value in detached_paths.items()
+        }
+        return {
+            "schema_version": 1,
+            "policy_revision": V5_POLICY_REVISION,
+            "terminalized_lease_revision": V5_TERMINALIZED_LEASE_REVISION,
+            "project_id": project_id,
+            "round_id": round_id,
+            "assignment_id": assignment["assignment_id"],
+            "writer_lease_id": assignment["writer_lease_id"],
+            "terminal_seal_sha256": seal["seal_sha256"],
+            "source_paths": source_paths,
+            "detached_paths": detached,
+            # PHX is advisory only; these fields make that boundary explicit
+            # in the marker itself and are not consumed by Research admission.
+            "truth_effect": "none",
+            "project_effect": "none",
+        }
+
+    def _validate_terminalized_canonical_paths(
+        self,
+        *,
+        assignment: dict[str, Any],
+        seal: dict[str, Any],
+    ) -> None:
+        """Check the COW successor paths without trusting them as authority."""
+
+        return_path = self._lexical_contained_path(
+            assignment["return_relpath"],
+            "terminalized canonical return",
+        )
+        try:
+            return_stat = return_path.lstat()
+        except OSError as exc:
+            raise ValueError("terminalized canonical return is missing") from exc
+        if (
+            stat.S_ISLNK(return_stat.st_mode)
+            or not stat.S_ISREG(return_stat.st_mode)
+            or return_stat.st_nlink != 1
+            or stat.S_IMODE(return_stat.st_mode) & 0o222
+        ):
+            raise ValueError("terminalized canonical return is writable or unsafe")
+        return_bytes = self._read_regular_bytes_once(
+            return_path,
+            label="terminalized canonical return",
+            containment_root=self.store.root,
+            require_single_link=True,
+        )
+        if sha256_bytes(return_bytes) != seal["source_return_sha256"]:
+            raise ValueError("terminalized canonical return bytes drifted")
+
+        artifact_root = self._lexical_contained_path(
+            assignment["artifact_dir_relpath"],
+            "terminalized canonical artifact root",
+        )
+        try:
+            artifact_root_stat = artifact_root.lstat()
+        except OSError as exc:
+            raise ValueError("terminalized canonical artifact root is missing") from exc
+        if stat.S_ISLNK(artifact_root_stat.st_mode) or not stat.S_ISDIR(
+            artifact_root_stat.st_mode
+        ):
+            raise ValueError("terminalized canonical artifact root is unsafe")
+        artifact_inventory = self._validate_readonly_tree(artifact_root)
+        expected_artifacts: dict[str, dict[str, Any]] = {}
+        artifact_base = Path(assignment["artifact_dir_relpath"])
+        for item in seal["artifacts"]:
+            source = Path(item["source_path"])
+            try:
+                relative = source.relative_to(artifact_base).as_posix()
+            except ValueError as exc:
+                raise ValueError(
+                    "terminalized source artifact escaped its assignment root"
+                ) from exc
+            expected_artifacts[relative] = item
+        actual_artifacts = {
+            path.relative_to(artifact_root).as_posix()
+            for path, item in artifact_inventory
+            if stat.S_ISREG(item.st_mode)
+        }
+        if actual_artifacts != set(expected_artifacts):
+            raise ValueError("terminalized canonical artifact file set drifted")
+        for relative, item in expected_artifacts.items():
+            path = artifact_root / relative
+            raw = self._read_regular_bytes_once(
+                path,
+                label="terminalized canonical artifact",
+                containment_root=artifact_root,
+                require_single_link=True,
+            )
+            if sha256_bytes(raw) != item["sha256"]:
+                raise ValueError("terminalized canonical artifact bytes drifted")
+
+        work_root = self._lexical_contained_path(
+            assignment["work_dir_relpath"],
+            "terminalized canonical work root",
+        )
+        try:
+            work_stat = work_root.lstat()
+        except OSError as exc:
+            raise ValueError("terminalized canonical work root is missing") from exc
+        if stat.S_ISLNK(work_stat.st_mode) or not stat.S_ISDIR(work_stat.st_mode):
+            raise ValueError("terminalized canonical work root is unsafe")
+        work_inventory = self._validate_readonly_tree(work_root)
+        # The COW successor deliberately has no mutable draft bytes.  The
+        # detached tree remains available as nontruth recovery evidence.
+        if any(stat.S_ISREG(item.st_mode) for _, item in work_inventory):
+            raise ValueError("terminalized canonical work root is not empty")
+
+    def _validate_terminalized_lease_marker(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+        seal: dict[str, Any],
+        required: bool = False,
+    ) -> dict[str, Any] | None:
+        """Validate an optional nontruth terminalized lease marker.
+
+        Absence is accepted for pre-COW cards and already-installed rounds.
+        If present, the marker is checked strongly enough to make lifecycle
+        recovery deterministic, but it never becomes a Research/Candidate/Fact
+        gate (PHX-005 owner-boundary rule).
+        """
+
+        marker_path = self._terminalized_marker_path(
+            round_dir, assignment["assignment_id"]
+        )
+        if not os.path.lexists(marker_path):
+            if required:
+                raise ValueError("terminalized worker lease marker is missing")
+            return None
+        if marker_path.is_symlink() or not marker_path.is_file():
+            raise ValueError("terminalized worker lease marker is unsafe")
+        marker_stat = marker_path.lstat()
+        if marker_stat.st_nlink != 1 or stat.S_IMODE(marker_stat.st_mode) & 0o222:
+            raise ValueError("terminalized worker lease marker is writable or unsafe")
+        raw = self._read_regular_bytes_once(
+            marker_path,
+            label="terminalized worker lease marker",
+            containment_root=self.store.root,
+            require_single_link=True,
+        )
+        try:
+            marker = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("terminalized worker lease marker is not valid JSON") from exc
+        required_fields = {
+            "schema_version",
+            "policy_revision",
+            "terminalized_lease_revision",
+            "project_id",
+            "round_id",
+            "assignment_id",
+            "writer_lease_id",
+            "terminal_seal_sha256",
+            "source_paths",
+            "detached_paths",
+            "truth_effect",
+            "project_effect",
+            "marker_sha256",
+        }
+        if not isinstance(marker, dict) or set(marker) != required_fields:
+            raise ValueError("terminalized worker lease marker fields are not exact")
+        semantic = {
+            key: value for key, value in marker.items() if key != "marker_sha256"
+        }
+        if marker["marker_sha256"] != sha256_json(semantic):
+            raise ValueError("terminalized worker lease marker hash mismatch")
+        if (
+            marker["schema_version"] != 1
+            or marker["policy_revision"] != V5_POLICY_REVISION
+            or marker["terminalized_lease_revision"]
+            != V5_TERMINALIZED_LEASE_REVISION
+            or marker["project_id"] != self.store.project_id()
+            or marker["round_id"] != round_dir.name
+            or marker["assignment_id"] != assignment["assignment_id"]
+            or marker["writer_lease_id"] != assignment.get("writer_lease_id")
+            or marker["terminal_seal_sha256"] != seal.get("seal_sha256")
+            or marker["truth_effect"] != "none"
+            or marker["project_effect"] != "none"
+        ):
+            raise ValueError("terminalized worker lease marker binding is invalid")
+        source_paths = marker["source_paths"]
+        expected_sources = {
+            "return": assignment["return_relpath"],
+            "artifacts": assignment["artifact_dir_relpath"],
+            "work": assignment["work_dir_relpath"],
+        }
+        if source_paths != expected_sources:
+            raise ValueError("terminalized worker source paths drifted")
+        detached_paths = marker["detached_paths"]
+        expected_detached = {
+            key: value.relative_to(self.store.root).as_posix()
+            for key, value in self._terminalized_detached_paths(
+                round_dir, assignment
+            ).items()
+        }
+        if detached_paths != expected_detached:
+            raise ValueError("terminalized worker detached paths drifted")
+        for key, relative in detached_paths.items():
+            detached = self._lexical_contained_path(
+                relative,
+                f"terminalized detached {key} path",
+            )
+            if not os.path.lexists(detached):
+                # A crash can happen before a source path exists (for example,
+                # an old card with no return draft).  The terminal bundle is
+                # still the recovery authority, so absence is diagnostic.
+                continue
+            if key == "return":
+                item = detached.lstat()
+                if (
+                    stat.S_ISLNK(item.st_mode)
+                    or not stat.S_ISREG(item.st_mode)
+                    or item.st_nlink != 1
+                    or stat.S_IMODE(item.st_mode) & 0o222
+                ):
+                    raise ValueError("terminalized detached return is unsafe")
+            else:
+                self._validate_readonly_tree(detached)
+        self._validate_terminalized_canonical_paths(
+            assignment=assignment,
+            seal=seal,
+        )
+        return marker
+
+    @classmethod
+    def _terminalized_make_writable_for_cleanup(cls, path: Path) -> None:
+        """Temporarily open a private COW tree for deterministic cleanup."""
+
+        if not os.path.lexists(path):
+            return
+        inventory = cls._tree_inventory(path)
+        for candidate, item in sorted(
+            inventory,
+            key=lambda pair: (-len(pair[0].parts), str(pair[0])),
+        ):
+            os.chmod(
+                candidate,
+                stat.S_IMODE(item.st_mode) | 0o700,
+                follow_symlinks=False,
+            )
+
+    @classmethod
+    def _terminalized_cleanup_path(cls, path: Path) -> None:
+        if not os.path.lexists(path):
+            return
+        cls._terminalized_make_writable_for_cleanup(path)
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
+    @classmethod
+    def _terminalized_readonly_path(cls, path: Path) -> None:
+        if not os.path.lexists(path):
+            raise ValueError("terminalized path disappeared before sealing")
+        if path.is_dir() and not path.is_symlink():
+            cls._readonly_tree(path)
+        else:
+            cls._readonly_paths([path])
+
+    def _terminalized_detach_source(
+        self,
+        *,
+        source: Path,
+        destination: Path,
+        label: str,
+    ) -> None:
+        """Atomically detach one live worker path into private recovery space."""
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if os.path.lexists(destination):
+            if os.path.lexists(source):
+                # A prior attempt already detached a predecessor.  Preserve a
+                # newly recreated path under a conflict suffix instead of
+                # replacing the deterministic recovery copy.
+                conflict = destination.with_name(
+                    destination.name + f".conflict-{time.time_ns()}"
+                )
+                os.replace(source, conflict)
+                self._terminalized_readonly_path(conflict)
+            self._terminalized_readonly_path(destination)
+            return
+        if not os.path.lexists(source):
+            # The source may be absent after a crash at the detach boundary;
+            # the terminal bundle can still reconstruct its canonical bytes.
+            return
+        source_item = source.lstat()
+        if stat.S_ISLNK(source_item.st_mode):
+            raise ValueError(f"{label} is a symlink")
+        if not (stat.S_ISREG(source_item.st_mode) or stat.S_ISDIR(source_item.st_mode)):
+            raise ValueError(f"{label} is not a regular file or directory")
+        os.replace(source, destination)
+        self._terminalized_readonly_path(destination)
+
+    def _terminalized_publish_directory(
+        self,
+        *,
+        replacement: Path,
+        canonical: Path,
+        detached_parent: Path,
+        label: str,
+    ) -> None:
+        """Publish a prepared read-only directory after a COW detach.
+
+        The parent of ``canonical`` is shared by legacy cards.  A stale worker
+        can therefore race by recreating that directory between two renames;
+        bounded retries detach such a recreation instead of allowing it to
+        become the canonical successor.  Persistent races fail closed and are
+        recoverable from the terminal bundle on the next ingest attempt.
+        """
+
+        for _ in range(4):
+            if os.path.lexists(canonical):
+                conflict = detached_parent / (
+                    f"{canonical.name}.recreated-{time.time_ns()}"
+                )
+                conflict.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(canonical, conflict)
+                self._terminalized_readonly_path(conflict)
+            try:
+                os.replace(replacement, canonical)
+                self._terminalized_readonly_path(canonical)
+                return
+            except FileExistsError:
+                # A stale worker recreated the path in the tiny publication
+                # window; detach it and retry with the same prepared bytes.
+                continue
+        raise ValueError(f"{label} could not be published without a stale race")
+
+    def _terminalized_build_artifact_tree(
+        self,
+        *,
+        destination: Path,
+        assignment: dict[str, Any],
+        snapshot: TerminalIngestSnapshot,
+    ) -> None:
+        destination.mkdir(parents=True, exist_ok=False)
+        artifact_base = Path(assignment["artifact_dir_relpath"])
+        for item in snapshot.artifacts:
+            source = Path(item.source_relpath)
+            try:
+                relative = source.relative_to(artifact_base)
+            except ValueError as exc:
+                raise ValueError(
+                    "terminalized artifact source escaped its assignment root"
+                ) from exc
+            if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+                raise ValueError("terminalized artifact relative path is invalid")
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            self.store._write_bytes_once(target, item.raw, mode=0o444)
+        self._readonly_tree(destination)
+
+    def _terminalize_worker_paths(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+        snapshot: TerminalIngestSnapshot,
+        seal: dict[str, Any],
+    ) -> dict[str, Any]:
+        """COW-detach assignment-owned worker paths after terminal sealing.
+
+        The operation is deliberately after ``_prepare_terminal_seal`` *and*
+        after the Research/receipt transaction.  It is a best-effort,
+        nontruth projection: if any step fails, the already-sealed terminal
+        bundle plus Research/receipt remain authoritative and the next ingest
+        retries from the bundle; no mathematical content gate is added.
+        """
+
+        if assignment.get("terminal_seal_revision") != V5_TERMINAL_SEAL_REVISION:
+            raise ValueError("terminalized worker paths require a current terminal seal")
+        marker_path = self._terminalized_marker_path(
+            round_dir, assignment["assignment_id"]
+        )
+        if os.path.lexists(marker_path):
+            try:
+                existing_marker = self._validate_terminalized_lease_marker(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    seal=seal,
+                )
+            except (OSError, ValueError):
+                # A stale worker may have atomically replaced a canonical
+                # source after the marker was written.  The marker is
+                # nontruth metadata, so discard that projection and rebuild it
+                # from the still-valid terminal seal; do not reopen or weaken
+                # any Research/Fact authority check.
+                if marker_path.is_symlink() or not marker_path.is_file():
+                    raise
+                self._terminalized_make_writable_for_cleanup(marker_path)
+                marker_path.unlink()
+                existing_marker = None
+            if existing_marker is not None:
+                return existing_marker
+
+        detached_paths = self._terminalized_detached_paths(round_dir, assignment)
+        terminalized_root = self._terminalized_root(round_dir)
+        terminalized_root.mkdir(parents=True, exist_ok=True)
+        detached_parent = detached_paths["return"].parent
+        detached_parent.mkdir(parents=True, exist_ok=True)
+
+        canonical_return = self._lexical_contained_path(
+            assignment["return_relpath"],
+            "terminalized canonical return",
+        )
+        canonical_artifacts = self._lexical_contained_path(
+            assignment["artifact_dir_relpath"],
+            "terminalized canonical artifact root",
+        )
+        canonical_work = self._lexical_contained_path(
+            assignment["work_dir_relpath"],
+            "terminalized canonical work root",
+        )
+
+        # Detach first.  The terminal bytes are already immutable, so a stale
+        # process holding an open descriptor can only mutate this detached,
+        # non-authoritative inode after the rename.
+        self._terminalized_detach_source(
+            source=canonical_return,
+            destination=detached_paths["return"],
+            label="terminalized canonical return",
+        )
+        self._terminalized_detach_source(
+            source=canonical_artifacts,
+            destination=detached_paths["artifacts"],
+            label="terminalized canonical artifact root",
+        )
+        self._terminalized_detach_source(
+            source=canonical_work,
+            destination=detached_paths["work"],
+            label="terminalized canonical work root",
+        )
+
+        # Rebuild the canonical return from the sealed snapshot, not from any
+        # worker-owned inode that may have been changed during handoff.
+        canonical_return.parent.mkdir(parents=True, exist_ok=True)
+        replacement_return = canonical_return.parent / (
+            f".{canonical_return.name}.terminalizing-"
+            f"{assignment['writer_lease_id'].removeprefix('writer-lease-')[:16]}"
+        )
+        self._terminalized_cleanup_path(replacement_return)
+        self.store._write_bytes_atomic(
+            replacement_return,
+            snapshot.return_bytes,
+            mode=0o444,
+        )
+        os.replace(replacement_return, canonical_return)
+        self._terminalized_readonly_path(canonical_return)
+
+        # Rebuild the artifact root from the exact declared snapshot.  Any
+        # undeclared worker files stay only in the detached nontruth tree.
+        replacement_artifacts = canonical_artifacts.parent / (
+            f".{canonical_artifacts.name}.terminalizing-"
+            f"{assignment['writer_lease_id'].removeprefix('writer-lease-')[:16]}"
+        )
+        self._terminalized_cleanup_path(replacement_artifacts)
+        self._terminalized_build_artifact_tree(
+            destination=replacement_artifacts,
+            assignment=assignment,
+            snapshot=snapshot,
+        )
+        self._terminalized_publish_directory(
+            replacement=replacement_artifacts,
+            canonical=canonical_artifacts,
+            detached_parent=detached_parent,
+            label="terminalized canonical artifact root",
+        )
+
+        # Work is a draft-only capability.  Preserve the old tree privately,
+        # then expose an empty read-only successor so a stale worker cannot
+        # recreate an unsealed draft through the assignment path.
+        replacement_work = canonical_work.parent / (
+            f".{canonical_work.name}.terminalizing-"
+            f"{assignment['writer_lease_id'].removeprefix('writer-lease-')[:16]}"
+        )
+        self._terminalized_cleanup_path(replacement_work)
+        replacement_work.mkdir(parents=True, exist_ok=False)
+        self._readonly_tree(replacement_work)
+        self._terminalized_publish_directory(
+            replacement=replacement_work,
+            canonical=canonical_work,
+            detached_parent=detached_parent,
+            label="terminalized canonical work root",
+        )
+
+        # Publish the marker last.  A crash before this write is recoverable:
+        # the next ingest sees the terminal seal and reconstructs the marker
+        # after validating the canonical successors.
+        semantic = self._terminalized_semantic(
+            project_id=self.store.project_id(),
+            round_id=round_dir.name,
+            assignment=assignment,
+            seal=seal,
+            detached_paths=detached_paths,
+            project_root=self.store.root,
+        )
+        marker = {**semantic, "marker_sha256": sha256_json(semantic)}
+        marker_path = self._terminalized_marker_path(
+            round_dir, assignment["assignment_id"]
+        )
+        self.store._write_json_once(marker_path, marker)
+        self._terminalized_readonly_path(marker_path)
+        self._validate_terminalized_lease_marker(
+            round_dir=round_dir,
+            assignment=assignment,
+            seal=seal,
+            required=True,
+        )
+        return marker
 
     @staticmethod
     def _runtime_binding() -> dict[str, Any]:
@@ -8534,6 +9247,30 @@ class V5LifecycleManager:
                 raise ValueError(
                     "current V5 control-plane allocation fields are not exact"
                 )
+            final_handoff_fields = control.get("final_handoff_fields")
+            return_contract = card["return_contract"]
+            legacy_handoff = [
+                "assignment_id",
+                "return_sha256",
+                "status",
+            ]
+            canonical_handoff = ["assignment_id", "status"]
+            legacy_hash_contract = (
+                "sha256_of_exact_return_bytes_reported_in_final_handoff"
+            )
+            canonical_hash_contract = (
+                "sha256_of_exact_return_bytes_derived_by_canonical_ingestion"
+            )
+            if (
+                final_handoff_fields == legacy_handoff
+                and return_contract.get("hash_contract") == legacy_hash_contract
+            ) or (
+                final_handoff_fields == canonical_handoff
+                and return_contract.get("hash_contract") == canonical_hash_contract
+            ):
+                pass
+            else:
+                raise ValueError("V5 final-handoff contract drifted")
             host_scope = control.get("host_task_scope_id")
             if (
                 not isinstance(host_scope, str)
@@ -9021,8 +9758,9 @@ class V5LifecycleManager:
             f"{campaign_note}"
             f"{paper_continuation_note}"
             f"{task_context_note}"
-            f"Write the exact return to `{card['return_contract']['return_relpath']}` "
-            "and hand off only its SHA-256 plus status.\n"
+            f"Write the exact return to `{card['return_contract']['return_relpath']}`, "
+            "then hand off assignment_id and status=\"final\". Canonical ingestion "
+            "derives the SHA-256 from those exact bytes.\n"
         )
 
     def create_production_round(
@@ -9057,18 +9795,21 @@ class V5LifecycleManager:
 
     def prepare_candidate_adverse_target(
         self,
-        production_research_id: str,
+        selected_research_id: str,
         *,
-        actor: str = "v5-candidate-adverse-preparer",
+        candidate_fact_path: str,
+        actor: str = "v5-main-candidate-adverse-preparer",
     ) -> dict[str, Any]:
         """Create or reuse the exact nontruth target for Candidate attack.
 
-        The preparation is deliberately narrow.  It accepts one active
-        production result containing one canonical Candidate Fact, derives the
-        unique live completed Research-supervision result, and publishes one
-        content-addressed synthesis Research entry.  It does not atomize a
-        claim, plan the attack, package a Candidate, invoke a verifier, create a
-        Certification Decision, or admit a Fact.
+        The preparation is deliberately narrow.  Main selects one active
+        Research head and supplies one project-contained canonical Candidate
+        Fact.  The Fact bytes need not have been authored by that Research or
+        by any worker.  Applicable completed Research-supervision results are
+        bound as mathematical lineage, and one content-addressed synthesis
+        Research entry transports the exact Fact bytes to the adverse card.
+        This does not atomize a claim, plan the attack, package a Candidate,
+        invoke a verifier, create a Certification Decision, or admit a Fact.
         """
 
         inspection = self._bind_inspection_context(
@@ -9076,54 +9817,51 @@ class V5LifecycleManager:
             create=True,
         )
         assert inspection is not None
-        production_research_id = validate_memory_id(production_research_id)
-        production = self._inspection_research_record(
-            production_research_id,
+        selected_research_id = validate_memory_id(selected_research_id)
+        selected = self._inspection_research_record(
+            selected_research_id,
             inspection,
         )
-        if production["status"] not in ACTIVE_MEMORY_STATUSES:
-            raise ValueError("Candidate production Research must be active")
-        if self._research_is_adverse_assignment(production):
-            raise ValueError("Candidate production Research cannot be adverse work")
-        artifacts = production.get("metadata", {}).get("artifacts", [])
-        candidate_facts = [
-            item for item in artifacts if item.get("role") == "candidate_fact"
-        ]
-        if len(candidate_facts) != 1:
-            raise ValueError(
-                "Candidate production Research must bind exactly one candidate_fact"
-            )
-        candidate_binding = candidate_facts[0]
+        if selected["status"] not in ACTIVE_MEMORY_STATUSES:
+            raise ValueError("Main-selected Candidate Research must be active")
+        if self._research_is_adverse_assignment(selected):
+            raise ValueError("Main-selected Candidate Research cannot be adverse work")
+        if not isinstance(candidate_fact_path, str):
+            raise ValueError("Candidate adverse target Fact path must be a string")
         candidate_path = contained_path(
             self.store.root,
-            candidate_binding["path"],
+            candidate_fact_path,
             "Candidate adverse target Fact path",
         )
         if candidate_path.is_symlink() or not candidate_path.is_file():
             raise ValueError("Candidate adverse target Fact is missing or unsafe")
-        raw = candidate_path.read_bytes()
-        if sha256_bytes(raw) != candidate_binding["sha256"]:
-            raise ValueError("Candidate adverse target Fact hash drifted")
+        raw = self._read_regular_bytes_once(
+            candidate_path,
+            label="Candidate adverse target Fact",
+        )
         fact = self._validate_candidate_fact_artifact_bytes(raw)
+        candidate_binding = {
+            "path": candidate_path.relative_to(
+                self.store.root.resolve()
+            ).as_posix(),
+            "sha256": sha256_bytes(raw),
+            "role": "candidate_fact",
+        }
 
         required_supervision = self._required_supervision_results_for_candidate(
-            [production],
+            [selected],
             _inspection_context=inspection,
         )
-        if len(required_supervision) != 1:
-            raise ValueError(
-                "Candidate adverse preparation requires exactly one live "
-                "completed supervision result"
+        supervision_ids = sorted(required_supervision)
+        for supervision_id in supervision_ids:
+            supervision = self._inspection_research_record(
+                supervision_id,
+                inspection,
             )
-        supervision_id = next(iter(required_supervision))
-        supervision = self._inspection_research_record(
-            supervision_id,
-            inspection,
-        )
-        if not self._research_is_adverse_assignment(supervision):
-            raise ValueError(
-                "Candidate adverse preparation supervision is not independent refute work"
-            )
+            if not self._research_is_adverse_assignment(supervision):
+                raise ValueError(
+                    "Candidate adverse preparation supervision is not independent refute work"
+                )
 
         payload = {
             "kind": "synthesis",
@@ -9133,9 +9871,11 @@ class V5LifecycleManager:
                 "whole-Candidate adverse review."
             ),
             "content": (
-                "This Main preparation reuses the exact canonical Candidate Fact "
-                "bytes and binds the unique live Research-supervision result. "
-                "It adds no mathematical conclusion."
+                "This Main preparation transports the exact canonical Candidate Fact "
+                "bytes selected for review and binds every applicable completed "
+                "Research-supervision result. Fact authorship and worker provenance "
+                "are descriptive metadata, not a mathematical capability. It adds no "
+                "mathematical conclusion."
             ),
             "rationale": (
                 "Whole-Candidate adverse review must target the exact one-conclusion "
@@ -9145,7 +9885,7 @@ class V5LifecycleManager:
             "source": "",
             "relation": "prepares_candidate_from",
             "related_research_ids": sorted(
-                [production_research_id, supervision_id]
+                {selected_research_id, *supervision_ids}
             ),
             "independent_adverse_required": True,
             "adverse_domain_profile": "mathematics",
@@ -9161,8 +9901,8 @@ class V5LifecycleManager:
         )
         return {
             "research_id": target["research_id"],
-            "production_research_id": production_research_id,
-            "supervision_research_id": supervision_id,
+            "selected_research_id": selected_research_id,
+            "supervision_research_ids": supervision_ids,
             "fact_id": fact.fact_id,
             "candidate_fact_sha256": candidate_binding["sha256"],
             "next_command": (
@@ -9230,22 +9970,20 @@ class V5LifecycleManager:
             )
 
         target_binding = candidate_facts[0]
-        # The 0.7.14 Main preparation path promises canonical Fact bytes and
-        # therefore receives the matching consumer-side check here.  Older
-        # hand-authored adverse targets retain their frozen pre-0.7.14 contract;
-        # they remain exact-hash checked by _typed_research_artifacts above.
-        if target.get("relation") == "prepares_candidate_from":
-            target_path = contained_path(
-                self.store.root,
-                target_binding["path"],
-                "Candidate adverse target Fact path",
-            )
-            if target_path.is_symlink() or not target_path.is_file():
-                raise ValueError("Candidate adverse target Fact is missing or unsafe")
-            target_raw = target_path.read_bytes()
-            if sha256_bytes(target_raw) != target_binding["sha256"]:
-                raise ValueError("Candidate adverse target Fact hash drifted")
-            self._validate_candidate_fact_artifact_bytes(target_raw)
+        target_path = contained_path(
+            self.store.root,
+            target_binding["path"],
+            "Candidate adverse target Fact path",
+        )
+        if target_path.is_symlink() or not target_path.is_file():
+            raise ValueError("Candidate adverse target Fact is missing or unsafe")
+        target_raw = self._read_regular_bytes_once(
+            target_path,
+            label="Candidate adverse target Fact",
+        )
+        if sha256_bytes(target_raw) != target_binding["sha256"]:
+            raise ValueError("Candidate adverse target Fact hash drifted")
+        self._validate_candidate_fact_artifact_bytes(target_raw)
         normalized_host_scope = normalize_host_task_scope_id(
             host_task_scope_id,
             workflow_evidence_version=5,
@@ -10824,7 +11562,6 @@ class V5LifecycleManager:
                         ],
                         "final_handoff_fields": [
                             "assignment_id",
-                            "return_sha256",
                             "status",
                         ],
                         "host_task_scope_id": host_task_scope_id,
@@ -10880,7 +11617,7 @@ class V5LifecycleManager:
                         "return_relpath": return_relpath,
                         "allowed_outcomes": sorted(V5_RETURN_OUTCOMES),
                         "hash_contract": (
-                            "sha256_of_exact_return_bytes_reported_in_final_handoff"
+                            "sha256_of_exact_return_bytes_derived_by_canonical_ingestion"
                         ),
                     },
                     "reasoning_mode_binding": reasoning_binding,
@@ -11859,6 +12596,7 @@ class V5LifecycleManager:
             assignment_id = assignment["assignment_id"]
             return_path = self.store.root / assignment["return_relpath"]
             terminal_source_diagnostics: list[str] = []
+            terminalized_marker_status: str | None = None
             product: dict[str, Any] | None = None
             try:
                 product, _receipt = self._research_product_for_assignment(
@@ -11888,6 +12626,33 @@ class V5LifecycleManager:
                             seal=seal,
                         )
                     )
+                    marker_path = self._terminalized_marker_path(
+                        round_dir, assignment_id
+                    )
+                    if os.path.lexists(marker_path):
+                        try:
+                            self._validate_terminalized_lease_marker(
+                                round_dir=round_dir,
+                                assignment=assignment,
+                                seal=seal,
+                            )
+                            terminalized_marker_status = "valid"
+                        except (OSError, ValueError):
+                            # The marker is a nontruth diagnostic projection;
+                            # do not let its corruption reopen or invalidate a
+                            # Research product.  Surface it for repair instead.
+                            terminalized_marker_status = "invalid"
+                            terminal_source_diagnostics.append(
+                                "terminalized_lease_marker:invalid"
+                            )
+                    else:
+                        # Missing marker is a retryable nontruth projection
+                        # state (including pre-COW historical rounds), not a
+                        # Research validity failure.
+                        terminalized_marker_status = "missing"
+                        terminal_source_diagnostics.append(
+                            "terminalized_lease_marker:missing"
+                        )
             elif assignment_id in quarantined:
                 state = "quarantined"
             elif abort is not None:
@@ -11911,6 +12676,7 @@ class V5LifecycleManager:
                         product["research_id"] if product is not None else None
                     ),
                     "terminal_source_diagnostics": terminal_source_diagnostics,
+                    "terminalized_lease_marker": terminalized_marker_status,
                 }
             )
         status = {
@@ -12357,6 +13123,8 @@ class V5LifecycleManager:
         payload: Any,
         return_path: Path,
         artifact_snapshots: list[TerminalArtifactSnapshot] | None = None,
+        artifact_bytes_override: dict[str, bytes] | None = None,
+        retryable_source_visibility: bool = False,
     ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("V5 worker return must be one object")
@@ -12519,10 +13287,12 @@ class V5LifecycleManager:
                 raise ValueError(
                     "V5 worker artifact is outside its task-card directory"
                 ) from exc
-            if artifact_path.is_symlink() or not artifact_path.is_file():
-                raise ValueError("V5 worker artifact is missing or unsafe")
             raw_artifact = artifact_bytes_by_path.get(item["path"])
+            if raw_artifact is None and artifact_bytes_override is not None:
+                raw_artifact = artifact_bytes_override.get(item["path"])
             if raw_artifact is None:
+                if artifact_path.is_symlink():
+                    raise ValueError("V5 worker artifact is missing or unsafe")
                 read_path = (
                     self._lexical_contained_path(
                         item["path"], "V5 worker artifact path"
@@ -12537,6 +13307,7 @@ class V5LifecycleManager:
                         self.store.root if terminal_seal_required else None
                     ),
                     require_single_link=terminal_seal_required,
+                    retryable_visibility=retryable_source_visibility,
                 )
                 artifact_bytes_by_path[item["path"]] = raw_artifact
             size = len(raw_artifact)
@@ -12634,6 +13405,7 @@ class V5LifecycleManager:
                 else None
             ),
             require_single_link=terminal_seal_required and canonical_input,
+            retryable_visibility=canonical_input,
         )
         return_sha256 = sha256_bytes(raw_return)
         if expected_sha256 is not None and return_sha256 != expected_sha256:
@@ -12651,6 +13423,7 @@ class V5LifecycleManager:
             payload=payload,
             return_path=return_path,
             artifact_snapshots=artifact_snapshots,
+            retryable_source_visibility=canonical_input,
         )
         return TerminalIngestSnapshot(
             return_path=return_path,
@@ -12659,6 +13432,91 @@ class V5LifecycleManager:
             return_bytes=raw_return,
             payload=payload,
             artifacts=tuple(artifact_snapshots),
+        )
+
+    def _snapshot_from_terminal_seal(
+        self,
+        *,
+        round_dir: Path,
+        assignment: dict[str, Any],
+        seal: dict[str, Any],
+        expected_sha256: str | None = None,
+    ) -> TerminalIngestSnapshot:
+        """Reconstruct an ingest snapshot from an already-published seal.
+
+        This is the crash-recovery path for a failure between the atomic COW
+        detach and its canonical successor/marker.  The terminal bundle is
+        already validated independently, so no mutable worker source path is
+        consulted and no new mathematical validation gate is introduced.
+        """
+
+        bundle_dir = self._terminal_bundle_dir(
+            round_dir, assignment["assignment_id"]
+        )
+        sealed_return = bundle_dir / "return.json"
+        raw_return = self._read_regular_bytes_once(
+            sealed_return,
+            label="terminal recovery return",
+            containment_root=bundle_dir,
+            require_single_link=True,
+        )
+        return_sha256 = sha256_bytes(raw_return)
+        if expected_sha256 is not None and return_sha256 != expected_sha256:
+            raise _WorkerFinalHashMismatch(
+                "worker final handoff hash does not match terminal sealed bytes"
+            )
+        try:
+            payload = json.loads(raw_return.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("terminal recovery return is not valid UTF-8 JSON") from exc
+        artifact_bytes_override: dict[str, bytes] = {}
+        for item in seal["artifacts"]:
+            sealed_path = self._lexical_contained_path(
+                item["sealed_path"],
+                "terminal recovery artifact",
+            )
+            raw = self._read_regular_bytes_once(
+                sealed_path,
+                label="terminal recovery artifact",
+                containment_root=bundle_dir,
+                require_single_link=True,
+            )
+            if sha256_bytes(raw) != item["sha256"]:
+                raise ValueError("terminal recovery artifact hash drifted")
+            artifact_bytes_override[item["source_path"]] = raw
+        snapshots: list[TerminalArtifactSnapshot] = []
+        self._validate_return_payload(
+            round_id=round_dir.name,
+            assignment_id=assignment["assignment_id"],
+            payload=payload,
+            return_path=sealed_return,
+            artifact_snapshots=snapshots,
+            artifact_bytes_override=artifact_bytes_override,
+        )
+        seal_bindings = [
+            (
+                item["source_path"],
+                item["sha256"],
+                item.get("role"),
+            )
+            for item in seal["artifacts"]
+        ]
+        snapshot_bindings = [
+            (item.source_relpath, item.sha256, item.role)
+            for item in snapshots
+        ]
+        if snapshot_bindings != seal_bindings:
+            raise ValueError("terminal recovery artifact bindings drifted")
+        return TerminalIngestSnapshot(
+            return_path=self._lexical_contained_path(
+                assignment["return_relpath"],
+                "terminal recovery canonical return",
+            ),
+            return_relpath=assignment["return_relpath"],
+            return_sha256=return_sha256,
+            return_bytes=raw_return,
+            payload=payload,
+            artifacts=tuple(snapshots),
         )
 
     def preflight_return(
@@ -13016,9 +13874,11 @@ class V5LifecycleManager:
         *,
         round_id: str,
         assignment_id: str,
-        worker_final_sha256: str,
+        worker_final_sha256: str | None = None,
     ) -> dict[str, Any]:
-        if SHA256_RE.fullmatch(worker_final_sha256) is None:
+        if worker_final_sha256 is not None and SHA256_RE.fullmatch(
+            worker_final_sha256
+        ) is None:
             raise ValueError("worker final SHA-256 is invalid")
         round_dir, manifest = self._round_manifest(round_id)
         assignment = self._assignment(manifest, assignment_id)
@@ -13029,21 +13889,122 @@ class V5LifecycleManager:
                     round_dir=round_dir,
                     assignment=assignment,
                 )
-                if receipt["return_sha256"] != worker_final_sha256:
+                if (
+                    worker_final_sha256 is not None
+                    and receipt["return_sha256"] != worker_final_sha256
+                ):
                     raise ValueError(
                         "terminal ingest conflict: assignment already finalized "
                         "with a different return SHA-256"
                     )
-                return {**receipt, "status": "ingested"}
+                terminalized_status = "sealed"
+                terminalized_error: str | None = None
+                if (
+                    assignment.get("terminal_seal_revision")
+                    == V5_TERMINAL_SEAL_REVISION
+                ):
+                    # Existing receipts remain subject to the terminal seal's
+                    # hard authority boundary.  Only the subsequent COW
+                    # projection is best-effort; a corrupt seal or sealed
+                    # snapshot must still fail loudly rather than becoming a
+                    # cosmetic ``pending`` diagnostic.
+                    seal = self._validate_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        required=True,
+                    )
+                    assert seal is not None
+                    snapshot = self._snapshot_from_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        seal=seal,
+                        expected_sha256=receipt["return_sha256"],
+                    )
+                    try:
+                        self._terminalize_worker_paths(
+                            round_dir=round_dir,
+                            assignment=assignment,
+                            snapshot=snapshot,
+                            seal=seal,
+                        )
+                    except Exception as exc:
+                        terminalized_status = "pending"
+                        terminalized_error = str(exc) or type(exc).__name__
+                result = {**receipt, "status": "ingested"}
+                if terminalized_error is not None:
+                    result["terminalized_lease_status"] = terminalized_status
+                    result["terminalized_lease_error"] = terminalized_error
+                return result
             self.store.reasoning_modes().require_work_unit_active(round_id)
             try:
-                snapshot = self._snapshot_return(
-                    round_id=round_id,
-                    assignment_id=assignment_id,
-                    expected_sha256=worker_final_sha256,
+                terminal_seal: dict[str, Any] | None = None
+                terminal_seal_required = (
+                    assignment.get("terminal_seal_revision")
+                    == V5_TERMINAL_SEAL_REVISION
                 )
+                if terminal_seal_required:
+                    # A prior attempt may have published the immutable bundle
+                    # and then failed during COW.  Recover from that bundle,
+                    # never from a mutable source path that a stale worker can
+                    # have recreated.
+                    terminal_seal = self._validate_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        required=False,
+                    )
+                if terminal_seal is not None:
+                    snapshot = self._snapshot_from_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        seal=terminal_seal,
+                        expected_sha256=worker_final_sha256,
+                    )
+                else:
+                    snapshot = self._snapshot_return(
+                        round_id=round_id,
+                        assignment_id=assignment_id,
+                        expected_sha256=worker_final_sha256,
+                    )
             except _WorkerFinalHashMismatch:
                 raise
+            except _CanonicalSourceNotVisible as visibility_error:
+                # ``preflight-return`` validates only one read-only snapshot.
+                # A worker may complete the canonical copy-on-write handoff
+                # between that snapshot and this locked ingest.  Recheck the
+                # immutable terminal seal once; otherwise leave no quarantine
+                # or workflow marker and let Main retry the same command.
+                if not terminal_seal_required:
+                    raise
+                try:
+                    terminal_seal = self._validate_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        required=False,
+                    )
+                    if terminal_seal is None:
+                        raise visibility_error
+                    snapshot = self._snapshot_from_terminal_seal(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        seal=terminal_seal,
+                        expected_sha256=worker_final_sha256,
+                    )
+                except (_WorkerFinalHashMismatch, _CanonicalSourceNotVisible):
+                    raise
+                except Exception as exc:
+                    quarantine = self._quarantine(
+                        round_id=round_id,
+                        assignment_id=assignment_id,
+                        assignment=assignment,
+                        error=str(exc),
+                    )
+                    return {
+                        "status": "quarantined",
+                        "quarantine_id": quarantine["quarantine_id"],
+                        "error": quarantine["error"],
+                        "effect": quarantine["effect"],
+                        "next_safe_command": quarantine["next_safe_command"],
+                    }
             except Exception as exc:
                 quarantine = self._quarantine(
                     round_id=round_id,
@@ -13070,11 +14031,7 @@ class V5LifecycleManager:
             card = self.store._read_json(
                 self.store.root / assignment["task_card_relpath"]
             )
-            terminal_seal: dict[str, Any] | None = None
-            if (
-                assignment.get("terminal_seal_revision")
-                == V5_TERMINAL_SEAL_REVISION
-            ):
+            if terminal_seal_required and terminal_seal is None:
                 terminal_seal = self._prepare_terminal_seal(
                     round_dir=round_dir,
                     assignment=assignment,
@@ -13276,7 +14233,27 @@ class V5LifecycleManager:
                 "created_at": _utc_now(),
             }
             self.store._write_json_once(receipt_path, receipt)
-            return {**receipt, "status": "ingested"}
+            terminalization_error: str | None = None
+            if terminal_seal is not None:
+                # COW is a nontruth lifecycle projection.  Keep the sealed
+                # Research/receipt transaction authoritative even if a host
+                # filesystem race or transient permission failure prevents the
+                # projection from completing; the next ingest replay retries
+                # it from the terminal bundle under the same mutation lock.
+                try:
+                    self._terminalize_worker_paths(
+                        round_dir=round_dir,
+                        assignment=assignment,
+                        snapshot=snapshot,
+                        seal=terminal_seal,
+                    )
+                except Exception as exc:
+                    terminalization_error = str(exc) or type(exc).__name__
+            result = {**receipt, "status": "ingested"}
+            if terminalization_error is not None:
+                result["terminalized_lease_status"] = "pending"
+                result["terminalized_lease_error"] = terminalization_error
+            return result
 
     def _release_path(self, release_id: str) -> Path:
         if not isinstance(release_id, str) or not release_id.startswith("release-"):
@@ -14835,23 +15812,10 @@ class V5LifecycleManager:
                 "fresh_adverse_missing: selected Research is absent: "
                 + ", ".join(missing)
             )
-        branch = set(research_ids)
-        pending = list(research_ids)
-        while pending:
-            current = records[pending.pop()]
-            for related_id in current["related_research_ids"]:
-                if related_id not in records:
-                    raise ValueError(
-                        "fresh adverse Research lineage names an unknown ancestor"
-                    )
-                if related_id not in branch:
-                    branch.add(related_id)
-                    pending.append(related_id)
-
         adverse_kinds = {"challenge", "counterexample", "obstacle", "dead_end"}
         required_targets = {
             research_id
-            for research_id in branch
+            for research_id in research_ids
             if independent_adverse_required(records[research_id])
             and records[research_id]["kind"] not in adverse_kinds
             and not self._research_is_adverse_assignment(records[research_id])
@@ -14869,6 +15833,10 @@ class V5LifecycleManager:
                 related_id = stack.pop()
                 if related_id == research_id:
                     raise ValueError("fresh adverse Research lineage is cyclic")
+                if related_id not in records:
+                    raise ValueError(
+                        "fresh adverse Research lineage names an unknown ancestor"
+                    )
                 if related_id in result:
                     continue
                 result.add(related_id)
@@ -15001,7 +15969,7 @@ class V5LifecycleManager:
             key: item for key, item in value.items() if key != "readiness_sha256"
         }
         if (
-            value["contract_revision"] != V5_FRESH_ADVERSE_READINESS_REVISION
+            value["contract_revision"] not in V5_FRESH_ADVERSE_READINESS_REVISIONS
             or not isinstance(value["required"], bool)
             or value["status"]
             != ("ready" if value["required"] else "not_required")
@@ -15195,17 +16163,18 @@ class V5LifecycleManager:
                 _inspection_context=inspection,
             )
         )
-        all_research_records = {
-            item["research_id"]: item
-            for item in self.research_records(
-                _inspection_context=inspection,
-            )
-        }
-        stale_routes = self._route_staleness(all_research_records)
+        route_projections = self._explicit_research_projections(
+            research_ids,
+            campaign_id=None,
+            _inspection_context=inspection,
+        )
         stale_selected = {
-            item["research_id"]: stale_routes[item["research_id"]]
+            item["research_id"]: route_projections[item["research_id"]][
+                "route_invalidated_by"
+            ]
             for item in explicit_research_records
-            if item["research_id"] in stale_routes
+            if route_projections[item["research_id"]]["route_status"]
+            != "current"
         }
         if stale_selected:
             details = ", ".join(
@@ -15478,7 +16447,9 @@ class V5LifecycleManager:
                     "Fact exactly through one or more load-bearing nodes; "
                     f"mapped={sorted(mapped_fact_ids)} candidates={sorted(facts)}"
                 )
-        continuation = self.paper_continuation()
+        continuation = self.paper_continuation(
+            _inspection_context=inspection,
+        )
         continuation_plan_ids = continuation.plan_ids_for_research(
             research_records
         )
@@ -15598,6 +16569,7 @@ class V5LifecycleManager:
         paper_refs = self._validate_paper_evidence_refs(
             payload.get("paper_evidence_refs"),
             validation_subject=assurance["validation_subject"],
+            _inspection_context=inspection,
         )
         if continuation_binding is not None:
             if (
@@ -15984,15 +16956,24 @@ class V5LifecycleManager:
             }
         path = self._release_path(release_id)
         with self.store.v5_mutation_lock(command="candidate-release"):
+            sealed_inspection = self._bind_inspection_context(
+                RoundInspectionContext(),
+                create=True,
+            )
+            assert sealed_inspection is not None
             if path.exists():
-                existing = self.release(release_id)
+                existing = self.release(
+                    release_id,
+                    _inspection_context=sealed_inspection,
+                )
                 if existing["release_sha256"] != release_sha:
                     raise ValueError(f"Candidate Release id collision at {path}")
                 return existing
             try:
                 sealed_supervision_result_ids = (
                     self._required_supervision_results_for_candidate(
-                        explicit_research_records
+                        explicit_research_records,
+                        _inspection_context=sealed_inspection,
                     )
                 )
             except ValueError as exc:
@@ -16034,8 +17015,10 @@ class V5LifecycleManager:
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         _inspection_context = self._bind_inspection_context(
-            _inspection_context
+            _inspection_context,
+            create=True,
         )
+        assert _inspection_context is not None
         cache_key = (
             release_id,
             _skip_successor_validation,
@@ -16634,23 +17617,20 @@ class V5LifecycleManager:
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         _inspection_context = self._bind_inspection_context(
-            _inspection_context
+            _inspection_context,
+            create=True,
         )
+        assert _inspection_context is not None
         if (
-            _inspection_context is not None
-            and release_id in _inspection_context.verifier_capsules
+            release_id in _inspection_context.verifier_capsules
         ):
             return _inspection_context.verifier_capsules[release_id]
         release = (
             _release
             if _release is not None
-            else (
-                self.release(release_id)
-                if _inspection_context is None
-                else self.release(
-                    release_id,
-                    _inspection_context=_inspection_context,
-                )
+            else self.release(
+                release_id,
+                _inspection_context=_inspection_context,
             )
         )
         if release.get("release_id") != release_id:

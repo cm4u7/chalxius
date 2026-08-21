@@ -638,10 +638,10 @@ MUTANTS = (
             "                if (\n"
             "                    record[\"kind\"] not in adverse_kinds\n"
             "                    and not self._research_is_adverse_assignment(record)\n"
-            "                ) or research_id in selected:\n"
+            "                ):\n"
         ),
         new=(
-            "                if record[\"kind\"] not in adverse_kinds or research_id in selected:\n"
+            "                if record[\"kind\"] not in adverse_kinds:\n"
         ),
         test=(
             f"{FIELD_TEST_MODULE}."

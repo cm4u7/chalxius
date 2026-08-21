@@ -43,7 +43,9 @@ Admission requires all of the following:
    verifier writes a draft only, while the copied host submission program
    quarantines invalid drafts and is the sole producer of the immutable formal
    review plus its content-addressed success receipt;
-12. one immutable Certification Decision bound to the release and capsule;
+12. one immutable Certification Decision bound to the release and capsule,
+   recorded only by the Gateway through `certification-record`; a verifier
+   supplies frozen review bytes but does not own Certification publication;
 13. gateway revalidation of the accepted decision followed by all-or-none Fact
    visibility; active lineage validation uses a two-phase command-local
    projection so a bounded frozen-authority reentry validates only local
@@ -68,7 +70,8 @@ itself still creates no Research, plan, dispatch, or Fact.
 
 ## Selective checkpoint and Candidate batch seed
 
-`selective-fact-checkpoint` is a Main-only, nontruth operation before Candidate
+`selective-fact-checkpoint` is a Main-only, nontruth operation after Main has
+explicitly selected the load-bearing Research ids and before Candidate
 authoring. Its exact input is one object with `schema_version=1`, a nonempty
 `objective`, one to sixteen `target_rationales` containing exact `research_id`
 and nonempty `reason` strings, and zero to thirty-two `excluded_research`
@@ -94,8 +97,10 @@ selected dependent. Main may later combine independent batches only after
 reviewing their common failure surface and must still preserve one-conclusion
 Fact atomicity plus exact predecessor closure. The seed is planning input only:
 it does not automatically atomize Research, author a Fact statement or proof,
-or waive Candidate preflight, fresh adverse review, verifier coverage,
-Certification, or Gateway admission.
+launch a worker, or waive Candidate preflight, fresh adverse review, verifier
+coverage, Gateway-owned Certification, or Gateway admission. Assignment or card
+creation is not dispatch; Main must launch the selected worker through the host
+and confirm the actual start.
 
 Before Research replay or packaging, every prospective Candidate command applies
 the same cheap semantic gate. If a Fact carries a semantic interface, exactly
@@ -103,22 +108,42 @@ one component may be a conclusion, mathematical claim, or empirical hypothesis;
 premise components may remain separate. Without that interface, exactly one
 `[CLAIM:*]` statement clause is allowed. New 0.7.13 worker cards that require a
 `candidate_fact` artifact also require exact canonical Fact Markdown bytes at
-return preflight. Older frozen task cards retain their original byte contract
-and remain replayable as historical nontruth lineage.
+return preflight. Main may instead author the same exact canonical Candidate
+Fact bytes, including a canonical Fact file in a sealed Main-authored Candidate
+Release. Authorship, container, actor labels, and other provenance metadata
+preserve lineage but do not establish mathematical validity or add an admission
+gate.
+Older frozen task cards retain their original byte contract and remain
+replayable as historical nontruth lineage.
 
 For each exact Candidate-Fact target, Main may call
 `plan-candidate-adverse RESEARCH_ID`. The target must be active, non-stale, bind
 exactly one current `candidate_fact` artifact, and carry
 `independent_adverse_required=true`. The planner is host-scope-bound and
-idempotent for an exact retry. It creates only nontruth refute Research; the
-Candidate disposition and every later truth gate remain mandatory.
+idempotent for an exact retry. It creates only a nontruth refute assignment and
+card; Main must still launch and confirm the worker. The Candidate disposition
+and every later truth gate remain mandatory.
 
-When the exact Candidate Fact is a production result that already passed the
-required Research supervision, Main may first call
-`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. The command derives
-the unique live supervision result and creates or reuses one content-addressed
-nontruth synthesis target. It does not perform atomization, Candidate
-packaging, verification, Certification, Gateway admission, or Fact admission.
+For exact canonical Candidate Fact bytes selected for one Research target, Main
+first calls
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+The public command is Main-only, fixes `actor="main"`, and accepts no
+`--actor` override. It canonical-validates and consumes those exact project-contained
+bytes, derives every applicable completed supervision result for the selected
+Research (possibly none when no supervision scope applies), and creates or
+reuses one content-addressed nontruth synthesis target. The bytes may be
+Main-authored; producer, container, author, and other provenance metadata remain
+lineage rather than mathematical gates. The command does not perform
+atomization, Candidate packaging, adverse disposition, fresh verification,
+Gateway-owned Certification, Gateway admission, or Fact admission.
+
+`validate-return` observes one bounded read-only snapshot of the canonical
+return and declared artifacts. A transient `ENOENT` or `ESTALE` while a safe
+snapshot is not yet visible may be retried after visibility stabilizes and must
+not create quarantine evidence. Unsafe filesystem objects and visible
+malformed, hash-drifted, schema-invalid, or semantically invalid bytes remain
+fail-closed and follow the ordinary local-quarantine contract. This retry rule
+adds no truth or admission state.
 
 Reasoning depth does not define the validation blast radius. Current receipts
 may cover unchanged sealed dependencies, but every new or invalidated atomic

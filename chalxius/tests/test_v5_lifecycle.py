@@ -763,6 +763,63 @@ class V5LifecycleTests(unittest.TestCase):
             self.assertNotIn(unrelated["research_id"], bound_ids)
             self.assertIn("adverse-worker", release["excluded_verifier_ids"])
 
+    def test_candidate_release_does_not_walk_administrative_related_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "v5", "v5-local-release-scope")
+            lifecycle = store.v5_lifecycle()
+            old_proof = lifecycle.add_research(
+                {"kind": "proof_attempt", "claim": "An older branch."},
+                actor="old-producer",
+            )
+            old_challenge = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Challenge the older branch.",
+                    "relation": "challenges",
+                    "related_research_ids": [old_proof["research_id"]],
+                },
+                actor="old-adverse-worker",
+            )
+            repair_task = lifecycle.add_research(
+                {
+                    "kind": "repair",
+                    "claim": "Prepare a bounded copy-on-write repair.",
+                    "relation": "repairs",
+                    "related_research_ids": [
+                        old_challenge["research_id"],
+                        old_proof["research_id"],
+                    ],
+                },
+                actor="v5-orchestrator",
+            )
+            repaired_proof = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "The repaired local branch.",
+                    "relation": "responds_to",
+                    "related_research_ids": [repair_task["research_id"]],
+                },
+                actor="candidate-producer",
+            )
+            direct_challenge = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Check the repaired local branch.",
+                    "relation": "challenges",
+                    "related_research_ids": [repaired_proof["research_id"]],
+                },
+                actor="current-adverse-worker",
+            )
+
+            bound = lifecycle._release_research_records([repaired_proof])
+            bound_ids = {item["research_id"] for item in bound}
+            self.assertEqual(
+                bound_ids,
+                {repaired_proof["research_id"], direct_challenge["research_id"]},
+            )
+            self.assertNotIn(old_challenge["research_id"], bound_ids)
+            self.assertNotIn(repair_task["research_id"], bound_ids)
+
     def test_frontier_limits_and_explicit_last_entry_have_no_truncation_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "v5", "v5-frontier-boundary")
@@ -939,9 +996,40 @@ class V5LifecycleTests(unittest.TestCase):
                 )
                 self.assertEqual(card["control_plane"]["plane"], "control")
                 self.assertEqual(
+                    card["control_plane"]["final_handoff_fields"],
+                    ["assignment_id", "status"],
+                )
+                self.assertEqual(
+                    card["return_contract"]["hash_contract"],
+                    "sha256_of_exact_return_bytes_derived_by_canonical_ingestion",
+                )
+                self.assertEqual(
                     card["mathematical_state"]["plane"], "mathematical_state"
                 )
                 self.assertEqual(card["narrative_plane"]["plane"], "narrative")
+                prompt = Path(assignment["prompt_path"]).read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn(
+                    'hand off assignment_id and status="final"', prompt
+                )
+                self.assertNotIn("hand off only its SHA-256 plus status", prompt)
+                mismatched_handoff = copy.deepcopy(card)
+                mismatched_handoff["control_plane"][
+                    "final_handoff_fields"
+                ] = ["assignment_id", "return_sha256", "status"]
+                semantic = {
+                    key: value
+                    for key, value in mismatched_handoff.items()
+                    if key != "task_card_semantic_sha256"
+                }
+                mismatched_handoff["task_card_semantic_sha256"] = sha256_json(
+                    semantic
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "final-handoff contract drifted"
+                ):
+                    lifecycle.validate_task_card(mismatched_handoff)
                 self.assertNotIn("profile_closure", card)
                 self.assertNotIn("pulse_closure", card)
                 self.assertIsNone(card["campaign_id"])
@@ -1354,13 +1442,15 @@ class V5LifecycleTests(unittest.TestCase):
                 json.dumps(valid_payload, ensure_ascii=False, sort_keys=True),
                 encoding="utf-8",
             )
-            valid_sha = hashlib.sha256(valid_path.read_bytes()).hexdigest()
             ingested = lifecycle.ingest_return(
                 round_id=round_status["round_id"],
                 assignment_id=assignments[0]["assignment_id"],
-                worker_final_sha256=valid_sha,
             )
             self.assertEqual(ingested["status"], "ingested")
+            self.assertEqual(
+                ingested["return_sha256"],
+                hashlib.sha256(valid_path.read_bytes()).hexdigest(),
+            )
 
             bad_payload = return_payload(assignments[1])
             del bad_payload["content"]

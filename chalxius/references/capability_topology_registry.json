@@ -842,7 +842,7 @@
       ]
     },
     "cap.runtime_continuity": {
-      "summary": "Release and rollback diagnostics with protected-project validation; runtime history never gates ordinary graph operations.",
+      "summary": "Fast host-global local installation plus explicit protected-project forensic cutover; runtime history never gates ordinary graph operations.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -864,12 +864,17 @@
       "tests": [
         "tests/test_runtime_archive.py",
         "tests/test_runtime_cutover.py",
+        "tests/test_local_install.py",
         "tests/test_host_entrypoint_nonmutation.py"
       ],
       "activation_paths": [
         {
           "kind": "standalone",
           "module": "archive_runtime"
+        },
+        {
+          "kind": "standalone",
+          "module": "local_install"
         },
         {
           "kind": "standalone",
@@ -1524,6 +1529,13 @@
         "state_owner"
       ]
     },
+    "mathgraph.local_install": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/mathgraph/local_install.py",
+      "roles": [
+        "domain_service"
+      ]
+    },
     "mathgraph.runtime_cutover": {
       "capability_id": "cap.runtime_continuity",
       "path": "scripts/mathgraph/runtime_cutover.py",
@@ -1544,6 +1556,20 @@
         "archive_runtime.main"
       ],
       "standalone_reason": "Installed host CLI wrapper for mathgraph.runtime_archive; invoked directly rather than imported."
+    },
+    "local_install": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/local_install.py",
+      "roles": [
+        "adapter",
+        "domain_service",
+        "entrypoint",
+        "release_tool"
+      ],
+      "standalone_entry_symbols": [
+        "local_install.main"
+      ],
+      "standalone_reason": "Normal host-global local installer; it validates and atomically swaps one skill runtime without project reads."
     },
     "runtime_cutover": {
       "capability_id": "cap.runtime_continuity",

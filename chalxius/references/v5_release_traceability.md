@@ -1,4 +1,112 @@
-# Chalxius V5 traceability through 0.8.0 MathGraph First
+# Chalxius V5 traceability through 0.8.6 Bounded PHX Repair
+
+## 0.8.6 bounded-PHX-repair release overlay
+
+- Candidate version: `0.8.6`; release name **Bounded PHX Repair**.
+- Main explicitly selects load-bearing Research ids. `plan-round`,
+  `plan-supervision-round`, `plan-computation-execution`, and
+  `plan-candidate-adverse` create assignments/cards only; Main must launch each
+  worker through the host and confirm the actual start. No dispatch receipt,
+  scheduler, compatibility layer, or mathematical gate is added.
+- Canonical Candidate Fact selection is producer- and container-neutral. Main
+  may author the bytes and select a canonical Fact file inside its sealed
+  Candidate Release. Producer, container, actor, and other provenance remain
+  nontruth lineage and do not establish mathematical validity.
+- The Main-only current command is
+  `prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+  Its actor is fixed to Main and it accepts no `--actor` override. It
+  canonical-validates and consumes the selected project-contained Fact
+  bytes, derives every applicable completed supervision id for the selected
+  Research (possibly none when no supervision scope applies), and creates or
+  reuses one nontruth adverse target. Fresh adverse review and disposition,
+  fresh verifier review, Gateway-owned `certification-record`, and Gateway Fact
+  admission remain separate.
+- `validate-return` reads one bounded canonical return/artifact snapshot.
+  Transient `ENOENT` or `ESTALE` visibility before a safe snapshot exists is
+  retryable without quarantine; unsafe objects and visible malformed,
+  hash-drifted, schema-invalid, or semantically invalid bytes remain fail-closed
+  and locally quarantinable.
+- Worker-performance observation is an ordinary Main-visible host instruction.
+  The release adds no timer, daemon, watcher, heartbeat, numeric threshold,
+  persistent performance state, or review/admission condition.
+- Gateway is the sole role authorized to invoke `certification-record`; a
+  verifier supplies review bytes but does not publish Certification.
+
+## 0.8.5 terminalized-worker-lifecycle release overlay
+
+- Candidate version: `0.8.5`; release name **Terminalized Worker Lifecycle**.
+- The immutable terminal seal remains the authority. After Research/receipt
+  publication, assignment-owned worker paths are detached and rebuilt
+  copy-on-write from sealed bytes, with a nontruth marker for replay and
+  diagnostics. Projection failure is retryable and does not block mathematical
+  ingestion; no Candidate, Certification, Gateway, or Fact gate is added.
+- Historical project bytes remain immutable. The ordinary stale-worker write
+  path is closed by read-only canonical successors, while open descriptors and
+  shared-parent atomic replacement remain explicit host/process boundaries.
+
+## 0.8.4 semantic-graph-handoff release overlay
+
+- Candidate version: `0.8.4`; release name **Semantic Graph Handoff**.
+- Candidate Release starts from explicitly selected constructive Research and
+  adds only responding adverse/supervision work. Generic provenance ancestry
+  does not become a packaging or verifier capability.
+- Structured source-evidence capabilities normalize current, compact, and
+  historical concrete path/hash spellings only after every declared path is
+  project-contained and byte-equal to the one declared SHA-256. Locator-only
+  metadata remains non-authorizing.
+- Historical MathGraph records remain immutable and directly operable. The
+  release adds no migration, compatibility database, receipt authority, or
+  second truth path. Candidate, verifier, Certification, Gateway, and Fact
+  checks remain at their existing owner boundaries.
+
+## 0.8.3 canonical-handoff release overlay
+
+- Candidate version: `0.8.3`; release name **Canonical Handoff**.
+- Worker finalization still requires an explicit assignment and `status="final"`,
+  but the return hash is no longer a manually transcribed capability input.
+  Canonical ingestion hashes the exact return bytes itself; a supplied legacy
+  hash remains an optional equality assertion.
+- V4 and V5 receipts retain their canonical return-hash fields for replay and
+  tamper detection. No Research, Candidate, Certification, Gateway, or Fact
+  authority boundary is weakened.
+- The normal `scripts/local_install.py` path remains the host-global installer;
+  this release changes only the handoff input and its focused regressions.
+
+## 0.8.2 explicit-route-boundaries release overlay
+
+- Candidate version: `0.8.2`; release name **Explicit Route Boundaries**.
+- `route_invalidations` invalidates only the exact Research ids named in that
+  field. `related_research_ids` remains general dependency, provenance, and
+  contextual lineage; it does not silently transmit route staleness. A future
+  semantic invalidation closure must have its own explicit edge contract.
+- This prevents an invalidated historical bridge from hiding independent
+  source, supervision, or repair Research that happens to cite the bridge as
+  context. Historical Research bytes, hashes, and statuses are not rewritten.
+- `scripts/local_install.py` is the normal authorized host-global development
+  installer. It validates the complete candidate manifest, runs self-test and
+  focused regressions, archives prior/new runtimes, atomically swaps the skill
+  discovery alias, and rotates one direct rollback copy outside discovery. It
+  performs zero project reads and writes. `runtime_cutover.py` is retained only
+  for explicitly requested protected-project or forensic deployment evidence.
+- Candidate, adverse, verifier, Certification, Gateway, Fact, and project
+  MathGraph authority are unchanged.
+
+## 0.8.1 scoped-candidate-adversity release overlay
+
+- Candidate version: `0.8.1`; release name **Scoped Candidate Adversity**.
+- Fresh Candidate-adverse targets are derived only from explicitly selected,
+  non-adverse constructive Research heads that themselves record literal
+  `independent_adverse_required=true`. Historical related-Research ancestry is
+  no longer an automatic source of a new Candidate obligation.
+- Multiple explicitly selected marked heads retain dependency-aware deduplication:
+  only maximal selected heads require separate whole-Candidate adverse review.
+- Required reviews still bind a direct responding refute, exact Candidate Fact
+  bytes, independent actor, task-card/return/Research-product provenance, a
+  Candidate disposition, and verifier exclusion. Candidate, verifier,
+  Certification, Gateway, and Fact authority are otherwise unchanged.
+- New readiness records use `chalxius-candidate-fresh-adverse-readiness-2`;
+  revision-1 readiness records remain readable for historical Candidate and
+  Fact-lineage validation.
 
 ## 0.8.0 mathgraph-first release overlay
 

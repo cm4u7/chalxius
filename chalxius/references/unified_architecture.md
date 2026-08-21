@@ -6,6 +6,15 @@
 > valid node/edge hashes, dependencies, provenance, workflow stages, and owner
 > boundaries are the compatibility surface.
 
+> **0.8.6 bounded-PHX override.** Current load-bearing work starts from
+> Research ids explicitly selected by Main. A planner freezes assignments and
+> cards but does not launch workers; Main launches and confirms them through the
+> host. Canonical Candidate Fact bytes may be Main-authored, while provenance
+> remains lineage rather than mathematical authority. Current return validation
+> is one retryable-visibility snapshot, performance observation is a Main-visible
+> instruction with no timer/daemon/threshold, and Gateway owns
+> `certification-record`. These repairs add no compatibility layer or truth gate.
+
 ### Receipt role in the 0.8.0 overlay
 
 Worker-ingestion receipts are process markers: they record that a return was
@@ -78,7 +87,7 @@ V5 has four persistent authority domains and one derived presentation surface:
 |---|---|---|
 | Research Ledger | cumulative claims, attempts, insights, challenges, counterexamples, obstacles, experiments, repairs, and dispositions | none |
 | Evidence sidecar | reviewed Paper graphs, explicitly imported external Fact capsules, dispositions, and prepared bridges | none |
-| Certification Ledger | immutable decisions over exact sealed Candidate Releases | certification evidence only |
+| Certification Ledger | Gateway-owned immutable decisions over exact sealed Candidate Releases | certification evidence only |
 | V5 Fact Graph | admitted statements, active predecessor edges, admissions, and revocations | sole premise store |
 | Reader projection | deterministic packet-v1/HTML view over the domains plus Paper/Audit, Blackboard, and optional background | none |
 
@@ -89,19 +98,32 @@ Research --release--> Candidate Release --decide--> Certification Decision --adm
 Evidence --verified_bridge/nontruth input--> Candidate Release
 ```
 
+The fresh verifier supplies the bounded review return. Gateway alone publishes
+the immutable Certification Decision with `certification-record`, then performs
+the separate admission revalidation. Main cannot substitute provenance,
+planning state, or a verifier draft for either Gateway-owned transition.
+
 There is no Round Closure, Pulse Closure, Profile Closure, Campaign Closure, or
 separate adverse-review object on this path. Compatibility commands may report
 process readiness, but they cannot supply admission authority.
 
 ### Prospective Research cycle: production, then supervision
 
-New public `plan-round` work is one prospective production subround. Its
-workers independently attempt proof, computation design, literature and source
+For load-bearing work, Main explicitly names the Research ids (through the
+current repeated `--memory-id` input) before calling `plan-round`. New public
+`plan-round` work is one prospective production subround. Its planned workers
+independently attempt proof, computation design, literature and source
 work, interpretation, or insight search from frozen prior Research. Production
 rejects explicit or automatically selected `refute` work and never appends a
 paired adverse worker. A constructive worker may record a boundary,
 obstruction, or counterexample encountered within its assigned task, but the
 formal attack pass is the second subround.
+
+`plan-round`, `plan-supervision-round`, `plan-computation-execution`, and
+`plan-candidate-adverse` create immutable assignments/cards only. None is a
+native worker launch or evidence that one occurred. Main must launch each exact
+worker through the host and confirm that it started. This is an explicit
+orchestration responsibility, not a new durable receipt or mathematical gate.
 
 Before dispatch, the production manifest partitions selected assignments into
 content-addressed logical components. Two selected assignments share a
@@ -122,8 +144,9 @@ never inferred from which returns happen to be present. The planner hash-binds
 the source manifest, component identity, and complete component product
 descriptors (the historical `source_receipts` field name is retained for
 schema readability),
-then selects at most three applicable supervisors from the static reproduced-
-failure registry. `program_math` applies to computation design or output,
+then plans at most three applicable supervisor assignments/cards from the
+static reproduced-failure registry; Main separately launches and confirms the
+workers. `program_math` applies to computation design or output,
 `proof_logic` to proof-bearing work, and `source_scope` to literature or exact
 source use. `integration` applies only when the component crosses at least two
 of those primary scopes; multiple outputs owned by one primary scope do not pay
@@ -289,24 +312,35 @@ only path to admitted Fact bytes.
 
 The one-conclusion rule is checked cheaply before global Research replay. New
 0.7.13 task cards additionally validate every `candidate_fact` worker artifact
-as exact canonical Fact Markdown before ingestion. Historical returns keep the
-contract of their frozen runtime. A copy-on-write repair may accept an exact
+as exact canonical Fact Markdown before ingestion. The canonical Candidate
+Fact may instead be authored by Main and selected from its sealed Candidate
+Release. Authorship, container, and provenance metadata remain lineage and do
+not establish the mathematical conclusion. Historical returns
+keep the contract of their frozen runtime. A copy-on-write repair may accept an exact
 Main-authored JSON repair specification; its claim, content, rationale, work
 mode, obligations, and stop conditions are normalized and hash-bound into both
 repair Research and the immutable task card so a repair round cannot silently
 fall back to a generic prompt.
 
-Main launches that later whole-Candidate attack through
+Main plans that later whole-Candidate attack with
 `plan-candidate-adverse RESEARCH_ID` only when the target is active, non-stale,
 binds exactly one current `candidate_fact` artifact, and explicitly requires
 independent adverse review. The command is exact-retry idempotent within one
-host scope and does not reopen constructive production or supervision.
+host scope and does not reopen constructive production or supervision. The
+resulting assignment/card is not dispatch; Main separately launches and
+confirms the actual worker.
 
-For exact canonical Fact bytes returned by constructive production, Main may
-derive that target with
-`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. The command requires
-the unique live completed Research-supervision result and adds no mathematical
-claim. Its refute card uses the dedicated Candidate-adverse compact bootstrap.
+For exact canonical Fact bytes selected by Main for one Research target, Main
+derives the adverse target with
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+The command canonical-validates and consumes those exact project-contained
+bytes, binds every applicable completed Research-supervision result for the
+selected target (possibly none when no scope applies), and adds no mathematical
+claim. The bytes may be Main-authored; producer, container, author, and other
+provenance metadata are not correctness gates. Its refute card uses the
+dedicated Candidate-adverse compact bootstrap. Main then launches and confirms
+the actual adverse worker. Candidate disposition, the fresh verifier,
+Gateway-owned Certification, and Gateway admission remain unchanged.
 
 Current supervision cards additionally freeze one content-addressed projection
 of each attacked production card's active Fact premises, exact task-card bytes,
@@ -329,8 +363,17 @@ Every V5 work unit keeps three communication planes distinct:
 
 The immutable task card is the capability boundary. A worker may not infer
 permissions from filesystem visibility. All workers in one planned round share
-the same Blackboard snapshot. A bad return is quarantined locally; other valid
-returns remain independently ingestible and cumulative.
+the same Blackboard snapshot. `validate-return` reads one bounded snapshot of
+the canonical return and declared artifacts. A transient `ENOENT` or `ESTALE`
+before a safe snapshot is visible may be retried without quarantine. An unsafe
+filesystem object or visible malformed, hash-drifted, schema-invalid, or
+semantically invalid return is quarantined locally; other valid returns remain
+independently ingestible and cumulative.
+
+Main may inspect ordinary visible host progress and reclaim or redirect a
+worker that stops producing useful output. This performance instruction is
+visible to Main only; it creates no worker timer, background daemon, watcher,
+heartbeat, numeric threshold, persistent state, or Candidate/admission gate.
 
 One prospective normal-flow allocation seam is exact and domain-general.
 `workers` counts constructive production primaries, and the production

@@ -46,6 +46,12 @@ The attack report is separate from the CHX runtime architecture report:
 
 Never copy one report into the other or treat either as Fact evidence.
 
+For current load-bearing work, Main explicitly selects the constructive
+Research ids and the canonical Candidate Fact bytes to be attacked. Those Fact
+bytes may be authored by Main. Author labels and other provenance metadata
+preserve lineage but do not establish mathematical validity, require worker
+authorship, or replace any later review boundary.
+
 ## Three Research attack roles
 
 Keep three layers distinct:
@@ -59,9 +65,10 @@ Keep three layers distinct:
    induce a later copy-on-write Research repair, but it does not activate
    attack routes or use Pulse for live peer editing. Its default target is new
    Research, not an admitted Fact premise.
-3. Candidate fresh-adverse review attacks the whole frozen Candidate fact
-   content and its dispositions before expensive sealing. It is the formal
-   engineering acceptance attack; a fresh verifier still follows it.
+3. Candidate fresh-adverse review attacks the whole frozen Candidate Fact
+   content selected by Main and its dispositions before expensive sealing. It
+   is the formal engineering acceptance attack; a fresh verifier and
+   Gateway-owned Certification still follow it.
 
 Only a `refute` return carrying the current adverse-routing contract and an
 explicit qualifying `attack_learning` object supplies a failure report.
@@ -267,12 +274,25 @@ round; a scope drift, stale target, missing byte binding, ordinary production
 claim, or duplicate live exact retry fails closed. This command does not change
 the constructive-only first Research subround or the supervision lane.
 
+For one exact Research target and canonical Candidate Fact path selected by
+Main, Main first runs
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+The command canonical-validates and consumes the exact project-contained bytes,
+binds every applicable completed supervision result (possibly none when no
+scope applies), and creates or reuses one nontruth synthesis target. The bytes
+may be Main-authored; producer/container/author provenance does not certify
+them. Neither this preparation nor `plan-candidate-adverse` launches a worker.
+Main must actually launch the exact refute worker through the host and confirm
+that it started. This creates no new dispatch receipt or mathematical gate.
+
 The sealed readiness receipt instructs the fresh verifier to adjudicate every
 bound adverse disposition. It does not ask the verifier to rerun packaging and
 does not make the adverse return true. A mathematical verifier finding may
 still require a copy-on-write repair; the gate eliminates late mechanical,
 freshness, scope, and candidate-byte failures rather than promising that
 substantive mathematical review can never disagree.
+The verifier returns review bytes only; Gateway owns `certification-record` and
+the later Fact-admission revalidation.
 
 ## Attack report and Main synthesis
 
@@ -313,8 +333,11 @@ the normal user-facing report.
 An empty `attacks` array is never self-interpreting. It establishes a completed
 zero only with `coverage_status=dispatched-no-surviving-attack` and complete
 paired return coverage, or records that no independent pair was required.
-Missing assignment/card dispatch and pending or quarantined returns remain
-explicitly incomplete. A mixed or missing current scope, pair mismatch, or
+A plan or assignment/card alone is not actual dispatch. Main must separately
+launch and confirm the worker before treating the planned attack as under way;
+pending or quarantined returns remain explicitly incomplete. The historical
+coverage labels in the report are workflow projections, not proof of a native
+process launch. A mixed or missing current scope, pair mismatch, or
 card/manifest/return drift fails closed. Historical null-scope cards stay
 readable and are not assigned to a newer scope.
 

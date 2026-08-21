@@ -33,6 +33,105 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.6 Bounded PHX Repair difference
+
+The current orchestration contract now separates selection, planning, and
+execution. Main explicitly names load-bearing Research ids. Round/adverse
+planning freezes assignments and task cards but is not native dispatch; Main
+must launch each exact worker through the host and confirm the start. This is a
+visible operating instruction and adds no dispatch receipt, scheduler,
+compatibility layer, or truth gate.
+
+Candidate-Fact authorship is producer- and container-neutral. Main may author
+the exact canonical Candidate Fact bytes, seal them in a Candidate Release, and
+select that canonical Fact file for the adverse target;
+worker/Research/Candidate provenance remains recorded lineage but is not a
+mathematical validity predicate.
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`
+canonical-validates and consumes the exact Main-selected bytes, derives every
+applicable completed supervision id for the selected Research (including an
+empty set only when no scope applies), and retains fresh adverse work and
+disposition, fresh verifier, Gateway-owned `certification-record`, and Gateway
+admission boundaries. It does not infer a theorem from provenance or add a
+second Certification route.
+
+Canonical `validate-return` is one bounded read-only snapshot. A transient
+`ENOENT` or `ESTALE` before a stable safe view exists is a retryable visibility
+outcome and produces no quarantine; an unsafe object or visible malformed,
+hash-drifted, schema-invalid, or semantically invalid return remains fail-closed
+and locally quarantinable. Performance observation is likewise deliberately
+nonpersistent: Main sees ordinary host progress and may reclaim or redirect
+stalled work, but Chalxius creates no timer, daemon, watcher, heartbeat, numeric
+threshold, or admission state.
+
+## 0.8.5 Terminalized Worker Lifecycle difference
+
+The terminal-seal lifecycle now copy-on-write detaches assignment-owned worker
+return, artifact, and work paths after the sealed Research/receipt transaction.
+Canonical paths are rebuilt from the immutable terminal bundle and ordinary
+stale direct writes fail; a nontruth marker makes interruption and retry
+replayable. The projection is deliberately not a Research or Fact gate, and
+historical records are not rewritten. Open file descriptors, hostile processes,
+and the shared returns parent remain host/process boundaries handled by worker
+reclamation and diagnostics.
+
+## 0.8.4 Semantic Graph Handoff difference
+
+Candidate packaging now distinguishes mathematical response closure from
+generic Research provenance. Explicit constructive heads still bind their
+responding adverse and completed supervision work, while planning, repair, and
+historical `related_research_ids` do not recursively pull unrelated project
+history into one Candidate.
+
+Frozen source-evidence JSON is likewise interpreted through exact graph
+semantics rather than one release-era field name. Every declared concrete path
+must be project-contained and match one SHA-256; current, compact, and
+historical path/hash spellings then project the same bounded supervisor
+capability. Locator-only metadata remains non-authorizing. No historical file,
+truth record, runtime adapter, or persistent compatibility index is added.
+
+## 0.8.3 Canonical Handoff difference
+
+The worker-to-Main final handoff now carries only the assignment identity and
+`status="final"` by default. Canonical ingestion derives the SHA-256 from the
+exact return bytes it owns. The legacy `return_sha256` handoff field and
+`--worker-final-sha256` option remain accepted only as optional equality
+assertions, so existing callers can continue while new callers no longer need
+to copy a 64-character value. Receipts retain the derived canonical hash and
+all byte, replay, artifact, Research, Candidate, Certification, Gateway, and
+Fact checks remain unchanged.
+
+## 0.8.2 Explicit Route Boundaries difference
+
+Route invalidation now has one exact semantic meaning: an entry in
+`route_invalidations` makes only its explicitly named Research target stale.
+The broad `related_research_ids` field continues to carry source, provenance,
+context, and ordinary dependency references, but it cannot be used as an
+implicit invalidation-transmission graph. This removes false staleness of
+independent research without reactivating the explicitly invalidated target or
+weakening any Candidate, verifier, Certification, Gateway, or Fact check.
+
+The normal global installer is likewise separated from protected-project
+forensics. `scripts/local_install.py` validates the exact candidate tree,
+self-test, and focused regressions before an archive-backed atomic host-global
+swap; it reads no project. The older `runtime_cutover.py` remains available for
+explicit protected-project evidence rather than imposing that administrative
+path on ordinary local iteration.
+
+## 0.8.1 Scoped Candidate Adversity difference
+
+Fresh Candidate adverse review now follows the Candidate's explicit selection
+boundary. Only explicitly selected constructive Research heads with literal
+`independent_adverse_required=true` can create a new fresh-adverse target;
+historical ancestry remains readable dependency/provenance context rather than
+an automatic obligation source. Among several selected marked heads, only
+maximal selected heads are required. Direct Candidate-byte binding,
+independent actor, disposition, task-card/return/Research-product provenance,
+verifier exclusion, Certification, Gateway, and Fact checks remain unchanged.
+The new readiness revision is backward-readable alongside revision 1. No
+compatibility adapter, persistent index, receipt authority, or new lifecycle
+state is added.
+
 ## 0.8.0 MathGraph-first difference
 
 Version 0.8.0 makes graph semantics the forward-compatibility principle. The

@@ -1,5 +1,93 @@
 # Chalxius portable deployment
 
+## 0.8.6 Bounded PHX Repair
+
+The `0.8.6` **Bounded PHX Repair** artifact makes Main's current host duties
+explicit without adding a scheduler or truth gate. Main selects the
+load-bearing Research ids; planning creates immutable assignments/cards but
+does not dispatch them, so Main separately launches or confirms the assigned
+worker. A performance checkpoint is an instruction visible to Main through the
+ordinary host interaction only. Chalxius creates no timer, daemon, watcher,
+heartbeat, numeric threshold, or persistent monitoring state.
+
+For prospective Candidate adversity, Main uses
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
+The actor is fixed to Main and there is no `--actor` override. The supplied
+project-contained canonical Fact bytes may be Main-authored, including a Fact
+inside a sealed Main-authored Candidate Release; producer, container, author,
+and other provenance metadata remain lineage rather than mathematical gates.
+Preparation derives every applicable completed supervision id for the selected
+Research, including an empty set only when no supervision scope applies, and
+does not launch the later adverse worker. Candidate disposition, fresh adverse
+review, fresh verifier review, Gateway-owned `certification-record`, and
+Gateway admission remain mandatory. `validate-return` validates one bounded
+filesystem snapshot: transient `ENOENT` or `ESTALE` before a safe view exists
+may be retried after paths stabilize without quarantine, while unsafe or
+visible malformed bytes remain fail-closed and follow local quarantine.
+
+## 0.8.5 Terminalized Worker Lifecycle
+
+The `0.8.5` **Terminalized Worker Lifecycle** artifact keeps the immutable
+terminal seal as the sole handoff authority and adds a replayable, nontruth
+copy-on-write cleanup of assignment-owned worker paths. Research and its
+receipt are written first; a transient filesystem failure leaves a pending
+projection rather than blocking valid mathematical ingestion. The next ingest
+replay reconstructs canonical paths from the sealed bundle. No compatibility
+layer, Candidate shortcut, or Fact gate is introduced.
+
+## 0.8.4 Semantic Graph Handoff
+
+The `0.8.4` **Semantic Graph Handoff** artifact keeps the MathGraph-first
+deployment model and removes two false administrative expansions: Candidate
+Release no longer walks generic historical Research ancestry, and source-scope
+supervision reads exact source capabilities across frozen graph-era field
+spellings. Both changes preserve content hashes and owner boundaries without
+rewriting project records or adding a runtime compatibility layer.
+
+## 0.8.3 Canonical Handoff
+
+The `0.8.3` **Canonical Handoff** artifact removes manual worker-to-Main hash
+transcription. The normal local installer remains the same, and canonical
+return bytes remain hash-bound at ingestion.
+
+## 0.8.2 Explicit Route Boundaries
+
+The `0.8.2` **Explicit Route Boundaries** artifact makes ordinary
+route-invalidations exact-target declarations: a `route_invalidations` entry
+marks only its named Research target stale, while `related_research_ids` stays
+available for ordinary provenance and contextual lineage. It also supplies the
+normal host-global installation path below. Neither change rewrites a project
+or affects Candidate, Certification, Gateway, or Fact authority.
+
+For a routine authorized local iteration, use the candidate's fast installer:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B \
+  /absolute/path/to/candidate/scripts/local_install.py
+```
+
+It verifies the complete candidate manifest, runs the candidate self-test and
+the focused route/install regressions, archives the prior and installed runtime,
+atomically replaces `~/.codex/skills/chalxius`, and retains one immediate
+rollback at `~/.codex/skill-rollbacks/chalxius-current`. It performs no project
+reads or writes and does not require a protected-project inventory, project
+audit, release matrix, or worker receipt. On post-swap failure it restores the
+prior installation automatically. Use `--dry-run` for the same candidate
+validation without changing host paths.
+
+Use `runtime_cutover.py` only for an explicitly requested forensic or
+protected-project deployment. That path retains its project-validation
+evidence contract but is not the default installation route.
+
+## 0.8.1 Scoped Candidate Adversity
+
+The `0.8.1` **Scoped Candidate Adversity** artifact retains the 0.8.0
+MathGraph-first continuity boundary and narrows fresh Candidate-adverse target
+derivation to explicitly selected marked constructive heads. The deployment
+surface remains the same: installation changes discovery bytes only and does
+not rewrite graph state, Candidate Releases, Certification Decisions, Facts,
+or historical readiness records.
+
 ## 0.8.0 MathGraph First
 
 The `0.8.0` **MathGraph First** artifact is self-contained and carries no
@@ -77,12 +165,18 @@ Candidate-Fact target. Candidate checks reuse only a command-local validated
 inspection context and repeat supervision liveness under the seal lock. No
 persistent cache or new lifecycle owner is installed.
 
-If that target is an exact supervised production result, Main may first use
-`prepare-candidate-adverse-target PRODUCTION_RESEARCH_ID`. Current
-Candidate-adverse cards use a dedicated compact bootstrap; current supervision
-cards inherit a content-addressed projection of the attacked production Fact
-premises and exact source/input capabilities. Historical cards remain
-byte-exact under their archived runtime.
+For that target, Main first uses
+`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`
+with the selected Research and exact project-contained canonical Fact bytes.
+Those bytes need not have been produced by a worker: authorship and container
+metadata are provenance, not mathematical authority. The preparation derives
+all applicable completed supervision ids; there may be none only when no
+supervision scope applies. Current Candidate-adverse cards use a dedicated
+compact bootstrap; current supervision cards inherit a content-addressed
+projection of the attacked canonical Fact premises and exact source/input
+capabilities. Preparation and card planning do not dispatch a worker; Main
+launches or confirms it separately. Historical cards remain byte-exact under
+their archived runtime.
 
 Candidate-local assurance shape and exact current-assurance statement-interface
 errors reject from submitted Fact bytes and immutable selected-Research

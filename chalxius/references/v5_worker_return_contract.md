@@ -128,7 +128,10 @@ the exact bytes as Fact Markdown, requires canonical round-trip serialization,
 and requires exactly one semantic conclusion atom. A typed semantic interface
 may separate premises from that conclusion; without one, the statement must
 contain exactly one `[CLAIM:*]` clause. This prospective gate does not rewrite
-or retroactively reject returns frozen under an older runtime.
+or retroactively reject returns frozen under an older runtime. It also does not
+require worker authorship: Main may author the same exact canonical Candidate
+Fact bytes. Author and other provenance metadata preserve lineage but are not a
+mathematical gate.
 
 If a production compute source contains `approved_computation_execution`, the
 return is a formal execution. Its `computation_source` and
@@ -302,11 +305,21 @@ and genuinely needed; it must not stand in for a missing premise or inference.
 mgraph --root PROJECT --role worker preflight-return ROUND_ID ASSIGNMENT_ID \
   --input DRAFT.json
 mgraph --root PROJECT --role worker validate-return ROUND_ID ASSIGNMENT_ID
-mgraph --root PROJECT --role main ingest-return ROUND_ID ASSIGNMENT_ID \
-  --worker-final-sha256 EXACT_SHA256
+mgraph --root PROJECT --role main ingest-return ROUND_ID ASSIGNMENT_ID
 ```
 
 `preflight-return` is read-only and may inspect a noncanonical draft. Copy the
 passing bytes without reserialization. `validate-return` checks the canonical
-path. Ingestion records Research; it does not create a Fact, decide Paper
-adequacy, approve an attack route, or modify a CHX report.
+path through one bounded read-only return/artifact snapshot. A transient
+`ENOENT` or `ESTALE` before a safe snapshot is visible may be retried after the
+same paths stabilize and creates no quarantine. A symlink, escape, special or
+otherwise unsafe object, or visible malformed, hash-drifted, schema-invalid, or
+semantically invalid bytes remains fail-closed and follows the ordinary local-
+quarantine path. The final handoff contains `assignment_id` and
+`status="final"`; its
+legacy `return_sha256` field is optional. Ingestion derives the SHA-256 from
+the canonical bytes and treats a supplied legacy value only as an equality
+assertion. Ingestion records Research; it does not create a Fact, decide Paper
+adequacy, approve an attack route, or modify a CHX report. A later verifier
+returns review bytes only; Gateway alone owns `certification-record` and Fact
+admission.

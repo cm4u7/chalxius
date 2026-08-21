@@ -186,6 +186,14 @@ architecture recommendation, global redesign, coordination, simplification,
 or recurring mechanism reuse. Semantic triggering means consult and, when
 appropriate, record the guide. It never means silently implement a route.
 
+Current worker-performance observation is an ordinary Main-visible instruction,
+not a PHX subsystem. Main may use the progress already visible in the host
+interaction to reclaim or redirect stalled work. Chalxius must not create a
+timer, daemon, watcher, polling loop, heartbeat, numeric threshold, persistent
+performance state, or lifecycle/admission gate for that observation. A concrete
+architecture-caused performance defect still enters CHX first; a reusable
+architectural lesson may then follow the existing PHX consultation route.
+
 PHX should stay compact by recording major reusable routes, meaningful
 measurements, explicit consultations, and actual adoptions. Local symptoms,
 ordinary bugs, one-off timings, and CHX dispositions belong elsewhere. The

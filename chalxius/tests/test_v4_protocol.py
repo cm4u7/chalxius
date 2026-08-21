@@ -842,13 +842,14 @@ class V4ProtocolTests(unittest.TestCase):
         self.assertTrue(applied["clean"])
         self.assertTrue(self.blackboard.reindex(apply=False)["clean"])
 
-    def test_direct_handoff_contains_only_assignment_hash_and_status(self) -> None:
+    def test_direct_handoff_requires_assignment_and_final_status_only(self) -> None:
         payload = {
             "assignment_id": "a01-0123456789ab-prove",
-            "return_sha256": "4" * 64,
             "status": "final",
         }
         self.assertEqual(validate_final_handoff(payload), payload)
+        legacy = {**payload, "return_sha256": "4" * 64}
+        self.assertEqual(validate_final_handoff(legacy), legacy)
         with self.assertRaisesRegex(ValueError, "unknown"):
             validate_final_handoff({**payload, "summary": "too much"})
 
@@ -1038,7 +1039,10 @@ class V4ProtocolTests(unittest.TestCase):
             self.store,
             planned["round_id"],
             card["assignment_id"],
-            worker_final_sha256=validated["return_sha256"],
+        )
+        self.assertEqual(receipt["return_sha256"], validated["return_sha256"])
+        self.assertEqual(
+            receipt["worker_final_sha256"], validated["return_sha256"]
         )
         fact_id = receipt["submission_id"]
         self.assertEqual(
