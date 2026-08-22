@@ -1,5 +1,18 @@
 # Chalxius portable deployment
 
+## 0.8.10 Semantic Frontier Control
+
+The `0.8.10` **Semantic Frontier Control** artifact adds a Main instruction for
+frontiers stated as a specific named mathematical object, class, theorem, or
+exact identifier. Before card freeze, Main performs one bounded exact Research
+search over stable subject names and identifiers, reviews matching completed
+production, copy-on-write repair successors, and applicable completed
+supervision, and explicitly chooses relevant `related_research_ids`.
+
+This deployment adds no executable matcher, automatic frontier expansion,
+whole-project audit, persistent index, receipt, lifecycle state, scheduler, or
+gate. Installation remains project-free and does not rewrite any MathGraph.
+
 ## 0.8.9 Frontier Reliability
 
 The `0.8.9` **Frontier Reliability** artifact gives ordinary and Brave Future

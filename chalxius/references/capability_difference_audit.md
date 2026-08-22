@@ -33,6 +33,22 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.10 Semantic Frontier Control difference
+
+The current Main contract now distinguishes explicit id selection from a
+frontier first formulated as a specific named mathematical object, class,
+theorem, or exact identifier. In the latter case Main performs one bounded
+exact Research search over stable subject names and identifiers before card
+freeze, reviews matching completed production, copy-on-write repair
+successors, and applicable completed supervision, and then explicitly chooses
+the relevant `related_research_ids`.
+
+The search supplies semantic evidence to Main; it does not infer relevance,
+automatically expand or choose work, perform fuzzy matching or a whole-project
+audit, persist an index, create a receipt or lifecycle state, schedule a
+worker, or gate Research, Candidate, verifier, Certification, Gateway, or Fact
+authority. Frozen cards and historical Research remain unchanged.
+
 ## 0.8.9 Frontier Reliability difference
 
 The current frontier is a semantic boundary projection, not a list of every

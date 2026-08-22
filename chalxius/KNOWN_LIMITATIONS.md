@@ -1,10 +1,25 @@
-# Chalxius 0.8.9 architecture findings and residual boundaries
+# Chalxius 0.8.10 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.9
-**Frontier Reliability**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.10
+**Semantic Frontier Control**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.10 Semantic Frontier Control
+
+Main's explicit load-bearing selection now includes one bounded semantic
+discipline for a frontier stated as a specific named object, class, theorem, or
+exact identifier. Before freezing a card, Main searches exact Research over
+the subject's stable names and identifiers, reviews matching completed
+production, copy-on-write repair successors, and applicable completed
+supervision, and then chooses the relevant `related_research_ids`.
+
+This is an instruction-surface repair for stale named-frontier selection. It
+does not infer relevance, automatically expand or choose work, run a
+whole-project audit, add fuzzy matching, persist an index, create a receipt or
+lifecycle state, schedule a worker, or gate Research or Fact authority. Main
+may omit irrelevant matches and remains responsible for the final frontier.
 
 ## 0.8.9 Frontier Reliability
 

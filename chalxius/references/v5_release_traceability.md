@@ -1,4 +1,20 @@
-# Chalxius V5 traceability through 0.8.9 Frontier Reliability
+# Chalxius V5 traceability through 0.8.10 Semantic Frontier Control
+
+## 0.8.10 semantic-frontier-control release overlay
+
+- Candidate version: `0.8.10`; release name **Semantic Frontier Control**.
+- When Main proposes a frontier around a specific named mathematical object,
+  class, theorem, or exact identifier, Main first performs one bounded exact
+  Research search over stable subject names and identifiers.
+- Before freezing the card, Main reviews matching completed production,
+  copy-on-write repair successors, and applicable completed supervision, then
+  explicitly chooses the relevant `related_research_ids`.
+- The search does not infer relevance, automatically expand or select the
+  frontier, perform fuzzy matching or a whole-project audit, persist an index,
+  create a receipt or lifecycle state, dispatch a worker, or create a Research,
+  Candidate, verifier, Certification, Gateway, or Fact gate.
+- Existing Research, task cards, returns, artifacts, and truth authority remain
+  immutable and unchanged.
 
 ## 0.8.9 frontier-reliability release overlay
 

@@ -149,6 +149,15 @@ paired adverse worker. A constructive worker may record a boundary,
 obstruction, or counterexample encountered within its assigned task, but the
 formal attack pass is the second subround.
 
+When that proposed frontier is a specific named mathematical object, class,
+theorem, or exact identifier, Main first performs one bounded exact Research
+search over the subject's stable names and identifiers. Main reviews matching
+completed production, copy-on-write repair successors, and applicable
+completed supervision before freezing the card and explicitly chooses which
+matches belong in `related_research_ids`. The search does not automatically
+expand or choose the frontier, invoke fuzzy matching or a whole-project audit,
+or create a persistent index, receipt, lifecycle state, scheduler, or gate.
+
 `plan-round`, `plan-supervision-round`, `plan-computation-execution`, and
 `plan-candidate-adverse` create immutable assignments/cards only. None is a
 native worker launch or evidence that one occurred. Main must launch each exact

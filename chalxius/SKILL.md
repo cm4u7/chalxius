@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.9 — Frontier Reliability
+# Chalxius 0.8.10 — Semantic Frontier Control
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -70,12 +70,14 @@ ordinary Research validates only the exact admitted Fact nodes it consumes,
 and a card-authorized exact `primary` artifact may be used without a returned
 copy while toy checks and bridges remain return-bound.
 
-The 0.8.6 repair keeps orchestration explicit. Main names the load-bearing
-Research ids, and a planning command creates only immutable assignments and
-task cards. Main must still launch each selected worker through the host and
-confirm that the worker actually started; a plan or card is not dispatch.
-This is an operating instruction, not a new receipt, compatibility layer, or
-mathematical gate.
+The 0.8.10 repair makes Main run one bounded exact Research search over stable
+names/identifiers before freezing a named-object/class/theorem frontier, review
+completed production/repair/supervision, and choose `related_research_ids`.
+It adds no automatic selection/expansion, fuzzy match, whole-project audit,
+index, receipt, state, scheduler, or gate.
+
+The 0.8.6 repair keeps orchestration explicit: Main names Research ids; planning
+only creates cards; Main launches and confirms workers. No receipt or gate is added.
 
 The 0.8.7 repair makes performance observation equally explicit. Main directly
 notices the end-to-end elapsed time of commands and work units already visible
@@ -325,12 +327,10 @@ repair caches implicitly.
 2. For a research draft, freeze the artifact, reconstruct the complete
    load-bearing target DAG, preserve its domain and quantifiers, and expose any
    weaker theorem as a typed gap rather than a solution to the original target.
-3. Main explicitly names the load-bearing Research IDs. Production subround 1
-   plans constructive proof, literature, insight, interpretation, or
-   computation-design assignments and never plans refute. Explicit Research
-   IDs use the exact-ID path and do not rebuild the unrelated global frontier.
-   Planning and card creation are not dispatch: Main must launch each worker
-   through the host and confirm the actual start.
+3. Main names load-bearing Research IDs. For a named object/class/theorem,
+   first run the exact search above, review completed work, and choose
+   `related_research_ids`. Production never plans refute; exact IDs do not
+   rebuild the global frontier; Main launches and confirms every planned worker.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
    continues. Use at most three failure-informed supervisors: `proof_logic`,
