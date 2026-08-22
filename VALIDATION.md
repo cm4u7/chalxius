@@ -1,127 +1,146 @@
-# Validation — Chalxius v0.8.7
+# Validation — Chalxius v0.8.8
 
-This document records software, packaging, installation, performance, and
-global CHX-settlement evidence for **Chalxius 0.8.7 — Main Observation and CHX
-Snapshot**. It does not certify a mathematical claim.
+This document records software, packaging, installation, direct-operation
+canaries, and global CHX-settlement evidence for **Chalxius 0.8.8 — Direct
+Graph Operations**. It does not certify a mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 0.8.7 |
-| Release date | 2026-08-21 |
-| Skill manifest entries | 256 |
-| Manifest SHA-256 | `455628742109d5e7f7adb2a1a33ca8058cce0f47fe683dc7e68ce0ebf34c7b7f` |
-| Runtime content SHA-256 | `adf87ef71e785a1a9188a6848c5bedf15e880f1dd15f985d2cff591ec56d73cf` |
-| Installed runtime identity | `420ab20e1d633afe091154f7bb2a489b7746e52e8a43cccae82584e4aebaa755` |
-| Installed archive-tree identity | `f4659ae08540bd4a98de7e58284a856f6caf94b1d16dd052464e87d6d395d69a` |
-| Archive | `chalxius-0.8.7-main-observation-chx-snapshot.tar.gz` |
-| Archive bytes | 2,536,984 |
-| Archive members | 257 |
-| Archive SHA-256 | `f749903fa86e0af558b44fd15b5fa7df6633f4a7859e6d61e97a521a97f5f65f` |
-| Checksum-file SHA-256 | `4a45fbd9d06f8273658d38dcc09754b4641d171abf431dd629d4d4e22268557a` |
+| Version | 0.8.8 |
+| Release date | 2026-08-22 |
+| Skill manifest entries | 257 |
+| Manifest SHA-256 | `938373dda29ca5c151cc469be8c7fe2a7b1d1d45bcd879533b8c89f20d15c917` |
+| Runtime content SHA-256 | `635a2a9c0ef96c5f247e313a85b240a9f418162f0b04458795a6ad1016360b9f` |
+| Installed runtime identity | `ebd626682653fad4c425a8386b214ec6f1baff8d04b016c9dc0b5545a573639c` |
+| Installed archive-tree identity | `6ee68f87f728ea7426424575662915a276f0f74859ec04addea529bb2c01dc61` |
+| Archive | `chalxius-0.8.8-direct-graph-operations.tar.gz` |
+| Archive bytes | 2,561,374 |
+| Archive file members | 258 |
+| Archive total members | 267 |
+| Archive SHA-256 | `e253142d934af49fa7e7cf8b8de7c0cb4c1b6f5359248591a617911e1c001561` |
+| Checksum-file SHA-256 | `35355e6ae2c0601be0abe14a196ce9aefbf903fca8301dfd4dc2387b1d16cd64` |
 
-The archive was built twice from the exact frozen tree; the byte streams were
-identical. A cold extraction passed all 256 manifest rows, the bundled
-self-test, and strict architecture reconnaissance.
+The archive was built twice from the same frozen tree and the byte streams
+were identical. A cold extraction matched the source tree and passed every
+manifest row, the bundled self-test, and strict architecture reconnaissance.
 
-## Failure-informed release validation
+## Complete and failure-informed validation
 
-The affected regression suite passed **162 tests in 9.300 s**. The isolated
-release matrix used contract **chalxius-release-validation-matrix-6** and
-receipt SHA-256
-`db7179a16bf47144777c06fd471739d97cc4599da5201d0145f46c1a4a7e8f98`.
-Every matrix lane used the same source tree and left it unchanged.
+The complete test suite passed **972 tests in 83.446 seconds**, with 2 skipped.
+
+The isolated release matrix used contract
+`chalxius-release-validation-matrix-6` and receipt SHA-256
+`5170e248e20b4f9cdbd8c51849990ed424ccf3ff3cb72af0328c825cb0d1281b`.
+Every lane used the same source tree and left it unchanged.
 
 | Lane | Result | Elapsed |
 |---|---|---:|
-| Self-test | PASS | 0.926 s |
-| Changed-surface tests | PASS; 29/29 | 8.417 s |
-| Semantic mutation profile | PASS; 15/15 | 33.593 s |
-| Strict architecture reconnaissance | PASS; 257 files, 0 errors, 0 warnings | — |
-| Candidate-to-installed comparison | PASS; 257/257 unchanged | — |
-| Cold archive | PASS; manifest, self-test, reconnaissance | — |
+| Self-test | PASS | 0.920 s |
+| Changed-surface tests | PASS; 29/29 | 8.459 s |
+| Semantic mutation profile | PASS; 15/15 | 33.265 s |
 
-The architecture inventory SHA-256 is
-`f66134f39caed3fff6b9b4f2a1b009fd04d9aabafd721faaa0e8c4350c23712a`.
-The candidate and installed reconnaissance receipt SHA-256 values are,
-respectively,
-`97e7bd2850a2c85662605ffa42a3db8ee35ca00a162ba6376598453ef9f49fa5`
-and
-`df33cda7a770b1ee3402c7308f0b4f32f4c5be2f3e1b05f329bf6e8aa677ffcf`.
+Strict candidate reconnaissance covered 972 probe symbols, 209 commands, and
+76 modules with 0 errors and 0 warnings. Its inventory and receipt SHA-256
+values are:
 
-Software checks establish exercised behavior only; they do not admit Research,
-certify a Candidate, or establish a mathematical Fact.
+- candidate inventory:
+  `bf808d520cfb401c5971ad22711a4e489da7954a8119ee9ffcc241736f9c83ee`;
+- candidate receipt:
+  `e788dd6be4ca2de084c9a465c8ab9f70810d83c5540a46f0a4a414445a9d11e3`;
+- installed inventory:
+  `380ad3d73f25b5a0d0ddb824c639bb5f37ee24b7043d1df68ca0fe6667ab5be3`;
+- installed receipt:
+  `a70a77d42c53aab130804f239852fbfc75e3a9c2f211a84a988d8051b708ec0c`.
 
-## Main-visible performance evidence
+Candidate and installed inventories intentionally have different inventory
+hashes because the absolute root is part of the report. Their 258 package files
+were byte-exact.
 
-All timings are local observations, not automatic timeouts, thresholds, or
-cross-machine guarantees.
+## Direct-operation canaries
 
-| Operation | Earlier observation | 0.8.7 observation |
-|---|---:|---:|
-| Five-target selective checkpoint | 82.9 s | 3.01 s |
-| Exact supervision retry | 10–17 s | 1.63 s |
-| Historical partial-supervisor replay | previously blocked | 2.40 s |
-| Exact legacy source Research planning | previously rejected late | 1.22 s |
+### Exact admitted-Fact projection
 
-The earlier 0.8.6 local-F0 canaries remain relevant: Candidate Release 12.80 s
-from about 91.7 s, verifier capsule 6.35 s from about 134 s, and host
-materialization 6.72 s from about 210 s, with semantic ids unchanged.
+An existing Research node with two admitted Fact premises was inspected under
+the installed 0.8.8 runtime.
 
-Main is instructed to notice elapsed time already exposed by host command and
-work-unit results. No timer, daemon, watcher, polling loop, scheduler,
-persistent cache, performance index, receipt gate, or lifecycle state was
-added.
+| Field | Result |
+|---|---|
+| Research id | `5389dfa5dd2a` |
+| Exact Fact ids | `8e96f0645e11f3c7`, `e95f6372df0906ec` |
+| Elapsed | 0.002910 s |
+| Broad active projection | false |
+| Unrelated Fact or historical Research replay | none |
+
+The elapsed time is a local diagnostic observation, not a threshold or
+cross-machine guarantee.
+
+### Source-capability union
+
+The historical canonical return from
+`round-20260821T175508Z-099b5554`,
+assignment `a01-68a23dd34f7a-literature`, still validates. Its return SHA-256
+is
+`55f86564961233a9256519051689806d79c428c29369b02bd927e8e9823e3cd0`.
+
+The same frozen task card also validated when its source-use binding named the
+primary TeX SHA-256
+`df1900c5a0d944a7e9f00eafaa72fe7df340fd7c271c44ccc28103672c99d548`
+directly and no duplicate primary-source artifact was returned.
+
+These two canaries jointly protect the intended union: old returned-source
+bindings and direct frozen-primary bindings are both capabilities. Derived
+toy-check and bridge bytes do not inherit this exception.
 
 ## Installation
 
 | Field | Result |
 |---|---|
 | Installer | default project-free local installer |
-| Installed version | 0.8.7 |
-| Candidate-to-installed tree | exact; 257/257 unchanged |
-| Install receipt SHA-256 | `21a52d21b3222314cbd97ea2459648cc5be93213248135bb2e31d12b4dc3d11b` |
+| Installed version | 0.8.8 |
+| Candidate-to-installed tree | exact; 258 files unchanged |
+| Candidate runtime identity | `9628e481c136ee4bad6595b7268009f1b5ca76b5a5b3c866a7e9b445fdeefaca` |
+| Installed runtime identity | `ebd626682653fad4c425a8386b214ec6f1baff8d04b016c9dc0b5545a573639c` |
+| Runtime archive registry SHA-256 | `ddcbb9c4625fb6b5a73e1f53c7b8ad289ed47583a4fffb6caf7005d10bcd8ad6` |
 | Project reads/writes | 0 / 0 |
-| Direct rollback | installation-before-final 0.8.7, identity `46317a46d0d1bdf6d18fdffbe7435a1ea90bd4fe214c969027bdd393e92f0e0c` |
-| Preserved 0.8.6 archive | identity `dbf07dbaef568f50e473f0081d22a743382bc75a5e2d2c71b8790a10cf354ec8` |
+| Direct rollback | prior 0.8.7 identity `420ab20e1d633afe091154f7bb2a489b7746e52e8a43cccae82584e4aebaa755` |
 | System restart | not performed |
 
-Runtime identity and archives are deployment evidence only; they are not
+Runtime identity and archives are deployment evidence only. They are not
 graph-operation or Fact-authority gates.
 
 ## Global CHX settlement
 
-After final installation, an owner-authorized copy-on-write global repair
-superseded the stale settlement and bound the exact current inventory:
+After final installation, one owner-authorized copy-on-write successor bound
+the exact complete inventory:
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-edddb03262efce8afadbeef701652c818f52eb2ea9c714b50c919ac6d64b45be` |
-| Contract | `chalxius-chx-global-integrated-repair-3` |
-| Canonical `record_sha256` | `dcaba853ee3206733b2bf671d1da2ba23c475d74d57433b1daf7fb7ed76b6b74` |
-| Record-file bytes SHA-256 | `b38b89f4eacf2fa11522cad02f0f5e8ba3c595cadcc24fc30921faf5d3033235` |
-| Settlement evidence receipt SHA-256 | `0ab8acc393e9f568cd299efe46ee0af23d4162a1e3d5eb00c432cd1373ce6235` |
-| Inventory SHA-256 | `3c883ec1a9dcb43f70a1e939ed2f62972ece67912e960c84642bb22a1d88d265` |
-| Covered snapshot SHA-256 | `7ffbe9ede34d7e5cc6261ad6f8cc8ac4211638551a3e42d8703ee9e6b69ef59b` |
-| Observed / globally disposed | 156 / 156 |
-| Resolved | 150 |
+| Global repair | `global-repair-24cdfcf98bf77b60e93e699ae5adfbab6c02ea71471768e4009be0d7d2645b7c` |
+| Canonical `record_sha256` | `65834de2ede12abdfe3705492a4ef675fa9260c773268f6e2cac7609b156c19f` |
+| Record-file SHA-256 | `71d26443d41c63e0241f807f1d6fbb5b9480f19726ff61547844f57ed7d2f995` |
+| Settlement evidence SHA-256 | `cc441cdffebf67c0ef399cb54884eb88f00ef1150f282cb00b6f795a5bf6eb8d` |
+| Inventory SHA-256 | `d6dc30f469fc67a84b76795ae85b073b6e0795f9f11622fed23c3c22ba320d1d` |
+| Covered snapshot SHA-256 | `e1f998012a76469ffce10e28439e26ba44cc47a68507928b1f2a977af1519db7` |
+| Observed / globally disposed | 159 / 159 |
+| Resolved | 153 |
 | Excluded nonarchitectural | 6 |
 | Unresolved / uncovered | 0 / 0 |
+| Active open issues | 0 |
 | Lineage errors / report drift | 0 / 0 |
 
-The six exclusions are deployment diagnostics, optional consultation features,
-or host-orchestration preferences rather than graph-correctness defects.
-Twenty-one historical ledgers retain an old open task flag, but
-`active_open_issues` is zero; those flags are historical metadata, not liveness
-or cleanup vetoes. The 601 historical ledger files were not rewritten.
+The six exclusions remain deployment diagnostics, optional consultation
+features, or host-orchestration preferences rather than graph-correctness
+defects. Twenty-three historical ledgers retain an old open task flag but own
+no active issue; those flags are not liveness or cleanup vetoes.
 
-Later mutation of any covered ledger makes this exact snapshot stale. That
-fact-preserving rule is sufficient; no compatibility layer or additional
-closure ritual was introduced.
+The 159 issues were assigned exactly once across 18 mechanism groups. The three
+issues added since 0.8.7 are covered by the direct exact-Fact projection and
+source-capability-union repairs. No historical ledger bytes were rewritten.
 
 ## Research and truth boundary
 
-The local-F0 research artifacts used for real replays remained read-only
-fixtures. This architecture release created no Candidate Release,
-Certification Decision, Gateway admission, or Fact.
+The local-F0 artifacts used for the canaries remained read-only fixtures. This
+architecture release created no Candidate Release, Certification Decision,
+Gateway admission, or Fact.

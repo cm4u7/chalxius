@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.7 — Main Observation and CHX Snapshot
+# Chalxius 0.8.8 — Direct Graph Operations
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -47,6 +47,19 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 `card_authorized_path` plus `returned_copy_path` declaration are equivalent
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
+
+The 0.8.8 repair makes two more graph capabilities direct. Ordinary Research
+that consumes admitted Facts validates only those exact immutable Fact nodes:
+their local Release, acceptance marker, Certification Decision, acceptance
+event, statement interface, Fact bytes, and revocation visibility. It does not
+reconstruct unrelated admissions or replay the historical Research that was
+already settled at Fact admission. Explicit closure reconstruction and attack
+surfaces retain their broader checks. A worker may likewise bind
+`source_uses.source_artifact_sha256` directly to an exact task-card related
+artifact whose role declares the standalone token `primary`; returned
+artifacts remain equally valid source capabilities, while toy checks and
+bridges remain return-bound. This is one semantic capability union, not a
+version branch, migration, copied-source ceremony, or compatibility layer.
 
 The 0.8.6 repair keeps orchestration explicit. Main names the load-bearing
 Research ids, and a planning command creates only immutable assignments and

@@ -574,6 +574,7 @@ def validate_return_assurance(
     contract: dict[str, Any],
     artifacts: list[dict[str, str]],
     artifact_bytes_by_sha256: dict[str, bytes] | None = None,
+    task_primary_source_sha256s: set[str] | None = None,
 ) -> dict[str, Any]:
     validate_assurance_contract(contract)
     artifact_hashes = {item["sha256"] for item in artifacts}
@@ -759,8 +760,23 @@ def validate_return_assurance(
         if item["source_strength"] not in _SOURCE_STRENGTHS or item["target_strength"] not in _SOURCE_STRENGTHS:
             raise ValueError("research source strength is invalid")
         source_hash = item["source_artifact_sha256"]
-        if not isinstance(source_hash, str) or source_hash not in artifact_hashes:
-            raise ValueError("research source use is not bound to a returned artifact")
+        if not isinstance(source_hash, str):
+            raise ValueError("research source use has an invalid source hash")
+        # A frozen task card may already grant the exact primary bytes.  Those
+        # graph capabilities and the worker's returned artifacts form one
+        # direct source boundary: copying task-card bytes into the return adds
+        # no authority, while existing returns remain intrinsically readable.
+        # This is a semantic capability union, not a version compatibility
+        # branch.
+        primary_source_hashes = task_primary_source_sha256s or set()
+        if (
+            source_hash not in artifact_hashes
+            and source_hash not in primary_source_hashes
+        ):
+            raise ValueError(
+                "research source use is not bound to a returned artifact or "
+                "task-card primary source capability"
+            )
         toy_hash = item["toy_check_artifact_sha256"]
         if item["use_kind"] == "formula":
             has_formula = True

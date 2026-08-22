@@ -278,6 +278,7 @@ class TextArtifactHygieneTests(unittest.TestCase):
                 label: str,
                 containment_root: Path | None = None,
                 require_single_link: bool = False,
+                retryable_visibility: bool = False,
             ) -> bytes:
                 read_paths.append(path.resolve())
                 return original_read(
@@ -285,6 +286,7 @@ class TextArtifactHygieneTests(unittest.TestCase):
                     label=label,
                     containment_root=containment_root,
                     require_single_link=require_single_link,
+                    retryable_visibility=retryable_visibility,
                 )
 
             with self._prospective_gate(lifecycle), patch.object(

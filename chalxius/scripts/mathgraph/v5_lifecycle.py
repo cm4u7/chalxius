@@ -542,6 +542,12 @@ class RoundInspectionContext:
     active_fact_paths: dict[str, Path] | None = None
     active_facts: dict[str, Fact] | None = None
     active_fact_validation_in_progress: bool = False
+    # Ordinary Research consumes admitted Facts by exact graph identity.  Keep
+    # those local admission bindings for this command only instead of turning
+    # one premise read into a reconstruction of every historical admission.
+    direct_active_fact_bindings: dict[str, dict[str, Any]] = field(
+        default_factory=dict
+    )
     revoked_fact_ids: set[str] | None = None
     quarantine_records: list[dict[str, Any]] | None = None
     adverse_cases: dict[str, dict[str, Any]] | None = None
@@ -4155,17 +4161,12 @@ class V5LifecycleManager:
         # nontruth Research append has no Fact premise to validate, so opening
         # the complete active-Fact lineage would let unrelated historical
         # Research and artifact closure veto this write.  Nonempty dependency
-        # sets retain the complete active-Fact validation below.
+        # sets validate their exact admitted Fact graph bindings below.
         if dependencies:
-            active_facts = set(
-                self.store.fact_ids(_inspection_context=inspection)
+            self._active_fact_premise_bindings(
+                dependencies,
+                _inspection_context=inspection,
             )
-            missing_facts = sorted(set(dependencies).difference(active_facts))
-            if missing_facts:
-                raise ValueError(
-                    "research dependencies are not active V5 Facts: "
-                    + ", ".join(missing_facts)
-                )
         related = _require_string_list(
             payload.get("related_research_ids", []), "related research ids"
         )
@@ -8559,6 +8560,189 @@ class V5LifecycleManager:
             )
         return context.paper_continuation_scopes[research_id]
 
+    def _active_fact_premise_bindings(
+        self,
+        fact_ids: list[str] | set[str],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        """Validate exactly the admitted Fact nodes consumed by one operation.
+
+        A Fact is already the result of Candidate, verifier, Certification, and
+        Gateway ownership.  An ordinary Research read therefore validates its
+        immutable local Release/marker/Decision/event/interface/Fact binding
+        and revocation visibility.  It does not replay unrelated admissions or
+        the Research history that preceded those already-admitted graph nodes.
+        """
+
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        requested = sorted(
+            dict.fromkeys(validate_fact_id(fact_id) for fact_id in fact_ids)
+        )
+        missing = [
+            fact_id
+            for fact_id in requested
+            if fact_id not in inspection.direct_active_fact_bindings
+        ]
+        if not missing:
+            return {
+                fact_id: inspection.direct_active_fact_bindings[fact_id]
+                for fact_id in requested
+            }
+
+        events = self.store._read_jsonl(self.store.verification_log)
+        events_by_fact: dict[str, list[dict[str, Any]]] = {
+            fact_id: [] for fact_id in missing
+        }
+        for event in events:
+            fact_id = event.get("fact_id") if isinstance(event, dict) else None
+            if fact_id in events_by_fact:
+                events_by_fact[fact_id].append(event)
+
+        event_fields = {
+            "evidence_version",
+            "event",
+            "event_id",
+            "fact_id",
+            "release_id",
+            "release_sha256",
+            "decision_id",
+            "decision_sha256",
+            "capsule_sha256",
+            "acceptance_id",
+            "gateway",
+            "reviewer",
+            "fact_sha256",
+            "claim_relation",
+            "timestamp",
+        }
+        selected_events: dict[str, dict[str, Any]] = {}
+        release_ids: set[str] = set()
+        for fact_id in missing:
+            matches = events_by_fact[fact_id]
+            if len(matches) != 1:
+                raise ValueError(
+                    f"active Fact premise {fact_id} must have exactly one "
+                    "acceptance event"
+                )
+            event = matches[0]
+            if set(event) != event_fields or (
+                event.get("evidence_version") != V5_WORKFLOW_EVIDENCE_VERSION
+                or event.get("event") != "accepted"
+                or event.get("fact_id") != fact_id
+            ):
+                raise ValueError(
+                    f"active Fact premise {fact_id} acceptance event is invalid"
+                )
+            release_id = event.get("release_id")
+            if not isinstance(release_id, str):
+                raise ValueError(
+                    f"active Fact premise {fact_id} lacks a Release binding"
+                )
+            release_ids.add(release_id)
+            selected_events[fact_id] = event
+
+        facts, paths = self._provisional_active_fact_snapshot(
+            release_ids=release_ids,
+            _inspection_context=inspection,
+        )
+        for fact_id in missing:
+            event = selected_events[fact_id]
+            release_id = event["release_id"]
+            fact = facts.get(fact_id)
+            path = paths.get(fact_id)
+            if fact is None or path is None:
+                raise ValueError(
+                    f"research dependency is not an active V5 Fact: {fact_id}"
+                )
+
+            marker_path = self._admission_dir(release_id) / "ACCEPTED.json"
+            marker = self.store._read_json(marker_path)
+            decision = self.decision(
+                marker["decision_id"],
+                validate_bindings=False,
+                _inspection_context=inspection,
+            )
+            release = self.store._read_json(self._release_path(release_id))
+            expected_event_id = sha256_json(
+                [
+                    "accepted-v5",
+                    fact_id,
+                    release_id,
+                    marker["decision_id"],
+                    marker["acceptance_id"],
+                ]
+            )
+            expected_event_values = {
+                "event_id": expected_event_id,
+                "release_sha256": marker["release_sha256"],
+                "decision_id": marker["decision_id"],
+                "decision_sha256": marker["decision_sha256"],
+                "capsule_sha256": marker["capsule_sha256"],
+                "acceptance_id": marker["acceptance_id"],
+                "gateway": marker["gateway"],
+                "reviewer": marker["reviewer"],
+                "fact_sha256": marker["fact_sha256"][fact_id],
+                "claim_relation": release["claim_relation"],
+                "timestamp": marker["accepted_at"],
+            }
+            if any(
+                event.get(key) != expected
+                for key, expected in expected_event_values.items()
+            ):
+                raise ValueError(
+                    f"active Fact premise {fact_id} acceptance binding drifted"
+                )
+            if (
+                decision.get("verdict") != "correct"
+                or decision.get("release_id") != release_id
+                or decision.get("release_sha256") != release["release_sha256"]
+                or decision.get("decision_sha256") != marker["decision_sha256"]
+                or decision.get("capsule_sha256") != marker["capsule_sha256"]
+            ):
+                raise ValueError(
+                    f"active Fact premise {fact_id} Certification binding drifted"
+                )
+
+            interface_path = self.store.interfaces_dir / f"{fact_id}.json"
+            if interface_path.is_symlink() or not interface_path.is_file():
+                raise ValueError(
+                    f"active Fact premise {fact_id} lacks its immutable interface"
+                )
+            statement_interface = validate_statement_interface(
+                self.store._read_json(interface_path),
+                active_fact_ids={fact_id},
+            )
+            fact_sha = sha256_bytes(path.read_bytes())
+            if (
+                statement_interface["fact_id"] != fact_id
+                or statement_interface["stored_fact_sha256"] != fact_sha
+                or statement_interface["statement_sha256"]
+                != sha256_bytes(fact.statement.encode("utf-8"))
+                or statement_interface["acceptance_event_sha256"]
+                != event["event_id"]
+                or statement_interface["admission_review_id"]
+                != marker["decision_sha256"]
+            ):
+                raise ValueError(
+                    f"active Fact premise {fact_id} interface binding drifted"
+                )
+            inspection.direct_active_fact_bindings[fact_id] = {
+                "fact": fact,
+                "path": path,
+                "statement_interface": statement_interface,
+                "release_id": release_id,
+            }
+
+        return {
+            fact_id: inspection.direct_active_fact_bindings[fact_id]
+            for fact_id in requested
+        }
+
     def _task_authority_snapshot(
         self,
         record: dict[str, Any],
@@ -8624,15 +8808,27 @@ class V5LifecycleManager:
             )
         )
 
+        direct_fact_bindings: dict[str, dict[str, Any]] = {}
         # Empty task authority is a complete, canonical projection.  Derive
         # applicability before opening the active-Fact lineage so a card that
         # references no Fact cannot recursively reconstruct every admission,
         # Candidate Release, and Paper closure merely to prove that it sees
-        # nothing.  Every nonempty reference retains the complete fail-closed
-        # authority path below.
+        # nothing.  Ordinary explicit premises consume their exact admitted
+        # graph bindings; an attack target or an explicit closure-
+        # reconstruction obligation retains the broader authority projection.
         if not referenced_fact_ids:
             active_paths: dict[str, Path] = {}
             revoked_fact_ids: set[str] = set()
+        elif not attack_present and not fact_closure_reconstruction_required:
+            direct_fact_bindings = self._active_fact_premise_bindings(
+                referenced_fact_ids,
+                _inspection_context=_inspection_context,
+            )
+            active_paths = {
+                fact_id: binding["path"]
+                for fact_id, binding in direct_fact_bindings.items()
+            }
+            revoked_fact_ids = set()
         elif _inspection_context is None:
             active_paths = self.active_fact_paths()
             revoked_fact_ids = self.revoked_fact_ids()
@@ -8815,10 +9011,15 @@ class V5LifecycleManager:
                 path = active_paths[fact_id]
                 fact_sha = sha256_bytes(path.read_bytes())
                 status = "active"
-                statement_interface = self.store.statement_interface(
-                    fact_id,
-                    materialize=False,
-                    _inspection_context=_inspection_context,
+                direct_binding = direct_fact_bindings.get(fact_id)
+                statement_interface = (
+                    direct_binding["statement_interface"]
+                    if direct_binding is not None
+                    else self.store.statement_interface(
+                        fact_id,
+                        materialize=False,
+                        _inspection_context=_inspection_context,
+                    )
                 )
             elif fact_id in revoked_fact_ids:
                 fact_sha = candidate_sha256.get(fact_id)
@@ -13218,6 +13419,33 @@ class V5LifecycleManager:
                 "approved computation manifest is not bound to the supervised source"
             )
 
+    @staticmethod
+    def _task_primary_source_sha256s(card: dict[str, Any]) -> set[str]:
+        """Return exact card capabilities whose role declares primary bytes."""
+
+        mathematical_state = card.get("mathematical_state", {})
+        related_artifacts = (
+            mathematical_state.get("related_artifacts", [])
+            if isinstance(mathematical_state, dict)
+            else []
+        )
+        primary_hashes: set[str] = set()
+        for artifact in related_artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            role = artifact.get("role")
+            digest = artifact.get("sha256")
+            if not isinstance(role, str) or not isinstance(digest, str):
+                continue
+            role_tokens = {
+                token
+                for token in re.split(r"[:._-]+", role.casefold())
+                if token
+            }
+            if "primary" in role_tokens and SHA256_RE.fullmatch(digest):
+                primary_hashes.add(digest)
+        return primary_hashes
+
     def _validate_return_payload(
         self,
         *,
@@ -13460,6 +13688,9 @@ class V5LifecycleManager:
                 contract=card["assurance_contract"],
                 artifacts=artifacts,
                 artifact_bytes_by_sha256=artifact_bytes_by_sha256,
+                task_primary_source_sha256s=(
+                    self._task_primary_source_sha256s(card)
+                ),
             )
             self._validate_research_cycle_return(card=card, payload=payload)
         canonical_return = self.store.root / assignment["return_relpath"]
@@ -19154,6 +19385,7 @@ class V5LifecycleManager:
     def _provisional_active_fact_snapshot(
         self,
         *,
+        release_ids: set[str] | None = None,
         _inspection_context: RoundInspectionContext,
     ) -> tuple[dict[str, Fact], dict[str, Path]]:
         """Build a command-local admission projection at a re-entry boundary.
@@ -19173,7 +19405,12 @@ class V5LifecycleManager:
         paths: dict[str, Path] = {}
         if not self.admissions_dir.exists():
             return facts, paths
-        for directory in sorted(self.admissions_dir.glob("release-*")):
+        directories = (
+            [self._admission_dir(release_id) for release_id in sorted(release_ids)]
+            if release_ids is not None
+            else sorted(self.admissions_dir.glob("release-*"))
+        )
+        for directory in directories:
             if directory.is_symlink() or not directory.is_dir():
                 raise ValueError("V5 admission store contains an unsafe entry")
             marker_path = directory / "ACCEPTED.json"

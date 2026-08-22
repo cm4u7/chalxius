@@ -141,8 +141,17 @@ class CHX102NoveltyAuditContextTests(unittest.TestCase):
             round_dir = store.rounds_dir / result["metadata"][
                 "assignment_provenance"
             ]["round_id"]
-            manifest = {"assignments": []}
-            assignment = {"assignment_id": "fixture"}
+            manifest = {
+                "round_id": result["metadata"]["assignment_provenance"][
+                    "round_id"
+                ],
+                "assignments": [],
+            }
+            assignment = {
+                "assignment_id": result["metadata"]["assignment_provenance"][
+                    "assignment_id"
+                ]
+            }
 
             with (
                 patch.object(
@@ -162,14 +171,20 @@ class CHX102NoveltyAuditContextTests(unittest.TestCase):
                 ),
                 patch.object(
                     lifecycle,
-                    "_validated_ingest_receipt",
-                    return_value={"research_id": result["research_id"]},
-                ),
+                    "_research_product_for_assignment",
+                    return_value=(result, None),
+                ) as research_product,
             ):
                 continuation._validate_managed_result(result)
 
             round_manifest.assert_called_once_with(
                 result["metadata"]["assignment_provenance"]["round_id"],
+                _inspection_context=inspection,
+            )
+            research_product.assert_called_once_with(
+                round_dir=round_dir,
+                manifest=manifest,
+                assignment=assignment,
                 _inspection_context=inspection,
             )
 

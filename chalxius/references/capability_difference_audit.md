@@ -33,6 +33,29 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.8 Direct Graph Operations difference
+
+Ordinary Research now consumes each admitted Fact as the exact graph node that
+admission created. The runtime validates that node's immutable local Release,
+acceptance marker, Certification Decision, acceptance event, statement
+interface, Fact bytes, and revocation visibility without reopening unrelated
+admissions or replaying historical Research. Explicit Fact-closure
+reconstruction and attack-target work retain the broad validation surface.
+
+Frozen primary sources also operate directly. When a task card grants an exact
+related artifact whose role contains the standalone token `primary`, a worker
+may name its SHA-256 in `source_uses` without returning a byte-for-byte copy.
+Returned artifacts remain valid source capabilities, so old and new returns
+share one semantic rule instead of a version adapter. Toy checks and bridges
+remain bound to returned work products. No persistent cache, compatibility
+layer, migration, receipt, monitor, or new lifecycle state is added.
+
+On the current local-F0 graph, a two-Fact authority projection completed in
+about 0.003 seconds without constructing the broad active-Fact projection; a
+historical canonical return still revalidated, and the same card accepted a
+direct primary-TeX source hash with no copied primary artifact. These are local
+diagnostic canaries, not timing promises or mathematical evidence.
+
 ## 0.8.7 Main Observation and CHX Snapshot difference
 
 The active Main instruction now names both signals available without a

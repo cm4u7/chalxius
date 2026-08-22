@@ -1,4 +1,25 @@
-# Chalxius V5 traceability through 0.8.7 Main Observation and CHX Snapshot
+# Chalxius V5 traceability through 0.8.8 Direct Graph Operations
+
+## 0.8.8 direct-graph-operations release overlay
+
+- Candidate version: `0.8.8`; release name **Direct Graph Operations**.
+- Ordinary Research with Fact premises validates only the exact admitted Fact
+  nodes it consumes: local Release, acceptance marker, Certification Decision,
+  acceptance event, statement interface, Fact bytes, and revocation visibility.
+- Unrelated admissions and already-settled historical Research are not replayed.
+  Explicit Fact-closure reconstruction and attack-target authority retain the
+  broader validation path.
+- `source_uses.source_artifact_sha256` accepts the union of returned artifacts
+  and exact task-card related artifacts whose role contains the standalone
+  token `primary`. Primary bytes need no returned copy; historical returned
+  source bindings remain valid.
+- Toy checks and stronger-target bridges remain bound to returned artifacts.
+- The local-F0 two-Fact authority canary completed in about 0.003 seconds
+  without constructing a broad active-Fact projection. A historical canonical
+  return revalidated, and an in-memory direct-primary variant passed with no
+  copied primary artifact.
+- No version branch, migration, compatibility adapter, persistent cache,
+  receipt, timer, monitor, lifecycle state, or truth path is added.
 
 ## 0.8.7 main-observation-and-CHX-snapshot release overlay
 
