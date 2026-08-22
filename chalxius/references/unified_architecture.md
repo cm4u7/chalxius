@@ -6,6 +6,17 @@
 > valid node/edge hashes, dependencies, provenance, workflow stages, and owner
 > boundaries are the compatibility surface.
 
+> **0.8.8 direct-graph-operations override.** Ordinary Research consumes an
+> admitted Fact through that exact node's immutable local Release, acceptance
+> marker, Decision, acceptance event, statement interface, Fact bytes, and
+> revocation visibility. It does not replay unrelated admissions or the
+> Research history already settled by admission; explicit Fact-closure
+> reconstruction and attack targets retain the broad path. A task-card related
+> artifact whose role contains the standalone token `primary` is directly
+> usable by `source_uses`, alongside returned artifacts. Toy checks and bridges
+> remain return-bound. No copied-source gate, version branch, migration,
+> compatibility layer, cache, or new authority boundary is introduced.
+
 > **0.8.7 Main-observation-and-CHX-snapshot override.** Main directly notices the
 > end-to-end elapsed time of commands and work units already visible through the
 > host. Unexpectedly long duration relative to apparent complexity or a recent

@@ -1,10 +1,35 @@
-# Chalxius 0.8.7 architecture findings and residual boundaries
+# Chalxius 0.8.8 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.7
-**Main Observation and CHX Snapshot**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.8
+**Direct Graph Operations**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.8 Direct Graph Operations
+
+An admitted Fact is now directly operable as its own graph node. Ordinary
+Research validates only the exact Fact premises it consumes through their
+immutable local Release, acceptance marker, Certification Decision, acceptance
+event, statement interface, Fact bytes, and revocation visibility. It no
+longer replays unrelated admissions or historical Research already settled at
+admission. Explicit Fact-closure reconstruction and attack-target work retain
+the broad path, so this work elimination does not weaken their mathematics or
+authority checks.
+
+Frozen primary sources are also directly operable. A task-card related
+artifact whose role contains the standalone token `primary` may be named by
+`source_uses` without copying its bytes into the return. Returned artifacts
+remain valid source capabilities; toy checks and stronger-target bridges remain
+return-bound. Thus existing canonical returns and future direct-primary returns
+follow the same semantic capability union, with no version branch, migration,
+compatibility layer, receipt gate, or new lifecycle state.
+
+The current local-F0 canary projected two exact Fact premises in about 0.003
+seconds without constructing the broad active-Fact projection. A historical
+canonical return revalidated, and the same frozen task card accepted its
+primary TeX hash without a copied primary artifact. These measurements are
+diagnostic observations only, not thresholds or mathematical evidence.
 
 ## 0.8.7 Main Observation and CHX Snapshot
 

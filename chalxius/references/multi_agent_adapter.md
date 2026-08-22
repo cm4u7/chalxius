@@ -16,6 +16,13 @@
 > includes end-to-end elapsed time already visible in host command/work-unit
 > results, as well as visible worker progress. Unexpectedly long duration is a
 > Main diagnostic signal, not an automatic timeout, failure, or gate.
+>
+> **0.8.8 current-V5 direct-operation clarification.** A worker receives and
+> uses exact task-card primary source bytes as graph capabilities; it does not
+> copy them into its return merely to satisfy `source_uses`. Ordinary Research
+> consumes exact admitted Fact premises without rebuilding unrelated admission
+> history. These are capability semantics, not dispatch or compatibility
+> mechanisms.
 
 The Python engine owns durable state; the active host session owns live agent processes. Map the host
 to spawn-worker, follow-up, wait/list, and fresh-verifier operations. In Codex these are the native

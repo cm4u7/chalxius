@@ -7,6 +7,17 @@ operations remain valid when graph identity, hashes, dependencies, provenance,
 workflow stage, and owner boundaries are interpretable. The historical rows
 record what older releases did; they are not current graph-operation gates.
 
+The 0.8.8 Direct Graph Operations overlay treats an admitted Fact and a frozen
+primary source as direct graph capabilities. Ordinary Research validates only
+the exact admitted Fact premises it names through their immutable local
+Release/marker/Decision/event/interface/Fact bindings plus revocation
+visibility; explicit closure reconstruction and attack targets keep the broad
+path. `source_uses` accepts either a returned artifact or an exact task-card
+related artifact whose role declares the standalone token `primary`, while toy
+checks and bridges remain return-bound. This is one semantic rule for existing
+and future nodes, with no compatibility layer, version branch, cache, receipt,
+or new authority state.
+
 The 0.8.7 Main Observation and CHX Snapshot overlay completes the current
 orchestration instruction: Main directly notices both ordinary visible worker
 progress and the end-to-end elapsed time of commands or work units already

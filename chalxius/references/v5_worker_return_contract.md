@@ -221,6 +221,14 @@ Each `source_uses` item has exactly `source_key`, `use_kind`,
 an artifact-bound toy check; a stronger target requires an artifact-bound
 bridge.
 
+`source_artifact_sha256` names either a declared return artifact or an exact
+task-card related artifact whose role contains the standalone token `primary`.
+The latter is already a frozen graph capability and therefore must not be
+copied into the return merely to become usable. Both capability kinds coexist:
+historical returned-source bindings remain valid when a task card also carries
+primary bytes. Toy checks and bridges are new work products and remain bound to
+declared return artifacts.
+
 `route_invalidations` is a duplicate-free list of exact 12-hex Research ids.
 Only `counterexample`, `challenge`, or `dead_end` may invalidate a route.
 

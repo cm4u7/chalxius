@@ -90,7 +90,7 @@ class CHX103EmptyAuthorityGateTests(unittest.TestCase):
             self.assertEqual(research["dependencies"], [])
             self.assertEqual(research["status"], "open")
 
-    def test_research_with_fact_dependency_retains_active_fact_validation(self) -> None:
+    def test_research_with_fact_dependency_uses_exact_premise_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(
                 Path(temporary).resolve(),
@@ -100,11 +100,20 @@ class CHX103EmptyAuthorityGateTests(unittest.TestCase):
             fact_id = "4" * 16
             inspection = RoundInspectionContext()
 
-            with patch.object(
-                store,
-                "fact_ids",
-                return_value=[fact_id],
-            ) as fact_ids:
+            with (
+                patch.object(
+                    lifecycle,
+                    "_active_fact_premise_bindings",
+                    return_value={fact_id: {"path": Path("fixture")}},
+                ) as premise_bindings,
+                patch.object(
+                    store,
+                    "fact_ids",
+                    side_effect=AssertionError(
+                        "one Research premise reconstructed every active Fact"
+                    ),
+                ) as fact_ids,
+            ):
                 research = lifecycle.add_research(
                     {
                         "kind": "proof_attempt",
@@ -115,10 +124,14 @@ class CHX103EmptyAuthorityGateTests(unittest.TestCase):
                     _inspection_context=inspection,
                 )
 
-            fact_ids.assert_called_once_with(_inspection_context=inspection)
+            premise_bindings.assert_called_once_with(
+                [fact_id],
+                _inspection_context=inspection,
+            )
+            fact_ids.assert_not_called()
             self.assertEqual(research["dependencies"], [fact_id])
 
-    def test_nonempty_authority_retains_complete_context_aware_reads(self) -> None:
+    def test_nonempty_authority_uses_exact_context_aware_premise(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             store = self._store(root, "chx-103-nonempty-authority")
@@ -138,35 +151,47 @@ class CHX103EmptyAuthorityGateTests(unittest.TestCase):
                 patch.object(
                     lifecycle,
                     "active_fact_paths",
-                    return_value={fact_id: fact_path},
+                    side_effect=AssertionError(
+                        "one task premise reconstructed every active Fact"
+                    ),
                 ) as active_fact_paths,
                 patch.object(
                     lifecycle,
                     "revoked_fact_ids",
-                    return_value=set(),
+                    side_effect=AssertionError(
+                        "one task premise reconstructed every revocation"
+                    ),
                 ) as revoked_fact_ids,
                 patch.object(
                     store,
                     "statement_interface",
-                    return_value=interface,
+                    side_effect=AssertionError(
+                        "direct premise reopened the broad interface reader"
+                    ),
                 ) as statement_interface,
+                patch.object(
+                    lifecycle,
+                    "_active_fact_premise_bindings",
+                    return_value={
+                        fact_id: {
+                            "path": fact_path,
+                            "statement_interface": interface,
+                        }
+                    },
+                ) as premise_bindings,
             ):
                 snapshot = lifecycle._task_authority_snapshot(
                     research,
                     _inspection_context=inspection,
                 )
 
-            active_fact_paths.assert_called_once_with(
-                _inspection_context=inspection
-            )
-            revoked_fact_ids.assert_called_once_with(
-                _inspection_context=inspection
-            )
-            statement_interface.assert_called_once_with(
-                fact_id,
-                materialize=False,
+            premise_bindings.assert_called_once_with(
+                {fact_id},
                 _inspection_context=inspection,
             )
+            active_fact_paths.assert_not_called()
+            revoked_fact_ids.assert_not_called()
+            statement_interface.assert_not_called()
             self.assertEqual(snapshot["fact_bindings"][0]["status"], "active")
             self.assertEqual(
                 snapshot["fact_bindings"][0]["statement_interface"],

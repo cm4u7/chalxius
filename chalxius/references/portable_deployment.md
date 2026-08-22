@@ -1,5 +1,19 @@
 # Chalxius portable deployment
 
+## 0.8.8 Direct Graph Operations
+
+The `0.8.8` **Direct Graph Operations** artifact removes two remaining false
+expansions at their existing owners. Ordinary Research validates only the exact
+admitted Fact nodes it consumes rather than replaying unrelated admissions and
+historical Research. A frozen task-card artifact whose role declares the
+standalone token `primary` may be used directly by `source_uses` without a
+returned byte copy; returned source artifacts remain valid, while toy and
+bridge evidence remains return-bound.
+
+The implementation uses no version branch, migration, compatibility layer,
+persistent cache, receipt, monitor, or new lifecycle state. Installation uses
+the same project-free local installer below and does not rewrite any graph.
+
 ## 0.8.7 Main Observation and CHX Snapshot
 
 The `0.8.7` **Main Observation and CHX Snapshot** artifact closes the remaining

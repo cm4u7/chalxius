@@ -129,26 +129,31 @@ class CHX004FactClosureAuthorityTests(unittest.TestCase):
             store = self._store(root)
             lifecycle = store.v5_lifecycle()
             target_id = "a" * 16
-            predecessor_id = "b" * 16
             target_path = root / "target.md"
-            predecessor_path = root / "predecessor.md"
             target_path.write_text("target fixture\n", encoding="utf-8")
-            predecessor_path.write_text("predecessor fixture\n", encoding="utf-8")
+            interface = {
+                "fact_id": target_id,
+                "interface": "fixture",
+            }
 
             with (
                 patch.object(
                     lifecycle,
                     "active_fact_paths",
-                    return_value={
-                        target_id: target_path,
-                        predecessor_id: predecessor_path,
-                    },
-                ),
+                    side_effect=AssertionError(
+                        "ordinary authority opened the broad Fact projection"
+                    ),
+                ) as active_fact_paths,
                 patch.object(
                     lifecycle,
-                    "revoked_fact_ids",
-                    return_value=set(),
-                ),
+                    "_active_fact_premise_bindings",
+                    return_value={
+                        target_id: {
+                            "path": target_path,
+                            "statement_interface": interface,
+                        }
+                    },
+                ) as premise_bindings,
                 patch(
                     "mathgraph.v5_lifecycle.parse_fact_markdown",
                     side_effect=AssertionError(
@@ -158,20 +163,26 @@ class CHX004FactClosureAuthorityTests(unittest.TestCase):
                 patch.object(
                     store,
                     "statement_interface",
-                    return_value={
-                        "fact_id": target_id,
-                        "interface": "fixture",
-                    },
-                ),
+                    side_effect=AssertionError(
+                        "ordinary authority reopened the broad interface reader"
+                    ),
+                ) as statement_interface,
             ):
+                inspection = RoundInspectionContext()
                 snapshot = lifecycle._task_authority_snapshot(
                     self._record(
                         target_id,
                         evidence_types=["bounded_argument"],
                     ),
-                    _inspection_context=RoundInspectionContext(),
+                    _inspection_context=inspection,
                 )
 
+            premise_bindings.assert_called_once_with(
+                {target_id},
+                _inspection_context=inspection,
+            )
+            active_fact_paths.assert_not_called()
+            statement_interface.assert_not_called()
             parse_fact.assert_not_called()
             self.assertEqual(
                 [item["fact_id"] for item in snapshot["fact_bindings"]],

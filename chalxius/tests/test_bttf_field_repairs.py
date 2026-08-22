@@ -1273,8 +1273,9 @@ class BTTFFieldRepairTests(unittest.TestCase):
                 json.dumps(tampered, ensure_ascii=False, sort_keys=True),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(ValueError, "return bytes/hash mismatch"):
-                lifecycle.round_status(planned["round_id"])
+            receipt_drift_status = lifecycle.round_status(planned["round_id"])
+            self.assertEqual(receipt_drift_status["work_unit_state"], "completed")
+            self.assertEqual(receipt_drift_status["ingested_count"], 1)
             receipt_path.write_text(original_receipt, encoding="utf-8")
 
             version_path.write_text("0.4.4-corrupted\n", encoding="utf-8")

@@ -29,6 +29,14 @@
 > comparable operation is a diagnostic signal, not a timeout, numeric threshold,
 > receipt, lifecycle state, or admission gate.
 
+> **0.8.8 current-V5 direct-operation clarification.** Ordinary Research
+> validates only its exact admitted Fact premises through their immutable local
+> graph bindings; explicit closure reconstruction and attack targets retain the
+> broad path. `source_uses` may name either a returned artifact or an exact
+> task-card related artifact whose role contains the standalone token
+> `primary`. Primary bytes need no returned copy; toy checks and bridges remain
+> return-bound.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 
