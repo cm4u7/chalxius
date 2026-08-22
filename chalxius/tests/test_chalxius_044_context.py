@@ -354,8 +354,18 @@ class Chalxius044ContextTests(unittest.TestCase):
             )
             pre_enable_card_path, card = self._card(store, planned)
             mode = card["context_selection"]["mode"]
-            self.assertEqual(card["work_mode"], "literature")
+            self.assertEqual(card["work_mode"], "prove")
             self.assertEqual(mode["accepted_suggestions"], ["literature", "prove"])
+            self.assertEqual(mode["eligible_suggestions"], ["prove"])
+            self.assertEqual(
+                mode["blocked_suggestions"],
+                [
+                    {
+                        "mode": "literature",
+                        "reason": "would_change_assurance_contract",
+                    }
+                ],
+            )
             self.assertEqual(mode["rejected_suggestions"], ["prove directly"])
 
             malformed = lifecycle.add_research(

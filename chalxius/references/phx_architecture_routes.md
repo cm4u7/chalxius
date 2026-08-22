@@ -140,10 +140,11 @@ stored locator and response digest when approval provenance is disputed.
 
 Routine, already authorized maintenance need not be inflated into a major
 architecture consultation merely because it uses a known implementation
-technique. If a purported tactical repair changes global lifecycle,
-coordination, authority, persistence, automation, compatibility, or deployment
-semantics, however, it is a significant architecture adoption and requires
-consultation before implementation.
+technique. Tactical repair is project-run local. A repair intended for global
+installation is integrated repair; if it also changes lifecycle, coordination,
+authority, persistence, automation, compatibility, or deployment semantics, it
+is a significant architecture adoption and requires consultation before
+implementation.
 
 ## CHX-to-PHX synthesis and repair workflow
 
@@ -152,8 +153,9 @@ When a CHX finding exposes a reusable architecture lesson:
 1. Keep the concrete failure and its causal account in CHX.
 2. Query PHX by applicability signal, domain, mechanism, source-CHX relation,
    and route relations before designing a new mechanism.
-3. Apply the CHX contract's bounded, reusable tactical repair without treating
-   that tactical record as resolution.
+3. For a project-local run failure, apply the bounded reusable tactical repair
+   without treating it as resolution. For a globally installed change, proceed
+   directly as integrated repair without manufacturing a tactical precursor.
 4. Record a new PHX route only when the lesson is globally reusable and is not
    already covered. Prefer extending or refining an earlier route over creating
    an unlinked duplicate.

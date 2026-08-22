@@ -307,6 +307,25 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             encoding="utf-8",
         )
         report = self._artifact(store, report_path, "research_report")
+        assurance = self._blank_assurance()
+        assurance_contract = card["assurance_contract"]
+        if "source_use_required" in assurance_contract["risk_signals"]:
+            source_keys = [
+                obligation["obligation_id"]
+                for obligation in assurance_contract["obligations"]
+            ] or ["fixture-source-report"]
+            assurance["source_uses"] = [
+                {
+                    "source_key": source_key,
+                    "use_kind": "result",
+                    "source_strength": "fixed_object",
+                    "target_strength": "fixed_object",
+                    "source_artifact_sha256": report["sha256"],
+                    "toy_check_artifact_sha256": None,
+                    "bridge_artifact_sha256s": [],
+                }
+                for source_key in source_keys
+            ]
         payload = {
             "schema_version": 5,
             "project_id": store.project_id(),
@@ -337,7 +356,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 for obligation in card["assurance_contract"]["obligations"]
             ],
             "computation_manifest": None,
-            "research_assurance": self._blank_assurance(),
+            "research_assurance": assurance,
         }
         return_path = Path(str(assignment["return_path"]))
         return_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
@@ -1379,9 +1398,15 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             )
             invalidated_id = assignment["research_id"]
             invalidator_id = descriptors[0]["result_research_id"]
-            _, supervision_receipt = self._ingest_supervision(
+            supervision, supervision_receipt = self._ingest_supervision(
                 store,
                 design["round_id"],
+            )
+            program_math_supervisor = lifecycle._research_record(
+                supervision["assignments"][0]["research_id"]
+            )
+            self.assertFalse(
+                program_math_supervisor["metadata"]["source_dependent"]
             )
             lifecycle.update_research(
                 supervision_receipt["research_id"],
@@ -1492,6 +1517,38 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     [constructive_result]
                 ),
                 {supervision_receipt["research_id"]},
+            )
+            source_research_id = design["assignments"][0]["research_id"]
+            self.assertNotIn(
+                source_research_id,
+                {
+                    item["research_id"]
+                    for item in lifecycle.frontier(limit=20)
+                },
+            )
+            history = {
+                item["research_id"]: item
+                for item in lifecycle.frontier(
+                    limit=20,
+                    include_history=True,
+                )
+            }
+            self.assertEqual(
+                history[source_research_id]["work_completion_status"],
+                "completed_production",
+            )
+            lifecycle.update_research(
+                supervision_receipt["research_id"],
+                status="blocked",
+                actor="main",
+                note="A blocked supervision result leaves production actionable.",
+            )
+            self.assertIn(
+                source_research_id,
+                {
+                    item["research_id"]
+                    for item in lifecycle.frontier(limit=20)
+                },
             )
 
     def test_candidate_seal_rechecks_live_supervision_under_lock(self) -> None:
@@ -2326,6 +2383,10 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 supervisor_scopes=["source_scope"],
                 host_task_scope_id="coverage-component-supervision-host",
             )
+            source_supervisor = lifecycle._research_record(
+                first_supervision["assignments"][0]["research_id"]
+            )
+            self.assertTrue(source_supervisor["metadata"]["source_dependent"])
             unrelated_dir = (
                 store.rounds_dir / "round-20260101T000000Z-deadbeef"
             )

@@ -1,10 +1,40 @@
-# Chalxius 0.8.8 architecture findings and residual boundaries
+# Chalxius 0.8.9 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.8
-**Direct Graph Operations**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.9
+**Frontier Reliability**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.9 Frontier Reliability
+
+Ordinary and Brave Future actionable views now consume the same command-local
+exact-workgroup and completion projection. Exact duplicate work receives one
+deterministic actionable representative, and a workgroup closed by a valid
+production product plus its applicable completed supervision is not presented
+as new work. History still exposes every immutable Research record and its
+provenance; no old Research or task card is rewritten. Exact related Research
+inputs remain part of work identity because they feed task-card and
+supervision authority; different related-input sets are never collapsed.
+
+Prospective Brave Future projection writers emit
+`chalxius-bf-frontier-projection-3`; frozen v1/v2 projections remain readable
+as immutable history and are never upgraded in place.
+
+`limit` now bounds the serialized entry and member windows instead of allowing a
+small request to emit a fixed broad projection. Full-set identity is retained
+compactly by count and digest, and a plan with zero active proof targets decides
+that condition before opening a Fact inventory. These are command-local work
+eliminations, not a persistent cache, index, timer, watcher, migration,
+compatibility adapter, or lifecycle gate.
+
+Source assurance is now selected from structured work semantics. Literature
+mode, source-dependent metadata, source/applicability obligations, and exact
+primary-source capabilities activate `source_uses` and exact obligation
+coverage even when incidental logic-signal prose is empty. Current cards get
+the stronger applicable contract; frozen historical cards remain byte-exact
+readable and are not backfilled. This validates source-use evidence structure,
+not the truth of the cited theorem or its mathematical application.
 
 ## 0.8.8 Direct Graph Operations
 
@@ -229,8 +259,9 @@ fail-closed. This changes lifecycle accounting only and does not reinterpret
 historical issue contents.
 
 The 0.7.16 release remains nontruth architecture work. Existing historical
-ledgers and reports stay immutable, and any unresolved CHX issue is settled only
-through the validated copy-on-write tactical/integrated/global repair routes.
+ledgers and reports stay immutable. Project-run-local repair may use the
+per-ledger tactical/integrated route; globally installed repair uses the direct
+copy-on-write global integrated route without a tactical precursor.
 
 ## 0.7.15 Research obligation closure
 
@@ -697,6 +728,13 @@ Operator explicitly approves one for future task cards.
 
 - Software validation establishes only the stated architecture behavior. It
   does not validate any A-model claim or admit any Research result as a Fact.
+- Exact workgroup collapse is intentionally exact, not fuzzy theorem matching.
+  A changed dependency, obligation, source capability, artifact hash, Campaign,
+  convention, or stop condition remains separate work.
+- A globally ordered bounded frontier may still inspect the eligible headers
+  needed to choose its prefix. The release bounds serialization and local
+  explanation expansion and removes inapplicable broad replay; it does not
+  promise constant-time ranking for arbitrarily large projects.
 - Existing frozen task cards, returns, Paper objects, Research, Candidate
   Releases, decisions, admissions, and Facts are never backfilled or rewritten.
 - Candidate fresh-adverse review, verifier, Certification, Gateway, and exact

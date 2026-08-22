@@ -165,13 +165,15 @@ flushed, and fail-closed on tampering. Never edit the file by hand.
 
 ## Gate revision-5 resolution through reconnaissance and coordinated repair
 
-Revision 5 separates immediate repair from final architectural settlement. For
-each issue, first make a bounded tactical repair that is reusable if the same
-mechanism recurs. Do not postpone an in-scope task merely to design the entire
+Revision 5 separates project-run repair from globally installed architectural
+settlement. A tactical repair is only a bounded change made and retained inside
+one project run. Do not postpone that in-scope task merely to design the entire
 future architecture, and do not require the full high-cost reliability matrix
-for this first bounded repair when focused evidence is sufficient. The tactical
-record preserves the mechanism, applicability, implementation, boundaries, and
-bounded evidence so the later integration can evaluate it.
+when focused evidence is sufficient. The tactical record preserves the local
+mechanism, applicability, implementation, boundaries, and bounded evidence so
+the project-stage integration can evaluate it. A change intended for global
+Chalxius installation is integrated repair from the outset and must not acquire
+synthetic tactical records as procedural prerequisites.
 
 A tactical repair is **not** a resolved disposition. It is provisional
 implementation evidence and may later be retained, generalized, narrowed,
@@ -200,7 +202,7 @@ nontruth route guidance and never substitutes for the CHX repair gates. A
 significant global architecture change identified through PHX still requires a
 recorded user consultation and decision before implementation.
 
-Before implementing a repair for a revision-5 issue, run the complete
+For the project-run-local per-ledger route described in this section, first run the complete
 architecture reconnaissance over the Chalxius candidate tree and write its
 JSON report outside that tree. Then record the report before any tactical
 repair event:
@@ -222,8 +224,8 @@ only a report whose canonical root and version match the ledger runtime. It
 does not rerun the administrative scan during later status,
 disposition, or close operations.
 
-Next record exactly one reusable tactical repair for each issue that will be
-resolved:
+Next record exactly one reusable tactical repair for each issue whose repair
+will remain in this project run and be resolved through the per-ledger route:
 
 ```bash
 python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-tactical-repair \
@@ -256,15 +258,17 @@ consistent mechanism definitions with their issue-specific bindings, embeds
 the registry, and binds its SHA-256 in the integrated event. The event also
 binds the complete tactical closure and the preceding integrated-repair id.
 
-A `resolved` disposition is appendable only when its tactical repair has a
+A project-local per-ledger `resolved` disposition is appendable only when its tactical repair has a
 prior reconnaissance receipt, the latest integrated repair covers the target
 and every already resolved issue, and the disposition's regression evidence is
 included in that integrated repair. An issue classified
 `excluded_nonarchitectural` does not require repair records. If a late issue is
-discovered, append it normally, record its tactical repair, and append a new
+discovered in that project-local route, append it normally, record its tactical repair, and append a new
 integrated repair that supersedes the earlier one and again covers every
 already resolved issue. Close rechecks that the latest integration covers all
-resolved issues. All three repair layers remain `truth_effect=none` and have no
+resolved issues. A globally installed repair instead uses the direct
+cross-ledger global integrated route below and creates no tactical precursor.
+All repair layers remain `truth_effect=none` and have no
 Paper, Research, Candidate, Certification, Gateway, or Fact authority.
 
 ## Gate public release disclosure
@@ -331,13 +335,13 @@ The default projection is bounded to counts, active run ids, unresolved issues,
 lineage errors, and report compatibility drift. Use `--full` only when the
 complete validated ledger and predecessor-chain inventory is required.
 
-### Cross-ledger global repair for explicit historical revalidation
+### Cross-ledger integrated repair for global installation or historical settlement
 
-The per-ledger tactical gate remains the ordinary rule for a current revision-5
-issue. When the user explicitly requests a full historical revalidation across
-many immutable ledgers, do not append synthetic tactical records to those old
-task ledgers. Instead, validate the full inventory and record one copy-on-write
-global repair:
+The per-ledger tactical route is only for a repair that remains inside its
+project run. When a repair is intended for global Chalxius installation, or the
+user requests a full historical settlement across immutable ledgers, validate
+the complete inventory and record one copy-on-write global integrated repair.
+Do not append synthetic tactical records to current or old task ledgers:
 
 ```bash
 python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-global-repair \

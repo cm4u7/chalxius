@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.8 — Direct Graph Operations
+# Chalxius 0.8.9 — Frontier Reliability
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -48,18 +48,27 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
 
-The 0.8.8 repair makes two more graph capabilities direct. Ordinary Research
-that consumes admitted Facts validates only those exact immutable Fact nodes:
-their local Release, acceptance marker, Certification Decision, acceptance
-event, statement interface, Fact bytes, and revocation visibility. It does not
-reconstruct unrelated admissions or replay the historical Research that was
-already settled at Fact admission. Explicit closure reconstruction and attack
-surfaces retain their broader checks. A worker may likewise bind
-`source_uses.source_artifact_sha256` directly to an exact task-card related
-artifact whose role declares the standalone token `primary`; returned
-artifacts remain equally valid source capabilities, while toy checks and
-bridges remain return-bound. This is one semantic capability union, not a
-version branch, migration, copied-source ceremony, or compatibility layer.
+The 0.8.9 repair gives ordinary and Brave Future actionable views one exact
+workgroup and completion projection. Exact duplicate work has one actionable
+representative; exact related Research inputs remain material to task-card and
+supervision authority. Completed production and applicable completed
+supervision are absent from actionable views, while history retains every
+original Research record and provenance. `limit` bounds serialized entries
+and the member window; a zero-active-proof-target plan decides applicability
+before Fact inventory. The full eligible-set identity may remain as a count and
+digest, but no persistent frontier cache, timer, watcher, migration, adapter,
+new lifecycle state, or truth gate is added. New Brave Future projection bytes
+use revision 3; frozen revisions 1 and 2
+remain readable without rewriting or becoming prospective writer formats.
+
+Source assurance is activated by structure rather than incidental prose:
+literature work, source-dependent metadata, source/applicability obligations,
+and exact primary-source capabilities require `source_uses` with exact
+obligation coverage. Existing frozen cards are not backfilled or rewritten.
+The 0.8.8 direct Fact and primary-source capability union remains unchanged:
+ordinary Research validates only the exact admitted Fact nodes it consumes,
+and a card-authorized exact `primary` artifact may be used without a returned
+copy while toy checks and bridges remain return-bound.
 
 The 0.8.6 repair keeps orchestration explicit. Main names the load-bearing
 Research ids, and a planning command creates only immutable assignments and
@@ -226,14 +235,13 @@ ledger before substantive project work. Project-bound ledgers live under
 `PROJECT/chx-ledgers/`; projectless ledgers use private host task state outside
 the skill. Historical runs must not be backfilled.
 
-Record architecture-caused or materially amplified mechanisms, not ordinary
-mathematical difficulty. For an ordinary run-local issue, make one bounded
-reusable tactical repair first, then coordinate related issues into one
-integrated repair. An explicitly requested project-wide historical
-revalidation may instead use the cross-ledger global repair path after validating
-every ledger and every observed qualified issue against one exact current
-candidate; it must not manufacture tactical entries in immutable predecessor
-ledgers. Performance issues consult PHX before mechanism selection. Main
+Record architecture-caused or materially amplified mechanisms, not ordinary mathematical difficulty. Tactical repair is only for a project run-local change
+that remains project-local; coordinate related local repairs at its stage
+boundary. Any repair intended for global Chalxius installation is an integrated
+repair and uses the cross-ledger global path directly, including an explicitly
+requested historical settlement. Validate every ledger and observed qualified
+issue against one exact candidate; never manufacture tactical entries merely
+to legalize global installation. Performance issues consult PHX before mechanism selection. Main
 directly observes both worker progress and the elapsed duration of commands or
 work units through ordinary visible host interaction. Main may reclaim or
 redirect a worker that stops producing useful visible progress, and treats an
@@ -345,11 +353,12 @@ repair caches implicitly.
    fresh Candidate-level adverse gate. Recheck live supervisor results under
    the seal lock, then package once. Iterative repair belongs before expensive
    packaging.
-9. Generic production planning omits only source Research obligations closed by
-   an exact valid, non-aborted production Research product. It retains the worker result,
-   history views, and explicit-ID planning. Main `memory-add` reuses identical
-   unbound semantics across actor labels only when the current CLI role is Main;
-   actor text never grants that authority.
+9. Generic and Brave Future actionable planning share one exact workgroup and
+   completion projection. Exact completed or duplicate work is omitted only
+   from actionable views; original Research, provenance, history, and explicit-
+   ID planning remain available. Main `memory-add` reuses identical unbound
+   semantics across actor labels only for the current Main CLI role; actor text
+   never grants that authority.
 
 Admitted Fact dependencies are frozen premises, not default counterexample
 targets. Exact contradiction evidence is routed separately for governed

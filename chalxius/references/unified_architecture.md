@@ -728,13 +728,14 @@ not make it Research, Certification, Fact, Paper/Audit, Blackboard, Reader, or
 Learning data and cannot change a project audit result.
 
 Prospective revision 5 retains the revision-4 transitive lineage and adds a
-repair-control DAG outside every authority plane. A resolved issue must descend
-from a recorded full-candidate architecture-reconnaissance receipt and one
-issue-bound reusable tactical repair. The latest integrated repair derives and
+repair-control DAG outside every authority plane. A project-run-local resolved
+issue must descend from a recorded full-candidate architecture-reconnaissance
+receipt and one issue-bound reusable tactical repair. The latest per-ledger integrated repair derives and
 hash-binds the reusable-mechanism registry, covers every already resolved
 issue, and records coordination decisions plus risk and regression evidence.
-Late issues append a superseding integration rather than modifying the earlier
-one. Revisions 1 through 4 remain exactly readable and appendable under their
+Late local issues append a superseding integration rather than modifying the
+earlier one. A globally installed repair instead uses the cross-ledger global
+integrated writer directly, with no tactical precursor. Revisions 1 through 4 remain exactly readable and appendable under their
 original contracts; none of these operational events has truth or project
 authority.
 

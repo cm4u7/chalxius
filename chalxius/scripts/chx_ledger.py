@@ -2894,6 +2894,11 @@ def record_tactical_repair(
     reconnaissance_id: str,
     repair: dict[str, Any],
 ) -> dict[str, Any]:
+    """Record one repair whose implementation remains inside this project run.
+
+    A repair intended for global Chalxius installation belongs to
+    ``record_global_repair`` and must not manufacture this local precursor.
+    """
     path = _resolved_path(ledger_path)
     if not isinstance(issue_id, str) or ISSUE_ID_RE.fullmatch(issue_id) is None:
         raise ValueError("CHX tactical repair issue_id is invalid")
@@ -4420,10 +4425,12 @@ def record_global_repair(
 ) -> dict[str, Any]:
     """Record one immutable, cross-ledger CHX integrated repair.
 
-    The operation is deliberately separate from per-issue tactical repair. It
-    binds the complete current inventory, assigns every qualified issue to one
-    mechanism group, and writes one content-addressed successor record without
-    mutating any historical JSONL ledger.
+    This is the direct route for a repair intended for global Chalxius
+    installation as well as an explicit historical settlement. It has no
+    tactical-repair precondition: tactical records describe only changes that
+    remain inside a project run. The operation binds the complete current
+    inventory, assigns every qualified issue to one mechanism group, and writes
+    one content-addressed successor without mutating historical JSONL ledgers.
     """
 
     project = _resolved_path(project_root)
@@ -5077,7 +5084,10 @@ def _parser() -> argparse.ArgumentParser:
     reconnaissance.add_argument("--ledger", required=True)
     reconnaissance.add_argument("--input", required=True)
 
-    tactical = commands.add_parser("record-tactical-repair")
+    tactical = commands.add_parser(
+        "record-tactical-repair",
+        help="record a repair that remains local to one project run",
+    )
     tactical.add_argument("--ledger", required=True)
     tactical.add_argument("--issue-id", required=True)
     tactical.add_argument("--reconnaissance-id", required=True)
@@ -5108,7 +5118,10 @@ def _parser() -> argparse.ArgumentParser:
 
     global_repair = commands.add_parser(
         "record-global-repair",
-        help="record one immutable cross-ledger integrated CHX repair",
+        help=(
+            "record the direct integrated CHX repair for global installation "
+            "or historical settlement; no tactical precursor"
+        ),
     )
     global_repair.add_argument("--project-root", required=True)
     global_repair.add_argument("--input", required=True)

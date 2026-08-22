@@ -1,5 +1,26 @@
 # Chalxius portable deployment
 
+## 0.8.9 Frontier Reliability
+
+The `0.8.9` **Frontier Reliability** artifact gives ordinary and Brave Future
+actionable planning one command-local exact-workgroup and completion
+projection. Exact duplicate or completed work is represented once or omitted
+from actionable output as applicable; history retains every original Research
+record and provenance edge. A requested frontier `limit` bounds serialized
+entry/member windows, while full-set identity remains a count and digest. A
+zero-active-proof-target plan decides applicability before opening a Fact
+inventory.
+Prospective Brave Future projections use `chalxius-bf-frontier-projection-3`;
+frozen v1/v2 projections remain readable without migration or rewrite.
+
+Structured work semantics now activate source assurance directly. Literature
+mode, source-dependent metadata, source/applicability obligations, and exact
+primary capabilities require `source_uses` with exact obligation coverage; old
+cards remain byte-exact readable and are not backfilled. Deployment introduces
+no persistent cache/index, timer, watcher, project migration, compatibility
+adapter, new lifecycle state, or new truth gate. The ordinary project-free
+installer below remains the installation path and never rewrites a project.
+
 ## 0.8.8 Direct Graph Operations
 
 The `0.8.8` **Direct Graph Operations** artifact removes two remaining false

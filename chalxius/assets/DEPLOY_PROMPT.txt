@@ -1,4 +1,4 @@
-Chalxius 0.8.8 — Direct Graph Operations
+Chalxius 0.8.9 — Frontier Reliability
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact

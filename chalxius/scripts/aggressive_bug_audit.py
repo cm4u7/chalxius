@@ -137,15 +137,19 @@ MUTANTS = (
         old=(
             "        if campaign_id is not None:\n"
             "            campaign_id = validate_campaign_id(campaign_id)\n"
-            "            self.store.campaigns().status(campaign_id)\n"
-            "        bases: dict[str, dict[str, Any]] = {}\n"
+            "            if campaign_id not in _inspection_context.campaign_statuses:\n"
+            "                _inspection_context.campaign_statuses[campaign_id] = (\n"
+            "                    self.store.campaigns().status(campaign_id)\n"
+            "                )\n"
         ),
         new=(
             "        campaign_id = campaign_id or self.store.campaigns().active()\n"
             "        if campaign_id is not None:\n"
             "            campaign_id = validate_campaign_id(campaign_id)\n"
-            "            self.store.campaigns().status(campaign_id)\n"
-            "        bases: dict[str, dict[str, Any]] = {}\n"
+            "            if campaign_id not in _inspection_context.campaign_statuses:\n"
+            "                _inspection_context.campaign_statuses[campaign_id] = (\n"
+            "                    self.store.campaigns().status(campaign_id)\n"
+            "                )\n"
         ),
         test=(
             f"{CAMPAIGN_TEST_MODULE}."
