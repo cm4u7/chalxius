@@ -1,171 +1,83 @@
 # Chalxius
 
-**A persistent research graph for source-bound work with Codex.**
+**Persistent research memory for Codex.**
 
-[Live examples](https://cm4u7.github.io/chalxius/) ·
+[Live graph](https://cm4u7.github.io/chalxius/) ·
 [Download v0.8.8](https://github.com/cm4u7/chalxius/releases/tag/v0.8.8) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
 
-Chalxius is a Codex skill and local runtime for long-running mathematical,
-philosophical, and paper-based research. It keeps sources, claims, proof
-attempts, objections, computations, and reviews in a persistent graph instead
-of compressing them into one increasingly fragile conversation.
+Chalxius turns long-running mathematical, philosophical, and paper-centered
+work into a durable graph. Exact sources, hypotheses, attempts, computations,
+objections, and dependencies survive across sessions without being flattened
+into one increasingly fragile chat history.
 
-> Research is allowed to be unfinished or wrong. Reusable Facts are not easy
-> to create.
+[![Open the anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
 
-That separation is the point. Exploration remains flexible; a claim becomes a
-Fact only through an exact Candidate, fresh verification, Certification, and
-Gateway admission.
+*A 175-node anonymized research topology. Click the image to explore it.*
 
-## Start in one prompt
+## What it gives you
 
-There is no prompt language to learn. Name `Chalxius` or `$chalxius`, describe
-the research object, and state the boundary that matters:
+- **Continuity:** the next session starts from the graph that actually exists,
+  not from a prose reconstruction of the last conversation.
+- **Active research:** Main selects the next load-bearing open node; proof,
+  literature, counterexample, and computation work stays attached to its exact
+  target and dependencies.
+- **A clean truth boundary:** unfinished, disputed, and failed work remains
+  useful Research. Nothing becomes a reusable Fact automatically.
+- **A shareable Reader:** export a deterministic offline map with search,
+  MathJax, filters, complete-path expansion, and draggable cards—without
+  writing back to the graph.
 
-```text
-Use $chalxius to continue this local-F0 project. Inspect the current graph,
-choose the most load-bearing open Research target, and keep every unproved
-A/B-model transport explicitly conditional.
-```
+## Use it
 
-Chalxius then works from the graph that actually exists: it resolves the
-relevant sources and dependencies, selects a bounded next target, records new
-work as Research, and attaches focused review to the logical component being
-tested. It does not silently turn a plausible report into mathematical truth.
-
-Use `fast mode` for a narrow, low-cost unit or `deep mode` for broader source,
-route, and computation work. The default is `auto`. Modes change research
-effort, never Fact-admission standards.
-
-## See a real graph
-
-[![Open the 175-node anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
-
-The featured Reader preserves the topology of a working run: 175 nodes, 364
-edges, 17 targets, and 7 themes. Content-bearing fields were removed and node
-identifiers were replaced with opaque HMAC-SHA-256 values generated from a
-discarded key.
-
-Other self-contained examples:
-
-- [A philosophy workflow](https://cm4u7.github.io/chalxius/cases/philosophy.html):
-  source reconstruction, independent audit, correction, and authority
-  separation.
-- [A proof graph](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html):
-  computation, blockers, verification, and revocation in one Reader.
-
-Readers are deterministic offline views. They support search, filters,
-complete-path expansion, MathJax, and draggable cards without changing the
-underlying graph.
-
-## Why use a research graph?
-
-**Long work loses structure.** A chat can remember prose while losing which
-hypothesis, source version, branch, or computation a conclusion depended on.
-Chalxius stores those relations explicitly.
-
-**Sources need exact identity.** A citation alone does not say which bytes,
-locator, convention, or theorem interface was used. Source-bound nodes do.
-
-**Exploration and truth are different jobs.** Literature notes, promising
-proofs, failed routes, and supervised Research remain useful without receiving
-Fact authority.
-
-**Corrections should not erase history.** Replacements, challenges, and
-revocations are appended copy-on-write, so downstream impact stays visible.
-
-## The authority model
+There is no special prompt language:
 
 ```text
-exact sources ──► Paper / Evidence ──► Research
-                                            │
-                              attempts · attacks · computation
-                                            │
-                                            ▼
-                                    Candidate Release
-                                            │
-                                      fresh Verifier
-                                            │
-                               Certification Decision
-                                            │
-                                       Fact Gateway
-                                            │
-                                            ▼
-                                        Fact Graph
+Use $chalxius to continue this project. Inspect the current graph, choose the
+most load-bearing open Research target, and keep every unproved bridge
+explicitly conditional.
 ```
 
-| Plane | What belongs there | Creates mathematical truth? |
-|---|---|---|
-| Paper / Evidence | Exact sources, reconstruction, audit, correction | No |
-| Research / Blackboard | Attempts, insights, objections, computation, synthesis | No |
-| Candidate / Certification | Exact proposed Fact bytes and independent review | Not by itself |
-| Fact Graph | Admitted reusable premises | Yes |
+`auto` is the default. Ask for `fast` for one narrow, inexpensive work unit or
+`deep` for broader source, route, and computation exploration. The mode changes
+research effort, never the Fact standard.
 
-The sole truth path is:
+## The trust model
 
 ```text
-Research → Candidate Release → Certification Decision → Fact
+Research  →  Candidate Release  →  Certification Decision  →  Fact
 ```
 
-A polished paper report, successful computation, review receipt, or Reader
-page is not a Fact. Conversely, Research does not need Fact ceremony merely to
-remain visible, useful, and extendable.
+Research may be incomplete or wrong. A reusable Fact must freeze the exact
+claim, dependencies, sources, and adverse work; receive fresh independent
+review; and be admitted by the Gateway. Confidence, polished prose, a review
+receipt, or a successful computation cannot create a second truth path.
 
-## What it supports
+## Install
 
-- reconstructing and auditing papers against frozen source bytes;
-- continuing proofs without weakening the original target unnoticed;
-- running independent proof, counterexample, literature, and computation
-  routes without mixing their authority;
-- focused second-stage review of source use, proof logic, integration, or
-  program–mathematics alignment;
-- replayable computations with code, versions, domains, representations,
-  outputs, and checks bound to the claim they support;
-- Candidate packaging, fresh verification, Certification, Fact admission, and
-  later revocation;
-- deterministic offline Readers for research delivery;
-- optional teaching and testing through Chalxius Learner, which cannot modify
-  Research or Fact state.
-
-## Install and verify
-
-Download the two adjacent assets from the
-[v0.8.8 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.8):
-
-- `chalxius-0.8.8-direct-graph-operations.tar.gz`
-- `chalxius-0.8.8-direct-graph-operations.tar.gz.sha256`
-
-Then verify the archive, the unpacked tree, and the runtime:
+Download the archive and checksum from the
+[v0.8.8 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.8), then:
 
 ```sh
 shasum -a 256 -c chalxius-0.8.8-direct-graph-operations.tar.gz.sha256
 tar -xzf chalxius-0.8.8-direct-graph-operations.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
-python3 scripts/self_test.py
+python3 -B scripts/self_test.py
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/local_install.py
 ```
 
-The unpacked [`chalxius/`](chalxius/) directory is the installable Codex skill.
-For an authorized host-global local update, the bundled installer validates the
-candidate, archives the previous runtime, swaps atomically, and verifies the
-installed copy:
-
-```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -B chalxius/scripts/local_install.py
-```
-
-The normal installer does not read or write a research project. Deployment and
-rollback details are in
-[`portable_deployment.md`](chalxius/references/portable_deployment.md).
+The installer validates the candidate, archives the previous runtime, swaps
+atomically, and verifies the installed copy. It does not read or modify any
+research project. See [portable deployment](chalxius/references/portable_deployment.md)
+for rollback and non-default layouts.
 
 <details>
-<summary><strong>Optional command-line entry</strong></summary>
+<summary><strong>CLI and automation</strong></summary>
 
-Most work starts in ordinary language. For exact automation and diagnostics,
-`mgraph` is a shell executable:
+`mgraph` is a shell executable, not a Python file:
 
 ```sh
 MGRAPH=/absolute/path/to/chalxius/scripts/mgraph
@@ -175,52 +87,35 @@ PROJECT=/absolute/path/to/project
 "$MGRAPH" --root "$PROJECT" --role main frontier
 ```
 
-Run `scripts/mgraph --help` for the full interface. Do not pass `mgraph` to the
-Python interpreter.
+Run `scripts/mgraph --help` for the complete interface.
 
 </details>
 
-## Direct Graph Operations in v0.8.8
+## Explore
 
-This release removes two procedural detours from ordinary Research:
+- [Anonymized research topology](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
+- [Philosophy source-and-audit workflow](https://cm4u7.github.io/chalxius/cases/philosophy.html)
+- [Guarded proof graph](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)
 
-- exact admitted Fact premises are validated directly, without replaying
-  unrelated admissions or historical Research;
-- a task-card primary source can be used directly by SHA-256, without copying
-  the same bytes into a worker return.
+The examples demonstrate graph structure and workflow; they do not claim that
+the displayed mathematics or interpretation has been admitted as Fact.
 
-Existing returned-source bindings remain valid under the same semantic rule.
-Fact-closure reconstruction, attack targets, computation bridges, verifier
-review, Certification, Gateway admission, and Fact correctness checks remain
-at the boundaries that own them. No compatibility layer, migration ceremony,
-timer, monitor, receipt gate, or new lifecycle state was added.
+## v0.8.8 — Direct Graph Operations
 
-See [RELEASE.md](RELEASE.md) for the complete change set and
-[VALIDATION.md](VALIDATION.md) for reproducible evidence.
+This release lets Research consume exact admitted Facts without replaying
+unrelated admissions, and lets a frozen primary source be used directly by
+SHA-256 without returning a duplicate copy. Mathematical and Fact-authority
+boundaries are unchanged. See [RELEASE.md](RELEASE.md) and
+[VALIDATION.md](VALIDATION.md).
 
 ## Documentation
 
-| Read this | For |
-|---|---|
-| [USE_CASES.md](USE_CASES.md) | End-to-end examples and expected outcomes |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System model, roles, planes, and authority boundaries |
-| [SKILL.md](chalxius/SKILL.md) | Agent-facing router and operating contract |
-| [Worker return contract](chalxius/references/v5_worker_return_contract.md) | Current bounded-return schema |
-| [Admission contract](chalxius/references/admission_contract.md) | Candidate, verifier, Certification, and Fact rules |
-| [Evidence plane](chalxius/references/evidence_plane.md) | Paper and cross-project Evidence lifecycle |
-| [VALIDATION.md](VALIDATION.md) | Tests, package identity, installation, and canaries |
+[Use cases](USE_CASES.md) ·
+[Architecture](ARCHITECTURE.md) ·
+[Skill contract](chalxius/SKILL.md) ·
+[Worker return contract](chalxius/references/v5_worker_return_contract.md) ·
+[Fact admission contract](chalxius/references/admission_contract.md)
 
-## Scope and credits
-
-Software validation establishes package and workflow behavior, not a
-mathematical theorem.
-
-Chalxius acknowledges the authors of *Danus: Orchestrating Mathematical
-Reasoning Agents with Fact-Graph Memory* (Liu et al., arXiv:2607.06447v2),
-whose public design informed the fact-graph layout, and Matt Pocock for the
-public `/grill-me` requirements-interview design that informed Reader
-requirements work. Neither is a runtime dependency. See
-[ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md).
-
-Licensed under [Apache-2.0](LICENSE). Third-party notices and vendored licenses
-are included in the skill directory.
+Software validation establishes package behavior, not a mathematical theorem.
+Licensed under [Apache-2.0](LICENSE). See
+[acknowledgements](ACKNOWLEDGEMENTS.md) for design lineage and credits.
