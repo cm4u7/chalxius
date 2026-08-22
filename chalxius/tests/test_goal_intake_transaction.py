@@ -209,8 +209,8 @@ class GoalIntakeTransactionTests(unittest.TestCase):
             self.assertEqual(
                 projection["revision"], BF_FRONTIER_PROJECTION_REVISION
             )
-            self.assertEqual(len(projection["eligible_manifest_window"]), 256)
-            self.assertEqual(projection["eligible_manifest_window_limit"], 256)
+            self.assertEqual(len(projection["eligible_manifest_window"]), 10)
+            self.assertEqual(projection["eligible_manifest_window_limit"], 10)
             self.assertEqual(projection["eligible_manifest_total_count"], 1400)
             self.assertLessEqual(
                 len(json.dumps(projection, ensure_ascii=False, sort_keys=True).encode()),

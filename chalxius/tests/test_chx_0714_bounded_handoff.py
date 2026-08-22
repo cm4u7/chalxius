@@ -202,7 +202,20 @@ class BoundedHandoff0714Tests(unittest.TestCase):
             ):
                 visible = lifecycle.frontier(limit=2)
             self.assertEqual(len(visible), 2)
-            self.assertEqual(set(calls), {item["research_id"] for item in visible})
+            self.assertEqual(calls, [])
+            self.assertNotIn("metadata", visible[0])
+
+            with patch.object(
+                lifecycle, "_inspection_research_record", side_effect=counted
+            ):
+                executable = lifecycle.frontier(
+                    limit=2,
+                    _execution_records=True,
+                )
+            self.assertEqual(
+                set(calls),
+                {item["research_id"] for item in executable},
+            )
             self.assertLess(len(calls), len(records))
 
     def test_unselected_component_ancestor_uses_structural_envelope(self) -> None:
@@ -461,7 +474,19 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 "obligation_dispositions": [],
                 "computation_manifest": None,
                 "research_assurance": {
-                    "source_uses": [],
+                    "source_uses": [
+                        {
+                            "source_key": "frozen-primary-source",
+                            "use_kind": "result",
+                            "source_strength": "fixed_object",
+                            "target_strength": "fixed_object",
+                            "source_artifact_sha256": sha256_bytes(
+                                source_path.read_bytes()
+                            ),
+                            "toy_check_artifact_sha256": None,
+                            "bridge_artifact_sha256s": [],
+                        }
+                    ],
                     "route_invalidations": [],
                     "extremal_cases": [],
                     "claim_strength": [],

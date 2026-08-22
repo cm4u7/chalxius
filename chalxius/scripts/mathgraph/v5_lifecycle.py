@@ -110,6 +110,7 @@ from .v5_assurance import (
     V5_ASSURANCE_CONTRACT_REVISION,
     V5_COMPUTATION_DESIGN_ARTIFACT_ROLES,
     V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
+    _obligation_source_requirements,
     build_assurance_contract,
     normalize_obligations,
     validate_computation_design_role_contract,
@@ -382,6 +383,41 @@ V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256 = sha256_json(
 V5_SAFE_SUPERVISION_DISPOSITIONS = frozenset(
     {"resolved_by_evidence", "resolved_no_obstruction"}
 )
+_FRONTIER_TASK_RESULT_METADATA_FIELDS = frozenset(
+    {
+        "assignment_provenance",
+        "computation_manifest",
+        "failure_informed_assurance",
+        "obligation_dispositions",
+        "research_assurance",
+        "research_supervision",
+        "source_uses",
+        "supervised_production_authority",
+        "task_binding",
+        "worker_outcome",
+    }
+)
+_FRONTIER_NONWORK_PROVENANCE_FIELDS = frozenset(
+    {
+        "assurance_contract_revision",
+        "blackboard_query_sha256",
+        "campaign_consultation_id",
+        "consultation_anchor_research_ids",
+        "decision_id",
+        "goal_intake_binding",
+        "historical_node_ids",
+        "origin_blackboard_node_id",
+        "origin_blackboard_node_sha256",
+        "origin_blackboard_snapshot_id",
+        "promotion_task_sha256",
+        "provenance_bindings",
+        "provider",
+        "release_id",
+        "score_model",
+        "snapshot_id",
+        "truth_effect",
+    }
+)
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
@@ -510,6 +546,8 @@ class RoundInspectionContext:
     ] = field(default_factory=dict)
     research_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     all_research_records: list[dict[str, Any]] | None = None
+    all_research_envelopes: list[dict[str, Any]] | None = None
+    research_envelopes_by_id: dict[str, dict[str, Any]] | None = None
     # A command-local index of worker-produced Research products.  This is a
     # read optimization and recovery projection only; it is never persisted
     # and never replaces the immutable Research records or their hashes.
@@ -564,7 +602,12 @@ class RoundInspectionContext:
     supervision_manifests_by_production_round: dict[
         str, list[tuple[Path, dict[str, Any]]]
     ] = field(default_factory=dict)
-    production_obligation_round_ids: dict[str, list[str]] | None = None
+    completion_obligation_rounds: dict[
+        str, list[tuple[str, str]]
+    ] | None = None
+    supervision_round_ids_by_production_round: dict[
+        str, list[str]
+    ] | None = None
 
     def bind_project(self, root: Path | str) -> None:
         canonical = str(Path(root).resolve())
@@ -944,9 +987,24 @@ class V5LifecycleManager:
             raise ValueError("research envelope record hash mismatch")
         return record
 
-    def research_envelopes(self) -> list[dict[str, Any]]:
+    def research_envelopes(
+        self,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
         """Return the complete structural Research collection without artifacts."""
 
+        _inspection_context = self._bind_inspection_context(_inspection_context)
+        if (
+            _inspection_context is not None
+            and _inspection_context.all_research_envelopes is not None
+        ):
+            if _inspection_context.research_envelopes_by_id is None:
+                _inspection_context.research_envelopes_by_id = {
+                    item["research_id"]: item
+                    for item in _inspection_context.all_research_envelopes
+                }
+            return _inspection_context.all_research_envelopes
         if not self.research_entries_dir.exists():
             return []
         records: list[dict[str, Any]] = []
@@ -954,6 +1012,11 @@ class V5LifecycleManager:
             if path.is_symlink() or not path.is_file():
                 raise ValueError("research ledger contains an unsafe entry")
             records.append(self._research_record_envelope(path.stem))
+        if _inspection_context is not None:
+            _inspection_context.all_research_envelopes = records
+            _inspection_context.research_envelopes_by_id = {
+                item["research_id"]: item for item in records
+            }
         return records
 
     def _validate_research_record(
@@ -2659,7 +2722,15 @@ class V5LifecycleManager:
             if left_root != right_root:
                 parent[max(left_root, right_root)] = min(left_root, right_root)
 
-        record_cache = dict(source_records)
+        inspection = self._bind_inspection_context(_inspection_context)
+        if (
+            inspection is not None
+            and inspection.research_envelopes_by_id is not None
+        ):
+            record_cache = dict(inspection.research_envelopes_by_id)
+            record_cache.update(source_records)
+        else:
+            record_cache = dict(source_records)
         for root_id in sorted(selected_ids):
             seen: set[str] = set()
             pending = list(source_records[root_id]["related_research_ids"])
@@ -2826,7 +2897,9 @@ class V5LifecycleManager:
 
         if inspection.research_products_by_assignment is None:
             index: dict[tuple[str, str], list[dict[str, Any]]] = {}
-            for envelope in self.research_envelopes():
+            for envelope in self.research_envelopes(
+                _inspection_context=inspection,
+            ):
                 metadata = envelope.get("metadata", {})
                 provenance = (
                     metadata.get("assignment_provenance")
@@ -4478,6 +4551,11 @@ class V5LifecycleManager:
             inspection.research_products_by_assignment = None
             if inspection.all_research_records is not None:
                 inspection.all_research_records.append(record)
+            if inspection.all_research_envelopes is not None:
+                inspection.all_research_envelopes.append(record)
+            if inspection.research_envelopes_by_id is not None:
+                inspection.research_envelopes_by_id[research_id] = record
+            inspection.completion_obligation_rounds = None
         return record
 
     def update_research(
@@ -5969,11 +6047,21 @@ class V5LifecycleManager:
     def _campaign_snapshot_for_planning(
         self,
         campaign_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> tuple[dict[str, Any], bytes]:
         """Validate and freeze one explicit nontruth Campaign envelope."""
 
+        _inspection_context = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert _inspection_context is not None
         campaign_id = validate_campaign_id(campaign_id)
-        status = self.store.campaigns().status(campaign_id)
+        status = _inspection_context.campaign_statuses.get(campaign_id)
+        if status is None:
+            status = self.store.campaigns().status(campaign_id)
+            _inspection_context.campaign_statuses[campaign_id] = status
         expected_status_fields = {
             "campaign_id",
             "active",
@@ -6020,7 +6108,7 @@ class V5LifecycleManager:
         targets = status.get("targets")
         if not isinstance(targets, dict):
             raise ValueError("V5 Campaign targets must be an object")
-        active_fact_ids = set(self.store.fact_ids())
+        active_proof_target_fact_ids: set[str] = set()
         for target_id, target in targets.items():
             if not isinstance(target_id, str) or not isinstance(target, dict):
                 raise ValueError("V5 Campaign target projection is malformed")
@@ -6040,12 +6128,21 @@ class V5LifecycleManager:
             if (
                 target["status"] == "active"
                 and target["role"] in {"headline_proof", "supporting_proof"}
-                and target["subject_id"] not in active_fact_ids
             ):
-                raise ValueError(
-                    "V5 Campaign active proof target is not an admitted Fact: "
-                    + target["subject_id"]
+                active_proof_target_fact_ids.add(
+                    validate_fact_id(target["subject_id"])
                 )
+        if active_proof_target_fact_ids:
+            try:
+                self._active_fact_premise_bindings(
+                    sorted(active_proof_target_fact_ids),
+                    _inspection_context=_inspection_context,
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    "V5 Campaign active proof targets are not exact admitted Facts: "
+                    + ", ".join(sorted(active_proof_target_fact_ids))
+                ) from exc
         snapshot = {
             "schema_version": 1,
             "revision": V5_CAMPAIGN_SCOPE_REVISION,
@@ -6249,8 +6346,8 @@ class V5LifecycleManager:
         include_history: bool = False,
         campaign_id: str | None = None,
         _inspection_context: RoundInspectionContext | None = None,
-        _research_records_override: list[dict[str, Any]] | None = None,
         _exclude_production_review_only: bool = False,
+        _execution_records: bool = False,
     ) -> list[dict[str, Any]]:
         _inspection_context = self._bind_inspection_context(
             _inspection_context,
@@ -6261,34 +6358,41 @@ class V5LifecycleManager:
             raise ValueError("frontier limit must be positive")
         if campaign_id is not None:
             campaign_id = validate_campaign_id(campaign_id)
-            self.store.campaigns().status(campaign_id)
-        bases: dict[str, dict[str, Any]] = {}
-        dispositions: dict[str, dict[str, Any]] = {}
+            if campaign_id not in _inspection_context.campaign_statuses:
+                _inspection_context.campaign_statuses[campaign_id] = (
+                    self.store.campaigns().status(campaign_id)
+                )
         # Frontier scoring needs immutable identity, metadata, and direct
         # connectivity for the complete ledger, not a replay of every artifact,
         # supervision round, historical runtime, and Fact authority.  Validate
         # structural envelopes globally, then fully validate only the visible
         # records returned to Main.  This is a read optimization, never an
         # authority or premise cache.
-        records = (
-            _research_records_override
-            if _research_records_override is not None
-            else self.research_envelopes()
+        records = self.research_envelopes(
+            _inspection_context=_inspection_context,
         )
-        for record in records:
-            if record["kind"] == "disposition":
-                target_id = record["metadata"].get("target_research_id")
-                if isinstance(target_id, str):
-                    previous = dispositions.get(target_id)
-                    if previous is None or record["created_at"] > previous["created_at"]:
-                        dispositions[target_id] = record
-                continue
-            bases[record["research_id"]] = record
-        route_staleness = self._route_staleness(bases)
+        (
+            bases,
+            dispositions,
+            route_staleness,
+            workgroups,
+            work_keys,
+        ) = self._frontier_structural_state(records)
+        dependency_ids = sorted(
+            {
+                fact_id
+                for record in bases.values()
+                for fact_id in record["dependencies"]
+            }
+        )
         active_fact_ids = set(
-            self.store.fact_ids(
-                _inspection_context=_inspection_context
+            self._active_fact_premise_bindings(
+                dependency_ids,
+                _inspection_context=_inspection_context,
+                _allow_inactive=True,
             )
+            if dependency_ids
+            else {}
         )
         visible: list[dict[str, Any]] = []
         for research_id, record in bases.items():
@@ -6344,8 +6448,36 @@ class V5LifecycleManager:
                 scoring_entry,
                 readiness=readiness,
             )
+            work_key = work_keys[research_id]
+            members = workgroups[work_key]
+            projection["work_key_sha256"] = work_key
+            projection["workgroup_representative_id"] = members[0]
+            projection["workgroup_member_count"] = len(members)
+            projection["workgroup_member_ids_sha256"] = sha256_json(
+                sorted(members)
+            )
             projection["id"] = research_id
             visible.append(projection)
+        actionable_representatives = self._frontier_actionable_representatives(
+            workgroups=workgroups,
+            bases=bases,
+            dispositions=dispositions,
+            route_staleness=route_staleness,
+            campaign_id=campaign_id,
+            exclude_production_review_only=_exclude_production_review_only,
+        )
+        for projection in visible:
+            actionable_representative_id = actionable_representatives.get(
+                projection["work_key_sha256"]
+            )
+            projection["workgroup_actionable_representative_id"] = (
+                actionable_representative_id
+            )
+            projection["workgroup_member_role"] = (
+                "representative"
+                if projection["research_id"] == actionable_representative_id
+                else "duplicate"
+            )
         visible.sort(
             key=lambda item: (
                 -item["score"],
@@ -6353,73 +6485,454 @@ class V5LifecycleManager:
                 item["research_id"],
             )
         )
-        if not include_history and _research_records_override is None:
+        group_completion: dict[
+            str, tuple[str, str | None, int, str]
+        ] = {}
+
+        def inspect_completion(work_key_batch: set[str]) -> None:
+            pending_keys = work_key_batch.difference(group_completion)
+            if not pending_keys:
+                return
+            group_completion.update(
+                self._frontier_group_completion(
+                    workgroups=workgroups,
+                    work_keys=pending_keys,
+                    bases=bases,
+                    dispositions=dispositions,
+                    route_staleness=route_staleness,
+                    _inspection_context=_inspection_context,
+                )
+            )
+
+        if include_history:
+            selected = visible[:limit]
+            inspect_completion(
+                {item["work_key_sha256"] for item in selected}
+            )
+        else:
+            actionable = [
+                item
+                for item in visible
+                if item["research_id"]
+                == item["workgroup_actionable_representative_id"]
+            ]
             selected = []
             cursor = 0
-            while cursor < len(visible) and len(selected) < limit:
-                batch = visible[cursor : cursor + max(limit, 8)]
-                completed = self._validated_completed_production_obligation_ids(
-                    {item["research_id"] for item in batch},
-                    _inspection_context=_inspection_context,
+            batch_size = max(limit, 8)
+            while cursor < len(actionable) and len(selected) < limit:
+                batch = actionable[cursor : cursor + batch_size]
+                inspect_completion(
+                    {item["work_key_sha256"] for item in batch}
                 )
                 selected.extend(
                     item
                     for item in batch
-                    if item["research_id"] not in completed
+                    if group_completion[item["work_key_sha256"]][0]
+                    == "pending"
                 )
                 cursor += len(batch)
             selected = selected[:limit]
-        else:
-            selected = visible[:limit]
-        if _research_records_override is None:
-            fully_validated: list[dict[str, Any]] = []
-            for projection in selected:
-                record = self._inspection_research_record(
-                    projection["research_id"],
-                    _inspection_context,
-                )
-                projection_fields = {
-                    "status",
-                    "latest_disposition_id",
-                    "latest_disposition_note",
-                    "route_status",
-                    "route_invalidated_by",
-                    "decision_profile",
-                    "decision_factors",
-                    "score_model",
-                    "score_role",
-                    "readiness",
-                    "score",
-                    "id",
-                }
-                preserved = {
-                    key: projection[key]
-                    for key in projection_fields
-                    if key in projection
-                }
-                fully_validated.append({**record, **preserved})
-            return fully_validated
-        return selected
+        for projection in selected:
+            completion = group_completion[projection["work_key_sha256"]]
+            projection["work_completion_status"] = completion[0]
+            projection["work_completion_research_id"] = completion[1]
+            projection["work_completion_member_count"] = completion[2]
+            projection["work_completion_member_ids_sha256"] = completion[3]
+        if not _execution_records:
+            return [self._compact_frontier_entry(item) for item in selected]
 
-    def _validated_completed_production_obligation_ids(
+        fully_validated: list[dict[str, Any]] = []
+        projection_fields = {
+            "status",
+            "latest_disposition_id",
+            "latest_disposition_note",
+            "route_status",
+            "route_invalidated_by",
+            "decision_profile",
+            "decision_factors",
+            "score_model",
+            "score_role",
+            "readiness",
+            "score",
+            "work_key_sha256",
+            "workgroup_representative_id",
+            "workgroup_actionable_representative_id",
+            "workgroup_member_count",
+            "workgroup_member_ids_sha256",
+            "workgroup_member_role",
+            "work_completion_status",
+            "work_completion_research_id",
+            "work_completion_member_count",
+            "work_completion_member_ids_sha256",
+            "id",
+        }
+        for projection in selected:
+            record = self._inspection_research_record(
+                projection["research_id"],
+                _inspection_context,
+            )
+            preserved = {
+                key: projection[key]
+                for key in projection_fields
+                if key in projection
+            }
+            fully_validated.append({**record, **preserved})
+        return fully_validated
+
+    @staticmethod
+    def _compact_frontier_entry(projection: dict[str, Any]) -> dict[str, Any]:
+        """Return Main's bounded selection surface, never full artifact metadata."""
+
+        metadata = projection["metadata"]
+        artifacts = metadata.get("artifacts", [])
+        obligations = metadata.get("obligations", [])
+        stops = metadata.get("stop_conditions", [])
+        suggested_actions = metadata.get("suggested_actions", [])
+        tags = metadata.get("tags", [])
+        dependencies = projection["dependencies"]
+        related = projection["related_research_ids"]
+        invalidators = projection["route_invalidated_by"]
+
+        def text_preview(value: str, maximum: int) -> str:
+            return value if len(value) <= maximum else value[: maximum - 3] + "..."
+
+        def bounded_strings(value: Any, maximum: int = 8) -> list[str]:
+            if not isinstance(value, list):
+                return []
+            return [item for item in value if isinstance(item, str)][:maximum]
+
+        return {
+            "research_id": projection["research_id"],
+            "id": projection["research_id"],
+            "record_sha256": projection["record_sha256"],
+            "kind": projection["kind"],
+            "status": projection["status"],
+            "claim": text_preview(projection["claim"], 768),
+            "claim_sha256": sha256_bytes(projection["claim"].encode("utf-8")),
+            "content_sha256": sha256_bytes(projection["content"].encode("utf-8")),
+            "rationale_sha256": sha256_bytes(
+                projection["rationale"].encode("utf-8")
+            ),
+            "source": text_preview(projection["source"], 256),
+            "source_sha256": sha256_bytes(projection["source"].encode("utf-8")),
+            "relation": projection["relation"],
+            "campaign_id": metadata.get("campaign_id"),
+            "dependency_ids": dependencies[:8],
+            "dependency_count": len(dependencies),
+            "dependency_ids_sha256": sha256_json(dependencies),
+            "related_research_count": len(related),
+            "related_research_ids_sha256": sha256_json(related),
+            "artifact_count": len(artifacts) if isinstance(artifacts, list) else 0,
+            "artifact_manifest_sha256": sha256_json(artifacts),
+            "obligation_ids": (
+                [
+                    item["obligation_id"]
+                    for item in obligations[:8]
+                    if isinstance(item, dict)
+                    and isinstance(item.get("obligation_id"), str)
+                ]
+                if isinstance(obligations, list)
+                else []
+            ),
+            "obligation_count": (
+                len(obligations) if isinstance(obligations, list) else 0
+            ),
+            "obligation_manifest_sha256": sha256_json(obligations),
+            "stop_condition_count": len(stops) if isinstance(stops, list) else 0,
+            "stop_conditions_sha256": sha256_json(stops),
+            "source_dependent": metadata.get("source_dependent", False),
+            "suggested_actions": bounded_strings(suggested_actions),
+            "suggested_actions_sha256": sha256_json(suggested_actions),
+            "tags": bounded_strings(tags),
+            "tags_sha256": sha256_json(tags),
+            "latest_disposition_id": projection.get("latest_disposition_id"),
+            "latest_disposition_note_sha256": (
+                sha256_bytes(
+                    projection["latest_disposition_note"].encode("utf-8")
+                )
+                if "latest_disposition_note" in projection
+                else None
+            ),
+            "route_status": projection["route_status"],
+            "route_invalidated_by": invalidators[:8],
+            "route_invalidator_count": len(invalidators),
+            "route_invalidator_ids_sha256": sha256_json(invalidators),
+            "decision_profile": projection["decision_profile"],
+            "decision_factors": projection["decision_factors"],
+            "score_model": projection["score_model"],
+            "score_role": projection["score_role"],
+            "readiness": projection["readiness"],
+            "score": projection["score"],
+            "work_key_sha256": projection["work_key_sha256"],
+            "workgroup_representative_id": projection[
+                "workgroup_representative_id"
+            ],
+            "workgroup_actionable_representative_id": projection[
+                "workgroup_actionable_representative_id"
+            ],
+            "workgroup_member_count": projection["workgroup_member_count"],
+            "workgroup_member_ids_sha256": projection[
+                "workgroup_member_ids_sha256"
+            ],
+            "workgroup_member_role": projection["workgroup_member_role"],
+            "work_completion_status": projection["work_completion_status"],
+            "work_completion_research_id": projection[
+                "work_completion_research_id"
+            ],
+            "work_completion_member_count": projection[
+                "work_completion_member_count"
+            ],
+            "work_completion_member_ids_sha256": projection[
+                "work_completion_member_ids_sha256"
+            ],
+            "created_at": projection["created_at"],
+        }
+
+    @staticmethod
+    def _frontier_work_key(record: dict[str, Any]) -> str:
+        """Hash one exact executable Research objective, not its provenance.
+
+        The key deliberately excludes ids, timestamps, actors, and explicitly
+        non-executable provenance metadata.  Related Research remains exact
+        input: current task cards expose its dossier and artifacts and use its
+        ancestry for supervision.  Task-bound worker and supervisor Research
+        stays singleton-keyed: those records are evidence products, not
+        duplicate Main roots.  No fuzzy text normalization or persisted cache
+        participates in this projection.
+        """
+
+        metadata = record["metadata"]
+        task_result_fields = sorted(
+            set(metadata).intersection(_FRONTIER_TASK_RESULT_METADATA_FIELDS)
+        )
+        # Worker products and supervisor tasks are evidence, not duplicate Main
+        # roots.  Other present and future metadata is exact work semantics by
+        # default, so a schema extension cannot silently disable workgrouping.
+        if task_result_fields:
+            return sha256_json(
+                {
+                    "bound_research_id": record["research_id"],
+                    "task_result_fields": task_result_fields,
+                }
+            )
+        work_metadata = {
+            key: metadata[key]
+            for key in sorted(metadata)
+            if key not in _FRONTIER_NONWORK_PROVENANCE_FIELDS
+        }
+        if "artifacts" in work_metadata:
+            artifacts = work_metadata["artifacts"]
+            if not isinstance(artifacts, list) or any(
+                not isinstance(item, dict)
+                or not {"path", "sha256", "role"}.issubset(item)
+                for item in artifacts
+            ):
+                return sha256_json(
+                    {
+                        "bound_research_id": record["research_id"],
+                        "malformed_fields": ["artifacts"],
+                    }
+                )
+            work_metadata["artifacts"] = sorted(
+                [
+                    {
+                        "path": item["path"],
+                        "sha256": item["sha256"],
+                        "role": item["role"],
+                    }
+                    for item in artifacts
+                ],
+                key=lambda item: (
+                    item["path"],
+                    item["sha256"],
+                    item["role"],
+                ),
+            )
+        if "obligations" in work_metadata:
+            work_metadata["obligations"] = sorted(
+                normalize_obligations(work_metadata["obligations"]),
+                key=lambda item: item["obligation_id"],
+            )
+        return sha256_json(
+            {
+                "kind": record["kind"],
+                "claim": record["claim"],
+                "content": record["content"],
+                "rationale": record["rationale"],
+                "dependencies": record["dependencies"],
+                "source": record["source"],
+                "relation": record["relation"],
+                "related_research_ids": sorted(
+                    record["related_research_ids"]
+                ),
+                "metadata": work_metadata,
+            }
+        )
+
+    def _frontier_structural_state(
+        self,
+        records: list[dict[str, Any]],
+    ) -> tuple[
+        dict[str, dict[str, Any]],
+        dict[str, dict[str, Any]],
+        dict[str, list[str]],
+        dict[str, list[str]],
+        dict[str, str],
+    ]:
+        """Build one exact command-local workgroup projection."""
+
+        bases: dict[str, dict[str, Any]] = {}
+        dispositions: dict[str, dict[str, Any]] = {}
+        for record in records:
+            if record["kind"] != "disposition":
+                bases[record["research_id"]] = record
+                continue
+            target_id = record["metadata"].get("target_research_id")
+            if not isinstance(target_id, str):
+                continue
+            previous = dispositions.get(target_id)
+            if previous is None or (
+                record["created_at"], record["research_id"]
+            ) > (previous["created_at"], previous["research_id"]):
+                dispositions[target_id] = record
+        route_staleness = self._route_staleness(bases)
+        workgroups: dict[str, list[str]] = {}
+        work_keys: dict[str, str] = {}
+        for research_id, record in bases.items():
+            work_key = self._frontier_work_key(record)
+            work_keys[research_id] = work_key
+            workgroups.setdefault(work_key, []).append(research_id)
+        for members in workgroups.values():
+            members.sort(
+                key=lambda item: (bases[item]["created_at"], item)
+            )
+        return bases, dispositions, route_staleness, workgroups, work_keys
+
+    def _frontier_actionable_representatives(
+        self,
+        *,
+        workgroups: dict[str, list[str]],
+        bases: dict[str, dict[str, Any]],
+        dispositions: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+        campaign_id: str | None,
+        exclude_production_review_only: bool,
+    ) -> dict[str, str]:
+        """Choose the oldest current member of each exact workgroup."""
+
+        representatives: dict[str, str] = {}
+        for work_key, members in workgroups.items():
+            for research_id in members:
+                record = bases[research_id]
+                effective_status = (
+                    dispositions.get(research_id, {})
+                    .get("metadata", {})
+                    .get("disposition_status", record["status"])
+                )
+                if (
+                    research_id in route_staleness
+                    or effective_status not in ACTIVE_MEMORY_STATUSES
+                    or (
+                        campaign_id is not None
+                        and record["metadata"].get("campaign_id")
+                        != campaign_id
+                    )
+                    or (
+                        exclude_production_review_only
+                        and self._production_entry_is_review_only(record)
+                    )
+                ):
+                    continue
+                representatives[work_key] = research_id
+                break
+        return representatives
+
+    def _frontier_group_completion(
+        self,
+        *,
+        workgroups: dict[str, list[str]],
+        work_keys: set[str],
+        bases: dict[str, dict[str, Any]],
+        dispositions: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+        _inspection_context: RoundInspectionContext,
+    ) -> dict[str, tuple[str, str | None, int, str]]:
+        """Project closure for exact groups requested by this command."""
+
+        candidate_members = {
+            member
+            for work_key in work_keys
+            for member in workgroups.get(work_key, [])
+        }
+        completion_statuses = (
+            self._validated_completed_research_obligation_statuses(
+                candidate_members,
+                _inspection_context=_inspection_context,
+                _all_bases=bases,
+                _latest_dispositions=dispositions,
+                _route_staleness=route_staleness,
+            )
+        )
+        projected: dict[str, tuple[str, str | None, int, str]] = {}
+        for work_key in sorted(work_keys):
+            completed_members = [
+                member
+                for member in workgroups.get(work_key, [])
+                if (
+                    member in completion_statuses
+                    and member not in route_staleness
+                    and dispositions.get(member, {})
+                    .get("metadata", {})
+                    .get(
+                        "disposition_status",
+                        bases[member]["status"],
+                    )
+                    in (
+                        (ACTIVE_MEMORY_STATUSES - {"challenged"})
+                        | V5_SAFE_SUPERVISION_DISPOSITIONS
+                    )
+                )
+            ]
+            completion_research_id = (
+                min(
+                    completed_members,
+                    key=lambda item: (bases[item]["created_at"], item),
+                )
+                if completed_members
+                else None
+            )
+            completion_status = (
+                "completed_supervision"
+                if any(
+                    completion_statuses[item] == "completed_supervision"
+                    for item in completed_members
+                )
+                else "completed_production" if completed_members else "pending"
+            )
+            projected[work_key] = (
+                completion_status,
+                completion_research_id,
+                len(completed_members),
+                sha256_json(sorted(completed_members)),
+            )
+        return projected
+
+    def _validated_completed_research_obligation_statuses(
         self,
         candidate_ids: set[str],
         *,
         _inspection_context: RoundInspectionContext,
-    ) -> set[str]:
-        """Derive closed generic-frontier obligations from existing products.
-
-        The immutable Research product closes the source assignment's
-        constructive obligation.  Its worker-ingestion receipt is only a
-        workflow marker and may be absent after a publish interruption.  A
-        missing or invalid product, quarantine, or abort still supplies no
-        closure evidence.
-        """
+        _all_bases: dict[str, dict[str, Any]] | None = None,
+        _latest_dispositions: dict[str, dict[str, Any]] | None = None,
+        _route_staleness: dict[str, list[str]] | None = None,
+    ) -> dict[str, str]:
+        """Derive safe two-subround closure from exact worker lineage."""
 
         if not candidate_ids or not self.store.rounds_dir.is_dir():
-            return set()
-        if _inspection_context.production_obligation_round_ids is None:
-            round_ids_by_research: dict[str, list[str]] = {}
+            return {}
+        if _inspection_context.completion_obligation_rounds is None:
+            rounds_by_research: dict[str, list[tuple[str, str]]] = {}
+            supervision_rounds_by_source: dict[str, list[str]] = {}
             for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
                 manifest_path = round_dir / "round.json"
                 if (
@@ -6435,12 +6948,21 @@ class V5LifecycleManager:
                     continue
                 cycle = preview.get("research_cycle")
                 assignments = preview.get("assignments")
+                subround = cycle.get("subround") if isinstance(cycle, dict) else None
                 if (
-                    not isinstance(cycle, dict)
-                    or cycle.get("subround") != "production"
+                    subround not in {"production", "supervision"}
                     or not isinstance(assignments, list)
                 ):
                     continue
+                if subround == "supervision":
+                    source_round_id = cycle.get("source_round_id")
+                    if (
+                        isinstance(source_round_id, str)
+                        and source_round_id.startswith("round-")
+                    ):
+                        supervision_rounds_by_source.setdefault(
+                            source_round_id, []
+                        ).append(round_dir.name)
                 for assignment in assignments:
                     if not isinstance(assignment, dict):
                         continue
@@ -6451,24 +6973,100 @@ class V5LifecycleManager:
                         or assignment.get("assignment_role") == "paired_adverse"
                     ):
                         continue
-                    round_ids_by_research.setdefault(research_id, []).append(
-                        round_dir.name
+                    rounds_by_research.setdefault(research_id, []).append(
+                        (round_dir.name, subround)
                     )
-            _inspection_context.production_obligation_round_ids = {
-                research_id: sorted(set(round_ids))
-                for research_id, round_ids in round_ids_by_research.items()
+            _inspection_context.completion_obligation_rounds = {
+                research_id: sorted(set(rounds))
+                for research_id, rounds in rounds_by_research.items()
             }
-        completed: set[str] = set()
-        candidate_round_ids = sorted(
+            _inspection_context.supervision_round_ids_by_production_round = {
+                source_round_id: sorted(set(round_ids))
+                for source_round_id, round_ids in supervision_rounds_by_source.items()
+            }
+        if (
+            _inspection_context.supervision_round_ids_by_production_round
+            is None
+        ):
+            _inspection_context.supervision_round_ids_by_production_round = {}
+        completed: dict[str, str] = {}
+        if (
+            _all_bases is None
+            or _latest_dispositions is None
+            or _route_staleness is None
+        ):
+            all_envelopes = self.research_envelopes(
+                _inspection_context=_inspection_context,
+            )
+            all_bases = {
+                item["research_id"]: item
+                for item in all_envelopes
+                if item["kind"] != "disposition"
+            }
+            latest_dispositions: dict[str, dict[str, Any]] = {}
+            for item in all_envelopes:
+                if item["kind"] != "disposition":
+                    continue
+                target_id = item.get("metadata", {}).get(
+                    "target_research_id"
+                )
+                if not isinstance(target_id, str):
+                    continue
+                previous = latest_dispositions.get(target_id)
+                if previous is None or (
+                    item["created_at"], item["research_id"]
+                ) > (previous["created_at"], previous["research_id"]):
+                    latest_dispositions[target_id] = item
+            route_staleness = self._route_staleness(all_bases)
+        else:
+            all_bases = _all_bases
+            latest_dispositions = _latest_dispositions
+            route_staleness = _route_staleness
+
+        def safe_supervision_product(product: dict[str, Any]) -> bool:
+            metadata = product.get("metadata", {})
+            if not isinstance(metadata, dict):
+                return False
+            dispositions = metadata.get("obligation_dispositions")
+            if (
+                not isinstance(dispositions, list)
+                or not dispositions
+                or any(
+                    not isinstance(item, dict)
+                    or item.get("status") not in {"complete", "not_applicable"}
+                    for item in dispositions
+                )
+            ):
+                return False
+            effective_status = product["status"]
+            disposition = latest_dispositions.get(product["research_id"])
+            if disposition is not None:
+                effective_status = disposition["metadata"]["disposition_status"]
+            if (
+                product["kind"]
+                in {"counterexample", "obstacle", "dead_end"}
+                or effective_status in {"challenged", "blocked", "dead_end", "refuted_by_fact"}
+                or product["research_id"] in route_staleness
+                or metadata.get("attack_learning") is not None
+                or bool(metadata.get("route_invalidations", []))
+                or metadata.get("worker_outcome")
+                in {"counterexample", "dead_end"}
+            ):
+                return False
+            return True
+
+        candidate_rounds = sorted(
             {
-                round_id
+                round_binding
                 for research_id in candidate_ids
-                for round_id in _inspection_context.production_obligation_round_ids.get(
-                    research_id, []
+                for round_binding in (
+                    _inspection_context.completion_obligation_rounds.get(
+                        research_id, []
+                    )
                 )
             }
         )
-        for round_id in candidate_round_ids:
+        for round_id, subround in candidate_rounds:
             try:
                 validated_dir, manifest = self._round_manifest(
                     round_id,
@@ -6494,8 +7092,64 @@ class V5LifecycleManager:
                     )
                 except (KeyError, OSError, ValueError):
                     continue
-                if product.get("related_research_ids") == [research_id]:
-                    completed.add(research_id)
+                if product.get("related_research_ids") != [research_id]:
+                    continue
+                if subround == "supervision":
+                    if safe_supervision_product(product):
+                        completed[research_id] = "completed_supervision"
+                    continue
+                production_round_id = manifest["round_id"]
+                if (
+                    production_round_id
+                    not in _inspection_context.supervision_manifests_by_production_round
+                ):
+                    matching_manifests: list[tuple[Path, dict[str, Any]]] = []
+                    for supervision_round_id in (
+                        _inspection_context.supervision_round_ids_by_production_round.get(
+                            production_round_id, []
+                        )
+                    ):
+                        try:
+                            supervision_round = self._round_manifest(
+                                supervision_round_id,
+                                _inspection_context=_inspection_context,
+                            )
+                        except (KeyError, OSError, ValueError):
+                            continue
+                        if (
+                            _inspection_context.round_aborts.get(
+                                supervision_round_id
+                            )
+                            is None
+                        ):
+                            matching_manifests.append(supervision_round)
+                    _inspection_context.supervision_manifests_by_production_round[
+                        production_round_id
+                    ] = matching_manifests
+                try:
+                    supervision_result_ids = (
+                        self._required_supervision_results_for_candidate(
+                            [product],
+                            _inspection_context=_inspection_context,
+                        )
+                    )
+                except (KeyError, OSError, ValueError):
+                    continue
+                try:
+                    supervision_results = [
+                        self._inspection_research_record(
+                            result_id,
+                            _inspection_context,
+                        )
+                        for result_id in sorted(supervision_result_ids)
+                    ]
+                except (KeyError, OSError, ValueError):
+                    continue
+                if supervision_results and all(
+                    safe_supervision_product(item)
+                    for item in supervision_results
+                ):
+                    completed[research_id] = "completed_production"
         return completed
 
     def _explicit_research_projections(
@@ -8565,6 +9219,7 @@ class V5LifecycleManager:
         fact_ids: list[str] | set[str],
         *,
         _inspection_context: RoundInspectionContext | None = None,
+        _allow_inactive: bool = False,
     ) -> dict[str, dict[str, Any]]:
         """Validate exactly the admitted Fact nodes consumed by one operation.
 
@@ -8592,6 +9247,7 @@ class V5LifecycleManager:
             return {
                 fact_id: inspection.direct_active_fact_bindings[fact_id]
                 for fact_id in requested
+                if fact_id in inspection.direct_active_fact_bindings
             }
 
         events = self.store._read_jsonl(self.store.verification_log)
@@ -8656,6 +9312,8 @@ class V5LifecycleManager:
             fact = facts.get(fact_id)
             path = paths.get(fact_id)
             if fact is None or path is None:
+                if _allow_inactive:
+                    continue
                 raise ValueError(
                     f"research dependency is not an active V5 Fact: {fact_id}"
                 )
@@ -8741,6 +9399,7 @@ class V5LifecycleManager:
         return {
             fact_id: inspection.direct_active_fact_bindings[fact_id]
             for fact_id in requested
+            if fact_id in inspection.direct_active_fact_bindings
         }
 
     def _task_authority_snapshot(
@@ -9069,6 +9728,7 @@ class V5LifecycleManager:
         *,
         card: dict[str, Any],
         source_research: dict[str, Any],
+        historical_runtime: bool = False,
         _materialized_round_dir: Path | None = None,
     ) -> dict[str, Any]:
         selection = card.get("context_selection")
@@ -9234,14 +9894,23 @@ class V5LifecycleManager:
             or fallback_index < 0
         ):
             raise ValueError("V5 mode-selection request/index is invalid")
-        expected_mode = self._mode_selection(
-            source_research,
-            requested_mode=requested_mode,
-            index=fallback_index,
-            adverse_routing_enabled=mode_selection.get(
-                "adverse_routing_enabled_at_freeze"
-            ),
-            research_cycle=card.get("research_cycle"),
+        # A completed/aborted card owns its sealed planning choice.  Re-running
+        # a newer assurance selector here would make immutable Research cease
+        # to be readable after a software upgrade.  Live cards still recompute
+        # the current selector; historical cards are checked by their nested
+        # context hash and the task-card semantic hash below.
+        expected_mode = (
+            mode_selection
+            if historical_runtime
+            else self._mode_selection(
+                source_research,
+                requested_mode=requested_mode,
+                index=fallback_index,
+                adverse_routing_enabled=mode_selection.get(
+                    "adverse_routing_enabled_at_freeze"
+                ),
+                research_cycle=card.get("research_cycle"),
+            )
         )
         if (
             (
@@ -9620,6 +10289,7 @@ class V5LifecycleManager:
                 self._validate_context_selection(
                     card=card,
                     source_research=source_research,
+                    historical_runtime=historical_runtime,
                     _materialized_round_dir=_materialized_round_dir,
                 )
         if "assurance_contract" in card:
@@ -9884,6 +10554,7 @@ class V5LifecycleManager:
                 )
         assurance_note = ""
         if "assurance_contract" in card:
+            assurance_contract = card["assurance_contract"]
             if cycle is not None and cycle["subround"] == "supervision":
                 assurance_note = (
                     "Scoped supervisor startup contract: "
@@ -9924,6 +10595,59 @@ class V5LifecycleManager:
                     "Return exact per-obligation dispositions, a typed computation manifest "
                     "when required, and the exact research_assurance object. Related "
                     "Research artifacts are authorized only through the frozen allowlist.\n\n"
+                )
+            if "source_use_required" in assurance_contract["risk_signals"]:
+                source_obligation_ids: list[str] = []
+                applicability_obligation_ids: list[str] = []
+                for obligation in assurance_contract["obligations"]:
+                    source_required, applicability_required = (
+                        _obligation_source_requirements(obligation)
+                    )
+                    if source_required:
+                        source_obligation_ids.append(
+                            obligation["obligation_id"]
+                        )
+                    if applicability_required:
+                        applicability_obligation_ids.append(
+                            obligation["obligation_id"]
+                        )
+                source_ids_text = (
+                    ", ".join(source_obligation_ids)
+                    if source_obligation_ids
+                    else "none"
+                )
+                applicability_ids_text = (
+                    ", ".join(applicability_obligation_ids)
+                    if applicability_obligation_ids
+                    else "none"
+                )
+                source_use_skeleton = json.dumps(
+                    {
+                        "source_key": (
+                            "<exact structured obligation_id; when none is listed, "
+                            "use one exact descriptive source key>"
+                        ),
+                        "use_kind": "result",
+                        "source_strength": "fixed_object",
+                        "target_strength": "fixed_object",
+                        "source_artifact_sha256": (
+                            "<exact returned artifact or frozen primary-source SHA-256>"
+                        ),
+                        "toy_check_artifact_sha256": None,
+                        "bridge_artifact_sha256s": [],
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                assurance_note += (
+                    "Source assurance is structurally required. Structured source "
+                    f"obligation ids: {source_ids_text}. Structured applicability "
+                    f"obligation ids: {applicability_ids_text}. Include at least one "
+                    "`research_assurance.source_uses` object and cover every listed "
+                    "source obligation by exact `source_key`; bind every witness "
+                    "declared by a completed obligation disposition through source, "
+                    "toy-check, or bridge artifact hashes. JSON object skeleton: "
+                    f"`{source_use_skeleton}`\n\n"
                 )
         campaign_note = ""
         if "campaign_scope" in card:
@@ -10818,7 +11542,10 @@ class V5LifecycleManager:
                     {
                         "dependencies": sorted(supervised_fact_ids),
                         "artifacts": supervised_artifacts,
-                        "source_dependent": bool(supervised_artifacts),
+                        "source_dependent": (
+                            scope == "source_scope"
+                            and bool(supervised_artifacts)
+                        ),
                         "supervised_production_authority": supervised_authority,
                     }
                 )
@@ -11204,7 +11931,10 @@ class V5LifecycleManager:
             campaign_id = validate_campaign_id(campaign_id)
             # Read-only preflight keeps unknown, malformed, or currently invalid
             # Campaigns from influencing selection or creating round bytes.
-            self._campaign_snapshot_for_planning(campaign_id)
+            self._campaign_snapshot_for_planning(
+                campaign_id,
+                _inspection_context=inspection,
+            )
         selected_background_chunks = _require_string_list(
             background_chunk_ids or [],
             "background chunk ids",
@@ -11284,12 +12014,14 @@ class V5LifecycleManager:
                     campaign_id=campaign_id,
                     _inspection_context=inspection,
                     _exclude_production_review_only=True,
+                    _execution_records=True,
                 )
             else:
                 selected = self.frontier(
                     limit=workers,
                     campaign_id=campaign_id,
                     _inspection_context=inspection,
+                    _execution_records=True,
                 )
         if len(selected) != workers:
             scope_note = (
@@ -11344,17 +12076,56 @@ class V5LifecycleManager:
                     create=True,
                 )
                 assert lock_inspection is not None
-                newly_completed = (
-                    self._validated_completed_production_obligation_ids(
-                        {item["research_id"] for item in selected},
-                        _inspection_context=lock_inspection,
+                fresh_envelopes = self.research_envelopes(
+                    _inspection_context=lock_inspection,
+                )
+                (
+                    fresh_bases,
+                    fresh_dispositions,
+                    fresh_route_staleness,
+                    all_fresh_workgroups,
+                    _fresh_work_keys,
+                ) = self._frontier_structural_state(fresh_envelopes)
+                selected_work_keys = {
+                    item["work_key_sha256"] for item in selected
+                }
+                fresh_workgroups = {
+                    work_key: all_fresh_workgroups.get(work_key, [])
+                    for work_key in selected_work_keys
+                }
+                fresh_completion = self._frontier_group_completion(
+                    workgroups=fresh_workgroups,
+                    work_keys=selected_work_keys,
+                    bases=fresh_bases,
+                    dispositions=fresh_dispositions,
+                    route_staleness=fresh_route_staleness,
+                    _inspection_context=lock_inspection,
+                )
+                fresh_representatives = (
+                    self._frontier_actionable_representatives(
+                        workgroups=fresh_workgroups,
+                        bases=fresh_bases,
+                        dispositions=fresh_dispositions,
+                        route_staleness=fresh_route_staleness,
+                        campaign_id=campaign_id,
+                        exclude_production_review_only=True,
                     )
                 )
-                if newly_completed:
+                changed = sorted(
+                    item["research_id"]
+                    for item in selected
+                    if (
+                        fresh_completion[item["work_key_sha256"]][0]
+                        != "pending"
+                        or fresh_representatives.get(item["work_key_sha256"])
+                        != item["research_id"]
+                    )
+                )
+                if changed:
                     raise ValueError(
                         "generic production frontier changed before round creation; "
-                        "completed Research obligations: "
-                        + ", ".join(sorted(newly_completed))
+                        "workgroups are no longer actionable: "
+                        + ", ".join(changed)
                     )
             if (
                 research_cycle is not None
@@ -11384,8 +12155,16 @@ class V5LifecycleManager:
             campaign_snapshot: dict[str, Any] | None = None
             campaign_snapshot_raw: bytes | None = None
             if campaign_id is not None:
+                lock_inspection = self._bind_inspection_context(
+                    RoundInspectionContext(),
+                    create=True,
+                )
+                assert lock_inspection is not None
                 campaign_snapshot, campaign_snapshot_raw = (
-                    self._campaign_snapshot_for_planning(campaign_id)
+                    self._campaign_snapshot_for_planning(
+                        campaign_id,
+                        _inspection_context=lock_inspection,
+                    )
                 )
                 mismatched = sorted(
                     entry["research_id"]
@@ -13439,7 +14218,7 @@ class V5LifecycleManager:
                 continue
             role_tokens = {
                 token
-                for token in re.split(r"[:._-]+", role.casefold())
+                for token in re.split(r"[^a-z0-9]+", role.casefold())
                 if token
             }
             if "primary" in role_tokens and SHA256_RE.fullmatch(digest):

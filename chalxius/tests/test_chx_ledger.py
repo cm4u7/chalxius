@@ -1028,7 +1028,7 @@ class CHXRunLedgerTests(unittest.TestCase):
         self.assertEqual(len(full_result["chains"]), 1)
         self.assertEqual(ledger.read_bytes(), before)
 
-    def test_global_integrated_repair_closes_all_qualified_issues_without_tactical_events(
+    def test_global_install_integration_covers_current_open_issue_without_tactical_events(
         self,
     ) -> None:
         first = self._started("run-global-repair-first-001")
@@ -1039,7 +1039,10 @@ class CHXRunLedgerTests(unittest.TestCase):
         second_issue = self._issue()
         second_issue["audit_anchors"] = ["global-repair:second"]
         record_issue(second, second_issue)
-        close_ledger(second)
+        self.assertNotIn(
+            "tactical_repair_recorded",
+            {json.loads(line)["event"] for line in second.read_text().splitlines()},
+        )
 
         base = inventory_project_ledgers(
             self.project,

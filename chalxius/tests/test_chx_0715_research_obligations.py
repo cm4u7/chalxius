@@ -216,7 +216,9 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 operator_ids.append(json.loads(stdout.getvalue())["research_id"])
             self.assertNotEqual(operator_ids[0], operator_ids[1])
 
-    def test_valid_receipt_closes_source_but_not_worker_result(self) -> None:
+    def test_production_receipt_waits_for_supervision_and_keeps_result_visible(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -241,22 +243,13 @@ class ResearchObligationClosureTests(unittest.TestCase):
             active_ids = {
                 item["research_id"] for item in lifecycle.frontier(limit=20)
             }
-            self.assertNotIn(source["research_id"], active_ids)
+            self.assertIn(source["research_id"], active_ids)
             self.assertIn(receipt["research_id"], active_ids)
             history_ids = {
                 item["research_id"]
                 for item in lifecycle.frontier(limit=20, include_history=True)
             }
             self.assertIn(source["research_id"], history_ids)
-
-            override_ids = {
-                item["research_id"]
-                for item in lifecycle.frontier(
-                    limit=20,
-                    _research_records_override=lifecycle.research_envelopes(),
-                )
-            }
-            self.assertIn(source["research_id"], override_ids)
 
     def test_one_valid_assignment_closes_only_its_source_obligation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -285,11 +278,11 @@ class ResearchObligationClosureTests(unittest.TestCase):
             active_ids = {
                 item["research_id"] for item in lifecycle.frontier(limit=20)
             }
-            self.assertNotIn(first["research_id"], active_ids)
+            self.assertIn(first["research_id"], active_ids)
             self.assertIn(second["research_id"], active_ids)
             self.assertIn(receipt["research_id"], active_ids)
 
-    def test_pending_quarantined_and_aborted_work_do_not_close_but_receipt_drift_does_not_reopen_product(self) -> None:
+    def test_production_states_without_supervision_do_not_close_source(self) -> None:
         for state in ("pending", "quarantined", "invalid", "aborted"):
             with self.subTest(state=state), tempfile.TemporaryDirectory() as temporary:
                 store = self._store(
@@ -344,13 +337,7 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 active_ids = {
                     item["research_id"] for item in lifecycle.frontier(limit=20)
                 }
-                if state == "invalid":
-                    # The receipt is only a workflow marker.  Its tampering is
-                    # diagnostic, but the independently hash-bound Research
-                    # product still closes the source obligation.
-                    self.assertNotIn(source["research_id"], active_ids)
-                else:
-                    self.assertIn(source["research_id"], active_ids)
+                self.assertIn(source["research_id"], active_ids)
 
     def test_missing_worker_product_does_not_close_source_obligation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -405,24 +392,40 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 {"claim": "Close this obligation during generic selection."},
                 actor="main",
             )
+            sibling = lifecycle.add_research(
+                {"claim": "Close this obligation during generic selection."},
+                actor="main-copy",
+            )
             pending = lifecycle.create_production_round(
                 workers=1,
                 mode="prove",
                 research_ids=[source["research_id"]],
                 host_task_scope_id="pending-before-generic-selection",
             )
-            original_frontier = lifecycle.frontier
+            original_completion = lifecycle._frontier_group_completion
+            calls = 0
 
-            def close_after_selection(*args: object, **kwargs: object) -> list[dict[str, object]]:
-                selected = original_frontier(*args, **kwargs)
-                self._ingest_plain_assignment(
-                    store,
-                    pending,
-                    pending["assignments"][0],
-                )
-                return selected
+            def close_after_selection(*args: object, **kwargs: object):
+                nonlocal calls
+                calls += 1
+                projected = original_completion(*args, **kwargs)
+                if calls == 1:
+                    return projected
+                return {
+                    work_key: (
+                        "completed_production",
+                        sibling["research_id"],
+                        1,
+                        "0" * 64,
+                    )
+                    for work_key in projected
+                }
 
-            with patch.object(lifecycle, "frontier", side_effect=close_after_selection):
+            with patch.object(
+                lifecycle,
+                "_frontier_group_completion",
+                side_effect=close_after_selection,
+            ):
                 with self.assertRaisesRegex(
                     ValueError,
                     "generic production frontier changed before round creation",

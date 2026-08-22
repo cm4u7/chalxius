@@ -34,6 +34,7 @@ from .goal_intake import (
 from .modes import FACT_ADMISSION_CONTRACT_SHA256
 from .markdown import parse_fact_markdown
 from .v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
+from .v5_lifecycle import RoundInspectionContext
 
 
 BF_POLICY_REVISION = "chalxius-brave-future-policy-1"
@@ -41,7 +42,8 @@ BF_REPAIR_CONTRACT_REVISION = "chalxius-bf-repair-contract-1"
 BF_PLANNING_SNAPSHOT_REVISION = "chalxius-bf-planning-snapshot-3"
 BF_PLANNING_SNAPSHOT_FULL_AUDIT_REVISION = "chalxius-bf-planning-snapshot-2"
 BF_PLANNING_SNAPSHOT_LEGACY_REVISION = "chalxius-bf-planning-snapshot-1"
-BF_FRONTIER_PROJECTION_REVISION = "chalxius-bf-frontier-projection-2"
+BF_FRONTIER_PROJECTION_REVISION = "chalxius-bf-frontier-projection-3"
+BF_FRONTIER_PROJECTION_WINDOW_REVISION = "chalxius-bf-frontier-projection-2"
 BF_FRONTIER_PROJECTION_LEGACY_REVISION = "chalxius-bf-frontier-projection-1"
 BF_BLOCKAGE_REVISION = "chalxius-bf-blockage-1"
 BF_CANDIDATE_MANIFEST_REVISION = "chalxius-bf-candidate-manifest-1"
@@ -122,6 +124,9 @@ BF_PROJECTION_STATUSES = frozenset(
         "collapsed_repaired",
         "collapsed_split_parent",
         "historical_disposed",
+        "completed_production",
+        "completed_supervision",
+        "duplicate_workgroup_member",
         "resolved_by_release_nontruth",
         "resolved_by_active_fact",
     }
@@ -218,7 +223,7 @@ _PROJECTION_SEMANTIC_FIELDS_V1 = {
     "truth_effect",
     "fact_admission_effect",
 }
-_PROJECTION_SEMANTIC_FIELDS = {
+_PROJECTION_SEMANTIC_FIELDS_V2 = {
     *(_PROJECTION_SEMANTIC_FIELDS_V1 - {
         "full_eligible_manifest",
         "full_eligible_manifest_sha256",
@@ -227,6 +232,10 @@ _PROJECTION_SEMANTIC_FIELDS = {
     "eligible_manifest_window_limit",
     "eligible_manifest_total_count",
     "eligible_manifest_sha256",
+}
+_PROJECTION_SEMANTIC_FIELDS = {
+    *_PROJECTION_SEMANTIC_FIELDS_V2,
+    "workgroup_inventory",
 }
 _CANDIDATE_MANIFEST_SEMANTIC_FIELDS = {
     "revision",
@@ -479,8 +488,45 @@ def _validate_planning_snapshot(record: Any) -> dict[str, Any]:
     return snapshot
 
 
+def _projection_manifest_item(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "research_id": entry["research_id"],
+        "record_sha256": entry["record_sha256"],
+        "projection_status": entry["projection_status"],
+        "work_key_sha256": entry["work_key_sha256"],
+        "work_completion_status": entry["work_completion_status"],
+        "score_bytes_sha256": sha256_json(
+            {
+                "score": entry["score"],
+                "decision_factors": entry["decision_factors"],
+                "score_model": entry["score_model"],
+                "score_role": entry["score_role"],
+                "readiness": entry["readiness"],
+            }
+        ),
+    }
+
+
+def _projection_workgroup_item(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "work_key_sha256": entry["work_key_sha256"],
+        "representative_research_id": entry["workgroup_representative_id"],
+        "actionable_representative_research_id": entry[
+            "workgroup_actionable_representative_id"
+        ],
+        "member_count": entry["workgroup_member_count"],
+        "member_ids_sha256": entry["workgroup_member_ids_sha256"],
+        "completion_status": entry["work_completion_status"],
+        "completion_research_id": entry["work_completion_research_id"],
+        "completion_member_count": entry["work_completion_member_count"],
+        "completion_member_ids_sha256": entry[
+            "work_completion_member_ids_sha256"
+        ],
+    }
+
+
 def _validate_frontier_projection(record: Any) -> dict[str, Any]:
-    """Validate the current bounded-window projection or an exact legacy v1."""
+    """Validate current v3 bytes while preserving frozen v1/v2 reads."""
 
     revision = record.get("revision") if isinstance(record, dict) else None
     if revision == BF_FRONTIER_PROJECTION_LEGACY_REVISION:
@@ -492,14 +538,24 @@ def _validate_frontier_projection(record: Any) -> dict[str, Any]:
             revision=BF_FRONTIER_PROJECTION_LEGACY_REVISION,
             label="legacy Brave Future frontier projection",
         )
-    projection = _validate_sealed_record(
-        record,
-        semantic_fields=_PROJECTION_SEMANTIC_FIELDS,
-        id_key="projection_id",
-        prefix="bfp-",
-        revision=BF_FRONTIER_PROJECTION_REVISION,
-        label="Brave Future frontier projection",
-    )
+    if revision == BF_FRONTIER_PROJECTION_WINDOW_REVISION:
+        projection = _validate_sealed_record(
+            record,
+            semantic_fields=_PROJECTION_SEMANTIC_FIELDS_V2,
+            id_key="projection_id",
+            prefix="bfp-",
+            revision=BF_FRONTIER_PROJECTION_WINDOW_REVISION,
+            label="frozen v2 Brave Future frontier projection",
+        )
+    else:
+        projection = _validate_sealed_record(
+            record,
+            semantic_fields=_PROJECTION_SEMANTIC_FIELDS,
+            id_key="projection_id",
+            prefix="bfp-",
+            revision=BF_FRONTIER_PROJECTION_REVISION,
+            label="Brave Future frontier projection",
+        )
     window = projection["eligible_manifest_window"]
     window_limit = projection["eligible_manifest_window_limit"]
     total_count = projection["eligible_manifest_total_count"]
@@ -509,6 +565,7 @@ def _validate_frontier_projection(record: Any) -> dict[str, Any]:
         or not isinstance(window_limit, int)
         or isinstance(window_limit, bool)
         or window_limit <= 0
+        or window_limit > BF_PROJECTION_MEMBER_LIMIT
         or not isinstance(total_count, int)
         or isinstance(total_count, bool)
         or total_count < 0
@@ -532,6 +589,149 @@ def _validate_frontier_projection(record: Any) -> dict[str, Any]:
     }
     if not entry_ids.issubset(set(research_ids)):
         raise ValueError("Brave Future entries escape the eligible-manifest window")
+    if revision == BF_FRONTIER_PROJECTION_WINDOW_REVISION:
+        return projection
+
+    manifest_fields = {
+        "research_id",
+        "record_sha256",
+        "projection_status",
+        "score_bytes_sha256",
+        "work_key_sha256",
+        "work_completion_status",
+    }
+    for item in window:
+        if set(item) != manifest_fields:
+            raise ValueError("Brave Future v3 eligible-manifest item is not exact")
+        validate_memory_id(item["research_id"])
+        for key in ("record_sha256", "score_bytes_sha256", "work_key_sha256"):
+            _validate_sha(item.get(key), f"Brave Future manifest {key}")
+        if item["projection_status"] not in BF_PROJECTION_STATUSES:
+            raise ValueError("Brave Future manifest projection status is invalid")
+        if item["work_completion_status"] not in {
+            "pending",
+            "completed_production",
+            "completed_supervision",
+        }:
+            raise ValueError("Brave Future manifest completion status is invalid")
+
+    entry_fields = {
+        "research_id",
+        "record_sha256",
+        "kind",
+        "status",
+        "projection_status",
+        "route_invalidator_ids",
+        "residual_reasons",
+        "score",
+        "decision_factors",
+        "score_model",
+        "score_role",
+        "readiness",
+        "work_key_sha256",
+        "workgroup_representative_id",
+        "workgroup_actionable_representative_id",
+        "workgroup_member_count",
+        "workgroup_member_ids_sha256",
+        "workgroup_member_role",
+        "work_completion_status",
+        "work_completion_research_id",
+        "work_completion_member_count",
+        "work_completion_member_ids_sha256",
+    }
+    entries = projection["entries"]
+    if (
+        not isinstance(entries, list)
+        or len(entries) > window_limit
+        or any(not isinstance(item, dict) or set(item) != entry_fields for item in entries)
+        or projection.get("omitted_count") != total_count - len(entries)
+    ):
+        raise ValueError("Brave Future v3 bounded entries are invalid")
+    if [item["research_id"] for item in entries] != research_ids:
+        raise ValueError("Brave Future v3 entries/window order drifted")
+    for manifest_item, entry in zip(window, entries, strict=True):
+        if manifest_item != _projection_manifest_item(entry):
+            raise ValueError(
+                "Brave Future v3 eligible manifest drifted from its entry"
+            )
+
+    inventory_fields = {
+        "work_key_sha256",
+        "representative_research_id",
+        "actionable_representative_research_id",
+        "member_count",
+        "member_ids_sha256",
+        "completion_status",
+        "completion_research_id",
+        "completion_member_count",
+        "completion_member_ids_sha256",
+    }
+    inventory = projection.get("workgroup_inventory")
+    if (
+        not isinstance(inventory, list)
+        or len(inventory) > window_limit
+        or any(not isinstance(item, dict) or set(item) != inventory_fields for item in inventory)
+    ):
+        raise ValueError("Brave Future v3 workgroup inventory is invalid")
+    by_work_key: dict[str, dict[str, Any]] = {}
+    for item in inventory:
+        work_key = item["work_key_sha256"]
+        _validate_sha(work_key, "Brave Future work key")
+        if work_key in by_work_key:
+            raise ValueError("Brave Future workgroup inventory is duplicated")
+        by_work_key[work_key] = item
+        for key in ("member_ids_sha256", "completion_member_ids_sha256"):
+            _validate_sha(item.get(key), f"Brave Future workgroup {key}")
+        validate_memory_id(item["representative_research_id"])
+        actionable_id = item["actionable_representative_research_id"]
+        if actionable_id is not None:
+            validate_memory_id(actionable_id)
+        member_count = item["member_count"]
+        completion_count = item["completion_member_count"]
+        if (
+            isinstance(member_count, bool)
+            or not isinstance(member_count, int)
+            or member_count < 1
+            or isinstance(completion_count, bool)
+            or not isinstance(completion_count, int)
+            or completion_count < 0
+            or completion_count > member_count
+        ):
+            raise ValueError("Brave Future workgroup counts are invalid")
+        completion_status = item["completion_status"]
+        completion_id = item["completion_research_id"]
+        if completion_status == "pending":
+            if completion_id is not None or completion_count != 0:
+                raise ValueError("Brave Future pending workgroup has completion evidence")
+        elif completion_status in {"completed_production", "completed_supervision"}:
+            validate_memory_id(completion_id)
+            if completion_count < 1:
+                raise ValueError("Brave Future completed workgroup lacks evidence")
+        else:
+            raise ValueError("Brave Future workgroup completion status is invalid")
+
+    if set(by_work_key) != {item["work_key_sha256"] for item in entries}:
+        raise ValueError("Brave Future workgroup inventory does not match entries")
+    for entry in entries:
+        validate_memory_id(entry["research_id"])
+        _validate_sha(entry["record_sha256"], "Brave Future entry record hash")
+        work_key = entry["work_key_sha256"]
+        item = by_work_key[work_key]
+        if item != _projection_workgroup_item(entry):
+            raise ValueError("Brave Future entry/workgroup projection drifted")
+        expected_role = (
+            "representative"
+            if entry["research_id"]
+            == entry["workgroup_actionable_representative_id"]
+            else "duplicate"
+        )
+        if entry["workgroup_member_role"] != expected_role:
+            raise ValueError("Brave Future workgroup member role is invalid")
+        if entry["projection_status"] in {
+            "completed_production",
+            "completed_supervision",
+        } and entry["projection_status"] != entry["work_completion_status"]:
+            raise ValueError("Brave Future completion projection drifted")
     return projection
 
 
@@ -1461,6 +1661,7 @@ class PlanningSnapshotBuilder:
         policy_status: dict[str, Any],
         campaign_status_override: dict[str, Any] | None = None,
         revision: str = BF_PLANNING_SNAPSHOT_REVISION,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         campaign_id = validate_campaign_id(campaign_id)
         if revision not in {
@@ -1480,7 +1681,9 @@ class PlanningSnapshotBuilder:
             raise ValueError("Brave Future Campaign status override mismatch")
         # ACTIVE is an informational legacy pointer, never a BF selector or head.
         campaign_status.pop("active", None)
-        records = self.lifecycle.research_envelopes()
+        records = self.lifecycle.research_envelopes(
+            _inspection_context=_inspection_context,
+        )
         bases, dispositions = self._effective_research(records, campaign_id)
         manifest = [
             {
@@ -1633,10 +1836,12 @@ class PlanningSnapshotBuilder:
 
     def revalidate(self, snapshot: dict[str, Any], policy_status: dict[str, Any]) -> bool:
         snapshot = _validate_planning_snapshot(snapshot)
+        inspection = RoundInspectionContext()
         current = self.preview(
             campaign_id=snapshot["campaign_id"],
             policy_status=policy_status,
             revision=snapshot["revision"],
+            _inspection_context=inspection,
         )
         return current["semantic_sha256"] == snapshot["semantic_sha256"]
 
@@ -1717,6 +1922,7 @@ class RepairLineageProjector:
         view: str,
         collapse_repairs: bool,
         limit: int,
+        _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         if view not in BF_VIEWS:
             raise ValueError("Brave Future frontier view is invalid")
@@ -1728,7 +1934,9 @@ class RepairLineageProjector:
                 f"{BF_PROJECTION_MEMBER_LIMIT}"
             )
         campaign_id = validate_campaign_id(snapshot["campaign_id"])
-        records = self.lifecycle.research_envelopes()
+        records = self.lifecycle.research_envelopes(
+            _inspection_context=_inspection_context,
+        )
         bases, dispositions = PlanningSnapshotBuilder._effective_research(
             records, campaign_id
         )
@@ -1871,7 +2079,7 @@ class RepairLineageProjector:
                 limit=max(1, len(bases)),
                 include_history=True,
                 campaign_id=campaign_id,
-                _research_records_override=records,
+                _inspection_context=_inspection_context,
             )
             if bases
             else []
@@ -1885,6 +2093,12 @@ class RepairLineageProjector:
             record = bases[research_id]
             status = statuses[research_id]
             is_active = status in ACTIVE_MEMORY_STATUSES
+            scoring = frontier_by_id.get(research_id)
+            if scoring is None:
+                raise ValueError(
+                    "Brave Future Research escaped the shared frontier projection: "
+                    + research_id
+                )
             if research_id in failed_repairs:
                 projection_status = "failed_repair"
             elif status == "blocked":
@@ -1904,6 +2118,10 @@ class RepairLineageProjector:
                 projection_status = "actionable_residual"
             elif invalidators.get(research_id):
                 projection_status = "stale_by_route_invalidation"
+            elif scoring["work_completion_status"] != "pending":
+                projection_status = scoring["work_completion_status"]
+            elif scoring["workgroup_member_role"] == "duplicate":
+                projection_status = "duplicate_workgroup_member"
             elif research_id in contracts:
                 projection_status = "current_repair_leaf"
             else:
@@ -1916,12 +2134,17 @@ class RepairLineageProjector:
                     and projection_status
                     not in {"failed_repair", "blocked", "actionable_residual"}
                 )
-                or projection_status in {"collapsed_repaired", "collapsed_split_parent"}
+                or projection_status in {
+                    "collapsed_repaired",
+                    "collapsed_split_parent",
+                    "completed_production",
+                    "completed_supervision",
+                    "duplicate_workgroup_member",
+                }
             ):
                 continue
             if view == "all-active" and not is_active:
                 continue
-            scoring = frontier_by_id.get(research_id, {})
             entries.append(
                 {
                     "research_id": research_id,
@@ -1936,77 +2159,38 @@ class RepairLineageProjector:
                     "score_model": scoring.get("score_model"),
                     "score_role": scoring.get("score_role"),
                     "readiness": scoring.get("readiness"),
+                    "work_key_sha256": scoring["work_key_sha256"],
+                    "workgroup_representative_id": scoring[
+                        "workgroup_representative_id"
+                    ],
+                    "workgroup_actionable_representative_id": scoring[
+                        "workgroup_actionable_representative_id"
+                    ],
+                    "workgroup_member_count": scoring[
+                        "workgroup_member_count"
+                    ],
+                    "workgroup_member_ids_sha256": scoring[
+                        "workgroup_member_ids_sha256"
+                    ],
+                    "workgroup_member_role": scoring[
+                        "workgroup_member_role"
+                    ],
+                    "work_completion_status": scoring[
+                        "work_completion_status"
+                    ],
+                    "work_completion_research_id": scoring[
+                        "work_completion_research_id"
+                    ],
+                    "work_completion_member_count": scoring[
+                        "work_completion_member_count"
+                    ],
+                    "work_completion_member_ids_sha256": scoring[
+                        "work_completion_member_ids_sha256"
+                    ],
                 }
             )
-        full_manifest = [
-            {
-                "research_id": item["research_id"],
-                "record_sha256": item["record_sha256"],
-                "projection_status": item["projection_status"],
-                "score_bytes_sha256": sha256_json(
-                    {
-                        "score": item["score"],
-                        "decision_factors": item["decision_factors"],
-                        "score_model": item["score_model"],
-                        "score_role": item["score_role"],
-                        "readiness": item["readiness"],
-                    }
-                ),
-            }
-            for item in entries
-        ]
-        member_window_limit = BF_PROJECTION_MEMBER_LIMIT
-        # Preserve the exact pre-bounding semantics whenever the complete
-        # Campaign fits in one member window.  In particular, a successfully
-        # collapsed predecessor is intentionally absent from ``entries`` but
-        # remains a load-bearing key in ``collapse_map``.  Deriving window
-        # membership from visible entries alone would therefore erase valid
-        # L4 relations even on a three-node Campaign.
-        retained_ids = (
-            set(bases)
-            if len(bases) <= member_window_limit
-            else {
-                item["research_id"]
-                for item in entries[:member_window_limit]
-            }
-        )
-        bounded_lineage_edges = [
-            {
-                "predecessor_research_id": predecessor,
-                "successor_research_id": successor,
-                "relation": bases[successor]["relation"],
-                "strategy": contracts.get(successor, {}).get("strategy"),
-            }
-            for predecessor, successor in sorted(lineage_edges)
-            if predecessor in retained_ids and successor in retained_ids
-        ][:BF_PROJECTION_RELATION_LIMIT]
-        bounded_collapse_map = {
-            key: [child for child in value if child in retained_ids][
-                :BF_PROJECTION_PER_MEMBER_RELATION_LIMIT
-            ]
-            for key, value in sorted(collapse_map.items())
-            if key in retained_ids and any(child in retained_ids for child in value)
-        }
-        bounded_residual_surface = {
-            key: value[:BF_PROJECTION_PER_MEMBER_RELATION_LIMIT]
-            for key, value in sorted(residual_surface.items())
-            if key in retained_ids
-        }
-        bounded_failed_repairs = {
-            key: value[:BF_PROJECTION_PER_MEMBER_RELATION_LIMIT]
-            for key, value in sorted(failed_repairs.items())
-            if key in retained_ids
-        }
-        bounded_invalidators = {
-            key: sorted(value)[:BF_PROJECTION_PER_MEMBER_RELATION_LIMIT]
-            for key, value in sorted(invalidators.items())
-            if key in retained_ids and value
-        }
-        bounded_obligations = {
-            key: _obligation_keys(record)[:BF_PROJECTION_PER_MEMBER_RELATION_LIMIT]
-            for key, record in sorted(bases.items())
-            if key in retained_ids and _obligation_keys(record)
-        }
+        full_manifest = [_projection_manifest_item(item) for item in entries]
+        member_window_limit = min(limit, BF_PROJECTION_MEMBER_LIMIT)
         bounded_entries = [
             {
                 **item,
@@ -2017,12 +2201,85 @@ class RepairLineageProjector:
                     :BF_PROJECTION_PER_MEMBER_RELATION_LIMIT
                 ],
             }
-            for item in entries[:limit]
+            for item in entries[:member_window_limit]
         ]
-        # The complete Campaign generation remains bound by the snapshot's
-        # Research manifest and this full digest.  BF-1 transports only a fixed
-        # local member/relation window; otherwise a large project would defeat
-        # the advisory local_graph_node_limit by serializing the entire tree.
+        retained_ids = {item["research_id"] for item in bounded_entries}
+        # A collapsed predecessor can be the direct explanation for a returned
+        # repair leaf even though it is absent from entries.  Keep only this
+        # bounded one-hop closure, never the full Campaign inventory.
+        bounded_lineage_edges = [
+            {
+                "predecessor_research_id": predecessor,
+                "successor_research_id": successor,
+                "relation": bases[successor]["relation"],
+                "strategy": contracts.get(successor, {}).get("strategy"),
+            }
+            for predecessor, successor in sorted(lineage_edges)
+            if predecessor in retained_ids or successor in retained_ids
+        ][:member_window_limit]
+        bounded_collapse_items = [
+            (
+                key,
+                [
+                    child
+                    for child in value
+                    if key in retained_ids or child in retained_ids
+                ][
+                    : min(
+                        BF_PROJECTION_PER_MEMBER_RELATION_LIMIT,
+                        member_window_limit,
+                    )
+                ],
+            )
+            for key, value in sorted(collapse_map.items())
+            if key in retained_ids or any(child in retained_ids for child in value)
+        ][:member_window_limit]
+        bounded_collapse_map = {
+            key: children
+            for key, children in bounded_collapse_items
+            if children
+        }
+        bounded_residual_surface = {
+            key: value[
+                : min(BF_PROJECTION_PER_MEMBER_RELATION_LIMIT, member_window_limit)
+            ]
+            for key, value in sorted(residual_surface.items())
+            if key in retained_ids
+        }
+        bounded_failed_repairs = {
+            key: value[
+                : min(BF_PROJECTION_PER_MEMBER_RELATION_LIMIT, member_window_limit)
+            ]
+            for key, value in sorted(failed_repairs.items())
+            if key in retained_ids
+        }
+        bounded_invalidators = {
+            key: sorted(value)[
+                : min(BF_PROJECTION_PER_MEMBER_RELATION_LIMIT, member_window_limit)
+            ]
+            for key, value in sorted(invalidators.items())
+            if key in retained_ids and value
+        }
+        bounded_obligations = {
+            key: _obligation_keys(record)[
+                : min(BF_PROJECTION_PER_MEMBER_RELATION_LIMIT, member_window_limit)
+            ]
+            for key, record in sorted(bases.items())
+            if key in retained_ids and _obligation_keys(record)
+        }
+        workgroup_inventory_by_key: dict[str, dict[str, Any]] = {}
+        for item in bounded_entries:
+            work_key = item["work_key_sha256"]
+            workgroup_inventory_by_key.setdefault(
+                work_key,
+                _projection_workgroup_item(item),
+            )
+        workgroup_inventory = [
+            workgroup_inventory_by_key[key]
+            for key in sorted(workgroup_inventory_by_key)
+        ]
+        # The complete eligible set survives only as count+digest.  Entries,
+        # member window, and all explanatory inventories obey this request.
         bounded_full_manifest = full_manifest[:member_window_limit]
         semantic = {
             "revision": BF_FRONTIER_PROJECTION_REVISION,
@@ -2038,12 +2295,13 @@ class RepairLineageProjector:
             "failed_repairs": bounded_failed_repairs,
             "invalidator_inventory": bounded_invalidators,
             "obligation_inventory": bounded_obligations,
+            "workgroup_inventory": workgroup_inventory,
             "eligible_manifest_window": bounded_full_manifest,
             "eligible_manifest_window_limit": member_window_limit,
             "eligible_manifest_total_count": len(full_manifest),
             "eligible_manifest_sha256": sha256_json(full_manifest),
             "entries": bounded_entries,
-            "omitted_count": max(0, len(entries) - limit),
+            "omitted_count": max(0, len(entries) - len(bounded_entries)),
             "scheduler": "v5_main_four_factor_frontier",
             "score_writeback": False,
             "truth_effect": BF_TRUTH_EFFECT,
@@ -2761,16 +3019,19 @@ class BraveFutureManager:
             # The entire BF-1 read/projection and its object budgets are
             # completed before any normal Campaign or BF activation reader can
             # observe this intake.
+            inspection = RoundInspectionContext()
             snapshot = self.snapshot_builder.preview(
                 campaign_id=campaign_id,
                 policy_status=policy_status,
                 campaign_status_override=campaign_status,
+                _inspection_context=inspection,
             )
             projection = self.projector.project(
                 snapshot=snapshot,
                 view="actionable",
                 collapse_repairs=True,
                 limit=limit,
+                _inspection_context=inspection,
             )
             bf1 = {
                 "planning_snapshot": snapshot,
@@ -2977,14 +3238,18 @@ class BraveFutureManager:
         status = self.policy_store.status(campaign_id)
         if not status["enabled"]:
             raise ValueError("Brave Future is disabled for the explicit Campaign")
+        inspection = RoundInspectionContext()
         snapshot = self.snapshot_builder.preview(
-            campaign_id=campaign_id, policy_status=status
+            campaign_id=campaign_id,
+            policy_status=status,
+            _inspection_context=inspection,
         )
         projection = self.projector.project(
             snapshot=snapshot,
             view=view,
             collapse_repairs=collapse_repairs,
             limit=limit,
+            _inspection_context=inspection,
         )
         return {
             "planning_snapshot": snapshot,
@@ -3046,8 +3311,11 @@ class BraveFutureManager:
         status = self.policy_store.status(campaign_id)
         if not status["enabled"]:
             raise ValueError("Brave Future is disabled for the explicit Campaign")
+        inspection = RoundInspectionContext()
         snapshot = self.snapshot_builder.preview(
-            campaign_id=campaign_id, policy_status=status
+            campaign_id=campaign_id,
+            policy_status=status,
+            _inspection_context=inspection,
         )
         blockage_semantic = self.blockage_validator.validate(
             blockage_input, snapshot=snapshot
@@ -3083,7 +3351,11 @@ class BraveFutureManager:
             snapshot=snapshot,
             view="actionable",
             collapse_repairs=True,
-            limit=max(1, snapshot["research_manifest"]["entry_count"]),
+            limit=min(
+                BF_PROJECTION_MEMBER_LIMIT,
+                max(1, snapshot["research_manifest"]["entry_count"]),
+            ),
+            _inspection_context=inspection,
         )
         created_at = _now()
         blockage = _sealed_record(

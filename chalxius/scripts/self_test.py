@@ -504,7 +504,7 @@ def main() -> int:
             '"independent_pair_contract_revision": "chalxius-independent-adverse-pair-1"',
             '"policy_revision": "chalxius-brave-future-policy-1"',
             '"goal_intake_revision": "chalxius-bf-goal-intake-2"',
-            '"frontier_projection_revision": "chalxius-bf-frontier-projection-2"',
+            '"frontier_projection_revision": "chalxius-bf-frontier-projection-3"',
             '"goal_intake_modes": [',
             '"autonomy_level": "advisory"',
             '"behavioral_gate_revision": "chalxius-behavioral-feature-gate-2"',

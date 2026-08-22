@@ -33,6 +33,43 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.9 Frontier Reliability difference
+
+The current frontier is a semantic boundary projection, not a list of every
+historical Research id. Ordinary and Brave Future actionable views now share
+one command-local exact-workgroup and completion state. Exact duplicate work
+selects one deterministic representative; valid completed production and its
+applicable completed supervision close that actionable workgroup. History
+still contains every original Research record and provenance edge. Exact
+changes to Campaign, work kind, content/source, relation, dependencies,
+related Research inputs, obligations, source dependence, artifact
+path/SHA/role capabilities, profiles, stop conditions, or conventions remain
+distinct work; no fuzzy/NLP collapse is introduced. In particular,
+`related_research_ids` remain material because they feed task-card dossiers,
+artifact authority, and supervision ancestry.
+
+New Brave Future projection bytes use
+`chalxius-bf-frontier-projection-3`. Frozen v1/v2 projection records retain
+their exact read validator and are not migrated, rewritten, or reused as
+prospective writer formats.
+
+Bounded requests now produce bounded serialized work. The requested `limit`
+also bounds the member window, full-set identity is summarized by count and
+digest, and only returned entries receive detailed inventory/explanation
+closure. A zero-active-proof-target plan decides that structural condition
+before Fact inventory; nonzero planning addresses only the exact selected
+targets. This removes broad replay and output rather than hiding it behind a
+persistent cache, index, timer, watcher, scheduler, or compatibility layer.
+
+Source-use assurance also follows structured applicability. Literature mode,
+source-dependent metadata, source/applicability obligations, and exact primary
+capabilities activate `source_uses` even when free-form logic signals say
+nothing about sources. Applicable returns must cover the exact obligation keys
+and bind exact returned or card-authorized primary bytes plus their witnesses.
+Frozen historical cards remain readable as written; there is no migration,
+backfill, new truth path, or replacement for Candidate/verifier/Certification/
+Gateway/Fact authority.
+
 ## 0.8.8 Direct Graph Operations difference
 
 Ordinary Research now consumes each admitted Fact as the exact graph node that

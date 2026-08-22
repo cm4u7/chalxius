@@ -12,9 +12,39 @@ sidecar still implements only the safe first slice of the L3/L4 design:
 
 It does not implement `plan_one`, `execute_one`, a background loop, or a
 `plan-round --reassessment` connector. Those authority-bearing seams remain
-closed pending a separate review. The stable unscoped V5 frontier, Campaign,
-Pulse, Paper, Evidence, Reader, Learner, Candidate, Certification, Gateway, and
-Fact behavior is unchanged when Brave Future is absent or disabled.
+closed pending a separate review. Campaign, Pulse, Paper, Evidence, Reader,
+Learner, Candidate, Certification, Gateway, and Fact behavior is unchanged when
+Brave Future is absent or disabled. The ordinary frontier itself follows the
+shared 0.8.9 projection below.
+
+## 0.8.9 shared frontier projection
+
+Brave Future no longer constructs a second actionable completion semantics.
+One command-local projection supplies both the ordinary and Brave Future
+actionable views. It groups exact work semantics across incidental record
+identity, timestamps, and explicitly non-material provenance, selects one
+deterministic representative, and removes a group closed by valid production
+plus applicable completed supervision. Workgroup identity remains exact across
+Campaign, work kind, content/source, relation, dependencies, related Research
+inputs, obligations, source dependence, artifact path/SHA/role capabilities,
+profiles, stop conditions, and conventions; it performs no fuzzy theorem
+matching. Because `related_research_ids` feed task-card dossiers, artifact
+authority, and supervision ancestry, different related-input sets never share
+a workgroup. The history view retains every original Research record and
+provenance edge.
+
+Prospective writers emit `chalxius-bf-frontier-projection-3`. Frozen
+`chalxius-bf-frontier-projection-1` and `-2` objects retain exact read
+validation but are never rewritten or emitted by the current writer. This is a
+frozen-record read contract, not a migration or runtime compatibility adapter.
+
+The requested `limit` bounds serialized entries and the corresponding member
+window. The complete eligible-set identity is represented by count and digest,
+while detailed inventories and explanation closure are restricted to returned
+entries. A planning request with zero active proof targets stops before Fact
+inventory. All of this state dies with the command: there is no persistent
+frontier cache or index, timer, watcher, migration, compatibility adapter, new
+truth path, or rewrite of a frozen Research/card.
 
 ## Authority boundary
 
@@ -94,14 +124,15 @@ bind:
 - exact source-capability hashes;
 - an acyclic, non-self, same-Campaign lineage.
 
-Legacy repair metadata remains readable but cannot collapse its parent. A root
-is hidden only when the union of visible strict successors completely covers
-its obligations and every live invalidator is inherited or validly disposed.
-Otherwise the root remains visible with a machine-readable residual surface.
+Legacy repair metadata remains readable but cannot collapse its parent. For an
+otherwise actionable repair lineage, a strict successor hides its root only
+when the union of visible successors completely covers its obligations and
+every live invalidator is inherited or validly disposed. Otherwise the root
+remains visible with a machine-readable residual surface.
 Conflicting repairs, cycles, stale sources, blocked or failed repairs, and
 unresolved program-math or Paper obligations fail closed to visibility.
 
-The projection copies the existing V5 four-factor ordering. It has
+The projection reuses the existing V5 four-factor ordering. It has
 `scheduler=v5_main_four_factor_frontier` and `score_writeback=false`; there is
 no second scheduler or persistent priority queue. Views are `actionable`,
 `all-active`, and `history`. `--history` and `--all-active` are compatibility

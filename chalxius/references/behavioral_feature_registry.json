@@ -552,28 +552,56 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "The default production frontier closes only the source Research obligation of an exact valid non-aborted ingestion receipt and rechecks selected obligations under the publication lock.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_production_obligation_ids",
+      "summary": "The default production frontier groups only exact executable Research inputs and closes a workgroup only through a current valid production result plus every applicable safe supervision result; positive resolution preserves closure, while challenged, blocked, adverse, or route-invalidated evidence reopens the work.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_group_completion",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_research_obligation_statuses",
       "activation_predicate": {
-        "predicate_id": "generic_frontier_source_has_valid_live_production_receipt",
-        "domain": ["valid_receipt", "pending_quarantined_invalid_or_aborted", "completion_race"],
+        "predicate_id": "exact_workgroup_has_safe_two_subround_completion",
+        "domain": ["safe_production_and_applicable_supervision", "pending_unsafe_challenged_blocked_or_stale", "same_workgroup_completion_race"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-v5-production-research-obligation-closure-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_production_obligation_ids"
+        "type_id": "chalxius-v5-production-research-workgroup-closure-2",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_research_obligation_statuses"
       },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_group_completion",
       "observable_effect": {
-        "effect_id": "completed_source_omitted_from_generic_production_only",
+        "effect_id": "safely_completed_exact_workgroup_omitted_from_actionable_frontier",
         "kind": "routing",
-        "description": "The receipt source is absent from the default frontier, its worker result and history remain visible, explicit-ID planning remains available, and a lock-held completion race fails before public round bytes."
+        "description": "A safely completed exact workgroup is absent from the actionable frontier but retained with provenance in history; include-history cannot bypass completion, explicit-ID planning remains available, and a sibling completion race fails before public round bytes."
       },
       "probes": {
-        "positive": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_valid_receipt_closes_source_but_not_worker_result",
-        "predicate_false": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_pending_quarantined_and_aborted_work_do_not_close_but_receipt_drift_does_not_reopen_product",
+        "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result",
         "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
+      }
+    },
+    "feature.bounded_frontier_projection_v3": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Ordinary and Brave Future frontier views consume the same exact workgroup and completion projection; public entries are compact, and the requested limit bounds entries, the authenticated member window, and related inventories while the full eligible set is retained only as count and digest.",
+      "production_entry_symbol": "mathgraph.brave_future.BraveFutureManager.frontier",
+      "producer_symbol": "mathgraph.brave_future.RepairLineageProjector.project",
+      "activation_predicate": {
+        "predicate_id": "bounded_frontier_projection_requested",
+        "domain": ["always"],
+        "conditional": false
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-bf-frontier-projection-3",
+        "validator_symbol": "mathgraph.brave_future._validate_frontier_projection"
+      },
+      "consumer_symbol": "mathgraph.brave_future.BraveFutureManager._read_transaction",
+      "observable_effect": {
+        "effect_id": "compact_cross_bound_frontier_window",
+        "kind": "bounded_output",
+        "description": "Main receives only the requested compact boundary window; work-key, completion, score, and record identity are cross-bound between each v3 entry and its authenticated manifests, while frozen v1/v2 records remain readable."
+      },
+      "probes": {
+        "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive",
+        "predicate_false": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_work_key_semantic_predicate_false_and_requested_limit_bounds_projection",
+        "tamper": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_zero_target_skips_fact_inventory_and_exact_target_tamper_fails"
       }
     },
     "feature.main_unbound_research_semantic_reuse": {
@@ -836,12 +864,12 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "A revision-5 resolved CHX issue must consume prior reconnaissance, one reusable tactical repair, and latest coordinated integrated coverage.",
+      "summary": "A project-run-local revision-5 resolution consumes prior reconnaissance, one reusable tactical repair, and latest coordinated per-ledger integration; global installation uses the direct global integrated writer with no tactical precursor.",
       "production_entry_symbol": "chx_ledger.main",
       "producer_symbol": "chx_ledger.record_integrated_repair",
       "activation_predicate": {
         "predicate_id": "revision_five_issue_resolved",
-        "domain": ["revision_5_resolution", "excluded_or_revision_1_to_4"],
+        "domain": ["project_run_local_revision_5_resolution", "excluded_or_global_integrated_or_revision_1_to_4"],
         "conditional": true
       },
       "typed_handoff": {
@@ -852,7 +880,7 @@
       "observable_effect": {
         "effect_id": "chx_resolved_disposition_gated",
         "kind": "validation_gate",
-        "description": "Resolution remains unavailable until the latest content-addressed integration covers every resolved issue and binds its regression evidence."
+        "description": "Project-local resolution uses its content-addressed per-ledger integration; a global installation is settled directly by the content-addressed cross-ledger global integration."
       },
       "probes": {
         "positive": "tests.test_chx_ledger.CHXRunLedgerTests.test_revision_five_resolution_requires_all_three_repair_gates",
@@ -989,6 +1017,40 @@
         "positive": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_normalizes_frozen_field_spellings",
         "predicate_false": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_skips_locator_only_and_rejects_path_drift",
         "tamper": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_structured_source_evidence_requires_all_declared_primary_bytes"
+      }
+    },
+    "feature.structured_source_assurance_activation": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Literature mode and structured source/applicability obligations activate exact source-use assurance without depending on incidental logic-signal prose.",
+      "production_entry_symbol": "mathgraph.v5_assurance.build_assurance_contract",
+      "producer_symbol": "mathgraph.v5_assurance.detect_risk_signals",
+      "activation_predicate": {
+        "predicate_id": "structured_work_semantics_require_source_use_assurance",
+        "domain": [
+          "literature_work",
+          "source_dependent_metadata",
+          "source_or_applicability_obligation",
+          "exact_primary_capability",
+          "ordinary_proof_without_source_structure"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-assurance-0.4.3-1",
+        "validator_symbol": "mathgraph.v5_assurance.validate_assurance_contract"
+      },
+      "consumer_symbol": "mathgraph.v5_assurance.validate_return_assurance",
+      "observable_effect": {
+        "effect_id": "structured_source_obligations_are_exactly_covered",
+        "kind": "validation_gate",
+        "description": "Applicable returns provide nonempty source_uses keyed to every structured source obligation and bind exact returned or card-authorized primary bytes plus required witnesses; frozen old cards are not rewritten."
+      },
+      "probes": {
+        "positive": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_positive",
+        "predicate_false": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_predicate_false",
+        "tamper": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_tamper"
       }
     },
     "feature.active_campaign_implicit_selection": {

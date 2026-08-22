@@ -51,6 +51,8 @@ _SOURCE_STRENGTHS = {
     "relative_family": 2,
 }
 _RISK_SIGNALS = {
+    "source_use_required",
+    "source_applicability_required",
     "source_formula",
     "fixed_to_family_transport",
     "topology_extremal_invariants",
@@ -207,7 +209,69 @@ def normalize_obligations(obligations: Any) -> list[dict[str, Any]]:
     return normalized
 
 
-def detect_risk_signals(entry: dict[str, Any]) -> list[str]:
+def _semantic_role_tokens(value: Any) -> set[str]:
+    if not isinstance(value, str):
+        return set()
+    return {
+        token
+        for token in re.split(r"[^a-z0-9]+", value.casefold())
+        if token
+    }
+
+
+def _role_requires_external_source(tokens: set[str]) -> bool:
+    if "applicability" in tokens:
+        return True
+    if "source" not in tokens:
+        return False
+    return not tokens.intersection(
+        {"code", "computation", "executable", "program"}
+    )
+
+
+def _obligation_source_requirements(
+    obligation: dict[str, Any],
+) -> tuple[bool, bool]:
+    """Return (source-use, applicability) requirements from frozen structure."""
+
+    evidence_tokens = [
+        _semantic_role_tokens(value)
+        for value in obligation.get("evidence_types", [])
+    ]
+    evidence_source = any(
+        {"primary", "source"}.issubset(tokens)
+        or {"theorem", "locator"}.issubset(tokens)
+        or "applicability" in tokens
+        for tokens in evidence_tokens
+    )
+    evidence_applicability = any(
+        {"theorem", "locator"}.issubset(tokens)
+        or "applicability" in tokens
+        for tokens in evidence_tokens
+    )
+    role_tokens = [
+        _semantic_role_tokens(value)
+        for value in obligation.get("required_artifact_roles", [])
+    ]
+    role_source = any(
+        _role_requires_external_source(tokens) for tokens in role_tokens
+    )
+    role_applicability = any(
+        "applicability" in tokens for tokens in role_tokens
+    )
+    return (
+        evidence_source or role_source,
+        evidence_applicability or role_applicability,
+    )
+
+
+def detect_risk_signals(
+    entry: dict[str, Any],
+    *,
+    obligations: list[dict[str, Any]],
+    work_mode: str,
+    related_artifacts: list[dict[str, str]],
+) -> list[str]:
     metadata = entry.get("metadata", {})
     if not isinstance(metadata, dict):
         raise ValueError("research metadata must be an object")
@@ -233,6 +297,38 @@ def detect_risk_signals(entry: dict[str, Any]) -> list[str]:
         }
     ):
         signals.add("program_math_semantic_alignment")
+    source_dependent = metadata.get("source_dependent", False)
+    if not isinstance(source_dependent, bool):
+        raise ValueError("research metadata source_dependent must be boolean")
+    obligation_requirements = [
+        _obligation_source_requirements(obligation)
+        for obligation in obligations
+    ]
+    has_structured_source_obligation = any(
+        source_required for source_required, _ in obligation_requirements
+    )
+    has_structured_applicability_obligation = any(
+        applicability_required
+        for _, applicability_required in obligation_requirements
+    )
+    has_exact_primary_capability = any(
+        isinstance(artifact, dict)
+        and "primary" in _semantic_role_tokens(artifact.get("role"))
+        and isinstance(artifact.get("path"), str)
+        and bool(artifact["path"].strip())
+        and isinstance(artifact.get("sha256"), str)
+        and SHA256_RE.fullmatch(artifact["sha256"]) is not None
+        for artifact in related_artifacts
+    )
+    if (
+        work_mode == "literature"
+        or source_dependent
+        or has_structured_source_obligation
+        or has_exact_primary_capability
+    ):
+        signals.add("source_use_required")
+    if has_structured_applicability_obligation:
+        signals.add("source_applicability_required")
     if declared_set.intersection(
         {"source_formula", "formula_use", "formula_sensitive"}
     ):
@@ -386,7 +482,12 @@ def build_assurance_contract(
             ),
             "architecture_issue_import": "forbidden",
         },
-        "risk_signals": detect_risk_signals(entry),
+        "risk_signals": detect_risk_signals(
+            entry,
+            obligations=normalized_obligations,
+            work_mode=work_mode,
+            related_artifacts=related_artifacts,
+        ),
         "related_artifact_roles": sorted(
             dict.fromkeys(item["role"] for item in related_artifacts)
         ),
@@ -473,6 +574,13 @@ def validate_assurance_contract(payload: Any) -> dict[str, Any]:
     signals = _strings(contract["risk_signals"], "V5 assurance risk signals")
     if len(signals) != len(set(signals)) or not set(signals).issubset(_RISK_SIGNALS):
         raise ValueError("V5 assurance risk signals are invalid or duplicated")
+    if (
+        "source_applicability_required" in signals
+        and "source_use_required" not in signals
+    ):
+        raise ValueError(
+            "source applicability assurance requires source-use assurance"
+        )
     roles = _strings(contract["related_artifact_roles"], "related artifact roles")
     if len(roles) != len(set(roles)):
         raise ValueError("related artifact roles must not be duplicated")
@@ -738,6 +846,30 @@ def validate_return_assurance(
     source_uses = assurance["source_uses"]
     if not isinstance(source_uses, list) or any(not isinstance(item, dict) for item in source_uses):
         raise ValueError("research_assurance.source_uses must be a list of objects")
+    signals = set(contract["risk_signals"])
+    source_assurance_required = bool(
+        signals.intersection(
+            {"source_use_required", "source_applicability_required"}
+        )
+    )
+    if source_assurance_required and not source_uses:
+        raise ValueError(
+            "task-card source assurance requires a nonempty source_uses record"
+        )
+    structured_source_obligations = {
+        item["obligation_id"]: item
+        for item in contract["obligations"]
+        if _obligation_source_requirements(item)[0]
+    }
+    source_witnesses_by_key: dict[str, set[str]] = {}
+    primary_source_hashes = set(task_primary_source_sha256s or set())
+    if any(
+        not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None
+        for digest in primary_source_hashes
+    ):
+        raise ValueError(
+            "task-card primary source capabilities must be exact SHA-256 values"
+        )
     has_formula = False
     has_strength_bridge = False
     for index, item in enumerate(source_uses, 1):
@@ -754,13 +886,16 @@ def validate_return_assurance(
             },
             f"research_assurance.source_uses[{index}]",
         )
-        _text(item["source_key"], "source-use key")
+        source_key = _text(item["source_key"], "source-use key")
         if item["use_kind"] not in {"result", "definition", "formula"}:
             raise ValueError("research source use_kind is invalid")
         if item["source_strength"] not in _SOURCE_STRENGTHS or item["target_strength"] not in _SOURCE_STRENGTHS:
             raise ValueError("research source strength is invalid")
         source_hash = item["source_artifact_sha256"]
-        if not isinstance(source_hash, str):
+        if (
+            not isinstance(source_hash, str)
+            or SHA256_RE.fullmatch(source_hash) is None
+        ):
             raise ValueError("research source use has an invalid source hash")
         # A frozen task card may already grant the exact primary bytes.  Those
         # graph capabilities and the worker's returned artifacts form one
@@ -768,7 +903,6 @@ def validate_return_assurance(
         # no authority, while existing returns remain intrinsically readable.
         # This is a semantic capability union, not a version compatibility
         # branch.
-        primary_source_hashes = task_primary_source_sha256s or set()
         if (
             source_hash not in artifact_hashes
             and source_hash not in primary_source_hashes
@@ -791,10 +925,58 @@ def validate_return_assurance(
         )
         if not set(bridges).issubset(artifact_hashes):
             raise ValueError("research source bridge is not artifact-bound")
+        source_witnesses = source_witnesses_by_key.setdefault(source_key, set())
+        source_witnesses.add(source_hash)
+        if isinstance(toy_hash, str):
+            source_witnesses.add(toy_hash)
+        source_witnesses.update(bridges)
         if _SOURCE_STRENGTHS[item["target_strength"]] > _SOURCE_STRENGTHS[item["source_strength"]]:
             has_strength_bridge = True
             if not bridges:
                 raise ValueError("fixed-object to stronger family use requires a bridge artifact")
+
+    if source_assurance_required:
+        missing_source_keys = sorted(
+            set(structured_source_obligations).difference(source_witnesses_by_key)
+        )
+        if missing_source_keys:
+            raise ValueError(
+                "source assurance does not cover structured obligations by exact "
+                "source_key: "
+                + ", ".join(missing_source_keys)
+            )
+        for obligation_id, obligation in structured_source_obligations.items():
+            if actual[obligation_id]["status"] != "complete":
+                continue
+            required_role_hashes = {
+                artifact_by_role[role]
+                for role in obligation["required_artifact_roles"]
+                if role in artifact_by_role
+            }
+            missing_witnesses = sorted(
+                required_role_hashes.difference(
+                    source_witnesses_by_key[obligation_id]
+                )
+            )
+            if missing_witnesses:
+                raise ValueError(
+                    f"source assurance for obligation {obligation_id} does not "
+                    "bind all required-role witnesses through source, toy, or "
+                    "bridge hashes: "
+                    + ", ".join(missing_witnesses)
+                )
+            unbound_disposition_witnesses = sorted(
+                set(actual[obligation_id]["witness_artifact_sha256s"]).difference(
+                    source_witnesses_by_key[obligation_id]
+                )
+            )
+            if unbound_disposition_witnesses:
+                raise ValueError(
+                    f"source assurance for obligation {obligation_id} does not "
+                    "bind all declared disposition witnesses through source, "
+                    "toy, or bridge hashes: "
+                    + ", ".join(unbound_disposition_witnesses)
+                )
 
     invalidations = _strings(
         assurance["route_invalidations"],
@@ -1130,7 +1312,6 @@ def validate_return_assurance(
                 "symbolic oracle, or metamorphic relation"
             )
 
-    signals = set(contract["risk_signals"])
     if "source_formula" in signals and not has_formula:
         raise ValueError("task-card formula risk requires a formula source-use record")
     if "fixed_to_family_transport" in signals and not has_strength_bridge:

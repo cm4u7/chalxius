@@ -3239,7 +3239,20 @@ class V5LifecycleTests(unittest.TestCase):
                     ],
                     "computation_manifest": None,
                     "research_assurance": {
-                        "source_uses": [],
+                        "source_uses": [
+                            {
+                                "source_key": obligation["obligation_id"],
+                                "use_kind": "result",
+                                "source_strength": "fixed_object",
+                                "target_strength": "fixed_object",
+                                "source_artifact_sha256": analysis_sha,
+                                "toy_check_artifact_sha256": None,
+                                "bridge_artifact_sha256s": [],
+                            }
+                            for obligation in card["assurance_contract"][
+                                "obligations"
+                            ]
+                        ],
                         "route_invalidations": [],
                         "extremal_cases": [],
                         "claim_strength": [],

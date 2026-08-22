@@ -111,6 +111,15 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 [item["research_id"] for item in scoped],
                 [a_high, a_low],
             )
+            scoped_history = lifecycle.frontier(
+                limit=10,
+                include_history=True,
+                campaign_id=campaign_a,
+            )
+            self.assertEqual(
+                [item["research_id"] for item in scoped_history],
+                [a_high, a_low],
+            )
             self.assertFalse(store.campaigns().status(campaign_a)["active"])
             self.assertTrue(store.campaigns().status(campaign_b)["active"])
 

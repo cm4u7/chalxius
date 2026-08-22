@@ -1,4 +1,41 @@
-# Chalxius V5 traceability through 0.8.8 Direct Graph Operations
+# Chalxius V5 traceability through 0.8.9 Frontier Reliability
+
+## 0.8.9 frontier-reliability release overlay
+
+- Candidate version: `0.8.9`; release name **Frontier Reliability**.
+- Ordinary and Brave Future actionable views consume one command-local exact-
+  workgroup and completion projection. Exact duplicates have one deterministic
+  representative; a valid completed production with applicable completed
+  supervision is not advertised as unfinished work.
+- Workgroup identity is exact across Campaign, work kind, normalized
+  content/source, relation, dependencies, obligations, source-dependence,
+  artifact path/SHA/role capabilities, profiles, stop conditions, and
+  conventions. Incidental record identity, timestamps, and explicitly
+  non-material provenance do not split exact work, but a changed semantic or
+  capability field does. The exact `related_research_ids` set is material: it
+  feeds task-card dossiers, artifact authority, and supervision ancestry, so a
+  changed related-input set remains separate work.
+- History retains every immutable Research record and provenance edge. No old
+  Research, task card, return, or artifact is rewritten or backfilled.
+- Prospective Brave Future projection writers emit
+  `chalxius-bf-frontier-projection-3`. Frozen revisions 1 and 2 remain exactly
+  readable but are neither rewritten nor emitted by the current writer.
+- Frontier `limit` bounds serialized entries and member windows. Full eligible-
+  set identity remains compactly available as count and digest; detailed
+  inventory and explanation closure are local to returned entries.
+- A planning request with zero active proof targets returns before broad Fact
+  inventory. Nonzero requests inspect only their exact named Fact targets at
+  the applicable planning boundary.
+- Literature mode, source-dependent metadata, structured source/applicability
+  obligations, and exact primary-source capabilities activate source-use
+  assurance without depending on incidental logic-signal prose.
+- Applicable returns provide nonempty `source_uses`, cover each exact source or
+  applicability obligation, bind either returned source bytes or an exact
+  card-authorized primary capability, and include their declared witnesses in
+  the returned evidence union.
+- These changes add no persistent frontier cache/index, timer, watcher,
+  migration, compatibility adapter, new lifecycle state, automatic Candidate
+  selection, Certification route, Gateway authority, or Fact gate.
 
 ## 0.8.8 direct-graph-operations release overlay
 
@@ -811,12 +848,12 @@
   normal reads. `research-goal-intake` creates or reuses one prospective root
   Research with an exact intake-token/Campaign binding. BF-1 through BF-3 remain
   advisory and themselves create no Research, round, dispatch, or Fact.
-- CHX-071 and CHX-080 add prospective CHX ledger revision 5. Resolution requires
-  a prior content-addressed full-tree reconnaissance receipt, exactly one
-  reusable tactical repair per issue, and the latest integrated repair covering
-  all resolved issues through a derived mechanism registry plus coordination,
-  risk, and regression evidence. Revisions 1–4 remain byte-exact readable with
-  their original event and append semantics.
+- CHX-071 and CHX-080 add prospective CHX ledger revision 5. Project-local
+  per-ledger resolution requires a prior content-addressed full-tree
+  reconnaissance receipt, exactly one reusable tactical repair per issue, and
+  the latest per-ledger integration. A globally installed repair uses the
+  direct cross-ledger global integration with no tactical precursor. Revisions
+  1–4 remain byte-exact readable with their original event and append semantics.
 - CHX-072 binds an exact current predecessor and complete node/edge/premise-order
   conservation at native Paper successor stage and freeze. CHX-073 binds reviewed
   PDF, Paper Graph, and explicitly imported associated Fact Graph Evidence through
