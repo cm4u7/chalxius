@@ -3,7 +3,7 @@
 **Persistent research memory for Codex.**
 
 [Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v0.8.9](https://github.com/cm4u7/chalxius/releases/tag/v0.8.9) ·
+[Download v0.8.11](https://github.com/cm4u7/chalxius/releases/tag/v0.8.11) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
@@ -21,9 +21,10 @@ into one increasingly fragile chat history.
 
 - **Continuity:** the next session starts from the graph that actually exists,
   not from a prose reconstruction of the last conversation.
-- **Active research:** Main selects the next load-bearing open node; proof,
-  literature, counterexample, and computation work stays attached to its exact
-  target and dependencies.
+- **Active research:** Main explicitly selects the next load-bearing open node.
+  For a named object or theorem it first runs one bounded exact Research search,
+  then binds proof, literature, counterexample, and computation work to the
+  chosen target and dependencies.
 - **A clean truth boundary:** unfinished, disputed, and failed work remains
   useful Research. Nothing becomes a reusable Fact automatically.
 - **A shareable Reader:** export a deterministic offline map with search,
@@ -58,11 +59,11 @@ receipt, or a successful computation cannot create a second truth path.
 ## Install
 
 Download the archive and checksum from the
-[v0.8.9 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.9), then:
+[v0.8.11 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.11), then:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.9-frontier-reliability.tar.gz.sha256
-tar -xzf chalxius-0.8.9-frontier-reliability.tar.gz
+shasum -a 256 -c chalxius-0.8.11-agent-judgment-integrity.tar.gz.sha256
+tar -xzf chalxius-0.8.11-agent-judgment-integrity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -100,13 +101,15 @@ Run `scripts/mgraph --help` for the complete interface.
 The examples demonstrate graph structure and workflow; they do not claim that
 the displayed mathematics or interpretation has been admitted as Fact.
 
-## v0.8.9 — Frontier Reliability
+## v0.8.11 — Agent Judgment Integrity
 
-This release makes the frontier reflect the Research graph that actually
-exists: exact duplicate work is grouped, fully supervised work is no longer
-offered as new work, and small frontier requests stay compact. Literature and
-source-applicability work now derives source-use assurance from its structured
-task semantics. Mathematical and Fact-authority boundaries are unchanged. See
+This cumulative release adds Main's bounded exact named-frontier search and
+keeps worker recovery in ordinary agent judgment: silence, compaction, startup
+reading, or slow reasoning alone never proves loss. A copy-on-write successor
+receives fresh complete review inside every assigned scope; previous defects
+seed that review without limiting it. No timer, watcher, compatibility layer,
+new lifecycle state, or truth gate is added. Mathematical and Fact-authority
+boundaries are unchanged. See
 [RELEASE.md](RELEASE.md) and [VALIDATION.md](VALIDATION.md).
 
 ## Documentation

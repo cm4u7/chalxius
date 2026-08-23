@@ -28,6 +28,13 @@ stale, drifted, ambiguous, schema-changed, or explicitly forensic state falls
 back to full validation. This never relaxes fresh verification for a new or
 invalidated atomic claim.
 
+A copy-on-write successor is itself a changed target and a new complete
+product. Reusable receipts for unchanged external dependencies do not narrow
+its review to previously observed defects. Each assigned supervisor freshly
+reviews every authorized successor claim, artifact, and interface inside its
+exact proof, source, program-math, or integration scope; prior findings are
+mandatory but non-exhaustive attack seeds.
+
 Version 0.6.5 gives `auto` and `deep` one prospective intake trigger: an explicit user
 research objective is sufficient semantic authority for Operator to call
 `research-goal-intake`, even when the user never says `Campaign`. The compiler

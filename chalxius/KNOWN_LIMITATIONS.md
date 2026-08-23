@@ -1,10 +1,33 @@
-# Chalxius 0.8.10 architecture findings and residual boundaries
+# Chalxius 0.8.11 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.10
-**Semantic Frontier Control**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.11
+**Agent Judgment Integrity**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.11 Agent Judgment Integrity
+
+Main no longer treats artifact silence, one quiet wait, elapsed time, context
+compaction, bounded startup reading, or deep reasoning as proof that a worker
+is lost. Before interruption or reassignment, Main uses fresh ordinary host
+status, messages, tool errors, and round bytes. Repeated no-useful-output
+milestones may justify reclaiming a live but unproductive worker; loss requires
+an explicit disconnect/error or sustained total nonresponse corroborated by
+more than artifact silence. This is agent judgment, not a timer, heartbeat,
+watcher, receipt, recovery state, or gate.
+
+A copy-on-write Research successor is treated as a new complete product in
+every assigned supervision scope. Prior defects and repair obligations seed
+the attack but do not form a defect allowlist. The supervisor freshly checks
+the whole exact successor and conserved in-scope claims for new, inherited,
+repair-induced, and cross-component defects. PHX limits architecture ceremony;
+it does not limit mathematical, source, integration, or program scrutiny.
+
+The public architecture, use-case, release-lock, and checksum projections are
+also rebuilt from their current owners. This removes stale verifier/Gateway,
+Pulse, repair-route, background-loading, and archive-member claims without
+adding a second authority path or compatibility layer.
 
 ## 0.8.10 Semantic Frontier Control
 

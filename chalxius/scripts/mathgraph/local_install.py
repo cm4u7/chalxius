@@ -127,7 +127,7 @@ def default_self_test_runner(root: Path) -> None:
 
 
 def default_focused_test_runner(root: Path) -> None:
-    """Run only the two seams that this fast path can change."""
+    """Run the bounded seams that a host-global install must preserve."""
 
     environment = dict(os.environ)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -143,6 +143,11 @@ def default_focused_test_runner(root: Path) -> None:
             "-m",
             "unittest",
             "test_local_install.LocalInstallTests",
+            "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
+            (
+                "test_research_two_subround.ResearchTwoSubroundTests."
+                "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"
+            ),
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
                 "test_route_invalidations_are_explicit_targets_only"

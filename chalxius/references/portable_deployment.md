@@ -1,5 +1,22 @@
 # Chalxius portable deployment
 
+## 0.8.11 Agent Judgment Integrity
+
+The `0.8.11` **Agent Judgment Integrity** artifact leaves worker liveness with
+Main's ordinary host-visible judgment. Silence, elapsed time, compaction,
+startup reading, or deep reasoning alone never establishes loss; interruption
+or reassignment requires explicit failure or sustained corroborated total
+nonresponse. It adds no monitor, timer, watcher, heartbeat, receipt, recovery
+state, scheduler, or gate.
+
+Copy-on-write supervision now states explicitly that the changed successor is
+a new complete review object inside each exact assigned scope. Earlier defects
+are mandatory but non-exhaustive attack seeds, so PHX's reduction of ceremony
+cannot narrow mathematical, source, integration, or program scrutiny. The
+release also rebuilds its public architecture and packaging projection from
+current authority owners. Installation remains project-free and creates no
+Research, Candidate, Certification, Gateway, or Fact effect.
+
 ## 0.8.10 Semantic Frontier Control
 
 The `0.8.10` **Semantic Frontier Control** artifact adds a Main instruction for

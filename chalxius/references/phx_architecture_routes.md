@@ -190,7 +190,11 @@ appropriate, record the guide. It never means silently implement a route.
 
 Current worker-performance observation is an ordinary Main-visible instruction,
 not a PHX subsystem. Main may use the progress already visible in the host
-interaction to reclaim or redirect stalled work. Chalxius must not create a
+interaction to reclaim a live-but-unproductive worker after repeated no-useful-
+output milestones. Artifact silence, one quiet wait, elapsed time, context
+compaction, startup reading, and deep reasoning do not prove loss; reassignment
+requires explicit failure or sustained total nonresponse corroborated by fresh
+host-visible evidence beyond artifact silence. Chalxius must not create a
 timer, daemon, watcher, polling loop, heartbeat, numeric threshold, persistent
 performance state, or lifecycle/admission gate for that observation. A concrete
 architecture-caused performance defect still enters CHX first; a reusable

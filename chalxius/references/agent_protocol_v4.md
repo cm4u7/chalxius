@@ -47,6 +47,22 @@
 > fuzzy matching, a whole-project audit, an index, receipt, lifecycle state,
 > scheduler, or gate.
 
+> **0.8.11 current-V5 agent-judgment clarification.** Artifact silence, one
+> quiet wait, elapsed time, context compaction, bounded startup reading, or deep
+> reasoning does not prove that a worker is lost. Main checks fresh ordinary
+> host status, messages, tool errors, and round bytes. A worker may be reclaimed
+> as live-but-unproductive after repeated no-useful-output milestones, but
+> declaring it lost and reassigning requires an explicit disconnect/error or
+> sustained total nonresponse corroborated by more than artifact silence. No
+> timer, heartbeat, watcher, receipt, recovery state, or gate is introduced.
+>
+> A copy-on-write successor is a new complete product. A failure family selects
+> a supervisor scope, not a defect allowlist. Prior findings and repair specs
+> are mandatory but non-exhaustive attack seeds; the supervisor freshly reviews
+> the complete successor surface and conserved claims inside that exact scope
+> for unseen inherited, repair-induced, new, and cross-artifact defects. PHX
+> never narrows mathematical or source scrutiny.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 
@@ -437,7 +453,13 @@ when one completed component crosses at least two of those primary scopes;
 same-scope multiple outputs remain with their primary supervisor. Explicit
 `--scope` may select only applicable distinct values. Supervisors
 return one `research_supervision_report`; defects become later copy-on-write Research
-repair. Supervisors attack the new production returns and declared artifacts;
+repair. Supervisors attack the complete new production returns and declared
+artifacts inside the selected scope. For a copy-on-write successor, the prior
+finding, repair specification, and failure-family focus are mandatory but non-
+exhaustive seeds rather than a defect allowlist; every authorized conserved
+claim and interface in that scope receives fresh review for unseen inherited,
+repair-induced, new, and cross-artifact defects. This does not widen review to
+another scope or the whole project;
 admitted Fact dependencies are frozen premises unless exact new contradiction
 evidence is escalated for separate authority-governed reopening. Validation
 rejects timing-derived subsets, unknown or tampered components, and overlapping

@@ -33,6 +33,24 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.11 Agent Judgment Integrity difference
+
+Current host orchestration distinguishes a quiet live worker from a lost one.
+Artifact silence, elapsed time, one quiet wait, context compaction, bounded
+startup reading, and deep reasoning are not loss evidence. Main consults fresh
+ordinary host status, messages, tool errors, and round bytes; interruption or
+reassignment requires an explicit failure or sustained total nonresponse
+corroborated beyond artifact silence. No runtime liveness schema, timer,
+watcher, heartbeat, receipt, scheduler, state machine, or gate is introduced.
+
+Fresh supervision of a copy-on-write successor covers the complete new product
+inside each exact assigned proof, source, program-math, or integration scope.
+Prior findings and repair specifications remain mandatory attack seeds but are
+not an exhaustive defect list. This strengthens agent scrutiny without widening
+the card capability boundary, reopening admitted Facts, or adding report-parser
+ceremony. The top-level public documentation is projected from the same current
+owners rather than retaining stale historical descriptions.
+
 ## 0.8.10 Semantic Frontier Control difference
 
 The current Main contract now distinguishes explicit id selection from a

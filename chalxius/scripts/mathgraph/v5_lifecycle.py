@@ -10502,7 +10502,13 @@ class V5LifecycleManager:
                     f"Your exact scope is `{supervision['supervisor_scope']}`. Attack "
                     "the frozen subround-1 return bindings in research_supervision and "
                     "the corresponding related Research/artifacts; do not replace them "
-                    "with a free-standing proof attempt. Admitted Fact dependencies are "
+                    "with a free-standing proof attempt. A copy-on-write successor is a "
+                    "new complete product: prior defects and repair obligations are "
+                    "mandatory but non-exhaustive attack seeds, not a defect allowlist. "
+                    "Freshly review the whole exact successor and every conserved claim "
+                    "inside this assigned scope, including new, inherited, repair-induced, "
+                    "and cross-component defects. PHX constrains architecture, never "
+                    "adversarial scrutiny. Admitted Fact dependencies are "
                     "frozen premises, not default attack targets. If exact new evidence "
                     "contradicts one, report that conflict separately for an "
                     "authority-governed reopening; do not casually re-refute the Fact. "
@@ -11493,9 +11499,12 @@ class V5LifecycleManager:
                     f"returns of {source_manifest['round_id']}."
                 ),
                 "content": (
-                    "Review only the hash-bound production returns and their declared "
-                    "artifacts. Report concrete failures or a bounded no-obstruction "
-                    "finding. Do not use realtime Pulse or silently rewrite production; "
+                    "Review the complete hash-bound production products and conserved "
+                    "claims inside this exact scope. Treat prior defects and repair "
+                    "obligations as mandatory but non-exhaustive attack seeds, not a "
+                    "defect allowlist; report new, inherited, repair-induced, or cross-"
+                    "component defects as well as a bounded no-obstruction finding. "
+                    "Do not use realtime Pulse or silently rewrite production; "
                     "any defect opens a copy-on-write Research repair in a later cycle. "
                     "The evidenced focus for this scope is: "
                     f"{supervision_focus}. Do not widen the review beyond the exact "
@@ -11525,8 +11534,9 @@ class V5LifecycleManager:
                     {
                         "obligation_id": f"obl-research-supervision-{scope}",
                         "description": (
-                            "Return one concise, artifact-bound supervision report "
-                            "covering every frozen receipt assigned to this scope."
+                            "Return one concise, artifact-bound fresh supervision report "
+                            "covering every complete frozen product and conserved claim "
+                            "assigned to this scope; prior defects are non-exhaustive seeds."
                         ),
                         "required_artifact_roles": [
                             "research_supervision_report"

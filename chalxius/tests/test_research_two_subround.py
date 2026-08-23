@@ -2149,6 +2149,27 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "references/v5_supervisor_worker_bootstrap.md",
                 supervisor_prompt,
             )
+            normalized_supervisor_prompt = " ".join(supervisor_prompt.split())
+            for required_boundary in (
+                "new complete product",
+                "mandatory but non-exhaustive attack seeds",
+                "not a defect allowlist",
+                "whole exact successor",
+                "inside this assigned scope",
+                "repair-induced",
+                "PHX constrains architecture, never adversarial scrutiny",
+            ):
+                self.assertIn(required_boundary, normalized_supervisor_prompt)
+            normalized_source = " ".join(source["content"].split())
+            for required_boundary in (
+                "complete hash-bound production products",
+                "mandatory but non-exhaustive attack seeds",
+                "not a defect allowlist",
+                "inside this exact scope",
+                "repair-induced",
+                "cross-component",
+            ):
+                self.assertIn(required_boundary, normalized_source)
             for broad_startup_reference in (
                 "references/agent_protocol_v4.md",
                 "references/v5_worker_return_contract.md",
@@ -2179,6 +2200,18 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "canonical byte validation and CHX close",
             ):
                 self.assertIn(required_boundary, compact_contract)
+            normalized_compact_contract = " ".join(compact_contract.split())
+            for required_boundary in (
+                "new complete product",
+                "mandatory but non-exhaustive attack seeds",
+                "failure family selects the review dimension",
+                "not a defect allowlist",
+                "whole successor",
+                "assigned supervisor scope",
+                "PHX constrains architecture",
+                "never narrows",
+            ):
+                self.assertIn(required_boundary, normalized_compact_contract)
 
             skill_root = Path(__file__).resolve().parents[1]
             skill_router = (skill_root / "SKILL.md").read_text(encoding="utf-8")

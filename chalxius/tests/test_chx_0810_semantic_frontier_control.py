@@ -32,16 +32,19 @@ class SemanticFrontierControl0810Tests(unittest.TestCase):
         self.assertIn("no automatic selection/expansion", normalized_skill)
         self.assertIn("not automatic expansion", normalized_protocol)
 
-    def test_release_contract_excludes_a_new_mechanism_or_gate(self) -> None:
-        self.assertEqual(
-            (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
-            "0.8.10",
+    def test_historical_release_contract_excludes_a_new_mechanism_or_gate(self) -> None:
+        traceability = (
+            ROOT / "references" / "v5_release_traceability.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "## 0.8.10 semantic-frontier-control release overlay",
+            traceability,
         )
+        self.assertIn("Candidate version: `0.8.10`", traceability)
+        self.assertIn("Semantic Frontier Control", traceability)
         lock = json.loads(
             (ROOT / "INHERITANCE.lock.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(lock["version"], "0.8.10")
-        self.assertEqual(lock["release_codename"], "Semantic Frontier Control")
         contract = lock["candidate_admission_efficiency_surface"]
         semantic = contract["named_frontier_semantic_selection"]
         for excluded in (

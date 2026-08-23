@@ -1,140 +1,148 @@
-# Chalxius v0.8.9 — Frontier Reliability
+# Chalxius v0.8.11 — Agent Judgment Integrity
 
-Chalxius 0.8.9 makes the actionable Research frontier reflect the graph that
-actually exists. Ordinary and Brave Future views now share one exact workgroup
-and completion projection, bounded requests stay compact, and structured
-source-dependent work activates source assurance without relying on a keyword
-compatibility table.
+Chalxius 0.8.11 makes Main's judgment—not ceremony—the control surface for
+research selection, worker recovery, and supervision. It also publishes the
+named-frontier work prepared in the unpublished 0.8.10 tree. The result is a
+smaller operational spine: agents can act directly on exact graph objects,
+while mathematical and source-correctness boundaries remain explicit.
 
-The mathematical authority path is unchanged:
+The truth path is unchanged:
 
-**Research → Candidate Release → Certification Decision → Fact**
+**Research → Candidate Release → Certification Decision → Gateway admission → Fact**
 
 ## What changed
 
-### One exact Research boundary
+### Main actively chooses the Research boundary
 
-- Exact duplicate work has one actionable representative while every original
-  Research record and its provenance remain in history.
-- Production closes only when its applicable supervision also closes.
-  Challenged, blocked, adverse, aborted, or route-stale work remains visible.
-- `related_research_ids` are material work inputs because they feed task-card
-  artifacts and supervision ancestry. Similar claims with different exact
-  related inputs are therefore not collapsed.
-- Explicit-id planning rehydrates the selected records directly; it does not
-  require Main to consume a project-wide frontier payload first.
+- Main chooses a named Campaign, object, or proposition before freezing work.
+- It performs an exact Research lookup and completion projection for that
+  selection, so an already-produced or safely closed node is not redispatched
+  merely because a broad frontier listing is stale.
+- Frontier output remains a bounded selection surface. It does not mechanically
+  expand coverage or replace direct graph access.
+- The graph remains fully operable through exact identifiers; no compatibility
+  layer, cache, scheduler, or additional lifecycle gate was introduced.
 
-### Bounded frontier cost
+### Worker recovery uses evidence visible to Main
 
-Public ordinary and Brave Future windows bound serialized entries and member
-inventories. The full eligible-set identity is represented by count and digest.
-Brave Future writes projection revision 3; frozen revisions 1 and 2 remain
-readable without becoming prospective writer formats.
+- Artifact silence, one quiet wait, elapsed time, context compaction, bounded
+  startup reading, and deep reasoning are not by themselves evidence that a
+  worker was lost.
+- Main consults current host status, worker messages, explicit tool errors, and
+  round bytes before deciding what happened.
+- A live worker that repeatedly produces no useful progress may be reclaimed as
+  unproductive. Loss or reassignment requires an explicit failure signal or
+  sustained total nonresponse corroborated beyond artifact silence.
+- This is an instruction-level judgment rule. It adds no timer, watcher,
+  heartbeat, receipt requirement, recovery state, or liveness schema.
 
-On the real local-F0 project, three installed `frontier --limit 8` runs took
-1.74, 1.32, and 1.31 seconds and returned 26,636 bytes each. The prior field
-observation was 7.39 seconds and about 28,773 tokens.
+### Copy-on-write supervision is fresh and complete
 
-### Structured source assurance
+- Every copy-on-write successor is reviewed as a new complete product within
+  each assigned proof, source, program, or integration scope.
+- Prior defects and repair obligations are mandatory attack seeds, but never a
+  defect allowlist.
+- Supervisors may find inherited, new, repair-induced, and cross-component
+  defects. PHX removes redundant procedure; it never narrows correctness or
+  source scrutiny.
 
-Literature mode, source-dependent metadata, source/applicability obligations,
-and exact primary-source capabilities now activate exact `source_uses`
-coverage. Program-source roles do not activate it accidentally. Frozen cards
-are not rewritten, and returned source bytes remain valid capabilities.
+### Public architecture now matches the runtime
 
-### CHX repair scope is explicit
+README, architecture, use cases, deployment text, limitations, worker
+bootstraps, and release traceability now agree on current ownership:
 
-A tactical repair is only a change that remains inside one project run. Any
-repair intended for global Chalxius installation goes directly through the
-copy-on-write global integrated repair route, with no synthetic tactical
-precursor. The current open-issue regression proves that global integration can
-cover a current revision-5 issue without a tactical event.
+- Main schedules and ingests; workers produce and independently supervise.
+- Certification records decisions; Gateway owns Fact admission.
+- The prospective Pulse path is retired from current operation.
+- Global installation repairs are integrated repairs directly, not tactical
+  repairs preceded by synthetic project-local ceremony.
+- Background reading is indexed and task-bounded rather than universally
+  front-loaded.
 
 ## PHX boundary
 
-The release removes repeated graph work and duplicated repair ceremony. It
-adds no persistent cache, timer, daemon, watcher, automatic scheduler,
-compatibility adapter, migration layer, lifecycle state, or truth gate.
+This release removes fragile procedural assumptions and leaves agents room to
+recover from ordinary mistakes. It does not weaken exact source identity,
+applicable supervision, Candidate adversity, fresh verification, Certification,
+Gateway admission, revocation, or mathematical correctness.
 
-Source identity, applicable supervision, exact Fact premises, Candidate
-adversity, fresh verification, Certification, Gateway admission, revocation,
-and mathematical correctness remain at their owning boundaries.
+No compatibility adapter, migration layer, daemon, automatic dispatcher,
+timer, watcher, heartbeat, receipt gate, or new truth gate was added.
 
 ## Validation
 
-The frozen 259-entry manifest passed:
+The frozen 261-entry manifest passed:
 
-- the complete suite: 982 tests in 98.873 seconds, with 2 skipped;
-- the full forensic code matrix: 133/133 mutation targets found and 133/133
-  mutants killed;
+- the complete suite: 987 tests in 78.480 seconds, with 2 skipped;
+- the full forensic mutation matrix: 134/134 targets found and 134/134 mutants
+  killed;
+- the 42-feature behavioral gate with 0 orphans;
+- strict candidate, installed, and cold-archive architecture reconnaissance
+  with 0 errors and 0 warnings;
 - the final exact-manifest routine matrix: self-test PASS, changed-surface
-  29/29 PASS, and semantic mutants 15/15 killed;
-- the final behavioral feature gate: 42/42 features PASS with 0 orphans;
-- strict candidate and installed architecture reconnaissance with 0 errors and
-  0 warnings;
-- exact candidate-to-installed comparison;
-- three real project frontier canaries and unchanged Research, Fact, and
-  Campaign bytes;
+  29/29 PASS, and semantic mutants 16/16 killed;
+- exact candidate-to-installed comparison across all 262 package files;
 - deterministic double archive construction and cold manifest, self-test,
-  architecture, and source-tree verification.
+  architecture, and source-tree verification;
+- public CHX disclosure against the exact closed historical ledger chain.
 
-These are software and workflow checks. They do not certify a mathematical
-claim.
+All isolated validation lanes left the candidate source unchanged. These are
+software and workflow checks; they do not certify a mathematical claim.
 
 ## Installation
 
-The validated tree is installed globally as 0.8.9 through the fast local path.
+The validated tree is installed globally as 0.8.11 through the project-free
+local path.
 
 | Item | SHA-256 or value |
 |---|---|
-| Manifest | `965ccfed438832c7b2a444a9f8f0feda945bc1d398d06b37bb9e8d5959953a18` |
-| Runtime content | `2eda96ca13e29213f9286931e6e2fc63f8f0f490433df8c89947d4cf58c6ebb0` |
-| Installed runtime identity | `bf28ce263151e1dfd4d44bda606a26d86dbbb8a80d4b0ad04c6ea2598eb5da87` |
-| Installed archive-tree identity | `523701de695b18fa8b734a95d39ac3eb11f490c389f6c20519cc9d4013c7f872` |
-| Direct rollback | pre-final 0.8.9 content `f0ddf4a44ef085f7851deb9c73821547c50608c9830d6b5065c22b5bea849bf7`; 0.8.8 remains archived |
-| Fast install elapsed | 3.85 seconds |
+| Manifest | `114555be38fa461c68cc3b699bf7e63bb26857ebcf7317bbf881114d768546d0` |
+| Runtime content | `de1d4a03ef94c0e47ed994b75493cc74504664fc4054a1d8c6809a0e2a4ebba9` |
+| Installed runtime identity | `27ec3fa853fda91393a471e4920aed1f57a52987989927111e8954e00980b694` |
+| Installed archive-tree identity | `c2c9e3e9febcf3de50621181311f34138057147220ad3951a14bee92d347cde5` |
+| Direct rollback | 0.8.10 content `50ff63f2ba0c7bc5760337dd70b22ffab2591ae45ee44670c73b282a846bed2c` |
+| Install elapsed | 3.4 seconds |
 
 Installation read and wrote no research project and required no restart.
 
 ## Global CHX settlement
 
 The installed-root successor
-`global-repair-fc8df3d092381bbe7de8bb083dcd377b4acabd2bd830887930538b0b8d3ad249`
-covers all 162 observed qualified issues:
+`global-repair-adc53add43febe72e78cae0f88c3b728b0992b93e25a2852fe7d3aba42a75a4f`
+covers all 166 observed qualified issues:
 
-- 156 resolved;
+- 160 resolved;
 - 6 excluded as nonarchitectural;
 - 0 unresolved or uncovered;
 - 0 active open issues;
 - 0 lineage errors or report drift.
 
 Its canonical `record_sha256` is
-`3e5e35b10f29ef38d35ef0dd7e7d65e341ec6ec5ba449ef00eda04a42e57c2e5`;
+`2b2c1b52a1503846c2044dafd858683556548956094f4971a36ee7f8a5cdb68c`;
 the complete record file SHA-256 is
-`864a7742223f6fe1f4a07551d63ed3c90fbbe7145a60bb717796019e3f828976`.
+`cb6806351a6a99b09ed7bf718aa999d78b338208575fce8f1fd38a2d1465865f`.
 
-The current task ledger was closed with zero tactical repairs and zero
-per-ledger integrated repairs; the global installation was settled directly by
-the global integrated record. Twenty-three historical ledgers retain an old
-open task flag but own no active issue. No historical ledger bytes were
-rewritten.
+The current task ledger is closed. It contains zero tactical and zero
+per-ledger integrated repairs; the global installation is represented directly
+by the global integrated successor. Historical ledger bytes were not rewritten,
+and historical task-state flags own no active issue.
 
 ## Public distribution
 
 Release assets:
 
-- `chalxius-0.8.9-frontier-reliability.tar.gz`
-- `chalxius-0.8.9-frontier-reliability.tar.gz.sha256`
+- `chalxius-0.8.11-agent-judgment-integrity.tar.gz`
+- `chalxius-0.8.11-agent-judgment-integrity.tar.gz.sha256`
 
-The archive contains 260 files and 9 directories, is 2,563,947 bytes, and has
-SHA-256
-`883bb69d5660ad506082f4f88f223df7b66352f6c8ce3364b1be915ec93668a8`.
+The canonical archive contains 262 regular files and no synthetic directory
+members. It is 2,572,660 bytes and has SHA-256
+`b81fcbd25823a15d61a0653eae666da342fd76d28158d1d3a0fdf0f51813774c`.
 
 Verify it with:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.9-frontier-reliability.tar.gz.sha256
-tar -xzf chalxius-0.8.9-frontier-reliability.tar.gz
+shasum -a 256 -c chalxius-0.8.11-agent-judgment-integrity.tar.gz.sha256
+tar -xzf chalxius-0.8.11-agent-judgment-integrity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
