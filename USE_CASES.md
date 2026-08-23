@@ -65,11 +65,13 @@ recorded structure, not mathematical correctness or publication status.
 
 The mathematical question combines source interpretation, several plausible
 routes, substantial computation, and a possible literature/novelty claim.
-Those signals can make the following advanced features applicable: independent
-clean-context panels, barriered Blackboard cross-review, long-horizon campaign
-expansion, a computation lane, novelty search, and an expert synthesis pass.
-Migration, source repair, fresh verification, and author confirmation would
-still be separate future work.
+Those signals can justify several independently selected work units: exact
+source reconstruction, alternative proof or obstruction routes, replayable
+computation, bounded novelty search, and later failure-informed supervision of
+completed components. `deep` allocates more effort to applicable work; it does
+not mechanically expand coverage or activate a separate Pulse/campaign path.
+Migration, source repair, fresh verification, and author confirmation remain
+separate future work.
 
 ## 🛠️ Reuse the patterns in your own work
 

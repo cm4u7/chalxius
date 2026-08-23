@@ -23,6 +23,15 @@
 > consumes exact admitted Fact premises without rebuilding unrelated admission
 > history. These are capability semantics, not dispatch or compatibility
 > mechanisms.
+>
+> **0.8.11 current-V5 liveness clarification.** Artifact silence, one quiet
+> wait, elapsed time, context compaction, bounded startup reading, and deep
+> reasoning are not proof that a host worker is lost. Main first checks fresh
+> ordinary host status, messages, tool errors, and round bytes. Repeated no-
+> useful-output milestones may justify reclaiming a still-live but unproductive
+> worker; loss/reassignment requires an explicit disconnect/error or sustained
+> total nonresponse corroborated by more than artifact silence. This remains
+> host judgment and creates no engine-side liveness schema or monitor.
 
 The Python engine owns durable state; the active host session owns live agent processes. Map the host
 to spawn-worker, follow-up, wait/list, and fresh-verifier operations. In Codex these are the native
@@ -422,6 +431,13 @@ supervisor. It may preserve a notice and optional response, but it cannot prove 
 never pauses, terminates, or sends a process signal. Host/OS enforcement is a separate boundary.
 
 ## Recovery and states
+
+Live-process authority remains with the host. A running/no-error status is
+presumptive liveness during bounded startup, reading, compaction, or active
+analysis. Do not infer `lost` from an empty artifact directory or one poll.
+Distinguish a live-but-unproductive worker, which Main may reclaim after
+repeated no-useful-output milestones, from a worker whose explicit failure or
+corroborated sustained total nonresponse supports reassignment.
 
 `round-status ROUND_ID` derives assignment states `ready`, `draft_present`, `ingesting`, and `ingested`;
 the overall state is `ready`, `in_progress`, or `complete`. Manifests, prompts, returns, and receipts

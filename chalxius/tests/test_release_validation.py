@@ -123,8 +123,8 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_semantic_registry_is_bounded_without_removing_forensic_registry(self) -> None:
         semantic = aggressive_bug_audit._mutants_for_profile("semantic")
         full = aggressive_bug_audit._mutants_for_profile("full")
-        self.assertEqual(len(semantic), 15)
-        self.assertEqual(len(full), 133)
+        self.assertEqual(len(semantic), 16)
+        self.assertEqual(len(full), 134)
         self.assertTrue({item.name for item in semantic} <= {item.name for item in full})
 
     def test_current_mutant_registry_preflight_is_cheap_read_only_diagnostic(self) -> None:

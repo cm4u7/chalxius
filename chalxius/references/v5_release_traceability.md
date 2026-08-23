@@ -1,4 +1,43 @@
-# Chalxius V5 traceability through 0.8.9 Frontier Reliability
+# Chalxius V5 traceability through 0.8.11 Agent Judgment Integrity
+
+## 0.8.11 agent-judgment-integrity release overlay
+
+- Candidate version: `0.8.11`; release name **Agent Judgment Integrity**.
+- Artifact silence, elapsed time, one quiet wait, context compaction, bounded
+  startup reading, and deep reasoning do not prove a host worker is lost.
+  Main uses fresh ordinary host status, messages, tool errors, and round bytes;
+  interruption or reassignment requires explicit failure or sustained total
+  nonresponse corroborated beyond artifact silence.
+- Repeated no-useful-output milestones may justify reclaiming a live but
+  unproductive worker. The distinction remains Main judgment and introduces no
+  timer, watcher, heartbeat, receipt, liveness schema, recovery state, or gate.
+- A copy-on-write successor is a new complete product. Every assigned
+  supervisor freshly reviews its whole exact in-scope surface and conserved
+  claims; prior defects and repair obligations are mandatory but non-exhaustive
+  attack seeds, not a defect allowlist.
+- The failure family selects the review dimension, not all permissible defects.
+  PHX constrains architecture ceremony and never narrows mathematical, source,
+  integration, or program scrutiny.
+- Public architecture and packaging documents are reprojected from the current
+  Gateway, Research-cycle, CHX, background, and canonical-archive owners.
+- Existing Research, task cards, returns, artifacts, Candidate Releases,
+  Certification Decisions, Gateway records, and Facts are unchanged.
+
+## 0.8.10 semantic-frontier-control release overlay
+
+- Candidate version: `0.8.10`; release name **Semantic Frontier Control**.
+- When Main proposes a frontier around a specific named mathematical object,
+  class, theorem, or exact identifier, Main first performs one bounded exact
+  Research search over stable subject names and identifiers.
+- Before freezing the card, Main reviews matching completed production,
+  copy-on-write repair successors, and applicable completed supervision, then
+  explicitly chooses the relevant `related_research_ids`.
+- The search does not infer relevance, automatically expand or select the
+  frontier, perform fuzzy matching or a whole-project audit, persist an index,
+  create a receipt or lifecycle state, dispatch a worker, or create a Research,
+  Candidate, verifier, Certification, Gateway, or Fact gate.
+- Existing Research, task cards, returns, artifacts, and truth authority remain
+  immutable and unchanged.
 
 ## 0.8.9 frontier-reliability release overlay
 

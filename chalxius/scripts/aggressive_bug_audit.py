@@ -76,6 +76,21 @@ RESEARCH_TWO_SUBROUND_TEST_MODULE = (
 )
 MUTANTS = (
     Mutant(
+        name="cow_supervision_defect_allowlist_restored",
+        old=(
+            '                    "obligations as mandatory but non-exhaustive attack seeds, not a "\n'
+            '                    "defect allowlist; report new, inherited, repair-induced, or cross-"\n'
+        ),
+        new=(
+            '                    "obligations as a checklist of already reported defects; "\n'
+            '                    "report repair-related or cross-"\n'
+        ),
+        test=(
+            f"{RESEARCH_TWO_SUBROUND_TEST_MODULE}."
+            "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"
+        ),
+    ),
+    Mutant(
         name="frontier_limit_minus_one",
         old="        selected = visible[:limit]\n",
         new="        selected = visible[: max(0, limit - 1)]\n",
@@ -2146,6 +2161,7 @@ SEMANTIC_MUTANT_NAMES = frozenset(
         "paper_research_mathematical_disproof_removed",
         "paper_research_receipt_content_address_recomputation_bypassed",
         "paper_research_stable_identity_semantic_collision_accepted",
+        "cow_supervision_defect_allowlist_restored",
     }
 )
 

@@ -1,5 +1,35 @@
 # Chalxius portable deployment
 
+## 0.8.11 Agent Judgment Integrity
+
+The `0.8.11` **Agent Judgment Integrity** artifact leaves worker liveness with
+Main's ordinary host-visible judgment. Silence, elapsed time, compaction,
+startup reading, or deep reasoning alone never establishes loss; interruption
+or reassignment requires explicit failure or sustained corroborated total
+nonresponse. It adds no monitor, timer, watcher, heartbeat, receipt, recovery
+state, scheduler, or gate.
+
+Copy-on-write supervision now states explicitly that the changed successor is
+a new complete review object inside each exact assigned scope. Earlier defects
+are mandatory but non-exhaustive attack seeds, so PHX's reduction of ceremony
+cannot narrow mathematical, source, integration, or program scrutiny. The
+release also rebuilds its public architecture and packaging projection from
+current authority owners. Installation remains project-free and creates no
+Research, Candidate, Certification, Gateway, or Fact effect.
+
+## 0.8.10 Semantic Frontier Control
+
+The `0.8.10` **Semantic Frontier Control** artifact adds a Main instruction for
+frontiers stated as a specific named mathematical object, class, theorem, or
+exact identifier. Before card freeze, Main performs one bounded exact Research
+search over stable subject names and identifiers, reviews matching completed
+production, copy-on-write repair successors, and applicable completed
+supervision, and explicitly chooses relevant `related_research_ids`.
+
+This deployment adds no executable matcher, automatic frontier expansion,
+whole-project audit, persistent index, receipt, lifecycle state, scheduler, or
+gate. Installation remains project-free and does not rewrite any MathGraph.
+
 ## 0.8.9 Frontier Reliability
 
 The `0.8.9` **Frontier Reliability** artifact gives ordinary and Brave Future

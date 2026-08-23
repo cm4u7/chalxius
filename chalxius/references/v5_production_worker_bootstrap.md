@@ -84,7 +84,13 @@ source, or premise. Do not emit consecutive status-only updates such as
 "drafting", "composing", or "almost written" while the authorized artifact
 directory remains empty. If a first artifact cannot yet be produced, state the
 single blocker and stop expanding scope. Main may reclaim a worker that repeats
-a no-output milestone. This is a communication and work-elimination rule, not a
+a no-output milestone, but artifact silence from an otherwise running worker is
+not itself loss evidence. Context compaction, bounded startup reading, and deep
+reasoning are valid no-artifact intervals. Main checks fresh ordinary host
+status, messages, tool errors, and round bytes before recovery; interruption or
+reassignment requires an explicit disconnect/error or sustained total
+nonresponse corroborated by more than artifact silence. This is a communication
+and work-elimination rule, not a
 worker-side monitoring mechanism, lifecycle state, truth gate, or packaging
 prerequisite. Main observes only milestones visible through ordinary host
 interaction. Chalxius creates no timer, daemon, watcher, heartbeat, numeric

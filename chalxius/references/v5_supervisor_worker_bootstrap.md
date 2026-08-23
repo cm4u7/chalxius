@@ -80,7 +80,13 @@ required `research_supervision_report` artifact or one explicit blocker naming
 the missing capability, Research product, or premise. Do not emit consecutive
 status-only updates such as "reviewing", "writing the report", or "almost at
 preflight" while the authorized artifact directory remains empty. Main may
-reclaim a supervisor that repeats a no-output milestone. This is a bounded
+reclaim a supervisor that repeats a no-output milestone, but artifact silence
+from an otherwise running worker is not itself a repeated status-only milestone
+or evidence of failure. Context compaction, bounded startup reading, and deep
+reasoning are valid no-artifact intervals. Main checks fresh ordinary host
+status, messages, tool errors, and round bytes before recovery; interruption or
+reassignment requires an explicit disconnect/error or sustained total
+nonresponse corroborated by more than artifact silence. This is a bounded
 communication rule, not a worker-side monitoring mechanism, lifecycle state,
 audit, truth gate, or packaging prerequisite. Main observes only milestones
 visible through ordinary host interaction. Chalxius creates no timer, daemon,
@@ -109,7 +115,15 @@ adjacent `failure_informed_assurance` binding identifies the exact static
 failure family and concise attack focus. Cover every bound product descriptor and no
 timing-derived subset.
 
-Attack the new production Research and its declared artifacts. An admitted
+Attack the new production Research and its declared artifacts. A copy-on-write
+successor is a new complete product: prior defects, previous challenges, and
+repair obligations are mandatory but non-exhaustive attack seeds. The failure
+family selects the review dimension; it is not a defect allowlist. Within the
+exact authorized product and assigned supervisor scope, freshly review the
+whole successor and every conserved claim in scope for new, inherited-but-
+unseen, repair-induced, and cross-component defects. PHX constrains architecture
+and ceremony; it never narrows mathematical, source, integration, or program-
+math scrutiny. An admitted
 Fact dependency is a frozen premise, not a default attack target. If exact new
 evidence contradicts one, state the conflict separately for Main to route to an
 authority-governed reopening; do not rewrite or silently invalidate the Fact.
@@ -179,6 +193,9 @@ must identify:
 
 - the supervisor scope and failure-family focus;
 - every frozen product descriptor and reviewed artifact hash;
+- the complete successor surface reviewed inside that scope, treating prior
+  findings and repair specifications as non-exhaustive rather than a defect
+  allowlist;
 - each attack actually performed and its result;
 - one of: clean bounded result, concrete defect, surviving counterexample, or
   explicit blocker;

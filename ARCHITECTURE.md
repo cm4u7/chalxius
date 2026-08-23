@@ -10,7 +10,7 @@ contract. They do not make a mathematical statement infallible.
 ## The four durable states
 
 ```text
-Research -> Candidate Release -> Certification Decision -> Fact
+Research -> Candidate Release -> Certification Decision -> Gateway admission -> Fact
 ```
 
 1. **Research** is cumulative nontruth. It contains attempts, insights,
@@ -19,9 +19,9 @@ Research -> Candidate Release -> Certification Decision -> Fact
 2. **Candidate Release** freezes the exact claim or atomic internal mini-DAG,
    proof, direct predecessors, source evidence, computation evidence,
    Paper/Audit references, and linked adverse work proposed for certification.
-3. **Certification Decision** is one immutable decision by a different fresh
-   verifier who receives only a frozen capsule.
-4. **Fact** is the exact accepted release exposed by the gateway after all
+3. **Certification Decision** is one immutable record written by the Gateway
+   from a different fresh verifier's review of only the frozen capsule.
+4. **Fact** is the exact accepted release exposed by the Gateway after all
    bindings are revalidated. Only current Fact nodes may be reused as trusted
    premises.
 
@@ -37,9 +37,9 @@ fourth path.
 | Paper reconstruction | Record an explicit interpretation of the source | Nontruth interpretation |
 | Paper audit | Hold objections, corrections, decisions, and replacement history | Audit evidence only |
 | Research | Accumulate exploration and adverse work | Nontruth |
-| Blackboard | Hold typed exploratory nodes, edges, snapshots, and Pulse projections | Nontruth |
+| Blackboard | Hold typed exploratory nodes, edges, and snapshots | Nontruth |
 | Candidate Release | Freeze one exact certification proposal | Candidate only |
-| Certification | Store the verifier capsule and immutable decision | Evidence, not a premise by itself |
+| Certification | Store the verifier capsule and Gateway-written immutable decision | Evidence, not a premise by itself |
 | Fact Graph | Store gateway-admitted active Facts and dependencies | Sole trusted premise store |
 | Learning | Hold teaching, attempts, misconceptions, and mastery evidence | Nontruth |
 | Reader | Present frozen projections in one offline page | Presentation only |
@@ -83,14 +83,18 @@ Every worker receives an immutable task card with three communication planes:
 - bounded narrative rationale, summary, intuition, limitations, and open
   boundary.
 
-Pulse is an optional two-wave adapter. Valid returns enter Research
-independently. A malformed peer receives an immutable local quarantine receipt
-and cannot destroy valid contributions. An explicit `pulse-abort` stops future
-dispatch and writes while preserving accumulated Research.
+New V5 Pulse planning is retired. Main explicitly selects Research, planning
+creates immutable production or supervision assignments/cards, and Main
+launches and confirms the workers. Completed logical components may enter fresh
+supervision while unrelated production continues. Historical Pulse records
+remain readable and retain their original status, audit, dispatch, close, void,
+and abort operations.
 
-Adverse work uses the same Research plane. Candidate Release automatically
-binds existing linked challenges, counterexamples, and obstacles, so Chalxius
-does not add a second adverse-review bureaucracy.
+Adverse work uses the Research plane. Candidate preparation binds the exact
+selected canonical claim and all applicable completed supervision, then a
+distinct fresh adverse worker reviews it and Main records the disposition.
+Fresh verifier review, the Gateway-written Certification Decision, and Gateway
+Fact admission remain separate owner boundaries.
 
 `profile-closure-status` and `profile-closure-record` are compatibility
 surfaces for repair advice. They can identify missing planned work and append
@@ -134,8 +138,10 @@ adapters rather than borrowing the philosophy stance rule.
 ## Architecture learning: CHX and PHX
 
 CHX is the append-only issue and repair ledger. A finding is recorded before it
-is classified; a reusable tactical repair is followed by a coordinated
-integrated repair and an explicit disposition.
+is classified. A tactical repair is confined to one project run; a repair
+intended for global installation goes directly through the cross-ledger global
+integrated-repair route, without a synthetic tactical precursor. Every observed
+issue still receives an explicit disposition.
 
 PHX is the host-global, project-independent route guide. It distills reusable
 major architecture proposals and measured tradeoffs from CHX and other evidence
@@ -151,10 +157,12 @@ receipts, and acceptance markers are not V5 authority. Chalxius does not
 perform an in-place authority migration.
 
 `PROJECT_BACKGROUND.md` is one bounded nontruth summary. Creating, rebuilding,
-or refreshing it requires an explicit user instruction. Once it exists, every
-substantive V5 work unit and V5 Reader projection reads and binds its complete
-body and hash by default. If it is absent, Chalxius proceeds without generating
-it. Load-bearing use always returns to the exact cited source.
+or refreshing it requires an explicit user instruction. A new card freezes its
+complete exact-byte index and one round-local immutable snapshot, then workers
+retrieve only selected chunks through that card; it does not preload the full
+body into active context. If it is absent, Chalxius proceeds without generating
+it. Every chunk remains retrievable, and load-bearing use returns to the exact
+cited source.
 
 ## Learner and Reader
 

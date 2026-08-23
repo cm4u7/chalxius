@@ -37,6 +37,32 @@
 > `primary`. Primary bytes need no returned copy; toy checks and bridges remain
 > return-bound.
 
+> **0.8.10 current-V5 semantic-selection clarification.** When Main proposes a
+> frontier around a specific named mathematical object, class, theorem, or
+> exact identifier, Main first performs one bounded exact Research search over
+> its stable names and identifiers. Before freezing the card, Main reviews
+> matching completed production, copy-on-write repair successors, and
+> applicable completed supervision, then explicitly selects the relevant
+> `related_research_ids`. This is Main judgment, not automatic expansion,
+> fuzzy matching, a whole-project audit, an index, receipt, lifecycle state,
+> scheduler, or gate.
+
+> **0.8.11 current-V5 agent-judgment clarification.** Artifact silence, one
+> quiet wait, elapsed time, context compaction, bounded startup reading, or deep
+> reasoning does not prove that a worker is lost. Main checks fresh ordinary
+> host status, messages, tool errors, and round bytes. A worker may be reclaimed
+> as live-but-unproductive after repeated no-useful-output milestones, but
+> declaring it lost and reassigning requires an explicit disconnect/error or
+> sustained total nonresponse corroborated by more than artifact silence. No
+> timer, heartbeat, watcher, receipt, recovery state, or gate is introduced.
+>
+> A copy-on-write successor is a new complete product. A failure family selects
+> a supervisor scope, not a defect allowlist. Prior findings and repair specs
+> are mandatory but non-exhaustive attack seeds; the supervisor freshly reviews
+> the complete successor surface and conserved claims inside that exact scope
+> for unseen inherited, repair-induced, new, and cross-artifact defects. PHX
+> never narrows mathematical or source scrutiny.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 
@@ -427,7 +453,13 @@ when one completed component crosses at least two of those primary scopes;
 same-scope multiple outputs remain with their primary supervisor. Explicit
 `--scope` may select only applicable distinct values. Supervisors
 return one `research_supervision_report`; defects become later copy-on-write Research
-repair. Supervisors attack the new production returns and declared artifacts;
+repair. Supervisors attack the complete new production returns and declared
+artifacts inside the selected scope. For a copy-on-write successor, the prior
+finding, repair specification, and failure-family focus are mandatory but non-
+exhaustive seeds rather than a defect allowlist; every authorized conserved
+claim and interface in that scope receives fresh review for unseen inherited,
+repair-induced, new, and cross-artifact defects. This does not widen review to
+another scope or the whole project;
 admitted Fact dependencies are frozen premises unless exact new contradiction
 evidence is escalated for separate authority-governed reopening. Validation
 rejects timing-derived subsets, unknown or tampered components, and overlapping
@@ -497,7 +529,12 @@ through `plan-supervision-round` for the explicit second subround.
 ## Round procedure
 
 1. Add Research, inspect any active Campaign, and explicitly name every
-   load-bearing Research id selected for this work.
+   load-bearing Research id selected for this work. For a frontier stated as a
+   specific named object, class, theorem, or exact identifier, first make one
+   bounded exact Research search over stable subject names and identifiers;
+   review matching completed production, repair successors, and applicable
+   supervision before freezing the card, while leaving relevance and final
+   selection to Main.
 2. Run `plan-round`; all assignments in that round receive the same frozen
    snapshot. The returned assignments and cards are a plan, not dispatch.
 3. Launch each context-free worker through the host with only its generated

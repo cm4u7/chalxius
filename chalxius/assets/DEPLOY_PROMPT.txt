@@ -1,8 +1,29 @@
-Chalxius 0.8.9 — Frontier Reliability
+Chalxius 0.8.11 — Agent Judgment Integrity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
+
+Artifact silence, one quiet wait, elapsed time, context compaction, bounded
+startup reading, and deep reasoning do not prove worker loss. Main checks fresh
+ordinary host status, messages, tool errors, and round bytes. Repeated no-useful-
+output milestones may justify reclaiming a live-but-unproductive worker;
+reassignment requires explicit failure or sustained total nonresponse
+corroborated beyond artifact silence. This creates no timer, watcher, heartbeat,
+receipt, or recovery state.
+
+A copy-on-write successor is a new complete product. Prior findings and repair
+specifications are mandatory but non-exhaustive attack seeds, not a defect
+allowlist. Each supervisor freshly reviews the complete successor surface and
+conserved claims inside its exact assigned proof, source, program-math, or
+integration scope. PHX never narrows that scrutiny.
+
+For a frontier stated as a specific named mathematical object, class, theorem,
+or exact identifier, Main performs one bounded exact Research search over its
+stable names and identifiers before card freeze, reviews completed production,
+repair successors, and applicable supervision, and then chooses relevant
+`related_research_ids`. This is an instruction, not an automatic expansion,
+index, receipt, state, scheduler, or gate.
 
 Ordinary Research operates exact admitted Fact premises directly and does not
 replay unrelated admission history. A frozen task-card related artifact whose

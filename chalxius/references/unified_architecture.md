@@ -1,5 +1,17 @@
 # Chalxius Back to the Future / Evidence candidate architecture
 
+> **0.8.11 agent-judgment-integrity override.** Main does not infer worker loss
+> from artifact silence, one quiet poll, elapsed time, context compaction,
+> bounded startup reading, or deep reasoning. It checks fresh ordinary host
+> status, messages, tool errors, and round bytes. Repeated no-useful-output
+> milestones may justify reclaiming a live-but-unproductive worker; loss and
+> reassignment require explicit failure or sustained total nonresponse
+> corroborated beyond artifact silence. A copy-on-write successor is a new
+> complete product: prior defects are mandatory but non-exhaustive attack seeds,
+> and each supervisor freshly reviews the whole successor surface and conserved
+> claims inside its exact assigned scope. PHX does not narrow scrutiny. No
+> monitor, liveness schema, compatibility layer, receipt, or gate is added.
+
 > **0.8.0 MathGraph-first override.** The historical release overlays below
 > preserve old runtime procedures as lineage evidence. They do not govern
 > current graph operations. Future upgrades need not preserve those procedures;
@@ -148,6 +160,15 @@ rejects explicit or automatically selected `refute` work and never appends a
 paired adverse worker. A constructive worker may record a boundary,
 obstruction, or counterexample encountered within its assigned task, but the
 formal attack pass is the second subround.
+
+When that proposed frontier is a specific named mathematical object, class,
+theorem, or exact identifier, Main first performs one bounded exact Research
+search over the subject's stable names and identifiers. Main reviews matching
+completed production, copy-on-write repair successors, and applicable
+completed supervision before freezing the card and explicitly chooses which
+matches belong in `related_research_ids`. The search does not automatically
+expand or choose the frontier, invoke fuzzy matching or a whole-project audit,
+or create a persistent index, receipt, lifecycle state, scheduler, or gate.
 
 `plan-round`, `plan-supervision-round`, `plan-computation-execution`, and
 `plan-candidate-adverse` create immutable assignments/cards only. None is a
@@ -400,8 +421,11 @@ filesystem object or visible malformed, hash-drifted, schema-invalid, or
 semantically invalid return is quarantined locally; other valid returns remain
 independently ingestible and cumulative.
 
-Main may inspect ordinary visible host progress and reclaim or redirect a
-worker that stops producing useful output. Main also notices the end-to-end
+Main may inspect ordinary visible host progress and reclaim a still-live worker
+after repeated no-useful-output milestones. Artifact silence or one quiet wait
+does not prove loss; Main checks fresh ordinary host status, messages, tool
+errors, and round bytes, and reassigns only after explicit failure or sustained
+total nonresponse corroborated beyond artifact silence. Main also notices the end-to-end
 elapsed time already visible for host commands and work units; unexpectedly
 long duration is a diagnostic signal relative to apparent complexity or a
 recent comparable operation. This performance instruction is visible to Main
