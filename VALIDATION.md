@@ -1,27 +1,27 @@
-# Validation — Chalxius v0.8.11
+# Validation — Chalxius v0.8.12
 
-This document records software, packaging, installation, agent-judgment
-semantics, public disclosure, and global CHX settlement for **Chalxius 0.8.11
-— Agent Judgment Integrity**. It does not certify a mathematical claim.
+This document records software, packaging, installation, semantic-recovery
+behavior, and global CHX settlement for **Chalxius 0.8.12 — Semantic
+Recovery**. It does not certify a mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 0.8.11 |
-| Release date | 2026-08-23 |
-| Skill manifest entries | 261 |
-| Package files, including manifest | 262 |
-| Manifest SHA-256 | `114555be38fa461c68cc3b699bf7e63bb26857ebcf7317bbf881114d768546d0` |
-| Runtime content SHA-256 | `de1d4a03ef94c0e47ed994b75493cc74504664fc4054a1d8c6809a0e2a4ebba9` |
-| Installed runtime identity | `27ec3fa853fda91393a471e4920aed1f57a52987989927111e8954e00980b694` |
-| Installed archive-tree identity | `c2c9e3e9febcf3de50621181311f34138057147220ad3951a14bee92d347cde5` |
-| Archive | `chalxius-0.8.11-agent-judgment-integrity.tar.gz` |
-| Archive bytes | 2,572,660 |
-| Archive regular-file members | 262 |
+| Version | 0.8.12 |
+| Release date | 2026-08-24 |
+| Skill manifest entries | 262 |
+| Package files, including manifest | 263 |
+| Manifest SHA-256 | `e47bdaeac15cfa1381264b04c9854fb99905a0dd2b863c6bb038f01841c82e77` |
+| Runtime content SHA-256 | `ffb00b70da8035ff7939aef3a8050dbcd41492249398ac7a2fc3f4f6de233c03` |
+| Installed runtime identity | `c0cdc2075fb6ac5a1b2d6c92da20a47dfdd37e806d47ec05b65d28ef968ca379` |
+| Installed archive-tree identity | `d1250a57b007308853574ef6f7d5f1c91435754d4e31f1cf3ca68d092e9a675e` |
+| Archive | `chalxius-0.8.12-semantic-recovery.tar.gz` |
+| Archive bytes | 2,581,988 |
+| Archive regular-file members | 263 |
 | Archive directory members | 0 |
-| Archive SHA-256 | `b81fcbd25823a15d61a0653eae666da342fd76d28158d1d3a0fdf0f51813774c` |
-| Checksum-file SHA-256 | `6dd16301e14e0690784c399d5bd301c8c7d9b3677e8a6d251e14e3e6cd27e191` |
+| Archive SHA-256 | `8e93c0d6fb165c6c8e38a3925a17b6051dd0d05be9842307bf77db2a9773142a` |
+| Checksum-file SHA-256 | `2156f3c15ee596c13be438df98e623881a5dfe2b42515c20e4e57b82a8369f3f` |
 
 Two builds from the same frozen tree were byte-identical. A cold extraction
 matched the source tree and passed every manifest row, the bundled self-test,
@@ -29,103 +29,99 @@ and strict architecture reconnaissance.
 
 ## Complete and failure-informed validation
 
-The complete test suite passed **987 tests in 78.480 seconds**, with 2 skipped.
-The full mutation preflight found 134/134 unique targets in 0.093 seconds, and
-the full audit killed 134/134 mutants in 153.312 seconds.
+The complete suite passed **995 tests in 78.691 seconds**, with 2 skipped.
 
-The forensic matrix used contract `chalxius-release-validation-matrix-6` and
-has file SHA-256
-`0e1853da6836a24142b30c26445b3225dac574a70d552935d32da55f6b543284`.
+The forensic matrix receipt is
+`/private/tmp/chalxius-0812-release.Cequm5/release-validation-forensic.json`
+with file SHA-256
+`db0b7029f149f697dea0b223d29837b1d214f25939363856b0ba685c6af27ff4`.
 
 | Forensic lane | Result | Elapsed |
 |---|---|---:|
-| Self-test | PASS | 0.837 s |
-| Full suite | PASS; 987 tests, 2 skipped | 78.480 s |
-| Mutant registry preflight | PASS; 134/134 | 0.093 s |
-| Full mutation audit | PASS; 134/134 killed | 153.312 s |
-| Behavioral feature gate | PASS; 42/42, 0 orphans | 16.605 s |
-| Strict architecture scan | PASS; 0 errors, 0 warnings | 4.764 s |
+| Self-test | PASS | 0.989 s |
+| Full suite | PASS; 995 tests, 2 skipped | 94.002 s |
+| Mutant registry preflight | PASS; 139/139 | 0.118 s |
+| Full mutation audit | PASS; 139/139 killed | 183.840 s |
+| Behavioral feature gate | PASS; 42 features, 0 orphans | 21.558 s |
+| Strict architecture scan | PASS; 0 errors, 0 warnings | 5.437 s |
 
-The final routine matrix used the same contract and exact manifest. Its receipt
-file SHA-256 is
-`458c3575b00f99b5eeba6eeb002c624aa5c236e068029d9f11bb2115ef11b8fb`.
+The final routine matrix receipt is
+`/private/tmp/chalxius-0812-release.Cequm5/release-validation-routine-final.json`
+with file SHA-256
+`1db6e2628c2b60dfd9ebea368a73c5305a6268b23680f8cf95a73e06c9576882`.
 
 | Routine lane | Result | Elapsed |
 |---|---|---:|
-| Self-test | PASS | 0.953 s |
-| Changed-surface tests | PASS; 29/29 | 8.695 s |
-| Semantic mutation audit | PASS; 16/16 killed | 34.454 s |
+| Self-test | PASS | 0.985 s |
+| Changed-surface tests | PASS; 36/36 | 8.897 s |
+| Semantic mutation audit | PASS; 21/21 killed | 38.924 s |
 
 Every lane used manifest
-`114555be38fa461c68cc3b699bf7e63bb26857ebcf7317bbf881114d768546d0`
-and reported `source_unchanged=true`.
+`e47bdaeac15cfa1381264b04c9854fb99905a0dd2b863c6bb038f01841c82e77`
+and reported an unchanged candidate source tree.
 
 ## Architecture reconnaissance
 
-Strict reconnaissance found 262 files, 89 test files, and 76 Python modules,
-with 0 errors and 0 warnings. The absolute root participates in the inventory
-identity, so candidate, installed, and cold-extraction hashes intentionally
-differ.
+Strict reconnaissance found 263 files, 90 test files, and 76 Python modules,
+with 0 errors, 0 warnings, and 0 orphans. The absolute root participates in the
+inventory identity, so candidate, installed, and cold-extraction hashes
+intentionally differ.
 
 | Report | Inventory SHA-256 | File SHA-256 |
 |---|---|---|
-| Candidate | `ee397c88f15e205873c2cf9d23d7de0f8ebe41f021421bd7f9a54f344d5b301b` | `126bb6df8171d4d033946e8ad53cb5c9cd8eeb7206595c4e77a4cfa185fe01fe` |
-| Installed | `06cbe1f1dc2a4a5959573b5d2e2e229113be80a475214c2561ef7816f5727577` | `d82f13779d32c0f1ba23115bbbc8b9b2de3980bfb3df74aef97a0e83cf9fb947` |
-| Cold archive | `4264b8c7464a62515c4202c85325c582b046c7215b68f1720aa8ef4742a72e93` | `a7e844ee0e2b9e2f3f247a8d93eee4088e230ef49262f6a64180821389d71f1f` |
+| Candidate | `5d4d62ad05a04a8f0cea904a0112a6af85191dbb44d078c2983e17b33a5c3bbd` | `0be1165d8de678b61a0aaecabbbd292ec0ff1e0acc618e02b248041267394c9a` |
+| Installed | `2b99d999e00ae6e73dcd55606ead355909346feb9f6a3e0b138bf42b6767c48c` | `b2a4311c0503c28bded98b623e03f431216f70c36c43e30fdbdd00a3ffcf281a` |
+| Cold archive | `bc76d4b7970516b77325d840034b7c74f64a38dd8fe6e84fdb7c80ddbbd84718` | `0c0b48bb23a14d5155df6b256bcd8465bfa3a6a8d67b25690ef2190874da290e` |
 
-All 262 candidate and installed package files were byte-exact.
+All 263 candidate and installed package files were byte-exact.
 
-## Agent-judgment regressions
+## Semantic-recovery regressions
 
-The 0.8.11 regressions exercise generated worker prompts and dossiers, not only
-static wording. They establish these semantic boundaries:
+The 0.8.12 tests establish the following fail-closed behavior:
 
-- Main must actively select a named Campaign, object, or proposition and check
-  exact Research completion before freezing work.
-- Artifact silence, a single quiet wait, elapsed time, context compaction,
-  bounded startup reading, and deep reasoning do not establish worker loss.
-- Fresh host-visible status, messages, explicit errors, and round bytes are the
-  relevant evidence. Repeated lack of useful output can justify reclaiming a
-  live but unproductive worker; loss requires explicit or corroborated failure.
-- Every copy-on-write successor receives a fresh full review within the assigned
-  scope. Prior defects are mandatory but non-exhaustive attack seeds.
-- PHX removes procedural fragility without limiting proof, source, program, or
-  integration scrutiny.
+- a unique, exact, multi-hop COW repair lineage can project completion back to
+  the original Research identity;
+- an unsafe terminal product or incomplete frozen obligations reopen the work;
+- malformed lineage, multiple child repairs, or a cycle remains pending;
+- a second active invalidator not covered by the repair prevents closure;
+- the repair objective, relations, source product, and obligations must match
+  the hash-bound normalized repair specification;
+- distinct non-aborted products for one Research are ambiguous, while an
+  identical retry publication of the same product is accepted;
+- Main's authoritative documents independently preserve semantic selection,
+  useful-slot, bounded-scout, and client-reconnect rules.
 
-Mutation coverage includes restoration of the forbidden COW defect-allowlist
-behavior and confirms that the regression suite kills it.
+The mutation audit covers branch-ambiguity bypass, invalidator-exhaustion
+weakening, repair-continuity bypass, original-identity projection bypass, and
+prior-terminal-staleness bypass. All 21 semantic mutants were killed.
 
-## Public disclosure and package boundary
+## Main and reconnect boundary
 
-The public-disclosure contract
-`chalxius-chx-public-disclosure-2` passed against the exact closed historical
-ledger chain through CHX-035:
+- Main owns cross-round/COW search, completion projection, duplicate exclusion,
+  and final target selection.
+- Workers may gather bounded evidence; they do not own final dispatch authority.
+- Free slots are used for real independent work when it exists, never to satisfy
+  a quota or create filler.
+- Client reconnect is transport-only. Main inspects agent status, canonical
+  return bytes, ingestion, and round state before resuming, and does not reclaim
+  or duplicate live work solely from a reconnect banner.
 
-| Field | Value |
-|---|---|
-| Disclosure status | PASS |
-| Historical ledger file SHA-256 | `4eb2660eee4bc089d0bd50fd7f871ad48a2141ce1c0d587fb3e50625eebbf8af` |
-| Ledger event-head SHA-256 | `6d057a16436c697bced5de09c7a6cc57fa59d6c5b90b1a111ed0973313446582` |
-| Public disclosure registry SHA-256 | `e6187e0b210cf89d32a85569ee047ff1f96a7f5c2b3a5fdcc8c112124aaaa210` |
-| Private ledger included | false |
-| Truth effect | none |
-
-The archive has 262 regular-file members and no synthetic directory entries.
-All cache and bytecode artifacts are absent.
+No monitor, timer, scheduler, receipt requirement, reconnect gate,
+compatibility layer, lifecycle state, or truth gate was added.
 
 ## Installation
 
 | Field | Result |
 |---|---|
 | Installer | default project-free local installer |
-| Installed version | 0.8.11 |
-| Elapsed | 3.4 s |
-| Candidate-to-installed tree | exact; 262 files unchanged |
-| Installed runtime identity | `27ec3fa853fda91393a471e4920aed1f57a52987989927111e8954e00980b694` |
-| Installed runtime content | `de1d4a03ef94c0e47ed994b75493cc74504664fc4054a1d8c6809a0e2a4ebba9` |
-| Installed archive-tree identity | `c2c9e3e9febcf3de50621181311f34138057147220ad3951a14bee92d347cde5` |
-| Direct rollback | 0.8.10 content `50ff63f2ba0c7bc5760337dd70b22ffab2591ae45ee44670c73b282a846bed2c` |
-| Archived prior public release | 0.8.9 content `2eda96ca13e29213f9286931e6e2fc63f8f0f490433df8c89947d4cf58c6ebb0` |
+| Installed version | 0.8.12 |
+| Candidate-to-installed tree | exact; 263 files unchanged |
+| Installed runtime identity | `c0cdc2075fb6ac5a1b2d6c92da20a47dfdd37e806d47ec05b65d28ef968ca379` |
+| Installed runtime content | `ffb00b70da8035ff7939aef3a8050dbcd41492249398ac7a2fc3f4f6de233c03` |
+| Installed archive-tree identity | `d1250a57b007308853574ef6f7d5f1c91435754d4e31f1cf3ca68d092e9a675e` |
+| Candidate runtime identity | `025bfc65ce4826a8c5ffaae5c6adf7ca75855171c7fd6491940aa432a334e1df` |
+| Cold runtime identity | `184357fa260a391fa2fea5cf141470cb10fde93b924f6b8896d8a1449fcb46d5` |
+| Direct rollback | 0.8.11 content `de1d4a03ef94c0e47ed994b75493cc74504664fc4054a1d8c6809a0e2a4ebba9` |
 | Project reads/writes | 0 / 0 |
 | System restart | not performed |
 
@@ -133,26 +129,32 @@ All cache and bytecode artifacts are absent.
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-adc53add43febe72e78cae0f88c3b728b0992b93e25a2852fe7d3aba42a75a4f` |
-| Canonical `record_sha256` | `2b2c1b52a1503846c2044dafd858683556548956094f4971a36ee7f8a5cdb68c` |
-| Record-file SHA-256 | `cb6806351a6a99b09ed7bf718aa999d78b338208575fce8f1fd38a2d1465865f` |
-| Inventory SHA-256 | `0c9f8b414b6c6c16acb27e4d7259cbe599661e6df6bc3cf4b439b73b1e8fb10b` |
-| Covered snapshot SHA-256 | `ba8712968f9c20765b2884815bd92ddd6c31128a71de0dc022f634817d512989` |
-| Observed / globally disposed | 166 / 166 |
-| Resolved / excluded | 160 / 6 |
-| Current mechanism groups | 4 |
+| Global repair | `global-repair-c82951c65fad6ec03d324b330345ee770787ca504413dd3855ed49f4a99d02ed` |
+| Canonical `record_sha256` | `d2ba32cb5d0d977f2cfdadee2ebe2d7363cf6544ab313d536d6d8409abc02e0b` |
+| Record-file SHA-256 | `b81f0a80d344fa4266245ef0ad7fc95260813d4a98532129e8f6915932b0ed69` |
+| Inventory SHA-256 | `d3c113fac745f35371f46b8ccbfb4f8d4fec31be4c24db50630b479b3f30d17f` |
+| Covered snapshot SHA-256 | `381d12e827f01d2dab6ea69d258e60cc1a3a3f3aaff266295ba165f7a41770bf` |
+| Observed / globally disposed | 170 / 170 |
+| Resolved / excluded | 164 / 6 |
+| Current mechanism groups | 3 |
 | Unresolved / uncovered | 0 / 0 |
 | Active open issues | 0 |
 | Lineage errors / report drift | 0 / 0 |
 
 The current task ledger is closed with SHA-256
-`0085a4cae1a9a59e6f796cff8a8a6ffbfe5ed929f4d18397fac83ebd6461865b`.
-It contains zero tactical and zero per-ledger integrated repairs. The globally
-installed change is represented directly by the global integrated successor.
-Historical ledgers remain append-only and own no active issue.
+`e2c1f43a965e89dfb6640395bd094df77837ced22f0198373269c72ff860e5c8`.
+Its architecture-report SHA-256 is
+`ca0e19ad3b60e2a0f9923a5b8767999298468e7a357dcfca6d35d00811dfc80e`.
+It contains zero tactical and zero per-ledger integrated repairs. Historical
+ledgers remain append-only and own no active issue.
 
 ## Research and truth boundary
 
+The A-model Research campaign was paused after the final VQ proof-logic
+supervision returned `challenge`: one artifact was not standalone because key
+symbols were undefined, while the mathematical withdrawal was otherwise
+correct. No third COW was started.
+
 This architecture release created no Candidate Release, Certification
-Decision, Gateway admission, or Fact. Existing Research and Fact graph bytes
-were not part of installation or publication.
+Decision, Gateway admission, or Fact. Installation and publication did not
+mutate Research graph bytes.

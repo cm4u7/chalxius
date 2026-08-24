@@ -33,6 +33,22 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.8.12 Semantic Recovery difference
+
+The current frontier now follows exact canonical copy-on-write lineage rather
+than treating a completed result as permanently closed or treating every broad
+Research relation as succession. Only a unique current terminal whose own
+production obligations and applicable supervision are safe closes the original
+workgroup. Exact terminal invalidation and malformed or ambiguous lineage reopen
+it without rewriting historical bytes.
+
+Main also owns cross-round/COW search, duplicate exclusion, and final dispatch;
+scouts are bounded evidence collectors. Visible spare capacity is used for real
+independent high-value work, while a client reconnect causes an ordinary
+agent/return/ingestion/round inspection. There is no compatibility adapter,
+persistent cache, slot quota, filler work, scheduler, monitor, reconnect gate,
+or new authority path.
+
 ## 0.8.11 Agent Judgment Integrity difference
 
 Current host orchestration distinguishes a quiet live worker from a lost one.

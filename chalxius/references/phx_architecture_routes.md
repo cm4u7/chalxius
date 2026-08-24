@@ -200,6 +200,11 @@ performance state, or lifecycle/admission gate for that observation. A concrete
 architecture-caused performance defect still enters CHX first; a reusable
 architectural lesson may then follow the existing PHX consultation route.
 
+The same PHX boundary applies to slot use and reconnect recovery. Main directly
+uses visible free slots and exact Research boundaries, while client reconnect is
+only transport state followed by an ordinary agent/return/ingestion inspection.
+Neither instruction justifies a quota, filler work, scheduler, or reconnect gate.
+
 PHX should stay compact by recording major reusable routes, meaningful
 measurements, explicit consultations, and actual adoptions. Local symptoms,
 ordinary bugs, one-off timings, and CHX dispositions belong elsewhere. The

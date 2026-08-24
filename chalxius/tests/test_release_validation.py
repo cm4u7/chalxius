@@ -107,6 +107,10 @@ class ReleaseValidationTests(unittest.TestCase):
         self.assertIn("--profile", routine_by_name["aggressive_bug_audit"].command)
         self.assertIn("semantic", routine_by_name["aggressive_bug_audit"].command)
         self.assertIn("changed_surface_tests", routine_by_name)
+        self.assertIn(
+            "tests.test_chx_0812_semantic_recovery",
+            routine_by_name["changed_surface_tests"].command,
+        )
         self.assertNotIn("mutant_registry_preflight", routine_by_name)
         self.assertNotIn("full_suite", routine_by_name)
 
@@ -123,8 +127,8 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_semantic_registry_is_bounded_without_removing_forensic_registry(self) -> None:
         semantic = aggressive_bug_audit._mutants_for_profile("semantic")
         full = aggressive_bug_audit._mutants_for_profile("full")
-        self.assertEqual(len(semantic), 16)
-        self.assertEqual(len(full), 134)
+        self.assertEqual(len(semantic), 21)
+        self.assertEqual(len(full), 139)
         self.assertTrue({item.name for item in semantic} <= {item.name for item in full})
 
     def test_current_mutant_registry_preflight_is_cheap_read_only_diagnostic(self) -> None:

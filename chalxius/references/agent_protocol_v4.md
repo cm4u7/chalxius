@@ -63,6 +63,17 @@
 > for unseen inherited, repair-induced, new, and cross-artifact defects. PHX
 > never narrows mathematical or source scrutiny.
 
+> **0.8.12 current-V5 semantic-recovery clarification.** Main owns cross-round
+> and copy-on-write search, completion projection, duplicate exclusion, and the
+> final `DISPATCH`/`NO-DISPATCH` decision. Scouts may collect bounded evidence
+> only. After dispatch or receipt, Main checks visible free slots and exact
+> current boundaries; if a nonduplicative independent high-value target exists,
+> keep at least two workers active, without filler work or a slot quota. A
+> client `Reconnecting...` banner is transport state, not worker or round state.
+> On return, inspect agents, canonical return bytes, ingestion, and round state;
+> do not duplicate or reclaim solely because of reconnect. There is no reconnect
+> gate or liveness scheduler.
+
 Read this reference before planning, executing, validating, or ingesting a
 workflow-evidence v4 round.
 
@@ -538,7 +549,8 @@ through `plan-supervision-round` for the explicit second subround.
 2. Run `plan-round`; all assignments in that round receive the same frozen
    snapshot. The returned assignments and cards are a plan, not dispatch.
 3. Launch each context-free worker through the host with only its generated
-   prompt and paths, and confirm the worker actually started.
+   prompt and paths, and confirm the worker actually started. Main then checks
+   visible capacity against exact independent current Research boundaries.
 4. The worker writes artifacts only in its artifact directory and a mutable return draft below its
    work directory. Before the canonical return exists, run:
 

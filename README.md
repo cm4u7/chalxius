@@ -3,7 +3,7 @@
 **Persistent research memory for Codex.**
 
 [Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v0.8.11](https://github.com/cm4u7/chalxius/releases/tag/v0.8.11) ·
+[Download v0.8.12](https://github.com/cm4u7/chalxius/releases/tag/v0.8.12) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
@@ -59,11 +59,11 @@ receipt, or a successful computation cannot create a second truth path.
 ## Install
 
 Download the archive and checksum from the
-[v0.8.11 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.11), then:
+[v0.8.12 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.12), then:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.11-agent-judgment-integrity.tar.gz.sha256
-tar -xzf chalxius-0.8.11-agent-judgment-integrity.tar.gz
+shasum -a 256 -c chalxius-0.8.12-semantic-recovery.tar.gz.sha256
+tar -xzf chalxius-0.8.12-semantic-recovery.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -101,15 +101,15 @@ Run `scripts/mgraph --help` for the complete interface.
 The examples demonstrate graph structure and workflow; they do not claim that
 the displayed mathematics or interpretation has been admitted as Fact.
 
-## v0.8.11 — Agent Judgment Integrity
+## v0.8.12 — Semantic Recovery
 
-This cumulative release adds Main's bounded exact named-frontier search and
-keeps worker recovery in ordinary agent judgment: silence, compaction, startup
-reading, or slow reasoning alone never proves loss. A copy-on-write successor
-receives fresh complete review inside every assigned scope; previous defects
-seed that review without limiting it. No timer, watcher, compatibility layer,
-new lifecycle state, or truth gate is added. Mathematical and Fact-authority
-boundaries are unchanged. See
+This release makes exact copy-on-write completion visible at the original
+frontier node and reopens it if the current terminal result is invalidated or
+the lineage is ambiguous. Main owns cross-round search and final dispatch,
+uses real independent work when slots are visible, and reconstructs state after
+client reconnect without duplicating or reclaiming work from the banner alone.
+No monitor, quota, scheduler, compatibility layer, new lifecycle state, or
+truth gate is added. Mathematical and Fact-authority boundaries are unchanged. See
 [RELEASE.md](RELEASE.md) and [VALIDATION.md](VALIDATION.md).
 
 ## Documentation

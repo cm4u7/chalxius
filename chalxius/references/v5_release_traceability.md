@@ -1,4 +1,23 @@
-# Chalxius V5 traceability through 0.8.11 Agent Judgment Integrity
+# Chalxius V5 traceability through 0.8.12 Semantic Recovery
+
+## 0.8.12 semantic-recovery release overlay
+
+- Candidate version: `0.8.12`; release name **Semantic Recovery**.
+- Exact workgroup completion follows only a unique canonical chain from a
+  production plan to its obligation-complete product, exact invalidator, and
+  copy-on-write repair. A current safely supervised terminal closes the
+  original workgroup; terminal invalidation, malformed lineage, branching, or
+  incompleteness reopens it. Frozen Research and public workgroup identity are
+  unchanged.
+- Main owns cross-round/COW search, completion projection, duplicate exclusion,
+  and final dispatch. Bounded scouts are advisory only. Main uses visible free
+  slots for real independent high-value work without filler, quota, scheduler,
+  receipt, or gate.
+- A client `Reconnecting...` banner is transport state only. Main reconstructs
+  live agent, canonical-return, ingestion, and round state after reconnect and
+  never duplicates or reclaims solely from the banner.
+- Candidate, Certification, Gateway, Fact, and mathematical correctness
+  boundaries are unchanged.
 
 ## 0.8.11 agent-judgment-integrity release overlay
 

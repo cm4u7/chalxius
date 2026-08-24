@@ -1,5 +1,19 @@
 # Chalxius portable deployment
 
+## 0.8.12 Semantic Recovery
+
+The `0.8.12` **Semantic Recovery** artifact projects a uniquely completed exact
+COW chain back onto its original frontier workgroup and reopens the work when
+the current terminal product is invalidated or the lineage is ambiguous. Main
+owns cross-round selection and uses available workers only for real independent
+targets. Client reconnect is transport recovery followed by ordinary agent,
+canonical-return, ingestion, and round inspection.
+
+No persistent projection, compatibility layer, slot quota, filler dispatcher,
+timer, monitor, scheduler, receipt, reconnect gate, or truth path is added. The
+normal project-free installer below remains the complete global installation
+path.
+
 ## 0.8.11 Agent Judgment Integrity
 
 The `0.8.11` **Agent Judgment Integrity** artifact leaves worker liveness with

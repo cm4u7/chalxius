@@ -73,6 +73,12 @@ not mechanically expand coverage or activate a separate Pulse/campaign path.
 Migration, source repair, fresh verification, and author confirmation remain
 separate future work.
 
+Main performs the cross-round/COW search and excludes completed or duplicate
+work before dispatch. When genuinely independent high-value boundaries and
+visible free slots coexist, it may keep multiple workers active; it does not
+invent coverage merely to occupy slots. A client reconnect only causes a fresh
+agent/return/ingestion/round inspection.
+
 ## 🛠️ Reuse the patterns in your own work
 
 Try prompts such as:

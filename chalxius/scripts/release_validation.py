@@ -209,6 +209,7 @@ def _default_lanes(python: str, *, forensic: bool = False) -> tuple[Lane, ...]:
                     "tests.test_release_validation",
                     "tests.test_host_entrypoint_nonmutation",
                     "tests.test_architecture_reconnaissance",
+                    "tests.test_chx_0812_semantic_recovery",
                 ),
                 phase=1,
             ),

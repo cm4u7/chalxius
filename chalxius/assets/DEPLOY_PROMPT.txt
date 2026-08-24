@@ -1,4 +1,4 @@
-Chalxius 0.8.11 — Agent Judgment Integrity
+Chalxius 0.8.12 — Semantic Recovery
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
@@ -24,6 +24,15 @@ stable names and identifiers before card freeze, reviews completed production,
 repair successors, and applicable supervision, and then chooses relevant
 `related_research_ids`. This is an instruction, not an automatic expansion,
 index, receipt, state, scheduler, or gate.
+
+Main owns cross-round and copy-on-write search and final dispatch. Scouts only
+collect bounded evidence. After dispatch or receipt, inspect visible free slots
+and keep at least two workers active only when independent, nonduplicative,
+high-value current boundaries really exist; never create filler or a slot quota.
+A client "Reconnecting..." banner is transport state, not worker or round state.
+After reconnect, inspect agents, canonical return bytes, ingestion, and round
+state; never duplicate or reclaim solely from the banner, and add no reconnect
+gate or liveness scheduler.
 
 Ordinary Research operates exact admitted Fact premises directly and does not
 replay unrelated admission history. A frozen task-card related artifact whose

@@ -1,10 +1,24 @@
-# Chalxius 0.8.11 architecture findings and residual boundaries
+# Chalxius 0.8.12 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.11
-**Agent Judgment Integrity**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.8.12
+**Semantic Recovery**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.8.12 Semantic Recovery
+
+Frontier completion now follows an exact command-local COW lineage and projects
+one unique current terminal result back to the original workgroup. An exact
+later invalidator reopens the work; malformed, incomplete, cyclic, or ambiguous
+lineage cannot hide it. This does not infer COW from prose or broad contextual
+links and does not rewrite frozen Research.
+
+Main owns exact cross-round search and final dispatch. It uses real independent
+work when visible slots exist, and reconstructs agent/return/ingestion/round
+state after a client reconnect. These are ordinary agent instructions, not a
+slot quota, filler-work policy, monitor, timer, scheduler, receipt, reconnect
+gate, compatibility layer, or truth gate.
 
 ## 0.8.11 Agent Judgment Integrity
 

@@ -552,27 +552,27 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "The default production frontier groups only exact executable Research inputs and closes a workgroup only through a current valid production result plus every applicable safe supervision result; positive resolution preserves closure, while challenged, blocked, adverse, or route-invalidated evidence reopens the work.",
+      "summary": "The default production frontier groups only exact executable Research inputs and closes a workgroup through a unique exact copy-on-write terminal with a current valid production result plus every applicable safe supervision result; positive resolution projects back to the original workgroup, while ambiguous, challenged, blocked, adverse, or route-invalidated terminal evidence reopens the work.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_group_completion",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_research_obligation_statuses",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_cow_terminal_members",
       "activation_predicate": {
-        "predicate_id": "exact_workgroup_has_safe_two_subround_completion",
-        "domain": ["safe_production_and_applicable_supervision", "pending_unsafe_challenged_blocked_or_stale", "same_workgroup_completion_race"],
+        "predicate_id": "exact_workgroup_has_unique_current_safe_cow_terminal",
+        "domain": ["safe_production_and_applicable_supervision", "exact_multihop_cow_successor", "exact_active_invalidator_exhaustion", "hash_bound_repair_objective_projection", "pending_unsafe_challenged_blocked_stale_or_ambiguous", "same_workgroup_completion_race"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-v5-production-research-workgroup-closure-2",
+        "type_id": "chalxius-v5-production-research-workgroup-closure-3",
         "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validated_completed_research_obligation_statuses"
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_group_completion",
       "observable_effect": {
         "effect_id": "safely_completed_exact_workgroup_omitted_from_actionable_frontier",
         "kind": "routing",
-        "description": "A safely completed exact workgroup is absent from the actionable frontier but retained with provenance in history; include-history cannot bypass completion, explicit-ID planning remains available, and a sibling completion race fails before public round bytes."
+        "description": "A uniquely and safely completed exact copy-on-write terminal closes the original workgroup in actionable views while history retains its identity and provenance; terminal invalidation or ambiguous repair lineage reopens it, explicit-ID planning remains available, and a sibling completion race fails before public round bytes."
       },
       "probes": {
         "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive",
-        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result",
+        "predicate_false": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_repair_requires_exact_active_invalidator_coverage",
         "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
       }
     },
