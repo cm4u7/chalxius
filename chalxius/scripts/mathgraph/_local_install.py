@@ -1,6 +1,7 @@
-"""Fast, host-global Chalxius installation without project-level cutover work.
+"""Private implementation of the one public host-global installer.
 
-This is intentionally narrower than :mod:`mathgraph.runtime_cutover`.  It is
+The public entrypoint is ``scripts/local_install.py``.  This module is
+intentionally narrower than :mod:`mathgraph.runtime_cutover`.  It is
 the normal local-development path: validate one complete candidate tree, run
 the local self-check plus focused regressions, archive the old and new runtime,
 atomically replace the discovery alias, and retain exactly one immediate
@@ -145,6 +146,8 @@ def default_focused_test_runner(root: Path) -> None:
             "test_local_install.LocalInstallTests",
             "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
             "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
+            "test_chx_090_frontier_active_fix.FrontierActiveFix090Tests",
+            "test_release_validation.ReleaseValidationTests",
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
                 "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"

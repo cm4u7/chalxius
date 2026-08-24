@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.12 — Semantic Recovery
+# Chalxius 0.9.0 — Frontier Active Fix
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -48,18 +48,9 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
 
-The 0.8.9 repair gives ordinary and Brave Future actionable views one exact
-workgroup and completion projection. Exact duplicate work has one actionable
-representative; exact related Research inputs remain material to task-card and
-supervision authority. Completed production and applicable completed
-supervision are absent from actionable views, while history retains every
-original Research record and provenance. `limit` bounds serialized entries
-and the member window; a zero-active-proof-target plan decides applicability
-before Fact inventory. The full eligible-set identity may remain as a count and
-digest, but no persistent frontier cache, timer, watcher, migration, adapter,
-new lifecycle state, or truth gate is added. New Brave Future projection bytes
-use revision 3; frozen revisions 1 and 2
-remain readable without rewriting or becoming prospective writer formats.
+The 0.8.9 repair gives ordinary and Brave Future views one exact workgroup/completion projection. Exact duplicates have one actionable representative; exact related Research remains material to task-card and supervision authority. Completed production/supervision disappears only from actionable views; history remains intact. `limit` bounds entries and members, zero-target planning avoids Fact inventory, and the full set remains a count/digest. Brave Future writes revision 3 and reads frozen revisions 1/2 without rewrite. No persistent cache, timer, watcher, migration, adapter, lifecycle state, or truth gate is added.
+
+The 0.9.0 ordinary frontier is lifecycle-aware: no product means `production`; live work or a published return means waiting/ingestion; a current product means `supervision`; invalidation means `repair`; and duplicate, historical, malformed, or branching evidence means `main_reconciliation` with exact bounded ids. Labels derive read-only from current graph/round bytes and never close mathematics, dispatch, or affect Candidate/Fact authority. Default `mgraph frontier` is Main's compact surface; `--diagnostic` adds bounded forensic fields. Campaign `research_goal` targets are exact existing same-Campaign Research anchors, not proof targets or tasks; the surface derives goal coverage/progress/current action. Synchronizing such targets into the Fact-only `TARGETS.txt` projection reads only the exact proof-target predecessor closure, and an empty proof closure reads zero Facts. An unscoped `ACTIVE` goal is an `active_hint`, never a queue filter or scoped-plan authority. When the queue shows only workflow completion or semantic choice, Main compares goal coverage with the user's goal and its broad memory, performs one bounded exact search, and actively selects the next load-bearing target. No quota, automatic expansion, fuzzy selector, persistent state, compatibility layer, monitor, scheduler, or gate is added.
 
 Source assurance is activated by structure rather than incidental prose:
 literature work, source-dependent metadata, source/applicability obligations,
@@ -80,23 +71,7 @@ host interaction. Unexpected duration relative to apparent complexity or a
 recent comparable operation diagnoses repeated validation, broad rescans, or
 idle work; it is not a numeric threshold or monitoring subsystem.
 
-The same repair removes reproduced work rather than monitoring it. One
-selective checkpoint shares a command-local inspection across its explicit
-targets; an exact supervision retry filters unrelated manifests and returns the
-existing round before rebuilding supervisor Research; and an independent
-Research append with no Fact dependencies does not open the active-Fact
-lineage. Proof-logic, program-math, and integration supervisors receive the
-exact production card, selected production outputs, and active Fact premises
-without preloading source-only baseline bytes; source-scope supervision alone
-projects those exact source capabilities. Historical Research artifacts that
-already form exact project-relative path/SHA-256/role capabilities remain
-directly operable regardless of their old assurance label. These projections
-never persist across commands or mutation
-boundaries. Ordinary content-addressed capabilities use their bytes and final
-SHA-256 as authority, so harmless mtime/ctime-only localization does not count
-as artifact drift while device, inode, type, size, link, containment, and hash
-checks remain exact. Current worker examples bind the selected skill root's
-executable `scripts/mgraph` shell entry instead of assuming a PATH alias.
+The same repair eliminates reproduced work: selective checkpoints share one command-local inspection; exact supervision retry filters unrelated manifests before rebuilding Research; and independent Research without Fact dependencies skips active-Fact lineage. Proof/program/integration supervisors receive the production card, selected outputs, and active Fact premises; only source-scope projects source-only capabilities. Existing exact path/SHA-256/role artifacts remain directly operable regardless of historical assurance labels. Projections never persist across commands or mutations. Content bytes/final SHA-256 outrank harmless mtime/ctime drift, while device, inode, type, size, link, containment, and hash checks remain exact. Worker examples execute the selected skill root's `scripts/mgraph` shell entry.
 
 Main may author the exact canonical Candidate Fact bytes, including a canonical
 Fact file inside a sealed Main-authored Candidate Release. Worker authorship,
@@ -320,11 +295,15 @@ repair caches implicitly.
 2. For a research draft, freeze the artifact, reconstruct the complete
    load-bearing target DAG, preserve its domain and quantifiers, and expose any
    weaker theorem as a typed gap rather than a solution to the original target.
-3. Main names load-bearing Research IDs. For a named object/class/theorem,
-   first run the exact search above, review completed work, and choose
-   `related_research_ids`. Production never plans refute; exact IDs do not
-   rebuild the global frontier; Main launches and confirms every planned worker,
-   then uses genuinely independent current boundaries when visible capacity exists.
+3. Main reads the goal-aware frontier and actively names load-bearing Research
+   IDs. When a Campaign has durable subgoals, bind each to one exact
+   `research_goal` root and use its derived coverage to distinguish work already
+   completed from the next production, return, supervision, repair, or semantic
+   choice. For a named object/class/theorem, first run the exact search above,
+   review completed work, and choose `related_research_ids`. Production never
+   plans refute; exact IDs do not rebuild the global frontier; Main launches and
+   confirms every planned worker, then uses genuinely independent current
+   boundaries when visible capacity exists.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
    continues. Use at most three failure-informed supervisors: `proof_logic`,
@@ -483,8 +462,10 @@ path or a graph-operation gate.
 
 Architecture releases use failure-informed validation: changed files, affected
 boundaries, manifest/inventory, focused regression, self-test, and only the
-broader suite justified by shared-runtime risk. Install the validated candidate
-locally before publication. The default host-global path is
+broader suite justified by shared-runtime risk. Main selects one validation
+profile per exact manifest; a successful forensic profile subsumes the routine
+profile for unchanged bytes, and its receipt exposes elapsed and slowest-lane
+cost. Install the validated candidate locally before publication. The sole public host-global path is
 `scripts/local_install.py`: it validates one complete candidate tree, runs the
 self-test and the two changed-surface regressions, archives the prior runtime,
 atomically swaps `/Users/<user>/.codex/skills/chalxius`, and keeps one direct
@@ -492,3 +473,10 @@ rollback copy outside skill discovery. It never reads or mutates a project and
 does not require a project audit, release matrix, or worker receipt. The older
 `scripts/runtime_cutover.py` remains an explicit forensic/protected-project
 deployment tool. For this release workflow, an explicit publication request includes merging the corresponding reviewed change into `main` by default; the user may explicitly exclude merge. Installation and publication remain separate authorizations, and publication never authorizes an unreviewed or unrelated change.
+
+Installation, validation, packaging, publication, rollback, and CHX settlement
+remain eligible CHX observation surfaces even when the release succeeds. For a
+global repair, finish install-time observations, reconcile and close/report the
+current ledger, then record and verify one global repair against terminal bytes;
+a later publication finding starts an ordinary successor. This adds no
+post-install ceremony, automatic issue generator, timer, monitor, or gate.

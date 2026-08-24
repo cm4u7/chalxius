@@ -655,7 +655,10 @@ def _validate_release_matrix_evidence(
             ) >= (0, 6, 5)
         except ValueError as error:
             raise ValueError("candidate skill version is not numeric semver") from error
-        if revision == "chalxius-release-validation-matrix-6":
+        if revision in {
+            "chalxius-release-validation-matrix-6",
+            "chalxius-release-validation-matrix-7",
+        }:
             expected_lanes = set()
         elif revision == "chalxius-release-validation-matrix-4":
             expected_lanes = {
@@ -689,16 +692,23 @@ def _validate_release_matrix_evidence(
             "chalxius-release-validation-matrix-3",
             "chalxius-release-validation-matrix-4",
             "chalxius-release-validation-matrix-6",
+            "chalxius-release-validation-matrix-7",
         }
         if current_architecture_gate_required:
             required_revision = (
-                "chalxius-release-validation-matrix-6"
+                "chalxius-release-validation-matrix-7"
+                if tuple(int(part) for part in version_parts[:3]) >= (0, 9, 0)
+                else "chalxius-release-validation-matrix-6"
                 if tuple(int(part) for part in version_parts[:3]) >= (0, 8, 0)
                 else "chalxius-release-validation-matrix-4"
             )
             revision_valid = revision == required_revision
         lanes_is_list = isinstance(lanes, list)
-        if revision == "chalxius-release-validation-matrix-6":
+        validation_profile: str | None = None
+        if revision in {
+            "chalxius-release-validation-matrix-6",
+            "chalxius-release-validation-matrix-7",
+        }:
             if not lanes_is_list:
                 architecture_valid = False
             else:
@@ -744,6 +754,7 @@ def _validate_release_matrix_evidence(
                     and len(lanes) == len(routine_phases)
                 ):
                     expected_lanes = set(routine_phases)
+                    validation_profile = "routine"
                     architecture_valid = True
                 elif (
                     lane_phases == forensic_phases
@@ -751,6 +762,7 @@ def _validate_release_matrix_evidence(
                     and len(lanes) == len(forensic_phases)
                 ):
                     expected_lanes = set(forensic_phases)
+                    validation_profile = "forensic"
                     architecture_valid = True
                 else:
                     architecture_valid = False
@@ -823,7 +835,58 @@ def _validate_release_matrix_evidence(
             )
         else:
             architecture_valid = True
-        if revision == "chalxius-release-validation-matrix-6":
+        if revision == "chalxius-release-validation-matrix-7":
+            performance = payload.get("performance_summary")
+            durations = [
+                (entry.get("lane"), entry.get("duration_seconds"))
+                for entry in lanes
+                if isinstance(entry, dict)
+            ] if lanes_is_list else []
+            duration_values_valid = bool(durations) and all(
+                isinstance(name, str)
+                and isinstance(duration, (int, float))
+                and not isinstance(duration, bool)
+                and duration >= 0
+                for name, duration in durations
+            )
+            slowest = (
+                max(durations, key=lambda item: (item[1], item[0]))
+                if duration_values_valid
+                else None
+            )
+            expected_subsumption = (
+                ["routine"] if validation_profile == "forensic" else []
+            )
+            repository_metadata = payload.get("repository_release_metadata")
+            repository_metadata_valid = (
+                repository_metadata is None
+                or (
+                    isinstance(repository_metadata, dict)
+                    and repository_metadata.get("ok") is True
+                    and repository_metadata.get("manifest_sha256")
+                    == candidate_manifest_sha256
+                )
+            )
+            receipt_shape_valid = (
+                payload.get("source_unchanged") is True
+                and payload.get("validation_profile") == validation_profile
+                and payload.get("same_manifest_subsumes_profiles")
+                == expected_subsumption
+                and isinstance(performance, dict)
+                and isinstance(performance.get("elapsed_seconds"), (int, float))
+                and not isinstance(performance.get("elapsed_seconds"), bool)
+                and performance.get("elapsed_seconds") >= 0
+                and duration_values_valid
+                and performance.get("recorded_lane_seconds")
+                == round(sum(item[1] for item in durations), 3)
+                and performance.get("slowest_lane")
+                == {
+                    "lane": slowest[0],
+                    "duration_seconds": round(slowest[1], 3),
+                }
+                and repository_metadata_valid
+            )
+        elif revision == "chalxius-release-validation-matrix-6":
             receipt_shape_valid = payload.get("source_unchanged") is True
         else:
             receipt_shape_valid = (

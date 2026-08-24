@@ -33,6 +33,39 @@ facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
 
+## 0.9.0 Frontier Active Fix difference
+
+The Main-facing frontier now preserves two distinct questions in one compact
+read: which durable Campaign research goals have been covered, and which
+operational lifecycle actions are currently pending. A `research_goal` target
+is an exact same-Campaign Research-root anchor. Existing immutable Research,
+COW, round, return, supervision, repair, and disposition bytes derive its live
+progress and next action; a missing route is displayed as `orphaned` rather
+than disappearing.
+
+An unscoped frontier may display the `ACTIVE` Campaign as an explicit hint, but
+does not use it to filter the global queue or plan a round. Main remains the
+semantic selector. The implementation adds no second checklist, persistent
+index, automatic dispatcher, scheduler, closure state, compatibility adapter,
+Candidate path, or Fact path.
+
+Campaign target synchronization now derives the Fact certificate from the
+exact selected proof-target predecessor closure. Pure `research_goal` updates
+therefore perform no admitted-Fact scan, while nonempty proof closures retain
+their deterministic topology and exact Fact-byte hashes.
+
+The same integration removes four release-operation ambiguities. Main selects
+one validation profile for one frozen manifest; a successful forensic profile
+explicitly subsumes routine evidence for unchanged bytes and reports total and
+slowest-lane cost. `release_validation.py --metadata-only` checks the factual
+repository-facing version, release name, archive, manifest, and checksum
+projection without authoring prose. `scripts/local_install.py` is the only
+unqualified installer path, with its implementation clearly private. Finally,
+installation, packaging, publication, rollback, and settlement remain eligible
+CHX observation surfaces, and the task ledger is closed before one final global
+repair binds terminal bytes. No cache, post-release ceremony, daemon, automatic
+issue generator, compatibility workflow, or mathematical authority is added.
+
 ## 0.8.12 Semantic Recovery difference
 
 The current frontier now follows exact canonical copy-on-write lineage rather

@@ -143,6 +143,34 @@
         "tamper": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_tampered_or_conflicting_intake_fails_before_research_write"
       }
     },
+    "feature.campaign_research_goal_frontier": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Main's ordinary frontier must expose durable Campaign Research goals and their exact current lifecycle actions beside the bounded workflow queue.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "activation_predicate": {
+        "predicate_id": "campaign_has_active_research_goal_target",
+        "domain": ["active_research_goal", "no_research_goal"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-campaign-goal-frontier-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "observable_effect": {
+        "effect_id": "campaign_goal_progress_visible_beside_workflow_queue",
+        "kind": "bounded_output",
+        "description": "The Main surface reports covered, open, in-flight, workflow, semantic-choice, or orphaned goal routes and exact next actions without selecting, dispatching, closing, or admitting them."
+      },
+      "probes": {
+        "positive": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_research_goal_tracks_progress_without_becoming_a_scheduler",
+        "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_cli_connects_campaign_scope_for_v5",
+        "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_cli_research_goal_requires_the_exact_campaign_bound_root"
+      }
+    },
     "feature.mathematical_target_policy": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
@@ -1059,7 +1087,7 @@
       "replacement_feature_id": "",
       "required": false,
       "summary": "Implicit selection through the historical ACTIVE Campaign pointer is retired.",
-      "boundary_reason": "Current goal intake and planning require exact objective or explicit Campaign identity and must never consume ACTIVE implicitly.",
+      "boundary_reason": "Current goal intake and scoped planning require an exact objective or explicit Campaign identity. An unscoped Main surface may display ACTIVE only as a nonfiltering active_hint with campaign_selection_effect=none.",
       "guard_symbol": "",
       "boundary_probe": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
     }

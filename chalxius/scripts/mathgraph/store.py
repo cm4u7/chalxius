@@ -2232,9 +2232,23 @@ class MathGraphStore:
             return targets
 
     def _target_certificate_payload(self, target_ids: list[str]) -> dict[str, Any]:
-        facts = self.facts()
+        # A target certificate is about the target closure, not the whole
+        # admitted graph.  Loading every Fact here made even an empty
+        # research-only Campaign projection scale with the entire project.
+        # Walk predecessors from the exact proof targets instead, so an empty
+        # target set performs no Fact reads and unrelated graph growth cannot
+        # slow this projection down.
+        facts: dict[str, Fact] = {}
+        pending = list(reversed(target_ids))
+        while pending:
+            fact_id = pending.pop()
+            if fact_id in facts:
+                continue
+            fact = self.get_fact(fact_id)
+            facts[fact_id] = fact
+            pending.extend(reversed(fact.predecessors))
         graph = DependencyGraph(facts)
-        closure = graph.closure(target_ids) if target_ids else set()
+        closure = set(facts)
         order = graph.topological_order(closure) if closure else []
         fact_sha256 = {
             fact_id: hashlib.sha256(

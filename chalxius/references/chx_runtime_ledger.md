@@ -271,6 +271,14 @@ cross-ledger global integrated route below and creates no tactical precursor.
 All repair layers remain `truth_effect=none` and have no
 Paper, Research, Candidate, Certification, Gateway, or Fact authority.
 
+Installation, release validation, packaging, publication, rollback, and CHX
+settlement are themselves eligible CHX observation surfaces. Successful
+completion does not erase a repeatable architecture-caused failure or measured
+avoidable cost encountered there. Main records such a mechanism in the current
+ledger while it remains open, or in one ordinary successor when it is discovered
+after close. This is retrospective judgment, not a mandatory post-install
+ceremony, automatic issue generator, release blocker, timer, or monitor.
+
 ## Gate public release disclosure
 
 Before packaging or publishing a Chalxius release, compare the exact private
@@ -349,6 +357,14 @@ python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" record-global-repair \
 python3 -B "$SKILL_ROOT/scripts/chx_ledger.py" verify-global-repair \
   --project-root "$PROJECT"
 ```
+
+For one integrated installation, the direct order is: finish validation and
+installation; reconcile every current finding; close and render the task
+ledger; then inventory, record, and verify one global repair against those
+terminal ledger bytes. A problem discovered during later publication belongs
+to a successor ledger. Do not record a supposedly final global repair against
+the still-open current ledger and then stale it by closing that ledger. This is
+an operating order, not a pre-close repair event, receipt gate, or new state.
 
 The revision-3 input names the exact candidate root, version, manifest SHA-256,
 full pre-repair inventory SHA-256, a `covered_issue_snapshot_sha256` binding

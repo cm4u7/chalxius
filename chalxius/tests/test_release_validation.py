@@ -111,6 +111,13 @@ class ReleaseValidationTests(unittest.TestCase):
             "tests.test_chx_0812_semantic_recovery",
             routine_by_name["changed_surface_tests"].command,
         )
+        for module in (
+            "tests.test_chx_090_frontier_active_fix",
+            "tests.test_v5_campaign_envelope",
+            "tests.test_local_install",
+            "tests.test_runtime_cutover",
+        ):
+            self.assertIn(module, routine_by_name["changed_surface_tests"].command)
         self.assertNotIn("mutant_registry_preflight", routine_by_name)
         self.assertNotIn("full_suite", routine_by_name)
 
@@ -127,8 +134,13 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_semantic_registry_is_bounded_without_removing_forensic_registry(self) -> None:
         semantic = aggressive_bug_audit._mutants_for_profile("semantic")
         full = aggressive_bug_audit._mutants_for_profile("full")
-        self.assertEqual(len(semantic), 21)
-        self.assertEqual(len(full), 139)
+        self.assertEqual(
+            {item.name for item in semantic},
+            aggressive_bug_audit.SEMANTIC_MUTANT_NAMES,
+        )
+        self.assertEqual(len(full), len(aggressive_bug_audit.MUTANTS))
+        self.assertLessEqual(len(semantic), 32)
+        self.assertGreater(len(full), 100)
         self.assertTrue({item.name for item in semantic} <= {item.name for item in full})
 
     def test_current_mutant_registry_preflight_is_cheap_read_only_diagnostic(self) -> None:
@@ -194,6 +206,8 @@ class ReleaseValidationTests(unittest.TestCase):
             manifest_sha256=manifest_sha256,
             results=results,
             source_unchanged=True,
+            validation_profile="routine",
+            elapsed_seconds=1.25,
         )
         self.assertFalse(report["ok"])
         self.assertEqual(
@@ -210,6 +224,10 @@ class ReleaseValidationTests(unittest.TestCase):
                 "schema_version",
                 "contract_revision",
                 "manifest_sha256",
+                "validation_profile",
+                "same_manifest_subsumes_profiles",
+                "performance_summary",
+                "repository_release_metadata",
                 "source_unchanged",
                 "lanes",
                 "truth_effect",
@@ -217,6 +235,126 @@ class ReleaseValidationTests(unittest.TestCase):
             },
         )
         self.assertTrue(results[-1]["skipped_due_to_prior_phase"])
+        self.assertEqual(report["validation_profile"], "routine")
+        self.assertEqual(report["same_manifest_subsumes_profiles"], [])
+        self.assertEqual(report["performance_summary"]["elapsed_seconds"], 1.25)
+
+    def test_forensic_profile_exposes_cost_and_same_manifest_subsumption(self) -> None:
+        manifest_sha256 = "b" * 64
+        lanes = release_validation._default_lanes(
+            release_validation.sys.executable,
+            forensic=True,
+        )
+        results = [
+            {
+                "lane": lane.name,
+                "phase": lane.phase,
+                "manifest_sha256": manifest_sha256,
+                "duration_seconds": float(index + 1),
+                "lane_unchanged": True,
+                "ok": True,
+            }
+            for index, lane in enumerate(lanes)
+        ]
+        report = release_validation._aggregate(
+            expected_lanes=lanes,
+            manifest_sha256=manifest_sha256,
+            results=results,
+            source_unchanged=True,
+            validation_profile="forensic",
+            elapsed_seconds=9.8764,
+        )
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["same_manifest_subsumes_profiles"], ["routine"])
+        self.assertEqual(report["performance_summary"]["elapsed_seconds"], 9.876)
+        self.assertEqual(
+            report["performance_summary"]["recorded_lane_seconds"],
+            sum(float(index + 1) for index in range(len(lanes))),
+        )
+        self.assertEqual(
+            report["performance_summary"]["slowest_lane"]["lane"],
+            lanes[-1].name,
+        )
+
+    def test_repository_metadata_projection_rejects_stale_public_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = Path(temporary).resolve()
+            candidate, _entries, manifest_sha256 = self._candidate(repository)
+            candidate.rename(repository / "chalxius")
+            candidate = repository / "chalxius"
+            (candidate / "VERSION").write_text("0.9.0\n", encoding="utf-8")
+            entries = sorted(
+                path.relative_to(candidate).as_posix()
+                for path in candidate.rglob("*")
+                if path.is_file() and path.name != "MANIFEST.sha256"
+            )
+            (candidate / "MANIFEST.sha256").write_text(
+                "".join(
+                    f"{hashlib.sha256((candidate / relative).read_bytes()).hexdigest()}  {relative}\n"
+                    for relative in entries
+                ),
+                encoding="utf-8",
+            )
+            manifest_sha256 = hashlib.sha256(
+                (candidate / "MANIFEST.sha256").read_bytes()
+            ).hexdigest()
+            archive_name = "chalxius-0.9.0-frontier-active-fix.tar.gz"
+            archive = repository / archive_name
+            archive.write_bytes(b"release bytes")
+            archive_sha256 = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checksum = f"{archive_sha256}  {archive_name}\n"
+            (repository / f"{archive_name}.sha256").write_text(
+                checksum,
+                encoding="utf-8",
+            )
+            (repository / "SHA256SUMS").write_text(checksum, encoding="utf-8")
+            (repository / "README.md").write_text(
+                f"[Download](/tag/v0.9.0)\n{archive_name}\n"
+                "## v0.9.0 — Frontier Active Fix\n",
+                encoding="utf-8",
+            )
+            (repository / "RELEASE.md").write_text(
+                f"# Chalxius v0.9.0 — Frontier Active Fix\n{archive_name}\n",
+                encoding="utf-8",
+            )
+            (repository / "VALIDATION.md").write_text(
+                f"# Validation — Chalxius v0.9.0\n{archive_name}\n",
+                encoding="utf-8",
+            )
+            release_lock = {
+                "version": "0.9.0",
+                "release_display_name": "Frontier Active Fix",
+                "public_distribution": {
+                    "archive_name": archive_name,
+                    "archive_sha256": archive_sha256,
+                    "archive_checksum_file_sha256": hashlib.sha256(
+                        checksum.encode("utf-8")
+                    ).hexdigest(),
+                    "manifest_sha256": manifest_sha256,
+                },
+            }
+            (repository / "RELEASE.lock.json").write_text(
+                json.dumps(release_lock),
+                encoding="utf-8",
+            )
+            projection = release_validation._repository_release_metadata(
+                repository_root=repository,
+                candidate_root=candidate,
+                expected_manifest_sha256=manifest_sha256,
+            )
+            self.assertTrue(projection["ok"])
+            self.assertEqual(projection["archive_sha256"], archive_sha256)
+            release_lock["version"] = "0.8.12"
+            (repository / "RELEASE.lock.json").write_text(
+                json.dumps(release_lock),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "candidate VERSION"):
+                release_validation._repository_release_metadata(
+                    repository_root=repository,
+                    candidate_root=candidate,
+                    expected_manifest_sha256=manifest_sha256,
+                )
 
     def test_lane_runner_suppresses_bytecode_and_rejects_any_lane_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

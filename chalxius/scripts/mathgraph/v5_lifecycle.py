@@ -47,6 +47,7 @@ from .computations import validate_computational_evidence
 from .decision_preflight import V5_FINDING_CLASSES, validate_decision_against_capsule
 from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
+from .frontier_actions import project_frontier_group_actions
 from .graph import DependencyGraph
 from .goal_intake import (
     build_goal_intake_research_binding,
@@ -593,6 +594,15 @@ class RoundInspectionContext:
     adverse_rules: dict[str, dict[str, Any]] | None = None
     campaign_statuses: dict[str, dict[str, Any]] = field(default_factory=dict)
     campaign_scopes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Main's goal-coverage view and ordinary workflow queue share this exact
+    # command-local projection.  It is neither persisted nor authoritative.
+    frontier_structural_state: tuple[Any, ...] | None = None
+    frontier_group_completions: dict[
+        str, tuple[str, str | None, int, str]
+    ] = field(default_factory=dict)
+    frontier_group_actions: dict[str, dict[str, Any]] = field(
+        default_factory=dict
+    )
     round_completed: dict[str, bool] = field(default_factory=dict)
     round_aborts: dict[str, dict[str, Any] | None] = field(default_factory=dict)
     round_statuses: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -6117,6 +6127,7 @@ class V5LifecycleManager:
             if target.get("role") not in {
                 "headline_proof",
                 "supporting_proof",
+                "research_goal",
                 "communication",
             }:
                 raise ValueError("V5 Campaign target role is invalid")
@@ -6377,7 +6388,10 @@ class V5LifecycleManager:
             route_staleness,
             workgroups,
             work_keys,
-        ) = self._frontier_structural_state(records)
+        ) = self._frontier_structural_state_for_inspection(
+            records,
+            _inspection_context,
+        )
         dependency_ids = sorted(
             {
                 fact_id
@@ -6485,22 +6499,32 @@ class V5LifecycleManager:
                 item["research_id"],
             )
         )
-        group_completion: dict[
-            str, tuple[str, str | None, int, str]
-        ] = {}
+        group_completion = _inspection_context.frontier_group_completions
+        group_actions = _inspection_context.frontier_group_actions
 
         def inspect_completion(work_key_batch: set[str]) -> None:
             pending_keys = work_key_batch.difference(group_completion)
             if not pending_keys:
                 return
-            group_completion.update(
-                self._frontier_group_completion(
+            completion_batch = self._frontier_group_completion(
+                workgroups=workgroups,
+                work_keys=pending_keys,
+                bases=bases,
+                dispositions=dispositions,
+                route_staleness=route_staleness,
+                _inspection_context=_inspection_context,
+            )
+            group_completion.update(completion_batch)
+            group_actions.update(
+                project_frontier_group_actions(
+                    self,
                     workgroups=workgroups,
                     work_keys=pending_keys,
                     bases=bases,
                     dispositions=dispositions,
                     route_staleness=route_staleness,
-                    _inspection_context=_inspection_context,
+                    group_completion=completion_batch,
+                    inspection=_inspection_context,
                 )
             )
 
@@ -6538,6 +6562,9 @@ class V5LifecycleManager:
             projection["work_completion_research_id"] = completion[1]
             projection["work_completion_member_count"] = completion[2]
             projection["work_completion_member_ids_sha256"] = completion[3]
+            projection.update(
+                group_actions[projection["work_key_sha256"]]
+            )
         if not _execution_records:
             return [self._compact_frontier_entry(item) for item in selected]
 
@@ -6564,6 +6591,19 @@ class V5LifecycleManager:
             "work_completion_research_id",
             "work_completion_member_count",
             "work_completion_member_ids_sha256",
+            "next_action",
+            "pending_reason",
+            "actionable_research_id",
+            "actionable_round_id",
+            "actionable_research_ids",
+            "actionable_research_count",
+            "actionable_research_ids_sha256",
+            "actionable_round_ids",
+            "actionable_round_count",
+            "actionable_round_ids_sha256",
+            "actionable_claim",
+            "actionable_claim_sha256",
+            "actionable_kind",
             "id",
         }
         for projection in selected:
@@ -6578,6 +6618,355 @@ class V5LifecycleManager:
             }
             fully_validated.append({**record, **preserved})
         return fully_validated
+
+    @staticmethod
+    def _frontier_action_class(next_action: str) -> str:
+        if next_action == "production":
+            return "research_development"
+        if next_action == "main_reconciliation":
+            return "semantic_choice"
+        if next_action == "none":
+            return "complete"
+        return "workflow_completion"
+
+    def campaign_goal_coverage(
+        self,
+        campaign_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, Any]]:
+        """Project nonworkflow Campaign goals onto their exact live routes.
+
+        A ``research_goal`` target is a durable semantic root.  This read-only
+        view follows exact Research workgroup/COW bytes to the current action;
+        it never edits the target, dispatches work, closes a goal, or affects
+        Candidate/Fact state.
+        """
+
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        campaign_id = validate_campaign_id(campaign_id)
+        status = inspection.campaign_statuses.get(campaign_id)
+        if status is None:
+            status = self.store.campaigns().status(campaign_id)
+            inspection.campaign_statuses[campaign_id] = status
+        targets = status.get("targets")
+        if not isinstance(targets, dict):
+            raise ValueError("Campaign goal targets must be an object")
+        goal_targets = [
+            (target_id, target)
+            for target_id, target in sorted(targets.items())
+            if isinstance(target, dict)
+            and target.get("status") == "active"
+            and target.get("role") == "research_goal"
+        ]
+        if not goal_targets:
+            return []
+
+        records = self.research_envelopes(
+            _inspection_context=inspection,
+        )
+        (
+            bases,
+            dispositions,
+            route_staleness,
+            workgroups,
+            work_keys,
+        ) = self._frontier_structural_state_for_inspection(
+            records,
+            inspection,
+        )
+        prepared: list[dict[str, Any]] = []
+        goal_work_keys: set[str] = set()
+        for target_id, target in goal_targets:
+            if target.get("subject_kind") != "research":
+                raise ValueError("Campaign research_goal subject kind is invalid")
+            root_id = validate_memory_id(target.get("subject_id"))
+            label = target.get("label")
+            if not isinstance(label, str) or not label.strip():
+                raise ValueError("Campaign research_goal label must be nonempty")
+            root = bases.get(root_id)
+            if root is None:
+                prepared.append(
+                    {
+                        "target_id": target_id,
+                        "label": label,
+                        "root_research_id": root_id,
+                        "coverage_status": "orphaned",
+                        "action_class": "semantic_choice",
+                        "next_action": "exact_research_search",
+                        "why_now": "research_goal_root_missing_or_nonexecutable",
+                        "actionable_research_id": None,
+                        "actionable_round_id": None,
+                        "actionable_research_ids": [],
+                        "root_claim": "",
+                        "_work_key_sha256": None,
+                    }
+                )
+                continue
+            metadata = root.get("metadata")
+            if (
+                not isinstance(metadata, dict)
+                or metadata.get("campaign_id") != campaign_id
+            ):
+                prepared.append(
+                    {
+                        "target_id": target_id,
+                        "label": label,
+                        "root_research_id": root_id,
+                        "coverage_status": "orphaned",
+                        "action_class": "semantic_choice",
+                        "next_action": "exact_research_search",
+                        "why_now": "research_goal_root_crosses_campaign_boundary",
+                        "actionable_research_id": None,
+                        "actionable_round_id": None,
+                        "actionable_research_ids": [],
+                        "root_claim": "",
+                        "_work_key_sha256": None,
+                    }
+                )
+                continue
+            work_key = work_keys[root_id]
+            goal_work_keys.add(work_key)
+            prepared.append(
+                {
+                    "target_id": target_id,
+                    "label": label,
+                    "root_research_id": root_id,
+                    "root_claim": root["claim"],
+                    "_work_key_sha256": work_key,
+                }
+            )
+
+        missing_completion = goal_work_keys.difference(
+            inspection.frontier_group_completions
+        )
+        if missing_completion:
+            inspection.frontier_group_completions.update(
+                self._frontier_group_completion(
+                    workgroups=workgroups,
+                    work_keys=missing_completion,
+                    bases=bases,
+                    dispositions=dispositions,
+                    route_staleness=route_staleness,
+                    _inspection_context=inspection,
+                )
+            )
+        missing_actions = goal_work_keys.difference(
+            inspection.frontier_group_actions
+        )
+        if missing_actions:
+            inspection.frontier_group_actions.update(
+                project_frontier_group_actions(
+                    self,
+                    workgroups=workgroups,
+                    work_keys=missing_actions,
+                    bases=bases,
+                    dispositions=dispositions,
+                    route_staleness=route_staleness,
+                    group_completion={
+                        work_key: inspection.frontier_group_completions[work_key]
+                        for work_key in missing_actions
+                    },
+                    inspection=inspection,
+                )
+            )
+
+        coverage: list[dict[str, Any]] = []
+        for item in prepared:
+            work_key = item["_work_key_sha256"]
+            if work_key is None:
+                coverage.append(item)
+                continue
+            action = inspection.frontier_group_actions[work_key]
+            completion = inspection.frontier_group_completions[work_key]
+            next_action = action["next_action"]
+            coverage_status = (
+                "covered"
+                if next_action == "none"
+                else "research_open"
+                if next_action == "production"
+                else "in_flight"
+                if next_action == "await_return"
+                else "needs_main_choice"
+                if next_action == "main_reconciliation"
+                else "workflow_pending"
+            )
+            root_claim = item["root_claim"]
+            coverage.append(
+                {
+                    **item,
+                    "root_claim": (
+                        root_claim
+                        if len(root_claim) <= 320
+                        else root_claim[:317] + "..."
+                    ),
+                    "coverage_status": coverage_status,
+                    "work_completion_status": completion[0],
+                    "action_class": self._frontier_action_class(next_action),
+                    "next_action": next_action,
+                    "why_now": action["pending_reason"],
+                    "actionable_research_id": action[
+                        "actionable_research_id"
+                    ],
+                    "actionable_round_id": action["actionable_round_id"],
+                    "actionable_research_ids": action[
+                        "actionable_research_ids"
+                    ][:4],
+                }
+            )
+        return coverage
+
+    def frontier_decision_surface(
+        self,
+        *,
+        limit: int = 10,
+        campaign_id: str | None = None,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        """Return Main's small goal-aware decision surface.
+
+        ``goal_coverage`` preserves semantic direction; ``workflow_queue``
+        shows bounded operational follow-up.  Neither list is a dispatcher or
+        a closure authority, and Main remains responsible for the exact choice.
+        """
+
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        goal_campaign_id = campaign_id
+        goal_context_source = "explicit_scope" if campaign_id is not None else "none"
+        if goal_campaign_id is None:
+            goal_campaign_id = self.store.campaigns().active()
+            if goal_campaign_id is not None:
+                goal_context_source = "active_hint"
+        goal_coverage = (
+            self.campaign_goal_coverage(
+                goal_campaign_id,
+                _inspection_context=inspection,
+            )
+            if goal_campaign_id is not None
+            else []
+        )
+        entries = self.frontier(
+            limit=limit,
+            campaign_id=campaign_id,
+            _inspection_context=inspection,
+        )
+        target_ids_by_work_key: dict[str, list[str]] = {}
+        for goal in goal_coverage:
+            work_key = goal.get("_work_key_sha256")
+            if isinstance(work_key, str):
+                target_ids_by_work_key.setdefault(work_key, []).append(
+                    goal["target_id"]
+                )
+
+        projected: list[dict[str, Any]] = []
+        for entry in entries:
+            next_action = entry["next_action"]
+            actionable_id = entry["actionable_research_id"]
+            actionable_claim = (
+                entry["actionable_claim"]
+                if actionable_id != entry["research_id"]
+                else ""
+            )
+            candidate_limit = 4 if next_action == "main_reconciliation" else 1
+            goal_target_ids = target_ids_by_work_key.get(
+                entry["work_key_sha256"], []
+            )
+            projected.append(
+                {
+                    "research_id": entry["research_id"],
+                    "claim": (
+                        entry["claim"]
+                        if len(entry["claim"]) <= 320
+                        else entry["claim"][:317] + "..."
+                    ),
+                    "campaign_id": entry["campaign_id"],
+                    "score": entry["score"],
+                    "readiness": entry["readiness"],
+                    "goal_relevance": "direct" if goal_target_ids else "none",
+                    "goal_target_ids": goal_target_ids,
+                    "action_class": self._frontier_action_class(next_action),
+                    "next_action": next_action,
+                    "why_now": entry["pending_reason"],
+                    "actionable_research_id": actionable_id,
+                    "actionable_round_id": entry["actionable_round_id"],
+                    "actionable_research_ids": entry[
+                        "actionable_research_ids"
+                    ][:candidate_limit],
+                    "actionable_research_count": entry[
+                        "actionable_research_count"
+                    ],
+                    "actionable_claim": (
+                        actionable_claim
+                        if len(actionable_claim) <= 256
+                        else actionable_claim[:253] + "..."
+                    ),
+                    "actionable_kind": entry["actionable_kind"],
+                    "workgroup_member_count": entry[
+                        "workgroup_member_count"
+                    ],
+                }
+            )
+        status = (
+            inspection.campaign_statuses[goal_campaign_id]
+            if goal_campaign_id is not None
+            else None
+        )
+        clean_coverage = [
+            {
+                key: value
+                for key, value in item.items()
+                if key != "_work_key_sha256"
+            }
+            for item in goal_coverage
+        ]
+        objective = status.get("objective") if isinstance(status, dict) else None
+        if isinstance(objective, str) and len(objective) > 640:
+            objective = objective[:637] + "..."
+        progress_counts: dict[str, int] = {}
+        for item in clean_coverage:
+            coverage_status = item["coverage_status"]
+            progress_counts[coverage_status] = (
+                progress_counts.get(coverage_status, 0) + 1
+            )
+        return {
+            "campaign_id": campaign_id,
+            "goal_campaign_id": goal_campaign_id,
+            "goal_context_source": goal_context_source,
+            "campaign_selection_effect": (
+                "exact_filter" if campaign_id is not None else "none"
+            ),
+            "objective": objective,
+            "goal_target_count": len(clean_coverage),
+            "goal_progress": {
+                "covered": progress_counts.get("covered", 0),
+                "research_open": progress_counts.get("research_open", 0),
+                "workflow_pending": progress_counts.get(
+                    "workflow_pending", 0
+                ),
+                "in_flight": progress_counts.get("in_flight", 0),
+                "needs_main_choice": progress_counts.get(
+                    "needs_main_choice", 0
+                ),
+                "orphaned": progress_counts.get("orphaned", 0),
+            },
+            "goal_coverage": clean_coverage,
+            "workflow_queue": projected,
+            "main_selection_policy": (
+                "Main compares exact goal coverage with the bounded workflow "
+                "queue and actively chooses one goal-serving action; no entry "
+                "dispatches or admits itself. An active_hint is visible context "
+                "only and must be ignored or revised when it conflicts with the "
+                "current user objective."
+            ),
+        }
 
     @staticmethod
     def _compact_frontier_entry(projection: dict[str, Any]) -> dict[str, Any]:
@@ -6685,6 +7074,33 @@ class V5LifecycleManager:
             "work_completion_member_ids_sha256": projection[
                 "work_completion_member_ids_sha256"
             ],
+            "next_action": projection["next_action"],
+            "pending_reason": projection["pending_reason"],
+            "actionable_research_id": projection[
+                "actionable_research_id"
+            ],
+            "actionable_round_id": projection["actionable_round_id"],
+            "actionable_research_ids": projection[
+                "actionable_research_ids"
+            ][:8],
+            "actionable_research_count": projection[
+                "actionable_research_count"
+            ],
+            "actionable_research_ids_sha256": projection[
+                "actionable_research_ids_sha256"
+            ],
+            "actionable_round_ids": projection["actionable_round_ids"][:8],
+            "actionable_round_count": projection["actionable_round_count"],
+            "actionable_round_ids_sha256": projection[
+                "actionable_round_ids_sha256"
+            ],
+            "actionable_claim": text_preview(
+                projection["actionable_claim"], 512
+            ),
+            "actionable_claim_sha256": projection[
+                "actionable_claim_sha256"
+            ],
+            "actionable_kind": projection["actionable_kind"],
             "created_at": projection["created_at"],
         }
 
@@ -6807,6 +7223,25 @@ class V5LifecycleManager:
                 key=lambda item: (bases[item]["created_at"], item)
             )
         return bases, dispositions, route_staleness, workgroups, work_keys
+
+    def _frontier_structural_state_for_inspection(
+        self,
+        records: list[dict[str, Any]],
+        inspection: RoundInspectionContext,
+    ) -> tuple[
+        dict[str, dict[str, Any]],
+        dict[str, dict[str, Any]],
+        dict[str, list[str]],
+        dict[str, list[str]],
+        dict[str, str],
+    ]:
+        """Reuse one structural projection inside a single Main command."""
+
+        cached = inspection.frontier_structural_state
+        if cached is None:
+            cached = self._frontier_structural_state(records)
+            inspection.frontier_structural_state = cached
+        return cached  # type: ignore[return-value]
 
     def _frontier_actionable_representatives(
         self,
@@ -7127,6 +7562,7 @@ class V5LifecycleManager:
                 sha256_json(sorted(completed_members)),
             )
         return projected
+
 
     def _validated_completed_research_obligation_statuses(
         self,

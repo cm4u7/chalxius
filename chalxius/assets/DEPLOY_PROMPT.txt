@@ -1,8 +1,15 @@
-Chalxius 0.8.12 — Semantic Recovery
+Chalxius 0.9.0 — Frontier Active Fix
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
+
+Default `mgraph frontier` is Main's compact decision surface: active Campaign
+goals remain visible semantic hints while the unscoped workflow queue remains
+global. `research_goal` targets name exact same-Campaign Research roots; their
+coverage and next actions are derived from current graph and round bytes. They
+do not dispatch, schedule, close, or admit anything, and Main still makes the
+actual research choice.
 
 Artifact silence, one quiet wait, elapsed time, context compaction, bounded
 startup reading, and deep reasoning do not prove worker loss. Main checks fresh

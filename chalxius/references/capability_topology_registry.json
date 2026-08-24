@@ -982,7 +982,7 @@
       ]
     },
     "cap.release_assurance": {
-      "summary": "Read-only architecture and executable normal-flow behavior gates, isolated baseline suite and mutation audit over one manifest identity.",
+      "summary": "Read-only architecture and executable normal-flow behavior gates, one selected isolated validation profile per manifest, visible cost summary, and an explicit factual repository-release metadata projection.",
       "status": "release_validation",
       "stateful": false,
       "state_roots": [],
@@ -1229,6 +1229,14 @@
       "path": "scripts/mathgraph/protocol.py",
       "roles": [
         "domain_service"
+      ]
+    },
+    "mathgraph.frontier_actions": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/frontier_actions.py",
+      "roles": [
+        "domain_service",
+        "presentation"
       ]
     },
     "mathgraph.v5_assurance": {
@@ -1529,9 +1537,9 @@
         "state_owner"
       ]
     },
-    "mathgraph.local_install": {
+    "mathgraph._local_install": {
       "capability_id": "cap.runtime_continuity",
-      "path": "scripts/mathgraph/local_install.py",
+      "path": "scripts/mathgraph/_local_install.py",
       "roles": [
         "domain_service"
       ]
@@ -1693,7 +1701,7 @@
       "standalone_entry_symbols": [
         "release_validation.main"
       ],
-      "standalone_reason": "Top-level isolated release-validation matrix orchestrator."
+      "standalone_reason": "Top-level isolated release-validation matrix orchestrator and explicit repository-metadata checker."
     },
     "self_test": {
       "capability_id": "cap.release_assurance",

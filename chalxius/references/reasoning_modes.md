@@ -59,6 +59,10 @@ truth effect; explicit low-scored Research remains schedulable in every mode.
 An explicitly named Campaign may filter that frontier to exact stored
 associations and freeze nontruth planning context, but never changes the score,
 mode, assurance contract, or Fact gate; no Campaign flag means global selection.
+Active `research_goal` targets may still appear in an unscoped Main decision
+surface as an `active_hint`: this is nontruth goal/progress context beside the
+global workflow queue, not an implicit Campaign filter. Main compares the
+derived goal coverage with the queue and makes the exact selection itself.
 
 New V5 refutation task cards receive the fixed low-cost attack vocabulary plus
 matching Main-approved, mechanism-level rules in every reasoning profile. That

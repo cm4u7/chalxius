@@ -539,13 +539,16 @@ through `plan-supervision-round` for the explicit second subround.
 
 ## Round procedure
 
-1. Add Research, inspect any active Campaign, and explicitly name every
-   load-bearing Research id selected for this work. For a frontier stated as a
-   specific named object, class, theorem, or exact identifier, first make one
-   bounded exact Research search over stable subject names and identifiers;
-   review matching completed production, repair successors, and applicable
-   supervision before freezing the card, while leaving relevance and final
-   selection to Main.
+1. Add Research, inspect the goal-aware frontier, and explicitly name every
+   load-bearing Research id selected for this work. Active Campaign
+   `research_goal` targets are durable semantic roots: Main reads their derived
+   covered/open/in-flight/workflow/semantic-choice/orphaned projection before
+   choosing from the workflow queue. An `active_hint` is presentation only and
+   never silently scopes planning. For a frontier stated as a specific named
+   object, class, theorem, or exact identifier, first make one bounded exact
+   Research search over stable subject names and identifiers; review matching
+   completed production, repair successors, and applicable supervision before
+   freezing the card, while leaving relevance and final selection to Main.
 2. Run `plan-round`; all assignments in that round receive the same frozen
    snapshot. The returned assignments and cards are a plan, not dispatch.
 3. Launch each context-free worker through the host with only its generated

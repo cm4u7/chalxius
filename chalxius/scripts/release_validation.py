@@ -21,7 +21,10 @@ from typing import Any
 
 sys.dont_write_bytecode = True
 
-from mathgraph.release_contracts import RELEASE_VALIDATION_MATRIX_REVISION
+from mathgraph.release_contracts import (
+    RELEASE_VALIDATION_MATRIX_REVISION,
+    REPOSITORY_RELEASE_METADATA_REVISION,
+)
 
 
 CONTRACT_REVISION = RELEASE_VALIDATION_MATRIX_REVISION
@@ -210,6 +213,10 @@ def _default_lanes(python: str, *, forensic: bool = False) -> tuple[Lane, ...]:
                     "tests.test_host_entrypoint_nonmutation",
                     "tests.test_architecture_reconnaissance",
                     "tests.test_chx_0812_semantic_recovery",
+                    "tests.test_chx_090_frontier_active_fix",
+                    "tests.test_v5_campaign_envelope",
+                    "tests.test_local_install",
+                    "tests.test_runtime_cutover",
                 ),
                 phase=1,
             ),
@@ -330,6 +337,9 @@ def _aggregate(
     manifest_sha256: str,
     results: list[dict[str, Any]],
     source_unchanged: bool,
+    validation_profile: str,
+    elapsed_seconds: float,
+    repository_release_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     expected_names = sorted(lane.name for lane in expected_lanes)
     observed_names = sorted(str(result.get("lane", "")) for result in results)
@@ -340,18 +350,179 @@ def _aggregate(
         result.get("manifest_sha256") == manifest_sha256 for result in results
     )
     lanes_ok = complete and all(result.get("ok") is True for result in results)
+    ok = source_unchanged and one_identity and lanes_ok
+    duration_rows = [
+        (str(result.get("lane", "")), float(result.get("duration_seconds", 0.0)))
+        for result in results
+    ]
+    slowest = max(duration_rows, key=lambda item: (item[1], item[0]), default=None)
     return {
         "schema_version": 1,
         "contract_revision": CONTRACT_REVISION,
         "manifest_sha256": manifest_sha256,
+        "validation_profile": validation_profile,
+        "same_manifest_subsumes_profiles": (
+            ["routine"] if validation_profile == "forensic" and ok else []
+        ),
+        "performance_summary": {
+            "elapsed_seconds": round(elapsed_seconds, 3),
+            "recorded_lane_seconds": round(
+                sum(duration for _, duration in duration_rows), 3
+            ),
+            "slowest_lane": (
+                {
+                    "lane": slowest[0],
+                    "duration_seconds": round(slowest[1], 3),
+                }
+                if slowest is not None
+                else None
+            ),
+        },
+        "repository_release_metadata": repository_release_metadata,
         "source_unchanged": source_unchanged,
         "lanes": sorted(results, key=lambda item: str(item.get("lane", ""))),
         "truth_effect": "none",
-        "ok": (
-            source_unchanged
-            and one_identity
-            and lanes_ok
-        ),
+        "ok": ok,
+    }
+
+
+def _regular_file_bytes(path: Path, *, label: str) -> bytes:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"{label} must be one regular file")
+    return path.read_bytes()
+
+
+def _repository_release_metadata(
+    *,
+    repository_root: Path,
+    candidate_root: Path,
+    expected_manifest_sha256: str,
+) -> dict[str, Any]:
+    """Validate the small factual surface outside the packaged skill tree.
+
+    Public prose remains agent-authored.  This projection checks only exact
+    release identity, archive identity, manifest identity, and the checksum
+    line that must agree across the repository-facing files.
+    """
+
+    repository = repository_root.expanduser().resolve(strict=True)
+    if repository.is_symlink() or not repository.is_dir():
+        raise ValueError("repository root must be one canonical directory")
+    if candidate_root != (repository / "chalxius").resolve(strict=True):
+        raise ValueError("repository metadata root does not own the candidate")
+
+    lock_path = repository / "RELEASE.lock.json"
+    try:
+        release_lock = json.loads(
+            _regular_file_bytes(lock_path, label="release lock").decode("utf-8")
+        )
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("release lock is unreadable") from error
+    if not isinstance(release_lock, dict):
+        raise ValueError("release lock must contain one JSON object")
+
+    version = _regular_file_bytes(
+        candidate_root / "VERSION", label="candidate VERSION"
+    ).decode("utf-8").strip()
+    release_name = release_lock.get("release_display_name")
+    distribution = release_lock.get("public_distribution")
+    if release_lock.get("version") != version:
+        raise ValueError("release lock version differs from candidate VERSION")
+    if not isinstance(release_name, str) or not release_name.strip():
+        raise ValueError("release display name must be nonempty")
+    if not isinstance(distribution, dict):
+        raise ValueError("release public_distribution must be an object")
+
+    archive_name = distribution.get("archive_name")
+    if (
+        not isinstance(archive_name, str)
+        or not archive_name.endswith(".tar.gz")
+        or PurePosixPath(archive_name).name != archive_name
+    ):
+        raise ValueError("release archive name is invalid")
+    archive_path = repository / archive_name
+    archive_bytes = _regular_file_bytes(archive_path, label="release archive")
+    archive_sha256 = _sha256_bytes(archive_bytes)
+    manifest_sha256 = _sha256_bytes(
+        _regular_file_bytes(
+            candidate_root / "MANIFEST.sha256", label="candidate manifest"
+        )
+    )
+    if manifest_sha256 != expected_manifest_sha256:
+        raise ValueError("candidate manifest differs from the approved identity")
+    if distribution.get("manifest_sha256") != manifest_sha256:
+        raise ValueError("release lock manifest identity is stale")
+    if distribution.get("archive_sha256") != archive_sha256:
+        raise ValueError("release lock archive identity is stale")
+
+    checksum_name = archive_name + ".sha256"
+    checksum_path = repository / checksum_name
+    checksum_bytes = _regular_file_bytes(
+        checksum_path, label="release archive checksum"
+    )
+    checksum_line = f"{archive_sha256}  {archive_name}\n".encode("utf-8")
+    if checksum_bytes != checksum_line:
+        raise ValueError("archive checksum sidecar is stale")
+    declared_checksum_sha256 = distribution.get("archive_checksum_file_sha256")
+    if (
+        declared_checksum_sha256 is not None
+        and declared_checksum_sha256 != _sha256_bytes(checksum_bytes)
+    ):
+        raise ValueError("release lock checksum-file identity is stale")
+
+    sums = _regular_file_bytes(
+        repository / "SHA256SUMS", label="repository SHA256SUMS"
+    ).decode("utf-8").splitlines()
+    archive_rows = [row for row in sums if row.endswith(f"  {archive_name}")]
+    if archive_rows != [checksum_line.decode("utf-8").rstrip("\n")]:
+        raise ValueError("repository SHA256SUMS archive row is stale or ambiguous")
+
+    readme = _regular_file_bytes(
+        repository / "README.md", label="repository README"
+    ).decode("utf-8")
+    release = _regular_file_bytes(
+        repository / "RELEASE.md", label="repository release notes"
+    ).decode("utf-8")
+    validation = _regular_file_bytes(
+        repository / "VALIDATION.md", label="repository validation report"
+    ).decode("utf-8")
+    required_markers = {
+        "README.md": (f"/tag/v{version}", archive_name, f"## v{version} — {release_name}"),
+        "RELEASE.md": (f"# Chalxius v{version} — {release_name}", archive_name),
+        "VALIDATION.md": (f"# Validation — Chalxius v{version}", archive_name),
+    }
+    texts = {
+        "README.md": readme,
+        "RELEASE.md": release,
+        "VALIDATION.md": validation,
+    }
+    for name, markers in required_markers.items():
+        missing = [marker for marker in markers if marker not in texts[name]]
+        if missing:
+            raise ValueError(f"{name} release identity is stale: {missing!r}")
+
+    return {
+        "contract_revision": REPOSITORY_RELEASE_METADATA_REVISION,
+        "version": version,
+        "release_display_name": release_name,
+        "archive_name": archive_name,
+        "archive_sha256": archive_sha256,
+        "archive_checksum_file_sha256": _sha256_bytes(checksum_bytes),
+        "manifest_sha256": manifest_sha256,
+        "checksum_line": checksum_line.decode("utf-8").rstrip("\n"),
+        "checked_files": [
+            "README.md",
+            "RELEASE.lock.json",
+            "RELEASE.md",
+            "SHA256SUMS",
+            "VALIDATION.md",
+            archive_name,
+            checksum_name,
+            "chalxius/MANIFEST.sha256",
+            "chalxius/VERSION",
+        ],
+        "truth_effect": "none",
+        "ok": True,
     }
 
 
@@ -376,6 +547,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--receipt", type=Path)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--timeout-seconds", type=int, default=1200)
+    parser.add_argument(
+        "--repository-root",
+        type=Path,
+        help=(
+            "Optional repository root for the exact publication-metadata "
+            "projection. It must own the candidate at ROOT/chalxius."
+        ),
+    )
+    parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="check repository release metadata without running validation lanes",
+    )
     parser.add_argument(
         "--forensic",
         action="store_true",
@@ -404,6 +588,33 @@ def main(argv: list[str] | None = None) -> int:
     entries, manifest_sha256 = _manifest_entries(candidate)
     if manifest_sha256 != expected_manifest:
         raise ValueError("candidate manifest identity does not match approved identity")
+    if args.metadata_only and args.repository_root is None:
+        raise ValueError("--metadata-only requires --repository-root")
+    repository_release_metadata = (
+        _repository_release_metadata(
+            repository_root=args.repository_root,
+            candidate_root=candidate,
+            expected_manifest_sha256=manifest_sha256,
+        )
+        if args.repository_root is not None
+        else None
+    )
+    if args.metadata_only:
+        report = {
+            "schema_version": 1,
+            "contract_revision": CONTRACT_REVISION,
+            "manifest_sha256": manifest_sha256,
+            "repository_release_metadata": repository_release_metadata,
+            "truth_effect": "none",
+            "ok": True,
+        }
+        payload = (
+            json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        ).encode("utf-8")
+        if receipt is not None:
+            _atomic_write(receipt, payload)
+        sys.stdout.buffer.write(payload)
+        return 0
     source_before = _snapshot(candidate)
 
     lock_dir = Path(tempfile.gettempdir()) / "chalxius-release-validation-locks"
@@ -417,6 +628,7 @@ def main(argv: list[str] | None = None) -> int:
         except BlockingIOError as error:
             raise RuntimeError("another validation matrix owns this candidate") from error
         lanes = _default_lanes(args.python, forensic=args.forensic)
+        matrix_started = time.monotonic()
         with tempfile.TemporaryDirectory(prefix="chalxius-release-validation-") as temporary:
             workspace = Path(temporary)
             lane_roots = _isolated_lane_roots(
@@ -479,6 +691,9 @@ def main(argv: list[str] | None = None) -> int:
             manifest_sha256=manifest_sha256,
             results=results,
             source_unchanged=source_unchanged,
+            validation_profile="forensic" if args.forensic else "routine",
+            elapsed_seconds=time.monotonic() - matrix_started,
+            repository_release_metadata=repository_release_metadata,
         )
         payload = (
             json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
