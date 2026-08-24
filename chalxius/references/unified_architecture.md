@@ -1,5 +1,13 @@
 # Chalxius Back to the Future / Evidence candidate architecture
 
+> **0.8.12 semantic-recovery override.** Frontier completion follows only a
+> unique exact canonical COW terminal and projects success back to the original
+> workgroup; terminal invalidation or ambiguous lineage reopens it. Main owns
+> cross-round/COW search and final dispatch, uses visible capacity only for real
+> independent work, and treats client reconnect as transport recovery followed
+> by ordinary agent/return/ingestion/round inspection. No scheduler, quota,
+> compatibility layer, reconnect gate, or truth gate is added.
+
 > **0.8.11 agent-judgment-integrity override.** Main does not infer worker loss
 > from artifact silence, one quiet poll, elapsed time, context compaction,
 > bounded startup reading, or deep reasoning. It checks fresh ordinary host
@@ -169,6 +177,11 @@ completed supervision before freezing the card and explicitly chooses which
 matches belong in `related_research_ids`. The search does not automatically
 expand or choose the frontier, invoke fuzzy matching or a whole-project audit,
 or create a persistent index, receipt, lifecycle state, scheduler, or gate.
+Main owns this cross-round and copy-on-write search, completion projection,
+duplicate exclusion, and final dispatch decision; scouts may only return bounded
+evidence. After dispatch or receipt, Main checks visible free slots and exact
+current Research boundaries and keeps at least two workers active when a real,
+independent, nonduplicative high-value target exists, without filler or quota.
 
 `plan-round`, `plan-supervision-round`, `plan-computation-execution`, and
 `plan-candidate-adverse` create immutable assignments/cards only. None is a
@@ -431,6 +444,11 @@ long duration is a diagnostic signal relative to apparent complexity or a
 recent comparable operation. This performance instruction is visible to Main
 only; it creates no worker timer, background daemon, watcher, heartbeat,
 numeric threshold, persistent state, or Candidate/admission gate.
+
+A client `Reconnecting...` banner is transport state, not worker or round state.
+After reconnect Main inspects agents, canonical return bytes, ingestion, and
+round state before resuming. It never duplicates or reclaims solely from the
+banner and introduces no reconnect gate or liveness scheduler.
 
 One prospective normal-flow allocation seam is exact and domain-general.
 `workers` counts constructive production primaries, and the production

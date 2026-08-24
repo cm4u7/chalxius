@@ -3,9 +3,14 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mathgraph.contracts import sha256_bytes
-from mathgraph.local_install import default_global_paths, perform_local_install
+from mathgraph.local_install import (
+    default_focused_test_runner,
+    default_global_paths,
+    perform_local_install,
+)
 
 
 class LocalInstallTests(unittest.TestCase):
@@ -47,6 +52,18 @@ class LocalInstallTests(unittest.TestCase):
             Path("/private/example-home/.codex/skill-rollbacks/chalxius-current"),
         )
         self.assertFalse(paths["rollback_root"].is_relative_to(paths["installed_root"].parent))
+
+    def test_focused_install_regressions_include_semantic_recovery(self) -> None:
+        with patch("mathgraph.local_install.subprocess.run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stderr = ""
+            run.return_value.stdout = "OK"
+            default_focused_test_runner(Path("/private/example-candidate"))
+        command = run.call_args.args[0]
+        self.assertIn(
+            "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
+            command,
+        )
 
     def test_install_archives_prior_and_rotates_one_direct_rollback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

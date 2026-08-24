@@ -1,5 +1,12 @@
 # Multi-agent adapter
 
+> **0.8.12 current-V5 semantic recovery.** Main owns exact cross-round/COW
+> search and dispatch, uses visible slots only for genuine independent targets,
+> and treats client reconnect as transport state followed by agent, canonical-
+> return, ingestion, and round inspection. Exact terminal invalidation reopens
+> its original frontier workgroup. No filler quota, scheduler, monitor,
+> reconnect gate, or compatibility layer is added.
+
 > **Unified supersession.** Live allocation follows the frozen task-card
 > `execution_profile`. The adapter supplies mechanics; it does not independently
 > require a panel or pulse. Deep requires all applicable features, auto follows
@@ -63,6 +70,12 @@ round. Related assignments stay in one component, `integration` waits for that
 whole component, and no component is derived from return timing. These
 supervisors attack the frozen receipts; they do not negotiate live repairs. Any
 defect creates a later copy-on-write production cycle.
+
+Main, not a scout, owns cross-round and copy-on-write search, completion and
+duplicate projection, and the final dispatch decision. After dispatch or
+receipt, inspect visible free slots and exact current boundaries; keep at least
+two workers active when a genuinely independent, nonduplicative high-value
+target exists. Do not invent filler work or a slot quota.
 
 This required Research sequencing does not call Pulse. The optional
 execution-profile Pulse below remains a separate compatibility mechanism for a
@@ -444,6 +457,12 @@ the overall state is `ready`, `in_progress`, or `complete`. Manifests, prompts, 
 are durable and hash-bound; after ingestion they are immutable evidence, not editable working files.
 A replacement main agent can resume by reading `round.json`, checking `round-status`, and ingesting
 only designated returns.
+
+A client `Reconnecting...` display is transport state, not worker or round
+state. When the client returns, inspect live agents, canonical return bytes,
+ingestion, and round state and report completions missed during the interruption.
+Do not duplicate or reclaim work solely because of reconnect; no reconnect gate
+or liveness scheduler is introduced.
 
 After recovery or any mutation, run `audit`. `graph_errors` concern mathematical DAG integrity;
 `workflow_errors` concern submission/packet/review/event/round/receipt provenance. Either makes

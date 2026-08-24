@@ -6847,6 +6847,205 @@ class V5LifecycleManager:
                 break
         return representatives
 
+    @staticmethod
+    def _frontier_product_has_complete_obligations(
+        *,
+        product: dict[str, Any],
+    ) -> bool:
+        metadata = product.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return False
+        dispositions = metadata.get("obligation_dispositions")
+        return (
+            isinstance(dispositions, list)
+            and bool(dispositions)
+            and all(
+                isinstance(item, dict)
+                and item.get("status") in {"complete", "not_applicable"}
+                for item in dispositions
+            )
+        )
+
+    @classmethod
+    def _frontier_completion_product_is_safe(
+        cls,
+        *,
+        product: dict[str, Any],
+        dispositions: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+    ) -> bool:
+        """Accept only a current product whose own obligations are complete."""
+
+        metadata = product.get("metadata", {})
+        if not isinstance(metadata, dict) or not (
+            cls._frontier_product_has_complete_obligations(product=product)
+        ):
+            return False
+        effective_status = product["status"]
+        disposition = dispositions.get(product["research_id"])
+        if disposition is not None:
+            effective_status = disposition["metadata"]["disposition_status"]
+        return not (
+            product["kind"] in {"counterexample", "obstacle", "dead_end"}
+            or effective_status
+            in {"challenged", "blocked", "dead_end", "refuted_by_fact"}
+            or product["research_id"] in route_staleness
+            or metadata.get("attack_learning") is not None
+            or bool(metadata.get("route_invalidations", []))
+            or metadata.get("worker_outcome")
+            in {"counterexample", "dead_end"}
+        )
+
+    @classmethod
+    def _frontier_repair_continuity_is_exact(
+        cls,
+        *,
+        repair: dict[str, Any],
+    ) -> bool:
+        """Recognize the existing hash-bound repair objective projection.
+
+        Research replay already validates the complete record.  This small
+        command-local predicate keeps the frontier projector honest when it is
+        exercised directly: a COW edge must carry one canonical repair spec,
+        and the obligations/stop conditions exposed on the Research record
+        must be the exact projection of that spec.  Semantic conservation is
+        still Main's judgment; this check does not claim to prove it.
+        """
+
+        metadata = repair.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return False
+        spec = metadata.get("repair_spec")
+        try:
+            normalized = cls._normalize_exact_repair_spec(spec)
+        except (TypeError, ValueError):
+            return False
+        return (
+            normalized == spec
+            and metadata.get("repair_spec_sha256")
+            == sha256_json(normalized)
+            and metadata.get("obligations") == normalized["obligations"]
+            and metadata.get("stop_conditions")
+            == normalized["stop_conditions"]
+        )
+
+    @classmethod
+    def _frontier_cow_terminal_members(
+        cls,
+        *,
+        seed_members: list[str],
+        bases: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+    ) -> dict[str, str | None]:
+        """Resolve exact, unique COW terminals for original workgroup members.
+
+        The edge is deliberately narrower than general Research provenance:
+        one validated-shape production product, exact exhaustion of its active
+        invalidators, and one hash-bound canonical repair declaration.
+        Ambiguous branches and cycles remain pending rather than letting an
+        older success mask current work.
+        """
+
+        production_parent: dict[str, str] = {}
+        for product_id, product in bases.items():
+            metadata = product.get("metadata", {})
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            related = product.get("related_research_ids")
+            if (
+                not isinstance(provenance, dict)
+                or provenance.get("adverse_assignment") is not False
+                or provenance.get("work_mode") == "refute"
+                or not isinstance(related, list)
+                or len(related) != 1
+                or related[0] not in bases
+                or not cls._frontier_product_has_complete_obligations(
+                    product=product
+                )
+            ):
+                continue
+            production_parent[product_id] = related[0]
+
+        repair_children: dict[str, set[str]] = {}
+        for repair_id, repair in bases.items():
+            if (
+                repair.get("kind") != "repair"
+                or repair.get("relation") != "repairs"
+                or not cls._frontier_repair_continuity_is_exact(repair=repair)
+            ):
+                continue
+            metadata = repair.get("metadata", {})
+            if not isinstance(metadata, dict):
+                continue
+            product_id = metadata.get("repair_of_research_id")
+            trigger_id = metadata.get("trigger_research_id")
+            parent_id = production_parent.get(product_id)
+            if (
+                parent_id is None
+                or not isinstance(trigger_id, str)
+                or trigger_id not in bases
+                or repair.get("source") != f"research:{product_id}"
+            ):
+                continue
+            related = repair.get("related_research_ids")
+            if (
+                not isinstance(related, list)
+                or related != sorted({product_id, trigger_id})
+            ):
+                continue
+            trigger_metadata = bases[trigger_id].get("metadata", {})
+            if (
+                not isinstance(trigger_metadata, dict)
+                or product_id
+                not in trigger_metadata.get("route_invalidations", [])
+                or route_staleness.get(product_id) != [trigger_id]
+            ):
+                continue
+            parent = bases[parent_id]
+            product = bases[product_id]
+            parent_metadata = parent.get("metadata", {})
+            product_metadata = product.get("metadata", {})
+            if not isinstance(parent_metadata, dict) or not isinstance(
+                product_metadata, dict
+            ):
+                continue
+            if not (
+                parent_metadata.get("campaign_id")
+                == product_metadata.get("campaign_id")
+                == metadata.get("campaign_id")
+                and parent.get("dependencies")
+                == product.get("dependencies")
+                == repair.get("dependencies")
+                and parent.get("created_at", "")
+                < product.get("created_at", "")
+                < repair.get("created_at", "")
+                and bases[trigger_id].get("created_at", "")
+                < repair.get("created_at", "")
+            ):
+                continue
+            repair_children.setdefault(parent_id, set()).add(repair_id)
+
+        terminals: dict[str, str | None] = {}
+        for seed in seed_members:
+            current = seed
+            seen: set[str] = set()
+            while current in bases and current not in seen:
+                seen.add(current)
+                children = sorted(repair_children.get(current, set()))
+                if not children:
+                    terminals[seed] = current
+                    break
+                if len(children) != 1:
+                    terminals[seed] = None
+                    break
+                current = children[0]
+            else:
+                terminals[seed] = None
+        return terminals
+
     def _frontier_group_completion(
         self,
         *,
@@ -6859,10 +7058,19 @@ class V5LifecycleManager:
     ) -> dict[str, tuple[str, str | None, int, str]]:
         """Project closure for exact groups requested by this command."""
 
-        candidate_members = {
-            member
+        terminal_members = {
+            work_key: self._frontier_cow_terminal_members(
+                seed_members=workgroups.get(work_key, []),
+                bases=bases,
+                route_staleness=route_staleness,
+            )
             for work_key in work_keys
-            for member in workgroups.get(work_key, [])
+        }
+        candidate_members = {
+            terminal
+            for work_key in work_keys
+            for terminal in terminal_members[work_key].values()
+            if terminal is not None
         }
         completion_statuses = (
             self._validated_completed_research_obligation_statuses(
@@ -6875,17 +7083,19 @@ class V5LifecycleManager:
         )
         projected: dict[str, tuple[str, str | None, int, str]] = {}
         for work_key in sorted(work_keys):
+            terminals = terminal_members[work_key]
             completed_members = [
                 member
-                for member in workgroups.get(work_key, [])
+                for member, terminal in terminals.items()
                 if (
-                    member in completion_statuses
-                    and member not in route_staleness
-                    and dispositions.get(member, {})
+                    terminal is not None
+                    and terminal in completion_statuses
+                    and terminal not in route_staleness
+                    and dispositions.get(terminal, {})
                     .get("metadata", {})
                     .get(
                         "disposition_status",
-                        bases[member]["status"],
+                        bases[terminal]["status"],
                     )
                     in (
                         (ACTIVE_MEMORY_STATUSES - {"challenged"})
@@ -6904,7 +7114,8 @@ class V5LifecycleManager:
             completion_status = (
                 "completed_supervision"
                 if any(
-                    completion_statuses[item] == "completed_supervision"
+                    completion_statuses[terminals[item]]
+                    == "completed_supervision"
                     for item in completed_members
                 )
                 else "completed_production" if completed_members else "pending"
@@ -7023,49 +7234,20 @@ class V5LifecycleManager:
             latest_dispositions = _latest_dispositions
             route_staleness = _route_staleness
 
-        def safe_supervision_product(product: dict[str, Any]) -> bool:
-            metadata = product.get("metadata", {})
-            if not isinstance(metadata, dict):
-                return False
-            dispositions = metadata.get("obligation_dispositions")
-            if (
-                not isinstance(dispositions, list)
-                or not dispositions
-                or any(
-                    not isinstance(item, dict)
-                    or item.get("status") not in {"complete", "not_applicable"}
-                    for item in dispositions
+        completion_candidates: dict[str, dict[str, str]] = {}
+        product_ids_by_research: dict[str, set[str]] = {}
+        incomplete_or_unsafe: set[str] = set()
+        round_research_ids: dict[tuple[str, str], set[str]] = {}
+        for research_id in candidate_ids:
+            for round_binding in (
+                _inspection_context.completion_obligation_rounds.get(
+                    research_id, []
                 )
             ):
-                return False
-            effective_status = product["status"]
-            disposition = latest_dispositions.get(product["research_id"])
-            if disposition is not None:
-                effective_status = disposition["metadata"]["disposition_status"]
-            if (
-                product["kind"]
-                in {"counterexample", "obstacle", "dead_end"}
-                or effective_status in {"challenged", "blocked", "dead_end", "refuted_by_fact"}
-                or product["research_id"] in route_staleness
-                or metadata.get("attack_learning") is not None
-                or bool(metadata.get("route_invalidations", []))
-                or metadata.get("worker_outcome")
-                in {"counterexample", "dead_end"}
-            ):
-                return False
-            return True
-
-        candidate_rounds = sorted(
-            {
-                round_binding
-                for research_id in candidate_ids
-                for round_binding in (
-                    _inspection_context.completion_obligation_rounds.get(
-                        research_id, []
-                    )
+                round_research_ids.setdefault(round_binding, set()).add(
+                    research_id
                 )
-            }
-        )
+        candidate_rounds = sorted(round_research_ids)
         for round_id, subround in candidate_rounds:
             try:
                 validated_dir, manifest = self._round_manifest(
@@ -7073,6 +7255,9 @@ class V5LifecycleManager:
                     _inspection_context=_inspection_context,
                 )
             except (KeyError, OSError, ValueError):
+                incomplete_or_unsafe.update(
+                    round_research_ids[(round_id, subround)]
+                )
                 continue
             if _inspection_context.round_aborts.get(round_id) is not None:
                 continue
@@ -7091,12 +7276,26 @@ class V5LifecycleManager:
                         _inspection_context=_inspection_context,
                     )
                 except (KeyError, OSError, ValueError):
+                    incomplete_or_unsafe.add(research_id)
                     continue
                 if product.get("related_research_ids") != [research_id]:
+                    incomplete_or_unsafe.add(research_id)
+                    continue
+                product_id = product["research_id"]
+                product_ids_by_research.setdefault(research_id, set()).add(
+                    product_id
+                )
+                if not self._frontier_completion_product_is_safe(
+                    product=product,
+                    dispositions=latest_dispositions,
+                    route_staleness=route_staleness,
+                ):
+                    incomplete_or_unsafe.add(research_id)
                     continue
                 if subround == "supervision":
-                    if safe_supervision_product(product):
-                        completed[research_id] = "completed_supervision"
+                    completion_candidates.setdefault(research_id, {})[
+                        product_id
+                    ] = "completed_supervision"
                     continue
                 production_round_id = manifest["round_id"]
                 if (
@@ -7134,6 +7333,7 @@ class V5LifecycleManager:
                         )
                     )
                 except (KeyError, OSError, ValueError):
+                    incomplete_or_unsafe.add(research_id)
                     continue
                 try:
                     supervision_results = [
@@ -7144,12 +7344,28 @@ class V5LifecycleManager:
                         for result_id in sorted(supervision_result_ids)
                     ]
                 except (KeyError, OSError, ValueError):
+                    incomplete_or_unsafe.add(research_id)
                     continue
                 if supervision_results and all(
-                    safe_supervision_product(item)
+                    self._frontier_completion_product_is_safe(
+                        product=item,
+                        dispositions=latest_dispositions,
+                        route_staleness=route_staleness,
+                    )
                     for item in supervision_results
                 ):
-                    completed[research_id] = "completed_production"
+                    completion_candidates.setdefault(research_id, {})[
+                        product_id
+                    ] = "completed_production"
+                else:
+                    incomplete_or_unsafe.add(research_id)
+        for research_id, product_ids in product_ids_by_research.items():
+            if research_id in incomplete_or_unsafe or len(product_ids) != 1:
+                continue
+            product_id = next(iter(product_ids))
+            status = completion_candidates.get(research_id, {}).get(product_id)
+            if status is not None:
+                completed[research_id] = status
         return completed
 
     def _explicit_research_projections(

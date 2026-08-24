@@ -90,6 +90,14 @@ supervision while unrelated production continues. Historical Pulse records
 remain readable and retain their original status, audit, dispatch, close, void,
 and abort operations.
 
+Main owns exact cross-round and copy-on-write search, completion projection,
+duplicate exclusion, and final dispatch. A unique current safely supervised COW
+terminal closes its original workgroup; terminal invalidation or ambiguous
+lineage reopens it. Main uses visible free slots only for genuine independent
+high-value boundaries. Client reconnect is transport state followed by ordinary
+agent, canonical-return, ingestion, and round inspection—not a worker failure or
+new liveness mechanism.
+
 Adverse work uses the Research plane. Candidate preparation binds the exact
 selected canonical claim and all applicable completed supervision, then a
 distinct fresh adverse worker reviews it and Main records the disposition.

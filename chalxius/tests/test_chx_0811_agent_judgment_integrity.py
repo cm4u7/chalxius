@@ -13,11 +13,11 @@ def _read(relative: str) -> str:
 
 
 class AgentJudgmentIntegrity0811Tests(unittest.TestCase):
-    def test_release_identity_and_semantic_contract_are_current(self) -> None:
-        self.assertEqual(_read("VERSION").strip(), "0.8.11")
+    def test_historical_release_contract_remains_declared(self) -> None:
+        traceability = _read("references/v5_release_traceability.md")
+        self.assertIn("Candidate version: `0.8.11`", traceability)
+        self.assertIn("Agent Judgment Integrity", traceability)
         lock = json.loads(_read("INHERITANCE.lock.json"))
-        self.assertEqual(lock["version"], "0.8.11")
-        self.assertEqual(lock["release_codename"], "Agent Judgment Integrity")
         surface = lock["v5_research_cycle_surface"]
         self.assertIn("artifact_silence_alone_is_not_failure", surface["main_worker_recovery_policy"])
         self.assertIn("fresh_whole_successor", surface["cow_supervision_review_policy"])

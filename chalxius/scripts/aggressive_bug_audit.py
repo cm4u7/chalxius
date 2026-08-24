@@ -74,7 +74,78 @@ CHX004_TEST_MODULE = (
 RESEARCH_TWO_SUBROUND_TEST_MODULE = (
     "tests.test_research_two_subround.ResearchTwoSubroundTests"
 )
+CHX_0812_TEST_MODULE = (
+    "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests"
+)
 MUTANTS = (
+    Mutant(
+        name="frontier_cow_branch_ambiguity_bypassed",
+        old=(
+            "                if len(children) != 1:\n"
+            "                    terminals[seed] = None\n"
+            "                    break\n"
+        ),
+        new=(
+            "                if False and len(children) != 1:  # mutant\n"
+            "                    terminals[seed] = None\n"
+            "                    break\n"
+        ),
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_malformed_or_ambiguous_repair_lineage_never_closes_predecessor"
+        ),
+    ),
+    Mutant(
+        name="frontier_cow_invalidator_exhaustion_weakened",
+        old=(
+            "                or route_staleness.get(product_id) != [trigger_id]\n"
+        ),
+        new=(
+            "                or trigger_id not in route_staleness.get(product_id, [])"
+            "  # mutant\n"
+        ),
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_repair_requires_exact_active_invalidator_coverage"
+        ),
+    ),
+    Mutant(
+        name="frontier_cow_repair_continuity_bypassed",
+        old=(
+            "                or not cls._frontier_repair_continuity_is_exact(repair=repair)\n"
+        ),
+        new="                or False  # mutant: ignore repair continuity\n",
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_repair_requires_hash_bound_objective_projection"
+        ),
+    ),
+    Mutant(
+        name="frontier_cow_original_projection_bypassed",
+        old=(
+            "            completed_members = [\n"
+            "                member\n"
+            "                for member, terminal in terminals.items()\n"
+        ),
+        new=(
+            "            completed_members = [\n"
+            "                terminal  # mutant: expose successor as work identity\n"
+            "                for member, terminal in terminals.items()\n"
+        ),
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_exact_multihop_cow_completion_projects_to_original_workgroup"
+        ),
+    ),
+    Mutant(
+        name="frontier_cow_terminal_staleness_bypassed",
+        old='            or product["research_id"] in route_staleness\n',
+        new="            or False  # mutant: accept invalidated terminal product\n",
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_terminal_product_invalidation_and_incomplete_obligations_reopen"
+        ),
+    ),
     Mutant(
         name="cow_supervision_defect_allowlist_restored",
         old=(
@@ -2162,6 +2233,11 @@ SEMANTIC_MUTANT_NAMES = frozenset(
         "paper_research_receipt_content_address_recomputation_bypassed",
         "paper_research_stable_identity_semantic_collision_accepted",
         "cow_supervision_defect_allowlist_restored",
+        "frontier_cow_branch_ambiguity_bypassed",
+        "frontier_cow_invalidator_exhaustion_weakened",
+        "frontier_cow_original_projection_bypassed",
+        "frontier_cow_repair_continuity_bypassed",
+        "frontier_cow_terminal_staleness_bypassed",
     }
 )
 

@@ -7,6 +7,16 @@ operations remain valid when graph identity, hashes, dependencies, provenance,
 workflow stage, and owner boundaries are interpretable. The historical rows
 record what older releases did; they are not current graph-operation gates.
 
+The 0.8.12 Semantic Recovery overlay makes frontier completion follow one exact
+canonical COW chain from a plan through its obligation-complete production
+product and explicit invalidator to a unique current repair terminal. Terminal
+invalidation or ambiguous lineage reopens the original workgroup. Main owns
+cross-round search and final dispatch, uses free slots only for real independent
+targets, and treats client reconnect as transport recovery followed by ordinary
+agent/return/ingestion/round inspection. No compatibility adapter, persistent
+projection, filler quota, scheduler, monitor, receipt, reconnect gate, or truth
+path is introduced.
+
 The 0.8.8 Direct Graph Operations overlay treats an admitted Fact and a frozen
 primary source as direct graph capabilities. Ordinary Research validates only
 the exact admitted Fact premises it names through their immutable local

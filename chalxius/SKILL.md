@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.8.11 — Agent Judgment Integrity
+# Chalxius 0.8.12 — Semantic Recovery
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -70,16 +70,11 @@ ordinary Research validates only the exact admitted Fact nodes it consumes,
 and a card-authorized exact `primary` artifact may be used without a returned
 copy while toy checks and bridges remain return-bound.
 
-The 0.8.11 repair keeps orchestration in Main's judgment: planning creates cards; Main launches workers, confirms starts, and recovers only on positive failure evidence.
-Artifact silence alone is not failure; context compaction, bounded startup reading, and deep reasoning are valid no-artifact intervals. Before interrupting or
-reassigning, Main checks fresh ordinary host status, messages, tool errors, and round bytes. Recovery requires an explicit disconnect/error or sustained total
-nonresponse corroborated by more than artifact silence, with no timer, heartbeat, watcher, receipt, recovery state, or gate.
-A copy-on-write successor is a new complete product. Prior defects and repair obligations are mandatory but non-exhaustive attack seeds. Within the exact
-authorized product and assigned scope, its supervisor freshly reviews the whole successor and conserved claims for new, inherited, repair-induced, and cross-
-component defects. PHX constrains ceremony, never mathematical or source scrutiny.
-The 0.8.10 repair makes Main run one bounded exact Research search over stable names/identifiers before freezing a named frontier, review completed production,
-repair, and supervision, and choose `related_research_ids`; it adds no automatic selection/expansion, fuzzy match, whole-project audit, index, receipt, state,
-scheduler, or gate.
+The 0.8.11 repair keeps orchestration in Main's judgment: planning creates cards; Main launches workers, confirms starts, and recovers only on positive failure evidence. Artifact silence alone is not failure; context compaction, bounded startup reading, and deep reasoning are valid no-artifact intervals. Before interrupting or reassigning, Main checks fresh ordinary host status, messages, tool errors, and round bytes. Recovery requires an explicit disconnect/error or sustained total nonresponse corroborated by more than artifact silence, with no timer, heartbeat, watcher, receipt, recovery state, or gate.
+A copy-on-write successor is a new complete product. Prior defects and repair obligations are mandatory but non-exhaustive attack seeds. Within the exact authorized product and assigned scope, its supervisor freshly reviews the whole successor and conserved claims for new, inherited, repair-induced, and cross-component defects. PHX constrains ceremony, never mathematical or source scrutiny.
+Main owns cross-round and copy-on-write search, completion projection, duplicate exclusion, and final `DISPATCH`/`NO-DISPATCH`; Scouts may collect bounded evidence only. After dispatch or receipt, Main checks visible free slots and exact current Research boundaries; when a nonduplicative, logically independent high-value target exists, keep at least two workers active. This is opportunity use, not filler work or a slot quota.
+A client `Reconnecting...` banner is transport state, not worker or round state. After transport returns, Main inspects agents, canonical return bytes, ingestion, and round state, reports any missed completion, and resumes without duplicate dispatch or reclaim solely because of reconnect. This creates no reconnect gate or liveness scheduler.
+The 0.8.10 repair makes Main run one bounded exact Research search over stable names/identifiers before freezing a named frontier, review completed production, repair, and supervision, and choose `related_research_ids`; it adds no automatic selection/expansion, fuzzy match, whole-project audit, index, receipt, state, scheduler, or gate.
 The 0.8.7 repair makes Main notice elapsed time already visible through ordinary
 host interaction. Unexpected duration relative to apparent complexity or a
 recent comparable operation diagnoses repeated validation, broad rescans, or
@@ -328,7 +323,8 @@ repair caches implicitly.
 3. Main names load-bearing Research IDs. For a named object/class/theorem,
    first run the exact search above, review completed work, and choose
    `related_research_ids`. Production never plans refute; exact IDs do not
-   rebuild the global frontier; Main launches and confirms every planned worker.
+   rebuild the global frontier; Main launches and confirms every planned worker,
+   then uses genuinely independent current boundaries when visible capacity exists.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
    continues. Use at most three failure-informed supervisors: `proof_logic`,

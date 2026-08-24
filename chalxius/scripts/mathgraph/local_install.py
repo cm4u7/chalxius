@@ -144,6 +144,7 @@ def default_focused_test_runner(root: Path) -> None:
             "unittest",
             "test_local_install.LocalInstallTests",
             "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
+            "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
                 "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"
