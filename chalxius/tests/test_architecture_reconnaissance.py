@@ -13,6 +13,7 @@ from mathgraph.release_contracts import (
     ARCHITECTURE_RECONNAISSANCE_REVISION,
     CAPABILITY_TOPOLOGY_REGISTRY_REVISION,
     RELEASE_VALIDATION_MATRIX_REVISION,
+    REPOSITORY_RELEASE_METADATA_REVISION,
     validate_release_audit_revision_bindings,
 )
 
@@ -56,6 +57,9 @@ class ArchitectureReconnaissanceTests(unittest.TestCase):
                     "coordinator_contract_revision": (
                         RELEASE_VALIDATION_MATRIX_REVISION
                     ),
+                    "repository_release_metadata_revision": (
+                        REPOSITORY_RELEASE_METADATA_REVISION
+                    ),
                 }
             }
             registry = {
@@ -68,6 +72,10 @@ class ArchitectureReconnaissanceTests(unittest.TestCase):
                 ("architecture_reconnaissance_revision", "stale-recon"),
                 ("capability_registry_revision", "stale-registry-lock"),
                 ("coordinator_contract_revision", "stale-coordinator"),
+                (
+                    "repository_release_metadata_revision",
+                    "stale-repository-metadata",
+                ),
             )
             for key, value in mutations:
                 with self.subTest(key=key):

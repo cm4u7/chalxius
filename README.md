@@ -1,69 +1,81 @@
 # Chalxius
 
-**Persistent research memory for Codex.**
+**Persistent research memory and an active frontier for Codex.**
 
 [Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v0.8.12](https://github.com/cm4u7/chalxius/releases/tag/v0.8.12) ·
+[Download v0.9.0](https://github.com/cm4u7/chalxius/releases/tag/v0.9.0) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
 
-Chalxius turns long-running mathematical, philosophical, and paper-centered
-work into a durable graph. Exact sources, hypotheses, attempts, computations,
-objections, and dependencies survive across sessions without being flattened
-into one increasingly fragile chat history.
+Chalxius keeps long mathematical, philosophical, and paper-centered projects
+in a durable graph. Sources, conjectures, attempts, computations, objections,
+dependencies, and failed routes survive across sessions without being
+flattened into one fragile chat history.
+
+Its ordinary frontier is a small decision surface for Main: it identifies what
+has already been produced, what is waiting for return or ingestion, what needs
+supervision or repair, and where semantic ambiguity still requires Main's
+judgment. It does not automatically choose research direction or promote
+mathematics to truth.
 
 [![Open the anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
 
-*A 175-node anonymized research topology. Click the image to explore it.*
+*An anonymized research topology. Click the image to explore it.*
 
-## What it gives you
+## Start here
 
-- **Continuity:** the next session starts from the graph that actually exists,
-  not from a prose reconstruction of the last conversation.
-- **Active research:** Main explicitly selects the next load-bearing open node.
-  For a named object or theorem it first runs one bounded exact Research search,
-  then binds proof, literature, counterexample, and computation work to the
-  chosen target and dependencies.
-- **A clean truth boundary:** unfinished, disputed, and failed work remains
-  useful Research. Nothing becomes a reusable Fact automatically.
-- **A shareable Reader:** export a deterministic offline map with search,
-  MathJax, filters, complete-path expansion, and draggable cards—without
-  writing back to the graph.
-
-## Use it
-
-There is no special prompt language:
+Ask Codex directly:
 
 ```text
-Use $chalxius to continue this project. Inspect the current graph, choose the
-most load-bearing open Research target, and keep every unproved bridge
-explicitly conditional.
+Use $chalxius to continue this project. Read the current Campaign goal and
+compact frontier, choose the most load-bearing open Research target, and keep
+every unproved bridge explicitly conditional.
 ```
 
-`auto` is the default. Ask for `fast` for one narrow, inexpensive work unit or
-`deep` for broader source, route, and computation exploration. The mode changes
-research effort, never the Fact standard.
+`auto` is the default research mode. `fast` narrows the next work unit; `deep`
+permits broader source, route, and computation exploration. Mode changes never
+lower the Fact standard.
 
-## The trust model
+Main's working loop is deliberately simple:
+
+1. read the user's objective and the active Campaign goal;
+2. inspect the compact, stage-aware frontier;
+3. search exact Research identities when the semantic choice is not already
+   clear;
+4. actively select and dispatch the next useful unit;
+5. preserve returns, invalidations, and unresolved bridges in the graph.
+
+Campaign `research_goal` targets remember non-procedural research objectives.
+They coordinate with the workflow queue through derived coverage and next
+actions, but they are not tasks, proof targets, automatic dispatch rules, or a
+second truth path.
+
+## Truth boundary
 
 ```text
-Research  →  Candidate Release  →  Certification Decision  →  Fact
+Research → Candidate Release → Certification Decision → Gateway admission → Fact
 ```
 
-Research may be incomplete or wrong. A reusable Fact must freeze the exact
-claim, dependencies, sources, and adverse work; receive fresh independent
-review; and be admitted by the Gateway. Confidence, polished prose, a review
-receipt, or a successful computation cannot create a second truth path.
+Research may be incomplete, disputed, or wrong and still be useful. A reusable
+Fact must freeze the exact claim, dependencies, sources, and adverse work;
+receive fresh independent review; and pass Gateway admission. Confidence,
+polished prose, a worker receipt, or a successful computation cannot bypass
+that path.
 
 ## Install
 
-Download the archive and checksum from the
-[v0.8.12 release](https://github.com/cm4u7/chalxius/releases/tag/v0.8.12), then:
+Download these assets from the
+[v0.9.0 release](https://github.com/cm4u7/chalxius/releases/tag/v0.9.0):
+
+- `chalxius-0.9.0-frontier-active-fix.tar.gz`
+- `chalxius-0.9.0-frontier-active-fix.tar.gz.sha256`
+
+Then verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-0.8.12-semantic-recovery.tar.gz.sha256
-tar -xzf chalxius-0.8.12-semantic-recovery.tar.gz
+shasum -a 256 -c chalxius-0.9.0-frontier-active-fix.tar.gz.sha256
+tar -xzf chalxius-0.9.0-frontier-active-fix.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -71,12 +83,12 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/local_install.py
 ```
 
 The installer validates the candidate, archives the previous runtime, swaps
-atomically, and verifies the installed copy. It does not read or modify any
-research project. See [portable deployment](chalxius/references/portable_deployment.md)
-for rollback and non-default layouts.
+atomically, and verifies the installed copy. It does not inspect or mutate a
+research project. See
+[portable deployment](chalxius/references/portable_deployment.md) for rollback
+and non-default layouts.
 
-<details>
-<summary><strong>CLI and automation</strong></summary>
+## CLI
 
 `mgraph` is a shell executable, not a Python file:
 
@@ -85,41 +97,40 @@ MGRAPH=/absolute/path/to/chalxius/scripts/mgraph
 PROJECT=/absolute/path/to/project
 
 "$MGRAPH" --root "$PROJECT" --role main status
-"$MGRAPH" --root "$PROJECT" --role main frontier
+"$MGRAPH" --root "$PROJECT" --role main frontier --limit 5
+"$MGRAPH" --root "$PROJECT" --role main frontier --limit 5 --diagnostic
 ```
 
-Run `scripts/mgraph --help` for the complete interface.
+The default frontier is compact. `--diagnostic` adds bounded forensic detail;
+it is for investigation, not ordinary context consumption. Run
+`scripts/mgraph --help` for the complete interface.
 
-</details>
+## v0.9.0 — Frontier Active Fix
 
-## Explore
+Version 0.9.0 makes the frontier lifecycle-aware and connects exact Campaign
+goals to current Research coverage. On a large live project, Main selected a
+real load-bearing repair boundary after two of three goals were already
+covered. The same exercise exposed and fixed a whole-graph target-certificate
+scan: an idempotent research-goal replay fell from about 294.5 seconds to about
+3 seconds without adding a cache, daemon, scheduler, compatibility layer, or
+new gate.
+
+The release also leaves one unmistakable public installer, makes release
+performance visible, checks repository-facing release identity, and treats
+installation or publication defects as ordinary CHX observation surfaces.
+Mathematical and Fact authority are unchanged. See [RELEASE.md](RELEASE.md)
+and [VALIDATION.md](VALIDATION.md).
+
+## Explore and extend
 
 - [Anonymized research topology](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
 - [Philosophy source-and-audit workflow](https://cm4u7.github.io/chalxius/cases/philosophy.html)
 - [Guarded proof graph](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)
+- [Skill contract](chalxius/SKILL.md)
+- [Worker return contract](chalxius/references/v5_worker_return_contract.md)
+- [Fact admission contract](chalxius/references/admission_contract.md)
 
-The examples demonstrate graph structure and workflow; they do not claim that
-the displayed mathematics or interpretation has been admitted as Fact.
-
-## v0.8.12 — Semantic Recovery
-
-This release makes exact copy-on-write completion visible at the original
-frontier node and reopens it if the current terminal result is invalidated or
-the lineage is ambiguous. Main owns cross-round search and final dispatch,
-uses real independent work when slots are visible, and reconstructs state after
-client reconnect without duplicating or reclaiming work from the banner alone.
-No monitor, quota, scheduler, compatibility layer, new lifecycle state, or
-truth gate is added. Mathematical and Fact-authority boundaries are unchanged. See
-[RELEASE.md](RELEASE.md) and [VALIDATION.md](VALIDATION.md).
-
-## Documentation
-
-[Use cases](USE_CASES.md) ·
-[Architecture](ARCHITECTURE.md) ·
-[Skill contract](chalxius/SKILL.md) ·
-[Worker return contract](chalxius/references/v5_worker_return_contract.md) ·
-[Fact admission contract](chalxius/references/admission_contract.md)
-
-Software validation establishes package behavior, not a mathematical theorem.
-Licensed under [Apache-2.0](LICENSE). See
+Examples demonstrate workflow and graph structure; they do not declare the
+displayed mathematics admitted. Software validation establishes package
+behavior, not a theorem. Licensed under [Apache-2.0](LICENSE); see
 [acknowledgements](ACKNOWLEDGEMENTS.md) for design lineage and credits.

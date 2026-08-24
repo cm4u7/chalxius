@@ -963,6 +963,14 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--no-collapse-repairs", action="store_true")
     p.add_argument("--history", action="store_true")
     p.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help=(
+            "print the bounded forensic frontier instead of Main's small "
+            "default decision surface"
+        ),
+    )
+    p.add_argument(
         "--brave-future",
         action="store_true",
         help="use the explicitly enabled V5 BF-1/L4 advisory projection",
@@ -1259,7 +1267,14 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
 
     p = sub.add_parser("campaign-target-add")
     p.add_argument("campaign_id")
-    p.add_argument("--input", required=True)
+    p.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "JSON target; research_goal targets name one exact Research root "
+            "already bound to this Campaign and have no dispatch or truth effect"
+        ),
+    )
     p.add_argument("--actor", required=True)
 
     p = sub.add_parser("campaign-target-archive")
@@ -2178,6 +2193,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "frontier":
             if store.workflow_evidence_version() == 5:
                 if args.brave_future:
+                    if args.diagnostic:
+                        raise ValueError(
+                            "--diagnostic is for the ordinary V5 frontier"
+                        )
                     if not args.campaign:
                         raise ValueError(
                             "Brave Future frontier requires an explicit --campaign"
@@ -2207,16 +2226,24 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     if args.view is not None:
                         raise ValueError("--view requires --brave-future")
-                    _print_json(
-                        store.v5_lifecycle().frontier(
+                    lifecycle = store.v5_lifecycle()
+                    if args.diagnostic or args.history:
+                        projection = lifecycle.frontier(
                             limit=args.limit,
                             include_history=args.history,
                             campaign_id=args.campaign,
                         )
-                    )
+                    else:
+                        projection = lifecycle.frontier_decision_surface(
+                            limit=args.limit,
+                            campaign_id=args.campaign,
+                        )
+                    _print_json(projection)
             else:
                 if args.brave_future or args.view is not None:
                     raise ValueError("Brave Future frontier requires a V5 project")
+                if args.diagnostic:
+                    raise ValueError("--diagnostic frontier requires a V5 project")
                 _print_json(
                     store.frontier(
                         limit=args.limit,
@@ -2694,13 +2721,28 @@ def main(argv: list[str] | None = None) -> int:
                 _print_json(store.campaigns().status(campaign_id))
         elif args.command == "campaign-target-add":
             campaigns = store.campaigns()
+            target_payload = _json_file(args.input)
+
+            def exact_campaign_research_exists(research_id: str) -> bool:
+                try:
+                    record = store.v5_lifecycle()._research_record(research_id)
+                except (KeyError, OSError, ValueError):
+                    return False
+                metadata = record.get("metadata")
+                return (
+                    record.get("kind") != "disposition"
+                    and isinstance(metadata, dict)
+                    and metadata.get("campaign_id") == args.campaign_id
+                )
+
             target_id = campaigns.target_add(
                 args.campaign_id,
-                _json_file(args.input),
+                target_payload,
                 actor=args.actor,
                 fact_exists=lambda fact_id: (
                     fact_id in set(store.fact_ids())
                 ),
+                research_exists=exact_campaign_research_exists,
             )
             if campaigns.active() == args.campaign_id:
                 store.sync_active_campaign_targets(

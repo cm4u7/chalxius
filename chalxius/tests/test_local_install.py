@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mathgraph.contracts import sha256_bytes
-from mathgraph.local_install import (
+from mathgraph._local_install import (
     default_focused_test_runner,
     default_global_paths,
     perform_local_install,
@@ -53,8 +53,18 @@ class LocalInstallTests(unittest.TestCase):
         )
         self.assertFalse(paths["rollback_root"].is_relative_to(paths["installed_root"].parent))
 
+    def test_only_public_installer_path_has_the_unqualified_name(self) -> None:
+        skill_root = Path(__file__).resolve().parents[1]
+        self.assertTrue((skill_root / "scripts" / "local_install.py").is_file())
+        self.assertTrue(
+            (skill_root / "scripts" / "mathgraph" / "_local_install.py").is_file()
+        )
+        self.assertFalse(
+            (skill_root / "scripts" / "mathgraph" / "local_install.py").exists()
+        )
+
     def test_focused_install_regressions_include_semantic_recovery(self) -> None:
-        with patch("mathgraph.local_install.subprocess.run") as run:
+        with patch("mathgraph._local_install.subprocess.run") as run:
             run.return_value.returncode = 0
             run.return_value.stderr = ""
             run.return_value.stdout = "OK"

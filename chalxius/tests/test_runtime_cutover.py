@@ -263,7 +263,7 @@ class RuntimeCutoverTests(unittest.TestCase):
                             "phase_order": [1, 2, 3, 4],
                         }
                     )
-                if revision.endswith("-6"):
+                if revision.endswith(("-6", "-7")):
                     payload.update(
                         {
                             "source_unchanged": True,
@@ -277,11 +277,40 @@ class RuntimeCutoverTests(unittest.TestCase):
                                         else None
                                     ),
                                     "manifest_sha256": manifest_sha256,
+                                    "duration_seconds": float(index + 1),
                                     "ok": True,
                                     "lane_unchanged": True,
                                 }
-                                for name, phase in lanes
+                                for index, (name, phase) in enumerate(lanes)
                             ],
+                        }
+                    )
+                if revision.endswith("-7"):
+                    durations = [
+                        (name, float(index + 1))
+                        for index, (name, _phase) in enumerate(lanes)
+                    ]
+                    slowest = max(durations, key=lambda item: (item[1], item[0]))
+                    forensic = any(name == "full_suite" for name, _ in lanes)
+                    payload.update(
+                        {
+                            "validation_profile": (
+                                "forensic" if forensic else "routine"
+                            ),
+                            "same_manifest_subsumes_profiles": (
+                                ["routine"] if forensic else []
+                            ),
+                            "performance_summary": {
+                                "elapsed_seconds": 8.5,
+                                "recorded_lane_seconds": round(
+                                    sum(duration for _, duration in durations), 3
+                                ),
+                                "slowest_lane": {
+                                    "lane": slowest[0],
+                                    "duration_seconds": slowest[1],
+                                },
+                            },
+                            "repository_release_metadata": None,
                         }
                     )
                 digest = self._write_json(path, payload)
@@ -376,6 +405,31 @@ class RuntimeCutoverTests(unittest.TestCase):
                     matrix4,
                     candidate_manifest_sha256=manifest_sha256,
                     candidate_skill_version="0.8.0",
+                )
+
+            matrix7 = evidence(
+                "chalxius-release-validation-matrix-7",
+                (
+                    ("self_test", 1),
+                    ("changed_surface_tests", 1),
+                    ("aggressive_bug_audit", 2),
+                ),
+            )
+            self.assertEqual(
+                len(
+                    _validate_release_matrix_evidence(
+                        matrix7,
+                        candidate_manifest_sha256=manifest_sha256,
+                        candidate_skill_version="0.9.0",
+                    )
+                ),
+                1,
+            )
+            with self.assertRaisesRegex(ValueError, "release-validation evidence"):
+                _validate_release_matrix_evidence(
+                    matrix6,
+                    candidate_manifest_sha256=manifest_sha256,
+                    candidate_skill_version="0.9.0",
                 )
 
     def test_round_bindings_preserve_absent_legacy_field_but_reject_mixed_round(self) -> None:

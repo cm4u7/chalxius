@@ -10,7 +10,7 @@ import sys
 
 sys.dont_write_bytecode = True
 
-from mathgraph.local_install import default_global_paths, perform_local_install
+from mathgraph._local_install import default_global_paths, perform_local_install
 
 
 def _parser() -> argparse.ArgumentParser:

@@ -365,13 +365,14 @@ def main() -> int:
         skill_root / "scripts" / "paper_library.py",
         skill_root / "scripts" / "archive_runtime.py",
         skill_root / "scripts" / "local_install.py",
+        skill_root / "scripts" / "release_validation.py",
         skill_root / "scripts" / "runtime_cutover.py",
         skill_root / "scripts" / "runtime_cutover_project_validation.py",
         skill_root / "scripts" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_pipeline.py",
         skill_root / "scripts" / "mathgraph" / "paper_research_reliability.py",
         skill_root / "scripts" / "mathgraph" / "runtime_archive.py",
-        skill_root / "scripts" / "mathgraph" / "local_install.py",
+        skill_root / "scripts" / "mathgraph" / "_local_install.py",
         skill_root / "scripts" / "mathgraph" / "runtime_cutover.py",
     )
     policy_texts = {
@@ -405,6 +406,9 @@ def main() -> int:
             "Chalxius Learner only when the user explicitly asks",
             "Grill Me Code",
             "scripts/local_install.py",
+            "Main selects one validation",
+            "sole public host-global path",
+            "eligible CHX observation surfaces",
             "explicit publication request includes merging the corresponding reviewed change into `main` by default",
         ),
         "agents/openai.yaml": (
@@ -712,6 +716,10 @@ def main() -> int:
             "`runtime_binding` field is retained only as diagnostic provenance",
             "missing archive or changed runtime may",
             "must not be read as a runtime-compatibility mandate",
+            "eligible CHX observation surfaces",
+            "the direct order is: finish validation and",
+            "close and render the task",
+            "later publication belongs",
         ),
         "references/external_source_reliability.md": (
             "current-status assessment may be `not_assessed`",
@@ -785,7 +793,15 @@ def main() -> int:
             "perform_local_install",
             "--dry-run",
         ),
-        "scripts/mathgraph/local_install.py": (
+        "scripts/release_validation.py": (
+            '"same_manifest_subsumes_profiles"',
+            '"performance_summary"',
+            "_repository_release_metadata",
+            '"--metadata-only"',
+            '"--repository-root"',
+        ),
+        "scripts/mathgraph/_local_install.py": (
+            "Private implementation of the one public host-global installer.",
             'LOCAL_INSTALL_CONTRACT_REVISION = "chalxius-global-local-install-1"',
             "It never reads or mutates a project.",
             "direct rollback root must remain outside skill discovery",

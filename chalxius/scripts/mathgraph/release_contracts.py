@@ -18,7 +18,10 @@ ARCHITECTURE_RECONNAISSANCE_REVISION = (
 CAPABILITY_TOPOLOGY_REGISTRY_REVISION = (
     "chalxius-capability-topology-registry-3"
 )
-RELEASE_VALIDATION_MATRIX_REVISION = "chalxius-release-validation-matrix-6"
+RELEASE_VALIDATION_MATRIX_REVISION = "chalxius-release-validation-matrix-7"
+REPOSITORY_RELEASE_METADATA_REVISION = (
+    "chalxius-repository-release-metadata-1"
+)
 
 
 def validate_release_audit_revision_bindings(
@@ -48,6 +51,9 @@ def validate_release_audit_revision_bindings(
         "release_validation_matrix_revision": release_audit.get(
             "coordinator_contract_revision"
         ),
+        "repository_release_metadata_revision": release_audit.get(
+            "repository_release_metadata_revision"
+        ),
     }
     expected = {
         "architecture_reconnaissance_revision": (
@@ -61,6 +67,9 @@ def validate_release_audit_revision_bindings(
         ),
         "release_validation_matrix_revision": (
             RELEASE_VALIDATION_MATRIX_REVISION
+        ),
+        "repository_release_metadata_revision": (
+            REPOSITORY_RELEASE_METADATA_REVISION
         ),
     }
     if actual != expected:

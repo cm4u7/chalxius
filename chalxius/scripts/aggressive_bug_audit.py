@@ -77,7 +77,89 @@ RESEARCH_TWO_SUBROUND_TEST_MODULE = (
 CHX_0812_TEST_MODULE = (
     "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests"
 )
+CHX_090_TEST_MODULE = (
+    "tests.test_chx_090_frontier_active_fix."
+    "FrontierActiveFix090Tests"
+)
 MUTANTS = (
+    Mutant(
+        name="frontier_multiple_products_reconciliation_weakened",
+        old="        if len(products) > 1:\n",
+        new="        if len(products) > 2:  # mutant\n",
+        test=(
+            f"{CHX_090_TEST_MODULE}."
+            "test_multiple_ingested_products_require_main_reconciliation"
+        ),
+        target="mathgraph/frontier_actions.py",
+    ),
+    Mutant(
+        name="frontier_active_hint_becomes_exact_filter",
+        old=(
+            "        entries = self.frontier(\n"
+            "            limit=limit,\n"
+            "            campaign_id=campaign_id,\n"
+            "            _inspection_context=inspection,\n"
+            "        )\n"
+        ),
+        new=(
+            "        entries = self.frontier(\n"
+            "            limit=limit,\n"
+            "            campaign_id=goal_campaign_id,  # mutant\n"
+            "            _inspection_context=inspection,\n"
+            "        )\n"
+        ),
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_active_goal_hint_does_not_filter_the_global_workflow_queue"
+        ),
+    ),
+    Mutant(
+        name="campaign_research_goal_exact_root_bypassed",
+        old=(
+            "            if research_exists is None or not research_exists(subject_id):\n"
+        ),
+        new="            if research_exists is None:  # mutant\n",
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_cli_research_goal_requires_the_exact_campaign_bound_root"
+        ),
+        target="mathgraph/campaigns.py",
+    ),
+    Mutant(
+        name="target_certificate_whole_graph_scan_restored",
+        old="        pending = list(reversed(target_ids))\n",
+        new=(
+            "        self.facts()  # mutant: rescan unrelated admitted Facts\n"
+            "        pending = list(reversed(target_ids))\n"
+        ),
+        test=(
+            f"{CHX_090_TEST_MODULE}."
+            "test_research_only_campaign_sync_does_not_scan_the_fact_graph"
+        ),
+        target="mathgraph/store.py",
+    ),
+    Mutant(
+        name="release_forensic_subsumption_removed",
+        old=(
+            "            [\"routine\"] if validation_profile == \"forensic\" and ok else []\n"
+        ),
+        new="            []  # mutant\n",
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_forensic_profile_exposes_cost_and_same_manifest_subsumption"
+        ),
+        target="release_validation.py",
+    ),
+    Mutant(
+        name="repository_release_version_drift_bypassed",
+        old='    if release_lock.get("version") != version:\n',
+        new='    if False and release_lock.get("version") != version:  # mutant\n',
+        test=(
+            f"{RELEASE_VALIDATION_TEST_MODULE}."
+            "test_repository_metadata_projection_rejects_stale_public_identity"
+        ),
+        target="release_validation.py",
+    ),
     Mutant(
         name="frontier_cow_branch_ambiguity_bypassed",
         old=(
@@ -2238,6 +2320,12 @@ SEMANTIC_MUTANT_NAMES = frozenset(
         "frontier_cow_original_projection_bypassed",
         "frontier_cow_repair_continuity_bypassed",
         "frontier_cow_terminal_staleness_bypassed",
+        "frontier_multiple_products_reconciliation_weakened",
+        "frontier_active_hint_becomes_exact_filter",
+        "campaign_research_goal_exact_root_bypassed",
+        "target_certificate_whole_graph_scan_restored",
+        "release_forensic_subsumption_removed",
+        "repository_release_version_drift_bypassed",
     }
 )
 
@@ -2520,7 +2608,10 @@ def main(argv: list[str] | None = None) -> int:
     candidate_unchanged = _candidate_is_unchanged(candidate_before, candidate_root)
     if args.profile == "semantic":
         scope = (
-            "graph frontier, campaign snapshot integrity, Fact-closure authority, "
+            "graph frontier lifecycle actions, Campaign goal-hint isolation and "
+            "target-closure locality, snapshot integrity, repository release identity "
+            "and validation-profile "
+            "subsumption, Fact-closure authority, "
             "Candidate/Fact exact coverage, computation truncation, frozen source "
             "snapshots, adverse provenance, worker return integrity, verifier "
             "signatures and nonce replay, semantic Research continuity, evidence "

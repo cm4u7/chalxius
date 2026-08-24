@@ -1,4 +1,36 @@
-# Chalxius V5 traceability through 0.8.12 Semantic Recovery
+# Chalxius V5 traceability through 0.9.0 Frontier Active Fix
+
+## 0.9.0 frontier-active-fix release overlay
+
+- Candidate version: `0.9.0`; release name **Frontier Active Fix**.
+- Ordinary frontier entries derive exact next lifecycle actions: production,
+  waiting, return ingestion, supervision, repair, Main reconciliation, or
+  completion. Default output is a compact Main surface; `--diagnostic` retains
+  bounded forensic fields.
+- A Campaign `research_goal` names one exact same-Campaign Research root after
+  Campaign creation. Main sees its covered/open/in-flight/workflow/semantic-
+  choice/orphaned state and current exact action beside the workflow queue.
+- An unscoped frontier may show `ACTIVE` goals as an `active_hint`, but it does
+  not filter the global queue or authorize Campaign-scoped planning.
+- Goal and workflow projections share command-local structural and round reads.
+  No persistent cache, scheduler, dispatcher, automatic closure, compatibility
+  layer, Candidate effect, or Fact effect is introduced.
+- The Fact target certificate reads only the exact selected proof-target
+  predecessor closure. A research-only Campaign sync reads zero Facts; proof
+  targets retain deterministic topological order and exact byte hashes.
+- Main chooses one release-validation profile for one exact manifest. A
+  successful forensic profile explicitly subsumes routine evidence for
+  unchanged bytes; the receipt reports elapsed, recorded lane time, and its
+  slowest lane without creating a timer or performance gate.
+- `release_validation.py --metadata-only` checks exact repository-facing
+  version, release name, archive, manifest, and checksum facts while leaving
+  release prose agent-authored. `scripts/local_install.py` is the sole public
+  installer name; its implementation module is private.
+- Installation, validation, packaging, publication, rollback, and CHX
+  settlement remain observation surfaces even after success. The current task
+  ledger closes before the final global repair binds its terminal bytes; a
+  later publication finding enters a successor. No post-release ceremony,
+  compatibility workflow, automatic issue generator, or truth gate is added.
 
 ## 0.8.12 semantic-recovery release overlay
 

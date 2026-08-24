@@ -19,6 +19,7 @@ from .contracts import (
     CAMPAIGN_TARGET_ID_RE,
     CLAIM_ID_RE,
     FACT_ID_RE,
+    MEMORY_ID_RE,
     POLICY_REVISION_V4,
     SHA256_RE,
     require_exact_keys,
@@ -38,6 +39,7 @@ from .goal_intake import (
 CAMPAIGN_TARGET_ROLES = {
     "headline_proof",
     "supporting_proof",
+    "research_goal",
     "communication",
 }
 COMMUNICATION_SUBJECT_KINDS = {
@@ -590,6 +592,12 @@ class CampaignStore:
             if not isinstance(target_payload, dict):
                 raise ValueError("campaign initial targets must be objects")
             role = target_payload.get("role")
+            if role == "research_goal":
+                raise ValueError(
+                    "campaign research_goal targets must be added after "
+                    "Campaign creation so their exact Campaign-bound Research "
+                    "root can be checked"
+                )
             if (
                 role in {"headline_proof", "supporting_proof"}
                 and fact_exists is None
@@ -697,6 +705,7 @@ class CampaignStore:
         payload: dict[str, Any],
         *,
         fact_exists: Callable[[str], bool],
+        research_exists: Callable[[str], bool] | None = None,
     ) -> dict[str, Any]:
         require_exact_keys(
             payload,
@@ -717,6 +726,19 @@ class CampaignStore:
                 raise ValueError("proof campaign targets must be fact ids")
             if not fact_exists(subject_id):
                 raise ValueError("campaign proof target is not an active admitted fact")
+        elif role == "research_goal":
+            if (
+                subject_kind != "research"
+                or MEMORY_ID_RE.fullmatch(subject_id) is None
+            ):
+                raise ValueError(
+                    "campaign research_goal targets must name exact Research ids"
+                )
+            if research_exists is None or not research_exists(subject_id):
+                raise ValueError(
+                    "campaign research_goal target is not an exact "
+                    "Campaign-bound Research root"
+                )
         elif subject_kind not in COMMUNICATION_SUBJECT_KINDS:
             raise ValueError("campaign communication subject kind is invalid")
         return payload
@@ -728,10 +750,15 @@ class CampaignStore:
         *,
         actor: str,
         fact_exists: Callable[[str], bool],
+        research_exists: Callable[[str], bool] | None = None,
     ) -> str:
         campaign_id = validate_campaign_id(campaign_id)
         self.status(campaign_id)
-        target = self._validate_target(dict(payload), fact_exists=fact_exists)
+        target = self._validate_target(
+            dict(payload),
+            fact_exists=fact_exists,
+            research_exists=research_exists,
+        )
         target_id = "camtarget-" + sha256_json(
             [campaign_id, target]
         )[:16]

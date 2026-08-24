@@ -1,5 +1,29 @@
 # Chalxius portable deployment
 
+## 0.9.0 Frontier Active Fix
+
+The `0.9.0` **Frontier Active Fix** artifact separates Main's compact decision
+surface into durable Campaign goal coverage and a bounded operational workflow
+queue. Active `research_goal` targets point to exact same-Campaign Research
+roots; current workgroup, COW, round, return, supervision, repair, and
+disposition bytes derive what is covered and what remains. An unscoped view may
+show the `ACTIVE` Campaign as a nonselecting hint while leaving the queue global.
+The derived Fact target certificate walks only the selected proof targets and
+their predecessors. A research-only Campaign therefore reads zero Facts while
+synchronizing an empty `TARGETS.txt`, rather than paying for unrelated graph
+history.
+
+The projection is command-local and read-only. It adds no persistent frontier
+state, automatic target following, dispatcher, scheduler, completion gate,
+compatibility layer, Candidate effect, or Fact effect. The project-free
+installer below remains the complete global installation path. Its internal
+implementation is private; `scripts/local_install.py` is the sole public
+entrypoint. One validation profile is chosen per exact manifest, with forensic
+success covering routine evidence for unchanged bytes and a direct cost summary
+in the receipt. An explicit repository-metadata projection checks version,
+release name, archive, manifest, and checksum facts after public files are
+authored. These checks add no release daemon or second deployment workflow.
+
 ## 0.8.12 Semantic Recovery
 
 The `0.8.12` **Semantic Recovery** artifact projects a uniquely completed exact
@@ -353,13 +377,13 @@ administrative registry. The registry preflight still checks each selected
 target and old fragment exactly once, so a stale semantic probe fails cheaply
 rather than consuming the audit budget.
 
-The routine receipt records only the manifest identity, source nonmutation, and
-the actual per-lane name, phase, profile, and result. Cutover derives the
-routine or forensic shape from those raw lane facts; it does not require a
-second set of scope or schedule flags that could drift from the executed
-matrix.
+The receipt records the selected profile, manifest identity, source
+nonmutation, actual per-lane facts, total elapsed time, recorded lane-seconds,
+and slowest lane. Main chooses one profile per frozen manifest. A successful
+forensic receipt explicitly subsumes routine evidence only while the manifest
+and selected risk surface remain unchanged; do not immediately rerun routine.
 
-The complete 134-probe registry, full suite, behavior-feature gate, and
+The complete mutation registry, full suite, behavior-feature gate, and
 whole-tree architecture reconnaissance are diagnostic forensic work, not a
 routine release gate. Use the complete matrix only when an explicit
 investigation justifies the cost:
@@ -373,7 +397,21 @@ python3 scripts/release_validation.py \
   --receipt /absolute/path/to/forensic-release-validation-receipt.json
 ```
 
-Both profiles run in isolated copies and leave the candidate unchanged.
+Both profiles run in isolated copies and leave the candidate unchanged. After
+the release prose, lock, archive, and checksums are final, check their factual
+cross-file projection without rerunning either matrix:
+
+```bash
+python3 scripts/release_validation.py \
+  --candidate-root "$SKILL_ROOT" \
+  --expected-manifest-sha256 APPROVED_MANIFEST_FILE_SHA256 \
+  --repository-root /absolute/path/to/repository \
+  --metadata-only \
+  --receipt /absolute/path/to/repository-metadata-receipt.json
+```
+
+This verifies version, release name, archive, manifest, and checksum identity.
+It does not author or judge the release prose.
 
 ## Preserve runtime continuity before every global cutover
 

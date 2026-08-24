@@ -1,5 +1,15 @@
 # Chalxius Back to the Future / Evidence candidate architecture
 
+> **0.9.0 frontier-active-fix override.** Main's frontier now joins two derived,
+> read-only views: durable Campaign `research_goal` coverage and a bounded
+> stage-aware workflow queue with exact next actions. An unscoped active goal
+> is a hint, never an implicit filter. Release work chooses one validation
+> profile per unchanged manifest; forensic evidence subsumes routine evidence,
+> and the receipt exposes elapsed and slowest-lane cost. One public installer
+> remains, repository publication facts receive an exact final check, and
+> install/release defects remain CHX observations. No persistent frontier
+> state, dispatcher, monitor, compatibility layer, or truth gate is added.
+
 > **0.8.12 semantic-recovery override.** Frontier completion follows only a
 > unique exact canonical COW terminal and projects success back to the original
 > workgroup; terminal invalidation or ambiguous lineage reopens it. Main owns
@@ -528,6 +538,15 @@ the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
 Campaign snapshot plus compact task-card envelope. Without the flag, selection
 stays global even when a Campaign is active. Campaign never expands Research,
 advances continuously, closes work, rewrites frozen cards, or affects Facts.
+
+An active Campaign may carry `research_goal` targets pointing to exact
+same-Campaign Research roots. They are direction anchors, not workflow items.
+Main's small frontier surface derives each anchor's current COW/workflow route
+and reports goal progress beside the bounded queue. An unscoped view may expose
+the `ACTIVE` Campaign as an `active_hint`, but the queue stays global and no
+planning scope is inferred. This gives Main a live account of work already
+covered and work remaining without a second mutable checklist, automatic
+dispatch, completion gate, or persisted frontier state.
 
 ## Back to the Future field-repair boundaries
 

@@ -20,6 +20,7 @@ definition. Its targets are typed:
 
 - `headline_proof`;
 - `supporting_proof`;
+- `research_goal`;
 - `communication`.
 
 `campaign-create --input` accepts exactly `name`, `objective`,
@@ -29,10 +30,16 @@ object `payload`; `type` is one of `constraint_added`,
 `stop_condition_disposition`, `value_definition_updated`, or `note`. The CLI
 also exposes these fields in the corresponding `--help` text.
 
-Only admitted fact ids may be proof targets. Communication targets may point to a fact, source claim,
-report, or verification bundle but never enter proof-target closure. Archiving is append-only.
+Only admitted fact ids may be proof targets. A `research_goal` is added only
+after Campaign creation and names one exact Research root already bound to that
+Campaign. It is durable nontruth direction: it never enters proof-target
+closure, schedules a round, closes itself, or affects Candidate/Fact state.
+Communication targets may point to a fact, source claim, report, or verification
+bundle but never enter proof-target closure. Archiving is append-only.
 `TARGETS.txt` is a derived projection of active headline/supporting fact targets, not an independent
-source of truth.
+source of truth. Its certificate loads only those exact proof targets and their
+transitive Fact predecessors; a Campaign containing only `research_goal` or
+communication targets reads zero Facts during synchronization.
 
 Every `source_claim_id` must resolve to a valid object in the project claim registry. Campaign
 creation verifies this before writing, audit rechecks it as current workflow integrity, and
@@ -62,6 +69,16 @@ only when Main deliberately chooses that durable objective. V5 accepts only
 Research whose immutable metadata has that exact `campaign_id`; untagged and
 other-Campaign entries are excluded, including explicit ids. The scoped set is
 still ordered by the ordinary four-factor frontier, with no score cutoff.
+
+The ordinary Main-facing `frontier` decision surface separates
+`goal_coverage` from the bounded `workflow_queue`. Exact Research workgroup,
+COW, round, return, supervision, repair, and disposition bytes derive what has
+already been covered and the next action for each active `research_goal`.
+Missing or cross-Campaign roots are shown as `orphaned`; they do not disappear
+and do not block unrelated work. When no explicit Campaign filter is supplied,
+the current `ACTIVE` Campaign may be shown as an `active_hint` only. That hint
+does not filter the global queue, select Research, dispatch work, or authorize a
+scoped plan. Main compares the goal view with the queue and chooses explicitly.
 
 Before writing a scoped round, planning revalidates the Campaign, registered
 source claims, and active proof targets. It then freezes one bounded snapshot

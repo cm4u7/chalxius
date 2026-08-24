@@ -1,5 +1,11 @@
 # Multi-agent adapter
 
+> **0.9.0 current-V5 goal/frontier coordination.** Main's default frontier
+> presents durable Campaign `research_goal` coverage beside the bounded
+> workflow queue. Exact current bytes derive completed and remaining actions;
+> an `active_hint` never selects, filters, plans, or dispatches. Main uses this
+> view to choose the next exact goal-serving Research or lifecycle action.
+
 > **0.8.12 current-V5 semantic recovery.** Main owns exact cross-round/COW
 > search and dispatch, uses visible slots only for genuine independent targets,
 > and treats client reconnect as transport state followed by agent, canonical-

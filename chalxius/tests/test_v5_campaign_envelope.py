@@ -123,6 +123,129 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             self.assertFalse(store.campaigns().status(campaign_a)["active"])
             self.assertTrue(store.campaigns().status(campaign_b)["active"])
 
+    def test_research_goal_tracks_progress_without_becoming_a_scheduler(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "goal-anchor")
+            research_id = self._research(
+                store,
+                "goal-anchor",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            with store.v5_mutation_lock(command="campaign-goal-target-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_id,
+                        "label": "Resolve the exact goal-anchor branch",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == research_id,
+                )
+                store.campaigns().activate(campaign_id, actor="main")
+
+            self.assertEqual(
+                store.campaigns().derived_targets(campaign_id), []
+            )
+            surface = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=3,
+            )
+            self.assertEqual(surface["goal_target_count"], 1)
+            self.assertEqual(surface["goal_progress"]["research_open"], 1)
+            self.assertEqual(
+                surface["goal_coverage"][0],
+                {
+                    "target_id": target_id,
+                    "label": "Resolve the exact goal-anchor branch",
+                    "root_research_id": research_id,
+                    "root_claim": "Investigate branch goal-anchor.",
+                    "coverage_status": "research_open",
+                    "work_completion_status": "pending",
+                    "action_class": "research_development",
+                    "next_action": "production",
+                    "why_now": "no_ingested_production_product",
+                    "actionable_research_id": research_id,
+                    "actionable_round_id": None,
+                    "actionable_research_ids": [research_id],
+                },
+            )
+            self.assertEqual(
+                surface["workflow_queue"][0]["goal_relevance"], "direct"
+            )
+            self.assertEqual(
+                surface["workflow_queue"][0]["goal_target_ids"], [target_id]
+            )
+
+            unscoped = store.v5_lifecycle().frontier_decision_surface(limit=3)
+            self.assertIsNone(unscoped["campaign_id"])
+            self.assertEqual(unscoped["goal_campaign_id"], campaign_id)
+            self.assertEqual(unscoped["goal_context_source"], "active_hint")
+            self.assertEqual(unscoped["campaign_selection_effect"], "none")
+            self.assertEqual(
+                unscoped["goal_coverage"][0]["target_id"], target_id
+            )
+
+            store.v5_lifecycle()._research_path(research_id).unlink()
+            orphaned = store.v5_lifecycle().frontier_decision_surface(limit=3)
+            self.assertEqual(orphaned["goal_progress"]["orphaned"], 1)
+            self.assertEqual(
+                orphaned["goal_coverage"][0]["next_action"],
+                "exact_research_search",
+            )
+            self.assertEqual(orphaned["workflow_queue"], [])
+
+    def test_active_goal_hint_does_not_filter_the_global_workflow_queue(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            active_campaign = self._campaign(store, "active-goal")
+            other_campaign = self._campaign(store, "other-work")
+            goal_id = self._research(
+                store,
+                "active-goal",
+                campaign_id=active_campaign,
+                score=0.7,
+            )
+            other_id = self._research(
+                store,
+                "other-work",
+                campaign_id=other_campaign,
+                score=1.0,
+            )
+            with store.v5_mutation_lock(command="campaign-goal-hint-fixture"):
+                store.campaigns().target_add(
+                    active_campaign,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": goal_id,
+                        "label": "Keep the active goal visible",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == goal_id,
+                )
+                store.campaigns().activate(active_campaign, actor="main")
+
+            surface = store.v5_lifecycle().frontier_decision_surface(limit=10)
+
+            self.assertEqual(surface["goal_context_source"], "active_hint")
+            self.assertEqual(surface["campaign_selection_effect"], "none")
+            self.assertEqual(
+                {item["research_id"] for item in surface["workflow_queue"]},
+                {goal_id, other_id},
+            )
+
     def test_scoped_round_freezes_lightweight_nontruth_campaign_envelope(
         self,
     ) -> None:
@@ -330,8 +453,13 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                     ]
                 )
             self.assertEqual(code, 0, stderr.getvalue())
+            decision_surface = json.loads(stdout.getvalue())
+            self.assertEqual(decision_surface["campaign_id"], campaign_id)
             self.assertEqual(
-                [item["research_id"] for item in json.loads(stdout.getvalue())],
+                [
+                    item["research_id"]
+                    for item in decision_surface["workflow_queue"]
+                ],
                 [research_id],
             )
 
@@ -355,6 +483,82 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 )
             self.assertEqual(code, 0, stderr.getvalue())
             self.assertEqual(json.loads(stdout.getvalue())["campaign_scope"]["campaign_id"], campaign_id)
+
+    def test_cli_research_goal_requires_the_exact_campaign_bound_root(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "goal-cli")
+            other_campaign_id = self._campaign(store, "other-goal-cli")
+            research_id = self._research(
+                store,
+                "goal-cli",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            target_path = Path(temporary) / "research-goal-target.json"
+            target_path.write_text(
+                json.dumps(
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_id,
+                        "label": "Exact CLI research goal",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli_main(
+                    [
+                        "--root",
+                        str(root),
+                        "--role",
+                        "main",
+                        "campaign-target-add",
+                        campaign_id,
+                        "--input",
+                        str(target_path),
+                        "--actor",
+                        "main",
+                    ]
+                )
+            self.assertEqual(code, 0, stderr.getvalue())
+            target_id = json.loads(stdout.getvalue())["target_id"]
+            self.assertEqual(
+                store.campaigns().status(campaign_id)["targets"][target_id][
+                    "subject_id"
+                ],
+                research_id,
+            )
+
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = cli_main(
+                    [
+                        "--root",
+                        str(root),
+                        "--role",
+                        "main",
+                        "campaign-target-add",
+                        other_campaign_id,
+                        "--input",
+                        str(target_path),
+                        "--actor",
+                        "main",
+                    ]
+                )
+            self.assertNotEqual(code, 0)
+            self.assertIn(
+                "not an exact Campaign-bound Research root",
+                stderr.getvalue(),
+            )
 
     def test_campaign_cli_help_and_update_error_expose_exact_input_contract(self) -> None:
         for command, required_fragments in (

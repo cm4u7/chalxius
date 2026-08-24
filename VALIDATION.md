@@ -1,160 +1,206 @@
-# Validation — Chalxius v0.8.12
+# Validation — Chalxius v0.9.0
 
-This document records software, packaging, installation, semantic-recovery
-behavior, and global CHX settlement for **Chalxius 0.8.12 — Semantic
-Recovery**. It does not certify a mathematical claim.
+This report records software, packaging, installation, live large-project
+behavior, performance, and CHX settlement for **Chalxius 0.9.0 — Frontier
+Active Fix**. It does not certify a mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 0.8.12 |
+| Version | 0.9.0 |
 | Release date | 2026-08-24 |
-| Skill manifest entries | 262 |
-| Package files, including manifest | 263 |
-| Manifest SHA-256 | `e47bdaeac15cfa1381264b04c9854fb99905a0dd2b863c6bb038f01841c82e77` |
-| Runtime content SHA-256 | `ffb00b70da8035ff7939aef3a8050dbcd41492249398ac7a2fc3f4f6de233c03` |
-| Installed runtime identity | `c0cdc2075fb6ac5a1b2d6c92da20a47dfdd37e806d47ec05b65d28ef968ca379` |
-| Installed archive-tree identity | `d1250a57b007308853574ef6f7d5f1c91435754d4e31f1cf3ca68d092e9a675e` |
-| Archive | `chalxius-0.8.12-semantic-recovery.tar.gz` |
-| Archive bytes | 2,581,988 |
-| Archive regular-file members | 263 |
+| Skill manifest entries | 264 |
+| Package files, including manifest | 265 |
+| Manifest SHA-256 | `ad7e4a1b5ce81a35e62ac4d78cdc845a9289e226e866f0987d3d02258ff91d51` |
+| Runtime content SHA-256 | `fe51aa8d051fc7bfae730cf3f17b4cc56a62b8c80aa1cbdcd08c66e6adf80fed` |
+| Installed runtime identity | `164fded34389f5f491ed080eafc99a20c09fc5de2fd3e76345bbea029a8ef630` |
+| Installed archive-tree identity | `349612debe0ce1685f1d5b0efa3ea84d923696d81aee06547f5d9199a7b11dce` |
+| Archive | `chalxius-0.9.0-frontier-active-fix.tar.gz` |
+| Archive bytes | 2,601,441 |
+| Archive regular-file members | 265 |
 | Archive directory members | 0 |
-| Archive SHA-256 | `8e93c0d6fb165c6c8e38a3925a17b6051dd0d05be9842307bf77db2a9773142a` |
-| Checksum-file SHA-256 | `2156f3c15ee596c13be438df98e623881a5dfe2b42515c20e4e57b82a8369f3f` |
+| Archive SHA-256 | `30e6d08ff6546a454e4273efa42e561b57f67f8c3cf9e8c2337baef3fcc8519a` |
+| Checksum-file SHA-256 | `710a00e432b5b575b76ac30a260fc70fddd2a696798af2bccc099348f96e413c` |
 
-Two builds from the same frozen tree were byte-identical. A cold extraction
-matched the source tree and passed every manifest row, the bundled self-test,
-and strict architecture reconnaissance.
+Two builds from the frozen tree were byte-identical. A cold extraction matched
+the source tree and passed every manifest row, the bundled self-test, and
+strict architecture reconnaissance.
 
-## Complete and failure-informed validation
+## Forensic release matrix
 
-The complete suite passed **995 tests in 78.691 seconds**, with 2 skipped.
+One forensic profile was selected for the exact final manifest. It explicitly
+subsumes the routine profile while bytes remain unchanged, so the routine
+matrix was not repeated.
 
-The forensic matrix receipt is
-`/private/tmp/chalxius-0812-release.Cequm5/release-validation-forensic.json`
-with file SHA-256
-`db0b7029f149f697dea0b223d29837b1d214f25939363856b0ba685c6af27ff4`.
-
-| Forensic lane | Result | Elapsed |
+| Lane | Result | Elapsed |
 |---|---|---:|
-| Self-test | PASS | 0.989 s |
-| Full suite | PASS; 995 tests, 2 skipped | 94.002 s |
-| Mutant registry preflight | PASS; 139/139 | 0.118 s |
-| Full mutation audit | PASS; 139/139 killed | 183.840 s |
-| Behavioral feature gate | PASS; 42 features, 0 orphans | 21.558 s |
-| Strict architecture scan | PASS; 0 errors, 0 warnings | 5.437 s |
+| Self-test | PASS | 0.954 s |
+| Full suite | PASS; 1,006 tests discovered | 90.930 s |
+| Mutant registry preflight | PASS; 145/145 unique targets | 0.122 s |
+| Full mutation audit | PASS; 145/145 killed | 173.444 s |
+| Behavioral feature gate | PASS; 43 features, 0 orphans | 21.323 s |
+| Strict architecture scan | PASS; 0 errors, 0 warnings | 5.421 s |
 
-The final routine matrix receipt is
-`/private/tmp/chalxius-0812-release.Cequm5/release-validation-routine-final.json`
-with file SHA-256
-`1db6e2628c2b60dfd9ebea368a73c5305a6268b23680f8cf95a73e06c9576882`.
+The matrix recorded 291.871 wall seconds and 292.194 aggregate lane-seconds.
+The full mutation audit was the slowest lane. Every lane used manifest
+`ad7e4a1b5ce81a35e62ac4d78cdc845a9289e226e866f0987d3d02258ff91d51`
+and reported an unchanged candidate tree.
 
-| Routine lane | Result | Elapsed |
-|---|---|---:|
-| Self-test | PASS | 0.985 s |
-| Changed-surface tests | PASS; 36/36 | 8.897 s |
-| Semantic mutation audit | PASS; 21/21 killed | 38.924 s |
-
-Every lane used manifest
-`e47bdaeac15cfa1381264b04c9854fb99905a0dd2b863c6bb038f01841c82e77`
-and reported an unchanged candidate source tree.
+The final matrix receipt has file SHA-256
+`a1b118438c42dd534b2a2828cb4d9716885cb27c460dcc72fa5ba4941d75fc09`.
 
 ## Architecture reconnaissance
 
-Strict reconnaissance found 263 files, 90 test files, and 76 Python modules,
-with 0 errors, 0 warnings, and 0 orphans. The absolute root participates in the
-inventory identity, so candidate, installed, and cold-extraction hashes
-intentionally differ.
+Strict reconnaissance found:
 
-| Report | Inventory SHA-256 | File SHA-256 |
-|---|---|---|
-| Candidate | `5d4d62ad05a04a8f0cea904a0112a6af85191dbb44d078c2983e17b33a5c3bbd` | `0be1165d8de678b61a0aaecabbbd292ec0ff1e0acc618e02b248041267394c9a` |
-| Installed | `2b99d999e00ae6e73dcd55606ead355909346feb9f6a3e0b138bf42b6767c48c` | `b2a4311c0503c28bded98b623e03f431216f70c36c43e30fdbdd00a3ffcf281a` |
-| Cold archive | `bc76d4b7970516b77325d840034b7c74f64a38dd8fe6e84fdb7c80ddbbd84718` | `0c0b48bb23a14d5155df6b256bcd8465bfa3a6a8d67b25690ef2190874da290e` |
+- 265 files and 11,689,577 bytes;
+- 91 test files;
+- 77 Python modules, including 58 MathGraph modules;
+- 0 orphan modules;
+- 0 exact duplicate-file groups;
+- 25 duplicate-function-body groups, all 25 explicitly adjudicated;
+- 0 generated artifacts, errors, warnings, or behavioral orphans.
 
-All 263 candidate and installed package files were byte-exact.
+The candidate architecture inventory SHA-256 is
+`38a6a528a4aa619b3c18e47b4af53a22ea3750e3eaf4c2d5224f5ca9d879c7f1`.
 
-## Semantic-recovery regressions
+## Frontier Active Fix regressions
 
-The 0.8.12 tests establish the following fail-closed behavior:
+Focused and mutation tests establish these properties:
 
-- a unique, exact, multi-hop COW repair lineage can project completion back to
-  the original Research identity;
-- an unsafe terminal product or incomplete frozen obligations reopen the work;
-- malformed lineage, multiple child repairs, or a cycle remains pending;
-- a second active invalidator not covered by the repair prevents closure;
-- the repair objective, relations, source product, and obligations must match
-  the hash-bound normalized repair specification;
-- distinct non-aborted products for one Research are ambiguous, while an
-  identical retry publication of the same product is accepted;
-- Main's authoritative documents independently preserve semantic selection,
-  useful-slot, bounded-scout, and client-reconnect rules.
+- the compact frontier distinguishes production, return waiting, ingestion,
+  supervision, repair, Main reconciliation, and no-action states;
+- the actionable id follows the current validated lifecycle object instead of
+  mechanically redispatching the original Research root;
+- exact canonical COW completion remains a fast path;
+- ambiguous, duplicate, historical, malformed, or branching evidence stays
+  visible for Main judgment rather than being auto-closed;
+- a Campaign `research_goal` names one exact existing Research root in the same
+  Campaign and carries no dispatch or truth effect;
+- explicit Campaign selection scopes the goal projection, while the ordinary
+  active Campaign remains only a hint;
+- goal coverage, progress, queue, orphan, and Main-choice signals are derived
+  from existing bytes and are not persistent frontier state;
+- default output is compact and `--diagnostic` remains bounded;
+- no automatic admission, scheduler, watcher, cache, compatibility layer, or
+  new lifecycle gate exists.
 
-The mutation audit covers branch-ambiguity bypass, invalidator-exhaustion
-weakening, repair-continuity bypass, original-identity projection bypass, and
-prior-terminal-staleness bypass. All 21 semantic mutants were killed.
+The semantic mutation profile killed 27/27 mutants. The full release profile
+killed 145/145.
 
-## Main and reconnect boundary
+## Live large-project exercise
 
-- Main owns cross-round/COW search, completion projection, duplicate exclusion,
-  and final target selection.
-- Workers may gather bounded evidence; they do not own final dispatch authority.
-- Free slots are used for real independent work when it exists, never to satisfy
-  a quota or create filler.
-- Client reconnect is transport-only. Main inspects agent status, canonical
-  return bytes, ingestion, and round state before resuming, and does not reclaim
-  or duplicate live work solely from a reconnect banner.
+The final installed runtime was exercised on the active local-F0 A-model
+project with 1,288 Research entries at the performance measurement point.
 
-No monitor, timer, scheduler, receipt requirement, reconnect gate,
-compatibility layer, lifecycle state, or truth gate was added.
+Three exact Campaign goals were added without duplicate events:
 
-## Installation
+1. the physical-heart corridor;
+2. the exact marked physical light period;
+3. the split-light Hall/log factor.
+
+The explicit-Campaign frontier derived:
+
+| Signal | Result |
+|---|---|
+| Goals covered | 2 |
+| Workflow pending | 1 |
+| In flight / research open | 0 / 0 |
+| Orphaned / needs Main choice | 0 / 0 |
+| Selected root | `1a0f4f0fbceb` |
+| Actionable Research | `2050c5322ddd` |
+| Next action | `repair` |
+| Reason | `production_product_invalidated` |
+
+The explicit projection took 2.263 seconds and emitted 13,533 bytes. An
+unscoped projection treated the active Campaign only as `active_hint`, took
+2.754 seconds, and did not silently filter the queue.
+
+## Target-certificate performance repair
+
+Before the final fix, synchronizing a research-only Campaign target loaded and
+validated the whole admitted Fact graph before emitting an empty 250-byte
+certificate:
+
+| Measurement | Before fix | Candidate fix | Final installed |
+|---|---:|---:|---:|
+| Target synchronization / replay | ~294.5 s | 3.02 s first add; 2.39 s retry | 3.23 s retry |
+| Approximate sampled physical footprint | ~544 MiB | not retained as a release claim | not retained as a release claim |
+| Approximate sampled peak | 1.0 GiB | not retained as a release claim | not retained as a release claim |
+| Campaign events after idempotent retry | 7 | 7 | 7 |
+
+The measured candidate wall-time reduction was 98.97%. The repaired
+certificate traverses only selected proof targets and their exact transitive
+predecessors. A research-only target has an empty proof closure and reads zero
+Facts. Deterministic topological order, exact hashes, and existing audit errors
+remain in force.
+
+The bound performance evidence has SHA-256
+`ab454c54a2c3e91f351ada0592b2e0391b163005aa61e354ca9002ce21ca8582`.
+
+## Installation and rollback
 
 | Field | Result |
 |---|---|
-| Installer | default project-free local installer |
-| Installed version | 0.8.12 |
-| Candidate-to-installed tree | exact; 263 files unchanged |
-| Installed runtime identity | `c0cdc2075fb6ac5a1b2d6c92da20a47dfdd37e806d47ec05b65d28ef968ca379` |
-| Installed runtime content | `ffb00b70da8035ff7939aef3a8050dbcd41492249398ac7a2fc3f4f6de233c03` |
-| Installed archive-tree identity | `d1250a57b007308853574ef6f7d5f1c91435754d4e31f1cf3ca68d092e9a675e` |
-| Candidate runtime identity | `025bfc65ce4826a8c5ffaae5c6adf7ca75855171c7fd6491940aa432a334e1df` |
-| Cold runtime identity | `184357fa260a391fa2fea5cf141470cb10fde93b924f6b8896d8a1449fcb46d5` |
-| Direct rollback | 0.8.11 content `de1d4a03ef94c0e47ed994b75493cc74504664fc4054a1d8c6809a0e2a4ebba9` |
-| Project reads/writes | 0 / 0 |
+| Installer | `scripts/local_install.py` |
+| Installed version | 0.9.0 |
+| Candidate-to-installed tree | exact; 265 files unchanged |
+| Candidate runtime identity | `9343d1ff0905b3b78bf93599add08cd99701488423ec082f4fd46be3719010af` |
+| Installed runtime identity | `164fded34389f5f491ed080eafc99a20c09fc5de2fd3e76345bbea029a8ef630` |
+| Installed runtime content | `fe51aa8d051fc7bfae730cf3f17b4cc56a62b8c80aa1cbdcd08c66e6adf80fed` |
+| Installed archive-tree identity | `349612debe0ce1685f1d5b0efa3ea84d923696d81aee06547f5d9199a7b11dce` |
+| Direct rollback | 0.8.12 content `ffb00b70da8035ff7939aef3a8050dbcd41492249398ac7a2fc3f4f6de233c03` |
+| Project reads / writes | 0 / 0 |
 | System restart | not performed |
+
+The final installation evidence file has SHA-256
+`fd13ee61c1193bdaf8a7d214217647941e2ae8fadbcb2fe66430d6e790ccc669`.
+
+## Repository metadata and archive
+
+The existing release validator's metadata-only projection checks the candidate
+version, release display name, archive name and bytes, manifest identity,
+checksum sidecar, the unique SHA256SUMS row, and the required identity markers
+in README, RELEASE, and VALIDATION. Public prose is not generated or approved
+by this check.
+
+The archive contains only the 265 regular package files and no synthetic
+directory or other members. The checksum sidecar contains exactly:
+
+```text
+30e6d08ff6546a454e4273efa42e561b57f67f8c3cf9e8c2337baef3fcc8519a  chalxius-0.9.0-frontier-active-fix.tar.gz
+```
 
 ## Global CHX settlement
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-c82951c65fad6ec03d324b330345ee770787ca504413dd3855ed49f4a99d02ed` |
-| Canonical `record_sha256` | `d2ba32cb5d0d977f2cfdadee2ebe2d7363cf6544ab313d536d6d8409abc02e0b` |
-| Record-file SHA-256 | `b81f0a80d344fa4266245ef0ad7fc95260813d4a98532129e8f6915932b0ed69` |
-| Inventory SHA-256 | `d3c113fac745f35371f46b8ccbfb4f8d4fec31be4c24db50630b479b3f30d17f` |
-| Covered snapshot SHA-256 | `381d12e827f01d2dab6ea69d258e60cc1a3a3f3aaff266295ba165f7a41770bf` |
-| Observed / globally disposed | 170 / 170 |
-| Resolved / excluded | 164 / 6 |
-| Current mechanism groups | 3 |
+| Global repair | `global-repair-0b4d0d15520bc41f8273a3f6d962dc0129511b2a18440056fabbd2c9694e698a` |
+| Canonical `record_sha256` | `14307aba1bc1af4791dff5e97f068d4df828a22e824af7bbed346cbb9302f7a2` |
+| Record-file SHA-256 | `40720e2137716e1229e97f8920779ef88ecc68cb7e879c499dc9512bf2bd3bd0` |
+| Inventory SHA-256 | `1c734bb26f242996213213b7e863fe0ddaba24537b78eea88dc10e1b190cd208` |
+| Covered snapshot SHA-256 | `7cd60c497e6bbf7daee2aba8cd166e3031955e0742b852362921e7a327440592` |
+| Observed / globally disposed | 177 / 177 |
+| Resolved / excluded | 171 / 6 |
+| Current mechanism groups | 6 |
 | Unresolved / uncovered | 0 / 0 |
 | Active open issues | 0 |
 | Lineage errors / report drift | 0 / 0 |
 
 The current task ledger is closed with SHA-256
-`e2c1f43a965e89dfb6640395bd094df77837ced22f0198373269c72ff860e5c8`.
+`1ecba772b28e08f89d448110ef88508339857a364fb05687c8fe37e5136c7e68`.
 Its architecture-report SHA-256 is
-`ca0e19ad3b60e2a0f9923a5b8767999298468e7a357dcfca6d35d00811dfc80e`.
-It contains zero tactical and zero per-ledger integrated repairs. Historical
-ledgers remain append-only and own no active issue.
+`5df04db4c51e3c2d8a995ae3d5dbcae079b9747fedca835cbc492d2df000de5c`.
+It contains seven issues, all resolved by the global integrated repair, and
+zero tactical or per-ledger integrated repairs. Twenty-four historical ledgers
+retain their original active flag, but none owns an open issue; no historical
+bytes were rewritten.
 
 ## Research and truth boundary
 
-The A-model Research campaign was paused after the final VQ proof-logic
-supervision returned `challenge`: one artifact was not standalone because key
-symbols were undefined, while the mathematical withdrawal was otherwise
-correct. No third COW was started.
-
-This architecture release created no Candidate Release, Certification
-Decision, Gateway admission, or Fact. Installation and publication did not
-mutate Research graph bytes.
+The live exercise changed only nontruth Campaign targets and read-only
+frontier projections. It created no Candidate Release, Certification Decision,
+Gateway admission, or Fact. Installation read and wrote no Research graph
+bytes. The selected A-model repair remains Research work, not an admitted
+mathematical result.

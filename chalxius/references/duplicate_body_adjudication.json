@@ -125,7 +125,7 @@
       "category": "state_boundary_local",
       "decision": "retain_local",
       "definitions": [
-        "mathgraph.local_install:_fsync_directory",
+        "mathgraph._local_install:_fsync_directory",
         "mathgraph.runtime_cutover:_fsync_directory"
       ],
       "reason": "The ordinary local installer and the explicit forensic cutover retain separate atomic-swap boundaries; sharing this five-line durability helper would couple the fast path back to the forensic runtime module."
