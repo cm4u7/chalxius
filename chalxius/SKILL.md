@@ -304,6 +304,12 @@ repair, and an issue in a newly appended ledger remains uncovered until a
 successor global repair covers it. Any later mutation of an open ledger whose
 issues were covered naturally stales that exact covered-ledger snapshot; it
 does not erase or silently hide the new bytes.
+Historical global-repair candidate roots are immutable locators, not a demand
+that every old worktree remain installed forever. Inventory parses a canonical
+absolute historical locator even after that directory is archived, then marks
+the old repair `stale` with a bounded reason. Recording or verifying the current
+repair still requires the live canonical non-symlink root, exact version,
+manifest bytes, manifest tree, and file set.
 
 If `report_required=false`, do not surface CHX bookkeeping to the user. CHX is
 never an audit warning, certification blocker, or reason to redo otherwise

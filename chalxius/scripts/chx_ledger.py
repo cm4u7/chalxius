@@ -702,7 +702,11 @@ def _validate_integrated_repair_input(value: Any) -> dict[str, Any]:
     )
 
 
-def _validate_global_repair_input(value: Any) -> dict[str, Any]:
+def _validate_global_repair_input(
+    value: Any,
+    *,
+    require_live_candidate_root: bool = True,
+) -> dict[str, Any]:
     """Validate one cross-ledger repair plan without requiring tactical entries.
 
     Historical task ledgers remain immutable.  This input is the project-wide
@@ -730,14 +734,24 @@ def _validate_global_repair_input(value: Any) -> dict[str, Any]:
         "CHX global repair candidate_root",
         maximum=4_096,
     )
-    candidate_path = Path(candidate_root).expanduser()
-    if (
-        not candidate_path.is_absolute()
-        or candidate_path.is_symlink()
-        or not candidate_path.is_dir()
-        or str(candidate_path.resolve(strict=True)) != candidate_root
-    ):
+    candidate_path = Path(candidate_root)
+    candidate_locator_is_canonical = (
+        candidate_path.is_absolute()
+        and str(candidate_path) == candidate_root
+        and os.path.normpath(candidate_root) == candidate_root
+        and "." not in candidate_path.parts
+        and ".." not in candidate_path.parts
+    )
+    if not candidate_locator_is_canonical:
         raise ValueError("CHX global repair candidate_root is unsafe")
+    candidate_present = candidate_path.exists() or candidate_path.is_symlink()
+    if require_live_candidate_root or candidate_present:
+        if (
+            candidate_path.is_symlink()
+            or not candidate_path.is_dir()
+            or str(candidate_path.resolve(strict=True)) != candidate_root
+        ):
+            raise ValueError("CHX global repair candidate_root is unsafe")
     candidate_version = _require_text(
         value.get("candidate_version"),
         "CHX global repair candidate_version",
@@ -3592,7 +3606,8 @@ def _validate_global_repair_record(
                 "regression_evidence",
                 "supersedes_global_repair_id",
             )
-        }
+        },
+        require_live_candidate_root=False,
     )
     if record["global_repair_id"] != _global_repair_id(record):
         raise ValueError("CHX global repair id mismatch")
@@ -3682,6 +3697,7 @@ def _apply_global_repair_projection(
     records, chain = _collect_global_repair_records(project_root)
     projection: dict[str, Any] = {
         "status": "absent",
+        "stale_reason_codes": [],
         "global_repair_id": "",
         "covered_issue_count": 0,
         "uncovered_issue_count": 0,
@@ -3724,8 +3740,10 @@ def _apply_global_repair_projection(
         if covered_ids.issubset(observed_ids)
         else len(observed_ids)
     )
-    candidate_current = False
-    if latest["candidate_root"] == str(_skill_root()):
+    stale_reason_codes: list[str] = []
+    if latest["candidate_root"] != str(_skill_root()):
+        stale_reason_codes.append("candidate_root_not_current")
+    else:
         try:
             _validate_global_repair_candidate(
                 latest["candidate_root"],
@@ -3734,17 +3752,24 @@ def _apply_global_repair_projection(
                     "candidate_manifest_sha256"
                 ],
             )
-            _verify_global_repair_references(latest, project_root=project_root)
         except (OSError, ValueError):
-            pass
+            stale_reason_codes.append("candidate_tree_unavailable_or_drifted")
         else:
-            candidate_current = True
-    if not candidate_current:
+            try:
+                _verify_global_repair_references(
+                    latest,
+                    project_root=project_root,
+                )
+            except (OSError, ValueError):
+                stale_reason_codes.append("repair_evidence_unavailable_or_drifted")
+    if stale_reason_codes:
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = stale_reason_codes
         result["global_repair"] = projection
         return result
     if result["lineage_errors"] or result["report_compatibility_drift"]:
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = ["inventory_integrity_drifted"]
         result["global_repair"] = projection
         return result
     all_rows = [
@@ -3756,10 +3781,12 @@ def _apply_global_repair_projection(
     }
     if not covered_ids.issubset(observed_ids):
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = ["covered_issue_set_drifted"]
         result["global_repair"] = projection
         return result
     if set(dispositions) != covered_ids:
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = ["disposition_coverage_drifted"]
         result["global_repair"] = projection
         return result
     try:
@@ -3769,10 +3796,12 @@ def _apply_global_repair_projection(
         )
     except ValueError:
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = ["covered_issue_snapshot_unavailable"]
         result["global_repair"] = projection
         return result
     if current_covered_snapshot != latest["covered_issue_snapshot_sha256"]:
         projection["status"] = "stale"
+        projection["stale_reason_codes"] = ["covered_issue_snapshot_drifted"]
         result["global_repair"] = projection
         return result
     for row in all_rows:

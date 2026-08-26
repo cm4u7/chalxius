@@ -24,6 +24,11 @@
   current or recent orphaned ledger after reconnect, compaction, or a major
   task switch. This is concise judgment guidance, not a timer, monitor,
   checklist gate, or automatic issue generator.
+- Global-repair inventory treats an archived historical candidate path as an
+  inert canonical locator and projects the predecessor stale with an explicit
+  reason. New repair records and verification still bind the live canonical
+  runtime, exact version, manifest tree, file set, and digest-bound evidence;
+  no path alias or compatibility worktree is introduced.
 - Focused candidate/Campaign tests and repeated live local-F0 generation-45
   trials pass. Two goal lanes project `await_return`, the third requests Main
   selection, and checkpoint refresh is not recommended. After the post-install

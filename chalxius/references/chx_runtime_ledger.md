@@ -423,6 +423,16 @@ rather than editing or deleting the old record. This path is nontruth
 architecture accounting only and does not bypass Research, Candidate,
 verifier, Certification, Gateway, or Fact requirements.
 
+An immutable historical repair stores its candidate root as a canonical
+absolute locator. The locator remains parseable if that old candidate directory
+is later archived or removed from the active workspace; the projection becomes
+`stale` and reports a bounded `stale_reason_codes` value instead of aborting the
+whole inventory. This historical parsing rule does not apply to a new repair:
+`record-global-repair` and `verify-global-repair` continue to require the live
+non-symlink current runtime, exact manifest tree, exact file set, and bound
+evidence. Do not recreate an old path with an alias or rewrite its immutable
+record.
+
 ## Immutable successors and deterministic reports
 
 After a predecessor ledger is closed, start a revision-4 successor when later

@@ -1124,6 +1124,87 @@ class CHXRunLedgerTests(unittest.TestCase):
             ):
                 verify_global_repair(self.project)
 
+    def test_historical_global_repair_survives_relocated_candidate_root(
+        self,
+    ) -> None:
+        ledger = self._started("run-global-relocated-candidate-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        plan = self._global_repair_input(base)
+        historical_candidate = (
+            Path(self.temporary.name) / "historical-candidate"
+        ).resolve()
+        historical_candidate.mkdir()
+        plan["candidate_root"] = str(historical_candidate)
+
+        with patch.object(
+            chx_ledger,
+            "_skill_root",
+            return_value=historical_candidate,
+        ), patch.object(
+            chx_ledger,
+            "_skill_version",
+            return_value=plan["candidate_version"],
+        ), patch.object(
+            chx_ledger,
+            "_validate_global_repair_candidate",
+            return_value={},
+        ), patch.object(
+            chx_ledger,
+            "_verify_global_repair_references",
+            return_value=None,
+        ):
+            receipt = record_global_repair(self.project, plan)
+
+        archived_candidate = historical_candidate.with_name(
+            "archived-historical-candidate"
+        )
+        historical_candidate.rename(archived_candidate)
+        projected = inventory_project_ledgers(self.project, full=True)
+        self.assertEqual(projected["global_repair"]["status"], "stale")
+        self.assertEqual(
+            projected["global_repair"]["stale_reason_codes"],
+            ["candidate_root_not_current"],
+        )
+        self.assertEqual(
+            projected["global_repair"]["global_repair_id"],
+            receipt["global_repair_id"],
+        )
+        records, chain = chx_ledger._collect_global_repair_records(self.project)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(chain, [receipt["global_repair_id"]])
+
+    def test_new_global_repair_rejects_missing_or_symlink_candidate_root(
+        self,
+    ) -> None:
+        ledger = self._started("run-global-live-candidate-001")
+        record_issue(ledger, self._issue())
+        close_ledger(ledger)
+        base = inventory_project_ledgers(
+            self.project,
+            full=True,
+            include_global=False,
+        )
+        plan = self._global_repair_input(base)
+
+        missing = (Path(self.temporary.name) / "missing-candidate").resolve()
+        plan["candidate_root"] = str(missing)
+        with self.assertRaisesRegex(ValueError, "candidate_root is unsafe"):
+            record_global_repair(self.project, plan)
+
+        real_candidate = (Path(self.temporary.name) / "real-candidate").resolve()
+        real_candidate.mkdir()
+        symlink_candidate = Path(self.temporary.name) / "candidate-link"
+        symlink_candidate.symlink_to(real_candidate, target_is_directory=True)
+        plan["candidate_root"] = str(symlink_candidate)
+        with self.assertRaisesRegex(ValueError, "candidate_root is unsafe"):
+            record_global_repair(self.project, plan)
+
     def test_global_repair_counts_resolved_and_excluded_separately(self) -> None:
         first = self._started("run-global-count-first-001")
         record_issue(first, self._issue())
