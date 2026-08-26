@@ -118,13 +118,20 @@ does not authorize a live Campaign read.
 
 Main `campaign-status` is deliberately one compact current view, not a paging
 protocol. It returns current Campaign semantics, the newest minimal
-frontier-head checkpoint, and a fixed recent event-summary tail. Exact older
+frontier-head checkpoint, and the eight most recent event summaries. Exact older
 event bytes remain append-only in `campaigns/CAMPAIGN_ID/events.jsonl` for
 targeted event/Research forensics. New frontier checkpoints persist only the
 routing fields the reader consumes: generation/supersedes, target id, bounded
 active and attained Research ids, optional recovery root, and concise Main
 disposition. Canonical Research, product, review, and reason bodies are not
 copied into each generation; old verbose checkpoints remain untouched.
+
+Main's ordinary `frontier` goal rows keep decision-complete routing: exact
+active/attained ids, head-to-workflow-root mappings, current route and terminal
+ids, actionable Research/round, replay argv, freshness, and concise semantic
+disposition. Repeated per-successor hashes, counts, and full diagnostic trees
+are emitted only by explicit `frontier --diagnostic`. This changes neither the
+underlying exact search nor Main's authority to choose a different route.
 
 Omitting an exact Campaign id preserves the global V5 frontier and the earlier passive
 behavior: a selected Research item may still copy its `campaign_id` into a card,

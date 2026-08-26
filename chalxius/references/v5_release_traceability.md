@@ -11,6 +11,11 @@
   primary. Goal-unmapped Campaign items remain visible in a bounded secondary
   summary with exact ids, count, and digest; none is deleted, closed, or
   treated as mathematically irrelevant.
+- Routine goal rows retain decision-complete exact routing and concise Main
+  disposition without copying the full per-successor diagnostic tree.
+  `frontier --diagnostic` retains that deeper topology. Routine Campaign status
+  shows eight recent event summaries plus the latest checkpoint; the complete
+  append-only ledger remains available for targeted forensics.
 - `scripts/candidate_identity.py` reports canonical candidate path, VERSION,
   manifest validity, Git branch/HEAD/dirty state, path-version hints, and exact
   installed-tree differences. It never selects, switches, mutates, installs,
@@ -19,11 +24,12 @@
   current or recent orphaned ledger after reconnect, compaction, or a major
   task switch. This is concise judgment guidance, not a timer, monitor,
   checklist gate, or automatic issue generator.
-- Fifty-eight focused candidate/Campaign tests and repeated live local-F0
-  generation-45 trials pass. Two goal lanes project `await_return`, the third
-  requests Main selection, checkpoint refresh is not recommended, and routine
-  elapsed time remains about two seconds. Installation and publication remain
-  separate authorizations.
+- Focused candidate/Campaign tests and repeated live local-F0 generation-45
+  trials pass. Two goal lanes project `await_return`, the third requests Main
+  selection, and checkpoint refresh is not recommended. After the post-install
+  context repair, Campaign frontier output is 15,646 bytes versus 21,857 in
+  diagnostic mode, and compact Campaign status is 12,111 bytes. Installation
+  and publication remain separate authorizations.
 
 ## 0.9.6 frontier-freshness release overlay
 

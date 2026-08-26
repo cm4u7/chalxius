@@ -920,8 +920,8 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
         "--diagnostic",
         action="store_true",
         help=(
-            "print the bounded forensic frontier instead of Main's small "
-            "default decision surface"
+            "print the bounded forensic decision surface, including deep "
+            "Campaign successor topology"
         ),
     )
 
@@ -2124,11 +2124,17 @@ def main(argv: list[str] | None = None) -> int:
                         "repair-collapse switches have no V5 meaning"
                     )
                 lifecycle = store.v5_lifecycle()
-                if args.diagnostic or args.history:
+                if args.history:
                     projection = lifecycle.frontier(
                         limit=args.limit,
                         include_history=args.history,
                         campaign_id=args.campaign,
+                    )
+                elif args.diagnostic:
+                    projection = lifecycle.frontier_decision_surface(
+                        limit=args.limit,
+                        campaign_id=args.campaign,
+                        diagnostic=True,
                     )
                 else:
                     projection = lifecycle.frontier_decision_surface(

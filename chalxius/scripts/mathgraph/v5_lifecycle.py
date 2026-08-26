@@ -8403,11 +8403,130 @@ class V5LifecycleManager:
                     )
         return coverage
 
+    @staticmethod
+    def _compact_goal_coverage_entry(
+        entry: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Keep Main's routine goal row exact without copying diagnostics."""
+
+        routine_fields = (
+            "target_id",
+            "label",
+            "root_research_id",
+            "root_claim",
+            "recovery_root_research_id",
+            "recovery_root_source",
+            "coverage_status",
+            "work_completion_status",
+            "action_class",
+            "next_action",
+            "why_now",
+            "actionable_research_id",
+            "actionable_round_id",
+            "actionable_research_ids",
+            "next_attention",
+            "disposition",
+            "attention_basis_research_ids",
+            "attention_basis_round_ids",
+            "attention_reason",
+            "plan_round_argv",
+            "active_head_research_ids",
+            "active_head_workflow_roots",
+            "current_active_head_research_ids",
+            "current_active_head_count",
+            "current_active_head_ids_sha256",
+            "stale_active_head_research_ids",
+            "attained_checkpoint_research_ids",
+            "frontier_generation",
+            "frontier_source",
+            "frontier_checkpoint_event_id",
+            "checkpoint_main_disposition",
+            "checkpoint_refresh_recommended",
+            "checkpoint_refresh_reasons",
+            "checkpoint_diagnostic_codes",
+            "checkpoint_malformed",
+            "invalid_head_research_ids",
+            "invalid_attained_checkpoint_research_ids",
+            "terminal_successor_selection_effect",
+            "uncheckpointed_terminal_successor_count",
+            "uncheckpointed_terminal_successor_ids_sha256",
+            "uncheckpointed_terminal_successor_research_ids",
+        )
+        compact = {
+            key: entry[key] for key in routine_fields if key in entry
+        }
+        raw_head_actions = entry.get("active_head_actions")
+        if isinstance(raw_head_actions, list):
+            compact["active_head_actions"] = [
+                {
+                    key: action[key]
+                    for key in (
+                        "research_id",
+                        "workflow_root_research_id",
+                        "checkpoint_head_state",
+                        "action_class",
+                        "next_action",
+                        "why_now",
+                        "actionable_research_id",
+                        "actionable_round_id",
+                        "current_route_research_ids",
+                        "current_terminal_research_ids",
+                        "terminal_evidence_research_ids",
+                        "work_completion_status",
+                        "plan_round_argv",
+                    )
+                    if key in action
+                }
+                for action in raw_head_actions
+                if isinstance(action, dict)
+            ]
+        diagnostic_rows: list[dict[str, Any]] = []
+        for field in (
+            "active_head_actions",
+            "active_head_semantic_successors",
+            "attained_semantic_successors",
+        ):
+            values = entry.get(field)
+            if not isinstance(values, list):
+                continue
+            diagnostic_rows.extend(
+                value for value in values if isinstance(value, dict)
+            )
+        for field in (
+            "current_route_research_ids",
+            "terminal_research_ids",
+            "terminal_evidence_research_ids",
+            "production_product_research_ids",
+            "supervision_plan_research_ids",
+            "supervision_result_research_ids",
+            "cow_repair_research_ids",
+        ):
+            exact_ids: list[str] = []
+            for row in diagnostic_rows:
+                values = row.get(field)
+                if not isinstance(values, list):
+                    continue
+                for research_id in values:
+                    if (
+                        isinstance(research_id, str)
+                        and research_id not in exact_ids
+                    ):
+                        exact_ids.append(research_id)
+            if not exact_ids:
+                continue
+            compact[field] = exact_ids[:8]
+            if len(exact_ids) > 8:
+                stem = field[:-4] if field.endswith("_ids") else field
+                compact[f"{stem}_count"] = len(exact_ids)
+                compact[f"{stem}_ids_sha256"] = sha256_json(exact_ids)
+        return compact
+
     def frontier_decision_surface(
         self,
         *,
         limit: int = 10,
         campaign_id: str | None = None,
+        diagnostic: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Return Main's small goal-aware decision surface.
@@ -8746,7 +8865,14 @@ class V5LifecycleManager:
                 ),
                 "orphaned": progress_counts.get("orphaned", 0),
             },
-            "goal_coverage": clean_coverage,
+            "goal_coverage": (
+                clean_coverage
+                if diagnostic
+                else [
+                    self._compact_goal_coverage_entry(item)
+                    for item in clean_coverage
+                ]
+            ),
             "checkpoint_diagnostics": checkpoint_diagnostics,
             "checkpoint_refresh": {
                 "recommended": bool(refresh_goal_rows),

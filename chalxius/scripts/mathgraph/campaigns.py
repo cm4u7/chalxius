@@ -72,7 +72,7 @@ COMPACT_SCORE_WEIGHTS = {
     "feasibility": 0.20,
     "economy": 0.20,
 }
-RECENT_CAMPAIGN_EVENT_SUMMARIES = 20
+RECENT_CAMPAIGN_EVENT_SUMMARIES = 8
 
 
 def _utc_now() -> str:

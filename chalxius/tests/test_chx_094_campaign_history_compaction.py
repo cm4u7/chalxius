@@ -96,13 +96,13 @@ class CampaignHistoryCompactionTests(unittest.TestCase):
         self.assertIsNone(compact["latest_frontier_checkpoint"])
         self.assertEqual(compact["history"]["event_count"], len(events))
         recent = compact["recent_history"]
-        self.assertEqual(recent["shown_count"], 20)
-        self.assertEqual(recent["start_ordinal"], len(events) - 19)
+        self.assertEqual(recent["shown_count"], 8)
+        self.assertEqual(recent["start_ordinal"], len(events) - 7)
         self.assertEqual(recent["end_ordinal"], len(events))
-        self.assertEqual(recent["older_event_count"], len(events) - 20)
+        self.assertEqual(recent["older_event_count"], len(events) - 8)
         self.assertEqual(
             [event["event_id"] for event in recent["events"]],
-            [event["event_id"] for event in events[-20:]],
+            [event["event_id"] for event in events[-8:]],
         )
         self.assertNotIn("payload", recent["events"][-1])
         self.assertEqual(recent["events"][-1]["text_preview"], "history-036")
@@ -226,9 +226,9 @@ class CampaignHistoryCompactionTests(unittest.TestCase):
             self.assertEqual(status, 0, error)
             result = json.loads(second_output)
             self.assertNotIn("updates", result)
-            self.assertEqual(result["recent_history"]["shown_count"], 20)
+            self.assertEqual(result["recent_history"]["shown_count"], 8)
             self.assertLess(len(second_output), len(first_output) + 512)
-            self.assertLess(len(second_output), 32 * 1024)
+            self.assertLess(len(second_output), 20 * 1024)
 
     def test_event_tamper_still_fails_closed(self) -> None:
         path = self.root / "campaigns" / self.campaign_id / "events.jsonl"

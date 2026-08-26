@@ -255,8 +255,14 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     campaign_id=campaign_id,
                     _inspection_context=inspection,
                 )
+                diagnostic_surface = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    diagnostic=True,
+                    _inspection_context=inspection,
+                )
 
             goal = surface["goal_coverage"][0]
+            diagnostic_goal = diagnostic_surface["goal_coverage"][0]
             self.assertEqual(goal["active_head_research_ids"], [head_id])
             self.assertEqual(
                 goal["stale_active_head_research_ids"], [head_id]
@@ -286,6 +292,12 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 ],
                 [review_id],
             )
+            self.assertNotIn("active_head_semantic_successors", goal)
+            self.assertNotIn("attained_semantic_successors", goal)
+            self.assertIn(
+                "active_head_semantic_successors", diagnostic_goal
+            )
+            self.assertIn("attained_semantic_successors", diagnostic_goal)
             self.assertTrue(goal["checkpoint_refresh_recommended"])
             self.assertIn(
                 "active_head_has_newer_terminal_successor",

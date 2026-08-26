@@ -77,7 +77,13 @@ recognized legacy repair relations remain traversable; and Campaign work not
 mapped to an active goal moves into a bounded secondary attention summary
 instead of filling the primary queue. `scripts/candidate_identity.py` exposes
 the exact candidate root, manifest, Git worktree, and installed-tree difference
-before source edits. After reconnect or context compaction, Main reconciles the
+before source edits. Routine goal rows retain the exact head-to-workflow-root
+map, current route/terminal ids, actionable Research/round, replay argv,
+checkpoint freshness, and Main disposition; repeated successor hashes and
+per-branch diagnostic trees move behind explicit `frontier --diagnostic`.
+Routine `campaign-status` keeps eight recent event summaries beside the latest
+checkpoint while exact older history remains directly readable. After
+reconnect or context compaction, Main reconciles the
 current and recent orphaned CHX ledger by instruction, without a monitor,
 automatic issue generator, selector, mutation, compatibility layer, or truth
 effect.

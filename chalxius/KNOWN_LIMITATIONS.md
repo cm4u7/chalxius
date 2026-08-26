@@ -28,6 +28,16 @@ Self-test reports the current SKILL line count as a context-cost observation
 but no longer turns an arbitrary formatting threshold into an installation
 gate. Exact manifest, metadata, behavior, and authority checks remain strict.
 
+Post-install generation-45 use exposed a residual of the earlier compact
+frontier repair: semantically correct default goal rows still copied their
+complete diagnostic successor trees, and Campaign status retained twenty
+recent event summaries in addition to the latest checkpoint. Routine goal rows
+now preserve the exact action, head-to-root mapping, current route/terminal ids,
+round, replay argv, freshness, and Main disposition while `--diagnostic` owns
+the repeated per-branch hashes and topology. The ordinary status tail is eight
+event summaries; complete immutable history remains available for exact
+forensics. This is an output projection only, not a score cutoff or work gate.
+
 ## 0.9.6 Frontier Freshness
 
 Installed 0.9.5 made exact attained-checkpoint successors visible but did not
