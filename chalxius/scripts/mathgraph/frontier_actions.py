@@ -52,9 +52,47 @@ class _ActionProjector:
         kind = primary.get("kind")
         claim = claim if isinstance(claim, str) else ""
         kind = kind if isinstance(kind, str) else None
+        explicit_disposition = self.dispositions.get(
+            primary_research_id or "", {}
+        ).get("metadata", {}).get("attention_disposition")
+        if explicit_disposition not in {
+            "superseded",
+            "equivalent_review_accepted",
+        }:
+            explicit_disposition = None
+        if next_action == "production":
+            next_attention = "production"
+        elif next_action == "repair":
+            next_attention = "repair"
+        elif next_action == "supervision" or reason.startswith("supervision_"):
+            next_attention = "supervision"
+        elif next_action in {"await_return", "ingest_return"}:
+            next_attention = (
+                "supervision"
+                if reason.startswith("supervision_")
+                else "production"
+            )
+        elif next_action == "none":
+            next_attention = "none"
+        else:
+            next_attention = "reconcile"
+        disposition = (
+            explicit_disposition
+            if explicit_disposition is not None
+            else "in_flight"
+            if next_action in {"await_return", "ingest_return"}
+            else "complete"
+            if next_action == "none"
+            else "active"
+        )
         return {
             "next_action": next_action,
             "pending_reason": reason,
+            "next_attention": next_attention,
+            "disposition": disposition,
+            "attention_basis_research_ids": ordered_research,
+            "attention_basis_round_ids": ordered_rounds,
+            "attention_reason": reason,
             "actionable_research_id": primary_research_id,
             "actionable_round_id": primary_round_id,
             "actionable_research_ids": ordered_research,
@@ -67,6 +105,21 @@ class _ActionProjector:
             "actionable_claim_sha256": sha256_bytes(claim.encode("utf-8")),
             "actionable_kind": kind,
         }
+
+    def explicit_attention_disposition(
+        self,
+        research_id: str,
+    ) -> str | None:
+        """Return Main's exact COW semantic disposition, when present."""
+
+        value = self.dispositions.get(research_id, {}).get(
+            "metadata", {}
+        ).get("attention_disposition")
+        return (
+            value
+            if value in {"superseded", "equivalent_review_accepted"}
+            else None
+        )
 
     def historical_repairs(
         self,
@@ -101,6 +154,17 @@ class _ActionProjector:
 
     def research(self, research_id: str) -> dict[str, Any]:
         """Derive one exact Research's next lifecycle operation."""
+
+        explicit_disposition = self.explicit_attention_disposition(
+            research_id
+        )
+        if explicit_disposition is not None:
+            return self.action(
+                "none",
+                f"main_{explicit_disposition}",
+                research_ids=[research_id],
+                primary_research_id=research_id,
+            )
 
         bindings = self.inspection.completion_obligation_rounds
         if bindings is None:
@@ -232,15 +296,12 @@ class _ActionProjector:
             )
 
         product = self.bases[product_id]
-        if not self.lifecycle._frontier_completion_product_is_safe(
-            product=product,
-            dispositions=self.dispositions,
-            route_staleness=self.route_staleness,
-        ):
+        product_disposition = self.explicit_attention_disposition(product_id)
+        if product_disposition is not None:
             return self.action(
-                "main_reconciliation",
-                "ingested_product_not_safe_for_automatic_routing",
-                research_ids=[research_id, product_id],
+                "none",
+                f"main_{product_disposition}",
+                research_ids=[product_id],
                 round_ids=[production_round],
                 primary_research_id=product_id,
                 primary_round_id=production_round,
@@ -251,6 +312,19 @@ class _ActionProjector:
         )
         supervision_rounds = supervision_index.get(production_round, [])
         if not supervision_rounds:
+            if not self.lifecycle._frontier_completion_product_is_safe(
+                product=product,
+                dispositions=self.dispositions,
+                route_staleness=self.route_staleness,
+            ):
+                return self.action(
+                    "main_reconciliation",
+                    "ingested_product_not_safe_for_automatic_routing",
+                    research_ids=[research_id, product_id],
+                    round_ids=[production_round],
+                    primary_research_id=product_id,
+                    primary_round_id=production_round,
+                )
             return self.action(
                 "supervision",
                 "production_product_awaits_supervision",
@@ -304,6 +378,24 @@ class _ActionProjector:
                 research_ids=[product_id],
                 round_ids=list(supervision_awaiting),
                 primary_research_id=product_id,
+            )
+
+        # Existing live supervision is an operational fact and remains visible
+        # even when the pre-supervision product is semantically unsafe.  Once
+        # no live state remains, safety again controls interpretation of the
+        # completed supervision lineage.
+        if not self.lifecycle._frontier_completion_product_is_safe(
+            product=product,
+            dispositions=self.dispositions,
+            route_staleness=self.route_staleness,
+        ):
+            return self.action(
+                "main_reconciliation",
+                "ingested_product_not_safe_for_automatic_routing",
+                research_ids=[research_id, product_id],
+                round_ids=[production_round, *supervision_rounds],
+                primary_research_id=product_id,
+                primary_round_id=production_round,
             )
 
         try:

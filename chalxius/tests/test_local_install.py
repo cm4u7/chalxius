@@ -74,6 +74,10 @@ class LocalInstallTests(unittest.TestCase):
             "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
             command,
         )
+        self.assertIn(
+            "test_chx_095_terminal_frontier_context.TerminalFrontierContextTests",
+            command,
+        )
 
     def test_install_archives_prior_and_rotates_one_direct_rollback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

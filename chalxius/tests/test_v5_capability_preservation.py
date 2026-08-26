@@ -34,7 +34,7 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertEqual(
             compatibility["project_schema_change"],
-            "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
+            "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_and_paper_research_pipeline_only",
         )
         self.assertEqual(
             compatibility["activation_absent_behavior"],
@@ -63,14 +63,12 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertEqual(
             campaign_scope["selection"],
-            "explicit_id_or_auto_or_deep_exact_user_objective_compilation",
+            "main_selected_research_with_optional_explicit_campaign_scope",
         )
         self.assertEqual(
-            campaign_scope["goal_matching"],
-            "unicode_nfc_whitespace_fold_then_lexical_exact_only",
+            campaign_scope["research_creation"],
+            "atomic_memory_add_campaign_binding",
         )
-        self.assertFalse(campaign_scope["user_campaign_jargon_required"])
-        self.assertFalse(campaign_scope["active_campaign_pointer_used_for_goal_selection"])
         self.assertEqual(
             campaign_scope["scheduler"],
             "v5_main_four_factor_frontier",
@@ -78,16 +76,7 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         self.assertFalse(campaign_scope["active_campaign_pointer_default"])
         self.assertFalse(campaign_scope["fact_admission_change"])
         self.assertEqual(campaign_scope["truth_effect"], "none")
-        brave_future = lock["brave_future_surface"]
-        self.assertEqual(
-            brave_future["goal_intake_revision"], "chalxius-bf-goal-intake-2"
-        )
-        self.assertEqual(
-            brave_future["goal_intake_modes"], ["auto", "deep"]
-        )
-        self.assertEqual(brave_future["plan_effect"], "none")
-        self.assertEqual(brave_future["dispatch_effect"], "none")
-        self.assertEqual(brave_future["truth_effect"], "none")
+        self.assertNotIn("brave_future_surface", lock)
         paper = lock["paper_continuation_surface"]
         self.assertEqual(
             paper["contract_revision"], "chalxius-v5-paper-continuation-1"
@@ -120,13 +109,6 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         self.assertIn("operator_registered", parallel["trust_anchor"])
         self.assertIn("nonce_uniqueness", parallel["freshness"])
         self.assertIn("same_eligible_aggregate", parallel["gateway"])
-        brave = lock["brave_future_surface"]
-        self.assertEqual(brave["autonomy_level"], "advisory")
-        self.assertFalse(brave["active_campaign_pointer"])
-        self.assertEqual(brave["scheduler"], "v5_main_four_factor_frontier")
-        self.assertEqual(brave["plan_effect"], "none")
-        self.assertEqual(brave["dispatch_effect"], "none")
-        self.assertEqual(brave["truth_effect"], "none")
 
     def test_every_036_cli_command_is_accounted_for(self) -> None:
         cli_path = SKILL_ROOT / "scripts" / "mathgraph" / "cli.py"

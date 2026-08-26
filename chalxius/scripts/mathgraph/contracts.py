@@ -54,6 +54,8 @@ TERMINAL_MEMORY_STATUSES = {
     "refuted_by_fact",
     "dead_end",
     "blocked",
+    "superseded",
+    "equivalent_review_accepted",
 }
 MEMORY_STATUSES = ACTIVE_MEMORY_STATUSES | TERMINAL_MEMORY_STATUSES
 

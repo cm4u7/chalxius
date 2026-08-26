@@ -1,4 +1,154 @@
-# Chalxius V5 traceability through 0.9.0 Frontier Active Fix
+# Chalxius V5 traceability through 0.9.7 Frontier Continuity
+
+## 0.9.7 frontier-continuity release overlay
+
+- Candidate version: `0.9.7`; release name **Frontier Continuity**.
+- Campaign semantic-successor projection follows exact production bindings and
+  narrowly recognized legacy repair relations through deep COW history.
+  Ingested products use their exact production source as the workflow root;
+  in-flight supervision does not make that stable root look stale.
+- When an explicit Campaign has active research goals, goal-mapped workflow is
+  primary. Goal-unmapped Campaign items remain visible in a bounded secondary
+  summary with exact ids, count, and digest; none is deleted, closed, or
+  treated as mathematically irrelevant.
+- `scripts/candidate_identity.py` reports canonical candidate path, VERSION,
+  manifest validity, Git branch/HEAD/dirty state, path-version hints, and exact
+  installed-tree differences. It never selects, switches, mutates, installs,
+  or affects graph authority.
+- Main records qualifying CHX observations when seen and reconciles the exact
+  current or recent orphaned ledger after reconnect, compaction, or a major
+  task switch. This is concise judgment guidance, not a timer, monitor,
+  checklist gate, or automatic issue generator.
+- Fifty-eight focused candidate/Campaign tests and repeated live local-F0
+  generation-45 trials pass. Two goal lanes project `await_return`, the third
+  requests Main selection, checkpoint refresh is not recommended, and routine
+  elapsed time remains about two seconds. Installation and publication remain
+  separate authorizations.
+
+## 0.9.6 frontier-freshness release overlay
+
+- Candidate version: `0.9.6`; release name **Frontier Freshness**.
+- Ordinary Main `search` ranks immutable V5 Research and verified Facts with
+  explicit object types; `show` autodetects exact Research and Fact ids. The
+  low-level Fact search remains Fact-only for truth-stage callers.
+- Campaign reads compare checkpoint active heads with exact production,
+  supervision, and semantic COW descendants. Productive challenge/repair
+  terminals are current routes; clean terminal supervision results are review
+  evidence. A bounded `checkpoint_refresh` recommendation has
+  `selection_effect=none` and never writes the checkpoint.
+- Historical canonical COW Research remains visible by exact graph semantics
+  even when it predates the optional hash-bound repair-spec projection.
+  Per-target malformed status now follows only that target's diagnostics.
+- Focused regression and the live generation-42 local-F0 Campaign distinguish
+  two stale heads, two current productive routes, and clean review evidence in
+  about three seconds. No automatic selection, dispatch, compatibility layer,
+  Candidate effect, or Fact effect is added. Installation and publication are
+  separate authorizations.
+
+## 0.9.5 exact-frontier-context release overlay
+
+- Candidate version: `0.9.5`; release name **Exact Frontier Context**.
+- Main's Campaign goal projection follows only exact recorded workflow shapes
+  from attained checkpoints through production products, supervision plans and
+  results, and canonical COW repairs. It exposes bounded uncheckpointed
+  terminal routes plus full counts/digests with `selection_effect=none`.
+- A new task card also freezes every valid existing 12-hex Research id
+  literally named in the selected Research claim/content/rationale/source,
+  together with its exact Research record and path/SHA-256/role artifacts.
+  Unknown checksum-like tokens remain inert; no fuzzy relevance inference is
+  performed.
+- Existing immutable task cards and Campaign checkpoints remain unchanged and
+  directly readable. The repair adds no compatibility layer, auto-checkpoint,
+  dispatcher, scheduler, Candidate effect, or Fact effect.
+- Focused regression and live-project timing show the exact new context without
+  a material routine-frontier performance change. This is an integrated local
+  repair; installation and publication remain separate.
+
+## 0.9.4 campaign-history-compaction release overlay
+
+- Candidate version: `0.9.4`; release name **Campaign History Compaction**.
+- Full Campaign event ledgers remain immutable and append-only. Routine
+  `campaign-status` emits one compact current view, the latest minimal routing
+  checkpoint, and a fixed recent event-summary tail; no paging API is added.
+- Future frontier checkpoints retain only the routing fields consumed by the
+  reader. Canonical Research, product, review, and reason bodies are resolved
+  from their own records rather than copied into every generation.
+- New scoped rounds write `chalxius-v5-campaign-scope-2`, committing active
+  current semantics and the exact ordered event prefix. Tail append validates;
+  prefix rewrite, reorder, or truncation fails. Immutable scope-1 rounds remain
+  readable without rewrite.
+- A copy-on-write repair inherits the repaired Research's exact Campaign into
+  both its new Research and round scope; an unbound source does not infer
+  `ACTIVE`.
+- Main's parallelism instruction distinguishes mathematical production/review
+  from ordinary engineering: the latter is delegated only for positive
+  coordination-adjusted critical-path value. No quota or dispatch gate is
+  introduced.
+- This is an integrated local repair. It changes no Candidate, verifier,
+  Certification, Gateway, Fact, or mathematical truth boundary.
+
+## 0.9.3 integrated-frontier-cleanup release overlay
+
+- Candidate version: `0.9.3`; release name **Integrated Frontier Cleanup**.
+- `memory-add --campaign` validates one exact Campaign before Research semantic
+  identity and again under the write lock; conflicts or drift publish no
+  immutable Research. Worker products preserve that Campaign lineage.
+- New production manifests freeze Main's selection source, exact Research ids,
+  optional Campaign, requested mode, and copy-safe replay argv. Frontier and
+  Campaign goal rows expose compact next-attention/disposition fields and their
+  exact Research/round basis.
+- A live supervision round remains visible before the product-safety check used
+  only to decide whether a new automatic supervision suggestion is appropriate.
+  Once no live supervision remains, unsafe products still reconcile visibly.
+- The former Brave Future and goal-intake command family, modules, tests, and
+  current capability registrations are removed without aliases or a second
+  planner. Historical sidecar bytes remain inert nontruth provenance.
+- CHX inventory liveness comes only from explicit current run ids. Historical
+  open ledgers are bounded by default and may receive content-addressed COW
+  administrative dispositions; those markers do not resolve issues or alter
+  the global issue snapshot.
+- Final candidate validation recorded and repaired three integration findings
+  in `run-20260825T070910341563Z-45d813583f5f`: CHX-001 splits one duplicated
+  behavioral probe into distinct positive, predicate-false, and tamper roles;
+  CHX-002 closes the capability/behavior registry over every new command and
+  call edge; CHX-003 keeps administrative/interface mutants in the complete
+  forensic set without overfilling the bounded routine semantic profile.
+- Final candidate evidence is 998 inherited/current tests with two intentional
+  skips, self-test PASS, 111/111 executable behavioral probes, strict
+  reconnaissance over 260 files with zero errors/warnings/orphans, a 32/32
+  semantic mutation profile, and a 144/144 complete mutation profile. Both
+  mutation profiles and the behavior gate report unchanged candidate bytes.
+- This is an integrated local repair. It changes no Candidate, verifier,
+  Certification, Gateway, Fact, or mathematical truth boundary.
+
+## 0.9.2 frontier-semantic-choice release overlay
+
+- Candidate version: `0.9.2`; release name **Frontier Semantic Choice**.
+- Completion of a checkpoint work head never proves completion of its active
+  Campaign research goal. Finished heads request explicit Main disposition;
+  only target archive removes the goal from active coverage.
+- Checkpoint validation diagnoses duplicate targets, omitted active goals,
+  invalid attained/head/recovery ids, and generation/supersedes drift without
+  rewriting checkpoints or blocking ordinary graph work.
+- Production mode controls sparse automatic supervision selection only. Main
+  may explicitly select a registered materially applicable primary scope for
+  the complete frozen successor; no scope becomes mandatory or automatic.
+- The repair adds no dispatcher, semantic inference engine, compatibility
+  layer, Candidate effect, or Fact effect.
+
+## 0.9.1 campaign-frontier-heads release overlay
+
+- Candidate version: `0.9.1`; release name **Campaign Frontier Heads**.
+- A Campaign target's exact Research subject remains its immutable provenance
+  anchor. Main's newest append-only nontruth head checkpoint supplies bounded
+  current lifecycle work heads and attained checkpoints for routine reads.
+- Zero heads request Main selection, multiple heads remain jointly visible,
+  and missing or cross-Campaign heads request bounded exact recovery from the
+  nearest attained checkpoint. The anchor is the final recovery root only.
+- Checkpoints are advisory navigation. They do not update themselves, infer
+  semantic priority, dispatch, close a goal, or affect Candidate or Fact state.
+- Campaigns without a checkpoint retain the 0.9.0 exact-anchor projection; no
+  migration, compatibility layer, index, watcher, scheduler, or gate is added.
 
 ## 0.9.0 frontier-active-fix release overlay
 

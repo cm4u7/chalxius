@@ -127,7 +127,8 @@ class HostEntrypointNonMutationTests(unittest.TestCase):
                 "import mathgraph.roles\n"
                 "class BytecodeProbe(unittest.TestCase):\n"
                 "    def test_import(self):\n"
-                "        self.assertIn('research-goal-intake', mathgraph.roles.ALL_COMMANDS)\n",
+                "        self.assertIn('memory-add', mathgraph.roles.ALL_COMMANDS)\n"
+                "        self.assertNotIn('research-goal-intake', mathgraph.roles.ALL_COMMANDS)\n",
                 encoding="utf-8",
             )
             before = aggressive_bug_audit_module._candidate_snapshot(root)

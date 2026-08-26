@@ -63,10 +63,9 @@ Research, Evidence, Candidate Release, Certification Decision, Paper/Audit,
 Blackboard, Pulse status, profile-readiness advice, campaigns, experiments,
 novelty records, project background, Reader packets/HTML, expert prose, and
 Learning records are not Fact premises.
-`research-goal-intake`, its internally created Campaign, and every BF-1/BF-2/BF-3
-projection or receipt remain in that nontruth set. The command's one token-bound
-prospective root Research is likewise nontruth and supplies lineage only; BF
-itself still creates no Research, plan, dispatch, or Fact.
+Campaigns, goal coverage, plan-selection receipts, next-attention projections,
+and historical retired advisory sidecar bytes remain in that nontruth set.
+They supply context and lineage only and create no Fact premise.
 
 ## Selective checkpoint and Candidate batch seed
 

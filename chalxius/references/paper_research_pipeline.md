@@ -218,11 +218,10 @@ All output writes are atomic. Run native Paper stage/audit after successor
 materialization, then the ordinary strict research-draft lifecycle. Never call
 the preflight receipt an admitted Fact.
 
-## L3/L4 boundary
+## Planning boundary
 
-This pipeline may supply ordered nontruth work units to the existing scheduler
-and may coexist with explicitly enabled Brave Future BF-1 through BF-3. It does
-not enable `plan_one`, `execute_one`, `plan-round --reassessment`, automatic
-dispatch, Campaign closure, Research creation, or any Candidate/Certification/
-Gateway/Fact write. The finite L3/L4 recovery remains advisory and separately
-audited under [brave_future_l3_l4.md](brave_future_l3_l4.md).
+This pipeline may supply ordered nontruth work units to the ordinary frontier.
+It does not enable `plan_one`, `execute_one`, automatic dispatch, Campaign
+closure, Research creation, or any Candidate/Certification/Gateway/Fact write.
+Main remains responsible for exact search, duplicate exclusion, and explicit
+selection.

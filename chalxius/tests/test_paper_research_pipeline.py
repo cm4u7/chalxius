@@ -19,7 +19,6 @@ from mathgraph.paper_research_pipeline import (
     PaperPipelineError,
     build_ordered_paper_frontier,
     build_pipeline_receipt,
-    l3_l4_limited_restoration_contract,
     materialize_native_research_draft_successor,
     normalize_delta_receipt,
     normalize_pdf_layout,
@@ -1035,7 +1034,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
                 continuity_contract=continuity,
             )
 
-    def test_pipeline_receipt_keeps_native_gateway_and_bf_boundary(self) -> None:
+    def test_pipeline_receipt_keeps_native_gateway_boundary(self) -> None:
         graph = _graph()
         frontier = build_ordered_paper_frontier(graph, headline_claim_ids=["c1"])
         receipt = build_pipeline_receipt(
@@ -1045,11 +1044,7 @@ class PaperResearchPipelineTests(unittest.TestCase):
             continuity_contract=_continuity(),
         )
         self.assertTrue(receipt["authority_boundary"]["native_gateway_still_required"])
-        boundary = l3_l4_limited_restoration_contract()
-        self.assertEqual(len(boundary["restored_stages"]), 3)
-        self.assertIn("plan_one", boundary["forbidden"])
-        self.assertIn("execute_one", boundary["forbidden"])
-        self.assertIn("second-scheduler", boundary["forbidden"])
+        self.assertNotIn("l3_l4_limited_restoration", receipt)
 
     def test_public_successor_example_covers_every_required_parser_option(self) -> None:
         parser = _PUBLIC_PIPELINE._parser()

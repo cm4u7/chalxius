@@ -329,9 +329,11 @@ technical Host remains the trusted dispatch adapter and gains no planner or
 background capability.
 
 When Main explicitly plans V5 with `--campaign ID`, the round manifest and each
-card also bind one `chalxius-v5-campaign-scope-1` envelope and its exact frozen
+new card bind one `chalxius-v5-campaign-scope-2` envelope and its exact frozen
 snapshot path/hash. Read its objective, active typed targets, constraints,
-value definition, stop conditions, and history as nontruth planning context.
+value definition, stop conditions, and ordered history-prefix commitment as
+nontruth planning context. It does not copy event bodies; immutable scope-1
+cards remain readable without rewrite.
 It never replaces the source Research dossier, chooses the work mode, closes
 the assignment, grants an undeclared filesystem capability, or changes Fact
 admission. Cards planned without the flag—including older cards that merely

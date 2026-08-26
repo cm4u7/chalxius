@@ -96,6 +96,16 @@ artificial abort and never rewrites the frozen round.
 
 ## Record every discovery before classifying it
 
+Record a mechanism-worthy symptom when Main first has exact evidence for it;
+do not defer capture until the current mathematical round, report, or task is
+finished.  After a reconnect, context compaction, or substantial work-unit
+switch, Main reads the exact current ledger status and any recent orphaned
+task-scoped ledger before resuming, then records any already-observed qualifying
+symptom that is still only present in conversation context.  This is a bounded
+recovery instruction, not a timer, daemon, mandatory checklist, automatic issue
+generator, release gate, or truth-stage effect.  Ordinary mathematical gaps and
+one-off host/operator errors remain excluded by the causal test below.
+
 Revisions 3 and 4 first record every newly discovered candidate mechanism as a stable
 content-derived `finding-*` id. This prevents a host from noticing a mechanism
 and then silently omitting it because issue classification or the report is

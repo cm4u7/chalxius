@@ -35,15 +35,11 @@ reviews every authorized successor claim, artifact, and interface inside its
 exact proof, source, program-math, or integration scope; prior findings are
 mandatory but non-exhaustive attack seeds.
 
-Version 0.6.5 gives `auto` and `deep` one prospective intake trigger: an explicit user
-research objective is sufficient semantic authority for Operator to call
-`research-goal-intake`, even when the user never says `Campaign`. The compiler
-creates or lexically exact-matches one internal Campaign, enables only the fixed
-advisory BF policy, computes BF-1, and the public command creates or reuses one
-prospective root Research bound to the committed intake token and Campaign.
-BF-1 through BF-3 themselves still create no Research. This is not an `ACTIVE`
-default or planner: BF-2/BF-3 require exact ingested-attempt blockage evidence,
-and all planning or dispatch remains separate. `fast` retains explicit BF activation.
+Reasoning mode does not create a hidden objective compiler. In every mode Main
+may explicitly create or choose a Campaign and atomically bind a new Research
+root with `memory-add --campaign`. The ordinary frontier then reports exact
+goal coverage, outstanding attention, and copy-safe `plan_round_argv`; all
+planning and dispatch remain explicit. `ACTIVE` is a nonfiltering hint only.
 
 Current V5 task cards freeze the mode event and their exact assurance contract.
 They do not automatically attach the historical V4 `execution_profile` or

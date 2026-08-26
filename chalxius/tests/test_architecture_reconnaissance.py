@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 from copy import deepcopy
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import architecture_reconnaissance as reconnaissance
 import chx_ledger
@@ -19,6 +22,31 @@ from mathgraph.release_contracts import (
 
 
 class ArchitectureReconnaissanceTests(unittest.TestCase):
+    def test_quiet_strict_failure_emits_bounded_diagnostic(self):
+        root = Path(reconnaissance.__file__).resolve().parents[1]
+        report = {
+            "errors": ["missing_modules:candidate_identity"],
+            "warnings": ["unclassified_orphan_modules"],
+            "inventory_sha256": "a" * 64,
+        }
+        stderr = io.StringIO()
+        with mock.patch.object(
+            reconnaissance, "inventory", return_value=report
+        ), contextlib.redirect_stderr(stderr):
+            returncode = reconnaissance.main(
+                ["--root", str(root), "--quiet", "--strict"]
+            )
+        self.assertEqual(returncode, 1)
+        self.assertEqual(
+            json.loads(stderr.getvalue()),
+            {
+                "errors": ["missing_modules:candidate_identity"],
+                "warnings": ["unclassified_orphan_modules"],
+                "inventory_sha256": "a" * 64,
+                "truth_effect": "none",
+            },
+        )
+
     def test_release_revision_bindings_have_one_source_of_truth(self):
         root = Path(reconnaissance.__file__).resolve().parents[1]
         expected = validate_release_audit_revision_bindings(root)

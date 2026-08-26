@@ -2338,6 +2338,101 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "cross_scope_integration",
             )
 
+    def test_main_can_select_proof_scope_for_literature_complete_successor(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            target = lifecycle.add_research(
+                {
+                    "kind": "literature",
+                    "claim": (
+                        "Publish one complete copy-on-write successor whose "
+                        "frozen theorem remains available for proof review."
+                    ),
+                    "logic_signals": ["source_use_required"],
+                },
+                actor="main",
+            )
+            production = lifecycle.create_production_round(
+                workers=1,
+                mode="literature",
+                research_ids=[target["research_id"]],
+                host_task_scope_id="literature-cow-production-host",
+            )
+            assignment = production["assignments"][0]
+            receipt = self._ingest_plain_assignment(
+                store,
+                production,
+                assignment,
+                outcome="insight",
+            )
+
+            automatic = lifecycle.create_supervision_round(
+                production["round_id"],
+                host_task_scope_id="literature-cow-automatic-supervision-host",
+            )
+            self.assertEqual(
+                automatic["research_cycle"]["supervisor_scopes"],
+                ["source_scope"],
+            )
+            self.assertNotIn(
+                "proof_logic",
+                automatic["research_cycle"]["supervisor_scopes"],
+            )
+
+            selected = lifecycle.create_supervision_round(
+                production["round_id"],
+                supervisor_scopes=["proof_logic"],
+                host_task_scope_id="literature-cow-explicit-proof-host",
+            )
+            self.assertEqual(
+                selected["research_cycle"]["supervisor_scopes"],
+                ["proof_logic"],
+            )
+            card = json.loads(
+                Path(
+                    str(selected["assignments"][0]["task_card_path"])
+                ).read_text(encoding="utf-8")
+            )
+            binding = card["mathematical_state"][
+                "source_research_dossier"
+            ]["metadata"]["research_supervision"]
+            production_manifest = json.loads(
+                (
+                    store.rounds_dir / production["round_id"] / "round.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(binding["source_round_id"], production["round_id"])
+            self.assertEqual(
+                binding["source_round_manifest_sha256"],
+                production_manifest["manifest_sha256"],
+            )
+            self.assertEqual(binding["supervisor_scope"], "proof_logic")
+            self.assertEqual(len(binding["source_receipts"]), 1)
+            frozen = binding["source_receipts"][0]
+            self.assertEqual(frozen["work_mode"], "literature")
+            self.assertEqual(frozen["outcome"], "insight")
+            self.assertEqual(frozen["result_research_id"], receipt["research_id"])
+            self.assertEqual(frozen["return_sha256"], receipt["return_sha256"])
+            self.assertEqual(
+                frozen["task_card_sha256"], assignment["task_card_sha256"]
+            )
+            self.assertEqual(store.fact_ids(), [])
+            self.assertEqual(
+                list(lifecycle.candidate_releases_dir.glob("release-*.json")),
+                [],
+            )
+            self.assertEqual(
+                list(
+                    lifecycle.certification_decisions_dir.glob(
+                        "decision-*.json"
+                    )
+                ),
+                [],
+            )
+
     def test_failure_informed_assurance_tamper_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
@@ -2824,10 +2919,13 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertEqual(
                 rounds_before, {item.name for item in store.rounds_dir.iterdir()}
             )
-            with self.assertRaisesRegex(ValueError, "do not apply"):
+            with self.assertRaisesRegex(ValueError, "one to three"):
                 lifecycle.create_supervision_round(
-                    design["round_id"], supervisor_scopes=["proof_logic"]
+                    design["round_id"], supervisor_scopes=["unknown_scope"]
                 )
+            self.assertEqual(
+                rounds_before, {item.name for item in store.rounds_dir.iterdir()}
+            )
 
     def test_supervision_binding_tamper_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

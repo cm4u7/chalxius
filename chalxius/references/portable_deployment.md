@@ -1,5 +1,73 @@
 # Chalxius portable deployment
 
+## 0.9.7 Frontier Continuity
+
+The `0.9.7` **Frontier Continuity** candidate projects deep exact
+Campaign/COW lifecycle, stable product workflow roots, and in-flight
+supervision without automatic checkpoint mutation. Active-goal work remains
+primary; goal-unmapped Campaign attention is compact and secondary. Before an
+edit or package, `scripts/candidate_identity.py` reports the exact proposed
+root, VERSION, manifest, Git worktree, and installed-tree difference so a
+historical directory name cannot select the candidate. Installation remains
+project-free and separate from publication.
+
+## 0.9.6 Frontier Freshness
+
+The `0.9.6` **Frontier Freshness** candidate gives Main typed Research/Fact
+navigation and a read-only stale-checkpoint signal. Exact successor routes and
+clean review evidence remain separate; Main alone writes a later checkpoint.
+No fuzzy search, persistent index, updater, dispatcher, or truth effect is
+introduced. Installation remains project-free and separate from publication.
+
+## 0.9.5 Exact Frontier Context
+
+The `0.9.5` **Exact Frontier Context** candidate gives Main a bounded exact
+projection of uncheckpointed terminal workflow successors below attained
+Campaign checkpoints and freezes literal existing Research ids from selected
+Research prose as direct predecessor records and artifacts. These are read and
+card-construction semantics only: they do not rewrite project history, infer
+relevance, dispatch work, or change truth authority. The project-free fast
+installer remains the sole normal global installation path.
+
+## 0.9.4 Campaign History Compaction
+
+The `0.9.4` **Campaign History Compaction** candidate keeps complete
+append-only Campaign ledgers but removes
+history-proportional routine work. `campaign-status` has one compact current
+view and no paging API. New checkpoints store only routing references; new
+round snapshots freeze current semantics plus an exact ordered history-prefix
+commitment. Long histories therefore do not cross the planning cap merely by
+age, while prefix mutation still fails closed. Repair Research and its round
+inherit the same exact source Campaign. No project history is migrated,
+deleted, or rewritten during installation.
+
+## 0.9.3 Integrated Frontier Cleanup
+
+The `0.9.3` **Integrated Frontier Cleanup** candidate removes the parallel Brave Future/goal-intake command
+surface, adds atomic `memory-add --campaign`, freezes exact Main selection
+receipts and replay argv in new production rounds, exposes compact
+next-attention/disposition fields, and keeps live supervision visible ahead of
+new-supervisor product safety. CHX liveness is explicit and historical rows are
+bounded by default with COW administrative disposition. Installation remains
+project-free and does not imply publication.
+
+## 0.9.2 Frontier Semantic Choice
+
+The `0.9.2` **Frontier Semantic Choice** candidate keeps active Campaign goals
+open after their selected work heads complete and lets Main explicitly choose
+a registered supervision scope independently of the production-mode default.
+The project-free installer below remains the sole global installation path;
+installation does not imply publication.
+
+## 0.9.1 Campaign Frontier Heads
+
+The `0.9.1` **Campaign Frontier Heads** artifact keeps Campaign Research roots
+as immutable provenance and lets Main append one bounded nontruth checkpoint
+of current lifecycle work heads and attained boundaries. Routine frontier reads
+start there; an anchor traversal is recovery-only. The projection is read-only
+and adds no automatic updater, migration, scheduler, monitor, or truth effect.
+The project-free installer below remains the sole global installation path.
+
 ## 0.9.0 Frontier Active Fix
 
 The `0.9.0` **Frontier Active Fix** artifact separates Main's compact decision
@@ -70,16 +138,15 @@ gate. Installation remains project-free and does not rewrite any MathGraph.
 
 ## 0.8.9 Frontier Reliability
 
-The `0.8.9` **Frontier Reliability** artifact gives ordinary and Brave Future
-actionable planning one command-local exact-workgroup and completion
-projection. Exact duplicate or completed work is represented once or omitted
+The `0.8.9` **Frontier Reliability** artifact introduced the command-local
+exact-workgroup and completion projection now owned solely by the ordinary
+frontier. Exact duplicate or completed work is represented once or omitted
 from actionable output as applicable; history retains every original Research
 record and provenance edge. A requested frontier `limit` bounds serialized
 entry/member windows, while full-set identity remains a count and digest. A
 zero-active-proof-target plan decides applicability before opening a Fact
-inventory.
-Prospective Brave Future projections use `chalxius-bf-frontier-projection-3`;
-frozen v1/v2 projections remain readable without migration or rewrite.
+inventory. Version 0.9.3 removes the former parallel advisory writer; frozen
+historical sidecar bytes remain inert and are not migrated or rewritten.
 
 Structured work semantics now activate source assurance directly. Literature
 mode, source-dependent metadata, source/applicability obligations, and exact
@@ -650,19 +717,20 @@ Paper/Audit work, computation, campaigns, novelty search, or expert synthesis
 would be useful. Automatic attachment of that legacy plan to V5 rounds is not
 enabled. The Fact-admission contract is invariant in all modes.
 
-Under `auto` or `deep`, a user-stated research objective is enough to provision the
-internal advisory scope; the user does not need to say `Campaign`:
+When a durable objective is useful, Main creates or chooses one exact Campaign
+and binds the new Research root in the same public operation:
 
 ```bash
-"$MGRAPH" --root "$PROJECT" --role operator research-goal-intake \
-  --input goal.json --actor USER
+"$MGRAPH" --root "$PROJECT" --role main memory-add \
+  --campaign CAMPAIGN_ID --input research.json --actor main
 ```
 
-`goal.json` contains exactly revision `chalxius-bf-goal-intake-2` and the
-user's objective. The result returns an internal Campaign id for future
-Research and computes BF-1. It does not select `ACTIVE`, retag prior Research,
-plan, or dispatch. BF-2/BF-3 remain unavailable until a real exact blockage
-with an ingested attempt passes the inherited validator.
+The Campaign must already exist, and any `campaign_id` in `research.json` must
+match the flag. Validation is repeated under the write lock before the
+immutable Research record is published. The operation does not select
+`ACTIVE`, retag prior Research, plan, or dispatch. Main may then use the exact
+`plan_round_argv` projected by `frontier`; there is no parallel Brave Future
+command family or compatibility alias.
 
 When the operator adopts that advice, use genuinely distinct callable contexts
 for a panel and produce actual plan, ingestion, barrier, trusted dispatch,

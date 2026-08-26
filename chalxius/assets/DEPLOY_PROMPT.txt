@@ -1,15 +1,66 @@
-Chalxius 0.9.0 — Frontier Active Fix
+Chalxius 0.9.7 — Frontier Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
 
-Default `mgraph frontier` is Main's compact decision surface: active Campaign
-goals remain visible semantic hints while the unscoped workflow queue remains
-global. `research_goal` targets name exact same-Campaign Research roots; their
-coverage and next actions are derived from current graph and round bytes. They
-do not dispatch, schedule, close, or admit anything, and Main still makes the
-actual research choice.
+Before editing or packaging a proposed source root, run
+`scripts/candidate_identity.py --root ROOT --installed-root INSTALLED`. Select
+from its exact VERSION, manifest, worktree, and installed-difference evidence;
+directory names are diagnostic only. The projection never switches branches,
+mutates a tree, or installs bytes.
+
+Default `mgraph frontier` is Main's compact decision surface. A Campaign
+`research_goal` keeps its exact same-Campaign Research root as immutable
+provenance, while Main's newest nontruth checkpoint supplies current work heads
+and attained boundaries. Completion of those heads does not close the semantic
+goal: it requests Main disposition or a new exact head. Only explicit archive
+removes the goal. No note dispatches, schedules, closes, or admits anything,
+and the unscoped workflow queue remains global.
+
+Main can bind a new Research root to one explicit Campaign atomically with
+`memory-add --campaign`. New production manifests preserve the exact selection
+source, Research ids, Campaign, mode, and replay argv. Frontier rows expose
+next attention and its exact Research/round basis, and they show live
+supervision before any source-product safety recommendation. The former Brave
+Future and goal-intake commands have no alias; historical sidecar bytes remain
+inert nontruth provenance.
+
+CHX liveness is explicit: Main supplies current run ids when it needs a live
+projection. Old open ledgers appear as bounded orphaned history until a
+content-addressed administrative disposition marks them abandoned,
+superseded, or administratively complete. That marker never resolves or hides
+an issue and never changes the global issue snapshot.
+
+Campaign history remains append-only and has no routine length ceiling.
+`campaign-status` returns one compact current state, one latest minimal
+frontier checkpoint, and a fixed recent event-summary tail; it has no paging
+or cursor mode. Exact older bytes remain in the Campaign ledger for targeted
+forensics. New checkpoints contain routing ids and concise disposition only.
+Campaign-scoped rounds freeze active semantics plus an exact history-prefix
+commitment, so later append is valid but prefix mutation is not. Repairs
+inherit the source Research Campaign in both the new Research and its round;
+an unbound source never infers `ACTIVE`.
+
+Attained Campaign checkpoints now expose only exact, uncheckpointed terminal
+production/supervision/COW successor routes to Main, with bounded ids plus full
+counts and digests. This view never updates a checkpoint or selects work.
+Checkpoint active heads are compared with the same exact successor graph.
+Stale heads, productive current routes, clean terminal review evidence, and a
+nonblocking refresh recommendation are shown separately; Main alone decides
+whether and how to write the next checkpoint. Ordinary Main `search` and
+`show` navigate exact immutable Research as well as verified Facts.
+An ingested product projects lifecycle action through its exact production
+root, and in-flight supervision remains attached to that stable root. Deep
+legacy repair/COW relations are traversed only from exact recorded Research
+relations. When active Campaign goals exist, goal-unmapped historical work is
+shown in a bounded secondary attention summary rather than filling the primary
+workflow queue; it remains fully available for Main's exact search and
+promotion.
+During new round construction, an exact existing 12-hex Research id literally
+named in the selected Research prose is frozen with its record and artifact
+capabilities; unknown checksum-like tokens remain inert. No fuzzy semantic
+inference, compatibility layer, dispatcher, or new authority is introduced.
 
 Artifact silence, one quiet wait, elapsed time, context compaction, bounded
 startup reading, and deep reasoning do not prove worker loss. Main checks fresh
@@ -25,6 +76,11 @@ allowlist. Each supervisor freshly reviews the complete successor surface and
 conserved claims inside its exact assigned proof, source, program-math, or
 integration scope. PHX never narrows that scrutiny.
 
+Production mode selects only the sparse automatic supervision default. Main
+may explicitly choose any registered primary scope that fits the complete
+frozen successor; the choice is optional and never becomes a duplicate-review
+or admission gate.
+
 For a frontier stated as a specific named mathematical object, class, theorem,
 or exact identifier, Main performs one bounded exact Research search over its
 stable names and identifiers before card freeze, reviews completed production,
@@ -33,9 +89,12 @@ repair successors, and applicable supervision, and then chooses relevant
 index, receipt, state, scheduler, or gate.
 
 Main owns cross-round and copy-on-write search and final dispatch. Scouts only
-collect bounded evidence. After dispatch or receipt, inspect visible free slots
-and keep at least two workers active only when independent, nonduplicative,
-high-value current boundaries really exist; never create filler or a slot quota.
+collect bounded evidence. After mathematical dispatch or receipt, inspect
+visible free slots and keep at least two workers active only when independent,
+nonduplicative, high-value mathematical boundaries really exist. For ordinary
+engineering, delegate only when a bounded independent task remains faster
+after startup, context-transfer, coordination, and merge costs; never create
+filler or a slot quota.
 A client "Reconnecting..." banner is transport state, not worker or round state.
 After reconnect, inspect agents, canonical return bytes, ingestion, and round
 state; never duplicate or reclaim solely from the banner, and add no reconnect

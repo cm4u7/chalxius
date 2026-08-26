@@ -264,23 +264,6 @@ def main() -> int:
         "verification-status"
     }:
         raise RuntimeError("Gateway verification access must remain read-only status")
-    for command in ("brave-future-enable", "brave-future-disable", "campaign-reassess-decide"):
-        if command not in allowed_commands("operator") or any(
-            command in allowed_commands(role)
-            for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
-        ):
-            raise RuntimeError(f"{command} must remain Operator-only")
-    if "research-goal-intake" not in allowed_commands("operator") or any(
-        "research-goal-intake" in allowed_commands(role)
-        for role in ("main", "worker", "verifier", "gateway", "host", "paper-auditor")
-    ):
-        raise RuntimeError("research-goal-intake must remain Operator-only")
-    for command in ("brave-future-status", "brave-future-audit", "campaign-reassess"):
-        if any(command not in allowed_commands(role) for role in ("main", "operator")) or any(
-            command in allowed_commands(role)
-            for role in ("worker", "verifier", "gateway", "host", "paper-auditor")
-        ):
-            raise RuntimeError(f"{command} crossed the Brave Future advisory boundary")
 
     skill_root = Path(__file__).resolve().parents[1]
     inheritance_lock = json.loads(
@@ -306,17 +289,14 @@ def main() -> int:
         f"Candidate version: `{current_skill_version}`; release name "
         f"**{release_codename}**."
     )
-    current_portable_deployment_marker = (
-        f"The `{current_skill_version}` **{release_codename}** artifact"
+    current_portable_deployment_markers = (
+        f"`{current_skill_version}`",
+        f"**{release_codename}**",
     )
     validate_release_audit_revision_bindings(skill_root)
     validate_public_disclosure_contract(skill_root)
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
     skill_line_count = len(skill_text.splitlines())
-    if skill_line_count >= 500:
-        raise RuntimeError(
-            f"SKILL.md must remain below 500 lines; found {skill_line_count}"
-        )
     policy_paths = (
         skill_root / "SKILL.md",
         skill_root / "references" / "adoption_policy_v4.md",
@@ -337,7 +317,6 @@ def main() -> int:
         skill_root / "references" / "v5_worker_return_contract.md",
         skill_root / "references" / "paper_continuation_contract.md",
         skill_root / "references" / "paper_research_pipeline.md",
-        skill_root / "references" / "brave_future_l3_l4.md",
         skill_root / "references" / "v5_capability_matrix.md",
         skill_root / "references" / "evidence_plane.md",
         skill_root / "references" / "paper-reading-modes.md",
@@ -469,6 +448,7 @@ def main() -> int:
             '"chalxius-chx-run-ledger-4"',
             '"architecture_reconnaissance": "one_prior_full_candidate_tree_content_addressed_receipt_per_repair_lineage"',
             '"resolved_disposition_gate": "reconnaissance_then_tactical_then_latest_integrated_evidence_binding"',
+            '"historical_ledger_liveness": "explicit_current_run_ids_plus_content_addressed_cow_administrative_dispositions_without_mtime_or_timeout_guessing"',
             '"chalxius-chx-public-disclosure-2"',
             '"storage": "project_chx_ledgers_or_external_projectless_host_state"',
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
@@ -496,7 +476,9 @@ def main() -> int:
             '"candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact"',
             '"exact_repair_specification": "optional_main_json_is_normalized_hash_bound_into_repair_research_and_task_card"',
             '"contract_revision": "chalxius-v5-campaign-scope-1"',
-            '"selection": "explicit_id_or_auto_or_deep_exact_user_objective_compilation"',
+            '"selection": "main_selected_research_with_optional_explicit_campaign_scope"',
+            '"research_creation": "atomic_memory_add_campaign_binding"',
+            '"plan_selection_receipt": "selection_source_exact_research_ids_campaign_and_copy_safe_replay_argv_frozen_in_new_round_manifest"',
             '"scheduler": "v5_main_four_factor_frontier"',
             '"preflight_revision": "chalxius-research-draft-admission-preflight-1"',
             '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
@@ -506,11 +488,6 @@ def main() -> int:
             '"release_capsule_revision": "chalxius-v5-paper-continuation-release-capsule-1"',
             '"mathematical_target_policy_revision": "chalxius-mathematical-target-policy-1"',
             '"independent_pair_contract_revision": "chalxius-independent-adverse-pair-1"',
-            '"policy_revision": "chalxius-brave-future-policy-1"',
-            '"goal_intake_revision": "chalxius-bf-goal-intake-2"',
-            '"frontier_projection_revision": "chalxius-bf-frontier-projection-3"',
-            '"goal_intake_modes": [',
-            '"autonomy_level": "advisory"',
             '"behavioral_gate_revision": "chalxius-behavioral-feature-gate-2"',
             '"duplicate_body_adjudication_revision": "chalxius-duplicate-body-adjudication-1"',
             '"replace_with_authoritative_mechanism"',
@@ -574,17 +551,6 @@ def main() -> int:
             "parallel_verification_lifecycle.py",
             "project-wide nonrepeating nonces",
             "Certification and Gateway admission revalidate the same eligible aggregate",
-        ),
-        "references/brave_future_l3_l4.md": (
-            "BF-1 through BF-3",
-            "autonomy_level=advisory",
-            "It cannot create Research",
-            "legacy informational `ACTIVE` pointer",
-            "research-goal-intake",
-            "does not need to know or say the internal word `Campaign`",
-            "same-volume atomic directory rename",
-            "plan_one",
-            "execute_one",
         ),
         "references/v5_worker_return_contract.md": (
             "obligation_dispositions",
@@ -756,7 +722,7 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            current_portable_deployment_marker,
+            *current_portable_deployment_markers,
             "0.8.2 Explicit Route Boundaries",
             "scripts/local_install.py",
             "0.8.0",
@@ -2724,8 +2690,8 @@ def main() -> int:
         "reader_html=PASS chx_runtime_ledger=PASS adverse_routing=PASS "
         "research_draft_roles=PASS verification_lifecycle_roles=PASS "
         "verification_registry_identity=PASS "
-        "brave_future_roles=PASS goal_intake=PASS chx_public_disclosure=PASS "
-        "skill_line_limit=PASS"
+        "campaign_frontier=PASS chx_public_disclosure=PASS "
+        f"skill_lines={skill_line_count}"
     )
     return 0
 

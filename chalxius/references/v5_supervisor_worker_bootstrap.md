@@ -41,7 +41,7 @@ Read each unique path/hash byte object once even when the card repeats it under
 several descriptive roles. Reuse the verified binding instead of rereading it.
 
 Do not preload `unified_architecture.md`, `reasoning_modes.md`,
-`admission_contract.md`, `v5_capability_matrix.md`, `brave_future_l3_l4.md`,
+`admission_contract.md`, `v5_capability_matrix.md`,
 `agent_protocol_v4.md`, or `v5_worker_return_contract.md`. The task card plus
 this contract contain the supervisor's needed projection of those boundaries.
 Load a broader protocol only at one of the conditional branches below.

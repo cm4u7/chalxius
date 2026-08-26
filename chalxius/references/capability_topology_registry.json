@@ -197,7 +197,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution, static failure-family selective second-subround assurance, manifest-bound compact production and supervisor startup projections, exact-ID planning without unrelated frontier reconstruction, mode-preserving repair, early computation disposition rejection, automatic card-bound CHX observation projection, command-local planning inspection reuse, and one canonical computation-design role contract.",
+      "summary": "Round planning, frozen task cards, direct exact-ID predecessor context, worker returns, ingestion, bounded repair execution, static failure-family selective second-subround assurance, manifest-bound compact production and supervisor startup projections, exact-ID planning without unrelated frontier reconstruction, mode-preserving repair, early computation disposition rejection, automatic card-bound CHX observation projection, command-local planning inspection reuse, and one canonical computation-design role contract.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -227,7 +227,8 @@
         "tests/test_v5_lifecycle.py",
         "tests/test_research_two_subround.py",
         "tests/test_v4_preflight_return.py",
-        "tests/test_v4_protocol.py"
+        "tests/test_v4_protocol.py",
+        "tests/test_chx_095_terminal_frontier_context.py"
       ],
       "activation_paths": [
         {
@@ -350,47 +351,30 @@
         "none"
       ]
     },
-    "cap.campaign_bf": {
-      "summary": "Campaign envelopes and advisory-only BF-1 through BF-3 goal-driven recovery.",
-      "status": "advisory",
+    "cap.campaign_frontier": {
+      "summary": "Campaign envelopes, atomic Research binding, and the ordinary Main frontier with exact terminal-successor context for attained checkpoints.",
+      "status": "active",
       "stateful": true,
       "state_roots": [
         {
           "path": "campaigns",
           "owner_module": "mathgraph.campaigns",
           "relationship": "canonical"
-        },
-        {
-          "path": "governance/brave-future",
-          "owner_module": "mathgraph.brave_future",
-          "relationship": "canonical"
-        },
-        {
-          "path": "governance/brave-future/goal-intakes",
-          "owner_module": "mathgraph.goal_intake",
-          "relationship": "delegated_child",
-          "parent_path": "governance/brave-future"
         }
       ],
       "documents": [
-        "references/campaigns_and_migration_v4.md",
-        "references/brave_future_l3_l4.md"
+        "references/campaigns_and_migration_v4.md"
       ],
       "tests": [
-        "tests/test_brave_future.py",
-        "tests/test_goal_intake_transaction.py",
-        "tests/test_goal_intake_research_binding.py",
-        "tests/test_v5_campaign_envelope.py"
+        "tests/test_v5_campaign_envelope.py",
+        "tests/test_chx_093_integrated_cleanup.py",
+        "tests/test_chx_094_campaign_history_compaction.py",
+        "tests/test_chx_095_terminal_frontier_context.py"
       ],
       "activation_paths": [
         {
           "kind": "cli",
-          "command": "mgraph:research-goal-intake"
-        },
-        {
-          "kind": "automatic",
-          "module": "mathgraph.goal_intake",
-          "consumer_module": "mathgraph.v5_lifecycle"
+          "command": "mgraph:campaign-create"
         }
       ],
       "authority_effects": [
@@ -842,7 +826,7 @@
       ]
     },
     "cap.runtime_continuity": {
-      "summary": "Fast host-global local installation plus explicit protected-project forensic cutover; runtime history never gates ordinary graph operations.",
+      "summary": "Explicit read-only candidate identity, fast host-global local installation, and protected-project forensic cutover; runtime history never gates ordinary graph operations.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -865,9 +849,14 @@
         "tests/test_runtime_archive.py",
         "tests/test_runtime_cutover.py",
         "tests/test_local_install.py",
+        "tests/test_candidate_identity.py",
         "tests/test_host_entrypoint_nonmutation.py"
       ],
       "activation_paths": [
+        {
+          "kind": "standalone",
+          "module": "candidate_identity"
+        },
         {
           "kind": "standalone",
           "module": "archive_runtime"
@@ -1284,24 +1273,8 @@
         "state_owner"
       ]
     },
-    "mathgraph.brave_future": {
-      "capability_id": "cap.campaign_bf",
-      "path": "scripts/mathgraph/brave_future.py",
-      "roles": [
-        "domain_service",
-        "state_owner"
-      ]
-    },
-    "mathgraph.goal_intake": {
-      "capability_id": "cap.campaign_bf",
-      "path": "scripts/mathgraph/goal_intake.py",
-      "roles": [
-        "domain_service",
-        "state_owner"
-      ]
-    },
     "mathgraph.campaigns": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "path": "scripts/mathgraph/campaigns.py",
       "roles": [
         "domain_service",
@@ -1551,6 +1524,19 @@
         "domain_service",
         "state_owner"
       ]
+    },
+    "candidate_identity": {
+      "capability_id": "cap.runtime_continuity",
+      "path": "scripts/candidate_identity.py",
+      "roles": [
+        "domain_service",
+        "entrypoint",
+        "validation_tool"
+      ],
+      "standalone_entry_symbols": [
+        "candidate_identity.main"
+      ],
+      "standalone_reason": "Read-only exact candidate, manifest, repository and installed-baseline identity projection used by Main before an explicit local installation."
     },
     "archive_runtime": {
       "capability_id": "cap.runtime_continuity",
@@ -2134,91 +2120,42 @@
       ]
     },
     "mgraph:campaign-create": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
       ]
     },
     "mgraph:campaign-activate": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
       ]
     },
     "mgraph:campaign-update": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
       ]
     },
     "mgraph:campaign-status": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
       ]
     },
     "mgraph:campaign-target-add": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
       ]
     },
     "mgraph:campaign-target-archive": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:research-goal-intake": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:brave-future-enable": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:brave-future-status": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:brave-future-audit": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:campaign-reassess": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:campaign-reassess-decide": {
-      "capability_id": "cap.campaign_bf",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:brave-future-disable": {
-      "capability_id": "cap.campaign_bf",
+      "capability_id": "cap.campaign_frontier",
       "status": "canonical",
       "authority_effects": [
         "none"
@@ -2904,6 +2841,13 @@
       ]
     },
     "chx:inventory": {
+      "capability_id": "cap.chx_runtime_ledger",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "chx:record-ledger-disposition": {
       "capability_id": "cap.chx_runtime_ledger",
       "status": "canonical",
       "authority_effects": [

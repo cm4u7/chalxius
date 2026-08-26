@@ -6,11 +6,16 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from mathgraph.cli import build_parser, main as cli_main
-from mathgraph.contracts import sha256_bytes
+from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.store import MathGraphStore
-from mathgraph.v5_lifecycle import V5_CAMPAIGN_SCOPE_REVISION
+from mathgraph.v5_lifecycle import (
+    V5_CAMPAIGN_SCOPE_REVISION,
+    V5_LEGACY_CAMPAIGN_SCOPE_REVISION,
+    RoundInspectionContext,
+)
 
 
 class V5CampaignEnvelopeTests(unittest.TestCase):
@@ -79,6 +84,256 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
         return store.v5_lifecycle().add_research(payload, actor="main")[
             "research_id"
         ]
+
+    @staticmethod
+    def _goal_coverage_with_actions(
+        store: MathGraphStore,
+        campaign_id: str,
+        actions: dict[str, str],
+    ) -> list[dict[str, object]]:
+        lifecycle = store.v5_lifecycle()
+        bases = {
+            item["research_id"]: item
+            for item in lifecycle.research_envelopes()
+        }
+        work_keys = {
+            research_id: f"{index:064x}"
+            for index, research_id in enumerate(sorted(bases), start=1)
+        }
+        inspection = RoundInspectionContext(
+            frontier_group_completions={
+                work_keys[research_id]: (
+                    "completed_production"
+                    if next_action == "none"
+                    else "pending",
+                    research_id,
+                    1,
+                    "0" * 64,
+                )
+                for research_id, next_action in actions.items()
+            },
+            frontier_group_actions={
+                work_keys[research_id]: {
+                    "next_action": next_action,
+                    "pending_reason": (
+                        "workgroup_completed"
+                        if next_action == "none"
+                        else "no_ingested_production_product"
+                    ),
+                    "actionable_research_id": research_id,
+                    "actionable_round_id": None,
+                    "actionable_research_ids": [research_id],
+                }
+                for research_id, next_action in actions.items()
+            },
+        )
+        with patch.object(
+            lifecycle,
+            "_frontier_structural_state_for_inspection",
+            return_value=(bases, {}, {}, {}, work_keys),
+        ):
+            return lifecycle.campaign_goal_coverage(
+                campaign_id,
+                _inspection_context=inspection,
+            )
+
+    def test_worker_result_preserves_campaign_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "worker-lineage")
+            with store.v5_mutation_lock(command="large-campaign-history-fixture"):
+                for index in range(40):
+                    store.campaigns().update(
+                        campaign_id,
+                        {
+                            "type": "note",
+                            "payload": {
+                                "text": f"historical-note-{index}:" + "x" * 8192
+                            },
+                        },
+                        actor="main",
+                    )
+            lifecycle = store.v5_lifecycle()
+            root_id = self._research(
+                store,
+                "worker-lineage",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            planned = lifecycle.create_production_round(
+                workers=1,
+                research_ids=[root_id],
+                campaign_id=campaign_id,
+            )
+            snapshot_path = (
+                store.root
+                / planned["campaign_scope"]["snapshot_relpath"]
+            )
+            frozen_campaign = json.loads(
+                snapshot_path.read_text(encoding="utf-8")
+            )["campaign_status"]
+            self.assertNotIn("updates", frozen_campaign)
+            self.assertIn("history", frozen_campaign)
+            self.assertLess(len(snapshot_path.read_bytes()), 32 * 1024)
+            assignment = planned["assignments"][0]
+            card = json.loads(
+                Path(str(assignment["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            artifact_dir = store.root / assignment["artifact_dir_relpath"]
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            report_path = artifact_dir / "worker-report.md"
+            report_path.write_text(
+                "One Campaign-scoped result is ready for review.\n",
+                encoding="utf-8",
+            )
+            report = {
+                "path": report_path.relative_to(store.root).as_posix(),
+                "sha256": sha256_bytes(report_path.read_bytes()),
+                "role": "research_report",
+            }
+            payload = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": planned["round_id"],
+                "assignment_id": assignment["assignment_id"],
+                "worker_id": assignment["worker_id"],
+                "task_card_sha256": assignment["task_card_sha256"],
+                "blackboard_snapshot_sha256": assignment[
+                    "blackboard_snapshot_sha256"
+                ],
+                "outcome": "proof",
+                "claim": "The Campaign-scoped worker result is preserved.",
+                "content": "This remains nontruth Research.",
+                "narrative": {
+                    "rationale": "Preserve the exact Campaign lineage.",
+                    "summary": "One assignment completed.",
+                    "intuition": "The product stays in its selected objective.",
+                    "limitations": "No Fact authority is created.",
+                },
+                "artifacts": [report],
+                "obligation_dispositions": [
+                    {
+                        "obligation_id": obligation["obligation_id"],
+                        "status": "complete",
+                        "witness_artifact_sha256s": [report["sha256"]],
+                        "rationale": "The exact report is hash-bound.",
+                    }
+                    for obligation in card["assurance_contract"]["obligations"]
+                ],
+                "computation_manifest": None,
+                "research_assurance": {
+                    "source_uses": [],
+                    "route_invalidations": [],
+                    "extremal_cases": [],
+                    "claim_strength": [],
+                    "contour_substitutions": [],
+                    "claimed_structures": [],
+                    "program_math_alignments": [],
+                },
+            }
+            return_path = Path(str(assignment["return_path"]))
+            return_path.write_text(
+                json.dumps(payload, sort_keys=True), encoding="utf-8"
+            )
+            receipt = lifecycle.ingest_return(
+                round_id=planned["round_id"],
+                assignment_id=assignment["assignment_id"],
+                worker_final_sha256=sha256_bytes(return_path.read_bytes()),
+            )
+            self.assertEqual(receipt["status"], "ingested", receipt)
+            product = next(
+                item
+                for item in lifecycle.research_records()
+                if item["research_id"] == receipt["research_id"]
+            )
+            self.assertEqual(product["metadata"]["campaign_id"], campaign_id)
+            with store.v5_mutation_lock(command="campaign-tail-after-freeze"):
+                store.campaigns().update(
+                    campaign_id,
+                    {"type": "note", "payload": {"text": "new tail event"}},
+                    actor="main",
+                )
+            supervision = lifecycle.create_supervision_round(
+                planned["round_id"],
+                supervisor_scopes=["proof_logic"],
+            )
+            self.assertEqual(
+                supervision["campaign_scope"]["revision"],
+                V5_CAMPAIGN_SCOPE_REVISION,
+            )
+            self.assertGreater(
+                supervision["campaign_scope"]["event_count"],
+                planned["campaign_scope"]["event_count"],
+            )
+            supervision_snapshot = (
+                store.root
+                / supervision["campaign_scope"]["snapshot_relpath"]
+            )
+            self.assertLess(len(supervision_snapshot.read_bytes()), 32 * 1024)
+
+    def test_campaign_scope_commits_exact_history_prefix(self) -> None:
+        for mutation in ("rewrite", "reorder", "truncate"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+                store = self._store(Path(temporary) / "project")
+                campaign_id = self._campaign(store, mutation)
+                with store.v5_mutation_lock(command="campaign-prefix-fixture"):
+                    for index in range(2):
+                        store.campaigns().update(
+                            campaign_id,
+                            {
+                                "type": "note",
+                                "payload": {"text": f"prefix-note-{index}"},
+                            },
+                            actor="main",
+                        )
+                research_id = self._research(
+                    store,
+                    mutation,
+                    campaign_id=campaign_id,
+                    score=0.8,
+                )
+                lifecycle = store.v5_lifecycle()
+                planned = lifecycle.create_round(
+                    workers=1,
+                    research_ids=[research_id],
+                    campaign_id=campaign_id,
+                )
+                ledger_path = (
+                    store.root / "campaigns" / campaign_id / "events.jsonl"
+                )
+                events = [
+                    json.loads(line)
+                    for line in ledger_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
+                if mutation == "rewrite":
+                    rewritten = dict(events[-1])
+                    rewritten["payload"] = {"text": "rewritten-prefix-note"}
+                    semantic = {
+                        key: value
+                        for key, value in rewritten.items()
+                        if key != "event_id"
+                    }
+                    rewritten["event_id"] = sha256_json(semantic)
+                    events[-1] = rewritten
+                elif mutation == "reorder":
+                    events[-2], events[-1] = events[-1], events[-2]
+                else:
+                    events.pop()
+                ledger_path.write_text(
+                    "".join(
+                        json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
+                        for event in events
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "history (?:was truncated|prefix changed)",
+                ):
+                    lifecycle.round_status(planned["round_id"])
 
     def test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit(
         self,
@@ -175,6 +430,22 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                     "actionable_research_id": research_id,
                     "actionable_round_id": None,
                     "actionable_research_ids": [research_id],
+                    "next_attention": "production",
+                    "disposition": "active",
+                    "attention_basis_research_ids": [research_id],
+                    "attention_basis_round_ids": [],
+                    "attention_reason": "no_ingested_production_product",
+                    "plan_round_argv": [
+                        "plan-round",
+                        "--workers",
+                        "1",
+                        "--mode",
+                        "auto",
+                        "--campaign",
+                        campaign_id,
+                        "--memory-id",
+                        research_id,
+                    ],
                 },
             )
             self.assertEqual(
@@ -244,6 +515,731 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             self.assertEqual(
                 {item["research_id"] for item in surface["workflow_queue"]},
                 {goal_id, other_id},
+            )
+
+    def test_main_checkpoint_is_the_routine_goal_entry_not_the_old_anchor(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "checkpoint-heads")
+            anchor_id = self._research(
+                store,
+                "old-anchor",
+                campaign_id=campaign_id,
+                score=0.9,
+            )
+            first_head = self._research(
+                store,
+                "current-head-one",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            second_head = self._research(
+                store,
+                "current-head-two",
+                campaign_id=campaign_id,
+                score=0.7,
+            )
+            with store.v5_mutation_lock(command="campaign-head-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": anchor_id,
+                        "label": "Keep the semantic anchor but advance its heads",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == anchor_id,
+                )
+                event_id = store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 3,
+                            "target_frontiers": [
+                                {
+                                    "target_id": target_id,
+                                    "recovery_root_research_id": anchor_id,
+                                    "attained_checkpoints": [
+                                        {"research_id": anchor_id}
+                                    ],
+                                    "active_heads": [
+                                        {"research_id": first_head},
+                                        {"research_id": second_head},
+                                    ],
+                                }
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+
+            surface = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=10,
+            )
+            goal = surface["goal_coverage"][0]
+            self.assertEqual(goal["root_research_id"], anchor_id)
+            self.assertEqual(goal["frontier_source"], "main_checkpoint")
+            self.assertEqual(goal["frontier_generation"], 3)
+            self.assertEqual(goal["frontier_checkpoint_event_id"], event_id)
+            self.assertEqual(goal["recovery_root_research_id"], anchor_id)
+            self.assertEqual(
+                goal["recovery_root_source"], "explicit_checkpoint_root"
+            )
+            self.assertEqual(
+                goal["active_head_research_ids"],
+                [first_head, second_head],
+            )
+            self.assertEqual(goal["next_action"], "advance_active_heads")
+            self.assertEqual(goal["coverage_status"], "research_open")
+            self.assertEqual(
+                set(goal["actionable_research_ids"]),
+                {first_head, second_head},
+            )
+            relevance = {
+                item["research_id"]: item["goal_relevance"]
+                for item in surface["workflow_queue"]
+            }
+            self.assertEqual(relevance[first_head], "direct")
+            self.assertEqual(relevance[second_head], "direct")
+            self.assertNotIn(anchor_id, relevance)
+            self.assertIn(
+                anchor_id,
+                surface["unmapped_campaign_attention"][
+                    "visible_research_ids"
+                ],
+            )
+            self.assertEqual(
+                surface["unmapped_campaign_attention"][
+                    "selection_effect"
+                ],
+                "none",
+            )
+
+            lifecycle = store.v5_lifecycle()
+            exact_id_entry = {
+                "research_id": anchor_id,
+                "claim": "Historical workgroup representative",
+                "campaign_id": campaign_id,
+                "score": 0.9,
+                "readiness": 1.0,
+                "next_action": "supervision",
+                "pending_reason": "current_product_requires_supervision",
+                "actionable_research_id": first_head,
+                "actionable_round_id": None,
+                "actionable_research_ids": [first_head],
+                "actionable_research_count": 1,
+                "actionable_claim": "Current exact head product",
+                "actionable_kind": "insight",
+                "workgroup_member_count": 1,
+                "work_key_sha256": "f" * 64,
+            }
+            with patch.object(
+                lifecycle,
+                "frontier",
+                return_value=[exact_id_entry],
+            ):
+                exact_id_surface = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    limit=1,
+                )
+            self.assertEqual(
+                exact_id_surface["workflow_queue"][0]["goal_relevance"],
+                "direct",
+            )
+            self.assertEqual(
+                exact_id_surface["workflow_queue"][0]["goal_target_ids"],
+                [target_id],
+            )
+
+    def test_active_goal_requires_main_disposition_after_heads_complete(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "active-completed-heads")
+            labels = (
+                "single-anchor",
+                "single-head",
+                "multi-anchor",
+                "multi-head-one",
+                "multi-head-two",
+                "partial-anchor",
+                "partial-complete-head",
+                "partial-open-head",
+            )
+            research_ids = {
+                label: self._research(
+                    store,
+                    label,
+                    campaign_id=campaign_id,
+                    score=0.8,
+                )
+                for label in labels
+            }
+            with store.v5_mutation_lock(command="campaign-head-fixture"):
+                single_target = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_ids["single-anchor"],
+                        "label": "Dispose one completed head semantically",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item in research_ids.values(),
+                )
+                multi_target = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_ids["multi-anchor"],
+                        "label": "Dispose several completed heads semantically",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item in research_ids.values(),
+                )
+                partial_target = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_ids["partial-anchor"],
+                        "label": "Keep unfinished heads in progress",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item in research_ids.values(),
+                )
+                store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 1,
+                            "target_frontiers": [
+                                {
+                                    "target_id": single_target,
+                                    "recovery_root_research_id": research_ids[
+                                        "single-anchor"
+                                    ],
+                                    "attained_checkpoints": [],
+                                    "active_heads": [
+                                        {
+                                            "research_id": research_ids[
+                                                "single-head"
+                                            ]
+                                        }
+                                    ],
+                                },
+                                {
+                                    "target_id": multi_target,
+                                    "recovery_root_research_id": research_ids[
+                                        "multi-anchor"
+                                    ],
+                                    "attained_checkpoints": [],
+                                    "active_heads": [
+                                        {
+                                            "research_id": research_ids[
+                                                "multi-head-one"
+                                            ]
+                                        },
+                                        {
+                                            "research_id": research_ids[
+                                                "multi-head-two"
+                                            ]
+                                        },
+                                    ],
+                                },
+                                {
+                                    "target_id": partial_target,
+                                    "recovery_root_research_id": research_ids[
+                                        "partial-anchor"
+                                    ],
+                                    "attained_checkpoints": [],
+                                    "active_heads": [
+                                        {
+                                            "research_id": research_ids[
+                                                "partial-complete-head"
+                                            ]
+                                        },
+                                        {
+                                            "research_id": research_ids[
+                                                "partial-open-head"
+                                            ]
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+
+            actions = {
+                research_ids["single-head"]: "none",
+                research_ids["multi-head-one"]: "none",
+                research_ids["multi-head-two"]: "none",
+                research_ids["partial-complete-head"]: "none",
+                research_ids["partial-open-head"]: "production",
+            }
+            coverage = {
+                item["target_id"]: item
+                for item in self._goal_coverage_with_actions(
+                    store,
+                    campaign_id,
+                    actions,
+                )
+            }
+            for target_id in (single_target, multi_target):
+                goal = coverage[target_id]
+                self.assertEqual(goal["coverage_status"], "needs_main_choice")
+                self.assertEqual(goal["action_class"], "semantic_choice")
+                self.assertEqual(goal["next_action"], "main_disposition")
+                self.assertEqual(
+                    goal["why_now"],
+                    "campaign_target_active_after_heads_completed",
+                )
+                self.assertIsNone(goal["actionable_research_id"])
+                self.assertEqual(goal["actionable_research_ids"], [])
+
+            partial = coverage[partial_target]
+            self.assertEqual(partial["coverage_status"], "research_open")
+            self.assertEqual(partial["next_action"], "advance_active_heads")
+            self.assertEqual(
+                partial["actionable_research_ids"],
+                [research_ids["partial-open-head"]],
+            )
+
+            with store.v5_mutation_lock(command="campaign-target-archive"):
+                store.campaigns().target_archive(
+                    campaign_id,
+                    single_target,
+                    reason="Main explicitly closes this semantic target.",
+                    actor="main",
+                )
+            after_archive = self._goal_coverage_with_actions(
+                store,
+                campaign_id,
+                actions,
+            )
+            self.assertNotIn(
+                single_target,
+                {item["target_id"] for item in after_archive},
+            )
+
+    def test_active_goal_without_checkpoint_is_not_closed_by_work_completion(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "active-anchor-completed")
+            anchor_id = self._research(
+                store,
+                "active-anchor-completed",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            with store.v5_mutation_lock(command="campaign-goal-target-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": anchor_id,
+                        "label": "Require explicit semantic closure",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == anchor_id,
+                )
+
+            goal = self._goal_coverage_with_actions(
+                store,
+                campaign_id,
+                {anchor_id: "none"},
+            )[0]
+            self.assertEqual(goal["target_id"], target_id)
+            self.assertEqual(goal["coverage_status"], "needs_main_choice")
+            self.assertEqual(goal["action_class"], "semantic_choice")
+            self.assertEqual(goal["next_action"], "main_disposition")
+            self.assertEqual(
+                goal["why_now"],
+                "campaign_target_active_after_work_completed",
+            )
+            self.assertIsNone(goal["actionable_research_id"])
+
+    def test_checkpoint_without_a_live_head_requests_main_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "checkpoint-boundary")
+            anchor_id = self._research(
+                store,
+                "historical-anchor",
+                campaign_id=campaign_id,
+                score=0.9,
+            )
+            attained_id = self._research(
+                store,
+                "attained-boundary",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            with store.v5_mutation_lock(command="campaign-head-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": anchor_id,
+                        "label": "Choose the next semantic head",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == anchor_id,
+                )
+                store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 1,
+                            "target_frontiers": [
+                                {
+                                    "target_id": target_id,
+                                    "recovery_root_research_id": attained_id,
+                                    "attained_checkpoints": [
+                                        {"research_id": attained_id}
+                                    ],
+                                    "active_heads": [],
+                                }
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+
+            goal = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=10,
+            )["goal_coverage"][0]
+            self.assertEqual(goal["next_action"], "select_frontier_head")
+            self.assertEqual(goal["coverage_status"], "needs_main_choice")
+            self.assertEqual(goal["recovery_root_research_id"], attained_id)
+            self.assertEqual(
+                goal["recovery_root_source"], "explicit_checkpoint_root"
+            )
+            self.assertIsNone(goal["actionable_research_id"])
+
+    def test_stale_checkpoint_head_degrades_to_bounded_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "checkpoint-recovery")
+            anchor_id = self._research(
+                store,
+                "recovery-anchor",
+                campaign_id=campaign_id,
+                score=0.9,
+            )
+            stale_id = "f" * 12
+            with store.v5_mutation_lock(command="campaign-head-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": anchor_id,
+                        "label": "Recover an invalid head",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == anchor_id,
+                )
+                store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 1,
+                            "target_frontiers": [
+                                {
+                                    "target_id": target_id,
+                                    "attained_checkpoints": [
+                                        {"research_id": anchor_id}
+                                    ],
+                                    "active_heads": [
+                                        {"research_id": stale_id}
+                                    ],
+                                }
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+
+            goal = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=10,
+            )["goal_coverage"][0]
+            self.assertEqual(goal["next_action"], "exact_research_search")
+            self.assertEqual(goal["coverage_status"], "needs_main_choice")
+            self.assertEqual(goal["invalid_head_research_ids"], [stale_id])
+            self.assertEqual(goal["recovery_root_research_id"], anchor_id)
+            self.assertEqual(
+                goal["recovery_root_source"],
+                "immutable_campaign_anchor_fallback",
+            )
+            self.assertIn(
+                "checkpoint_recovery_root_missing",
+                goal["checkpoint_diagnostic_codes"],
+            )
+
+    def test_checkpoint_recognizes_legacy_supervision_campaign_provenance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "legacy-supervision")
+            source_id = "1" * 12
+            plan_id = "2" * 12
+            result_id = "3" * 12
+            bases = {
+                source_id: {
+                    "metadata": {"campaign_id": campaign_id},
+                },
+                plan_id: {
+                    "relation": "challenges",
+                    "related_research_ids": [source_id],
+                    "metadata": {
+                        "research_supervision": {
+                            "source_receipts": [
+                                {"result_research_id": source_id}
+                            ]
+                        }
+                    },
+                },
+                result_id: {
+                    "relation": "responds_to",
+                    "related_research_ids": [plan_id],
+                    "metadata": {
+                        "assignment_provenance": {
+                            "work_mode": "refute",
+                            "adverse_assignment": True,
+                        }
+                    },
+                },
+            }
+
+            lifecycle = store.v5_lifecycle()
+            self.assertEqual(
+                lifecycle._checkpoint_research_campaign_ids(
+                    result_id,
+                    bases,
+                ),
+                frozenset({campaign_id}),
+            )
+
+            bases[plan_id]["related_research_ids"] = ["4" * 12]
+            self.assertEqual(
+                lifecycle._checkpoint_research_campaign_ids(
+                    result_id,
+                    bases,
+                ),
+                frozenset(),
+            )
+
+    def test_checkpoint_diagnostics_expose_ambiguity_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            campaign_id = self._campaign(store, "checkpoint-diagnostics")
+            other_campaign_id = self._campaign(
+                store, "checkpoint-diagnostics-other"
+            )
+            first_anchor = self._research(
+                store,
+                "diagnostic-first-anchor",
+                campaign_id=campaign_id,
+                score=0.9,
+            )
+            second_anchor = self._research(
+                store,
+                "diagnostic-second-anchor",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            cross_campaign_id = self._research(
+                store,
+                "diagnostic-cross-campaign",
+                campaign_id=other_campaign_id,
+                score=0.7,
+            )
+            missing_id = "e" * 12
+            with store.v5_mutation_lock(command="campaign-head-fixture"):
+                first_target = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": first_anchor,
+                        "label": "Diagnose the first target",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == first_anchor,
+                )
+                second_target = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": second_anchor,
+                        "label": "Diagnose the omitted target",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == second_anchor,
+                )
+                first_event = store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 1,
+                            "target_frontiers": [
+                                {
+                                    "target_id": first_target,
+                                    "recovery_root_research_id": first_anchor,
+                                    "attained_checkpoints": [],
+                                    "active_heads": [],
+                                    "main_disposition": "First baseline.",
+                                },
+                                {
+                                    "target_id": second_target,
+                                    "recovery_root_research_id": second_anchor,
+                                    "attained_checkpoints": [],
+                                    "active_heads": [],
+                                    "main_disposition": "Second baseline.",
+                                },
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+                store.campaigns().update(
+                    campaign_id,
+                    {
+                        "type": "note",
+                        "payload": {
+                            "kind": "campaign_frontier_head_checkpoint",
+                            "generation": 3,
+                            "supersedes_event_id": "0" * 64,
+                            "target_frontiers": [
+                                {
+                                    "target_id": first_target,
+                                    "recovery_root_research_id": (
+                                        cross_campaign_id
+                                    ),
+                                    "attained_checkpoints": [
+                                        {"research_id": missing_id},
+                                        {"research_id": cross_campaign_id},
+                                    ],
+                                    "active_heads": [],
+                                    "main_disposition": 7,
+                                },
+                                {
+                                    "target_id": first_target,
+                                    "recovery_root_research_id": first_anchor,
+                                    "attained_checkpoints": [],
+                                    "active_heads": [
+                                        {"research_id": first_anchor}
+                                    ],
+                                    "main_disposition": "Duplicate entry.",
+                                },
+                            ],
+                        },
+                    },
+                    actor="Main",
+                )
+
+            before = {
+                str(path.relative_to(root)): path.read_bytes()
+                for path in root.rglob("*")
+                if path.is_file()
+            }
+            surface = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=10,
+            )
+            after = {
+                str(path.relative_to(root)): path.read_bytes()
+                for path in root.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(before, after)
+
+            diagnostics = surface["checkpoint_diagnostics"]
+            codes = {item["code"] for item in diagnostics}
+            self.assertLessEqual(len(diagnostics), 32)
+            self.assertTrue(
+                {
+                    "checkpoint_generation_mismatch",
+                    "checkpoint_supersedes_mismatch",
+                    "checkpoint_target_duplicate",
+                    "checkpoint_target_missing",
+                    "checkpoint_attained_missing_or_cross_campaign",
+                    "checkpoint_main_disposition_nontext",
+                    "checkpoint_recovery_root_missing_or_cross_campaign",
+                }.issubset(codes)
+            )
+            supersedes = next(
+                item
+                for item in diagnostics
+                if item["code"] == "checkpoint_supersedes_mismatch"
+            )
+            self.assertEqual(supersedes["expected"], first_event)
+
+            goals = {
+                item["target_id"]: item for item in surface["goal_coverage"]
+            }
+            first = goals[first_target]
+            self.assertEqual(first["recovery_root_research_id"], first_anchor)
+            self.assertEqual(
+                first["recovery_root_source"],
+                "immutable_campaign_anchor_fallback",
+            )
+            self.assertEqual(
+                first["invalid_attained_checkpoint_research_ids"],
+                [missing_id, cross_campaign_id],
+            )
+            self.assertEqual(first["checkpoint_main_disposition"], "")
+
+            second = goals[second_target]
+            self.assertEqual(
+                second["frontier_source"], "immutable_anchor_fallback"
+            )
+            self.assertEqual(
+                second["recovery_root_research_id"], second_anchor
+            )
+            self.assertIn(
+                "checkpoint_target_missing",
+                second["checkpoint_diagnostic_codes"],
             )
 
     def test_scoped_round_freezes_lightweight_nontruth_campaign_envelope(
@@ -337,6 +1333,33 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             )
             self.assertEqual(store.fact_ids(), [])
 
+    def test_immutable_scope_one_snapshot_remains_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "legacy-scope")
+            legacy_status = dict(store.campaigns().status(campaign_id))
+            legacy_status.pop("history")
+            snapshot = {
+                "schema_version": 1,
+                "revision": V5_LEGACY_CAMPAIGN_SCOPE_REVISION,
+                "campaign_id": campaign_id,
+                "campaign_status": legacy_status,
+                "selection_policy": "explicit_exact_research_campaign_id_match",
+                "scheduler": "v5_main_four_factor_frontier",
+                "truth_effect": "none",
+                "fact_admission_effect": "none",
+            }
+            scope = store.v5_lifecycle()._campaign_scope_from_snapshot(
+                snapshot,
+                snapshot_relpath="rounds/round-legacy/context/campaign.snapshot.json",
+                snapshot_sha256="0" * 64,
+            )
+            self.assertEqual(
+                scope["revision"],
+                V5_LEGACY_CAMPAIGN_SCOPE_REVISION,
+            )
+            self.assertEqual(scope["campaign_id"], campaign_id)
+
     def test_cross_campaign_explicit_selection_fails_before_round_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "project"
@@ -363,6 +1386,96 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 rounds_before,
             )
             self.assertEqual(list(store.rounds_dir.rglob("campaign.snapshot.json")), [])
+
+    def test_repair_inherits_exact_source_campaign_into_round_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "repair-inheritance")
+            lifecycle = store.v5_lifecycle()
+            bound = self._research(
+                store,
+                "bound-repair-source",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            repair = lifecycle.create_repair_round(bound)
+            repair_record = lifecycle._research_record(repair["research_id"])
+            self.assertEqual(
+                repair_record["metadata"]["campaign_id"],
+                campaign_id,
+            )
+            self.assertEqual(repair["campaign_scope"]["campaign_id"], campaign_id)
+            repair_card = json.loads(
+                Path(repair["assignments"][0]["task_card_path"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                repair_card["campaign_scope"],
+                repair["campaign_scope"],
+            )
+
+    def test_unbound_repair_does_not_infer_active_campaign(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            self._campaign(store, "active-but-unrelated", activate=True)
+            lifecycle = store.v5_lifecycle()
+            unbound = self._research(
+                store,
+                "unbound-repair-source",
+                campaign_id=None,
+                score=0.7,
+            )
+            unbound_repair = lifecycle.create_repair_round(unbound)
+            unbound_record = lifecycle._research_record(
+                unbound_repair["research_id"]
+            )
+            self.assertNotIn("campaign_id", unbound_record["metadata"])
+            self.assertNotIn("campaign_scope", unbound_repair)
+
+    def test_repair_rejects_tampered_source_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "tampered-repair")
+            lifecycle = store.v5_lifecycle()
+            source_id = self._research(
+                store,
+                "tampered-repair-source",
+                campaign_id=campaign_id,
+                score=0.8,
+            )
+            source_path = (
+                store.root / "research" / "entries" / "by-id" / f"{source_id}.json"
+            )
+            source_path.write_text(
+                source_path.read_text(encoding="utf-8").replace(
+                    campaign_id,
+                    "campaign-000000000000",
+                ),
+                encoding="utf-8",
+            )
+            research_before = sorted(
+                path.name
+                for path in (store.root / "research" / "entries" / "by-id").glob(
+                    "*.json"
+                )
+            )
+            rounds_before = sorted(path.name for path in store.rounds_dir.iterdir())
+            with self.assertRaises(ValueError):
+                lifecycle.create_repair_round(source_id)
+            self.assertEqual(
+                sorted(
+                    path.name
+                    for path in (
+                        store.root / "research" / "entries" / "by-id"
+                    ).glob("*.json")
+                ),
+                research_before,
+            )
+            self.assertEqual(
+                sorted(path.name for path in store.rounds_dir.iterdir()),
+                rounds_before,
+            )
 
     def test_unscoped_round_preserves_passive_campaign_association(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

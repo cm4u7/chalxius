@@ -3149,7 +3149,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--installed-root", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument(
-        "--quiet", action="store_true", help="write the requested report without stdout"
+        "--quiet",
+        action="store_true",
+        help=(
+            "suppress the full success report; strict failures still emit a "
+            "bounded diagnostic summary"
+        ),
     )
     parser.add_argument(
         "--strict",
@@ -3173,9 +3178,18 @@ def main(argv: list[str] | None = None) -> int:
         if output == root or root in output.parents:
             raise ValueError("architecture inventory output must be outside the candidate tree")
         _atomic_write(output, payload)
+    strict_failed = bool(args.strict and report["errors"])
     if not args.quiet:
         sys.stdout.buffer.write(payload)
-    return 1 if args.strict and report["errors"] else 0
+    elif strict_failed:
+        failure_summary = {
+            "errors": report["errors"],
+            "warnings": report["warnings"],
+            "inventory_sha256": report["inventory_sha256"],
+            "truth_effect": "none",
+        }
+        sys.stderr.write(_json_bytes(failure_summary).decode("utf-8"))
+    return 1 if strict_failed else 0
 
 
 if __name__ == "__main__":

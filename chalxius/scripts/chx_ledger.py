@@ -47,6 +47,9 @@ LINEAGE_CONTRACT_REVISION = "chalxius-chx-run-ledger-4"
 REPAIR_CONTRACT_REVISION = "chalxius-chx-run-ledger-5"
 CONTRACT_REVISION = REPAIR_CONTRACT_REVISION
 INVENTORY_CONTRACT_REVISION = "chalxius-chx-ledger-inventory-1"
+LEDGER_DISPOSITION_CONTRACT_REVISION = (
+    "chalxius-chx-ledger-administrative-disposition-1"
+)
 GLOBAL_REPAIR_CONTRACT_REVISION = "chalxius-chx-global-integrated-repair-3"
 GLOBAL_REPAIR_INPUT_REVISION = "chalxius-chx-global-integrated-repair-input-3"
 FINDING_CONTRACT_REVISIONS = frozenset(
@@ -70,6 +73,10 @@ SUPPORTED_CONTRACT_REVISIONS = frozenset(
     }
 )
 DEFAULT_PROJECT_LEDGER_DIR = "chx-ledgers"
+LEDGER_DISPOSITION_DIR = "administrative-dispositions"
+LEDGER_ADMINISTRATIVE_STATUSES = frozenset(
+    {"abandoned", "superseded", "administratively_complete"}
+)
 CAUSATIONS = frozenset({"caused", "materially_amplified"})
 MECHANISM_TYPES = frozenset(
     {
@@ -96,6 +103,9 @@ RECONNAISSANCE_ID_RE = re.compile(r"reconnaissance-[0-9a-f]{64}")
 TACTICAL_REPAIR_ID_RE = re.compile(r"tactical-repair-[0-9a-f]{64}")
 INTEGRATED_REPAIR_ID_RE = re.compile(r"integrated-repair-[0-9a-f]{64}")
 GLOBAL_REPAIR_ID_RE = re.compile(r"global-repair-[0-9a-f]{64}")
+LEDGER_DISPOSITION_ID_RE = re.compile(
+    r"ledger-disposition-[0-9a-f]{64}"
+)
 QUALIFIED_ISSUE_ID_RE = re.compile(
     r"run-[A-Za-z0-9][A-Za-z0-9._-]{0,127}/CHX-[0-9]{3,}"
 )
@@ -3815,11 +3825,467 @@ def _apply_global_repair_projection(
     return result
 
 
+def _ledger_disposition_dir(project_root: Path | str) -> Path:
+    project = _resolved_path(project_root)
+    return project / DEFAULT_PROJECT_LEDGER_DIR / LEDGER_DISPOSITION_DIR
+
+
+def _safe_project_relpath(value: Any, label: str) -> str:
+    text = _require_text(value, label)
+    pure = PurePosixPath(text)
+    if (
+        pure.is_absolute()
+        or "\\" in text
+        or any(part in {"", ".", ".."} for part in pure.parts)
+        or str(pure) != text
+    ):
+        raise ValueError(f"{label} is unsafe")
+    return text
+
+
+def _validate_ledger_disposition_record(
+    value: Any,
+    *,
+    path: Path,
+    project_root: Path,
+) -> dict[str, Any]:
+    expected = {
+        "contract_revision",
+        "target_run_id",
+        "target_ledger_relpath",
+        "target_ledger_sha256",
+        "status",
+        "reason",
+        "successor",
+        "truth_effect",
+        "project_effect",
+        "ledger_disposition_id",
+        "created_at",
+        "record_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError("CHX ledger disposition fields are not exact")
+    if value["contract_revision"] != LEDGER_DISPOSITION_CONTRACT_REVISION:
+        raise ValueError("CHX ledger disposition revision is invalid")
+    target_run_id = value["target_run_id"]
+    if not isinstance(target_run_id, str) or RUN_ID_RE.fullmatch(target_run_id) is None:
+        raise ValueError("CHX ledger disposition target run id is invalid")
+    target_relpath = _safe_project_relpath(
+        value["target_ledger_relpath"],
+        "CHX ledger disposition target path",
+    )
+    if not target_relpath.startswith(f"{DEFAULT_PROJECT_LEDGER_DIR}/"):
+        raise ValueError("CHX ledger disposition target is outside the ledger root")
+    if (
+        not isinstance(value["target_ledger_sha256"], str)
+        or SHA256_RE.fullmatch(value["target_ledger_sha256"]) is None
+    ):
+        raise ValueError("CHX ledger disposition target hash is invalid")
+    status = value["status"]
+    if status not in LEDGER_ADMINISTRATIVE_STATUSES:
+        raise ValueError("CHX ledger administrative status is invalid")
+    _require_text(value["reason"], "CHX ledger disposition reason")
+    successor = value["successor"]
+    if status == "superseded":
+        if not isinstance(successor, dict) or set(successor) != {
+            "run_id",
+            "ledger_relpath",
+            "ledger_sha256",
+        }:
+            raise ValueError("superseded CHX ledger requires an exact successor")
+        if (
+            not isinstance(successor["run_id"], str)
+            or RUN_ID_RE.fullmatch(successor["run_id"]) is None
+            or successor["run_id"] == target_run_id
+        ):
+            raise ValueError("CHX ledger successor run id is invalid")
+        successor_path = _safe_project_relpath(
+            successor["ledger_relpath"],
+            "CHX ledger successor path",
+        )
+        if not successor_path.startswith(f"{DEFAULT_PROJECT_LEDGER_DIR}/"):
+            raise ValueError("CHX ledger successor is outside the ledger root")
+        if (
+            not isinstance(successor["ledger_sha256"], str)
+            or SHA256_RE.fullmatch(successor["ledger_sha256"]) is None
+        ):
+            raise ValueError("CHX ledger successor hash is invalid")
+    elif successor is not None:
+        raise ValueError("non-superseded CHX ledger disposition has a successor")
+    if value["truth_effect"] != "none" or value["project_effect"] != "none":
+        raise ValueError("CHX ledger disposition must remain administrative")
+    disposition_id = value["ledger_disposition_id"]
+    if (
+        not isinstance(disposition_id, str)
+        or LEDGER_DISPOSITION_ID_RE.fullmatch(disposition_id) is None
+        or path.stem != disposition_id
+    ):
+        raise ValueError("CHX ledger disposition id/path is invalid")
+    _parse_utc_timestamp(
+        value["created_at"],
+        label="CHX ledger disposition created_at",
+    )
+    semantic = {
+        key: value[key]
+        for key in expected.difference(
+            {"ledger_disposition_id", "created_at", "record_sha256"}
+        )
+    }
+    if disposition_id != f"ledger-disposition-{_sha256(_canonical_nfc_bytes(semantic))}":
+        raise ValueError("CHX ledger disposition content id drifted")
+    record_without_hash = {
+        key: value[key] for key in expected.difference({"record_sha256"})
+    }
+    if value["record_sha256"] != _sha256(
+        _canonical_nfc_bytes(record_without_hash)
+    ):
+        raise ValueError("CHX ledger disposition record hash drifted")
+    return value
+
+
+def _project_ledger_bindings(project_root: Path) -> dict[str, dict[str, Any]]:
+    ledger_root = project_root / DEFAULT_PROJECT_LEDGER_DIR
+    bindings: dict[str, dict[str, Any]] = {}
+    for path in sorted(ledger_root.iterdir(), key=lambda item: item.name):
+        if path.suffix != ".jsonl":
+            continue
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("CHX ledger root contains an unsafe ledger")
+        raw = path.read_bytes()
+        _events, status = _read_locked(path)
+        run_id = status["run_id"]
+        if run_id in bindings:
+            raise ValueError("CHX project contains a duplicate ledger run id")
+        bindings[run_id] = {
+            "run_id": run_id,
+            "path": path,
+            "relpath": path.relative_to(project_root).as_posix(),
+            "sha256": _sha256(raw),
+            "state": status["state"],
+        }
+    return bindings
+
+
+def _collect_ledger_dispositions(
+    project_root: Path,
+    bindings: dict[str, dict[str, Any]],
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, str]]]:
+    directory = _ledger_disposition_dir(project_root)
+    if directory.is_symlink():
+        raise ValueError("CHX ledger disposition directory is unsafe")
+    if not directory.exists():
+        return {}, []
+    if not directory.is_dir():
+        raise ValueError("CHX ledger disposition directory is unsafe")
+    valid: dict[str, dict[str, Any]] = {}
+    drift: list[dict[str, str]] = []
+    for path in sorted(directory.iterdir(), key=lambda item: item.name):
+        if path.suffix != ".json" or path.is_symlink() or not path.is_file():
+            raise ValueError("CHX ledger disposition directory contains an unsafe entry")
+        record = _validate_ledger_disposition_record(
+            json.loads(path.read_text(encoding="utf-8")),
+            path=path,
+            project_root=project_root,
+        )
+        target = bindings.get(record["target_run_id"])
+        error = ""
+        if target is None:
+            error = "target_run_missing"
+        elif target["relpath"] != record["target_ledger_relpath"]:
+            error = "target_path_drifted"
+        elif target["sha256"] != record["target_ledger_sha256"]:
+            error = "target_hash_drifted"
+        successor = record["successor"]
+        if not error and successor is not None:
+            successor_binding = bindings.get(successor["run_id"])
+            if successor_binding is None:
+                error = "successor_run_missing"
+            elif successor_binding["relpath"] != successor["ledger_relpath"]:
+                error = "successor_path_drifted"
+            elif successor_binding["sha256"] != successor["ledger_sha256"]:
+                error = "successor_hash_drifted"
+        if error:
+            drift.append(
+                {
+                    "ledger_disposition_id": record["ledger_disposition_id"],
+                    "target_run_id": record["target_run_id"],
+                    "error": error,
+                }
+            )
+            continue
+        previous = valid.get(record["target_run_id"])
+        if previous is not None and previous != record:
+            raise ValueError("CHX ledger has conflicting administrative dispositions")
+        valid[record["target_run_id"]] = record
+    return valid, drift
+
+
+def record_ledger_disposition(
+    project_root: Path | str,
+    *,
+    run_id: str,
+    status: str,
+    reason: str,
+    successor_run_id: str | None = None,
+) -> dict[str, Any]:
+    """Append one administrative COW terminal marker for a historical run."""
+
+    project = _resolved_path(project_root)
+    if project.is_symlink() or not project.is_dir():
+        raise ValueError("CHX ledger disposition project root is unsafe")
+    if not isinstance(run_id, str) or RUN_ID_RE.fullmatch(run_id) is None:
+        raise ValueError("CHX ledger disposition run id is invalid")
+    if status not in LEDGER_ADMINISTRATIVE_STATUSES:
+        raise ValueError("CHX ledger administrative status is invalid")
+    reason = _require_text(reason, "CHX ledger disposition reason")
+    if status == "superseded":
+        if (
+            not isinstance(successor_run_id, str)
+            or RUN_ID_RE.fullmatch(successor_run_id) is None
+            or successor_run_id == run_id
+        ):
+            raise ValueError("superseded CHX ledger requires a distinct successor run")
+    elif successor_run_id is not None:
+        raise ValueError("successor run is valid only for superseded disposition")
+    with _global_repair_lock(project, exclusive=True):
+        bindings = _project_ledger_bindings(project)
+        target = bindings.get(run_id)
+        if target is None:
+            raise ValueError("unknown CHX ledger run id")
+        if target["state"] != "open":
+            raise ValueError("closed CHX ledger does not need administrative disposition")
+        successor = None
+        if successor_run_id is not None:
+            successor_binding = bindings.get(successor_run_id)
+            if successor_binding is None:
+                raise ValueError("unknown CHX successor run id")
+            successor = {
+                "run_id": successor_run_id,
+                "ledger_relpath": successor_binding["relpath"],
+                "ledger_sha256": successor_binding["sha256"],
+            }
+        semantic = {
+            "contract_revision": LEDGER_DISPOSITION_CONTRACT_REVISION,
+            "target_run_id": run_id,
+            "target_ledger_relpath": target["relpath"],
+            "target_ledger_sha256": target["sha256"],
+            "status": status,
+            "reason": reason,
+            "successor": successor,
+            "truth_effect": "none",
+            "project_effect": "none",
+        }
+        disposition_id = "ledger-disposition-" + _sha256(
+            _canonical_nfc_bytes(semantic)
+        )
+        record_without_hash = {
+            **semantic,
+            "ledger_disposition_id": disposition_id,
+            "created_at": _utc_now(),
+        }
+        record = {
+            **record_without_hash,
+            "record_sha256": _sha256(
+                _canonical_nfc_bytes(record_without_hash)
+            ),
+        }
+        directory = _ledger_disposition_dir(project)
+        path = directory / f"{disposition_id}.json"
+        existing, _drift = _collect_ledger_dispositions(project, bindings)
+        previous = existing.get(run_id)
+        if previous is not None:
+            if previous["ledger_disposition_id"] == disposition_id:
+                return {
+                    "ledger_disposition_id": disposition_id,
+                    "record_path": str(path),
+                    "record_sha256": previous["record_sha256"],
+                    "status": "already_recorded",
+                    "truth_effect": "none",
+                    "project_effect": "none",
+                }
+            raise ValueError("CHX ledger already has a different administrative disposition")
+        if directory.is_symlink():
+            raise ValueError("CHX ledger disposition directory is unsafe")
+        directory.mkdir(parents=True, exist_ok=True)
+        temporary = directory / (
+            f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(4)}"
+        )
+        descriptor = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+        try:
+            with os.fdopen(descriptor, "wb", closefd=True) as handle:
+                handle.write(_canonical_bytes(record))
+                handle.write(b"\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            _validate_ledger_disposition_record(
+                record,
+                path=path,
+                project_root=project,
+            )
+            os.replace(temporary, path)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+    return {
+        "ledger_disposition_id": disposition_id,
+        "record_path": str(path),
+        "record_sha256": record["record_sha256"],
+        "status": "recorded",
+        "truth_effect": "none",
+        "project_effect": "none",
+    }
+
+
+def _bounded_rows(rows: list[Any], *, limit: int = 8) -> dict[str, Any]:
+    return {
+        "count": len(rows),
+        "sha256": _sha256(_canonical_nfc_bytes(rows)),
+        "truncated": len(rows) > limit,
+        "items": rows[:limit],
+    }
+
+
+def _ledger_activity_projection(
+    *,
+    project_root: Path,
+    records: dict[str, dict[str, Any]],
+    current_run_ids: Sequence[str],
+    full: bool,
+) -> dict[str, Any]:
+    current = []
+    seen_current: set[str] = set()
+    for value in current_run_ids:
+        if not isinstance(value, str) or RUN_ID_RE.fullmatch(value) is None:
+            raise ValueError("CHX inventory current run id is invalid")
+        if value in seen_current:
+            raise ValueError("CHX inventory current run ids must be unique")
+        seen_current.add(value)
+        record = records.get(value)
+        if record is None:
+            raise ValueError("CHX inventory current run id is unknown")
+        if record["state"] != "open":
+            raise ValueError("CHX inventory current run id is already closed")
+        current.append(value)
+    bindings = {
+        run_id: {
+            "run_id": run_id,
+            "path": Path(record["path"]),
+            "relpath": Path(record["path"])
+            .relative_to(project_root)
+            .as_posix(),
+            "sha256": record["sha256"],
+            "state": record["state"],
+        }
+        for run_id, record in records.items()
+    }
+    dispositions, drift = _collect_ledger_dispositions(
+        project_root,
+        bindings,
+    )
+    categories: dict[str, list[dict[str, Any]]] = {
+        "open_current": [],
+        "open_stale": [],
+        "open_orphaned": [],
+    }
+    for run_id in sorted(
+        run_id
+        for run_id, record in records.items()
+        if record["state"] == "open"
+    ):
+        record = records[run_id]
+        disposition = dispositions.get(run_id)
+        category = (
+            "open_stale"
+            if disposition is not None
+            else "open_current"
+            if run_id in seen_current
+            else "open_orphaned"
+        )
+        row: dict[str, Any] = {
+            "run_id": run_id,
+            "ledger_path": record["path"],
+            "ledger_sha256": record["sha256"],
+            "skill_version": record["skill_version"],
+            "local_open_issue_count": sum(
+                issue["status"] == "open"
+                for issue in record["issues"].values()
+            ),
+        }
+        if disposition is not None:
+            row.update(
+                {
+                    "administrative_status": disposition["status"],
+                    "administrative_reason": disposition["reason"],
+                    "ledger_disposition_id": disposition[
+                        "ledger_disposition_id"
+                    ],
+                    "successor_run_id": (
+                        disposition["successor"]["run_id"]
+                        if disposition["successor"] is not None
+                        else None
+                    ),
+                }
+            )
+        categories[category].append(row)
+    projection: dict[str, Any] = {
+        "liveness_source": "explicit_current_run_ids_only",
+        "raw_open_ledger_count": sum(
+            record["state"] == "open" for record in records.values()
+        ),
+        "administrative_disposition_drift": (
+            drift if full else drift[:8]
+        ),
+        "administrative_disposition_drift_count": len(drift),
+        "administrative_disposition_drift_sha256": _sha256(
+            _canonical_nfc_bytes(drift)
+        ),
+    }
+    for category, rows in categories.items():
+        projection[category] = rows if full else rows[:8]
+        projection[f"{category}_count"] = len(rows)
+        projection[f"{category}_sha256"] = _sha256(
+            _canonical_nfc_bytes(rows)
+        )
+        projection[f"{category}_truncated"] = (
+            not full and len(rows) > 8
+        )
+    return projection
+
+
+def _bound_inventory_projection(result: dict[str, Any]) -> dict[str, Any]:
+    summaries: dict[str, dict[str, Any]] = {}
+    for field in (
+        "unresolved",
+        "report_compatibility_drift",
+        "lineage_errors",
+        "parallel_issue_free_successors",
+        "parallel_closed_successors",
+        "ignored_supersedes",
+        "active_run_ids",
+    ):
+        rows = result.get(field)
+        if not isinstance(rows, list):
+            continue
+        bounded = _bounded_rows(rows)
+        summaries[field] = {
+            key: bounded[key]
+            for key in ("count", "sha256", "truncated")
+        }
+        result[field] = bounded["items"]
+    result["bounded_lists"] = summaries
+    return result
+
+
 def _inventory_project_ledgers_unlocked(
     project_root: Path | str,
     *,
     full: bool = False,
     include_global: bool = True,
+    current_run_ids: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build a read-only closure view over every project-local CHX ledger.
 
@@ -3873,11 +4339,31 @@ def _inventory_project_ledgers_unlocked(
                 result,
                 project_root=project,
             )
+        result["ledger_activity"] = _ledger_activity_projection(
+            project_root=project,
+            records={},
+            current_run_ids=current_run_ids,
+            full=full,
+        )
+        result["active_run_ids"] = sorted(set(current_run_ids))
+        result["counts"]["raw_open_ledgers"] = result["counts"][
+            "active_ledgers"
+        ]
+        result["counts"]["active_ledgers"] = result[
+            "ledger_activity"
+        ]["open_current_count"]
+        result["counts"]["stale_open_ledgers"] = result[
+            "ledger_activity"
+        ]["open_stale_count"]
+        result["counts"]["orphaned_open_ledgers"] = result[
+            "ledger_activity"
+        ]["open_orphaned_count"]
         if full:
             pass
         else:
             result.pop("ledgers", None)
             result.pop("chains", None)
+            result = _bound_inventory_projection(result)
         return result
     if not ledger_root.is_dir():
         raise ValueError("CHX inventory ledger root is not a directory")
@@ -4374,11 +4860,31 @@ def _inventory_project_ledgers_unlocked(
             result,
             project_root=project,
         )
+    result["ledger_activity"] = _ledger_activity_projection(
+        project_root=project,
+        records=records,
+        current_run_ids=current_run_ids,
+        full=full,
+    )
+    result["active_run_ids"] = sorted(set(current_run_ids))
+    result["counts"]["raw_open_ledgers"] = result["counts"][
+        "active_ledgers"
+    ]
+    result["counts"]["active_ledgers"] = result[
+        "ledger_activity"
+    ]["open_current_count"]
+    result["counts"]["stale_open_ledgers"] = result[
+        "ledger_activity"
+    ]["open_stale_count"]
+    result["counts"]["orphaned_open_ledgers"] = result[
+        "ledger_activity"
+    ]["open_orphaned_count"]
     if full:
         pass
     else:
         result.pop("ledgers", None)
         result.pop("chains", None)
+        result = _bound_inventory_projection(result)
     return result
 
 
@@ -4387,6 +4893,7 @@ def inventory_project_ledgers(
     *,
     full: bool = False,
     include_global: bool = True,
+    current_run_ids: Sequence[str] = (),
     _lock_held: bool = False,
 ) -> dict[str, Any]:
     """Read a project inventory under the shared CHX writer lock.
@@ -4402,6 +4909,7 @@ def inventory_project_ledgers(
             project_root,
             full=full,
             include_global=include_global,
+            current_run_ids=current_run_ids,
         )
     project = _resolved_path(project_root)
     ledger_root = project / DEFAULT_PROJECT_LEDGER_DIR
@@ -4410,12 +4918,14 @@ def inventory_project_ledgers(
             project,
             full=full,
             include_global=include_global,
+            current_run_ids=current_run_ids,
         )
     with _global_repair_lock(project, exclusive=False):
         return _inventory_project_ledgers_unlocked(
             project,
             full=full,
             include_global=include_global,
+            current_run_ids=current_run_ids,
         )
 
 
@@ -5115,6 +5625,29 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="include every validated ledger and predecessor-chain projection",
     )
+    inventory.add_argument(
+        "--current-run-id",
+        action="append",
+        default=[],
+        help=(
+            "exact live run known to Main; repeat as needed. The inventory "
+            "never guesses liveness from age or an open bit"
+        ),
+    )
+
+    ledger_disposition = commands.add_parser(
+        "record-ledger-disposition",
+        help="append a COW administrative terminal marker for an old open run",
+    )
+    ledger_disposition.add_argument("--project-root", required=True)
+    ledger_disposition.add_argument("--run-id", required=True)
+    ledger_disposition.add_argument(
+        "--status",
+        choices=sorted(LEDGER_ADMINISTRATIVE_STATUSES),
+        required=True,
+    )
+    ledger_disposition.add_argument("--reason", required=True)
+    ledger_disposition.add_argument("--successor-run-id")
 
     global_repair = commands.add_parser(
         "record-global-repair",
@@ -5211,7 +5744,19 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "status":
         result = ledger_status(args.ledger)
     elif args.command == "inventory":
-        result = inventory_project_ledgers(args.project_root, full=args.full)
+        result = inventory_project_ledgers(
+            args.project_root,
+            full=args.full,
+            current_run_ids=args.current_run_id,
+        )
+    elif args.command == "record-ledger-disposition":
+        result = record_ledger_disposition(
+            args.project_root,
+            run_id=args.run_id,
+            status=args.status,
+            reason=args.reason,
+            successor_run_id=args.successor_run_id,
+        )
     elif args.command == "record-global-repair":
         result = record_global_repair(
             args.project_root,

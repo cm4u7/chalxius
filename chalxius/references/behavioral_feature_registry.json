@@ -115,39 +115,123 @@
         "tamper": "tests.test_evidence_plane.EvidencePlaneTests.test_association_failure_is_pending_tamper_fails_closed_and_retry_is_idempotent"
       }
     },
-    "feature.brave_future_goal_intake_binding": {
+    "feature.atomic_campaign_research_binding": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "An ordinary auto/deep research goal must bind the returned internal Campaign id to future Research without Campaign jargon.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
-      "producer_symbol": "mathgraph.goal_intake.build_goal_intake_research_binding",
+      "summary": "One public memory-add operation binds an exact Campaign to a new Research record without orphan publication.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
       "activation_predicate": {
-        "predicate_id": "user_goal_under_auto_or_deep",
-        "domain": ["auto_or_deep_goal", "fast_or_no_goal"],
+        "predicate_id": "explicit_campaign_bound_research_creation",
+        "domain": ["matching_campaign", "payload_flag_conflict", "campaign_drift_under_lock"],
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-bf-goal-intake-research-binding-1",
-        "validator_symbol": "mathgraph.goal_intake.validate_goal_intake_research_binding"
+        "type_id": "chalxius-v5-atomic-campaign-research-binding-1",
+        "validator_symbol": "mathgraph.contracts.validate_campaign_id"
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
       "observable_effect": {
-        "effect_id": "future_research_binds_goal_campaign",
+        "effect_id": "new_research_binds_exact_campaign_atomically",
         "kind": "state_transition",
-        "description": "New Research created after goal intake carries the exact returned Campaign id."
+        "description": "The immutable Research metadata carries the explicit Campaign id; mismatch or under-lock disappearance writes no Research."
       },
       "probes": {
-        "positive": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_public_goal_command_binds_root_research_without_campaign_jargon",
-        "predicate_false": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_plain_research_has_no_spurious_goal_binding",
-        "tamper": "tests.test_goal_intake_research_binding.GoalIntakeResearchBindingTests.test_tampered_or_conflicting_intake_fails_before_research_write"
+        "positive": "tests.test_chx_093_integrated_cleanup.IntegratedCleanup093Tests.test_campaign_bound_research_publishes_exact_campaign",
+        "predicate_false": "tests.test_chx_093_integrated_cleanup.IntegratedCleanup093Tests.test_campaign_bound_research_predicate_false_stays_unbound",
+        "tamper": "tests.test_chx_093_integrated_cleanup.IntegratedCleanup093Tests.test_campaign_bound_research_conflict_and_lock_drift_write_nothing"
+      }
+    },
+    "feature.campaign_compact_current_view": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Routine Campaign status reads expose one bounded current view while exact append-only event bytes remain available at their canonical ledger.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.campaigns.CampaignStore.compact_status",
+      "activation_predicate": {
+        "predicate_id": "campaign_has_repeated_or_large_history",
+        "domain": ["long_history", "short_history"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-campaign-compact-current-view-1",
+        "validator_symbol": "mathgraph.campaigns.CampaignStore._verified_events"
+      },
+      "consumer_symbol": "mathgraph.campaigns.CampaignStore.compact_status",
+      "observable_effect": {
+        "effect_id": "campaign_current_state_and_recent_event_summaries_are_bounded",
+        "kind": "bounded_output",
+        "description": "Main sees current semantics, one latest minimal frontier checkpoint, and a fixed recent event-summary tail without replaying or deleting full historical node bodies."
+      },
+      "probes": {
+        "positive": "tests.test_chx_094_campaign_history_compaction.CampaignHistoryCompactionTests.test_default_cli_output_remains_bounded_as_history_grows",
+        "predicate_false": "tests.test_chx_094_campaign_history_compaction.CampaignHistoryCompactionTests.test_compact_status_is_one_current_view_with_a_fixed_recent_tail",
+        "tamper": "tests.test_chx_094_campaign_history_compaction.CampaignHistoryCompactionTests.test_event_tamper_still_fails_closed"
+      }
+    },
+    "feature.campaign_planning_history_commitment": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Campaign-scoped round planning freezes compact current semantics and an exact ordered history-prefix commitment rather than copying all historical updates.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._campaign_snapshot_for_planning",
+      "activation_predicate": {
+        "predicate_id": "round_has_explicit_campaign_scope",
+        "domain": ["campaign_scoped", "unscoped_or_legacy_scope"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-campaign-scope-2",
+        "validator_symbol": "mathgraph.campaigns.CampaignStore.history_summary"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_campaign_scope_binding",
+      "observable_effect": {
+        "effect_id": "large_campaign_rounds_freeze_small_exact_history_prefixes",
+        "kind": "bounded_output",
+        "description": "Production and supervision planning remain available as history grows; tail append is accepted while frozen-prefix rewrite, reorder, or truncation fails closed."
+      },
+      "probes": {
+        "positive": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_worker_result_preserves_campaign_binding",
+        "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_immutable_scope_one_snapshot_remains_readable",
+        "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_campaign_scope_commits_exact_history_prefix"
+      }
+    },
+    "feature.campaign_repair_scope_inheritance": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "A copy-on-write repair inherits the repaired Research Campaign into both the new immutable Research and its production round without inferring ACTIVE.",
+      "production_entry_symbol": "mathgraph.cli.main",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_repair_round",
+      "activation_predicate": {
+        "predicate_id": "repaired_research_has_campaign_binding",
+        "domain": ["bound_source", "unbound_source"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-repair-campaign-inheritance-1",
+        "validator_symbol": "mathgraph.contracts.validate_campaign_id"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_repair_round",
+      "observable_effect": {
+        "effect_id": "repair_research_and_round_share_exact_source_campaign",
+        "kind": "state_transition",
+        "description": "A bound source yields one Campaign-scoped repair round; an unbound source remains unbound even when another Campaign is active."
+      },
+      "probes": {
+        "positive": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_repair_inherits_exact_source_campaign_into_round_scope",
+        "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_unbound_repair_does_not_infer_active_campaign",
+        "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_repair_rejects_tampered_source_before_writing"
       }
     },
     "feature.campaign_research_goal_frontier": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Main's ordinary frontier must expose durable Campaign Research goals and their exact current lifecycle actions beside the bounded workflow queue.",
+      "summary": "Main's ordinary frontier must expose durable Campaign Research goals, exact current lifecycle actions, and uncheckpointed terminal workflow successors beside the bounded workflow queue.",
       "production_entry_symbol": "mathgraph.cli.main",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
       "activation_predicate": {
@@ -163,12 +247,40 @@
       "observable_effect": {
         "effect_id": "campaign_goal_progress_visible_beside_workflow_queue",
         "kind": "bounded_output",
-        "description": "The Main surface reports covered, open, in-flight, workflow, semantic-choice, or orphaned goal routes and exact next actions without selecting, dispatching, closing, or admitting them."
+        "description": "The Main surface reports covered, open, in-flight, workflow, semantic-choice, or orphaned goal routes, exact next actions, and terminal successors of attained checkpoints without selecting, dispatching, closing, or admitting them."
       },
       "probes": {
-        "positive": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_research_goal_tracks_progress_without_becoming_a_scheduler",
+        "positive": "tests.test_chx_095_terminal_frontier_context.TerminalFrontierContextTests.test_campaign_projects_terminal_successors_of_attained_checkpoint",
         "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_cli_connects_campaign_scope_for_v5",
         "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_cli_research_goal_requires_the_exact_campaign_bound_root"
+      }
+    },
+    "feature.exact_literal_research_reference_freeze": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "An exact existing Research id literally named in selected Research prose becomes directly operable frozen predecessor context for the new task card.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._resolvable_literal_research_reference_ids",
+      "activation_predicate": {
+        "predicate_id": "source_prose_literally_names_existing_exact_research_id",
+        "domain": ["existing_exact_id", "nonexistent_exact_token", "prose_drift"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-exact-research-references-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.validate_task_card"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
+      "observable_effect": {
+        "effect_id": "literal_existing_research_id_freezes_record_and_artifacts",
+        "kind": "routing",
+        "description": "The immutable task card includes the exact predecessor Research record and its path/hash/role artifacts; unknown checksum-like tokens remain inert and no semantic relevance is inferred."
+      },
+      "probes": {
+        "positive": "tests.test_chx_095_terminal_frontier_context.TerminalFrontierContextTests.test_exact_literal_research_reference_freezes_record_and_artifact",
+        "predicate_false": "tests.test_chx_095_terminal_frontier_context.TerminalFrontierContextTests.test_nonexistent_literal_token_does_not_create_context",
+        "tamper": "tests.test_chx_095_terminal_frontier_context.TerminalFrontierContextTests.test_literal_reference_binding_rejects_prose_drift"
       }
     },
     "feature.mathematical_target_policy": {
@@ -599,35 +711,35 @@
         "description": "A uniquely and safely completed exact copy-on-write terminal closes the original workgroup in actionable views while history retains its identity and provenance; terminal invalidation or ambiguous repair lineage reopens it, explicit-ID planning remains available, and a sibling completion race fails before public round bytes."
       },
       "probes": {
-        "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive",
+        "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_views",
         "predicate_false": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_repair_requires_exact_active_invalidator_coverage",
         "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
       }
     },
-    "feature.bounded_frontier_projection_v3": {
+    "feature.active_main_frontier_projection": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Ordinary and Brave Future frontier views consume the same exact workgroup and completion projection; public entries are compact, and the requested limit bounds entries, the authenticated member window, and related inventories while the full eligible set is retained only as count and digest.",
-      "production_entry_symbol": "mathgraph.brave_future.BraveFutureManager.frontier",
-      "producer_symbol": "mathgraph.brave_future.RepairLineageProjector.project",
+      "summary": "The ordinary Main frontier exposes bounded exact workgroup completion, next attention, semantic disposition, live supervision, and copy-safe plan argv.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier",
       "activation_predicate": {
         "predicate_id": "bounded_frontier_projection_requested",
         "domain": ["always"],
         "conditional": false
       },
       "typed_handoff": {
-        "type_id": "chalxius-bf-frontier-projection-3",
-        "validator_symbol": "mathgraph.brave_future._validate_frontier_projection"
+        "type_id": "chalxius-v5-active-main-frontier-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier"
       },
-      "consumer_symbol": "mathgraph.brave_future.BraveFutureManager._read_transaction",
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
       "observable_effect": {
         "effect_id": "compact_cross_bound_frontier_window",
         "kind": "bounded_output",
-        "description": "Main receives only the requested compact boundary window; work-key, completion, score, and record identity are cross-bound between each v3 entry and its authenticated manifests, while frozen v1/v2 records remain readable."
+        "description": "Main receives only the requested compact boundary window plus exact attention and replay data; an already-live supervision round is visible even when the source product is unsafe for a new automatic supervisor suggestion."
       },
       "probes": {
-        "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive",
+        "positive": "tests.test_chx_090_frontier_active_fix.FrontierActiveFix090Tests.test_live_supervision_precedes_pre_supervision_product_safety",
         "predicate_false": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_work_key_semantic_predicate_false_and_requested_limit_bounds_projection",
         "tamper": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_zero_target_skips_fact_inventory_and_exact_target_tamper_fails"
       }
@@ -1087,7 +1199,7 @@
       "replacement_feature_id": "",
       "required": false,
       "summary": "Implicit selection through the historical ACTIVE Campaign pointer is retired.",
-      "boundary_reason": "Current goal intake and scoped planning require an exact objective or explicit Campaign identity. An unscoped Main surface may display ACTIVE only as a nonfiltering active_hint with campaign_selection_effect=none.",
+      "boundary_reason": "Scoped creation and planning require an explicit Campaign identity. An unscoped Main surface may display ACTIVE only as a nonfiltering active_hint with campaign_selection_effect=none.",
       "guard_symbol": "",
       "boundary_probe": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
     }

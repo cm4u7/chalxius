@@ -32,6 +32,8 @@ from .orchestrator import (
 )
 from .contracts import (
     CLAIM_RELATIONS,
+    FACT_ID_RE,
+    MEMORY_ID_RE,
     POLICY_REVISION_V4,
     contained_path,
     require_exact_keys,
@@ -76,68 +78,6 @@ def _json_file(path: str) -> dict[str, Any]:
 
 def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-
-
-def _goal_root_research(
-    store: MathGraphStore,
-    intake: dict[str, Any],
-    *,
-    actor: str,
-) -> tuple[dict[str, Any], str]:
-    """Create or reuse the one Research root for an ordinary goal."""
-
-    lifecycle = store.v5_lifecycle()
-    entries_dir = lifecycle.research_entries_dir
-    marker = {
-        "campaign_id": intake["campaign_id"],
-        "objective_sha256": intake["objective_sha256"],
-    }
-    marker_tokens = [value.encode("ascii") for value in marker.values()]
-    matches: list[dict[str, Any]] = []
-    for path in sorted(entries_dir.glob("*.json")):
-        if path.is_symlink() or not path.is_file():
-            raise ValueError("research ledger contains an unsafe entry")
-        raw = path.read_bytes()
-        if not all(token in raw for token in marker_tokens):
-            continue
-        envelope = lifecycle._research_record_envelope(path.stem)
-        metadata = envelope.get("metadata", {})
-        if metadata.get("goal_intake_root") == marker:
-            matches.append(envelope)
-    if len(matches) > 1:
-        raise ValueError("ordinary research goal has multiple bound Research roots")
-    if matches:
-        return lifecycle._research_record(matches[0]["research_id"]), (
-            "none_existing_root_reused"
-        )
-    existing_ids = {
-        path.stem
-        for path in entries_dir.glob("*.json")
-        if path.is_file() and not path.is_symlink()
-    }
-    record = lifecycle.add_research(
-        {
-            "kind": "direction",
-            "claim": intake["objective"],
-            "content": (
-                "Root Research for the exact user goal; Brave Future remains "
-                "advisory-only and creates no automatic plan or dispatch."
-            ),
-            "source": f"goal-intake:{intake['intake_token']}",
-            "goal_intake_root": {
-                "campaign_id": intake["campaign_id"],
-                "objective_sha256": intake["objective_sha256"],
-            },
-        },
-        actor=actor,
-        goal_intake_token=intake["intake_token"],
-    )
-    effect = (
-        "none_existing_root_reused"
-        if record["research_id"] in existing_ids
-        else "goal_intake_root_research_bound"
-    )
-    return record, effect
 
 
 def _v5_fact_bundle_release(
@@ -469,8 +409,6 @@ READ_ONLY_COMMANDS = {
     "verification-packet-prepare",
     "verification-receipt-prepare",
     "verification-status",
-    "brave-future-status",
-    "brave-future-audit",
     "verifier-capsule",
     "candidate-release-check",
     "certification-decision-check",
@@ -502,8 +440,6 @@ def _command_requires_mutation_lock(args: argparse.Namespace) -> bool:
         # would invoke the very guard that mode-init exists to satisfy.
         return False
     if args.command == "upgrade-workflow" and args.dry_run:
-        return False
-    if args.command == "campaign-reassess" and args.dry_run:
         return False
     if args.command == "ingest-return":
         # The orchestrator owns one complete validation/effect/pulse-failure
@@ -846,11 +782,20 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--actor", default="")
 
     p = sub.add_parser("show")
-    p.add_argument("fact_id")
+    p.add_argument("object_id")
 
     p = sub.add_parser("search")
     p.add_argument("query")
     p.add_argument("--limit", type=int, default=10)
+    p.add_argument(
+        "--scope",
+        choices=("all", "facts", "research"),
+        default="all",
+        help=(
+            "search the Main-visible graph; default includes immutable "
+            "Research and verified Facts"
+        ),
+    )
 
     p = sub.add_parser("closure")
     p.add_argument("fact_ids", nargs="+")
@@ -932,10 +877,10 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--input", required=True)
     p.add_argument("--actor", required=True)
     p.add_argument(
-        "--goal-intake-token",
+        "--campaign",
         help=(
-            "host-propagated bfit token returned by research-goal-intake; "
-            "binds Research without requiring Campaign jargon"
+            "explicit V5 Campaign id; validates and binds the immutable "
+            "Research in the same write transaction"
         ),
     )
     p.add_argument(
@@ -955,6 +900,15 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--resolution-fact-id")
     p.add_argument("--claim-relation", choices=sorted(CLAIM_RELATIONS))
     p.add_argument("--related-fact-id")
+    p.add_argument(
+        "--basis-research-id",
+        action="append",
+        dest="attention_basis_research_ids",
+        help=(
+            "exact Research basis for status superseded or "
+            "equivalent_review_accepted; repeat as needed"
+        ),
+    )
 
     p = sub.add_parser("frontier")
     p.add_argument("--limit", type=int, default=10)
@@ -970,55 +924,6 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
             "default decision surface"
         ),
     )
-    p.add_argument(
-        "--brave-future",
-        action="store_true",
-        help="use the explicitly enabled V5 BF-1/L4 advisory projection",
-    )
-    p.add_argument(
-        "--view",
-        choices=("actionable", "all-active", "history"),
-        help="explicit Brave Future view; valid only with --brave-future",
-    )
-
-    p = sub.add_parser("brave-future-enable")
-    p.add_argument("--campaign", required=True)
-    p.add_argument("--input", required=True)
-    p.add_argument("--actor", required=True)
-
-    p = sub.add_parser("research-goal-intake")
-    p.add_argument(
-        "--input",
-        required=True,
-        help=(
-            "JSON object with revision=chalxius-bf-goal-intake-2 and the "
-            "user's exact objective; no Campaign id is required"
-        ),
-    )
-    p.add_argument("--actor", required=True)
-    p.add_argument("--limit", type=int, default=10)
-
-    p = sub.add_parser("brave-future-status")
-    p.add_argument("--campaign", required=True)
-
-    sub.add_parser("brave-future-audit")
-
-    p = sub.add_parser("campaign-reassess")
-    p.add_argument("--campaign", required=True)
-    blockage_group = p.add_mutually_exclusive_group(required=True)
-    blockage_group.add_argument("--blockage-input")
-    blockage_group.add_argument("--blockage")
-    p.add_argument("--dry-run", action="store_true")
-
-    p = sub.add_parser("campaign-reassess-decide")
-    p.add_argument("reassessment_id")
-    p.add_argument("--input", required=True)
-    p.add_argument("--actor", required=True)
-
-    p = sub.add_parser("brave-future-disable")
-    p.add_argument("--campaign", required=True)
-    p.add_argument("--actor", required=True)
-    p.add_argument("--reason", required=True)
 
     p = sub.add_parser("adoption-plan")
     p.add_argument("--input", required=True)
@@ -1720,16 +1625,6 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 3
-    if (
-        args.command == "frontier"
-        and getattr(args, "brave_future", False)
-        and args.role not in {"main", "operator"}
-    ):
-        print(
-            "Brave Future frontier is restricted to main or operator",
-            file=sys.stderr,
-        )
-        return 3
     stack = ExitStack()
     try:
         root = Path(args.root).expanduser().resolve()
@@ -1909,9 +1804,27 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "show":
-            print(store.get_raw_fact(args.fact_id), end="")
+            if FACT_ID_RE.fullmatch(args.object_id):
+                print(store.get_raw_fact(args.object_id), end="")
+            elif (
+                store.workflow_evidence_version() == 5
+                and MEMORY_ID_RE.fullmatch(args.object_id)
+            ):
+                _print_json(
+                    store.v5_lifecycle()._research_record(args.object_id)
+                )
+            else:
+                raise ValueError(
+                    "show object id must be one exact Fact or V5 Research id"
+                )
         elif args.command == "search":
-            _print_json(store.search(args.query, limit=args.limit))
+            _print_json(
+                store.search_graph(
+                    args.query,
+                    limit=args.limit,
+                    scope=args.scope,
+                )
+            )
         elif args.command == "closure":
             _print_json({"facts": store.closure(args.fact_ids)})
         elif args.command == "context":
@@ -2138,7 +2051,7 @@ def main(argv: list[str] | None = None) -> int:
                 record = store.v5_lifecycle().add_research(
                     _json_file(args.input),
                     actor=args.actor,
-                    goal_intake_token=args.goal_intake_token,
+                    campaign_id=args.campaign,
                     reuse_unbound_main_semantics=args.role == "main",
                     assurance_contract_revision=(
                         V5_ASSURANCE_CONTRACT_REVISION
@@ -2151,9 +2064,12 @@ def main(argv: list[str] | None = None) -> int:
                         "memory_id": record["research_id"],
                         "research_id": record["research_id"],
                         "status": record["status"],
+                        "campaign_id": record["metadata"].get("campaign_id"),
                     }
                 )
             else:
+                if args.campaign:
+                    raise ValueError("memory-add --campaign requires a V5 project")
                 entry_id = store.memory_add(
                     _json_file(args.input), actor=args.actor
                 )
@@ -2168,6 +2084,9 @@ def main(argv: list[str] | None = None) -> int:
                     resolution_fact_id=args.resolution_fact_id,
                     claim_relation=args.claim_relation,
                     related_fact_id=args.related_fact_id,
+                    attention_basis_research_ids=(
+                        args.attention_basis_research_ids
+                    ),
                 )
                 _print_json(
                     {
@@ -2175,9 +2094,16 @@ def main(argv: list[str] | None = None) -> int:
                         "research_id": args.entry_id,
                         "status": args.status,
                         "disposition_id": disposition["research_id"],
+                        "attention_disposition": disposition["metadata"].get(
+                            "attention_disposition"
+                        ),
                     }
                 )
             else:
+                if args.attention_basis_research_ids:
+                    raise ValueError(
+                        "semantic attention disposition requires a V5 project"
+                    )
                 store.memory_update(
                     args.entry_id,
                     status=args.status,
@@ -2192,56 +2118,25 @@ def main(argv: list[str] | None = None) -> int:
                 )
         elif args.command == "frontier":
             if store.workflow_evidence_version() == 5:
-                if args.brave_future:
-                    if args.diagnostic:
-                        raise ValueError(
-                            "--diagnostic is for the ordinary V5 frontier"
-                        )
-                    if not args.campaign:
-                        raise ValueError(
-                            "Brave Future frontier requires an explicit --campaign"
-                        )
-                    selected_views = {
-                        value
-                        for value in (
-                            args.view,
-                            "history" if args.history else None,
-                            "all-active" if args.all_active else None,
-                        )
-                        if value is not None
-                    }
-                    if len(selected_views) > 1:
-                        raise ValueError(
-                            "Brave Future frontier view switches conflict; choose one view"
-                        )
-                    view = next(iter(selected_views), "actionable")
-                    _print_json(
-                        store.brave_future().frontier(
-                            campaign_id=args.campaign,
-                            view=view,
-                            collapse_repairs=not args.no_collapse_repairs,
-                            limit=args.limit,
-                        )
+                if args.all_active or args.no_collapse_repairs:
+                    raise ValueError(
+                        "V5 frontier uses --history or --diagnostic; V4-only "
+                        "repair-collapse switches have no V5 meaning"
+                    )
+                lifecycle = store.v5_lifecycle()
+                if args.diagnostic or args.history:
+                    projection = lifecycle.frontier(
+                        limit=args.limit,
+                        include_history=args.history,
+                        campaign_id=args.campaign,
                     )
                 else:
-                    if args.view is not None:
-                        raise ValueError("--view requires --brave-future")
-                    lifecycle = store.v5_lifecycle()
-                    if args.diagnostic or args.history:
-                        projection = lifecycle.frontier(
-                            limit=args.limit,
-                            include_history=args.history,
-                            campaign_id=args.campaign,
-                        )
-                    else:
-                        projection = lifecycle.frontier_decision_surface(
-                            limit=args.limit,
-                            campaign_id=args.campaign,
-                        )
-                    _print_json(projection)
+                    projection = lifecycle.frontier_decision_surface(
+                        limit=args.limit,
+                        campaign_id=args.campaign,
+                    )
+                _print_json(projection)
             else:
-                if args.brave_future or args.view is not None:
-                    raise ValueError("Brave Future frontier requires a V5 project")
                 if args.diagnostic:
                     raise ValueError("--diagnostic frontier requires a V5 project")
                 _print_json(
@@ -2718,7 +2613,7 @@ def main(argv: list[str] | None = None) -> int:
                 campaign_id = args.campaign_id or store.campaigns().active()
                 if campaign_id is None:
                     raise ValueError("there is no active campaign")
-                _print_json(store.campaigns().status(campaign_id))
+                _print_json(store.campaigns().compact_status(campaign_id))
         elif args.command == "campaign-target-add":
             campaigns = store.campaigns()
             target_payload = _json_file(args.input)
@@ -3082,79 +2977,6 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "verification-status":
             _print_json(
                 store.v5_lifecycle().parallel_verification().status(args.release_id)
-            )
-        elif args.command == "brave-future-enable":
-            _print_json(
-                store.brave_future().enable(
-                    campaign_id=args.campaign,
-                    policy=_json_file(args.input),
-                    actor=args.actor,
-                )
-            )
-        elif args.command == "research-goal-intake":
-            intake = store.brave_future().intake_research_goal(
-                goal_input=_json_file(args.input),
-                actor=args.actor,
-                limit=args.limit,
-            )
-            root_research, research_write_effect = _goal_root_research(
-                store,
-                intake,
-                actor=args.actor,
-            )
-            root_binding = root_research["metadata"]["goal_intake_binding"]
-            _print_json(
-                {
-                    **intake,
-                    "root_research_id": root_research["research_id"],
-                    "root_research_record_sha256": root_research["record_sha256"],
-                    "root_intake_token": root_binding["intake_token"],
-                    "research_write_effect": research_write_effect,
-                    "research_scope": {
-                        **intake["research_scope"],
-                        "root_research_id": root_research["research_id"],
-                        "intake_token_bound": True,
-                    },
-                }
-            )
-        elif args.command == "brave-future-status":
-            _print_json(store.brave_future().status(args.campaign))
-        elif args.command == "brave-future-audit":
-            report = store.brave_future().audit()
-            _print_json(report)
-            return 0 if report["ok"] else 2
-        elif args.command == "campaign-reassess":
-            manager = store.brave_future()
-            blockage_input = (
-                _json_file(args.blockage_input)
-                if args.blockage_input
-                else manager.blockage_input(
-                    campaign_id=args.campaign,
-                    blockage_id=args.blockage,
-                )
-            )
-            _print_json(
-                manager.reassess(
-                    campaign_id=args.campaign,
-                    blockage_input=blockage_input,
-                    dry_run=args.dry_run,
-                )
-            )
-        elif args.command == "campaign-reassess-decide":
-            _print_json(
-                store.brave_future().decide(
-                    args.reassessment_id,
-                    decision=_json_file(args.input),
-                    actor=args.actor,
-                )
-            )
-        elif args.command == "brave-future-disable":
-            _print_json(
-                store.brave_future().disable(
-                    campaign_id=args.campaign,
-                    actor=args.actor,
-                    reason=args.reason,
-                )
             )
         elif args.command == "evidence-library-status":
             _print_json(

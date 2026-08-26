@@ -53,7 +53,6 @@ RESEARCH_DRAFT_ADMISSION_TEST_MODULE = (
 PARALLEL_VERIFICATION_TEST_MODULE = (
     "tests.test_parallel_verification.ParallelVerificationTests"
 )
-BRAVE_FUTURE_TEST_MODULE = "tests.test_brave_future.BraveFutureTests"
 CHX_TEST_MODULE = "tests.test_chx_ledger.CHXRunLedgerTests"
 RUNTIME_ARCHIVE_TEST_MODULE = "tests.test_runtime_archive.RuntimeArchiveTests"
 V5_EXPERIMENT_TEST_MODULE = "tests.test_v5_experiments.V5ExperimentTests"
@@ -81,7 +80,123 @@ CHX_090_TEST_MODULE = (
     "tests.test_chx_090_frontier_active_fix."
     "FrontierActiveFix090Tests"
 )
+CHX_093_TEST_MODULE = (
+    "tests.test_chx_093_integrated_cleanup."
+    "IntegratedCleanup093Tests"
+)
 MUTANTS = (
+    Mutant(
+        name="campaign_atomic_under_lock_revalidation_dropped",
+        old=(
+            "            if bound_campaign_id is not None:\n"
+            "                # Campaign binding and immutable Research publication are one\n"
+            "                # transaction.  Revalidate under the existing write boundary\n"
+            "                # before reuse checks or any derived index preparation.\n"
+            "                self.store.campaigns().status(bound_campaign_id)\n"
+        ),
+        new=(
+            "            if bound_campaign_id is not None:\n"
+            "                # Campaign binding and immutable Research publication are one\n"
+            "                # transaction.  Revalidate under the existing write boundary\n"
+            "                # before reuse checks or any derived index preparation.\n"
+            "                pass  # mutant: drop lock-held Campaign revalidation\n"
+        ),
+        test=(
+            f"{CHX_093_TEST_MODULE}."
+            "test_campaign_bound_research_conflict_and_lock_drift_write_nothing"
+        ),
+    ),
+    Mutant(
+        name="plan_round_selection_receipt_not_published",
+        old=(
+            "            if selection_receipt is not None:\n"
+            "                manifest_semantic[\"selection_receipt\"] = selection_receipt\n"
+        ),
+        new=(
+            "            if False and selection_receipt is not None:  # mutant\n"
+            "                manifest_semantic[\"selection_receipt\"] = selection_receipt\n"
+        ),
+        test=(
+            f"{CHX_093_TEST_MODULE}."
+            "test_frontier_exact_argv_and_round_selection_receipt"
+        ),
+    ),
+    Mutant(
+        name="frontier_semantic_attention_disposition_ignored",
+        old=(
+            "        explicit_disposition = self.explicit_attention_disposition(\n"
+            "            research_id\n"
+            "        )\n"
+            "        if explicit_disposition is not None:\n"
+        ),
+        new=(
+            "        explicit_disposition = self.explicit_attention_disposition(\n"
+            "            research_id\n"
+            "        )\n"
+            "        if False and explicit_disposition is not None:  # mutant\n"
+        ),
+        test=(
+            f"{CHX_093_TEST_MODULE}."
+            "test_semantic_attention_disposition_is_cow_and_stops_repeat_work"
+        ),
+        target="mathgraph/frontier_actions.py",
+    ),
+    Mutant(
+        name="frontier_live_supervision_masked_by_product_safety",
+        old="        if not supervision_rounds:\n",
+        new=(
+            "        if not supervision_rounds or not "
+            "self.lifecycle._frontier_completion_product_is_safe(\n"
+            "            product=product,\n"
+            "            dispositions=self.dispositions,\n"
+            "            route_staleness=self.route_staleness,\n"
+            "        ):  # mutant\n"
+        ),
+        test=(
+            f"{CHX_090_TEST_MODULE}."
+            "test_live_supervision_precedes_pre_supervision_product_safety"
+        ),
+        target="mathgraph/frontier_actions.py",
+    ),
+    Mutant(
+        name="chx_explicit_liveness_replaced_by_raw_open",
+        old=(
+            "        category = (\n"
+            "            \"open_stale\"\n"
+            "            if disposition is not None\n"
+            "            else \"open_current\"\n"
+            "            if run_id in seen_current\n"
+            "            else \"open_orphaned\"\n"
+            "        )\n"
+        ),
+        new=(
+            "        category = (\n"
+            "            \"open_stale\" if disposition is not None else \"open_current\"\n"
+            "        )  # mutant\n"
+        ),
+        test=(
+            f"{CHX_093_TEST_MODULE}."
+            "test_chx_ledger_liveness_is_explicit_bounded_and_cow"
+        ),
+        target="chx_ledger.py",
+    ),
+    Mutant(
+        name="retired_brave_future_role_reintroduced",
+        old=(
+            "ALL_COMMANDS = {\n"
+            "    \"init\",\n"
+        ),
+        new=(
+            "ALL_COMMANDS = {\n"
+            "    \"brave-future-status\",  # mutant\n"
+            "    \"init\",\n"
+        ),
+        test=(
+            f"{CHX_093_TEST_MODULE}."
+            "test_retired_brave_future_has_no_public_command_or_alias"
+        ),
+        target="mathgraph/roles.py",
+    ),
     Mutant(
         name="frontier_multiple_products_reconciliation_weakened",
         old="        if len(products) > 1:\n",
@@ -1666,113 +1781,9 @@ MUTANTS = (
         ),
         new="",
         test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_real_attempt_dry_run_atomic_advisory_and_cooldown"
+            "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests."
+            "test_worker_result_preserves_campaign_binding"
         ),
-    ),
-    Mutant(
-        name="brave_future_reassessment_gains_plan_effect",
-        old=(
-            "            \"autonomy_level\": \"advisory\",\n"
-            "            \"cooldown_state\": \"signature_consumed\",\n"
-            "            \"created_by\": blockage_semantic[\"created_by\"],\n"
-            "            \"plan_effect\": \"none\",\n"
-            "            \"dispatch_effect\": \"none\",\n"
-            "            \"campaign_close_effect\": \"none\",\n"
-        ),
-        new=(
-            "            \"autonomy_level\": \"advisory\",\n"
-            "            \"cooldown_state\": \"signature_consumed\",\n"
-            "            \"created_by\": blockage_semantic[\"created_by\"],\n"
-            "            \"plan_effect\": \"plan_one\",\n"
-            "            \"dispatch_effect\": \"none\",\n"
-            "            \"campaign_close_effect\": \"none\",\n"
-        ),
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_real_attempt_dry_run_atomic_advisory_and_cooldown"
-        ),
-        target="mathgraph/brave_future.py",
-    ),
-    Mutant(
-        name="goal_intake_nonauto_mode_gate_bypassed",
-        old='        if reasoning_mode not in {"auto", "deep"}:\n',
-        new='        if False and reasoning_mode not in {"auto", "deep"}:\n',
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_goal_intake_ambiguity_nonauto_and_disablement_fail_zero_write"
-        ),
-        target="mathgraph/brave_future.py",
-    ),
-    Mutant(
-        name="goal_intake_deep_mode_excluded",
-        old='        if reasoning_mode not in {"auto", "deep"}:\n',
-        new='        if reasoning_mode not in {"auto"}:\n',
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_deep_goal_intake_creates_exact_campaign_enables_bf1_only"
-        ),
-        target="mathgraph/brave_future.py",
-    ),
-    Mutant(
-        name="goal_intake_active_pointer_becomes_selector",
-        old="            matches = campaigns.exact_objective_matches(objective)\n",
-        new=(
-            "            matches = ([campaigns.active()] if campaigns.active() "
-            "else campaigns.exact_objective_matches(objective))\n"
-        ),
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_goal_intake_ignores_active_pointer_and_exposes_future_scope"
-        ),
-        target="mathgraph/brave_future.py",
-    ),
-    Mutant(
-        name="goal_intake_exact_objective_degraded_to_substring",
-        old=(
-            '            if canonical_research_objective(status["objective"]) == objective_key:\n'
-        ),
-        new=(
-            '            if objective_key in canonical_research_objective(status["objective"]):\n'
-        ),
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_auto_goal_intake_is_lexically_exact_and_idempotent"
-        ),
-        target="mathgraph/campaigns.py",
-    ),
-    Mutant(
-        name="goal_intake_explicit_disablement_overridden",
-        old='            if not current["enabled"] and current["event_count"]:\n',
-        new=(
-            '            if False and not current["enabled"] and '
-            'current["event_count"]:\n'
-        ),
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_goal_intake_ambiguity_nonauto_and_disablement_fail_zero_write"
-        ),
-        target="mathgraph/brave_future.py",
-    ),
-    Mutant(
-        name="goal_intake_claims_automatic_plan_effect",
-        old=(
-            '            "fuzzy_objective_matching": False,\n'
-            '            "automatic_plan": False,\n'
-            '            "automatic_dispatch": False,\n'
-            '            "research_write_effect": "none",\n'
-        ),
-        new=(
-            '            "fuzzy_objective_matching": False,\n'
-            '            "automatic_plan": True,\n'
-            '            "automatic_dispatch": False,\n'
-            '            "research_write_effect": "none",\n'
-        ),
-        test=(
-            f"{BRAVE_FUTURE_TEST_MODULE}."
-            "test_auto_goal_intake_creates_exact_campaign_enables_bf1_only"
-        ),
-        target="mathgraph/brave_future.py",
     ),
     Mutant(
         name="chx_first_close_status_projection_drift",
@@ -2326,6 +2337,11 @@ SEMANTIC_MUTANT_NAMES = frozenset(
         "target_certificate_whole_graph_scan_restored",
         "release_forensic_subsumption_removed",
         "repository_release_version_drift_bypassed",
+        "campaign_atomic_under_lock_revalidation_dropped",
+        "plan_round_selection_receipt_not_published",
+        "frontier_semantic_attention_disposition_ignored",
+        "frontier_live_supervision_masked_by_product_safety",
+        "campaign_worker_result_lineage_dropped",
     }
 )
 
@@ -2639,8 +2655,8 @@ def main(argv: list[str] | None = None) -> int:
             "verification, registry-wide cryptographic-identity, idempotent-"
             "registration, and cached-read authority integrity, project-wide "
             "freshness, Certification aggregate enforcement, Campaign worker-result "
-            "lineage, exact goal-to-Campaign auto/deep intake, explicit disablement "
-            "and active-pointer isolation, Brave Future advisory-only effects, CHX "
+            "lineage, atomic Campaign-bound Research creation, exact frontier "
+            "selection receipts, and Main-visible attention projection, CHX "
             "revision-5 reconnaissance/tactical/integrated repair coverage and "
             "reusable-registry integrity, close/status parity, public-disclosure "
             "completeness and run namespace, content-addressed Paper-continuation "

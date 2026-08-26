@@ -1,5 +1,29 @@
 # Pre-Chalxius capability difference audit
 
+## 0.9.6 Frontier Freshness difference
+
+Main's ordinary navigation now searches and shows immutable Research alongside
+verified Facts while retaining the low-level Fact-only API for truth-stage
+code. Campaign freshness is also explicit: checkpoint active heads are compared
+with exact workflow successors; productive challenges and repairs remain
+current routes, clean reviews are attained evidence, and a bounded advisory
+surface recommends manual refresh. Exact historical COW edges do not depend on
+a later optional repair-spec field. The change adds no fuzzy search, persistent
+index, auto-checkpoint, dispatcher, lifecycle gate, or truth effect.
+
+## 0.9.5 Exact Frontier Context difference
+
+Two missing context edges are integrated into existing V5 readers and card
+construction. First, Campaign goal coverage now recognizes only exact recorded
+production, supervision, and canonical COW shapes downstream of attained
+checkpoints. It reports uncheckpointed terminal routes to Main as bounded
+nontruth context; it neither advances the checkpoint nor chooses work.
+Second, round construction treats a literal valid existing 12-hex Research id
+in the selected Research prose as a direct predecessor reference and freezes
+that record plus its exact artifacts. This is lexical exact-ID operation, not
+semantic inference or a new relation database. Historical cards are not
+rewritten, and Candidate/Certification/Gateway/Fact boundaries are unchanged.
+
 ## Audit question
 
 Could using the pre-Chalxius `mathgraph-chalk-version` 0.4.0 codebase as the
@@ -32,6 +56,52 @@ latency reference and frozen fact-import source. All new research and all new
 facts use the Chalxius research engine and invariant Fact admission contract.
 This avoids two certification paths and makes parity a contract invariant
 rather than a router promise.
+
+## 0.9.4 Campaign History Compaction difference
+
+Campaign length no longer controls routine planning or Main context size. One
+compact status view replaces full-history output; minimal checkpoints refer to
+canonical Research rather than copying node bodies; scope-2 snapshots bind an
+ordered history prefix without embedding it. Copy-on-write repairs carry the
+source Campaign into the same production round. Exact old events remain
+append-only and readable for targeted forensics. No cursor/paging subsystem,
+history migration, compatibility layer, or new truth authority is introduced.
+
+## 0.9.3 Integrated Frontier Cleanup difference
+
+Campaign binding is one atomic Main write instead of an intake side-channel.
+New production manifests retain Main's exact selection and replay argv, while
+frontier attention fields make unfinished and already-disposed work explicit.
+Live supervision is projected before the safety predicate used only for new
+automatic suggestions. Brave Future public commands and current registries are
+removed without aliases. CHX ledger liveness now requires explicit current ids;
+old open ledgers receive bounded visibility and optional content-addressed COW
+administrative disposition without issue-resolution effect.
+
+Candidate validation then closed three integration descendants without adding
+another mechanism: behavioral roles now use distinct executable probes, every
+new public surface is registered on its actual call graph, and the two
+administrative/interface-only mutants remain in the complete forensic registry
+rather than expanding the bounded routine semantic profile beyond 32.
+
+## 0.9.2 Frontier Semantic Choice difference
+
+An active Campaign goal is no longer labelled covered merely because its
+selected checkpoint heads completed. The frontier exposes the semantic gap as
+an explicit Main choice, while archive remains the only target-closing action.
+The same repair removes production-mode prohibition of a Main-selected,
+registered supervision scope for a complete frozen successor. Both surfaces
+remain optional, advisory, and outside Candidate/Fact authority.
+
+## 0.9.1 Campaign Frontier Heads difference
+
+Campaign goals now separate immutable provenance anchors from Main-selected
+current work heads. The newest append-only nontruth checkpoint is a bounded
+navigation surface: routine projection uses its exact lifecycle work heads and
+attained checkpoints; empty or invalid heads request Main selection or exact
+recovery, and multiple independent heads remain jointly visible. It is not a
+mutable target pointer, dispatcher, scheduler, cache, compatibility layer, or
+truth state.
 
 ## 0.9.0 Frontier Active Fix difference
 
@@ -119,8 +189,8 @@ authority. Frozen cards and historical Research remain unchanged.
 ## 0.8.9 Frontier Reliability difference
 
 The current frontier is a semantic boundary projection, not a list of every
-historical Research id. Ordinary and Brave Future actionable views now share
-one command-local exact-workgroup and completion state. Exact duplicate work
+historical Research id. The ordinary actionable frontier now owns one
+command-local exact-workgroup and completion state. Exact duplicate work
 selects one deterministic representative; valid completed production and its
 applicable completed supervision close that actionable workgroup. History
 still contains every original Research record and provenance edge. Exact
@@ -131,10 +201,9 @@ distinct work; no fuzzy/NLP collapse is introduced. In particular,
 `related_research_ids` remain material because they feed task-card dossiers,
 artifact authority, and supervision ancestry.
 
-New Brave Future projection bytes use
-`chalxius-bf-frontier-projection-3`. Frozen v1/v2 projection records retain
-their exact read validator and are not migrated, rewritten, or reused as
-prospective writer formats.
+Version 0.9.3 removes the former parallel advisory projection writer and public
+commands. Frozen historical projection bytes remain inert nontruth provenance;
+they are not migrated, rewritten, or reused as prospective formats.
 
 Bounded requests now produce bounded serialized work. The requested `limit`
 also bounds the member window, full-set identity is summarized by count and
@@ -833,20 +902,13 @@ adverse shapes, a copyable V5 template, prompt/help pointers, and actionable
 missing/unknown diagnostics. This is an interface-contract repair, not an
 adverse route rule.
 
-The 0.6.4 goal-intake repair closes a similar control-plane gap at the Campaign
-boundary. Previously the user could provide the complete research objective
-while BF-1 through BF-3 remained unreachable unless the host exposed and then
-manually supplied the internal Campaign id. `research-goal-intake` now accepts
-only the exact objective under `auto` or `deep`, performs lexical normalization rather
-than semantic guessing, reuses one exact match or creates one prospective
-Campaign, enables the fixed advisory policy, and computes BF-1. The 0.6.5
-normal-flow consumer creates or reuses exactly one prospective root Research
-bound to the committed intake token and Campaign; BF itself still creates no
-Research. Duplicate matches, `fast`, and explicit
-disablement fail before writes. BF-2/BF-3 still require the
-original exact ingested-attempt blockage evidence and cannot plan or dispatch.
-This restores the user outcome without reviving `ACTIVE`, fuzzy routing, a
-second scheduler, background autonomy, or any Fact seam.
+Versions 0.6.4 and 0.6.5 historically added goal-intake and advisory BF state.
+Version 0.9.3 retires that parallel surface. The useful outcome is now direct:
+Main explicitly creates or chooses a Campaign, `memory-add --campaign` binds
+the root atomically, and the ordinary frontier projects goal coverage and exact
+planning argv. Historical sidecar bytes remain inert nontruth provenance; no
+alias, fuzzy routing, second scheduler, background autonomy, or Fact seam is
+retained.
 
 The 0.6.5 consolidation addresses a broader reachability class rather than
 another standalone capability. Deep controls applicable research effort while
@@ -1074,8 +1136,8 @@ work-elimination routes justify the bounded projection; PHX gains no authority.
 Version 0.7.5 changes administrative scope, not mathematical capability. Exact
 selected Research and direct authority inputs remain fully validated, while
 unconsumed ancestry is reduced to content-addressed structural envelopes for
-identity and connectivity. Ordinary goal intake and advisory Fact snapshots use
-direct active projections; complete Research and Fact Evidence reconstruction
+identity and connectivity. Atomic Campaign-bound Research creation and advisory
+Fact snapshots use direct active projections; complete Research and Fact Evidence reconstruction
 remain explicit. Concise attack reporting is labeled an incomplete case
 projection, and round construction becomes visible only after one atomic rename.
 Compact worker contracts add a monotone completion checkpoint without adding a
@@ -1329,10 +1391,10 @@ omit-instead-of-broaden quality rule and all nontruth boundaries.
 - explicit Campaign scope must reject untagged or cross-Campaign Research before
   round writes, preserve unscoped global ordering, and detect frozen-snapshot
   damage or history truncation without invalidating later legitimate updates;
-- goal intake must preserve the exact normalized objective, reject duplicate
-  exact matches and explicit disablement, ignore `ACTIVE` for selection, create
-  or reuse exactly one token-bound prospective root Research, and remain unable
-  to plan, dispatch, or create Facts; BF itself must remain unable to create Research;
+- Campaign-bound Research creation must reject payload/flag conflicts, validate
+  before semantic identity, revalidate under the write lock, and preserve exact
+  Campaign lineage through worker-result ingestion; historical advisory bytes
+  must remain inert and have no public command alias;
 - the release mutation audit must remain byte-exact under ordinary Python
   invocation and must derive, rather than assert, its pre/post nonmutation result;
 - release validators may run concurrently only in manifest-bound isolated lanes;

@@ -2160,36 +2160,6 @@ def validate_atomic_paper_dag(
     }
 
 
-def l3_l4_limited_restoration_contract() -> dict[str, Any]:
-    """Return the exact BF-1--BF-3 authority ceiling used by this release."""
-
-    return {
-        "contract_revision": "chalxius-brave-future-limited-restoration-1",
-        "restored_stages": [
-            "BF-1/read-only-L4-repair-lineage-projection",
-            "BF-2/L3-dry-run-reassessment",
-            "BF-3/one-bounded-persisted-advisory-receipt",
-        ],
-        "same_frozen_snapshot_required": True,
-        "explicit_campaign_activation_and_opt_in_required": True,
-        "repeat_blockage_action": "park",
-        "forbidden": [
-            "ACTIVE-read",
-            "second-scheduler",
-            "background-loop",
-            "automatic-Research-creation",
-            "automatic-round-planning",
-            "dispatch",
-            "Campaign-state-mutation",
-            "Candidate-or-Fact-effect",
-            "plan_one",
-            "execute_one",
-        ],
-        "truth_effect": "none",
-        "fact_effect": "none",
-    }
-
-
 def build_pipeline_receipt(
     *,
     graph: dict[str, Any],
@@ -2252,7 +2222,6 @@ def build_pipeline_receipt(
             if successor_receipt_status is not None
             else None
         ),
-        "l3_l4_limited_restoration": l3_l4_limited_restoration_contract(),
         "authority_boundary": {
             "preflight_is_truth": False,
             "native_gateway_still_required": True,

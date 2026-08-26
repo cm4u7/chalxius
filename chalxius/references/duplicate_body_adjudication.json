@@ -151,18 +151,6 @@
       ],
       "reason": "At least one copy belongs to a standalone or copied host tool that must remain standard-library portable and independent of the package runtime."
     },
-    "88414de5548418421901f07211bec48701e04a267c8efc453c9d598b18ac4433": {
-      "authoritative_owner": "",
-      "category": "structural_method_parity",
-      "decision": "retain_local",
-      "definitions": [
-        "mathgraph.brave_future:BlockageValidator.__init__",
-        "mathgraph.brave_future:PlanningSnapshotBuilder.__init__",
-        "mathgraph.brave_future:RepairLineageProjector.__init__",
-        "mathgraph.brave_future:StepBackPlanner.__init__"
-      ],
-      "reason": "Identical method shape expresses parallel immutable view or manager interfaces and owns no independent state or authority."
-    },
     "b1b2cd0889d83cd0e6bbfacd024e0ca1797befd81c75b42be64978e1ae9e39d6": {
       "authoritative_owner": "",
       "category": "structural_method_parity",
@@ -209,7 +197,6 @@
       "decision": "retain_local",
       "definitions": [
         "mathgraph.adverse_routing:_utc_now",
-        "mathgraph.brave_future:_now",
         "mathgraph.campaigns:_utc_now",
         "mathgraph.modes:_utc_now",
         "mathgraph.paper_continuation_status:_utc_now",
@@ -226,7 +213,6 @@
       "category": "package_local_stateless",
       "decision": "retain_local",
       "definitions": [
-        "mathgraph.goal_intake:_exact",
         "mathgraph.paper_continuation_status:_exact",
         "mathgraph.parallel_verification:_exact",
         "mathgraph.parallel_verification_lifecycle:_exact",
@@ -241,7 +227,6 @@
       "category": "package_local_stateless",
       "decision": "retain_local",
       "definitions": [
-        "mathgraph.brave_future:_text",
         "mathgraph.v5_assurance:_text",
         "mathgraph.v5_collaboration:_text",
         "mathgraph.v5_lifecycle:_require_nonempty_text"

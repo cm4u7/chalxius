@@ -45,7 +45,7 @@ physical byte object once and reuse the verified hash binding. Do not reread a
 protocol or artifact merely because the card repeats its description.
 
 Do not preload `unified_architecture.md`, `reasoning_modes.md`,
-`admission_contract.md`, `v5_capability_matrix.md`, `brave_future_l3_l4.md`,
+`admission_contract.md`, `v5_capability_matrix.md`,
 `agent_protocol_v4.md`, Paper protocols, Blackboard protocols, or unrelated
 mode references. The task card and this contract contain the production
 projection needed to start safely.

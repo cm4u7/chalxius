@@ -1578,6 +1578,7 @@ class CHXRunLedgerTests(unittest.TestCase):
             self.project,
             full=True,
             include_global=False,
+            current_run_ids=["run-global-active-empty-fork-empty-001"],
         )
         self.assertFalse(base["lineage_errors"], base["lineage_errors"])
         self.assertIn(

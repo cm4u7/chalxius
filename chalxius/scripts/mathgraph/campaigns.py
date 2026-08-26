@@ -3,11 +3,9 @@ from __future__ import annotations
 import json
 import math
 import os
-import re
 import shutil
 import tempfile
 import time
-import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -21,18 +19,12 @@ from .contracts import (
     FACT_ID_RE,
     MEMORY_ID_RE,
     POLICY_REVISION_V4,
-    SHA256_RE,
     require_exact_keys,
     require_string,
     sha256_bytes,
     sha256_json,
     validate_campaign_id,
     validate_campaign_target_id,
-)
-from .goal_intake import (
-    GoalIntakeTransactionStore,
-    seal_goal_intake_campaign_marker,
-    validate_goal_intake_campaign_marker,
 )
 
 
@@ -80,19 +72,7 @@ COMPACT_SCORE_WEIGHTS = {
     "feasibility": 0.20,
     "economy": 0.20,
 }
-
-
-def canonical_research_objective(value: Any) -> str:
-    """Return the exact-match key for a user-supplied research objective.
-
-    Normalization is deliberately lexical only: Unicode NFC plus whitespace
-    folding.  It never performs fuzzy or semantic matching and therefore
-    cannot silently bind a user's goal to a different Campaign objective.
-    """
-
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError("research objective must be a nonempty string")
-    return unicodedata.normalize("NFC", re.sub(r"\s+", " ", value).strip())
+RECENT_CAMPAIGN_EVENT_SUMMARIES = 20
 
 
 def _utc_now() -> str:
@@ -266,37 +246,6 @@ class CampaignStore:
     def initialize(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def _goal_intake_marker(self, campaign_id: str) -> dict[str, Any] | None:
-        path = self.root / validate_campaign_id(campaign_id) / "GOAL_INTAKE.json"
-        if not path.exists():
-            if path.is_symlink():
-                raise ValueError("goal-intake Campaign marker is unsafe")
-            return None
-        if path.is_symlink() or not path.is_file():
-            raise ValueError("goal-intake Campaign marker is unsafe")
-        marker = validate_goal_intake_campaign_marker(
-            json.loads(path.read_text(encoding="utf-8"))
-        )
-        if marker["campaign_id"] != campaign_id:
-            raise ValueError("goal-intake Campaign marker id mismatch")
-        return marker
-
-    def _campaign_is_visible(self, campaign_id: str) -> bool:
-        marker = self._goal_intake_marker(campaign_id)
-        if marker is None:
-            return True
-        # This is deliberately a pure read.  A pending marker is invisible;
-        # only an explicit intake retry may finish its transaction.
-        transaction_store = GoalIntakeTransactionStore(self.project_root)
-        if not transaction_store.terminal_exists(marker["intake_token"]):
-            return False
-        transaction_store.terminal_gate(
-            marker["intake_token"],
-            campaign_id=campaign_id,
-            required_effect_ids={"campaign": marker["campaign_effect_id"]},
-        )
-        return True
-
     def campaign_ids(self) -> list[str]:
         """Return every exact stored Campaign id without using ``ACTIVE``."""
 
@@ -320,21 +269,8 @@ class CampaignStore:
                 )
             if path.is_symlink() or not path.is_dir():
                 raise ValueError(f"campaign path is unsafe: {path.name}")
-            if not self._campaign_is_visible(path.name):
-                continue
             campaign_ids.append(path.name)
         return campaign_ids
-
-    def exact_objective_matches(self, objective: str) -> list[str]:
-        """Find Campaigns by lexical objective identity, never by ``ACTIVE``."""
-
-        objective_key = canonical_research_objective(objective)
-        matches: list[str] = []
-        for campaign_id in self.campaign_ids():
-            status = self.status(campaign_id)
-            if canonical_research_objective(status["objective"]) == objective_key:
-                matches.append(campaign_id)
-        return matches
 
     def _events_path(self, campaign_id: str) -> Path:
         return self.root / validate_campaign_id(campaign_id) / "events.jsonl"
@@ -343,8 +279,6 @@ class CampaignStore:
         self,
         campaign_id: str,
         events: list[dict[str, Any]],
-        *,
-        goal_intake_marker: dict[str, Any] | None = None,
     ) -> None:
         """Publish one complete new-campaign ledger without partial visibility."""
 
@@ -381,28 +315,6 @@ class CampaignStore:
                 except OSError:
                     pass
                 raise
-            if goal_intake_marker is not None:
-                marker = validate_goal_intake_campaign_marker(
-                    goal_intake_marker
-                )
-                if marker["campaign_id"] != campaign_id:
-                    raise ValueError("goal-intake Campaign marker id mismatch")
-                marker_path = temporary / "GOAL_INTAKE.json"
-                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                if hasattr(os, "O_NOFOLLOW"):
-                    flags |= os.O_NOFOLLOW
-                marker_fd = os.open(marker_path, flags, 0o600)
-                with os.fdopen(marker_fd, "w", encoding="utf-8") as handle:
-                    handle.write(
-                        json.dumps(
-                            marker,
-                            ensure_ascii=False,
-                            sort_keys=True,
-                        )
-                        + "\n"
-                    )
-                    handle.flush()
-                    os.fsync(handle.fileno())
             if os.path.lexists(destination):
                 raise ValueError(f"campaign id collision: {campaign_id}")
             try:
@@ -416,112 +328,6 @@ class CampaignStore:
         except BaseException:
             shutil.rmtree(temporary, ignore_errors=True)
             raise
-
-    def prepare_goal_intake_create(
-        self,
-        payload: dict[str, Any],
-        *,
-        actor: str,
-    ) -> dict[str, Any]:
-        """Purely prepare the exact empty Campaign used by goal intake."""
-
-        validated = self._validate_create(dict(payload))
-        if validated["source_claim_ids"] or validated["targets"]:
-            raise ValueError(
-                "automatic research-goal Campaign preparation cannot carry "
-                "source claims or targets"
-            )
-        if not isinstance(actor, str) or not actor.strip():
-            raise ValueError("campaign actor must be nonempty")
-        normalized_payload = {
-            **validated,
-            "source_claim_ids": [],
-            "targets": [],
-            "constraints": list(validated["constraints"]),
-            "stop_conditions": list(validated["stop_conditions"]),
-        }
-        campaign_id = "campaign-" + sha256_json(
-            ["chalxius-goal-intake-campaign-1", normalized_payload]
-        )[:12]
-        event_body = {
-            "schema_version": 4,
-            "policy_revision": POLICY_REVISION_V4,
-            "event": "created",
-            "campaign_id": campaign_id,
-            "payload": normalized_payload,
-            "actor": actor.strip(),
-        }
-        event = {**event_body, "event_id": sha256_json(event_body)}
-        status = {
-            "campaign_id": campaign_id,
-            "active": False,
-            **normalized_payload,
-            "targets": {},
-            "updates": [],
-            "event_count": 1,
-        }
-        return {
-            "revision": "chalxius-goal-intake-campaign-effect-1",
-            "operation": "create",
-            "campaign_id": campaign_id,
-            "events": [event],
-            "status": status,
-        }
-
-    def publish_goal_intake_create(
-        self,
-        effect: dict[str, Any],
-        *,
-        intake_token: str,
-        campaign_effect_id: str,
-    ) -> None:
-        """Idempotently publish a terminal-gated Campaign ledger."""
-
-        if (
-            not isinstance(effect, dict)
-            or effect.get("revision")
-            != "chalxius-goal-intake-campaign-effect-1"
-            or effect.get("operation") != "create"
-            or not isinstance(effect.get("events"), list)
-            or len(effect["events"]) != 1
-            or not isinstance(effect.get("status"), dict)
-        ):
-            raise ValueError("goal-intake Campaign effect is invalid")
-        campaign_id = validate_campaign_id(effect.get("campaign_id"))
-        event = effect["events"][0]
-        event_semantic = (
-            {key: item for key, item in event.items() if key != "event_id"}
-            if isinstance(event, dict)
-            else {}
-        )
-        if (
-            not isinstance(event, dict)
-            or event.get("campaign_id") != campaign_id
-            or event.get("event") != "created"
-            or event.get("event_id") != sha256_json(event_semantic)
-            or effect["status"].get("campaign_id") != campaign_id
-            or effect["status"].get("event_count") != 1
-            or effect["status"].get("objective")
-            != event.get("payload", {}).get("objective")
-        ):
-            raise ValueError("goal-intake Campaign effect binding is invalid")
-        marker = seal_goal_intake_campaign_marker(
-            token=intake_token,
-            campaign_id=campaign_id,
-            campaign_effect_id=campaign_effect_id,
-        )
-        destination = self.root / campaign_id
-        if destination.exists():
-            existing_marker = self._goal_intake_marker(campaign_id)
-            existing_events = self._read_jsonl(destination / "events.jsonl")
-            if existing_marker != marker or existing_events != effect["events"]:
-                raise ValueError(f"campaign id collision: {campaign_id}")
-            return
-        self._publish_new_ledger(
-            campaign_id,
-            effect["events"],
-            goal_intake_marker=marker,
-        )
 
     @staticmethod
     def _validate_create(payload: dict[str, Any]) -> dict[str, Any]:
@@ -831,12 +637,15 @@ class CampaignStore:
             )
         if not isinstance(payload.get("payload"), dict):
             raise ValueError("campaign update payload must be an object")
+        update_payload = self._compact_frontier_checkpoint_payload(
+            payload["payload"]
+        )
         body = {
             "schema_version": 4,
             "policy_revision": POLICY_REVISION_V4,
             "event": update_type,
             "campaign_id": campaign_id,
-            "payload": payload["payload"],
+            "payload": update_payload,
             "actor": actor,
             "recorded_at": _utc_now(),
         }
@@ -847,10 +656,81 @@ class CampaignStore:
         )
         return event_id
 
-    def status(self, campaign_id: str) -> dict[str, Any]:
+    @staticmethod
+    def _compact_frontier_checkpoint_payload(
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Keep a frontier checkpoint self-contained without copying nodes.
+
+        Campaign checkpoints are advisory navigation snapshots.  Their reader
+        resolves exact Research and round content from identifiers and consumes
+        only the small routing projection below.  Persisting worker reasons,
+        products, reviews, labels, and other node bodies in every generation
+        merely duplicates canonical records and makes a long Campaign harder
+        to read.  Malformed values are preserved in the fields the reader
+        inspects so its existing diagnostics remain available; this is a write
+        projection, not a new admission gate.
+        """
+
+        if payload.get("kind") != "campaign_frontier_head_checkpoint":
+            return dict(payload)
+        compact = {
+            key: payload[key]
+            for key in (
+                "kind",
+                "generation",
+                "supersedes_event_id",
+            )
+            if key in payload
+        }
+        raw_frontiers = payload.get("target_frontiers")
+        if not isinstance(raw_frontiers, list):
+            compact["target_frontiers"] = raw_frontiers
+            return compact
+        frontiers: list[Any] = []
+        for raw_frontier in raw_frontiers:
+            if not isinstance(raw_frontier, dict):
+                frontiers.append(raw_frontier)
+                continue
+            frontier = {
+                key: raw_frontier[key]
+                for key in (
+                    "target_id",
+                    "recovery_root_research_id",
+                    "main_disposition",
+                )
+                if key in raw_frontier
+            }
+            for field in ("active_heads", "attained_checkpoints"):
+                if field not in raw_frontier:
+                    continue
+                values = raw_frontier[field]
+                if not isinstance(values, list):
+                    frontier[field] = values
+                    continue
+                frontier[field] = [
+                    (
+                        {"research_id": value["research_id"]}
+                        if isinstance(value, dict) and "research_id" in value
+                        else value
+                    )
+                    for value in values
+                ]
+            frontiers.append(frontier)
+        compact["target_frontiers"] = frontiers
+        return compact
+
+    def _verified_events(
+        self,
+        campaign_id: str,
+    ) -> list[dict[str, Any]]:
         campaign_id = validate_campaign_id(campaign_id)
         campaign_path = self.root / campaign_id
-        if campaign_path.exists() and not self._campaign_is_visible(campaign_id):
+        if (
+            not campaign_path.exists()
+            or campaign_path.is_symlink()
+            or not campaign_path.is_dir()
+        ):
             raise KeyError(f"unknown campaign: {campaign_id}")
         events = self._read_jsonl(self._events_path(campaign_id))
         if not events or events[0].get("event") != "created":
@@ -869,14 +749,55 @@ class CampaignStore:
         }
         if create.get("event_id") != sha256_json(expected_first):
             raise ValueError("campaign create event hash mismatch")
-        targets: dict[str, dict[str, Any]] = {}
-        updates: list[dict[str, Any]] = []
         for event in events[1:]:
             semantic = {
                 key: value for key, value in event.items() if key != "event_id"
             }
             if event.get("event_id") != sha256_json(semantic):
                 raise ValueError("campaign event id/hash mismatch")
+        return events
+
+    @staticmethod
+    def _history_summary_from_verified_events(
+        events: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return {
+            "event_count": len(events),
+            "last_event_id": events[-1]["event_id"] if events else None,
+            "events_sha256": sha256_json(events),
+        }
+
+    def history_summary(
+        self,
+        campaign_id: str,
+        *,
+        event_count: int | None = None,
+    ) -> dict[str, Any]:
+        """Return a fixed-size digest after validating every Campaign event."""
+
+        events = self._verified_events(campaign_id)
+        selected = events
+        if event_count is not None:
+            if isinstance(event_count, bool) or not isinstance(event_count, int):
+                raise ValueError("campaign event_count must be an integer")
+            if not 1 <= event_count <= len(events):
+                raise ValueError(
+                    "campaign event_count lies outside verified history"
+                )
+            selected = events[:event_count]
+        return self._history_summary_from_verified_events(selected)
+
+    def _status_from_verified_events(
+        self,
+        campaign_id: str,
+        events: list[dict[str, Any]],
+        *,
+        include_updates: bool,
+    ) -> dict[str, Any]:
+        create = events[0]
+        targets: dict[str, dict[str, Any]] = {}
+        updates: list[dict[str, Any]] = []
+        for event in events[1:]:
             event_type = event.get("event")
             if event_type == "target_added":
                 target_id = validate_campaign_target_id(str(event.get("target_id")))
@@ -897,16 +818,119 @@ class CampaignStore:
                     "status": "archived",
                     "archive_reason": event.get("reason", ""),
                 }
-            elif event_type not in {"activated"}:
+            elif include_updates and event_type not in {"activated"}:
                 updates.append(event)
-        return {
+        status = {
             "campaign_id": campaign_id,
             "active": self.active() == campaign_id,
             **create["payload"],
             "targets": targets,
-            "updates": updates,
             "event_count": len(events),
+            "history": self._history_summary_from_verified_events(events),
         }
+        if include_updates:
+            status["updates"] = updates
+        return status
+
+    def status(self, campaign_id: str) -> dict[str, Any]:
+        campaign_id = validate_campaign_id(campaign_id)
+        events = self._verified_events(campaign_id)
+        return self._status_from_verified_events(
+            campaign_id,
+            events,
+            include_updates=True,
+        )
+
+    @staticmethod
+    def _event_read_summary(event: dict[str, Any]) -> dict[str, Any]:
+        """Project one immutable event without replaying a copied node body."""
+
+        summary = {
+            key: event[key]
+            for key in (
+                "event_id",
+                "event",
+                "actor",
+                "recorded_at",
+                "target_id",
+                "reason",
+            )
+            if key in event
+        }
+        target = event.get("target")
+        if isinstance(target, dict):
+            summary["target"] = {
+                key: target[key]
+                for key in (
+                    "role",
+                    "subject_kind",
+                    "subject_id",
+                    "label",
+                    "status",
+                )
+                if key in target
+            }
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            return summary
+        summary["payload_sha256"] = sha256_json(payload)
+        summary["payload_keys"] = sorted(payload)
+        if payload.get("kind") == "campaign_frontier_head_checkpoint":
+            summary["checkpoint_generation"] = payload.get("generation")
+            summary["checkpoint_supersedes_event_id"] = payload.get(
+                "supersedes_event_id"
+            )
+        elif isinstance(payload.get("text"), str):
+            text = payload["text"]
+            summary["text_preview"] = (
+                text if len(text) <= 400 else text[:400] + "…"
+            )
+            summary["text_truncated"] = len(text) > 400
+        return summary
+
+    def compact_status(self, campaign_id: str) -> dict[str, Any]:
+        """Return one stable current view with a fixed recent event tail.
+
+        This deliberately is not a paging protocol.  Routine Main reads see
+        current Campaign semantics and a small recent provenance tail.  Exact
+        old bytes remain in the append-only ledger for targeted forensics.
+        """
+
+        campaign_id = validate_campaign_id(campaign_id)
+        events = self._verified_events(campaign_id)
+        compact = self._status_from_verified_events(
+            campaign_id,
+            events,
+            include_updates=False,
+        )
+        start = max(0, len(events) - RECENT_CAMPAIGN_EVENT_SUMMARIES)
+        recent_events = events[start:]
+        latest_checkpoint: dict[str, Any] | None = None
+        for event in reversed(events):
+            payload = event.get("payload")
+            if (
+                event.get("event") == "note"
+                and isinstance(payload, dict)
+                and payload.get("kind")
+                == "campaign_frontier_head_checkpoint"
+            ):
+                latest_checkpoint = {
+                    "event_id": event["event_id"],
+                    **self._compact_frontier_checkpoint_payload(payload),
+                }
+                break
+        compact["latest_frontier_checkpoint"] = latest_checkpoint
+        compact["recent_history"] = {
+            "event_count": len(events),
+            "shown_count": len(recent_events),
+            "start_ordinal": start + 1,
+            "end_ordinal": len(events),
+            "older_event_count": start,
+            "events": [
+                self._event_read_summary(event) for event in recent_events
+            ],
+        }
+        return compact
 
     def derived_targets(self, campaign_id: str | None = None) -> list[str]:
         campaign_id = campaign_id or self.active()

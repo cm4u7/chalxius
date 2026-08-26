@@ -1,4 +1,54 @@
-# Chalxius Back to the Future / Evidence candidate architecture
+# Chalxius unified Evidence and research architecture
+
+> **0.9.6 frontier-freshness override.** Ordinary Main `search` and `show`
+> navigate immutable Research and verified Facts by exact typed identity.
+> Campaign reads compare checkpoint active heads with exact production,
+> supervision, and semantic COW successors, distinguish productive current
+> routes from clean terminal review evidence, and recommend a manual refresh
+> when stale. The view never rewrites a checkpoint, selects mathematics,
+> dispatches work, or changes truth authority.
+>
+
+> **0.9.5 exact-frontier-context override.** Main receives bounded exact
+> terminal production/supervision/COW successor routes below attained Campaign
+> checkpoints, without checkpoint mutation or selection effect. New task cards
+> freeze valid existing Research ids literally named in their source Research
+> prose together with exact artifact capabilities. This is direct graph
+> operation, not fuzzy relevance inference, a compatibility layer, dispatcher,
+> or truth boundary.
+>
+
+> **0.9.4 campaign-history-compaction override.** Campaign ledgers remain
+> append-only and unlimited, while routine status reads, frontier checkpoints,
+> and round snapshots no longer copy historical node bodies. Main sees one
+> compact current view; scope-2 freezes active semantics and an exact ordered
+> history-prefix commitment. Repair Research and round scope inherit one exact
+> source Campaign. No paging protocol, history rewrite, dispatcher, or truth
+> boundary is added.
+>
+
+> **0.9.3 integrated-frontier-cleanup override.** Main binds new Research to an
+> exact Campaign atomically, and new production manifests freeze its exact
+> selection receipt and replay argv. Frontier rows expose attention and
+> disposition, with existing live supervision visible before new-suggestion
+> safety. The parallel Brave Future/goal-intake surface is removed without
+> aliases. CHX liveness is explicit; COW administrative dispositions classify
+> historical ledgers but never settle their issues. No truth boundary changes.
+
+> **0.9.2 frontier-semantic-choice override.** Work-head lifecycle completion
+> and semantic Campaign-goal completion are distinct: an active completed goal
+> returns to Main for disposition, and only target archive removes it. A
+> production-mode label chooses sparse supervision defaults but cannot forbid
+> Main from explicitly selecting a registered materially applicable scope.
+> Neither rule adds automatic work, closure, admission, or truth authority.
+
+> **0.9.1 campaign-frontier-heads override.** A Campaign Research target keeps
+> its immutable provenance anchor. Main's newest append-only nontruth
+> checkpoint supplies bounded exact lifecycle work heads and attained
+> boundaries for routine frontier reads. Empty, multiple, or stale heads stay
+> visible for Main judgment; anchors are recovery roots only. No automatic
+> pointer updater, migration, index, dispatcher, scheduler, or truth gate is
+> added.
 
 > **0.9.0 frontier-active-fix override.** Main's frontier now joins two derived,
 > read-only views: durable Campaign `research_goal` coverage and a bounded
@@ -123,21 +173,12 @@ view over that Main planner. Exact stored associations may filter the same
 frontier and freeze one bounded nontruth Campaign envelope. No flag means no
 Campaign filter, including when an active Campaign exists.
 
-The prospective 0.6.4 goal-intake successor repaired the human-to-envelope
-entry seam. Under `auto` or `deep`, an explicit user research objective lets Operator
-lexically exact-match or create one Campaign, enable the fixed advisory BF
-policy, and compute BF-1 without requiring Campaign jargon. It never selects
-through `ACTIVE`, retags old Research, fuzzy-matches goals, plans, dispatches,
-or changes any truth boundary. BF-2/BF-3 remain gated by an exact real blockage.
-
-The 0.6.5 continuity overlay consumes that committed intake by creating or
-reusing exactly one prospective root Research with an exact token/Campaign
-binding; BF-1 through BF-3 themselves still create no Research. The same overlay
-separates deep research effort from necessity-based changed-surface validation,
-adds domain-specific draft targets, paired independent adverse Research, a
-bounded Paper release capsule, host-controlled neutral-review return, revision-5
-CHX integration, and executable behavior-orphan dispositions. None adds a new
-truth path or rewrites historical contracts.
+The 0.9.3 Campaign repair removes the former goal-intake and Brave Future
+command family. Main creates or chooses one exact Campaign and may atomically
+bind a new root with `memory-add --campaign`; no compatibility alias, hidden
+intake state, fuzzy matching, or parallel planner remains. Historical sidecar
+bytes stay inert and readable as nontruth provenance. The ordinary frontier is
+the only Main planning surface.
 
 ## Authority domains and truth path
 
@@ -528,14 +569,16 @@ or authority over explicit scheduling.
 Main can organize a bounded project queue directly with this frontier. A
 Campaign is therefore not a second scheduler or a per-task gate; it remains an
 optional durable multi-round envelope for an explicit objective, typed targets,
-constraints, value definition, stop conditions, and history. The prospective
-   Campaign connection is explicit semantically: Main may supply an id, or under
-   `auto`/`deep` Operator may compile the user's exact stated objective through
-   `research-goal-intake`, which creates or reuses one token-bound prospective
-   root Research. The resulting `frontier --campaign ID` and
+constraints, value definition, stop conditions, and history. The Campaign
+connection is explicit semantically: Main supplies an exact id and may create a
+bound root atomically with `memory-add --campaign ID`. The resulting
+`frontier --campaign ID` and
 `plan-round --campaign ID` select exact stored `campaign_id` matches and retain
 the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
-Campaign snapshot plus compact task-card envelope. Without the flag, selection
+Campaign scope-2 snapshot plus compact task-card envelope: active current
+semantics and an exact ordered history-prefix commitment, never copied update
+bodies. Routine status similarly exposes one current view and a fixed recent
+summary tail rather than a paging protocol. Without the flag, selection
 stays global even when a Campaign is active. Campaign never expands Research,
 advances continuously, closes work, rewrites frozen cards, or affects Facts.
 

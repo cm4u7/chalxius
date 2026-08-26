@@ -777,20 +777,6 @@ class MathGraphStore:
     def v5_lifecycle(self) -> V5LifecycleManager:
         return V5LifecycleManager(self)
 
-    def brave_future(self) -> Any:
-        """Return the optional V5 advisory sidecar without materializing it.
-
-        The manager owns its V5 mutation locking.  Merely asking for the
-        accessor is read-only, which preserves byte-for-byte absent behavior
-        for projects that never opt in.
-        """
-
-        if self.workflow_evidence_version() != V5_WORKFLOW_EVIDENCE_VERSION:
-            raise ValueError("Brave Future is available only for V5 projects")
-        from .brave_future import BraveFutureManager
-
-        return BraveFutureManager(self)
-
     def adverse_routes(self) -> AdverseRoutingManager:
         return AdverseRoutingManager(self)
 
@@ -3608,6 +3594,155 @@ class MathGraphStore:
             for fact_id, text, score in ranked[:limit]
             if score > 0
         ]
+
+    def search_graph(
+        self,
+        query: str,
+        *,
+        limit: int = 10,
+        scope: str = "all",
+    ) -> list[dict[str, Any]]:
+        """Search the Main-visible mathematical graph, including Research.
+
+        ``search`` remains the low-level verified-Fact API used by truth-stage
+        code.  This read-only navigation projection is the ordinary CLI
+        surface: it ranks verified Facts and immutable V5 Research together,
+        labels every result by type, and never changes frontier or Campaign
+        state.  Main can therefore perform duplicate and terminal-successor
+        searches without dropping to a filesystem scan.
+        """
+
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("graph search query must be nonempty")
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+            raise ValueError("graph search limit must be positive")
+        if scope not in {"all", "facts", "research"}:
+            raise ValueError("graph search scope must be all, facts, or research")
+
+        # Preserve the established verified-Fact search as the one low-level
+        # implementation whenever Research cannot participate.  Besides
+        # avoiding two subtly different Fact-only rankings, this keeps the
+        # historical public API on the ordinary read path without broadening
+        # any worker capability.
+        if (
+            scope == "facts"
+            or self.workflow_evidence_version() != V5_WORKFLOW_EVIDENCE_VERSION
+        ):
+            return [
+                {
+                    "object_type": "fact",
+                    "object_id": item["fact_id"],
+                    **item,
+                }
+                for item in self.search(query, limit=limit)
+            ]
+
+        documents: list[tuple[str, str, dict[str, Any]]] = []
+        inspection = (
+            RoundInspectionContext()
+            if self.workflow_evidence_version() == V5_WORKFLOW_EVIDENCE_VERSION
+            else None
+        )
+        with self.snapshot_lock():
+            if scope in {"all", "facts"}:
+                fact_ids = self.fact_ids(
+                    _inspection_context=inspection,
+                ) if inspection is not None else self.fact_ids()
+                for fact_id in fact_ids:
+                    raw = self.get_raw_fact(
+                        fact_id,
+                        _inspection_context=inspection,
+                    ) if inspection is not None else self.get_raw_fact(fact_id)
+                    documents.append(
+                        (
+                            "fact",
+                            fact_id,
+                            {
+                                "text": f"{fact_id}\n{raw}",
+                                "statement": statement_snippet(raw),
+                            },
+                        )
+                    )
+            if (
+                scope in {"all", "research"}
+                and inspection is not None
+            ):
+                lifecycle = self.v5_lifecycle()
+                for record in lifecycle.research_envelopes(
+                    _inspection_context=inspection,
+                ):
+                    metadata = record.get("metadata")
+                    campaign_id = (
+                        metadata.get("campaign_id")
+                        if isinstance(metadata, dict)
+                        else None
+                    )
+                    searchable = "\n".join(
+                        [
+                            record["research_id"],
+                            record["kind"],
+                            record["status"],
+                            record["claim"],
+                            record["content"],
+                            record["rationale"],
+                            record["source"],
+                            record.get("relation") or "",
+                            " ".join(record["related_research_ids"]),
+                            campaign_id or "",
+                        ]
+                    )
+                    documents.append(
+                        (
+                            "research",
+                            record["research_id"],
+                            {
+                                "text": searchable,
+                                "kind": record["kind"],
+                                "status": record["status"],
+                                "claim": (
+                                    record["claim"]
+                                    if len(record["claim"]) <= 400
+                                    else record["claim"][:397] + "..."
+                                ),
+                                "relation": record.get("relation"),
+                                "related_research_ids": record[
+                                    "related_research_ids"
+                                ][:8],
+                                "campaign_id": campaign_id,
+                                "created_at": record["created_at"],
+                            },
+                        )
+                    )
+
+        scores = bm25(query, [item[2]["text"] for item in documents])
+        ranked = sorted(
+            zip(documents, scores),
+            key=lambda item: (-item[1], item[0][0], item[0][1]),
+        )
+        results: list[dict[str, Any]] = []
+        for (object_type, object_id, projection), score in ranked:
+            if score <= 0:
+                continue
+            result = {
+                "object_type": object_type,
+                "object_id": object_id,
+                "score": round(score, 6),
+            }
+            result.update(
+                {
+                    key: value
+                    for key, value in projection.items()
+                    if key != "text"
+                }
+            )
+            if object_type == "fact":
+                result["fact_id"] = object_id
+            else:
+                result["research_id"] = object_id
+            results.append(result)
+            if len(results) >= limit:
+                break
+        return results
 
     def closure(self, target_ids: list[str]) -> list[str]:
         target_ids = [validate_fact_id(item) for item in target_ids]

@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.0 — Frontier Active Fix
+# Chalxius 0.9.7 — Frontier Continuity
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -48,9 +48,39 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
 
-The 0.8.9 repair gives ordinary and Brave Future views one exact workgroup/completion projection. Exact duplicates have one actionable representative; exact related Research remains material to task-card and supervision authority. Completed production/supervision disappears only from actionable views; history remains intact. `limit` bounds entries and members, zero-target planning avoids Fact inventory, and the full set remains a count/digest. Brave Future writes revision 3 and reads frozen revisions 1/2 without rewrite. No persistent cache, timer, watcher, migration, adapter, lifecycle state, or truth gate is added.
+The ordinary frontier has one exact workgroup/completion projection. Exact duplicates have one actionable representative; exact related Research remains material to task-card and supervision authority. Completed production and applicable supervision disappear only from actionable views; history remains intact. `limit` bounds entries and members, zero-target planning avoids Fact inventory, and the full set remains a count/digest.
 
-The 0.9.0 ordinary frontier is lifecycle-aware: no product means `production`; live work or a published return means waiting/ingestion; a current product means `supervision`; invalidation means `repair`; and duplicate, historical, malformed, or branching evidence means `main_reconciliation` with exact bounded ids. Labels derive read-only from current graph/round bytes and never close mathematics, dispatch, or affect Candidate/Fact authority. Default `mgraph frontier` is Main's compact surface; `--diagnostic` adds bounded forensic fields. Campaign `research_goal` targets are exact existing same-Campaign Research anchors, not proof targets or tasks; the surface derives goal coverage/progress/current action. Synchronizing such targets into the Fact-only `TARGETS.txt` projection reads only the exact proof-target predecessor closure, and an empty proof closure reads zero Facts. An unscoped `ACTIVE` goal is an `active_hint`, never a queue filter or scoped-plan authority. When the queue shows only workflow completion or semantic choice, Main compares goal coverage with the user's goal and its broad memory, performs one bounded exact search, and actively selects the next load-bearing target. No quota, automatic expansion, fuzzy selector, persistent state, compatibility layer, monitor, scheduler, or gate is added.
+The 0.9.1 ordinary frontier is lifecycle-aware: no product means `production`; live work or a published return means waiting/ingestion; a current product means `supervision`; invalidation means `repair`; and ambiguous evidence means `main_reconciliation` with exact bounded ids. A Campaign `research_goal` keeps its exact Research subject as an immutable provenance anchor. Main may append a nontruth `campaign_frontier_head_checkpoint`; the newest generation supplies bounded exact lifecycle work heads and attained checkpoints, so routine reads do not walk an obsolete branch from the anchor. Zero heads ask Main to select the next question, multiple heads remain jointly visible, and a missing/cross-Campaign head requests bounded exact recovery from the nearest attained checkpoint. The note never updates itself, dispatches, closes, or affects Candidate/Fact authority. Campaigns without such a note retain the anchor projection. Default `mgraph frontier` is compact; `--diagnostic` is bounded forensic detail; `ACTIVE` is a hint, never a filter. No fuzzy selector, persistent index, automatic target rewrite, compatibility layer, monitor, scheduler, or gate is added.
+
+The 0.9.2 repair separates completion of a selected checkpoint head from
+semantic completion of its active Campaign goal. A finished single head, all
+finished parallel heads, or a finished anchor with no checkpoint now asks Main
+for `main_disposition`; an empty checkpoint asks Main to select a new exact
+head. Only explicit target archive removes the goal. Checkpoint diagnostics
+remain advisory. Production mode also remains a default supervision-scope
+hint, not a prohibition: Main may explicitly select any registered primary
+scope that is materially applicable to the complete frozen successor. This
+does not auto-review, duplicate an already completed review, dispatch, close a
+goal, or affect Candidate/Fact authority.
+
+The 0.9.3 integrated cleanup makes this surface directly operable. Main may create Campaign-bound Research atomically with `memory-add --campaign`; the Campaign is checked before semantic identity and again under the write lock. Each new production round freezes Main's selection source, exact Research ids, Campaign id, mode, and copy-safe replay argv. Frontier and goal rows expose compact `next_attention`, `disposition`, exact basis ids, and `plan_round_argv`.
+
+An already-live supervision round is always projected before the planner asks whether the source product is safe for a new supervisor suggestion. The former Brave Future/goal-intake command family is removed without aliases; historical sidecar bytes are inert nontruth provenance. CHX inventory treats liveness as an explicit Main declaration, bounds historical lists by default, and uses content-addressed copy-on-write administrative dispositions for abandoned, superseded, or externally completed ledgers. Such dispositions never hide or resolve a mathematical or architecture issue.
+
+The 0.9.4 Campaign repair keeps unlimited append-only history without history-sized routine reads or writes. Main `campaign-status` receives one compact current view, the latest minimal frontier checkpoint, and a fixed recent event-summary tail; there is no paging protocol, while exact old event bytes remain available for targeted forensics. New checkpoints persist only routing Research ids, recovery roots, and concise Main disposition. Campaign-scoped rounds freeze active current semantics plus an exact ordered history-prefix commitment: a later tail is valid, but prefix rewrite, reorder, or truncation is not. The 256 KiB cap guards anomalous current state rather than Campaign lifetime. Repair Research and its round inherit the exact source Campaign; an unbound source never infers `ACTIVE`. The 0.9.5 repair projects exact workflow successors and literal Research references. The 0.9.6 repair makes ordinary `search`/`show` operate on immutable Research as well as Facts and compares checkpoint active heads with exact later workflow routes. It reports stale heads, productive current routes, clean terminal review evidence, and a nonblocking refresh recommendation; Main alone decides and writes a later checkpoint. Historical semantic COW edges remain visible without requiring a later optional repair-spec field. None of these projections infers relevance, mutates a checkpoint, dispatches work, or changes truth authority.
+
+The 0.9.7 repair keeps Main on the current semantic frontier after deeper
+copy-on-write and supervision chains. Exact task bindings project an ingested
+product through its production root; in-flight supervision remains attached to
+that stable root instead of making the checkpoint look stale; narrowly
+recognized legacy repair relations remain traversable; and Campaign work not
+mapped to an active goal moves into a bounded secondary attention summary
+instead of filling the primary queue. `scripts/candidate_identity.py` exposes
+the exact candidate root, manifest, Git worktree, and installed-tree difference
+before source edits. After reconnect or context compaction, Main reconciles the
+current and recent orphaned CHX ledger by instruction, without a monitor,
+automatic issue generator, selector, mutation, compatibility layer, or truth
+effect.
 
 Source assurance is activated by structure rather than incidental prose:
 literature work, source-dependent metadata, source/applicability obligations,
@@ -63,7 +93,8 @@ copy while toy checks and bridges remain return-bound.
 
 The 0.8.11 repair keeps orchestration in Main's judgment: planning creates cards; Main launches workers, confirms starts, and recovers only on positive failure evidence. Artifact silence alone is not failure; context compaction, bounded startup reading, and deep reasoning are valid no-artifact intervals. Before interrupting or reassigning, Main checks fresh ordinary host status, messages, tool errors, and round bytes. Recovery requires an explicit disconnect/error or sustained total nonresponse corroborated by more than artifact silence, with no timer, heartbeat, watcher, receipt, recovery state, or gate.
 A copy-on-write successor is a new complete product. Prior defects and repair obligations are mandatory but non-exhaustive attack seeds. Within the exact authorized product and assigned scope, its supervisor freshly reviews the whole successor and conserved claims for new, inherited, repair-induced, and cross-component defects. PHX constrains ceremony, never mathematical or source scrutiny.
-Main owns cross-round and copy-on-write search, completion projection, duplicate exclusion, and final `DISPATCH`/`NO-DISPATCH`; Scouts may collect bounded evidence only. After dispatch or receipt, Main checks visible free slots and exact current Research boundaries; when a nonduplicative, logically independent high-value target exists, keep at least two workers active. This is opportunity use, not filler work or a slot quota.
+Main owns cross-round and copy-on-write search, completion projection, duplicate exclusion, and final `DISPATCH`/`NO-DISPATCH`; Scouts may collect bounded evidence only. After mathematical dispatch or receipt, Main checks visible free slots and exact current Research boundaries; when a nonduplicative, logically independent high-value mathematical target exists, keep at least two workers active on useful mathematics. For non-mathematical engineering, delegate only when a bounded independent subtask is expected to shorten the critical path after startup, context-transfer, coordination, and merge costs. This is opportunity use, not filler work or a slot quota.
+Slot use takes priority over reviewer-session reuse. After useful independent mathematical slots are filled, Main may continue with the same independent supervisor for another applicable scope of the same frozen product or for a later copy-on-write successor in the same route. This saves startup and repeated source loading; it creates no persistent supervisor binding, no receipt dependency, and no requirement to wait for that reviewer when another qualified reviewer is available.
 A client `Reconnecting...` banner is transport state, not worker or round state. After transport returns, Main inspects agents, canonical return bytes, ingestion, and round state, reports any missed completion, and resumes without duplicate dispatch or reclaim solely because of reconnect. This creates no reconnect gate or liveness scheduler.
 The 0.8.10 repair makes Main run one bounded exact Research search over stable names/identifiers before freezing a named frontier, review completed production, repair, and supervision, and choose `related_research_ids`; it adds no automatic selection/expansion, fuzzy match, whole-project audit, index, receipt, state, scheduler, or gate.
 The 0.8.7 repair makes Main notice elapsed time already visible through ordinary
@@ -131,9 +162,8 @@ they exist.
   [references/computational_verification_v4.md](references/computational_verification_v4.md).
 - Candidate/adverse routing:
   [references/adverse_routing_evolution.md](references/adverse_routing_evolution.md).
-- Campaigns, historical migration, and optional advisory planning:
-  [references/campaigns_and_migration_v4.md](references/campaigns_and_migration_v4.md)
-  and [references/brave_future_l3_l4.md](references/brave_future_l3_l4.md).
+- Campaigns, historical migration, and Main's active frontier:
+  [references/campaigns_and_migration_v4.md](references/campaigns_and_migration_v4.md).
 - Blackboard or historical Pulse compatibility:
   [references/blackboard_graph_v4.md](references/blackboard_graph_v4.md).
 - Explicit academic teaching/testing:
@@ -233,6 +263,14 @@ chains, and historical report-renderer compatibility drift; it never rewrites
 old ledgers or reports. Its default output is bounded; `--full` exposes every
 validated ledger and chain only for an explicit forensic need.
 
+Before editing a proposed local Chalxius candidate, run its
+`scripts/candidate_identity.py --root CANDIDATE --installed-root INSTALLED`
+projection.  Main selects the source root from the reported canonical path,
+VERSION, Git worktree/HEAD/dirty state, manifest validity, and installed-tree
+difference.  Directory names and version-looking path fragments are diagnostic
+only.  The projection is read-only and advisory: it does not switch branches,
+rewrite manifests, choose a candidate automatically, or gate graph operation.
+
 For a user-directed full historical settlement, `record-global-repair` binds
 the complete qualified issue inventory, exact candidate root, version and
 manifest, the revision-3 `covered_issue_snapshot_sha256`, one disposition per
@@ -327,8 +365,8 @@ repair caches implicitly.
    fresh Candidate-level adverse gate. Recheck live supervisor results under
    the seal lock, then package once. Iterative repair belongs before expensive
    packaging.
-9. Generic and Brave Future actionable planning share one exact workgroup and
-   completion projection. Exact completed or duplicate work is omitted only
+9. Generic actionable planning uses one exact workgroup and completion
+   projection. Exact completed or duplicate work is omitted only
    from actionable views; original Research, provenance, history, and explicit-
    ID planning remain available. Main `memory-add` reuses identical unbound
    semantics across actor labels only for the current Main CLI role; actor text

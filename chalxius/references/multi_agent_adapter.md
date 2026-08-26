@@ -1,6 +1,33 @@
 # Multi-agent adapter
 
-> **0.9.0 current-V5 goal/frontier coordination.** Main's default frontier
+> **0.9.4 current-V5 allocation refinement.** Genuine independent
+> mathematical production and review should use available clean-context slots.
+> Non-mathematical engineering is delegated only when a bounded independent
+> subtask is expected to shorten the critical path after startup, context
+> transfer, coordination, and merge costs. This is Main judgment, not a worker
+> quota, domain gate, or prohibition on useful engineering delegation.
+>
+
+> **0.9.3 current-V5 frontier coordination.** Main's exact Research choice is
+> preserved in each new production manifest and exposed as copy-safe argv.
+> Existing live supervision remains visible even when its source product would
+> be unsafe for a new automatic suggestion. Compact attention/disposition
+> fields prevent duplicate work without adding a dispatcher, quota, or gate.
+>
+
+> **0.9.2 current-V5 semantic coordination.** Completion of a selected
+> checkpoint head returns an active Campaign goal to Main for disposition; it
+> does not close the goal. Production mode supplies a sparse automatic
+> supervision default but does not prohibit a registered scope explicitly
+> selected by Main for the complete frozen successor.
+>
+> **0.9.1 goal/frontier-head foundation.** Campaign roots remain
+> immutable provenance. Main's newest append-only nontruth checkpoint names
+> bounded current lifecycle work heads and attained boundaries; routine reads
+> start there, while empty, multiple, or stale heads remain visible for Main
+> judgment. Nothing updates or dispatches itself.
+>
+> **0.9.0 goal/frontier foundation.** Main's default frontier
 > presents durable Campaign `research_goal` coverage beside the bounded
 > workflow queue. Exact current bytes derive completed and remaining actions;
 > an `active_hint` never selects, filters, plans, or dispatches. Main uses this
@@ -81,7 +108,17 @@ Main, not a scout, owns cross-round and copy-on-write search, completion and
 duplicate projection, and the final dispatch decision. After dispatch or
 receipt, inspect visible free slots and exact current boundaries; keep at least
 two workers active when a genuinely independent, nonduplicative high-value
-target exists. Do not invent filler work or a slot quota.
+mathematical target exists. For non-mathematical work, delegate only when a
+bounded independent task has positive coordination-adjusted critical-path
+value. Do not invent filler work or a slot quota.
+
+Fill useful independent mathematical slots before optimizing reviewer startup.
+Once that priority is met, the same independent supervisor session may receive
+another applicable scope for the same frozen product, or a later copy-on-write
+successor on the same route. Session reuse is only an execution convenience:
+it creates no persistent reviewer ownership, waiting dependency, receipt gate,
+or reason to avoid another qualified reviewer when the original session is not
+available.
 
 This required Research sequencing does not call Pulse. The optional
 execution-profile Pulse below remains a separate compatibility mechanism for a

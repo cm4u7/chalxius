@@ -49,10 +49,6 @@ from .elementary import validate_elementary_uses_for_submission
 from .fact_bundles import validate_terminology
 from .frontier_actions import project_frontier_group_actions
 from .graph import DependencyGraph
-from .goal_intake import (
-    build_goal_intake_research_binding,
-    validate_goal_intake_research_binding,
-)
 from .proof_lineage import validate_successor_contracts
 from .paper_continuation import (
     prepare_candidate_continuation_release_capsule,
@@ -257,7 +253,14 @@ V5_MAX_PROJECT_BACKGROUND_BYTES = MAX_PROJECT_BACKGROUND_BYTES
 V5_LEGACY_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.3-2"
 V5_TASK_CONTEXT_REVISION = "chalxius-v5-task-context-0.4.4-1"
 V5_CONTEXT_SELECTION_REVISION = "chalxius-v5-context-selection-0.4.4-1"
-V5_CAMPAIGN_SCOPE_REVISION = "chalxius-v5-campaign-scope-1"
+V5_EXACT_RESEARCH_REFERENCE_REVISION = (
+    "chalxius-v5-exact-research-references-1"
+)
+_EXACT_RESEARCH_REFERENCE_RE = re.compile(
+    r"(?<![0-9a-f])([0-9a-f]{12})(?![0-9a-f])"
+)
+V5_LEGACY_CAMPAIGN_SCOPE_REVISION = "chalxius-v5-campaign-scope-1"
+V5_CAMPAIGN_SCOPE_REVISION = "chalxius-v5-campaign-scope-2"
 V5_MAX_CONTEXT_SNAPSHOT_NODES = 256
 V5_MAX_CONTEXT_SNAPSHOT_EDGES = 512
 V5_MAX_SOURCE_RESEARCH_DOSSIER_BYTES = 256 * 1024
@@ -1095,17 +1098,8 @@ class V5LifecycleManager:
         if not isinstance(record.get("metadata"), dict):
             raise ValueError("research metadata must be an object")
         metadata = record["metadata"]
-        goal_binding = metadata.get("goal_intake_binding")
-        if goal_binding is not None:
-            goal_binding = validate_goal_intake_research_binding(goal_binding)
-            if metadata.get("campaign_id") != goal_binding["campaign_id"]:
-                raise ValueError("Research goal-intake/Campaign binding drifted")
-            current_goal_binding = build_goal_intake_research_binding(
-                self.store,
-                goal_binding["intake_token"],
-            )
-            if current_goal_binding != goal_binding:
-                raise ValueError("Research goal-intake terminal lineage drifted")
+        # Retired goal-intake metadata is inert historical provenance.  The
+        # ordinary Campaign id is the only current planning association.
         _research_decision_profile(metadata)
         validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
         independent_adverse_required(record)
@@ -1207,13 +1201,6 @@ class V5LifecycleManager:
             metadata=metadata,
             _inspection_context=_inspection_context,
         )
-        if "brave_future_repair_contract" in metadata:
-            # Prospective only.  Replay performs exact structural validation;
-            # cross-record coverage/cycle semantics are rechecked by the BF
-            # projector and BF audit without changing historical authority.
-            from .brave_future import validate_repair_contract_structure
-
-            validate_repair_contract_structure(record)
         semantic = {
             key: record[key]
             for key in required.difference(
@@ -1726,6 +1713,50 @@ class V5LifecycleManager:
                 }
             )
         return result
+
+    @staticmethod
+    def _literal_research_reference_tokens(
+        record: dict[str, Any],
+    ) -> list[str]:
+        """Return exact 12-hex Research tokens literally named in prose.
+
+        This is intentionally lexical rather than semantic.  It lets Main
+        make a predecessor operable by naming its exact Research id, without
+        introducing fuzzy relevance inference, a compatibility layer, or a
+        planning gate.
+        """
+
+        tokens: set[str] = set()
+        for field in ("claim", "content", "rationale", "source"):
+            value = record.get(field)
+            if not isinstance(value, str):
+                continue
+            tokens.update(_EXACT_RESEARCH_REFERENCE_RE.findall(value))
+        tokens.discard(str(record.get("research_id") or ""))
+        return sorted(tokens)
+
+    def _resolvable_literal_research_reference_ids(
+        self,
+        record: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[str]:
+        """Resolve only literal tokens that are existing valid Research ids."""
+
+        explicit = set(record.get("related_research_ids", []))
+        resolved: list[str] = []
+        for research_id in self._literal_research_reference_tokens(record):
+            if research_id in explicit:
+                continue
+            try:
+                self._inspection_research_record(
+                    research_id,
+                    _inspection_context,
+                )
+            except KeyError:
+                continue
+            resolved.append(research_id)
+        return resolved
 
     @staticmethod
     def _normalize_repair_input_capabilities(
@@ -3227,6 +3258,34 @@ class V5LifecycleManager:
             return True
         raise ValueError("unsupported Research supervisor scope")
 
+    @classmethod
+    def _research_supervision_scope_receipts(
+        cls,
+        scope: str,
+        descriptors: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Bind one selected scope to exact frozen production products.
+
+        The sparse automatic selector may use work mode, outcome, artifact
+        roles, and frozen logic signals to omit unnecessary supervisors.  Once
+        Main explicitly selects a registered primary scope, however, a work
+        mode classification must not make that scope targetless.  Preserve the
+        historical narrow receipt subset when it is nonempty; otherwise bind
+        the complete frozen component.  Integration keeps its separate
+        cross-primary applicability rule at planning time.
+        """
+
+        scoped = [
+            descriptor
+            for descriptor in descriptors
+            if cls._supervisor_scope_applies(scope, descriptor)
+        ]
+        if scoped:
+            return scoped
+        if scope in {"proof_logic", "program_math", "source_scope"}:
+            return list(descriptors)
+        return []
+
     @staticmethod
     def _failure_informed_scope_applies(
         scope: str,
@@ -3557,11 +3616,10 @@ class V5LifecycleManager:
                 raise ValueError(
                     "Research supervision source component drifted"
                 )
-            expected = [
-                item
-                for item in all_descriptors
-                if self._supervisor_scope_applies(scope, item)
-            ]
+            expected = self._research_supervision_scope_receipts(
+                scope,
+                all_descriptors,
+            )
             # Frozen pre-0.7 integration records covered every multi-return
             # component.  The 0.7 selector no longer creates same-scope
             # integration supervisors, but validation must not reinterpret
@@ -4198,7 +4256,7 @@ class V5LifecycleManager:
         *,
         actor: str,
         task_binding: dict[str, str] | None = None,
-        goal_intake_token: str | None = None,
+        campaign_id: str | None = None,
         assurance_contract_revision: str = V5_LEGACY_ASSURANCE_CONTRACT_REVISION,
         reuse_unbound_main_semantics: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
@@ -4281,22 +4339,21 @@ class V5LifecycleManager:
         }
         if "goal_intake_binding" in metadata or "goal_intake_token" in metadata:
             raise ValueError(
-                "goal-intake lineage is host-bound; do not inject it through Research payload metadata"
+                "retired goal-intake metadata cannot be added to new Research"
             )
-        if goal_intake_token is not None:
-            binding = build_goal_intake_research_binding(
-                self.store,
-                goal_intake_token,
-            )
-            binding = validate_goal_intake_research_binding(binding)
-            explicit_campaign = metadata.get("campaign_id")
-            if explicit_campaign is not None and explicit_campaign != binding["campaign_id"]:
+        payload_campaign = metadata.get("campaign_id")
+        if payload_campaign is not None:
+            payload_campaign = validate_campaign_id(payload_campaign)
+        if campaign_id is not None:
+            campaign_id = validate_campaign_id(campaign_id)
+            if payload_campaign is not None and payload_campaign != campaign_id:
                 raise ValueError(
-                    "Research Campaign metadata conflicts with the committed goal intake"
+                    "Research payload and --campaign identify different Campaigns"
                 )
-            self.store.campaigns().status(binding["campaign_id"])
-            metadata["campaign_id"] = binding["campaign_id"]
-            metadata["goal_intake_binding"] = binding
+        bound_campaign_id = campaign_id or payload_campaign
+        if bound_campaign_id is not None:
+            self.store.campaigns().status(bound_campaign_id)
+            metadata["campaign_id"] = bound_campaign_id
         decision_profile = _research_decision_profile(metadata)
         validate_adverse_domain_profile(metadata.get("adverse_domain_profile"))
         independent_adverse_required({"metadata": metadata})
@@ -4473,27 +4530,13 @@ class V5LifecycleManager:
             **record_without_hash,
             "record_sha256": sha256_json(record_without_hash),
         }
-        if "brave_future_repair_contract" in metadata:
-            from .brave_future import validate_repair_contract_semantics
-
-            campaign_id = metadata.get("campaign_id")
-            if not isinstance(campaign_id, str):
-                raise ValueError(
-                    "Brave Future repair Research requires an explicit Campaign id"
-                )
-            self.store.campaigns().status(campaign_id)
-            existing_records = {
-                item["research_id"]: item
-                for item in self.research_records(
-                    _inspection_context=inspection
-                )
-            }
-            validate_repair_contract_semantics(
-                record,
-                {**existing_records, research_id: record},
-            )
         path = self._research_path(research_id)
         with self.store.v5_mutation_lock(command="research-add"):
+            if bound_campaign_id is not None:
+                # Campaign binding and immutable Research publication are one
+                # transaction.  Revalidate under the existing write boundary
+                # before reuse checks or any derived index preparation.
+                self.store.campaigns().status(bound_campaign_id)
             # The command-local capability snapshot is only a read-phase
             # optimization.  Recheck the exact bytes after entering the
             # mutation boundary so a concurrent source replacement cannot be
@@ -4578,6 +4621,7 @@ class V5LifecycleManager:
         resolution_fact_id: str | None = None,
         claim_relation: str | None = None,
         related_fact_id: str | None = None,
+        attention_basis_research_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         target = self._research_record(research_id)
         if status not in MEMORY_STATUSES:
@@ -4596,6 +4640,38 @@ class V5LifecycleManager:
             self.store.get_fact(related_fact_id)
         elif related_fact_id is not None:
             raise ValueError("related Fact requires a claim relation")
+        attention_basis = sorted(
+            dict.fromkeys(
+                validate_memory_id(item)
+                for item in (attention_basis_research_ids or [])
+            )
+        )
+        attention_disposition = (
+            status
+            if status in {"superseded", "equivalent_review_accepted"}
+            else None
+        )
+        if attention_disposition is not None:
+            if not note.strip() or not attention_basis:
+                raise ValueError(
+                    "semantic attention disposition requires a reason and exact basis Research ids"
+                )
+            for basis_id in attention_basis:
+                self._research_record(basis_id)
+        elif attention_basis:
+            raise ValueError(
+                "attention basis Research ids require superseded or equivalent_review_accepted status"
+            )
+        metadata: dict[str, Any] = {
+            "target_research_id": research_id,
+            "disposition_status": status,
+            "resolution_fact_id": resolution_fact_id,
+            "claim_relation": claim_relation,
+            "related_fact_id": related_fact_id,
+        }
+        if attention_disposition is not None:
+            metadata["attention_disposition"] = attention_disposition
+            metadata["attention_basis_research_ids"] = attention_basis
         return self.add_research(
             {
                 "kind": "disposition",
@@ -4603,12 +4679,8 @@ class V5LifecycleManager:
                 "claim": f"Disposition of {research_id}: {target['claim']}",
                 "content": note,
                 "relation": "disposes",
-                "related_research_ids": [research_id],
-                "target_research_id": research_id,
-                "disposition_status": status,
-                "resolution_fact_id": resolution_fact_id,
-                "claim_relation": claim_relation,
-                "related_fact_id": related_fact_id,
+                "related_research_ids": [research_id, *attention_basis],
+                **metadata,
             },
             actor=actor,
         )
@@ -4709,6 +4781,7 @@ class V5LifecycleManager:
             )
             if key in source["metadata"]
         }
+        repair_campaign_id = copied_metadata.get("campaign_id")
         # A repair may need the same exact source bytes or other artifacts that
         # carried the challenged claim.  Preserve that minimum capability
         # closure directly; do not force Main to synthesize a second Research
@@ -4787,6 +4860,11 @@ class V5LifecycleManager:
             workers=1,
             mode=repair_mode,
             research_ids=[repair["research_id"]],
+            campaign_id=(
+                validate_campaign_id(repair_campaign_id)
+                if repair_campaign_id is not None
+                else None
+            ),
             host_task_scope_id=host_task_scope_id,
             _inspection_context=inspection,
         )
@@ -6072,6 +6150,12 @@ class V5LifecycleManager:
         if status is None:
             status = self.store.campaigns().status(campaign_id)
             _inspection_context.campaign_statuses[campaign_id] = status
+        # ``CampaignStore.status`` remains the complete internal replay because
+        # frontier checkpoint recovery needs the append-only event history.
+        # Planning, however, must freeze only current semantics plus an exact
+        # commitment to the observed history prefix.  Otherwise a healthy
+        # long-running Campaign eventually becomes impossible to plan merely
+        # because its historical notes cross the snapshot byte cap.
         expected_status_fields = {
             "campaign_id",
             "active",
@@ -6084,6 +6168,7 @@ class V5LifecycleManager:
             "value_definition",
             "updates",
             "event_count",
+            "history",
         }
         if not isinstance(status, dict) or set(status) != expected_status_fields:
             raise ValueError("V5 Campaign status fields are not exact")
@@ -6119,6 +6204,7 @@ class V5LifecycleManager:
         if not isinstance(targets, dict):
             raise ValueError("V5 Campaign targets must be an object")
         active_proof_target_fact_ids: set[str] = set()
+        compact_targets: dict[str, dict[str, str]] = {}
         for target_id, target in targets.items():
             if not isinstance(target_id, str) or not isinstance(target, dict):
                 raise ValueError("V5 Campaign target projection is malformed")
@@ -6143,6 +6229,18 @@ class V5LifecycleManager:
                 active_proof_target_fact_ids.add(
                     validate_fact_id(target["subject_id"])
                 )
+            if target["status"] == "active":
+                compact_targets[target_id] = {
+                    key: target[key]
+                    for key in (
+                        "target_id",
+                        "role",
+                        "subject_kind",
+                        "subject_id",
+                        "label",
+                        "status",
+                    )
+                }
         if active_proof_target_fact_ids:
             try:
                 self._active_fact_premise_bindings(
@@ -6154,11 +6252,36 @@ class V5LifecycleManager:
                     "V5 Campaign active proof targets are not exact admitted Facts: "
                     + ", ".join(sorted(active_proof_target_fact_ids))
                 ) from exc
+        history = status.get("history")
+        if (
+            not isinstance(history, dict)
+            or set(history)
+            != {"event_count", "last_event_id", "events_sha256"}
+            or history.get("event_count") != event_count
+            or not isinstance(history.get("last_event_id"), str)
+            or SHA256_RE.fullmatch(history["last_event_id"]) is None
+            or not isinstance(history.get("events_sha256"), str)
+            or SHA256_RE.fullmatch(history["events_sha256"]) is None
+        ):
+            raise ValueError("V5 Campaign history commitment is malformed")
+        compact_status = {
+            "campaign_id": campaign_id,
+            "active": status["active"],
+            "name": status["name"],
+            "objective": status["objective"],
+            "source_claim_ids": list(status["source_claim_ids"]),
+            "targets": compact_targets,
+            "constraints": list(status["constraints"]),
+            "stop_conditions": list(status["stop_conditions"]),
+            "value_definition": status["value_definition"],
+            "event_count": event_count,
+            "history": history,
+        }
         snapshot = {
             "schema_version": 1,
             "revision": V5_CAMPAIGN_SCOPE_REVISION,
             "campaign_id": campaign_id,
-            "campaign_status": status,
+            "campaign_status": compact_status,
             "selection_policy": "explicit_exact_research_campaign_id_match",
             "scheduler": "v5_main_four_factor_frontier",
             "truth_effect": "none",
@@ -6185,9 +6308,14 @@ class V5LifecycleManager:
         }
         if not isinstance(snapshot, dict) or set(snapshot) != required:
             raise ValueError("V5 Campaign snapshot fields are not exact")
+        revision = snapshot.get("revision")
         if (
             snapshot.get("schema_version") != 1
-            or snapshot.get("revision") != V5_CAMPAIGN_SCOPE_REVISION
+            or revision
+            not in {
+                V5_LEGACY_CAMPAIGN_SCOPE_REVISION,
+                V5_CAMPAIGN_SCOPE_REVISION,
+            }
             or snapshot.get("selection_policy")
             != "explicit_exact_research_campaign_id_match"
             or snapshot.get("scheduler") != "v5_main_four_factor_frontier"
@@ -6199,6 +6327,30 @@ class V5LifecycleManager:
         status = snapshot.get("campaign_status")
         if not isinstance(status, dict) or status.get("campaign_id") != campaign_id:
             raise ValueError("V5 Campaign snapshot status mismatch")
+        common_status_fields = {
+            "campaign_id",
+            "active",
+            "name",
+            "objective",
+            "source_claim_ids",
+            "targets",
+            "constraints",
+            "stop_conditions",
+            "value_definition",
+            "event_count",
+        }
+        expected_status_fields = (
+            common_status_fields | {"updates"}
+            if revision == V5_LEGACY_CAMPAIGN_SCOPE_REVISION
+            else common_status_fields | {"history"}
+        )
+        if set(status) != expected_status_fields:
+            raise ValueError("V5 Campaign snapshot status fields are not exact")
+        if revision == V5_LEGACY_CAMPAIGN_SCOPE_REVISION:
+            if not isinstance(status.get("updates"), list) or any(
+                not isinstance(item, dict) for item in status["updates"]
+            ):
+                raise ValueError("V5 legacy Campaign updates are malformed")
         targets = status.get("targets")
         if not isinstance(targets, dict):
             raise ValueError("V5 Campaign snapshot targets are invalid")
@@ -6206,7 +6358,20 @@ class V5LifecycleManager:
         for target_id, target in sorted(targets.items()):
             if not isinstance(target, dict) or target.get("target_id") != target_id:
                 raise ValueError("V5 Campaign snapshot target projection is invalid")
+            if revision == V5_CAMPAIGN_SCOPE_REVISION and set(target) != {
+                "target_id",
+                "role",
+                "subject_kind",
+                "subject_id",
+                "label",
+                "status",
+            }:
+                raise ValueError("V5 compact Campaign target fields are not exact")
             if target.get("status") != "active":
+                if revision == V5_CAMPAIGN_SCOPE_REVISION:
+                    raise ValueError(
+                        "V5 compact Campaign snapshot contains an inactive target"
+                    )
                 continue
             compact = {
                 key: target.get(key)
@@ -6228,6 +6393,19 @@ class V5LifecycleManager:
             or event_count < 1
         ):
             raise ValueError("V5 Campaign snapshot event count is invalid")
+        if revision == V5_CAMPAIGN_SCOPE_REVISION:
+            history = status.get("history")
+            if (
+                not isinstance(history, dict)
+                or set(history)
+                != {"event_count", "last_event_id", "events_sha256"}
+                or history.get("event_count") != event_count
+                or not isinstance(history.get("last_event_id"), str)
+                or SHA256_RE.fullmatch(history["last_event_id"]) is None
+                or not isinstance(history.get("events_sha256"), str)
+                or SHA256_RE.fullmatch(history["events_sha256"]) is None
+            ):
+                raise ValueError("V5 Campaign snapshot history is malformed")
         source_claim_ids = _require_string_list(
             status.get("source_claim_ids"), "Campaign snapshot source claim ids"
         )
@@ -6237,13 +6415,13 @@ class V5LifecycleManager:
         stop_conditions = _require_string_list(
             status.get("stop_conditions"), "Campaign snapshot stop conditions"
         )
-        for key in ("objective", "value_definition"):
+        for key in ("name", "objective", "value_definition"):
             if not isinstance(status.get(key), str) or not status[key].strip():
                 raise ValueError(f"V5 Campaign snapshot {key} must be nonempty")
         if not isinstance(status.get("active"), bool):
             raise ValueError("V5 Campaign snapshot active state is invalid")
         return {
-            "revision": V5_CAMPAIGN_SCOPE_REVISION,
+            "revision": revision,
             "campaign_id": campaign_id,
             "selection_policy": snapshot["selection_policy"],
             "scheduler": snapshot["scheduler"],
@@ -6346,6 +6524,16 @@ class V5LifecycleManager:
                 _inspection_context.campaign_statuses[campaign_id] = current
         if current.get("event_count", 0) < scope["event_count"]:
             raise ValueError("V5 Campaign history was truncated after round freeze")
+        if scope["revision"] == V5_CAMPAIGN_SCOPE_REVISION:
+            frozen_history = snapshot["campaign_status"]["history"]
+            current_prefix = self.store.campaigns().history_summary(
+                campaign_id,
+                event_count=scope["event_count"],
+            )
+            if current_prefix != frozen_history:
+                raise ValueError(
+                    "V5 Campaign frozen history prefix changed after round freeze"
+                )
         if _inspection_context is not None:
             _inspection_context.campaign_scopes[round_id] = scope
         return scope
@@ -6565,6 +6753,16 @@ class V5LifecycleManager:
             projection.update(
                 group_actions[projection["work_key_sha256"]]
             )
+            actionable_id = projection.get("actionable_research_id")
+            projection["plan_round_argv"] = (
+                self._exact_plan_round_argv(
+                    [actionable_id],
+                    campaign_id=campaign_id,
+                )
+                if projection["next_action"] == "production"
+                and isinstance(actionable_id, str)
+                else None
+            )
         if not _execution_records:
             return [self._compact_frontier_entry(item) for item in selected]
 
@@ -6593,6 +6791,12 @@ class V5LifecycleManager:
             "work_completion_member_ids_sha256",
             "next_action",
             "pending_reason",
+            "next_attention",
+            "disposition",
+            "attention_basis_research_ids",
+            "attention_basis_round_ids",
+            "attention_reason",
+            "plan_round_argv",
             "actionable_research_id",
             "actionable_round_id",
             "actionable_research_ids",
@@ -6629,6 +6833,545 @@ class V5LifecycleManager:
             return "complete"
         return "workflow_completion"
 
+    @staticmethod
+    def _latest_campaign_frontier_checkpoint(
+        status: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Read Main's newest advisory Campaign head checkpoint.
+
+        Campaign notes intentionally remain a flexible nontruth surface.  A
+        malformed or partially stale note is therefore reported to Main by the
+        projection below; it is never promoted into a write gate, scheduler, or
+        truth-stage contract.
+        """
+
+        updates = status.get("updates")
+        if not isinstance(updates, list):
+            return None
+        checkpoint_updates: list[dict[str, Any]] = []
+        for update in updates:
+            if not isinstance(update, dict) or update.get("event") != "note":
+                continue
+            payload = update.get("payload")
+            if (
+                isinstance(payload, dict)
+                and payload.get("kind")
+                == "campaign_frontier_head_checkpoint"
+            ):
+                checkpoint_updates.append(update)
+        if not checkpoint_updates:
+            return None
+
+        update = checkpoint_updates[-1]
+        payload = update["payload"]
+        raw_frontiers = payload.get("target_frontiers")
+        checkpoint: dict[str, Any] = {
+            "event_id": update.get("event_id"),
+            "generation": payload.get("generation"),
+            "supersedes_event_id": payload.get("supersedes_event_id"),
+            "targets": {},
+            "diagnostics": [],
+            "malformed": False,
+        }
+
+        def diagnose(code: str, **fields: Any) -> None:
+            diagnostics = checkpoint["diagnostics"]
+            if len(diagnostics) >= 32:
+                return
+            diagnostic = {"code": code}
+            diagnostic.update(fields)
+            if diagnostic not in diagnostics:
+                diagnostics.append(diagnostic)
+            checkpoint["malformed"] = True
+
+        generation = payload.get("generation")
+        generation_is_valid = (
+            not isinstance(generation, bool)
+            and isinstance(generation, int)
+            and generation >= 1
+        )
+        previous = (
+            checkpoint_updates[-2] if len(checkpoint_updates) > 1 else None
+        )
+        previous_generation: Any = None
+        expected_generation = 1
+        expected_supersedes: Any = None
+        if previous is not None:
+            previous_payload = previous.get("payload")
+            if isinstance(previous_payload, dict):
+                previous_generation = previous_payload.get("generation")
+            if (
+                not isinstance(previous_generation, bool)
+                and isinstance(previous_generation, int)
+                and previous_generation >= 1
+            ):
+                expected_generation = previous_generation + 1
+            else:
+                expected_generation = None
+            expected_supersedes = previous.get("event_id")
+        if not generation_is_valid or generation != expected_generation:
+            diagnose(
+                "checkpoint_generation_mismatch",
+                expected=expected_generation,
+                actual=generation,
+            )
+        actual_supersedes = payload.get("supersedes_event_id")
+        if actual_supersedes != expected_supersedes:
+            diagnose(
+                "checkpoint_supersedes_mismatch",
+                expected=expected_supersedes,
+                actual=actual_supersedes,
+            )
+
+        if not isinstance(raw_frontiers, list):
+            diagnose("checkpoint_target_list_malformed")
+            return checkpoint
+        if len(raw_frontiers) > 64:
+            diagnose(
+                "checkpoint_target_list_truncated",
+                actual=len(raw_frontiers),
+                maximum=64,
+            )
+        for raw_frontier in raw_frontiers[:64]:
+            if not isinstance(raw_frontier, dict):
+                diagnose("checkpoint_target_entry_malformed")
+                continue
+            target_id = raw_frontier.get("target_id")
+            if not isinstance(target_id, str) or not target_id:
+                diagnose("checkpoint_target_id_malformed")
+                continue
+            if target_id in checkpoint["targets"]:
+                diagnose(
+                    "checkpoint_target_duplicate",
+                    target_id=target_id,
+                )
+                # A duplicate is ambiguous.  Preserve the first bounded view
+                # instead of giving array order a hidden last-write-wins role.
+                continue
+            active_ids: list[str] = []
+            attained_ids: list[str] = []
+            for field, destination in (
+                ("active_heads", active_ids),
+                ("attained_checkpoints", attained_ids),
+            ):
+                values = raw_frontier.get(field, [])
+                if not isinstance(values, list):
+                    diagnose(
+                        "checkpoint_research_list_malformed",
+                        target_id=target_id,
+                        field=field,
+                    )
+                    continue
+                for value in values[:8]:
+                    research_id = (
+                        value.get("research_id")
+                        if isinstance(value, dict)
+                        else None
+                    )
+                    if (
+                        not isinstance(research_id, str)
+                        or MEMORY_ID_RE.fullmatch(research_id) is None
+                    ):
+                        diagnose(
+                            "checkpoint_research_id_malformed",
+                            target_id=target_id,
+                            field=field,
+                        )
+                        continue
+                    if research_id not in destination:
+                        destination.append(research_id)
+            raw_disposition = raw_frontier.get("main_disposition", "")
+            if not isinstance(raw_disposition, str):
+                diagnose(
+                    "checkpoint_main_disposition_nontext",
+                    target_id=target_id,
+                )
+                raw_disposition = ""
+            recovery_provided = "recovery_root_research_id" in raw_frontier
+            recovery_id = raw_frontier.get("recovery_root_research_id")
+            if recovery_provided and (
+                not isinstance(recovery_id, str)
+                or MEMORY_ID_RE.fullmatch(recovery_id) is None
+            ):
+                diagnose(
+                    "checkpoint_recovery_root_malformed",
+                    target_id=target_id,
+                )
+                recovery_id = None
+            checkpoint["targets"][target_id] = {
+                "active_head_research_ids": active_ids,
+                "attained_checkpoint_research_ids": attained_ids,
+                "recovery_root_research_id": recovery_id,
+                "recovery_root_provided": recovery_provided,
+                "main_disposition": raw_disposition,
+            }
+        return checkpoint
+
+    @staticmethod
+    def _checkpoint_research_campaign_ids(
+        research_id: str,
+        bases: dict[str, dict[str, Any]],
+    ) -> frozenset[str]:
+        """Resolve exact Campaign provenance used by checkpoint diagnostics.
+
+        New production records carry ``campaign_id`` directly.  Legacy
+        supervision plans and their returned products did not, although their
+        frozen supervision receipts identify the exact Campaign-scoped source
+        products.  Recognize only that narrow, receipt-consistent shape; do not
+        turn generic Research ancestry into Campaign membership.
+        """
+
+        record = bases.get(research_id)
+        if not isinstance(record, dict):
+            return frozenset()
+        metadata = record.get("metadata")
+        if not isinstance(metadata, dict):
+            return frozenset()
+        direct_campaign_id = metadata.get("campaign_id")
+        if isinstance(direct_campaign_id, str):
+            return frozenset({direct_campaign_id})
+
+        plan = record
+        if record.get("relation") == "responds_to":
+            provenance = metadata.get("assignment_provenance")
+            related = record.get("related_research_ids")
+            if (
+                not isinstance(provenance, dict)
+                or provenance.get("work_mode") != "refute"
+                or provenance.get("adverse_assignment") is not True
+                or not isinstance(related, list)
+                or len(related) != 1
+            ):
+                return frozenset()
+            plan = bases.get(related[0])
+        if not isinstance(plan, dict) or plan.get("relation") != "challenges":
+            return frozenset()
+        plan_metadata = plan.get("metadata")
+        if not isinstance(plan_metadata, dict):
+            return frozenset()
+        supervision = plan_metadata.get("research_supervision")
+        plan_related = plan.get("related_research_ids")
+        if (
+            not isinstance(supervision, dict)
+            or not isinstance(plan_related, list)
+        ):
+            return frozenset()
+        receipts = supervision.get("source_receipts")
+        if not isinstance(receipts, list) or not receipts:
+            return frozenset()
+        receipt_ids: list[str] = []
+        campaign_ids: set[str] = set()
+        for receipt in receipts:
+            source_id = (
+                receipt.get("result_research_id")
+                if isinstance(receipt, dict)
+                else None
+            )
+            if not isinstance(source_id, str):
+                return frozenset()
+            source = bases.get(source_id)
+            source_metadata = (
+                source.get("metadata") if isinstance(source, dict) else None
+            )
+            source_campaign_id = (
+                source_metadata.get("campaign_id")
+                if isinstance(source_metadata, dict)
+                else None
+            )
+            if not isinstance(source_campaign_id, str):
+                return frozenset()
+            receipt_ids.append(source_id)
+            campaign_ids.add(source_campaign_id)
+        if (
+            len(receipt_ids) != len(plan_related)
+            or set(receipt_ids) != set(plan_related)
+        ):
+            return frozenset()
+        return frozenset(campaign_ids)
+
+    @classmethod
+    def _campaign_semantic_successor_index(
+        cls,
+        bases: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Index exact production, supervision, and COW workflow edges.
+
+        The index projects only already-recorded identities.  It does not rank
+        mathematical relevance, mutate a Campaign checkpoint, or authorize a
+        new round.
+        """
+
+        children: dict[str, set[str]] = {}
+        production_products: set[str] = set()
+        production_source_by_product: dict[str, str] = {}
+        supervision_plans: set[str] = set()
+        supervision_results: set[str] = set()
+        cow_repairs: set[str] = set()
+        legacy_repair_tasks: set[str] = set()
+
+        for research_id, record in bases.items():
+            metadata = record.get("metadata")
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            related = record.get("related_research_ids")
+            if (
+                record.get("relation") == "responds_to"
+                and isinstance(provenance, dict)
+                and provenance.get("adverse_assignment") is False
+                and provenance.get("work_mode") != "refute"
+                and isinstance(related, list)
+                and len(related) == 1
+                and related[0] in bases
+            ):
+                # Freshness follows exact workflow publication, not product
+                # completion.  A blocked or challenge-bearing product is still
+                # a real successor that makes an older checkpoint head stale;
+                # its completion and next action remain separate projections.
+                production_products.add(research_id)
+                production_source_by_product[research_id] = related[0]
+                children.setdefault(related[0], set()).add(research_id)
+
+            supervision = (
+                metadata.get("research_supervision")
+                if isinstance(metadata, dict)
+                else None
+            )
+            receipts = (
+                supervision.get("source_receipts")
+                if isinstance(supervision, dict)
+                else None
+            )
+            if (
+                record.get("relation") == "challenges"
+                and isinstance(related, list)
+                and isinstance(receipts, list)
+                and receipts
+            ):
+                receipt_ids = [
+                    item.get("result_research_id")
+                    if isinstance(item, dict)
+                    else None
+                    for item in receipts
+                ]
+                if (
+                    all(isinstance(item, str) for item in receipt_ids)
+                    and len(receipt_ids) == len(related)
+                    and sorted(receipt_ids) == sorted(related)
+                    and all(item in bases for item in receipt_ids)
+                ):
+                    supervision_plans.add(research_id)
+                    for source_id in receipt_ids:
+                        children.setdefault(source_id, set()).add(research_id)
+
+        for research_id, record in bases.items():
+            metadata = record.get("metadata")
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            related = record.get("related_research_ids")
+            if (
+                record.get("relation") == "responds_to"
+                and isinstance(provenance, dict)
+                and provenance.get("adverse_assignment") is True
+                and provenance.get("work_mode") == "refute"
+                and isinstance(related, list)
+                and len(related) == 1
+                and related[0] in supervision_plans
+            ):
+                supervision_results.add(research_id)
+                children.setdefault(related[0], set()).add(research_id)
+
+            if (
+                record.get("kind") != "repair"
+                or record.get("relation") != "repairs"
+                or not isinstance(metadata, dict)
+            ):
+                continue
+            source = record.get("source")
+            source_parts = (
+                [part.strip() for part in source.split(";")]
+                if isinstance(source, str)
+                else []
+            )
+            source_research_ids = [
+                part.removeprefix("research:")
+                for part in source_parts
+                if part.startswith("research:")
+                and MEMORY_ID_RE.fullmatch(
+                    part.removeprefix("research:")
+                )
+                is not None
+            ]
+            if (
+                isinstance(metadata.get("campaign_id"), str)
+                and isinstance(related, list)
+                and len(related) >= 2
+                and len(set(related)) == len(related)
+                and len(source_research_ids) == len(source_parts)
+                and set(source_research_ids) == set(related)
+                and all(item in bases for item in related)
+                and all(
+                    record.get("created_at", "")
+                    > bases[item].get("created_at", "")
+                    for item in related
+                )
+            ):
+                # Before repair_of/trigger metadata was standardized, Main
+                # authored exact COW task roots whose complete ``research:``
+                # source set equalled their immutable related-id set.  The
+                # bytes already state the bridge.  Following it here restores
+                # deep Campaign visibility without treating the repair as
+                # completed, choosing a branch, or accepting fuzzy ancestry.
+                legacy_repair_tasks.add(research_id)
+                for source_id in related:
+                    children.setdefault(source_id, set()).add(research_id)
+            product_id = metadata.get("repair_of_research_id")
+            trigger_id = metadata.get("trigger_research_id")
+            if (
+                not isinstance(product_id, str)
+                or product_id not in production_products
+                or not isinstance(trigger_id, str)
+                or trigger_id not in supervision_results
+                or record.get("source") != f"research:{product_id}"
+                or related != sorted({product_id, trigger_id})
+            ):
+                continue
+            # Campaign freshness follows the semantic COW edge that is already
+            # present in the immutable graph.  A historical repair may predate
+            # the optional hash-bound ``repair_spec`` projection; requiring
+            # that later administrative field here would strand an otherwise
+            # exact kind/relation/source/product/trigger edge.  The stricter
+            # repair-continuity predicate remains in the workgroup-completion
+            # path, where it decides whether a repair can close work rather
+            # than whether Main is allowed to see that the route advanced.
+            cow_repairs.add(research_id)
+            children.setdefault(product_id, set()).add(research_id)
+            children.setdefault(trigger_id, set()).add(research_id)
+
+        return {
+            "children": {
+                research_id: sorted(values)
+                for research_id, values in children.items()
+            },
+            "production_products": production_products,
+            "production_source_by_product": production_source_by_product,
+            "supervision_plans": supervision_plans,
+            "supervision_results": supervision_results,
+            "cow_repairs": cow_repairs,
+            "legacy_repair_tasks": legacy_repair_tasks,
+        }
+
+    def _campaign_attained_semantic_successor_summary(
+        self,
+        *,
+        attained_research_id: str,
+        campaign_id: str,
+        bases: dict[str, dict[str, Any]],
+        index: dict[str, Any],
+    ) -> tuple[dict[str, Any], list[str]]:
+        children = index["children"]
+        seen = {attained_research_id}
+        pending = list(children.get(attained_research_id, []))
+        successors: list[str] = []
+        while pending:
+            research_id = pending.pop(0)
+            if research_id in seen:
+                continue
+            if self._checkpoint_research_campaign_ids(
+                research_id,
+                bases,
+            ) != frozenset({campaign_id}):
+                continue
+            seen.add(research_id)
+            successors.append(research_id)
+            pending.extend(children.get(research_id, []))
+        successor_ids = sorted(successors)
+        successor_set = set(successor_ids)
+        terminal_ids = sorted(
+            research_id
+            for research_id in successor_ids
+            if not any(
+                child in successor_set
+                for child in children.get(research_id, [])
+            )
+        )
+
+        # A clean supervision result is attained review evidence, not a new
+        # research question.  Productive challenges remain current route heads
+        # until a COW repair succeeds them.  Every other exact terminal shape
+        # (production product, live supervision plan, or repair) is likewise a
+        # workflow route.  This role split is structural and advisory: it does
+        # not choose the next mathematical target or mutate a checkpoint.
+        current_route_ids: list[str] = []
+        terminal_evidence_ids: list[str] = []
+        for research_id in terminal_ids:
+            if research_id not in index["supervision_results"]:
+                current_route_ids.append(research_id)
+                continue
+            record = bases[research_id]
+            metadata = record.get("metadata")
+            worker_outcome = (
+                metadata.get("worker_outcome")
+                if isinstance(metadata, dict)
+                else None
+            )
+            route_invalidations = (
+                metadata.get("route_invalidations", [])
+                if isinstance(metadata, dict)
+                else []
+            )
+            productive = (
+                record.get("kind")
+                in {"challenge", "counterexample", "obstacle", "dead_end"}
+                or worker_outcome
+                in {"challenge", "counterexample", "dead_end"}
+                or bool(route_invalidations)
+            )
+            if productive:
+                current_route_ids.append(research_id)
+            else:
+                terminal_evidence_ids.append(research_id)
+
+        def bounded_members(member_ids: set[str]) -> list[str]:
+            return sorted(successor_set.intersection(member_ids))[:8]
+
+        summary = {
+            "attained_research_id": attained_research_id,
+            "production_product_research_ids": bounded_members(
+                index["production_products"]
+            ),
+            "supervision_plan_research_ids": bounded_members(
+                index["supervision_plans"]
+            ),
+            "supervision_result_research_ids": bounded_members(
+                index["supervision_results"]
+            ),
+            "cow_repair_research_ids": bounded_members(index["cow_repairs"]),
+            "legacy_repair_task_research_ids": bounded_members(
+                index["legacy_repair_tasks"]
+            ),
+            "terminal_research_ids": terminal_ids[:8],
+            "current_route_research_ids": current_route_ids[:8],
+            "current_route_count": len(current_route_ids),
+            "current_route_ids_sha256": sha256_json(current_route_ids),
+            "terminal_evidence_research_ids": terminal_evidence_ids[:8],
+            "terminal_evidence_count": len(terminal_evidence_ids),
+            "terminal_evidence_ids_sha256": sha256_json(
+                terminal_evidence_ids
+            ),
+            "successor_count": len(successor_ids),
+            "successor_ids_sha256": sha256_json(successor_ids),
+            "terminal_count": len(terminal_ids),
+            "terminal_ids_sha256": sha256_json(terminal_ids),
+            "selection_effect": "none",
+        }
+        return summary, terminal_ids
+
     def campaign_goal_coverage(
         self,
         campaign_id: str,
@@ -6637,9 +7380,11 @@ class V5LifecycleManager:
     ) -> list[dict[str, Any]]:
         """Project nonworkflow Campaign goals onto their exact live routes.
 
-        A ``research_goal`` target is a durable semantic root.  This read-only
-        view follows exact Research workgroup/COW bytes to the current action;
-        it never edits the target, dispatches work, closes a goal, or affects
+        A ``research_goal`` target is a durable semantic root.  Routine reads
+        use Main's newest exact ``frontier_heads`` checkpoint when present;
+        the root remains provenance and final recovery input rather than a
+        request to traverse an old branch every time.  This read-only view
+        never edits the target, dispatches work, closes a goal, or affects
         Candidate/Fact state.
         """
 
@@ -6666,6 +7411,47 @@ class V5LifecycleManager:
         if not goal_targets:
             return []
 
+        checkpoint = self._latest_campaign_frontier_checkpoint(status)
+        checkpoint_targets = (
+            checkpoint["targets"]
+            if isinstance(checkpoint, dict)
+            and isinstance(checkpoint.get("targets"), dict)
+            else {}
+        )
+        checkpoint_diagnostics = (
+            list(checkpoint.get("diagnostics", []))
+            if isinstance(checkpoint, dict)
+            and isinstance(checkpoint.get("diagnostics"), list)
+            else []
+        )
+
+        def diagnose_checkpoint(code: str, **fields: Any) -> None:
+            if len(checkpoint_diagnostics) >= 32:
+                return
+            diagnostic = {"code": code}
+            diagnostic.update(fields)
+            if diagnostic not in checkpoint_diagnostics:
+                checkpoint_diagnostics.append(diagnostic)
+            if isinstance(checkpoint, dict):
+                checkpoint["malformed"] = True
+
+        if isinstance(checkpoint, dict):
+            for target_id, _target in goal_targets:
+                if target_id not in checkpoint_targets:
+                    diagnose_checkpoint(
+                        "checkpoint_target_missing",
+                        target_id=target_id,
+                    )
+
+        def target_checkpoint_diagnostics(
+            target_id: str,
+        ) -> list[dict[str, Any]]:
+            return [
+                diagnostic
+                for diagnostic in checkpoint_diagnostics
+                if diagnostic.get("target_id") in {None, target_id}
+            ]
+
         records = self.research_envelopes(
             _inspection_context=inspection,
         )
@@ -6679,6 +7465,9 @@ class V5LifecycleManager:
             records,
             inspection,
         )
+        semantic_successor_index = self._campaign_semantic_successor_index(
+            bases
+        )
         prepared: list[dict[str, Any]] = []
         goal_work_keys: set[str] = set()
         for target_id, target in goal_targets:
@@ -6689,6 +7478,343 @@ class V5LifecycleManager:
             if not isinstance(label, str) or not label.strip():
                 raise ValueError("Campaign research_goal label must be nonempty")
             root = bases.get(root_id)
+            checkpoint_target = checkpoint_targets.get(target_id)
+            if isinstance(checkpoint_target, dict):
+                root_claim = (
+                    root["claim"]
+                    if isinstance(root, dict)
+                    and isinstance(root.get("claim"), str)
+                    else ""
+                )
+                active_head_ids = checkpoint_target.get(
+                    "active_head_research_ids", []
+                )
+                attained_ids = checkpoint_target.get(
+                    "attained_checkpoint_research_ids", []
+                )
+                if not isinstance(active_head_ids, list):
+                    active_head_ids = []
+                if not isinstance(attained_ids, list):
+                    attained_ids = []
+                head_work_keys: list[tuple[str, str]] = []
+                head_action_root_ids: dict[str, str] = {}
+                invalid_head_ids: list[str] = []
+                invalid_attained_ids: list[str] = []
+                valid_attained_ids: list[str] = []
+                for head_id in active_head_ids[:8]:
+                    head = bases.get(head_id)
+                    if (
+                        not isinstance(head, dict)
+                        or self._checkpoint_research_campaign_ids(
+                            head_id,
+                            bases,
+                        )
+                        != frozenset({campaign_id})
+                    ):
+                        invalid_head_ids.append(head_id)
+                        continue
+                    action_root_id = head_id
+                    production_source_id = semantic_successor_index[
+                        "production_source_by_product"
+                    ].get(head_id)
+                    head_metadata = head.get("metadata")
+                    provenance = (
+                        head_metadata.get("assignment_provenance")
+                        if isinstance(head_metadata, dict)
+                        else None
+                    )
+                    task_binding = (
+                        head_metadata.get("task_binding")
+                        if isinstance(head_metadata, dict)
+                        else None
+                    )
+                    if (
+                        isinstance(production_source_id, str)
+                        and production_source_id in bases
+                        and isinstance(provenance, dict)
+                        and isinstance(task_binding, dict)
+                        and provenance.get("adverse_assignment") is False
+                        and provenance.get("assignment_id")
+                        == task_binding.get("assignment_id")
+                        and provenance.get("round_id")
+                        == task_binding.get("round_id")
+                        and provenance.get("task_card_sha256")
+                        == task_binding.get("task_card_sha256")
+                        and self._checkpoint_research_campaign_ids(
+                            production_source_id,
+                            bases,
+                        )
+                        == frozenset({campaign_id})
+                    ):
+                        # A frozen product is a valid semantic checkpoint head,
+                        # but its next lifecycle action belongs to the exact
+                        # production task root named by the bound return.  This
+                        # read-only redirect prevents "produce the product"
+                        # recursion while preserving the product as Main's
+                        # chosen semantic object.
+                        action_root_id = production_source_id
+                    work_key = work_keys[action_root_id]
+                    head_work_keys.append((head_id, work_key))
+                    head_action_root_ids[head_id] = action_root_id
+                    goal_work_keys.add(work_key)
+                if invalid_head_ids:
+                    diagnose_checkpoint(
+                        "checkpoint_active_head_missing_or_cross_campaign",
+                        target_id=target_id,
+                        research_ids=invalid_head_ids,
+                    )
+                for attained_id in attained_ids[:8]:
+                    attained = bases.get(attained_id)
+                    if (
+                        not isinstance(attained, dict)
+                        or self._checkpoint_research_campaign_ids(
+                            attained_id,
+                            bases,
+                        )
+                        != frozenset({campaign_id})
+                    ):
+                        invalid_attained_ids.append(attained_id)
+                    else:
+                        valid_attained_ids.append(attained_id)
+                if invalid_attained_ids:
+                    diagnose_checkpoint(
+                        "checkpoint_attained_missing_or_cross_campaign",
+                        target_id=target_id,
+                        research_ids=invalid_attained_ids,
+                    )
+                attained_semantic_successors: list[dict[str, Any]] = []
+                terminal_successor_ids: set[str] = set()
+                checkpointed_research_ids = set(active_head_ids).union(
+                    attained_ids
+                )
+                active_head_semantic_successors: list[dict[str, Any]] = []
+                head_terminal_ids: dict[str, list[str]] = {}
+                current_active_head_ids: list[str] = []
+                stale_active_head_ids: list[str] = []
+                for head_id, _work_key in head_work_keys:
+                    summary, terminal_ids = (
+                        self._campaign_attained_semantic_successor_summary(
+                            attained_research_id=head_id,
+                            campaign_id=campaign_id,
+                            bases=bases,
+                            index=semantic_successor_index,
+                        )
+                    )
+                    summary["checkpoint_active_head_research_id"] = (
+                        summary.pop("attained_research_id")
+                    )
+                    head_terminal_ids[head_id] = terminal_ids
+                    if summary["successor_count"]:
+                        stale_active_head_ids.append(head_id)
+                        summary["projection_scope"] = (
+                            "exact_workflow_successors_of_checkpoint_head"
+                        )
+                        active_head_semantic_successors.append(summary)
+                        candidates = summary[
+                            "current_route_research_ids"
+                        ]
+                    else:
+                        candidates = [head_id]
+                    for candidate_id in candidates:
+                        if candidate_id not in current_active_head_ids:
+                            current_active_head_ids.append(candidate_id)
+                successor_root_ids: list[str] = []
+                for attained_id in valid_attained_ids:
+                    summary, terminal_ids = (
+                        self._campaign_attained_semantic_successor_summary(
+                            attained_research_id=attained_id,
+                            campaign_id=campaign_id,
+                            bases=bases,
+                            index=semantic_successor_index,
+                        )
+                    )
+                    if summary["successor_count"]:
+                        successor_root_ids.append(attained_id)
+                    new_terminal_ids = sorted(
+                        set(terminal_ids).difference(
+                            checkpointed_research_ids
+                        )
+                    )
+                    if new_terminal_ids:
+                        summary["projection_scope"] = (
+                            "uncheckpointed_terminal_routes_only"
+                        )
+                        attained_semantic_successors.append(summary)
+                        terminal_successor_ids.update(new_terminal_ids)
+                uncheckpointed_terminal_ids = sorted(
+                    terminal_successor_ids
+                )
+                recovery_id = checkpoint_target.get(
+                    "recovery_root_research_id"
+                )
+                recovery_provided = bool(
+                    checkpoint_target.get("recovery_root_provided")
+                )
+                if not recovery_provided:
+                    diagnose_checkpoint(
+                        "checkpoint_recovery_root_missing",
+                        target_id=target_id,
+                    )
+                    recovery_id = root_id
+                    recovery_source = "immutable_campaign_anchor_fallback"
+                else:
+                    recovery = (
+                        bases.get(recovery_id)
+                        if isinstance(recovery_id, str)
+                        else None
+                    )
+                    if (
+                        not isinstance(recovery, dict)
+                        or self._checkpoint_research_campaign_ids(
+                            recovery_id,
+                            bases,
+                        )
+                        != frozenset({campaign_id})
+                    ):
+                        if isinstance(recovery_id, str):
+                            diagnose_checkpoint(
+                                "checkpoint_recovery_root_missing_or_"
+                                "cross_campaign",
+                                target_id=target_id,
+                                research_ids=[recovery_id],
+                            )
+                        recovery_id = root_id
+                        recovery_source = (
+                            "immutable_campaign_anchor_fallback"
+                        )
+                    else:
+                        recovery_source = "explicit_checkpoint_root"
+                diagnostics = target_checkpoint_diagnostics(target_id)
+                prepared.append(
+                    {
+                        "target_id": target_id,
+                        "label": label,
+                        "root_research_id": root_id,
+                        "root_claim": root_claim,
+                        "frontier_source": "main_checkpoint",
+                        "frontier_generation": checkpoint.get("generation"),
+                        "frontier_checkpoint_event_id": checkpoint.get(
+                            "event_id"
+                        ),
+                        "active_head_research_ids": active_head_ids[:8],
+                        "current_active_head_research_ids": (
+                            current_active_head_ids[:8]
+                        ),
+                        "current_active_head_count": len(
+                            current_active_head_ids
+                        ),
+                        "current_active_head_ids_sha256": sha256_json(
+                            current_active_head_ids
+                        ),
+                        "stale_active_head_research_ids": (
+                            stale_active_head_ids[:8]
+                        ),
+                        "active_head_semantic_successors": (
+                            active_head_semantic_successors
+                        ),
+                        "active_head_selection_effect": "none",
+                        "active_head_workflow_roots": [
+                            {
+                                "active_head_research_id": head_id,
+                                "workflow_root_research_id": (
+                                    head_action_root_ids[head_id]
+                                ),
+                                "selection_effect": "none",
+                            }
+                            for head_id, _work_key in head_work_keys
+                        ],
+                        "attained_checkpoint_research_ids": attained_ids[:8],
+                        "attained_semantic_successors": (
+                            attained_semantic_successors
+                        ),
+                        "attained_successor_root_count": len(
+                            successor_root_ids
+                        ),
+                        "attained_successor_root_ids_sha256": sha256_json(
+                            sorted(successor_root_ids)
+                        ),
+                        "uncheckpointed_terminal_successor_research_ids": (
+                            uncheckpointed_terminal_ids[:8]
+                        ),
+                        "uncheckpointed_terminal_successor_count": len(
+                            uncheckpointed_terminal_ids
+                        ),
+                        "uncheckpointed_terminal_successor_ids_sha256": (
+                            sha256_json(uncheckpointed_terminal_ids)
+                        ),
+                        "terminal_successor_selection_effect": "none",
+                        "recovery_root_research_id": recovery_id,
+                        "recovery_root_source": recovery_source,
+                        "checkpoint_main_disposition": checkpoint_target.get(
+                            "main_disposition", ""
+                        ),
+                        # A diagnostic about a different target must not make
+                        # every otherwise valid target look malformed.
+                        "checkpoint_malformed": bool(diagnostics),
+                        "checkpoint_refresh_recommended": bool(
+                            diagnostics
+                            or stale_active_head_ids
+                            or uncheckpointed_terminal_ids
+                        ),
+                        "checkpoint_refresh_reasons": sorted(
+                            {
+                                *(
+                                    ["checkpoint_diagnostic"]
+                                    if diagnostics
+                                    else []
+                                ),
+                                *(
+                                    ["active_head_has_newer_terminal_successor"]
+                                    if stale_active_head_ids
+                                    else []
+                                ),
+                                *(
+                                    ["attained_checkpoint_has_unrecorded_terminal_successor"]
+                                    if uncheckpointed_terminal_ids
+                                    else []
+                                ),
+                            }
+                        ),
+                        "invalid_head_research_ids": invalid_head_ids,
+                        "invalid_attained_checkpoint_research_ids": (
+                            invalid_attained_ids
+                        ),
+                        "checkpoint_diagnostic_codes": [
+                            diagnostic["code"]
+                            for diagnostic in diagnostics
+                        ],
+                        "_head_work_keys": head_work_keys,
+                        "_head_action_root_ids": head_action_root_ids,
+                        "_head_terminal_ids": head_terminal_ids,
+                        "_uncheckpointed_terminal_ids": (
+                            uncheckpointed_terminal_ids
+                        ),
+                        "_work_key_sha256s": [
+                            work_key for _, work_key in head_work_keys
+                        ],
+                        "_checkpoint_diagnostics": diagnostics,
+                    }
+                )
+                continue
+            checkpoint_fallback: dict[str, Any] = {}
+            if isinstance(checkpoint, dict):
+                diagnostics = target_checkpoint_diagnostics(target_id)
+                checkpoint_fallback = {
+                    "frontier_source": "immutable_anchor_fallback",
+                    "frontier_generation": checkpoint.get("generation"),
+                    "frontier_checkpoint_event_id": checkpoint.get(
+                        "event_id"
+                    ),
+                    "recovery_root_research_id": root_id,
+                    "recovery_root_source": (
+                        "immutable_campaign_anchor_fallback"
+                    ),
+                    "checkpoint_malformed": True,
+                    "checkpoint_diagnostic_codes": [
+                        diagnostic["code"] for diagnostic in diagnostics
+                    ],
+                    "_checkpoint_diagnostics": diagnostics,
+                }
             if root is None:
                 prepared.append(
                     {
@@ -6704,6 +7830,8 @@ class V5LifecycleManager:
                         "actionable_research_ids": [],
                         "root_claim": "",
                         "_work_key_sha256": None,
+                        "_work_key_sha256s": [],
+                        **checkpoint_fallback,
                     }
                 )
                 continue
@@ -6726,6 +7854,8 @@ class V5LifecycleManager:
                         "actionable_research_ids": [],
                         "root_claim": "",
                         "_work_key_sha256": None,
+                        "_work_key_sha256s": [],
+                        **checkpoint_fallback,
                     }
                 )
                 continue
@@ -6738,6 +7868,8 @@ class V5LifecycleManager:
                     "root_research_id": root_id,
                     "root_claim": root["claim"],
                     "_work_key_sha256": work_key,
+                    "_work_key_sha256s": [work_key],
+                    **checkpoint_fallback,
                 }
             )
 
@@ -6775,8 +7907,381 @@ class V5LifecycleManager:
                 )
             )
 
+        # A Campaign checkpoint may deliberately keep the durable production
+        # task as its active head while recording the ingested product as
+        # attained.  A subsequently planned supervision node is operational
+        # evidence, not a new mathematical frontier choice.  Decide freshness
+        # only after exact round actions are visible so an in-flight plan does
+        # not force Main to rewrite the checkpoint after every workflow step.
+        # Productive reviews, COW tasks, completed review results, and other
+        # uncheckpointed semantic terminals still make the head stale.
+        for item in prepared:
+            if item.get("frontier_source") != "main_checkpoint":
+                continue
+            checkpointed_ids = set(
+                item.get("active_head_research_ids", [])
+            ).union(item.get("attained_checkpoint_research_ids", []))
+            stale_head_ids: list[str] = []
+            current_head_ids: list[str] = []
+            suppressed_plan_ids: set[str] = set()
+            for head_id, work_key in item["_head_work_keys"]:
+                summary = next(
+                    (
+                        candidate
+                        for candidate in item[
+                            "active_head_semantic_successors"
+                        ]
+                        if candidate.get(
+                            "checkpoint_active_head_research_id"
+                        )
+                        == head_id
+                    ),
+                    None,
+                )
+                if summary is None:
+                    current_head_ids.append(head_id)
+                    continue
+                terminal_ids = set(
+                    item["_head_terminal_ids"].get(head_id, [])
+                )
+                uncheckpointed_ids = terminal_ids.difference(
+                    checkpointed_ids
+                )
+                action = inspection.frontier_group_actions[work_key]
+                pending_reason = str(action.get("pending_reason", ""))
+                in_flight_plan_ids = uncheckpointed_ids.intersection(
+                    semantic_successor_index["supervision_plans"]
+                )
+                plan_only_in_flight = bool(uncheckpointed_ids) and (
+                    in_flight_plan_ids == uncheckpointed_ids
+                    and action.get("next_action")
+                    in {"await_return", "ingest_return"}
+                    and pending_reason.startswith("supervision_")
+                )
+                if not uncheckpointed_ids or plan_only_in_flight:
+                    current_head_ids.append(head_id)
+                    summary["checkpoint_refresh_required"] = False
+                    summary["checkpoint_route_state"] = (
+                        "current_with_in_flight_supervision"
+                        if plan_only_in_flight
+                        else "current_with_checkpointed_successors"
+                    )
+                    if plan_only_in_flight:
+                        bounded_plans = sorted(in_flight_plan_ids)[:8]
+                        summary[
+                            "in_flight_supervision_plan_research_ids"
+                        ] = bounded_plans
+                        suppressed_plan_ids.update(in_flight_plan_ids)
+                    continue
+                stale_head_ids.append(head_id)
+                summary["checkpoint_refresh_required"] = True
+                summary["checkpoint_route_state"] = (
+                    "stale_exact_successor_available"
+                )
+                for candidate_id in summary.get(
+                    "current_route_research_ids", []
+                ):
+                    if candidate_id not in current_head_ids:
+                        current_head_ids.append(candidate_id)
+
+            item["stale_active_head_research_ids"] = stale_head_ids[:8]
+            item["current_active_head_research_ids"] = current_head_ids[:8]
+            item["current_active_head_count"] = len(current_head_ids)
+            item["current_active_head_ids_sha256"] = sha256_json(
+                current_head_ids
+            )
+            remaining_terminal_ids = sorted(
+                set(item["_uncheckpointed_terminal_ids"]).difference(
+                    suppressed_plan_ids
+                )
+            )
+            item[
+                "uncheckpointed_terminal_successor_research_ids"
+            ] = remaining_terminal_ids[:8]
+            item["uncheckpointed_terminal_successor_count"] = len(
+                remaining_terminal_ids
+            )
+            item[
+                "uncheckpointed_terminal_successor_ids_sha256"
+            ] = sha256_json(remaining_terminal_ids)
+            for summary in item.get("attained_semantic_successors", []):
+                terminal_ids = set(
+                    summary.get("terminal_research_ids", [])
+                ).difference(checkpointed_ids)
+                unresolved_ids = terminal_ids.difference(
+                    suppressed_plan_ids
+                )
+                summary["checkpoint_refresh_required"] = bool(
+                    unresolved_ids
+                )
+                summary["checkpoint_route_state"] = (
+                    "stale_exact_successor_available"
+                    if unresolved_ids
+                    else "current_with_in_flight_supervision"
+                )
+                summary[
+                    "uncheckpointed_terminal_research_ids"
+                ] = sorted(unresolved_ids)[:8]
+            diagnostics = item["_checkpoint_diagnostics"]
+            item["checkpoint_refresh_recommended"] = bool(
+                diagnostics or stale_head_ids or remaining_terminal_ids
+            )
+            item["checkpoint_refresh_reasons"] = sorted(
+                {
+                    *(
+                        ["checkpoint_diagnostic"]
+                        if diagnostics
+                        else []
+                    ),
+                    *(
+                        ["active_head_has_newer_terminal_successor"]
+                        if stale_head_ids
+                        else []
+                    ),
+                    *(
+                        [
+                            "attained_checkpoint_has_unrecorded_terminal_successor"
+                        ]
+                        if remaining_terminal_ids
+                        else []
+                    ),
+                }
+            )
+
         coverage: list[dict[str, Any]] = []
         for item in prepared:
+            if item.get("frontier_source") == "main_checkpoint":
+                head_work_keys = item["_head_work_keys"]
+                invalid_head_ids = item["invalid_head_research_ids"]
+                root_claim = item["root_claim"]
+                public = {
+                    key: value
+                    for key, value in item.items()
+                    if not key.startswith("_")
+                }
+                public["_work_key_sha256s"] = item[
+                    "_work_key_sha256s"
+                ]
+                public["_checkpoint_diagnostics"] = item[
+                    "_checkpoint_diagnostics"
+                ]
+                public["root_claim"] = (
+                    root_claim
+                    if len(root_claim) <= 320
+                    else root_claim[:317] + "..."
+                )
+                if invalid_head_ids:
+                    coverage.append(
+                        {
+                            **public,
+                            "coverage_status": "needs_main_choice",
+                            "work_completion_status": "unknown",
+                            "action_class": "semantic_choice",
+                            "next_action": "exact_research_search",
+                            "why_now": (
+                                "campaign_checkpoint_head_missing_or_"
+                                "cross_campaign"
+                            ),
+                            "actionable_research_id": None,
+                            "actionable_round_id": None,
+                            "actionable_research_ids": [],
+                            "active_head_actions": [],
+                        }
+                    )
+                    continue
+                if not head_work_keys:
+                    coverage.append(
+                        {
+                            **public,
+                            "coverage_status": "needs_main_choice",
+                            "work_completion_status": "checkpoint_only",
+                            "action_class": "semantic_choice",
+                            "next_action": "select_frontier_head",
+                            "why_now": "campaign_checkpoint_has_no_active_head",
+                            "actionable_research_id": None,
+                            "actionable_round_id": None,
+                            "actionable_research_ids": [],
+                            "active_head_actions": [],
+                        }
+                    )
+                    continue
+                head_actions: list[dict[str, Any]] = []
+                for head_id, work_key in head_work_keys:
+                    action = inspection.frontier_group_actions[work_key]
+                    completion = inspection.frontier_group_completions[
+                        work_key
+                    ]
+                    successor_summary = next(
+                        (
+                            summary
+                            for summary in item[
+                                "active_head_semantic_successors"
+                            ]
+                            if summary.get(
+                                "checkpoint_active_head_research_id"
+                            )
+                            == head_id
+                        ),
+                        None,
+                    )
+                    head_actions.append(
+                        {
+                            "research_id": head_id,
+                            "workflow_root_research_id": item[
+                                "_head_action_root_ids"
+                            ].get(head_id, head_id),
+                            "checkpoint_head_state": (
+                                successor_summary.get(
+                                    "checkpoint_route_state",
+                                    "stale_exact_successor_available",
+                                )
+                                if successor_summary is not None
+                                else "current"
+                            ),
+                            "current_terminal_research_ids": (
+                                successor_summary.get(
+                                    "terminal_research_ids", []
+                                )
+                                if successor_summary is not None
+                                else [head_id]
+                            ),
+                            "current_route_research_ids": (
+                                successor_summary.get(
+                                    "current_route_research_ids", []
+                                )
+                                if successor_summary is not None
+                                else [head_id]
+                            ),
+                            "terminal_evidence_research_ids": (
+                                successor_summary.get(
+                                    "terminal_evidence_research_ids", []
+                                )
+                                if successor_summary is not None
+                                else []
+                            ),
+                            "work_completion_status": completion[0],
+                            "action_class": self._frontier_action_class(
+                                action["next_action"]
+                            ),
+                            "next_action": action["next_action"],
+                            "why_now": action["pending_reason"],
+                            "actionable_research_id": action[
+                                "actionable_research_id"
+                            ],
+                            "actionable_round_id": action[
+                                "actionable_round_id"
+                            ],
+                        }
+                    )
+                if len(head_actions) == 1:
+                    head_action = head_actions[0]
+                    next_action = head_action["next_action"]
+                    if next_action == "none":
+                        coverage_status = "needs_main_choice"
+                        action_class = "semantic_choice"
+                        goal_next_action = "main_disposition"
+                        why_now = (
+                            "campaign_target_active_after_heads_completed"
+                        )
+                        actionable_research_id = None
+                        actionable_round_id = None
+                    else:
+                        coverage_status = (
+                            "research_open"
+                            if next_action == "production"
+                            else "in_flight"
+                            if next_action == "await_return"
+                            else "needs_main_choice"
+                            if next_action == "main_reconciliation"
+                            else "workflow_pending"
+                        )
+                        action_class = head_action["action_class"]
+                        goal_next_action = next_action
+                        why_now = head_action["why_now"]
+                        actionable_research_id = head_action[
+                            "actionable_research_id"
+                        ]
+                        actionable_round_id = head_action[
+                            "actionable_round_id"
+                        ]
+                    coverage.append(
+                        {
+                            **public,
+                            "coverage_status": coverage_status,
+                            "work_completion_status": head_action[
+                                "work_completion_status"
+                            ],
+                            "action_class": action_class,
+                            "next_action": goal_next_action,
+                            "why_now": why_now,
+                            "actionable_research_id": (
+                                actionable_research_id
+                            ),
+                            "actionable_round_id": actionable_round_id,
+                            "actionable_research_ids": [
+                                actionable_research_id
+                            ]
+                            if isinstance(actionable_research_id, str)
+                            else [],
+                            "active_head_actions": head_actions,
+                        }
+                    )
+                    continue
+                pending_actions = [
+                    action
+                    for action in head_actions
+                    if action["next_action"] != "none"
+                ]
+                next_actions = {
+                    action["next_action"] for action in pending_actions
+                }
+                if not pending_actions:
+                    coverage_status = "needs_main_choice"
+                    action_class = "semantic_choice"
+                    next_action = "main_disposition"
+                elif "main_reconciliation" in next_actions:
+                    coverage_status = "needs_main_choice"
+                    action_class = "semantic_choice"
+                    next_action = "advance_active_heads"
+                elif "await_return" in next_actions:
+                    coverage_status = "in_flight"
+                    action_class = "multi_branch_progress"
+                    next_action = "advance_active_heads"
+                elif "production" in next_actions:
+                    coverage_status = "research_open"
+                    action_class = "multi_branch_progress"
+                    next_action = "advance_active_heads"
+                else:
+                    coverage_status = "workflow_pending"
+                    action_class = "multi_branch_progress"
+                    next_action = "advance_active_heads"
+                actionable_ids: list[str] = []
+                for action in pending_actions:
+                    actionable_id = action["actionable_research_id"]
+                    if (
+                        isinstance(actionable_id, str)
+                        and actionable_id not in actionable_ids
+                    ):
+                        actionable_ids.append(actionable_id)
+                coverage.append(
+                    {
+                        **public,
+                        "coverage_status": coverage_status,
+                        "work_completion_status": "multiple_heads",
+                        "action_class": action_class,
+                        "next_action": next_action,
+                        "why_now": (
+                            "campaign_target_active_after_heads_completed"
+                            if not pending_actions
+                            else "campaign_checkpoint_has_multiple_active_heads"
+                        ),
+                        "actionable_research_id": None,
+                        "actionable_round_id": None,
+                        "actionable_research_ids": actionable_ids[:8],
+                        "active_head_actions": head_actions,
+                    }
+                )
+                continue
             work_key = item["_work_key_sha256"]
             if work_key is None:
                 coverage.append(item)
@@ -6784,17 +8289,34 @@ class V5LifecycleManager:
             action = inspection.frontier_group_actions[work_key]
             completion = inspection.frontier_group_completions[work_key]
             next_action = action["next_action"]
-            coverage_status = (
-                "covered"
-                if next_action == "none"
-                else "research_open"
-                if next_action == "production"
-                else "in_flight"
-                if next_action == "await_return"
-                else "needs_main_choice"
-                if next_action == "main_reconciliation"
-                else "workflow_pending"
-            )
+            if next_action == "none":
+                coverage_status = "needs_main_choice"
+                action_class = "semantic_choice"
+                goal_next_action = "main_disposition"
+                why_now = "campaign_target_active_after_work_completed"
+                actionable_research_id = None
+                actionable_round_id = None
+                actionable_research_ids: list[str] = []
+            else:
+                coverage_status = (
+                    "research_open"
+                    if next_action == "production"
+                    else "in_flight"
+                    if next_action == "await_return"
+                    else "needs_main_choice"
+                    if next_action == "main_reconciliation"
+                    else "workflow_pending"
+                )
+                action_class = self._frontier_action_class(next_action)
+                goal_next_action = next_action
+                why_now = action["pending_reason"]
+                actionable_research_id = action[
+                    "actionable_research_id"
+                ]
+                actionable_round_id = action["actionable_round_id"]
+                actionable_research_ids = action[
+                    "actionable_research_ids"
+                ][:4]
             root_claim = item["root_claim"]
             coverage.append(
                 {
@@ -6806,18 +8328,79 @@ class V5LifecycleManager:
                     ),
                     "coverage_status": coverage_status,
                     "work_completion_status": completion[0],
-                    "action_class": self._frontier_action_class(next_action),
-                    "next_action": next_action,
-                    "why_now": action["pending_reason"],
-                    "actionable_research_id": action[
-                        "actionable_research_id"
-                    ],
-                    "actionable_round_id": action["actionable_round_id"],
-                    "actionable_research_ids": action[
-                        "actionable_research_ids"
-                    ][:4],
+                    "action_class": action_class,
+                    "next_action": goal_next_action,
+                    "why_now": why_now,
+                    "actionable_research_id": actionable_research_id,
+                    "actionable_round_id": actionable_round_id,
+                    "actionable_research_ids": actionable_research_ids,
                 }
             )
+        for item in coverage:
+            next_action = item.get("next_action")
+            reason = item.get("why_now", "")
+            if next_action == "production":
+                next_attention = "production"
+            elif next_action == "repair":
+                next_attention = "repair"
+            elif next_action == "supervision" or (
+                isinstance(reason, str) and reason.startswith("supervision_")
+            ):
+                next_attention = "supervision"
+            elif next_action in {"await_return", "ingest_return"}:
+                next_attention = (
+                    "supervision"
+                    if isinstance(reason, str)
+                    and reason.startswith("supervision_")
+                    else "production"
+                )
+            elif item.get("coverage_status") == "covered":
+                next_attention = "none"
+            else:
+                next_attention = "reconcile"
+            disposition = (
+                "complete"
+                if next_attention == "none"
+                else "in_flight"
+                if item.get("coverage_status") == "in_flight"
+                else "active"
+            )
+            actionable_id = item.get("actionable_research_id")
+            item["next_attention"] = next_attention
+            item["disposition"] = disposition
+            item["attention_basis_research_ids"] = (
+                list(item.get("actionable_research_ids", []))[:8]
+                if isinstance(item.get("actionable_research_ids"), list)
+                else []
+            )
+            item["attention_basis_round_ids"] = (
+                [item["actionable_round_id"]]
+                if isinstance(item.get("actionable_round_id"), str)
+                else []
+            )
+            item["attention_reason"] = reason
+            item["plan_round_argv"] = (
+                self._exact_plan_round_argv(
+                    [actionable_id], campaign_id=campaign_id
+                )
+                if next_action == "production"
+                and isinstance(actionable_id, str)
+                else None
+            )
+            head_actions = item.get("active_head_actions")
+            if isinstance(head_actions, list):
+                for head_action in head_actions:
+                    if not isinstance(head_action, dict):
+                        continue
+                    head_id = head_action.get("actionable_research_id")
+                    head_action["plan_round_argv"] = (
+                        self._exact_plan_round_argv(
+                            [head_id], campaign_id=campaign_id
+                        )
+                        if head_action.get("next_action") == "production"
+                        and isinstance(head_id, str)
+                        else None
+                    )
         return coverage
 
     def frontier_decision_surface(
@@ -6859,16 +8442,76 @@ class V5LifecycleManager:
             _inspection_context=inspection,
         )
         target_ids_by_work_key: dict[str, list[str]] = {}
+        target_ids_by_research_id: dict[str, list[str]] = {}
         for goal in goal_coverage:
-            work_key = goal.get("_work_key_sha256")
-            if isinstance(work_key, str):
+            work_keys = goal.get("_work_key_sha256s")
+            if not isinstance(work_keys, list):
+                work_key = goal.get("_work_key_sha256")
+                work_keys = [work_key] if isinstance(work_key, str) else []
+            for work_key in work_keys:
+                if not isinstance(work_key, str):
+                    continue
                 target_ids_by_work_key.setdefault(work_key, []).append(
                     goal["target_id"]
                 )
+            exact_ids: list[str] = []
+            for field in (
+                "active_head_research_ids",
+                "actionable_research_ids",
+            ):
+                values = goal.get(field)
+                if not isinstance(values, list):
+                    continue
+                for research_id in values:
+                    if (
+                        isinstance(research_id, str)
+                        and research_id not in exact_ids
+                    ):
+                        exact_ids.append(research_id)
+            head_actions = goal.get("active_head_actions")
+            if isinstance(head_actions, list):
+                for action in head_actions:
+                    if not isinstance(action, dict):
+                        continue
+                    for field in (
+                        "research_id",
+                        "actionable_research_id",
+                    ):
+                        research_id = action.get(field)
+                        if (
+                            isinstance(research_id, str)
+                            and research_id not in exact_ids
+                        ):
+                            exact_ids.append(research_id)
+            for research_id in exact_ids:
+                target_ids_by_research_id.setdefault(
+                    research_id, []
+                ).append(goal["target_id"])
 
         projected: list[dict[str, Any]] = []
         for entry in entries:
             next_action = entry["next_action"]
+            derived_next_attention = (
+                "production"
+                if next_action == "production"
+                else "repair"
+                if next_action == "repair"
+                else "supervision"
+                if next_action == "supervision"
+                or str(entry.get("pending_reason", "")).startswith(
+                    "supervision_"
+                )
+                else "none"
+                if next_action == "none"
+                else "reconcile"
+            )
+            derived_disposition = (
+                "in_flight"
+                if next_action in {"await_return", "ingest_return"}
+                else "complete"
+                if next_action == "none"
+                else "active"
+            )
             actionable_id = entry["actionable_research_id"]
             actionable_claim = (
                 entry["actionable_claim"]
@@ -6876,9 +8519,19 @@ class V5LifecycleManager:
                 else ""
             )
             candidate_limit = 4 if next_action == "main_reconciliation" else 1
-            goal_target_ids = target_ids_by_work_key.get(
-                entry["work_key_sha256"], []
+            goal_target_ids: list[str] = list(
+                target_ids_by_work_key.get(entry["work_key_sha256"], [])
             )
+            exact_entry_ids = [entry["research_id"], actionable_id]
+            exact_entry_ids.extend(entry["actionable_research_ids"])
+            for research_id in exact_entry_ids:
+                if not isinstance(research_id, str):
+                    continue
+                for target_id in target_ids_by_research_id.get(
+                    research_id, []
+                ):
+                    if target_id not in goal_target_ids:
+                        goal_target_ids.append(target_id)
             projected.append(
                 {
                     "research_id": entry["research_id"],
@@ -6895,6 +8548,26 @@ class V5LifecycleManager:
                     "action_class": self._frontier_action_class(next_action),
                     "next_action": next_action,
                     "why_now": entry["pending_reason"],
+                    "next_attention": entry.get(
+                        "next_attention", derived_next_attention
+                    ),
+                    "disposition": entry.get(
+                        "disposition", derived_disposition
+                    ),
+                    "attention_basis_research_ids": entry.get(
+                        "attention_basis_research_ids",
+                        entry.get("actionable_research_ids", []),
+                    )[:4],
+                    "attention_basis_round_ids": entry.get(
+                        "attention_basis_round_ids",
+                        [entry["actionable_round_id"]]
+                        if isinstance(entry.get("actionable_round_id"), str)
+                        else [],
+                    )[:4],
+                    "attention_reason": entry.get(
+                        "attention_reason", entry["pending_reason"]
+                    ),
+                    "plan_round_argv": entry.get("plan_round_argv"),
                     "actionable_research_id": actionable_id,
                     "actionable_round_id": entry["actionable_round_id"],
                     "actionable_research_ids": entry[
@@ -6914,6 +8587,51 @@ class V5LifecycleManager:
                     ],
                 }
             )
+        unmapped_campaign_attention: dict[str, Any] | None = None
+        if campaign_id is not None and goal_coverage:
+            goal_mapped = [
+                item
+                for item in projected
+                if item["goal_relevance"] == "direct"
+            ]
+            goal_unmapped = [
+                item
+                for item in projected
+                if item["goal_relevance"] == "none"
+            ]
+            unmapped_ids = [
+                item["research_id"] for item in goal_unmapped
+            ]
+            unmapped_campaign_attention = {
+                "visible_count": len(goal_unmapped),
+                "visible_research_ids": unmapped_ids[:8],
+                "visible_research_ids_sha256": sha256_json(unmapped_ids),
+                "items": [
+                    {
+                        "research_id": item["research_id"],
+                        "claim": (
+                            item["claim"]
+                            if len(item["claim"]) <= 160
+                            else item["claim"][:157] + "..."
+                        ),
+                        "next_action": item["next_action"],
+                        "why_now": item["why_now"],
+                        "actionable_round_id": item[
+                            "actionable_round_id"
+                        ],
+                    }
+                    for item in goal_unmapped[:3]
+                ],
+                "bounded_selection_exhausted": len(entries) >= limit,
+                "selection_effect": "none",
+                "instruction": (
+                    "These Campaign-associated items are not mapped to an "
+                    "active goal target. Main may exact-search and promote a "
+                    "promising item into a target; none is deleted, closed, "
+                    "dispatched, or treated as mathematically irrelevant."
+                ),
+            }
+            projected = goal_mapped
         status = (
             inspection.campaign_statuses[goal_campaign_id]
             if goal_campaign_id is not None
@@ -6923,10 +8641,74 @@ class V5LifecycleManager:
             {
                 key: value
                 for key, value in item.items()
-                if key != "_work_key_sha256"
+                if not key.startswith("_")
             }
             for item in goal_coverage
         ]
+        # An active Campaign is only an advisory hint for an unscoped
+        # frontier.  Its exact Research ids remain useful, but its Campaign id
+        # must not silently filter or bind Main's replay command.
+        for item in clean_coverage:
+            actionable_id = item.get("actionable_research_id")
+            if item.get("next_action") == "production" and isinstance(
+                actionable_id, str
+            ):
+                item["plan_round_argv"] = self._exact_plan_round_argv(
+                    [actionable_id], campaign_id=campaign_id
+                )
+            head_actions = item.get("active_head_actions")
+            if isinstance(head_actions, list):
+                for head_action in head_actions:
+                    if not isinstance(head_action, dict):
+                        continue
+                    head_id = head_action.get("actionable_research_id")
+                    if head_action.get("next_action") == "production" and isinstance(
+                        head_id, str
+                    ):
+                        head_action["plan_round_argv"] = (
+                            self._exact_plan_round_argv(
+                                [head_id], campaign_id=campaign_id
+                            )
+                        )
+        checkpoint_diagnostics: list[dict[str, Any]] = []
+        for item in goal_coverage:
+            diagnostics = item.get("_checkpoint_diagnostics")
+            if not isinstance(diagnostics, list):
+                continue
+            for diagnostic in diagnostics:
+                if (
+                    isinstance(diagnostic, dict)
+                    and diagnostic not in checkpoint_diagnostics
+                    and len(checkpoint_diagnostics) < 32
+                ):
+                    checkpoint_diagnostics.append(diagnostic)
+        refresh_goal_rows = [
+            item
+            for item in clean_coverage
+            if item.get("checkpoint_refresh_recommended") is True
+            or item.get("frontier_source") == "immutable_anchor_fallback"
+        ]
+        checkpoint_refresh_reasons = sorted(
+            {
+                reason
+                for item in refresh_goal_rows
+                for reason in (
+                    item.get("checkpoint_refresh_reasons", [])
+                    if isinstance(
+                        item.get("checkpoint_refresh_reasons"), list
+                    )
+                    else []
+                )
+            }.union(
+                {"checkpoint_target_missing"}
+                if any(
+                    item.get("frontier_source")
+                    == "immutable_anchor_fallback"
+                    for item in refresh_goal_rows
+                )
+                else set()
+            )
+        )
         objective = status.get("objective") if isinstance(status, dict) else None
         if isinstance(objective, str) and len(objective) > 640:
             objective = objective[:637] + "..."
@@ -6936,6 +8718,13 @@ class V5LifecycleManager:
             progress_counts[coverage_status] = (
                 progress_counts.get(coverage_status, 0) + 1
             )
+        queue_policy = (
+            "goal-mapped workflow_queue as operational follow-up, and "
+            "consults unmapped_campaign_attention only when an exact "
+            "side-route search is useful"
+            if unmapped_campaign_attention is not None
+            else "the bounded workflow_queue as operational follow-up"
+        )
         return {
             "campaign_id": campaign_id,
             "goal_campaign_id": goal_campaign_id,
@@ -6958,13 +8747,45 @@ class V5LifecycleManager:
                 "orphaned": progress_counts.get("orphaned", 0),
             },
             "goal_coverage": clean_coverage,
+            "checkpoint_diagnostics": checkpoint_diagnostics,
+            "checkpoint_refresh": {
+                "recommended": bool(refresh_goal_rows),
+                "reason_codes": checkpoint_refresh_reasons,
+                "target_ids": sorted(
+                    {item["target_id"] for item in refresh_goal_rows}
+                ),
+                "selection_effect": "none",
+                "instruction": (
+                    "Main should exact-search the listed Research ids and "
+                    "write one new advisory checkpoint when the semantic "
+                    "choice is clear; this hint neither mutates Campaign "
+                    "state nor blocks planning."
+                    if refresh_goal_rows
+                    else "The latest checkpoint is current under exact "
+                    "recorded workflow successors."
+                ),
+            },
             "workflow_queue": projected,
+            **(
+                {
+                    "unmapped_campaign_attention": (
+                        unmapped_campaign_attention
+                    )
+                }
+                if unmapped_campaign_attention is not None
+                else {}
+            ),
             "main_selection_policy": (
-                "Main compares exact goal coverage with the bounded workflow "
-                "queue and actively chooses one goal-serving action; no entry "
-                "dispatches or admits itself. An active_hint is visible context "
-                "only and must be ignored or revised when it conflicts with the "
-                "current user objective."
+                "Main reads exact goal_coverage first, compares active heads "
+                "and attained checkpoints with their read-only exact terminal "
+                "successor summaries, refreshes a stale advisory checkpoint "
+                "when semantic judgment is clear, then uses "
+                + queue_policy
+                + ". Main actively chooses one "
+                "goal-serving action; no "
+                "entry dispatches or admits itself. "
+                "An active_hint is visible context only and must be ignored or "
+                "revised when it conflicts with the current user objective."
             ),
         }
 
@@ -7076,6 +8897,16 @@ class V5LifecycleManager:
             ],
             "next_action": projection["next_action"],
             "pending_reason": projection["pending_reason"],
+            "next_attention": projection["next_attention"],
+            "disposition": projection["disposition"],
+            "attention_basis_research_ids": projection[
+                "attention_basis_research_ids"
+            ][:8],
+            "attention_basis_round_ids": projection[
+                "attention_basis_round_ids"
+            ][:8],
+            "attention_reason": projection["attention_reason"],
+            "plan_round_argv": projection["plan_round_argv"],
             "actionable_research_id": projection[
                 "actionable_research_id"
             ],
@@ -10900,9 +12731,48 @@ class V5LifecycleManager:
             raise ValueError(
                 "V5 task-card Paper continuation scope drifted or was omitted"
             )
-        if context_ids != source_research["related_research_ids"]:
+        mathematical_state = card["mathematical_state"]
+        reference_revision = mathematical_state.get(
+            "research_reference_revision"
+        )
+        if reference_revision is None:
+            expected_context_ids = source_research["related_research_ids"]
+        elif reference_revision == V5_EXACT_RESEARCH_REFERENCE_REVISION:
+            literal_ids = mathematical_state.get(
+                "literal_research_reference_ids"
+            )
+            if (
+                not isinstance(literal_ids, list)
+                or literal_ids != sorted(set(literal_ids))
+                or any(
+                    not isinstance(item, str)
+                    or MEMORY_ID_RE.fullmatch(item) is None
+                    for item in literal_ids
+                )
+            ):
+                raise ValueError(
+                    "V5 task-card literal Research references are malformed"
+                )
+            literal_tokens = set(
+                self._literal_research_reference_tokens(source_research)
+            )
+            explicit_ids = set(source_research["related_research_ids"])
+            if any(
+                item not in literal_tokens or item in explicit_ids
+                for item in literal_ids
+            ):
+                raise ValueError(
+                    "V5 task-card literal Research references drifted from source prose"
+                )
+            expected_context_ids = sorted(explicit_ids.union(literal_ids))
+        else:
             raise ValueError(
-                "V5 task card research_context does not exactly match Research links"
+                "V5 task-card Research-reference revision is unsupported"
+            )
+        if context_ids != expected_context_ids:
+            raise ValueError(
+                "V5 task card research_context does not exactly match its "
+                "structured and literal Research references"
             )
         task_context_revision = card.get("task_context_revision")
         if task_context_revision is not None:
@@ -11415,6 +13285,123 @@ class V5LifecycleManager:
             _inspection_context=_inspection_context,
         )
 
+    @staticmethod
+    def _exact_plan_round_argv(
+        research_ids: list[str],
+        *,
+        campaign_id: str | None,
+        requested_mode: str = "auto",
+    ) -> list[str]:
+        """Build a copy-safe exact Research selection for Main."""
+
+        normalized_ids = [validate_memory_id(item) for item in research_ids]
+        if not normalized_ids or len(normalized_ids) != len(set(normalized_ids)):
+            raise ValueError("exact plan-round argv requires unique Research ids")
+        if requested_mode != "auto" and requested_mode not in WORK_MODES:
+            raise ValueError("exact plan-round argv mode is invalid")
+        argv = [
+            "plan-round",
+            "--workers",
+            str(len(normalized_ids)),
+            "--mode",
+            requested_mode,
+        ]
+        if campaign_id is not None:
+            argv.extend(["--campaign", validate_campaign_id(campaign_id)])
+        for research_id in normalized_ids:
+            argv.extend(["--memory-id", research_id])
+        return argv
+
+    @classmethod
+    def _plan_round_selection_receipt(
+        cls,
+        *,
+        selected_research_ids: list[str],
+        research_ids_were_explicit: bool,
+        campaign_id: str | None,
+        requested_mode: str,
+    ) -> dict[str, Any]:
+        selection_source = (
+            "explicit_research_ids"
+            if research_ids_were_explicit
+            else "campaign_frontier"
+            if campaign_id is not None
+            else "global_frontier"
+        )
+        return {
+            "revision": "chalxius-v5-plan-round-selection-1",
+            "selection_source": selection_source,
+            "selected_research_ids": list(selected_research_ids),
+            "campaign_id": campaign_id,
+            "requested_mode": requested_mode,
+            "exact_replay_argv": cls._exact_plan_round_argv(
+                list(selected_research_ids),
+                campaign_id=campaign_id,
+                requested_mode=requested_mode,
+            ),
+        }
+
+    @classmethod
+    def _validate_plan_round_selection_receipt(
+        cls,
+        value: Any,
+        *,
+        assignments: list[dict[str, Any]],
+        campaign_scope: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        expected = {
+            "revision",
+            "selection_source",
+            "selected_research_ids",
+            "campaign_id",
+            "requested_mode",
+            "exact_replay_argv",
+        }
+        if not isinstance(value, dict) or set(value) != expected:
+            raise ValueError("plan-round selection receipt fields are not exact")
+        if value["revision"] != "chalxius-v5-plan-round-selection-1":
+            raise ValueError("plan-round selection receipt revision is invalid")
+        if value["selection_source"] not in {
+            "explicit_research_ids",
+            "campaign_frontier",
+            "global_frontier",
+        }:
+            raise ValueError("plan-round selection source is invalid")
+        if any(not isinstance(item, dict) for item in assignments):
+            raise ValueError("plan-round selection assignments are malformed")
+        selected = [
+            item["research_id"]
+            for item in assignments
+            if item.get("assignment_role") != "paired_adverse"
+        ]
+        if value["selected_research_ids"] != selected:
+            raise ValueError("plan-round selected Research ids drifted")
+        expected_campaign = (
+            campaign_scope["campaign_id"]
+            if campaign_scope is not None
+            else None
+        )
+        if value["campaign_id"] != expected_campaign:
+            raise ValueError("plan-round selection Campaign drifted")
+        if (
+            value["selection_source"] == "campaign_frontier"
+            and expected_campaign is None
+        ):
+            raise ValueError("Campaign frontier selection lacks Campaign scope")
+        if (
+            value["selection_source"] == "global_frontier"
+            and expected_campaign is not None
+        ):
+            raise ValueError("global frontier selection carries Campaign scope")
+        expected_argv = cls._exact_plan_round_argv(
+            selected,
+            campaign_id=expected_campaign,
+            requested_mode=value["requested_mode"],
+        )
+        if value["exact_replay_argv"] != expected_argv:
+            raise ValueError("plan-round exact replay argv drifted")
+        return value
+
     def prepare_candidate_adverse_target(
         self,
         selected_research_id: str,
@@ -11852,7 +13839,14 @@ class V5LifecycleManager:
                 raise ValueError(
                     "Research supervision accepts one to three distinct supported scopes"
                 )
-            inapplicable = sorted(set(chosen).difference(applicable))
+            # Primary scopes are Main-selectable over the exact frozen
+            # component even when the sparse automatic selector omitted them.
+            # Integration retains its structural cross-primary definition.
+            inapplicable = sorted(
+                scope
+                for scope in set(chosen).difference(applicable)
+                if scope == "integration"
+            )
             if inapplicable:
                 raise ValueError(
                     "Research supervisor scopes do not apply to this production: "
@@ -11984,13 +13978,10 @@ class V5LifecycleManager:
         )
         supervisor_ids: list[str] = []
         for scope in chosen:
-            scoped_receipts = [
-                descriptor
-                for descriptor in descriptors
-                if self._supervisor_scope_applies(scope, descriptor)
-            ]
-            if scope == "integration" and scope not in applicable:
-                scoped_receipts = []
+            scoped_receipts = self._research_supervision_scope_receipts(
+                scope,
+                descriptors,
+            )
             binding_revision = (
                 V5_RESEARCH_SUPERVISION_REVISION
                 if source_component is not None
@@ -12849,6 +14840,13 @@ class V5LifecycleManager:
                 research_id: self._source_research_dossier(record)
                 for research_id, record in source_records.items()
             }
+            literal_reference_ids = {
+                research_id: self._resolvable_literal_research_reference_ids(
+                    record,
+                    _inspection_context=inspection,
+                )
+                for research_id, record in source_records.items()
+            }
             authority_snapshots = {
                 research_id: self._task_authority_snapshot(
                     record,
@@ -13033,6 +15031,19 @@ class V5LifecycleManager:
                     snapshot_relpath=campaign_snapshot_relpath,
                     snapshot_sha256=sha256_bytes(campaign_snapshot_raw),
                 )
+            selection_receipt: dict[str, Any] | None = None
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+            ):
+                selection_receipt = self._plan_round_selection_receipt(
+                    selected_research_ids=[
+                        item["research_id"] for item in selected
+                    ],
+                    research_ids_were_explicit=research_ids is not None,
+                    campaign_id=campaign_id,
+                    requested_mode=mode,
+                )
             final_round_dir = self.store.rounds_dir / round_id
             round_dir = self.store.rounds_dir / (
                 f".{round_id}.staging-"
@@ -13189,7 +15200,12 @@ class V5LifecycleManager:
                 related_artifacts.extend(
                     typed_artifacts_by_research[entry["research_id"]]
                 )
-                for related_id in entry["related_research_ids"]:
+                context_research_ids = sorted(
+                    set(entry["related_research_ids"]).union(
+                        literal_reference_ids[entry["research_id"]]
+                    )
+                )
+                for related_id in context_research_ids:
                     related_record = self._inspection_research_record(
                         related_id,
                         inspection,
@@ -13324,6 +15340,12 @@ class V5LifecycleManager:
                         "source_research_dossier": source_dossiers[
                             entry["research_id"]
                         ],
+                        "research_reference_revision": (
+                            V5_EXACT_RESEARCH_REFERENCE_REVISION
+                        ),
+                        "literal_research_reference_ids": (
+                            literal_reference_ids[entry["research_id"]]
+                        ),
                         "research_context": research_context,
                         "related_artifacts": related_artifacts,
                         "authority_snapshot": authority_snapshots[
@@ -13474,6 +15496,8 @@ class V5LifecycleManager:
                 manifest_semantic["campaign_scope"] = campaign_scope
             if research_cycle is not None:
                 manifest_semantic["research_cycle"] = research_cycle
+            if selection_receipt is not None:
+                manifest_semantic["selection_receipt"] = selection_receipt
             if supervision_components is not None:
                 manifest_semantic["supervision_components"] = (
                     supervision_components
@@ -13528,6 +15552,8 @@ class V5LifecycleManager:
             required.add("campaign_scope")
         if "research_cycle" in manifest:
             required.add("research_cycle")
+        if "selection_receipt" in manifest:
+            required.add("selection_receipt")
         if "supervision_components" in manifest:
             required.add("supervision_components")
         current_allocation_fields = {
@@ -13572,6 +15598,20 @@ class V5LifecycleManager:
         assignments = manifest.get("assignments")
         if not isinstance(assignments, list) or not assignments:
             raise ValueError("V5 round assignments must be nonempty")
+        selection_receipt = manifest.get("selection_receipt")
+        if selection_receipt is not None:
+            if (
+                research_cycle is None
+                or research_cycle["subround"] != "production"
+            ):
+                raise ValueError(
+                    "plan-round selection receipt requires a production round"
+                )
+            selection_receipt = self._validate_plan_round_selection_receipt(
+                selection_receipt,
+                assignments=assignments,
+                campaign_scope=campaign_scope,
+            )
         current_allocation = "assignment_contract_revision" in manifest
         pair_records: list[dict[str, Any]] = []
         if current_allocation:

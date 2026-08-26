@@ -1,10 +1,105 @@
-# Chalxius 0.8.12 architecture findings and residual boundaries
+# Chalxius 0.9.7 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.8.12
-**Semantic Recovery**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.9.7
+**Frontier Continuity**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.9.7 Frontier Continuity
+
+The 0.9.6 decision surface could stop too early on deep legacy repair/COW
+lineage, classify an already ingested product as a fresh production task, and
+let goal-unmapped historical Campaign items consume the complete bounded Main
+queue. It also left candidate selection vulnerable to stale directory names
+and allowed mechanism-worthy observations to remain only in conversation
+memory after reconnect or compaction.
+
+The integrated repair follows exact task bindings and narrowly recognized
+legacy repair relations, keeps in-flight supervision attached to its stable
+workflow root, and separates active-goal work from bounded unmapped attention.
+A read-only candidate-identity projection reports exact manifest and worktree
+state; concise Main guidance recovers CHX observations across continuation
+boundaries. These surfaces remain advisory. They do not infer mathematical
+relevance, select or dispatch work, mutate Campaign or Research state, create a
+monitor or compatibility layer, or affect truth authority.
+
+Self-test reports the current SKILL line count as a context-cost observation
+but no longer turns an arbitrary formatting threshold into an installation
+gate. Exact manifest, metadata, behavior, and authority checks remain strict.
+
+## 0.9.6 Frontier Freshness
+
+Installed 0.9.5 made exact attained-checkpoint successors visible but did not
+tell Main when a checkpoint's active heads had themselves become stale. It also
+kept ordinary `search` and `show` Fact-only and let one target diagnostic mark
+unrelated Campaign rows malformed. The successor repairs all three on existing
+read surfaces: typed Main navigation includes immutable Research; stale heads
+expose productive current routes separately from clean review evidence; and a
+bounded refresh recommendation remains advisory and nonmutating. Exact legacy
+COW edges do not need a later optional repair-spec field merely to be visible.
+
+Main still owns semantic selection and checkpoint authorship. The runtime does
+not continuously refresh Campaign state, infer relevance, dispatch work, or
+add a monitor, scheduler, persistent index, compatibility layer, Candidate
+condition, or Fact gate.
+
+## 0.9.5 Exact Frontier Context
+
+Campaign checkpoints remain Main-authored advisory records rather than
+self-updating pointers. Their read projection now exposes exact uncheckpointed
+terminal workflow successors, which prevents an attained but stale root from
+hiding later production or supervision. The output is deliberately bounded and
+nonselecting; Main still judges mathematical relevance and direction.
+
+Exact Research ids named in a selected source's prose are now directly frozen
+as predecessor context only when the corresponding current Research exists and
+validates. This removes a brittle dependence on one structured field but does
+not interpret vague prose or infer relevance. Historical cards are unchanged.
+
+## 0.9.4 Campaign History Compaction
+
+Long Campaigns remain append-only and may grow without an event-count limit.
+The former planning envelope copied every historical update into every round,
+so a healthy Campaign eventually crossed a 256 KiB cap and could no longer
+enter production or supervision. New scope-2 snapshots freeze only active
+current semantics and an ordered history-prefix commitment. Tail append stays
+valid; prefix rewrite, reorder, and truncation fail closed. The cap remains a
+guard on anomalously large current state, not on project age.
+
+Routine `campaign-status` is one bounded current view rather than a history
+browser: it includes the latest minimal frontier checkpoint and a fixed recent
+event-summary tail. There is deliberately no paging or cursor protocol. Exact
+old bytes remain readable at `campaigns/CAMPAIGN_ID/events.jsonl` for targeted
+forensics. Future checkpoints store only routing identifiers and a concise
+Main disposition; existing verbose generations are neither rewritten nor
+deleted. Copy-on-write repair rounds now inherit the repaired Research's exact
+Campaign together with the repair node and never infer `ACTIVE`. Main's worker
+opportunity instruction is also narrowed: parallel mathematical production
+and review should use genuine independent slots, while ordinary engineering is
+delegated only when its coordination-adjusted critical path is shorter.
+
+## 0.9.3 Integrated Frontier Cleanup
+
+Six field CHX defects are repaired together: Main's exact selection is
+frozen in new production manifests; Research and Campaign binding is atomic;
+frontier rows expose compact next attention and semantic disposition; live
+supervision is visible before the new-supervisor safety recommendation; the
+parallel Brave Future/goal-intake command family is removed without aliases;
+and CHX ledger liveness is explicit, bounded, and administratively disposable
+by content-addressed copy-on-write records. Administrative ledger disposition
+never resolves or hides an issue and is excluded from the global issue
+snapshot hash. Existing Research, rounds, products, Campaigns, Candidate
+Releases, decisions, admissions, and Facts are not rewritten.
+
+Final validation exposed three release-integration CHX findings before
+installation: one behavioral feature reused a test for two distinct probe
+roles; the capability/behavior registries omitted or misbound new public
+surfaces; and all new mutants were initially placed in the bounded routine
+semantic profile. The candidate now has distinct positive/predicate-false/
+tamper probes, zero topology or behavior orphans, a 32-mutant routine semantic
+profile, and a complete 144-mutant forensic registry. These repairs simplify
+release evidence; they add no runtime gate or truth authority.
 
 ## 0.8.12 Semantic Recovery
 

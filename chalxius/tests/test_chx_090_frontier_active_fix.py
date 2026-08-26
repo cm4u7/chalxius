@@ -186,6 +186,120 @@ class FrontierActiveFix090Tests(unittest.TestCase):
             self.assertEqual(action["actionable_research_id"], product_id)
             self.assertEqual(action["actionable_round_id"], round_id)
 
+    def test_live_supervision_precedes_pre_supervision_product_safety(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = self._store(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            root_id = "a" * 12
+            product_id = "b" * 12
+            production_round = "round-20260825T000000Z-00000001"
+            supervision_round = "round-20260825T000000Z-00000002"
+            bases = {
+                root_id: self._record(
+                    root_id, created_at="2026-08-25T00:00:00Z"
+                ),
+                # No obligation dispositions: deliberately unsafe for a new
+                # automatic supervision suggestion.
+                product_id: self._record(
+                    product_id,
+                    created_at="2026-08-25T00:01:00Z",
+                    kind="evidence",
+                    related=[root_id],
+                ),
+            }
+            inspection = RoundInspectionContext(
+                completion_obligation_rounds={
+                    root_id: [(production_round, "production")]
+                },
+                supervision_round_ids_by_production_round={
+                    production_round: [supervision_round]
+                },
+            )
+
+            def project(supervision_state: str) -> dict[str, object]:
+                statuses = {
+                    production_round: {
+                        "assignments": [
+                            {
+                                "research_id": root_id,
+                                "assignment_role": "primary",
+                                "state": "ingested",
+                                "research_product_id": product_id,
+                            }
+                        ]
+                    },
+                    supervision_round: {
+                        "assignments": [{"state": supervision_state}]
+                    },
+                }
+                with patch.object(
+                    lifecycle,
+                    "_round_status_with_context",
+                    side_effect=lambda round_id, _context: statuses[round_id],
+                ):
+                    return _project_research_action(
+                        lifecycle,
+                        research_id=root_id,
+                        bases=bases,
+                        dispositions={},
+                        route_staleness={},
+                        inspection=inspection,
+                    )
+
+            awaiting = project("awaiting_return")
+            self.assertEqual(awaiting["next_action"], "await_return")
+            self.assertEqual(
+                awaiting["pending_reason"], "supervision_round_in_flight"
+            )
+            returned = project("return_present")
+            self.assertEqual(returned["next_action"], "ingest_return")
+            self.assertEqual(
+                returned["pending_reason"], "supervision_return_present"
+            )
+            completed = project("ingested")
+            self.assertEqual(completed["next_action"], "main_reconciliation")
+            self.assertEqual(
+                completed["pending_reason"],
+                "ingested_product_not_safe_for_automatic_routing",
+            )
+
+            no_supervision = RoundInspectionContext(
+                completion_obligation_rounds={
+                    root_id: [(production_round, "production")]
+                },
+                supervision_round_ids_by_production_round={},
+            )
+            with patch.object(
+                lifecycle,
+                "_round_status_with_context",
+                return_value={
+                    "assignments": [
+                        {
+                            "research_id": root_id,
+                            "assignment_role": "primary",
+                            "state": "ingested",
+                            "research_product_id": product_id,
+                        }
+                    ]
+                },
+            ):
+                action = _project_research_action(
+                    lifecycle,
+                    research_id=root_id,
+                    bases=bases,
+                    dispositions={},
+                    route_staleness={},
+                    inspection=no_supervision,
+                )
+            self.assertEqual(action["next_action"], "main_reconciliation")
+            self.assertEqual(
+                action["pending_reason"],
+                "ingested_product_not_safe_for_automatic_routing",
+            )
+
     def test_multiple_ingested_products_require_main_reconciliation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             lifecycle = self._store(

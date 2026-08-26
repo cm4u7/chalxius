@@ -147,6 +147,23 @@ def default_focused_test_runner(root: Path) -> None:
             "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
             "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
             "test_chx_090_frontier_active_fix.FrontierActiveFix090Tests",
+            "test_chx_093_integrated_cleanup.IntegratedCleanup093Tests",
+            (
+                "test_chx_094_campaign_history_compaction."
+                "CampaignHistoryCompactionTests"
+            ),
+            (
+                "test_chx_095_terminal_frontier_context."
+                "TerminalFrontierContextTests"
+            ),
+            (
+                "test_v5_campaign_envelope.V5CampaignEnvelopeTests."
+                "test_worker_result_preserves_campaign_binding"
+            ),
+            (
+                "test_v5_campaign_envelope.V5CampaignEnvelopeTests."
+                "test_repair_inherits_exact_source_campaign_into_round_scope"
+            ),
             "test_release_validation.ReleaseValidationTests",
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
@@ -155,6 +172,10 @@ def default_focused_test_runner(root: Path) -> None:
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
                 "test_route_invalidations_are_explicit_targets_only"
+            ),
+            (
+                "test_research_two_subround.ResearchTwoSubroundTests."
+                "test_main_can_select_proof_scope_for_literature_complete_successor"
             ),
             (
                 "test_chx_0714_bounded_handoff.BoundedHandoff0714Tests."

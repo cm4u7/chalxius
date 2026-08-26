@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.9.0",
-  "release_codename": "Frontier Active Fix",
-  "release_display_name": "Chalxius 0.9.0 — Frontier Active Fix",
+  "version": "0.9.7",
+  "release_codename": "Frontier Continuity",
+  "release_display_name": "Chalxius 0.9.7 — Frontier Continuity",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
@@ -236,6 +236,10 @@
     "integrated_repair": "latest_complete_resolved_issue_coverage_with_derived_reusable_mechanism_registry_coordination_risk_and_regression_hash_binding",
     "late_issue_policy": "append_superseding_integrated_repair_with_renewed_complete_resolved_issue_coverage",
     "resolved_disposition_gate": "reconnaissance_then_tactical_then_latest_integrated_evidence_binding",
+    "historical_ledger_liveness": "explicit_current_run_ids_plus_content_addressed_cow_administrative_dispositions_without_mtime_or_timeout_guessing",
+    "administrative_disposition_effect": "categorization_only_never_hides_or_resolves_an_issue_and_never_changes_global_issue_snapshot_hash",
+    "inventory_output": "default_eight_rows_per_historical_category_with_count_digest_and_explicit_full_override",
+    "continuation_recovery": "main_reconciles_exact_current_and_recent_orphaned_ledgers_after_reconnect_compaction_or_major_task_switch_without_monitor_or_issue_generator",
     "final_feedback": "report_only_when_report_required_true",
     "older_run_policy": "no_backfill_reclassification_invalidation_or_redo",
     "worker_runtime_binding": "optional_diagnostic_provenance_content_hash_and_workflow_owner_checks_remain_exact",
@@ -431,13 +435,15 @@
   },
   "v5_campaign_scope_surface": {
     "contract_revision": "chalxius-v5-campaign-scope-1",
-    "activation": "prospective_explicit_id_or_auto_or_deep_user_goal",
-    "selection": "explicit_id_or_auto_or_deep_exact_user_objective_compilation",
-    "goal_matching": "unicode_nfc_whitespace_fold_then_lexical_exact_only",
+    "activation": "prospective_explicit_campaign_id_only",
+    "selection": "main_selected_research_with_optional_explicit_campaign_scope",
+    "research_creation": "atomic_memory_add_campaign_binding",
+    "campaign_revalidation": "before_semantic_identity_and_again_under_write_lock",
+    "payload_flag_conflict": "fail_before_immutable_research_write",
     "user_campaign_jargon_required": false,
     "active_campaign_pointer_used_for_goal_selection": false,
-    "goal_scope_application": "future_research_only_no_existing_research_retagging",
-    "goal_root_research_binding": "ordinary_auto_or_deep_goal_creates_or_reuses_one_token_bound_root_research_without_user_campaign_jargon",
+    "goal_scope_application": "explicit_future_research_only_no_existing_research_retagging",
+    "goal_root_research_binding": "main_creates_or_selects_campaign_then_atomically_binds_one_root",
     "scheduler": "v5_main_four_factor_frontier",
     "active_campaign_pointer_default": false,
     "unscoped_behavior": "global_frontier_and_passive_campaign_binding_unchanged",
@@ -446,6 +452,12 @@
     "planning_applicability": "zero_active_proof_targets_skip_fact_inventory_and_nonempty_targets_validate_only_exact_fact_ids",
     "frozen_binding": "objective_active_targets_constraints_value_stop_conditions_event_count_and_snapshot_path_hash",
     "cross_campaign_selection": "fail_before_round_directory_write",
+    "plan_selection_receipt": "selection_source_exact_research_ids_campaign_and_copy_safe_replay_argv_frozen_in_new_round_manifest",
+    "attention_projection": "compact_next_attention_disposition_exact_research_and_round_basis_without_scheduler_or_gate",
+    "semantic_successor_projection": "exact_production_supervision_cow_and_narrow_legacy_repair_edges_with_bounded_ambiguity",
+    "product_workflow_root": "ingested_product_uses_exact_task_binding_source_for_lifecycle_action",
+    "in_flight_supervision_freshness": "stable_root_remains_current_while_exact_supervision_is_awaiting_or_ingesting",
+    "goal_unmapped_attention": "bounded_secondary_ids_count_and_digest_never_deleted_closed_or_inferred_irrelevant",
     "later_campaign_events": "future_only_no_frozen_card_mutation",
     "continuous_advancement": false,
     "research_expansion": false,
@@ -554,55 +566,6 @@
     "gateway": "ordinary_v5_fact_gateway_unchanged_but_strict_research_draft_decision_and_admission_revalidate_the_same_eligible_aggregate",
     "truth_effect": "certification_evidence_only"
   },
-  "brave_future_surface": {
-    "policy_revision": "chalxius-brave-future-policy-1",
-    "goal_intake_revision": "chalxius-bf-goal-intake-2",
-    "repair_contract_revision": "chalxius-bf-repair-contract-1",
-    "planning_snapshot_revision": "chalxius-bf-planning-snapshot-1",
-    "frontier_projection_revision": "chalxius-bf-frontier-projection-3",
-    "legacy_frontier_projection_revision": "chalxius-bf-frontier-projection-2",
-    "earlier_frontier_projection_revision": "chalxius-bf-frontier-projection-1",
-    "frontier_member_window_limit": 256,
-    "frontier_request_limit_policy": "fail_closed_above_member_window_and_serialize_at_most_the_requested_limit",
-    "frontier_workgroup_policy": "exact_semantic_key_with_one_actionable_representative_and_complete_immutable_history",
-    "frontier_completion_policy": "ordinary_and_brave_future_actionable_views_share_valid_production_and_applicable_supervision_completion",
-    "blockage_revision": "chalxius-bf-blockage-1",
-    "reassessment_revision": "chalxius-bf-reassessment-1",
-    "activation": "explicit_exact_campaign_or_auto_or_deep_exact_user_goal",
-    "goal_intake_modes": [
-      "auto",
-      "deep"
-    ],
-    "goal_bf1": "immediate_after_exact_campaign_resolve_or_create",
-    "goal_bf2_bf3": "existing_exact_real_blockage_evidence_gate_only",
-    "explicit_disablement_policy": "never_implicitly_reenable",
-    "implemented_levels": [
-      "BF-1",
-      "BF-2",
-      "BF-3"
-    ],
-    "autonomy_level": "advisory",
-    "active_campaign_pointer": false,
-    "scheduler": "v5_main_four_factor_frontier",
-    "score_writeback": false,
-    "l4_collapse": "strict_typed_complete_repair_only_with_live_invalidators_and_residuals_visible",
-    "dry_run": "deterministic_zero_write",
-    "persistent_write": "one_same_volume_atomic_nontruth_sidecar_transaction",
-    "repeat_signature": "park_and_escalate_without_write",
-    "plan_effect": "none",
-    "dispatch_effect": "none",
-    "campaign_close_effect": "none",
-    "reader_effect": "none",
-    "learner_effect": "none",
-    "fact_admission_effect": "none",
-    "truth_effect": "none",
-    "rejected_future_authority": [
-      "plan_one",
-      "execute_one",
-      "plan_round_reassessment_connector"
-    ],
-    "legacy_and_frozen_work_policy": "absent_or_disabled_preserves_stable_v5_bytes_and_behavior"
-  },
   "v5_task_context_surface": {
     "contract_revision": "chalxius-v5-task-context-0.4.4-1",
     "legacy_contract_revisions": [
@@ -678,8 +641,7 @@
     "forensic_cutover_policy": "scripts/runtime_cutover.py_is_explicit_only_for_protected_project_or_release_evidence_work",
     "host_entrypoint_write_policy": "runtime_cutover_project_validation_archive_runtime_and_chx_ledger_disable_bytecode_before_local_import_and_do_not_mutate_the_runtime_they_validate",
     "truth_effect": "none",
-    "project_effect": "none",
-    "brave_future_effect": "none"
+    "project_effect": "none"
   },
   "mathgraph_first_compatibility": {
     "basis": "content_hashes_dependencies_provenance_workflow_and_owner_boundaries",
@@ -690,10 +652,19 @@
     "legacy_operation": "direct_graph_semantics_without_adapter_or_migration",
     "ordinary_graph_writes": "append_only_or_nontruth_writers_follow_their_own_owner_boundary",
     "runtime_archive_role": "release_and_rollback_diagnostics_only",
-    "project_schema_change": "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_paper_research_pipeline_and_optional_brave_future_sidecar_only",
+    "project_schema_change": "prospective_v5_context_background_source_campaign_adverse_nontruth_evidence_bridge_paper_continuation_research_draft_admission_and_paper_research_pipeline_only",
     "activation_absent_behavior": "legacy_frozen_task_cards_returns_releases_and_decisions_preserved",
     "fact_admission_change": false,
     "fact_admission_change_scope": "base_contract_unchanged_with_recovery_legacy_premises_seal_time_lineage_shared_decision_validation_optional_evidence_bridge_freshness_paper_continuation_freshness_prospective_paper_research_pipeline_preflight_and_strict_research_draft_composable_verification"
+  },
+  "candidate_source_identity_surface": {
+    "activation": "explicit_read_only_projection_before_candidate_edit_package_or_install",
+    "evidence": "canonical_root_version_manifest_git_worktree_branch_head_dirty_paths_path_version_hints_and_installed_tree_difference",
+    "selection": "main_explicit_from_exact_bytes_never_directory_name_or_implicit_current_pointer",
+    "mutation": false,
+    "installation_effect": "none",
+    "project_effect": "none",
+    "truth_effect": "none"
   },
   "route_invalidation_surface": {
     "activation": "explicit_metadata_route_invalidations_only",
@@ -707,7 +678,7 @@
   },
   "bounded_projection_surface": {
     "contract_revision": "chalxius-bounded-projection-surface-1",
-    "activation": "prospective_default_for_current_goal_intake_round_planning_attack_report_and_advisory_fact_snapshot",
+    "activation": "prospective_default_for_atomic_campaign_research_round_planning_attack_report_and_advisory_fact_snapshot",
     "selected_authority_validation": "complete_exact_content_and_direct_authority_inputs",
     "structural_envelope_scope": "content_addressed_identity_connectivity_and_typed_invalidation_only_never_mathematical_truth",
     "full_forensic_paths": [
@@ -1152,9 +1123,7 @@
     "chx_architecture_issue_as_adverse_route_rule",
     "automatic_cross_project_fact_inheritance_or_federation",
     "research_draft_as_external_evidence_substitute",
-    "external_publication_credibility_as_fact_authority",
-    "brave_future_active_campaign_pointer_selection",
-    "brave_future_round_planning_dispatch_or_truth_effect"
+    "external_publication_credibility_as_fact_authority"
   ],
   "fact_admission_rule": "one_identical_v5_candidate_certification_gateway_contract_across_fast_auto_deep"
 }

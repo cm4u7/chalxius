@@ -7,15 +7,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from mathgraph.brave_future import (
-    BF_FRONTIER_PROJECTION_REVISION,
-    BF_FRONTIER_PROJECTION_WINDOW_REVISION,
-    _FIXED_POLICY,
-    _PROJECTION_SEMANTIC_FIELDS,
-    _PROJECTION_SEMANTIC_FIELDS_V2,
-    _sealed_record,
-    _validate_frontier_projection,
-)
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_lifecycle import RoundInspectionContext
 
@@ -47,28 +38,6 @@ class FrontierReliability089Tests(unittest.TestCase):
                 actor="main",
                 fact_exists=lambda _fact_id: False,
             )
-
-    @staticmethod
-    def _enable(store: MathGraphStore, campaign_id: str):
-        manager = store.brave_future()
-        manager.enable(
-            campaign_id=campaign_id,
-            policy={**_FIXED_POLICY, "campaign_id": campaign_id},
-            actor="main",
-        )
-        return manager
-
-    @staticmethod
-    def _reseal_projection(projection: dict[str, object]) -> dict[str, object]:
-        semantic = {
-            key: projection[key] for key in _PROJECTION_SEMANTIC_FIELDS
-        }
-        return _sealed_record(
-            semantic,
-            id_key="projection_id",
-            prefix="bfp-",
-            created_at=str(projection["created_at"]),
-        )
 
     def _duplicate_roots(
         self,
@@ -118,14 +87,13 @@ class FrontierReliability089Tests(unittest.TestCase):
         )
         return first, second
 
-    def test_exact_workgroup_completion_is_shared_by_frontier_and_brave_future_positive(
+    def test_exact_workgroup_completion_is_shared_by_frontier_views(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             campaign_id = self._campaign(store, "Exact duplicate closure")
-            manager = self._enable(store, campaign_id)
-            lifecycle = manager.projector.lifecycle
+            lifecycle = store.v5_lifecycle()
             first, second = self._duplicate_roots(store, campaign_id)
 
             completed = {second["research_id"]: "completed_production"}
@@ -143,11 +111,6 @@ class FrontierReliability089Tests(unittest.TestCase):
                     include_history=True,
                     limit=10,
                 )
-                projected = manager.frontier(
-                    campaign_id=campaign_id,
-                    view="all-active",
-                    limit=10,
-                )["frontier_projection"]
 
             duplicate_ids = {first["research_id"], second["research_id"]}
             self.assertTrue(
@@ -165,21 +128,6 @@ class FrontierReliability089Tests(unittest.TestCase):
                     by_id[research_id]["work_completion_status"],
                     "completed_production",
                 )
-            bf_by_id = {
-                item["research_id"]: item for item in projected["entries"]
-            }
-            self.assertEqual(set(bf_by_id), duplicate_ids)
-            self.assertEqual(
-                {
-                    item["projection_status"]
-                    for item in bf_by_id.values()
-                },
-                {"completed_production"},
-            )
-            self.assertEqual(
-                _validate_frontier_projection(projected)["revision"],
-                BF_FRONTIER_PROJECTION_REVISION,
-            )
             lifecycle.update_research(
                 second["research_id"],
                 status="resolved_by_evidence",
@@ -254,8 +202,7 @@ class FrontierReliability089Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             campaign_id = self._campaign(store, "Bounded frontier")
-            manager = self._enable(store, campaign_id)
-            lifecycle = manager.projector.lifecycle
+            lifecycle = store.v5_lifecycle()
             first, second = self._duplicate_roots(store, campaign_id)
             records = {
                 item["research_id"]: item
@@ -325,32 +272,6 @@ class FrontierReliability089Tests(unittest.TestCase):
             self.assertNotIn("unrelated-099.md", encoded)
             self.assertLess(len(encoded.encode()), 16_000)
 
-            contexts: list[RoundInspectionContext] = []
-            original_preview = manager.snapshot_builder.preview
-            original_project = manager.projector.project
-
-            def preview(*args, **kwargs):
-                contexts.append(kwargs["_inspection_context"])
-                return original_preview(*args, **kwargs)
-
-            def project(*args, **kwargs):
-                contexts.append(kwargs["_inspection_context"])
-                return original_project(*args, **kwargs)
-
-            with patch.object(manager.snapshot_builder, "preview", side_effect=preview), patch.object(
-                manager.projector, "project", side_effect=project
-            ):
-                projection = manager.frontier(
-                    campaign_id=campaign_id,
-                    limit=3,
-                )["frontier_projection"]
-            self.assertIs(contexts[0], contexts[1])
-            self.assertEqual(len(projection["entries"]), 3)
-            self.assertEqual(len(projection["eligible_manifest_window"]), 3)
-            self.assertEqual(projection["eligible_manifest_window_limit"], 3)
-            self.assertLessEqual(len(projection["workgroup_inventory"]), 3)
-            self.assertLessEqual(len(projection["obligation_inventory"]), 3)
-            self.assertLessEqual(len(projection["invalidator_inventory"]), 3)
 
     def test_zero_target_skips_fact_inventory_and_exact_target_tamper_fails(
         self,
@@ -419,50 +340,6 @@ class FrontierReliability089Tests(unittest.TestCase):
                         _inspection_context=RoundInspectionContext(),
                     )
 
-            manager = self._enable(store, campaign_id)
-            manager.projector.lifecycle.add_research(
-                {
-                    "claim": "One entry for projection tamper checks.",
-                    "campaign_id": campaign_id,
-                },
-                actor="main",
-            )
-            projection = manager.frontier(
-                campaign_id=campaign_id,
-                limit=1,
-            )["frontier_projection"]
-            v2_semantic = {
-                key: projection[key]
-                for key in _PROJECTION_SEMANTIC_FIELDS_V2
-                if key != "revision"
-            }
-            v2 = _sealed_record(
-                {
-                    **v2_semantic,
-                    "revision": BF_FRONTIER_PROJECTION_WINDOW_REVISION,
-                },
-                id_key="projection_id",
-                prefix="bfp-",
-                created_at=projection["created_at"],
-            )
-            self.assertEqual(
-                _validate_frontier_projection(v2)["revision"],
-                BF_FRONTIER_PROJECTION_WINDOW_REVISION,
-            )
-            for field, value in (
-                ("work_key_sha256", "4" * 64),
-                ("work_completion_status", "completed_production"),
-                ("score_bytes_sha256", "5" * 64),
-            ):
-                with self.subTest(field=field):
-                    tampered = copy.deepcopy(projection)
-                    tampered["eligible_manifest_window"][0][field] = value
-                    resealed = self._reseal_projection(tampered)
-                    with self.assertRaisesRegex(
-                        ValueError,
-                        "eligible manifest drifted from its entry",
-                    ):
-                        _validate_frontier_projection(resealed)
 
     def test_source_assurance_prompt_names_exact_structured_obligations(
         self,
