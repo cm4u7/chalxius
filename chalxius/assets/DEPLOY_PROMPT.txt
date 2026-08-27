@@ -1,4 +1,4 @@
-Chalxius 0.9.7 — Frontier Continuity
+Chalxius 0.9.10 — Terminal Seal Hygiene
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
@@ -17,6 +17,12 @@ and attained boundaries. Completion of those heads does not close the semantic
 goal: it requests Main disposition or a new exact head. Only explicit archive
 removes the goal. No note dispatches, schedules, closes, or admits anything,
 and the unscoped workflow queue remains global.
+
+One frontier invocation shares one ephemeral exact-snapshot inspection of
+Research COW/repair topology, completion, and assignment product/receipt
+bindings across its internal projections. Research or round publication
+invalidates the affected state. No persistent cache, index, daemon, scheduler,
+or workflow authority is installed.
 
 Main can bind a new Research root to one explicit Campaign atomically with
 `memory-add --campaign`. New production manifests preserve the exact selection

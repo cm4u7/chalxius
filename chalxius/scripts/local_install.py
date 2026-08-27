@@ -13,6 +13,18 @@ sys.dont_write_bytecode = True
 from mathgraph._local_install import default_global_paths, perform_local_install
 
 
+def _candidate_root_argument(
+    value: Path,
+    *,
+    cwd: Path | None = None,
+) -> Path:
+    """Anchor a read-only candidate path without hiding symlink components."""
+
+    if value.is_absolute():
+        return value
+    return (Path.cwd() if cwd is None else cwd) / value
+
+
 def _parser() -> argparse.ArgumentParser:
     defaults = default_global_paths()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -20,7 +32,10 @@ def _parser() -> argparse.ArgumentParser:
         "--candidate-root",
         type=Path,
         default=Path(__file__).resolve().parents[1],
-        help="Candidate tree; defaults to the tree containing this script.",
+        help=(
+            "Candidate tree; relative paths are anchored to the current "
+            "directory and the default is the tree containing this script."
+        ),
     )
     parser.add_argument("--installed-root", type=Path, default=defaults["installed_root"])
     parser.add_argument("--archive-root", type=Path, default=defaults["archive_root"])
@@ -36,7 +51,7 @@ def _parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = _parser().parse_args()
     result = perform_local_install(
-        candidate_root=args.candidate_root,
+        candidate_root=_candidate_root_argument(args.candidate_root),
         installed_root=args.installed_root,
         archive_root=args.archive_root,
         rollback_root=args.rollback_root,

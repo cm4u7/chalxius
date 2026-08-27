@@ -443,6 +443,8 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                         "auto",
                         "--campaign",
                         campaign_id,
+                        "--frontier-target",
+                        target_id,
                         "--memory-id",
                         research_id,
                     ],

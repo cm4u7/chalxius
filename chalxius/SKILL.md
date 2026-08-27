@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.7 — Frontier Continuity
+# Chalxius 0.9.10 — Terminal Seal Hygiene
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -68,6 +68,48 @@ The 0.9.3 integrated cleanup makes this surface directly operable. Main may crea
 An already-live supervision round is always projected before the planner asks whether the source product is safe for a new supervisor suggestion. The former Brave Future/goal-intake command family is removed without aliases; historical sidecar bytes are inert nontruth provenance. CHX inventory treats liveness as an explicit Main declaration, bounds historical lists by default, and uses content-addressed copy-on-write administrative dispositions for abandoned, superseded, or externally completed ledgers. Such dispositions never hide or resolve a mathematical or architecture issue.
 
 The 0.9.4 Campaign repair keeps unlimited append-only history without history-sized routine reads or writes. Main `campaign-status` receives one compact current view, the latest minimal frontier checkpoint, and a fixed recent event-summary tail; there is no paging protocol, while exact old event bytes remain available for targeted forensics. New checkpoints persist only routing Research ids, recovery roots, and concise Main disposition. Campaign-scoped rounds freeze active current semantics plus an exact ordered history-prefix commitment: a later tail is valid, but prefix rewrite, reorder, or truncation is not. The 256 KiB cap guards anomalous current state rather than Campaign lifetime. Repair Research and its round inherit the exact source Campaign; an unbound source never infers `ACTIVE`. The 0.9.5 repair projects exact workflow successors and literal Research references. The 0.9.6 repair makes ordinary `search`/`show` operate on immutable Research as well as Facts and compares checkpoint active heads with exact later workflow routes. It reports stale heads, productive current routes, clean terminal review evidence, and a nonblocking refresh recommendation; Main alone decides and writes a later checkpoint. Historical semantic COW edges remain visible without requiring a later optional repair-spec field. None of these projections infers relevance, mutates a checkpoint, dispatches work, or changes truth authority.
+
+The 0.9.8 repair fuses Main's exact Campaign-target selection with ordinary
+production planning. `plan-round --frontier-target` atomically advances one
+compact replaceable nontruth working-memory state containing bounded active
+heads, recent attained results, historical mathematical landmarks, and one
+recovery root per target. Frontier hydrates concise mathematical summaries
+from canonical Research instead of copying node bodies. Sparse explicit
+updates remain available for genuine branch reordering or history curation;
+history-review advisories ask Main to inspect accumulated results but never
+select, dispatch, close, or gate work. Invalid state falls back visibly to the
+last checkpoint or Campaign roots, and targetless auxiliary or supervision
+planning has no head effect. Structured source-evidence projection also keeps
+its concrete declared files marked as primary-source capabilities, so a
+source-scope supervisor may bind the exact frozen primary SHA-256 directly
+without returning a redundant copy. Neither mechanism affects Candidate,
+Certification, Gateway, Fact, or truth authority.
+
+The 0.9.9 repair closes the overlapping-round successor handoff left by
+0.9.8. When Main selects a positive Research descendant with
+`plan-round --frontier-target`, the selected descendant replaces the exact
+active predecessor route even if that predecessor still has supervision in
+flight. The supervision remains visible and ingestible as workflow state, but
+the predecessor no longer survives as a second head and later asks Main to
+repeat the same semantic choice. Challenge, investigation, disposition, and
+other nonadvancing relations do not retire a head. This changes only compact
+nontruth navigation; it has no Research-result, Candidate, Certification,
+Gateway, or Fact effect.
+
+The 0.9.10 repair keeps terminal authority content-addressed when macOS Finder
+materializes `.DS_Store` in the terminal bundle root or its sole `artifacts`
+directory. Those two exact regular-file locations are host decoration, not
+Research authority. Every expected seal, return, and artifact byte remains
+path- and SHA-256-bound; unknown files, unexpected directories, writable
+authority files, symlinks, hard links, special entries, device crossings, and
+hash drift still fail. The repair neither rewrites frozen products nor adds a
+compatibility layer, migration, workflow gate, Candidate effect, or Fact
+effect. The same release also makes one ordinary frontier invocation reuse one
+ephemeral exact-snapshot inspection of Research COW/repair topology, completion
+state, and assignment product/receipt bindings. Research or round publication
+invalidates the affected command-local state before any later read. Nothing is
+persisted, and output, selection, dispatch, Candidate, and Fact semantics are
+unchanged.
 
 The 0.9.7 repair keeps Main on the current semantic frontier after deeper
 copy-on-write and supervision chains. Exact task bindings project an ingested

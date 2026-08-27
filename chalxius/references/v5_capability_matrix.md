@@ -7,6 +7,31 @@ operations remain valid when graph identity, hashes, dependencies, provenance,
 workflow stage, and owner boundaries are interpretable. The historical rows
 record what older releases did; they are not current graph-operation gates.
 
+The 0.9.10 Terminal Seal Hygiene overlay separates two exact Finder
+`.DS_Store` locations from terminal authority while keeping the no-follow tree
+inventory and the exact sealed path/hash set strict. Unknown entries,
+unexpected directories, writable authority bytes, links, special files,
+device crossings, and byte drift still fail. No product rewrite, adapter,
+migration, scheduler, or truth effect is added. The same overlay shares one
+ephemeral exact-snapshot Research COW/repair, completion, and product/receipt
+inspection context inside an ordinary frontier command. Mutation invalidates
+the context; no persistent index, output change, selection effect, or truth
+effect is added.
+
+The 0.9.9 Frontier Successor Handoff overlay lets one exact positive Research
+dependency carry Main's already-expressed branch choice across overlapping
+production and supervision. The predecessor review remains ordinary workflow;
+only the duplicate semantic head is retired. Nonadvancing relations and
+unrelated parallel heads are conserved, with no scheduler or truth effect.
+
+The 0.9.8 Frontier Working Memory overlay lets Main express a Campaign-target
+choice once at production planning. One compact replaceable nontruth map stores
+bounded active, recent, landmark, and recovery Research ids; routine reads
+hydrate exact mathematical summaries, and sparse Main updates handle genuine
+branch/history curation. Structured source-evidence files keep their primary
+role through source-scope projection. No automatic selector, scheduler,
+compatibility layer, Candidate effect, or Fact effect is added.
+
 The 0.9.7 Frontier Continuity overlay follows exact deep production,
 supervision, repair, and COW lineage while retaining one stable workflow root
 for an ingested product and its in-flight review. Active-goal workflow remains

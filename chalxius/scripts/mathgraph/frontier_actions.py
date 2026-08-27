@@ -456,10 +456,11 @@ class _ActionProjector:
         group_completion: dict[str, tuple[str, str | None, int, str]],
     ) -> dict[str, dict[str, Any]]:
         terminals = {
-            work_key: self.lifecycle._frontier_cow_terminal_members(
+            work_key: self.lifecycle._frontier_cow_terminal_members_for_inspection(
                 seed_members=workgroups.get(work_key, []),
                 bases=self.bases,
                 route_staleness=self.route_staleness,
+                inspection=self.inspection,
             )
             for work_key in work_keys
         }

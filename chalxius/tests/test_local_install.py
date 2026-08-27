@@ -11,9 +11,30 @@ from mathgraph._local_install import (
     default_global_paths,
     perform_local_install,
 )
+from local_install import _candidate_root_argument
 
 
 class LocalInstallTests(unittest.TestCase):
+    def test_public_installer_anchors_relative_candidate_without_resolving_it(self) -> None:
+        cwd = Path("/private/example-checkout")
+        self.assertEqual(
+            _candidate_root_argument(Path("."), cwd=cwd),
+            cwd,
+        )
+        self.assertEqual(
+            _candidate_root_argument(Path("candidate"), cwd=cwd),
+            cwd / "candidate",
+        )
+        self.assertEqual(
+            _candidate_root_argument(Path("candidate/.."), cwd=cwd),
+            cwd / "candidate/..",
+        )
+        absolute = Path("/private/exact-candidate")
+        self.assertEqual(
+            _candidate_root_argument(absolute, cwd=cwd),
+            absolute,
+        )
+
     @staticmethod
     def _runtime(root: Path, version: str, payload: str) -> Path:
         root.mkdir(parents=True)

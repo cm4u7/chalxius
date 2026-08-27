@@ -407,9 +407,18 @@ class SemanticRecovery0812Tests(unittest.TestCase):
                     _route_staleness={},
                 )
                 products["round-b"] = products["round-a"]
+                retry_context = RoundInspectionContext(
+                    completion_obligation_rounds={
+                        root: [
+                            ("round-a", "production"),
+                            ("round-b", "production"),
+                        ]
+                    },
+                    supervision_round_ids_by_production_round={},
+                )
                 exact_retry = lifecycle._validated_completed_research_obligation_statuses(
                     {root},
-                    _inspection_context=context,
+                    _inspection_context=retry_context,
                     _all_bases=bases,
                     _latest_dispositions={},
                     _route_staleness={},

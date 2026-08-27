@@ -940,6 +940,13 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--frontier-target",
+        help=(
+            "Main-selected Campaign research goal advanced by this production "
+            "plan; omitted rounds remain auxiliary"
+        ),
+    )
+    p.add_argument(
         "--host-task-scope-id",
         help=(
             "stable host task/thread identifier; defaults to "
@@ -1084,6 +1091,10 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument(
         "--input",
         help="exact bounded repair specification JSON",
+    )
+    p.add_argument(
+        "--frontier-target",
+        help="Main-selected Campaign research goal advanced by this repair",
     )
     p = sub.add_parser("novelty-record")
     p.add_argument("--input", required=True)
@@ -2224,12 +2235,13 @@ def main(argv: list[str] | None = None) -> int:
                         campaign_id=args.campaign,
                         host_task_scope_id=normalized_host_scope,
                         background_chunk_ids=args.background_chunk_ids,
+                        frontier_target_id=args.frontier_target,
                     )
                 )
             else:
-                if args.campaign:
+                if args.campaign or args.frontier_target:
                     raise ValueError(
-                        "explicit plan-round --campaign is available only for V5; "
+                        "explicit plan-round --campaign/--frontier-target is available only for V5; "
                         "V4 keeps its frozen active-Campaign behavior"
                     )
                 if args.background_chunk_ids:
@@ -2502,9 +2514,14 @@ def main(argv: list[str] | None = None) -> int:
                         repair_spec=(
                             _json_file(args.input) if args.input else None
                         ),
+                        frontier_target_id=args.frontier_target,
                     )
                 )
             else:
+                if args.frontier_target:
+                    raise ValueError(
+                        "plan-repair-round --frontier-target requires V5"
+                    )
                 _print_json(
                     create_repair_round(
                         store,
@@ -2606,12 +2623,28 @@ def main(argv: list[str] | None = None) -> int:
                 }
             )
         elif args.command == "campaign-update":
-            event_id = store.campaigns().update(
-                args.campaign_id,
-                _json_file(args.input),
-                actor=args.actor,
-            )
-            _print_json({"event_id": event_id, "status": "recorded"})
+            update_payload = _json_file(args.input)
+            note_payload = update_payload.get("payload")
+            if (
+                store.workflow_evidence_version() == 5
+                and update_payload.get("type") == "note"
+                and isinstance(note_payload, dict)
+                and note_payload.get("kind")
+                == "campaign_frontier_update"
+            ):
+                _print_json(
+                    store.v5_lifecycle().reconcile_campaign_frontier(
+                        args.campaign_id,
+                        note_payload,
+                    )
+                )
+            else:
+                event_id = store.campaigns().update(
+                    args.campaign_id,
+                    update_payload,
+                    actor=args.actor,
+                )
+                _print_json({"event_id": event_id, "status": "recorded"})
         elif args.command == "campaign-status":
             if args.role == "worker":
                 _print_json(args.bound_campaign_status)

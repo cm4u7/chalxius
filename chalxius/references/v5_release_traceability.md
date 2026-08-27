@@ -1,4 +1,63 @@
-# Chalxius V5 traceability through 0.9.7 Frontier Continuity
+# Chalxius V5 traceability through 0.9.10 Terminal Seal Hygiene
+
+## 0.9.10 terminal-seal-hygiene release overlay
+
+- Candidate version: `0.9.10`; release name **Terminal Seal Hygiene**.
+- Terminal authority excludes only regular `.DS_Store` at the bundle root and
+  exact `artifacts` directory. These bytes carry no Research authority.
+- Seal, return, and artifact paths and SHA-256 values remain exact. Unknown
+  files, unexpected directories, writable authority bytes, symlinks, hard
+  links, special entries, device crossings, and byte drift still fail.
+- The live local-F0 project passed candidate audit with the observed
+  `.DS_Store` retained; no frozen Research or round byte was rewritten.
+- One ordinary frontier command now reuses an ephemeral exact-snapshot
+  Research COW/repair index, completion projection, and successful assignment
+  product/receipt bindings. Research and round publication clear the relevant
+  command-local state; no persistent cache or index is created.
+- The local-F0 canary preserved the exact frontier output SHA-256 while six
+  alternating warm runs reduced median elapsed time from 2.4116 to 1.8115
+  seconds. The release regression suite asserts both output equivalence and
+  single-scan reuse inside one command.
+- The repair has no compatibility, migration, dispatch, Candidate,
+  Certification, Gateway, or Fact effect.
+
+## 0.9.9 frontier-successor-handoff release overlay
+
+- Candidate version: `0.9.9`; release name **Frontier Successor Handoff**.
+- `plan-round --frontier-target` recognizes the selected Research's exact
+  positive dependency relation as Main's semantic handoff from an intersecting
+  predecessor route, including when predecessor supervision is still live.
+- The old workflow remains independently visible and ingestible, while the
+  compact target state retains only the selected successor plus unrelated
+  parallel heads. Main is not asked to repeat the same choice after review.
+- Challenge, investigation, disposition, repair-response, and other explicit
+  nonadvancing relations do not retire an active head.
+- The change affects only replaceable nontruth frontier memory. It has no
+  Research-result, Candidate, Certification, Gateway, or Fact effect.
+
+## 0.9.8 frontier-working-memory release overlay
+
+- Candidate version: `0.9.8`; release name **Frontier Working Memory**.
+- `plan-round --frontier-target` binds Main's exact target-local selection and
+  atomically advances one replaceable nontruth working-memory map before round
+  publication. Production heads advance or replace only their exact current
+  route; unrelated parallel heads remain visible; supervision and targetless
+  auxiliary work have no head effect.
+- Each target stores bounded active-head, recent-attained, historical-landmark,
+  and recovery-root Research ids. Frontier hydrates concise mathematical
+  summaries from canonical Research, so snapshots never copy node bodies.
+- Sparse `campaign_frontier_update` remains an explicit Main override for real
+  branch reordering or history curation. Advisory history reasons are
+  nonblocking and have no automatic selection, dispatch, closure, Candidate,
+  or Fact effect. Invalid state falls back visibly and unsafe symlink targets
+  are rejected.
+- Structured source-evidence files retain a `primary_source` role when
+  projected into source-scope supervisor cards. Exact frozen primary hashes
+  are directly usable under the existing source-use validator without a
+  redundant returned copy; path, containment, hash, and source obligations
+  remain exact.
+- Focused regressions and the live local-F0 canary pass. Installation and
+  publication remain separate authorizations.
 
 ## 0.9.7 frontier-continuity release overlay
 

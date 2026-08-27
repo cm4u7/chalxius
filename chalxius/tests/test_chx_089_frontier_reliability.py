@@ -196,6 +196,56 @@ class FrontierReliability089Tests(unittest.TestCase):
                 {item["research_id"] for item in reopened},
             )
 
+    def test_one_command_reuses_research_cow_and_completion_inspection(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "One command inspection")
+            lifecycle = store.v5_lifecycle()
+            for index in range(12):
+                lifecycle.add_research(
+                    {
+                        "claim": f"Independent exact frontier route {index:02d}.",
+                        "campaign_id": campaign_id,
+                    },
+                    actor="main",
+                )
+            expected = lifecycle.frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=8,
+            )
+            entry_count = len(
+                list(lifecycle.research_entries_dir.glob("*.json"))
+            )
+            inspection = RoundInspectionContext()
+            with patch.object(
+                lifecycle,
+                "_research_record_envelope",
+                wraps=lifecycle._research_record_envelope,
+            ) as envelope_read, patch.object(
+                lifecycle,
+                "_frontier_cow_repair_children_index",
+                wraps=lifecycle._frontier_cow_repair_children_index,
+            ) as cow_index:
+                actual = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    limit=8,
+                    _inspection_context=inspection,
+                )
+                repeated = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    limit=8,
+                    _inspection_context=inspection,
+                )
+            self.assertEqual(actual, expected)
+            self.assertEqual(repeated, expected)
+            self.assertEqual(envelope_read.call_count, entry_count)
+            self.assertEqual(cow_index.call_count, 1)
+            self.assertGreaterEqual(
+                len(inspection.frontier_completion_statuses), 8
+            )
+
     def test_work_key_semantic_predicate_false_and_requested_limit_bounds_projection(
         self,
     ) -> None:

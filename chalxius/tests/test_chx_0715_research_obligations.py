@@ -14,6 +14,7 @@ from unittest.mock import patch
 from mathgraph.cli import main as cli_main
 from mathgraph.contracts import sha256_bytes
 from mathgraph.store import MathGraphStore
+from mathgraph.v5_lifecycle import RoundInspectionContext, V5LifecycleManager
 
 
 class ResearchObligationClosureTests(unittest.TestCase):
@@ -112,6 +113,36 @@ class ResearchObligationClosureTests(unittest.TestCase):
         return_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         return return_path
 
+    def _sealed_plain_assignment(
+        self,
+        root: Path,
+        *,
+        project_id: str,
+    ) -> tuple[V5LifecycleManager, Path, dict[str, object], Path]:
+        store = self._store(root, project_id=project_id)
+        lifecycle = store.v5_lifecycle()
+        source = lifecycle.add_research(
+            {"claim": "Freeze one exact terminal authority bundle."},
+            actor="main",
+        )
+        planned = lifecycle.create_production_round(
+            workers=1,
+            mode="prove",
+            research_ids=[source["research_id"]],
+            host_task_scope_id=project_id,
+        )
+        assignment = planned["assignments"][0]
+        return_path = self._write_plain_assignment(store, planned, assignment)
+        receipt = lifecycle.ingest_return(
+            round_id=str(planned["round_id"]),
+            assignment_id=str(assignment["assignment_id"]),
+            worker_final_sha256=sha256_bytes(return_path.read_bytes()),
+        )
+        self.assertEqual(receipt["status"], "ingested")
+        round_dir = store.rounds_dir / str(planned["round_id"])
+        bundle_dir = round_dir / "terminal" / str(assignment["assignment_id"])
+        return lifecycle, round_dir, assignment, bundle_dir
+
     def test_main_reuses_identical_unbound_semantics_across_actor_labels(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
@@ -134,6 +165,39 @@ class ResearchObligationClosureTests(unittest.TestCase):
             self.assertEqual(second["research_id"], first["research_id"])
             self.assertEqual(second["actor"], "main-session-a")
             self.assertEqual(len(lifecycle.research_envelopes()), 1)
+
+    def test_command_local_product_binding_validates_receipt_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle, round_dir, assignment, _bundle_dir = (
+                self._sealed_plain_assignment(
+                    Path(temporary) / "project",
+                    project_id="chx-0715-product-inspection",
+                )
+            )
+            inspection = RoundInspectionContext()
+            with patch.object(
+                lifecycle,
+                "_validated_ingest_receipt",
+                wraps=lifecycle._validated_ingest_receipt,
+            ) as receipt_validation:
+                _validated_dir, manifest = lifecycle._round_manifest(
+                    round_dir.name,
+                    _inspection_context=inspection,
+                )
+                first = lifecycle._research_product_for_assignment(
+                    round_dir=round_dir,
+                    manifest=manifest,
+                    assignment=assignment,
+                    _inspection_context=inspection,
+                )
+                second = lifecycle._research_product_for_assignment(
+                    round_dir=round_dir,
+                    manifest=manifest,
+                    assignment=assignment,
+                    _inspection_context=inspection,
+                )
+            self.assertEqual(first, second)
+            self.assertEqual(receipt_validation.call_count, 1)
 
     def test_ordinary_and_task_bound_writes_keep_actor_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -934,6 +998,73 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 (round_dir / "terminal" / str(assignment["assignment_id"])).exists()
             )
 
+    def test_terminal_seal_excludes_only_exact_finder_metadata(self) -> None:
+        """CHX: host decoration is nonauthority; sealed and unknown bytes remain strict."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle, round_dir, assignment, bundle_dir = self._sealed_plain_assignment(
+                Path(temporary) / "project",
+                project_id="chx-terminal-host-metadata",
+            )
+
+            os.chmod(bundle_dir, 0o700)
+            os.chmod(bundle_dir / "artifacts", 0o700)
+            root_metadata = bundle_dir / ".DS_Store"
+            artifact_metadata = bundle_dir / "artifacts" / ".DS_Store"
+            root_metadata.write_bytes(b"finder-root")
+            artifact_metadata.write_bytes(b"finder-artifacts")
+            seal = lifecycle._validate_terminal_seal(
+                round_dir=round_dir,
+                assignment=assignment,
+                required=True,
+            )
+            self.assertIsNotNone(seal)
+
+            # Host metadata may change without gaining mathematical authority.
+            root_metadata.write_bytes(b"finder-root-updated")
+            artifact_metadata.write_bytes(b"finder-artifacts-updated")
+            self.assertIsNotNone(
+                lifecycle._validate_terminal_seal(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    required=True,
+                )
+            )
+
+            root_metadata.unlink()
+            artifact_metadata.unlink()
+            unknown = bundle_dir / "unexpected.txt"
+            unknown.write_bytes(b"not authority")
+            os.chmod(unknown, 0o400)
+            with self.assertRaisesRegex(ValueError, "file set drifted"):
+                lifecycle._validate_terminal_seal(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    required=True,
+                )
+            unknown.unlink()
+
+            root_metadata.symlink_to(bundle_dir / "return.json")
+            with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                lifecycle._validate_terminal_seal(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    required=True,
+                )
+            root_metadata.unlink()
+
+            sealed_return = bundle_dir / "return.json"
+            original = sealed_return.read_bytes()
+            os.chmod(sealed_return, 0o600)
+            sealed_return.write_bytes(original + b"\n")
+            os.chmod(sealed_return, 0o400)
+            with self.assertRaisesRegex(ValueError, "sealed return drifted"):
+                lifecycle._validate_terminal_seal(
+                    round_dir=round_dir,
+                    assignment=assignment,
+                    required=True,
+                )
+
     def test_terminal_read_uses_stable_parent_descriptors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "root"
@@ -956,8 +1087,6 @@ class ResearchObligationClosureTests(unittest.TestCase):
                 return real_open(path, flags, *args, **kwargs)  # type: ignore[arg-type]
 
             with patch("mathgraph.v5_lifecycle.os.open", side_effect=racing_open):
-                from mathgraph.v5_lifecycle import V5LifecycleManager
-
                 raw = V5LifecycleManager._read_regular_bytes_once(
                     target,
                     label="terminal parent race fixture",

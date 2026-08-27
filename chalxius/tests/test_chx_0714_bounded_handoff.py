@@ -543,6 +543,14 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     "dml-primary.pdf",
                 },
             )
+            self.assertTrue(
+                {
+                    item["artifact_sha256"]
+                    for item in source_artifacts
+                }.issubset(
+                    lifecycle._task_primary_source_sha256s(supervisor_card)
+                )
+            )
             self.assertIn(assignment["task_card_relpath"], paths)
 
     def test_structured_source_evidence_requires_all_declared_primary_bytes(self) -> None:

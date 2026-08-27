@@ -1,5 +1,36 @@
 # Chalxius portable deployment
 
+## 0.9.10 Terminal Seal Hygiene
+
+The `0.9.10` **Terminal Seal Hygiene** candidate keeps an exact terminal
+return/artifact authority valid if Finder creates a regular `.DS_Store` at one
+of the terminal bundle's two expected directory levels. It does not delete or
+rewrite project files. All authority files and all other tree entries retain
+the existing strict identity, permission, containment, and hash checks.
+Ordinary frontier reads also share one ephemeral exact-snapshot inspection
+across their internal projections and invalidate it at Research or round
+publication; no persistent cache, service, scheduler, or new workflow state is
+installed. The project-free installer still validates and atomically swaps one
+complete manifest-bound tree. Publication remains a separate authorization.
+
+## 0.9.9 Frontier Successor Handoff
+
+The `0.9.9` **Frontier Successor Handoff** candidate makes an exact positive
+Research descendant selected by production planning replace its intersecting
+predecessor route while preserving any in-flight review as workflow state.
+The project-free installer still validates and atomically swaps one complete
+manifest-bound tree. Publication remains a separate authorization.
+
+## 0.9.8 Frontier Working Memory
+
+The `0.9.8` **Frontier Working Memory** candidate fuses explicit
+Campaign-target selection with production planning and maintains one compact
+replaceable nontruth working-memory map rather than repeated full checkpoints.
+It also preserves direct primary-source capability through source-scope
+projection. Installation validates and swaps only the complete manifest-bound
+skill tree; it reads and writes no research project. Publication remains a
+separate authorization.
+
 ## 0.9.7 Frontier Continuity
 
 The `0.9.7` **Frontier Continuity** candidate projects deep exact

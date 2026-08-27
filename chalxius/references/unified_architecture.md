@@ -1,5 +1,36 @@
 # Chalxius unified Evidence and research architecture
 
+> **0.9.10 terminal-seal-hygiene override.** Terminal authority is the exact
+> seal, return, and artifact path/hash set, not Finder decoration. A regular
+> `.DS_Store` is ignored only at the bundle root or its exact `artifacts`
+> directory. Unknown files and directories, writable authority bytes, links,
+> special entries, device crossings, and hash drift still fail. No frozen
+> product is rewritten and no compatibility, migration, workflow, Candidate,
+> or Fact mechanism is added. One ordinary frontier command may reuse one
+> ephemeral exact-snapshot inspection of Research COW/repair topology,
+> completion, and product/receipt bindings. Research and round publication
+> invalidate that command-local state; no persistent index, scheduler, gate,
+> selection effect, Candidate effect, or Fact effect is introduced.
+
+> **0.9.9 frontier-successor-handoff override.** A positive Research
+> descendant explicitly selected by `plan-round --frontier-target` retires
+> only the intersecting active predecessor route, even if its supervision is
+> still in flight. Review workflow remains visible and ingestible; unrelated
+> heads and nonadvancing relations remain active. This is one nontruth-memory
+> update, not an automatic mathematical selector or truth-stage operation.
+
+> **0.9.8 frontier-working-memory override.** Main's exact Campaign-target
+> choice and production planning now update one compact replaceable nontruth
+> target map in the same transaction. The map stores only bounded Research ids
+> for active heads, recent attained work, historical mathematical landmarks,
+> and recovery roots; frontier resolves concise mathematics from canonical
+> Research. Sparse Main updates handle real branch/history curation, and
+> bounded advisories call attention to accumulated or overgrown history
+> without selecting or blocking work. Source-scope projection preserves the
+> primary-source role of exact files declared by structured source evidence.
+> No scheduler, compatibility layer, automatic mathematical selector,
+> Candidate effect, or Fact effect is added.
+
 > **0.9.6 frontier-freshness override.** Ordinary Main `search` and `show`
 > navigate immutable Research and verified Facts by exact typed identity.
 > Campaign reads compare checkpoint active heads with exact production,

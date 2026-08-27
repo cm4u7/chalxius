@@ -1,5 +1,52 @@
 # Pre-Chalxius capability difference audit
 
+## 0.9.10 Terminal Seal Hygiene difference
+
+Terminal validation now distinguishes exact content authority from two
+host-owned Finder decoration files. A regular `.DS_Store` at the sealed bundle
+root or its exact `artifacts` directory is not part of Research authority.
+Every expected seal, return, and artifact remains path- and SHA-256-bound, and
+the existing tree inventory still rejects unknown files, unexpected
+directories, writable authority bytes, links, special entries, and device
+crossings. The change adds no adapter, migration, second seal format, workflow
+gate, Candidate effect, or Fact effect.
+
+Ordinary frontier inspection also reuses one ephemeral command-local view of
+the exact Research COW/repair graph, completion results, and assignment
+product/receipt bindings. The context is invalidated at Research and round
+publication boundaries and is never persisted. This removes repeated full-
+store validation inside one read without changing output, mathematical
+selection, workflow state, Candidate authority, or Fact authority.
+
+## 0.9.9 Frontier Successor Handoff difference
+
+Main's exact positive Research dependency now completes the target-local
+handoff already expressed by `plan-round --frontier-target`, even when the
+predecessor has an overlapping supervision round. The predecessor workflow is
+still tracked and ingestible, but it is not retained as a second semantic head.
+Unrelated parallel heads and explicit nonadvancing relations remain unchanged.
+This removes a duplicate Main choice without adding a scheduler, inference
+layer, workflow gate, compatibility adapter, Candidate effect, or Fact effect.
+
+## 0.9.8 Frontier Working Memory difference
+
+Campaign planning and navigation now share one explicit Main selection. A
+production `plan-round --frontier-target` transaction replaces only the chosen
+target's compact nontruth working-memory row, preserves unrelated parallel
+heads, and records bounded recent attainment, historical landmarks, and a
+recovery root without copying Research bodies or appending another Campaign
+snapshot. Sparse Main updates remain for genuine branch reordering and history
+curation. History advisories expose accumulated recent work or an overgrown
+landmark set but do not choose, dispatch, close, or gate research.
+
+Source-scope supervision also retains the semantic `primary_source` marker on
+exact files expanded from structured source evidence. Return validation can
+therefore consume the already authorized primary SHA-256 directly rather than
+forcing a redundant returned copy or report indirection. Exact path/hash,
+containment, source-use coverage, and artifact checks remain unchanged. Neither
+repair adds a compatibility layer, scheduler, persistent authority, Candidate
+effect, or Fact effect.
+
 ## 0.9.6 Frontier Freshness difference
 
 Main's ordinary navigation now searches and shows immutable Research alongside

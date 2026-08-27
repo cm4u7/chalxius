@@ -1,10 +1,86 @@
-# Chalxius 0.9.7 architecture findings and residual boundaries
+# Chalxius 0.9.10 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.9.7
-**Frontier Continuity**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.9.10
+**Terminal Seal Hygiene**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.9.10 Terminal Seal Hygiene
+
+The terminal seal correctly bound the exact return and artifact bytes, but its
+tree-set check also treated Finder's writable `.DS_Store` as sealed authority.
+Browsing one terminal directory could therefore invalidate its production and
+every dependent supervision, Research ledger, novelty ledger, and audit
+projection even though all expected SHA-256 values still matched.
+
+Terminal validation now excludes only regular `.DS_Store` files at the bundle
+root and its sole expected `artifacts` directory from the authority inventory.
+The no-follow tree walk still rejects symbolic links, special files,
+multiply-linked files, device crossings, and unexpected directories. Unknown
+regular files still change the exact file set; every seal, return, and artifact
+must remain read-only and hash-exact. No historical product is rewritten.
+
+The live local-F0 project retained the original `.DS_Store` and passed a fresh
+candidate audit with `current_ok=true`, no workflow or graph errors, and clean
+history in 15.66 seconds. This is a host-metadata boundary repair, not a new
+compatibility layer or a relaxation of mathematical authority.
+
+The same project exposed a separate frontier performance defect: a bounded
+`--limit 8` read rebuilt the complete Research COW/repair adjacency once per
+workgroup and revalidated identical assignment products and ingestion receipts
+inside one command. The repair shares one ephemeral inspection context across
+that exact command snapshot, memoizes exact successful bindings and completion
+states, and clears the relevant state at Research or round publication. It
+creates no persistent index, cache file, daemon, scheduler, or new gate.
+
+On the local-F0 canary, six alternating warm runs preserved the exact output
+SHA-256 and reduced median elapsed time from 2.4116 to 1.8115 seconds. A profile
+reduced Research repair-continuity checks from 8,758 to 151 and ingestion-
+receipt validations from 327 to 60. These measurements establish the repaired
+repeated-work mechanism on that snapshot; they are not a universal latency
+guarantee.
+
+## 0.9.9 Frontier Successor Handoff
+
+The 0.9.8 working state could retain an old active head when Main deliberately
+planned a positive descendant while the old product's supervision was still
+running. Once supervision ended, an unsafe or counterexample product could
+turn that retained head into `main_reconciliation`, causing the target to say
+`needs_main_choice` even though the new round was visibly awaiting return.
+
+Planning now treats the selected Research's exact positive dependency relation
+as Main's branch handoff. It retires only an active route intersecting that
+dependency, retains unrelated parallel heads, and leaves the old supervision
+in the ordinary workflow projection until it is ingested. Nonadvancing
+challenge, investigation, repair-response, and disposition relations do not
+perform this handoff. No automatic mathematical choice, workflow gate, or
+truth-stage effect is introduced.
+
+## 0.9.8 Frontier Working Memory
+
+The 0.9.7 Campaign frontier still required Main to repeat one semantic choice:
+after exact target selection and round planning, a separate checkpoint write
+was needed before the chosen work became the active head. On large and
+branching Campaigns this could leave planned work outside routine working
+memory or make stale heads invite duplicate research. The repair binds one
+explicit target to production planning and atomically advances a compact
+replaceable nontruth state. It stores only bounded Research ids for active
+heads, recent attainment, historical landmarks, and recovery roots. Canonical
+Research remains the owner of mathematical content.
+
+This working state is navigation, not history or authority. Exact Campaign
+events and immutable Research remain intact; malformed state falls back with a
+diagnostic, and Main retains sparse branch/history curation. Advisories ask
+Main to inspect accumulated mathematical progress but do not decide which
+result matters, launch work, close a goal, or affect Candidate or Fact status.
+
+A source-scope field run also showed that files declared inside structured
+source evidence lost their primary-role token when projected into a supervisor
+card. Their exact path and SHA-256 remained present, but direct source use was
+incorrectly rejected. The projection now retains `primary_source`; the
+existing exact containment, byte hash, source-use, and obligation checks remain
+unchanged.
 
 ## 0.9.7 Frontier Continuity
 
