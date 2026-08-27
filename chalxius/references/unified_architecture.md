@@ -1,5 +1,18 @@
 # Chalxius unified Evidence and research architecture
 
+> **0.9.12 frontier-lifecycle-closure override.** Exact historical
+> Main-authored COW roots close advisory workgroups only when their recorded
+> relation, complete source-id set, one obligation-complete production
+> product, explicit challenge companions, Campaign, dependencies, and
+> chronology define one unambiguous edge. In a multi-head goal, an exact
+> `await_return` branch foregrounds the goal state while every sibling action
+> remains visible. One command may reuse Research envelope bytes already
+> hash-validated in that snapshot before complete record/artifact validation.
+> A still-running host session is resumed rather than interpreted as blank
+> stdout or retried. No historical rewrite, compatibility layer, automatic
+> selector, hidden branch deletion, persistent index, Candidate effect, or
+> Fact effect is introduced.
+
 > **0.9.11 frontier-and-source-continuity override.** Routine frontier is
 > bounded mathematical working memory: it retains exact decisions and compact
 > current/recent/historical mathematics while deep repeated topology stays

@@ -7695,8 +7695,7 @@ class V5LifecycleManager:
                 children.setdefault(related[0], set()).add(research_id)
 
             if (
-                record.get("kind") != "repair"
-                or record.get("relation") != "repairs"
+                record.get("relation") != "repairs"
                 or not isinstance(metadata, dict)
             ):
                 continue
@@ -7738,6 +7737,13 @@ class V5LifecycleManager:
                 legacy_repair_tasks.add(research_id)
                 for source_id in related:
                     children.setdefault(source_id, set()).add(research_id)
+            if record.get("kind") != "repair":
+                # Earlier Main-authored COW roots used an ordinary Research
+                # kind while stating the exact ``repairs`` relation and exact
+                # source-id set.  That is sufficient for advisory Campaign
+                # navigation, but only the current repair shape below can use
+                # the canonical repair metadata projection.
+                continue
             product_id = metadata.get("repair_of_research_id")
             trigger_id = metadata.get("trigger_research_id")
             if (
@@ -8860,13 +8866,18 @@ class V5LifecycleManager:
                     coverage_status = "needs_main_choice"
                     action_class = "semantic_choice"
                     next_action = "main_disposition"
+                elif "await_return" in next_actions:
+                    # A real in-flight branch is the target's current
+                    # operational state even when an unrelated older branch
+                    # still needs Main reconciliation.  Keep every branch in
+                    # ``active_head_actions``; do not let historical ambiguity
+                    # conceal already-planned work or invite a duplicate plan.
+                    coverage_status = "in_flight"
+                    action_class = "multi_branch_progress"
+                    next_action = "advance_active_heads"
                 elif "main_reconciliation" in next_actions:
                     coverage_status = "needs_main_choice"
                     action_class = "semantic_choice"
-                    next_action = "advance_active_heads"
-                elif "await_return" in next_actions:
-                    coverage_status = "in_flight"
-                    action_class = "multi_branch_progress"
                     next_action = "advance_active_heads"
                 elif "production" in next_actions:
                     coverage_status = "research_open"
@@ -10424,14 +10435,89 @@ class V5LifecycleManager:
 
         repair_children: dict[str, set[str]] = {}
         for repair_id, repair in bases.items():
-            if (
-                repair.get("kind") != "repair"
-                or repair.get("relation") != "repairs"
-                or not cls._frontier_repair_continuity_is_exact(repair=repair)
-            ):
+            if repair.get("relation") != "repairs":
                 continue
             metadata = repair.get("metadata", {})
             if not isinstance(metadata, dict):
+                continue
+            related = repair.get("related_research_ids")
+            source = repair.get("source")
+            source_parts = (
+                [part.strip() for part in source.split(";")]
+                if isinstance(source, str)
+                else []
+            )
+            source_research_ids = [
+                part.removeprefix("research:")
+                for part in source_parts
+                if part.startswith("research:")
+                and MEMORY_ID_RE.fullmatch(
+                    part.removeprefix("research:")
+                )
+                is not None
+            ]
+
+            # Historical Main-authored COW roots predate the dedicated
+            # ``kind=repair`` metadata projection.  Their exact relation,
+            # complete research: source set, one production product, and
+            # explicit challenge companions already determine the same
+            # nontruth lifecycle edge.  Follow those bytes without rewriting
+            # them or making them Candidate/Fact authority.
+            legacy_product_ids = (
+                [item for item in related if item in production_parent]
+                if isinstance(related, list)
+                else []
+            )
+            legacy_exact = (
+                isinstance(related, list)
+                and len(related) >= 2
+                and len(set(related)) == len(related)
+                and len(source_research_ids) == len(source_parts)
+                and set(source_research_ids) == set(related)
+                and all(item in bases for item in related)
+                and len(legacy_product_ids) == 1
+            )
+            if legacy_exact:
+                legacy_product_id = legacy_product_ids[0]
+                legacy_parent_id = production_parent[legacy_product_id]
+                challenge_ids = [
+                    item for item in related if item != legacy_product_id
+                ]
+                campaign_id = metadata.get("campaign_id")
+                legacy_parent = bases[legacy_parent_id]
+                legacy_product = bases[legacy_product_id]
+                challenge_shapes_are_exact = all(
+                    bases[item].get("kind")
+                    in {"challenge", "counterexample", "obstacle", "dead_end"}
+                    or bases[item].get("metadata", {}).get("worker_outcome")
+                    in {"challenge", "counterexample", "dead_end"}
+                    for item in challenge_ids
+                )
+                if (
+                    isinstance(campaign_id, str)
+                    and challenge_shapes_are_exact
+                    and all(
+                        bases[item].get("metadata", {}).get("campaign_id")
+                        == campaign_id
+                        for item in [legacy_parent_id, *related]
+                    )
+                    and legacy_parent.get("dependencies")
+                    == legacy_product.get("dependencies")
+                    == repair.get("dependencies")
+                    and all(
+                        repair.get("created_at", "")
+                        > bases[item].get("created_at", "")
+                        for item in related
+                    )
+                ):
+                    repair_children.setdefault(
+                        legacy_parent_id, set()
+                    ).add(repair_id)
+
+            if (
+                repair.get("kind") != "repair"
+                or not cls._frontier_repair_continuity_is_exact(repair=repair)
+            ):
                 continue
             product_id = metadata.get("repair_of_research_id")
             trigger_id = metadata.get("trigger_research_id")
@@ -10443,7 +10529,6 @@ class V5LifecycleManager:
                 or repair.get("source") != f"research:{product_id}"
             ):
                 continue
-            related = repair.get("related_research_ids")
             if (
                 not isinstance(related, list)
                 or related != sorted({product_id, trigger_id})
@@ -12917,10 +13002,27 @@ class V5LifecycleManager:
             return self._research_record(research_id)
         cached = context.research_records.get(research_id)
         if cached is None:
-            cached = self._research_record(
-                research_id,
-                _inspection_context=context,
+            envelope = (
+                context.research_envelopes_by_id.get(research_id)
+                if context.research_envelopes_by_id is not None
+                else None
             )
+            if envelope is None:
+                cached = self._research_record(
+                    research_id,
+                    _inspection_context=context,
+                )
+            else:
+                # ``research_envelopes`` already read and hash-validated these
+                # exact immutable bytes in this command snapshot.  Reuse the
+                # parsed object while still running the complete record and
+                # artifact validator; a later mutation starts with a fresh
+                # inspection context.
+                cached = self._validate_research_record(
+                    envelope,
+                    path=self._research_path(research_id),
+                    _inspection_context=context,
+                )
             context.research_records[research_id] = cached
         return cached
 

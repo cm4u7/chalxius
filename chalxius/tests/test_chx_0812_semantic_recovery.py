@@ -124,6 +124,24 @@ def _repair(
     )
 
 
+def _legacy_repair(
+    research_id: str,
+    product_id: str,
+    trigger_id: str,
+    *,
+    created_at: str,
+) -> dict[str, object]:
+    related = sorted([product_id, trigger_id])
+    return _record(
+        research_id,
+        created_at=created_at,
+        kind="conjecture",
+        relation="repairs",
+        related=related,
+        source="; ".join(f"research:{item}" for item in related),
+    )
+
+
 class SemanticRecovery0812Tests(unittest.TestCase):
     @staticmethod
     def _two_hop_chain() -> tuple[dict[str, dict[str, object]], list[str]]:
@@ -208,6 +226,39 @@ class SemanticRecovery0812Tests(unittest.TestCase):
         self.assertEqual(
             projected,
             ("completed_production", root, 1, sha256_json([root])),
+        )
+
+    def test_exact_legacy_multihop_cow_is_visible_and_completes(self) -> None:
+        bases, ids = self._two_hop_chain()
+        root, first_product, first_trigger, first_repair = ids[:4]
+        second_product, second_trigger, second_repair = ids[4:7]
+        bases[first_repair] = _legacy_repair(
+            first_repair,
+            first_product,
+            first_trigger,
+            created_at="2026-01-01T00:00:04+00:00",
+        )
+        bases[second_repair] = _legacy_repair(
+            second_repair,
+            second_product,
+            second_trigger,
+            created_at="2026-01-01T00:00:07+00:00",
+        )
+
+        index = V5LifecycleManager._campaign_semantic_successor_index(bases)
+        self.assertEqual(
+            index["legacy_repair_tasks"],
+            {first_repair, second_repair},
+        )
+        self.assertIn(first_repair, index["children"][first_product])
+        self.assertIn(second_repair, index["children"][second_product])
+        self.assertEqual(
+            V5LifecycleManager._frontier_cow_terminal_members(
+                seed_members=[root],
+                bases=bases,
+                route_staleness=self._two_hop_staleness(ids),
+            ),
+            {root: second_repair},
         )
 
     def test_terminal_product_invalidation_and_incomplete_obligations_reopen(self) -> None:

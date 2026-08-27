@@ -1,4 +1,20 @@
-# Chalxius V5 traceability through 0.9.11 Frontier and Source Continuity
+# Chalxius V5 traceability through 0.9.12 Frontier Lifecycle Closure
+
+## 0.9.12 frontier-lifecycle-closure release overlay
+
+- Candidate version: `0.9.12`; release name **Frontier Lifecycle Closure**.
+- Exact historical Main-authored COW roots can complete advisory workgroups
+  when one recorded relation/source/product/challenge/Campaign/dependency/time
+  shape determines a unique repair edge. Frozen Research is not rewritten.
+- In a multi-head Campaign goal, a real `await_return` branch yields the
+  foreground `in_flight` state while every older reconciliation action remains
+  visible for Main.
+- Full record validation reuses Research envelope bytes already hash-validated
+  in the same command-local snapshot; record and artifact checks still run.
+- Main resumes a still-running host session and retries no mutating planner
+  merely because an intermediate yield lacks final JSON.
+- The release adds no compatibility layer, automatic selector, branch deletion,
+  persistent index, receipt authority, Candidate effect, or Fact effect.
 
 ## 0.9.11 frontier-and-source-continuity release overlay
 

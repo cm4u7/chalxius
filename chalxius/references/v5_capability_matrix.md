@@ -1,5 +1,14 @@
 # V5 capability preservation matrix
 
+The 0.9.12 Frontier Lifecycle Closure overlay recognizes one structurally exact
+historical Main-authored COW completion shape, gives an exact in-flight branch
+goal-level precedence without removing sibling reconciliation, and reuses
+already hash-validated Research envelope bytes before full record/artifact
+validation in the same command. Main resumes a still-running host session
+instead of issuing a duplicate mutating plan. No compatibility adapter,
+automatic selector, hidden branch deletion, persistent index, Candidate effect,
+or Fact effect is introduced.
+
 The 0.8.0 MathGraph-first rule supersedes procedural compatibility language in
 the historical overlays below: future upgrades need not preserve runtime
 identity, adapter, migration, or administrative-gate protocols. Current

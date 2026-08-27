@@ -146,6 +146,8 @@ def default_focused_test_runner(root: Path) -> None:
             "test_local_install.LocalInstallTests",
             "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
             "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
+            "test_chx_089_frontier_reliability.FrontierReliability089Tests",
+            "test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests",
             "test_chx_090_frontier_active_fix.FrontierActiveFix090Tests",
             "test_chx_093_integrated_cleanup.IntegratedCleanup093Tests",
             (

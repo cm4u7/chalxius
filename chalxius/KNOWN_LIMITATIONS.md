@@ -1,10 +1,33 @@
-# Chalxius 0.9.11 architecture findings and residual boundaries
+# Chalxius 0.9.12 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.9.11
-**Frontier and Source Continuity**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.9.12
+**Frontier Lifecycle Closure**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.9.12 Frontier Lifecycle Closure
+
+Three field defects remained after 0.9.11. First, an exact historical COW chain
+could still appear pending because its Main-authored repair root predated the
+dedicated `kind=repair` metadata shape. Second, a multi-head goal could display
+`needs_main_choice` even though Main's latest exact branch was already
+`await_return`. Third, bounded frontier work still reread a Research file after
+the same command had already hash-validated and parsed its immutable envelope.
+
+The repair recognizes only the complete legacy relation/source/product/
+challenge/Campaign/dependency/chronology shape, gives real in-flight work
+foreground precedence while retaining every sibling action, and reuses the
+command-local envelope bytes while rerunning full record and artifact
+validation. It neither rewrites old Research nor deletes a branch. Ambiguous
+legacy shapes remain pending.
+
+One operating defect was procedural but did not justify another protocol:
+Main could mistake a tool's intermediate yield for successful blank stdout and
+retry a planner whose original process was still running. Current instructions
+require resuming the same session; only a completed command with missing or
+invalid required output is defective. There is no retry service, receipt gate,
+monitor, compatibility layer, or new lifecycle owner.
 
 ## 0.9.11 Frontier and Source Continuity
 

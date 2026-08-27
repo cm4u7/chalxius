@@ -3,86 +3,85 @@
 **Persistent research memory and a reliable working frontier for Codex.**
 
 [Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v0.9.10](https://github.com/cm4u7/chalxius/releases/tag/v0.9.10) ·
+[Download v0.9.12](https://github.com/cm4u7/chalxius/releases/tag/v0.9.12) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
 
 Chalxius is a local research runtime for projects that outgrow one chat. It
-keeps sources, Research, computations, objections, dependencies, failed routes,
-supervision, and admitted Facts in one content-addressed graph while preserving
-their different authority levels.
+keeps sources, Research, computations, objections, dependencies, supervision,
+failed routes, and admitted Facts in one content-addressed graph without
+collapsing their different authority levels.
 
-The ordinary frontier is Main's working memory. It connects durable Campaign
-goals to the current Research boundary, shows exact work already in flight or
-awaiting ingestion, and identifies where Main must make a mathematical choice.
-It does not choose a research direction, dispatch workers, or promote Research
-to Fact automatically.
+Its ordinary frontier is Main's working memory: a compact view of the current
+mathematical boundary, exact work in flight, recently attained results,
+historical landmarks, and places that genuinely require judgment. Main chooses
+the direction. Chalxius records and projects that choice; it does not select or
+dispatch research automatically.
 
 [![Open the anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
 
 *A content-free projection of a real research topology. Click to explore it.*
 
-## Start here
+## Start
 
 Ask Codex:
 
 ```text
-Use $chalxius to continue this project. Read the current Campaign goal and
-frontier, search existing Research before choosing a new target, and keep every
+Use $chalxius to continue this project. Read the active Campaign goals and
+frontier, search exact Research before choosing a new target, and keep every
 unproved bridge explicitly conditional.
 ```
 
-`auto` is the default profile. `fast` narrows the next work unit; `deep` permits
+`auto` is the default profile. `fast` narrows the next work unit; `deep` allows
 broader source, route, and computation exploration. Profiles never change the
 Fact-admission standard.
 
-A typical Main loop is deliberately short:
+Main's ordinary loop is short:
 
-1. read the user's objective and active Campaign goals;
-2. inspect the compact frontier;
-3. search exact Research identities before creating overlapping work;
-4. choose and dispatch a useful production or supervision unit;
-5. ingest the result and let the graph expose the next boundary.
+1. read the objective and active Campaign goals;
+2. inspect the bounded frontier;
+3. search existing Research before choosing a named target;
+4. plan useful production or independent supervision;
+5. ingest the result and read the newly exposed boundary.
 
-Campaign goals store non-procedural objectives. Frontier state stores compact,
-replaceable navigation memory. Immutable Research and round records remain the
+Campaign goals hold durable, non-procedural objectives. Frontier state is
+compact and replaceable. Immutable Research and round records remain the
 history and evidence; neither Campaign nor frontier is a second truth path.
 
 ## Truth boundary
 
 ```text
-Research → Candidate Release → Certification Decision → Gateway admission → Fact
+Research -> Candidate Release -> Certification Decision -> Gateway -> Fact
 ```
 
-Research may be incomplete, disputed, or wrong and still be useful. A reusable
-Fact must freeze its exact claim, dependencies, sources, and adverse work and
-pass the independent admission path. A polished report, worker receipt,
-frontier label, or successful computation cannot bypass it.
+Research may be incomplete, disputed, or wrong and still be valuable. A Fact
+must freeze its exact claim, dependencies, sources, and adverse work and pass
+the independent admission path. A report, worker receipt, frontier label, or
+successful computation cannot bypass it.
 
 ## Install
 
-Download these assets from the
-[v0.9.10 release](https://github.com/cm4u7/chalxius/releases/tag/v0.9.10):
+Download from the
+[v0.9.12 release](https://github.com/cm4u7/chalxius/releases/tag/v0.9.12):
 
-- `chalxius-0.9.10-terminal-seal-hygiene.tar.gz`
-- `chalxius-0.9.10-terminal-seal-hygiene.tar.gz.sha256`
+- `chalxius-0.9.12-frontier-lifecycle-closure.tar.gz`
+- `chalxius-0.9.12-frontier-lifecycle-closure.tar.gz.sha256`
 
 Then verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-0.9.10-terminal-seal-hygiene.tar.gz.sha256
-tar -xzf chalxius-0.9.10-terminal-seal-hygiene.tar.gz
+shasum -a 256 -c chalxius-0.9.12-frontier-lifecycle-closure.tar.gz.sha256
+tar -xzf chalxius-0.9.12-frontier-lifecycle-closure.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
 python3 -B scripts/local_install.py
 ```
 
-The installer validates one complete manifest-bound tree, archives the previous
-runtime, swaps atomically, and retains a direct rollback copy. It does not read
-or mutate a research project. See
-[portable deployment](chalxius/references/portable_deployment.md) for details.
+The installer validates one complete manifest-bound tree, archives the prior
+runtime, and swaps atomically. It does not read or mutate a research project.
+See [portable deployment](chalxius/references/portable_deployment.md).
 
 ## CLI
 
@@ -97,31 +96,24 @@ PROJECT=/absolute/path/to/project
 "$MGRAPH" --root "$PROJECT" --role main frontier --limit 5 --diagnostic
 ```
 
-Default frontier output is the bounded decision surface. `--diagnostic` adds
-forensic topology only when Main is investigating a discrepancy.
+The default frontier is the bounded decision surface. `--diagnostic` adds deep
+topology only when Main is investigating a discrepancy.
 
-## v0.9.10 — Terminal Seal Hygiene
+## v0.9.12 — Frontier Lifecycle Closure
 
-This release consolidates the Campaign/frontier work completed after 0.9.0:
+- exact historical copy-on-write repair chains now reach their actual terminal
+  Research when the frozen graph determines one unambiguous edge;
+- real `await_return` work remains the foreground state of a multi-head goal,
+  while older reconciliation branches stay visible;
+- one frontier command reuses Research bytes already hash-validated in that
+  command, then still performs full record and artifact validation;
+- Main resumes a still-running host command instead of mistaking an
+  intermediate yield for blank output and duplicating a mutating plan.
 
-- production planning and Campaign working memory now share Main's one explicit
-  target choice, including positive successor, repair, overlapping-supervision,
-  and compatible multi-branch handoff;
-- ordinary search and show navigate immutable Research as well as Facts;
-- exact source capabilities survive supervision handoff without duplicate byte
-  returns;
-- Finder-created `.DS_Store` at two exact terminal locations no longer
-  invalidates otherwise hash-exact work;
-- one frontier command reuses one ephemeral exact-snapshot inspection instead
-  of repeatedly rescanning the same Research and round data.
-
-On the 1,778-Research local-F0 canary, the last repair preserved the exact
-42,528-byte frontier output and reduced six-run median time from 2.4116 to
-1.8115 seconds. It adds no persistent cache, daemon, scheduler, compatibility
-layer, workflow gate, Candidate effect, or Fact effect.
-
-See [RELEASE.md](RELEASE.md) for the complete release note and
-[VALIDATION.md](VALIDATION.md) for reproducible identities and test results.
+The release adds no automatic selector, scheduler, daemon, compatibility layer,
+workflow gate, Candidate effect, or Fact effect. See [RELEASE.md](RELEASE.md)
+for the complete release note and [VALIDATION.md](VALIDATION.md) for exact
+software evidence.
 
 ## Explore
 

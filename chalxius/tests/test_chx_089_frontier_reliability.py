@@ -246,6 +246,35 @@ class FrontierReliability089Tests(unittest.TestCase):
                 len(inspection.frontier_completion_statuses), 8
             )
 
+    def test_full_record_validation_reuses_the_command_envelope_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "Envelope snapshot reuse")
+            lifecycle = store.v5_lifecycle()
+            created = lifecycle.add_research(
+                {
+                    "claim": "One exact immutable Research snapshot.",
+                    "campaign_id": campaign_id,
+                },
+                actor="main",
+            )
+            inspection = RoundInspectionContext()
+            lifecycle.research_envelopes(
+                _inspection_context=inspection,
+            )
+            with patch.object(
+                lifecycle,
+                "_research_record",
+                side_effect=AssertionError(
+                    "an envelope already read in this command must not be reread"
+                ),
+            ) as record_read:
+                validated = lifecycle._inspection_research_record(
+                    created["research_id"], inspection
+                )
+            self.assertEqual(validated["research_id"], created["research_id"])
+            record_read.assert_not_called()
+
     def test_work_key_semantic_predicate_false_and_requested_limit_bounds_projection(
         self,
     ) -> None:

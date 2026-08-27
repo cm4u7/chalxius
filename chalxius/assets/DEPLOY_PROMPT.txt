@@ -1,4 +1,4 @@
-Chalxius 0.9.11 — Frontier and Source Continuity
+Chalxius 0.9.12 — Frontier Lifecycle Closure
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
@@ -17,6 +17,15 @@ and attained boundaries. Completion of those heads does not close the semantic
 goal: it requests Main disposition or a new exact head. Only explicit archive
 removes the goal. No note dispatches, schedules, closes, or admits anything,
 and the unscoped workflow queue remains global.
+
+Exact legacy Main-authored COW roots remain directly operable when their
+existing relation, complete source-id set, one completed production product,
+challenge companions, Campaign, dependencies, and chronology determine one
+unambiguous repair edge. In a multi-head goal, real `await_return` work is the
+foreground goal state even when an older sibling still needs reconciliation;
+all sibling actions remain visible. One command reuses already hash-validated
+Research envelope bytes before full record/artifact validation rather than
+rereading the same immutable file.
 
 Routine goal rows preserve exact actions and bounded current, recent, and
 historical mathematical summaries. Repeated forensic topology remains behind
@@ -119,6 +128,10 @@ A client "Reconnecting..." banner is transport state, not worker or round state.
 After reconnect, inspect agents, canonical return bytes, ingestion, and round
 state; never duplicate or reclaim solely from the banner, and add no reconnect
 gate or liveness scheduler.
+If a host command has yielded a still-running process/session without a final
+exit code or expected JSON, resume that same session. Do not call the first
+yield blank stdout and do not retry a mutating planner for output. Only a
+completed command with missing or invalid required output is an output defect.
 
 Ordinary Research operates exact admitted Fact premises directly and does not
 replay unrelated admission history. A frozen task-card related artifact whose

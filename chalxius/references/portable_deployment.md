@@ -1,5 +1,16 @@
 # Chalxius portable deployment
 
+## 0.9.12 Frontier Lifecycle Closure
+
+The `0.9.12` **Frontier Lifecycle Closure** candidate follows exact historical
+COW bytes through one unambiguous completion edge, foregrounds real in-flight
+work without hiding older branch attention, and avoids rereading Research bytes
+already hash-validated inside one frontier command. Main also resumes a
+still-running host process instead of retrying a mutating planner for output.
+The project-free installer validates and atomically swaps one complete
+manifest-bound tree; it reads and writes no research project. Publication is a
+separate authorization.
+
 ## 0.9.11 Frontier and Source Continuity
 
 The `0.9.11` **Frontier and Source Continuity** candidate keeps routine

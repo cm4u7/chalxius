@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.11 — Frontier and Source Continuity
+# Chalxius 0.9.12 — Frontier Lifecycle Closure
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -47,6 +47,19 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 `card_authorized_path` plus `returned_copy_path` declaration are equivalent
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
+
+The 0.9.12 repair closes three frontier lifecycle seams without adding a
+second state machine. Exact historical Main-authored COW roots may complete a
+workgroup when their existing relation, complete source-id set, single
+obligation-complete production product, explicit challenge companions,
+Campaign, dependencies, and chronology determine one unambiguous repair edge.
+In a multi-head Campaign goal, an exact `await_return` branch is the foreground
+goal state even when an older sibling still needs reconciliation; every sibling
+action remains visible. One frontier command also reuses Research envelope
+bytes already hash-validated in that command before running the full record and
+artifact checks. Historical bytes are not rewritten, and no compatibility
+layer, automatic selector, hidden branch deletion, persistent index, Candidate
+effect, or Fact effect is introduced.
 
 The 0.9.11 repair treats routine frontier context as Main's mathematical
 working memory rather than as a byte-minimization exercise. Goal rows retain
@@ -159,6 +172,12 @@ A copy-on-write successor is a new complete product. Prior defects and repair ob
 Main owns cross-round and copy-on-write search, completion projection, duplicate exclusion, and final `DISPATCH`/`NO-DISPATCH`; Scouts may collect bounded evidence only. After mathematical dispatch or receipt, Main checks visible free slots and exact current Research boundaries; when a nonduplicative, logically independent high-value mathematical target exists, keep at least two workers active on useful mathematics. For non-mathematical engineering, delegate only when a bounded independent subtask is expected to shorten the critical path after startup, context-transfer, coordination, and merge costs. This is opportunity use, not filler work or a slot quota.
 Slot use takes priority over reviewer-session reuse. After useful independent mathematical slots are filled, Main may continue with the same independent supervisor for another applicable scope of the same frozen product or for a later copy-on-write successor in the same route. This saves startup and repeated source loading; it creates no persistent supervisor binding, no receipt dependency, and no requirement to wait for that reviewer when another qualified reviewer is available.
 A client `Reconnecting...` banner is transport state, not worker or round state. After transport returns, Main inspects agents, canonical return bytes, ingestion, and round state, reports any missed completion, and resumes without duplicate dispatch or reclaim solely because of reconnect. This creates no reconnect gate or liveness scheduler.
+When a host command yields a still-running process/session without a final exit
+code or the expected final JSON, Main resumes that same session. It does not
+classify the first yield as blank stdout and does not retry a mutating planner
+solely to obtain output. Only a completed command whose required output is
+missing or invalid is an output defect. This is an operating instruction, not
+a receipt, transaction layer, retry service, or gate.
 The 0.8.10 repair makes Main run one bounded exact Research search over stable names/identifiers before freezing a named frontier, review completed production, repair, and supervision, and choose `related_research_ids`; it adds no automatic selection/expansion, fuzzy match, whole-project audit, index, receipt, state, scheduler, or gate.
 The 0.8.7 repair makes Main notice elapsed time already visible through ordinary
 host interaction. Unexpected duration relative to apparent complexity or a

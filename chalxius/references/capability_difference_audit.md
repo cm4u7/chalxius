@@ -1,5 +1,22 @@
 # Pre-Chalxius capability difference audit
 
+## 0.9.12 Frontier Lifecycle Closure difference
+
+Three defects shared one cause: the frontier projected newer canonical repair
+metadata more strongly than equivalent exact historical graph bytes, goal-level
+multi-head aggregation let an old reconciliation branch obscure real in-flight
+work, and full record validation reread Research bytes already hash-validated
+by the same command snapshot. The repair follows only a structurally exact
+legacy COW shape, gives `await_return` foreground precedence without deleting
+any sibling action, and reuses the envelope bytes while retaining complete
+record and artifact checks.
+
+A separate Main instruction distinguishes a still-running host session from a
+completed command with missing output. Main resumes the same session and never
+retries a mutating planner solely because the first tool yield has no final
+JSON. This adds no transaction layer, receipt, compatibility branch, scheduler,
+persistent index, automatic selection, Candidate effect, or Fact effect.
+
 ## 0.9.11 Frontier and Source Continuity difference
 
 Routine frontier projection now removes repeated forensic aggregates while

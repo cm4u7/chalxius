@@ -75,5 +75,18 @@ class AgentJudgmentIntegrity0811Tests(unittest.TestCase):
         ):
             self.assertIn(marker, combined)
 
+    def test_running_host_session_is_resumed_without_mutating_retry(self) -> None:
+        skill = _read("SKILL.md")
+        deploy = _read("assets/DEPLOY_PROMPT.txt")
+        combined = " ".join("\n".join((skill, deploy)).split())
+        for marker in (
+            "still-running process/session",
+            "resumes that same session",
+            "does not retry a mutating planner",
+            "completed command",
+            "missing or invalid",
+        ):
+            self.assertIn(marker, combined)
+
 if __name__ == "__main__":
     unittest.main()

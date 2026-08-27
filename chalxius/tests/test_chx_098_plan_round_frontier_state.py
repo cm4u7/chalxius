@@ -483,6 +483,72 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         self.assertTrue(self.store.audit().current_ok)
 
+    def test_in_flight_head_remains_goal_state_beside_reconciliation(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [
+                        self.root_id,
+                        self.successor_id,
+                    ],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        records = {
+            item["research_id"]: item
+            for item in lifecycle.research_envelopes()
+        }
+        root_key = lifecycle._frontier_work_key(records[self.root_id])
+        successor_key = lifecycle._frontier_work_key(
+            records[self.successor_id]
+        )
+        completions = {
+            root_key: ("pending", None, 0, "0" * 64),
+            successor_key: ("pending", None, 0, "1" * 64),
+        }
+        actions = {
+            root_key: {
+                "next_action": "main_reconciliation",
+                "pending_reason": "older_branch_needs_reconciliation",
+                "actionable_research_id": self.root_id,
+                "actionable_round_id": None,
+            },
+            successor_key: {
+                "next_action": "await_return",
+                "pending_reason": "production_round_in_flight",
+                "actionable_research_id": self.successor_id,
+                "actionable_round_id": "round-20260827T000000Z-00000000",
+            },
+        }
+        with (
+            patch.object(
+                lifecycle,
+                "_frontier_group_completion",
+                return_value=completions,
+            ),
+            patch(
+                "mathgraph.v5_lifecycle.project_frontier_group_actions",
+                return_value=actions,
+            ),
+        ):
+            goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
+        self.assertEqual(goal["coverage_status"], "in_flight")
+        self.assertEqual(goal["next_action"], "advance_active_heads")
+        self.assertEqual(goal["action_class"], "multi_branch_progress")
+        self.assertEqual(len(goal["active_head_actions"]), 2)
+        self.assertIn(
+            "main_reconciliation",
+            {
+                item["next_action"]
+                for item in goal["active_head_actions"]
+            },
+        )
+
     def test_routine_goal_projection_spends_context_on_math_not_duplicate_lineage(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         actions = []
