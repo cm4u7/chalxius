@@ -1,4 +1,4 @@
-Chalxius 0.9.10 — Terminal Seal Hygiene
+Chalxius 0.9.11 — Frontier and Source Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
@@ -17,6 +17,20 @@ and attained boundaries. Completion of those heads does not close the semantic
 goal: it requests Main disposition or a new exact head. Only explicit archive
 removes the goal. No note dispatches, schedules, closes, or admits anything,
 and the unscoped workflow queue remains global.
+
+Routine goal rows preserve exact actions and bounded current, recent, and
+historical mathematical summaries. Repeated forensic topology remains behind
+explicit diagnostic output. A target-bound production plan may hand off an
+old active route through its exact completed terminal descendants; unrelated
+parallel heads remain visible and Main still makes the mathematical choice.
+Batch round status ignores only recognized private staging names and reports
+their count, while visible malformed entries remain diagnostic.
+
+When a downstream production explicitly cites an upstream product or review,
+its source-scope supervisor may follow that exact workflow provenance to the
+completed upstream source review. The card carries the review and only the
+primary-source hashes it actually cited. It never infers semantic relevance,
+reopens the review, or scans the project for a substitute.
 
 One frontier invocation shares one ephemeral exact-snapshot inspection of
 Research COW/repair topology, completion, and assignment product/receipt

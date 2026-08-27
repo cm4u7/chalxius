@@ -1,10 +1,32 @@
-# Chalxius 0.9.10 architecture findings and residual boundaries
+# Chalxius 0.9.11 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.9.10
-**Terminal Seal Hygiene**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.9.11
+**Frontier and Source Continuity**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.9.11 Frontier and Source Continuity
+
+Large Campaigns exposed three coupled navigation defects. Routine frontier
+rows repeated deep diagnostic topology after their actionable and
+mathematical content was already present; a target-bound production selection
+could fail to retire an old head when the bridge ran through completed
+terminal products or reviews; and batch round discovery treated an abandoned
+private atomic-staging directory as a public round. The repair keeps bounded
+current, recent, and historical mathematics, extends exact handoff through
+terminal lineage, and distinguishes narrowly named private staging from
+visible malformed entries. None of these projections chooses mathematics or
+changes immutable history.
+
+A separate source-continuity defect arose when a downstream production cited
+an upstream product or its proof review but did not repeat the upstream
+source-scope sibling. New source-scope planning now follows only that explicit
+workflow provenance to completed source reviews, carries the review Research,
+and projects only primary hashes listed in its `source_uses`. It does not scan
+the project for semantic similarity, copy every old capability, or require a
+redo. The focused 42-test surface and the complete 1,041-test suite pass; two
+unrelated tests remain intentionally skipped.
 
 ## 0.9.10 Terminal Seal Hygiene
 

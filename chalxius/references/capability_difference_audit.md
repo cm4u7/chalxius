@@ -1,5 +1,20 @@
 # Pre-Chalxius capability difference audit
 
+## 0.9.11 Frontier and Source Continuity difference
+
+Routine frontier projection now removes repeated forensic aggregates while
+retaining exact actions and bounded mathematical summaries. Target-bound
+planning recognizes completed terminal descendants as an exact branch
+handoff, and batch round discovery treats only a recognized private staging
+name as non-round state. Visible malformed entries remain diagnostic.
+
+Source-scope planning also preserves an already completed upstream source
+review across an explicit downstream Research edge. It follows exact round,
+component, assignment, and supervisor provenance and carries only source
+hashes actually named by that review, plus its report through ordinary
+Research context. This is direct graph operation, not semantic inference,
+automatic review, a compatibility layer, or a new authority boundary.
+
 ## 0.9.10 Terminal Seal Hygiene difference
 
 Terminal validation now distinguishes exact content authority from two

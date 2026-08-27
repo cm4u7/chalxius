@@ -395,6 +395,186 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(row["active_head_research_ids"], [next_id])
         self.assertEqual(row["recent_attained_research_ids"], [self.root_id])
 
+    def test_terminal_successor_handoff_retires_completed_head_at_head_limit(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        product_id = self._research(
+            "completed-product",
+            "Completed product of the stored root",
+            relation="extends",
+            related_research_ids=[self.root_id],
+        )
+        clean_review_id = self._research(
+            "clean-review",
+            "Clean independent review of the completed product",
+            relation="supports",
+            related_research_ids=[product_id],
+        )
+        next_id = self._research(
+            "terminal-successor-next",
+            "Main-selected continuation from exact terminal evidence",
+            relation="extends",
+            related_research_ids=[product_id, clean_review_id],
+        )
+        other_heads = [
+            self._research(f"head-{index}", f"Stored head {index}")
+            for index in range(7)
+        ]
+        in_flight_id = other_heads[0]
+        stored_heads = [self.root_id, *other_heads]
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": stored_heads,
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "current_route_research_ids": [],
+                    "current_terminal_research_ids": [
+                        product_id,
+                        clean_review_id,
+                    ],
+                    "terminal_evidence_research_ids": [clean_review_id],
+                    "actionable_research_id": None,
+                    "next_action": "plan_supervision",
+                },
+                {
+                    "research_id": in_flight_id,
+                    "current_route_research_ids": [in_flight_id],
+                    "current_terminal_research_ids": [in_flight_id],
+                    "terminal_evidence_research_ids": [],
+                    "actionable_research_id": in_flight_id,
+                    "next_action": "await_return",
+                },
+                *[
+                    {
+                        "research_id": head_id,
+                        "current_route_research_ids": [],
+                        "current_terminal_research_ids": [head_id],
+                        "terminal_evidence_research_ids": [],
+                        "actionable_research_id": None,
+                        "next_action": "none",
+                    }
+                    for head_id in other_heads[1:]
+                ],
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[next_id],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["active_head_research_ids"], [next_id, in_flight_id]
+        )
+        self.assertTrue(self.store.audit().current_ok)
+
+    def test_routine_goal_projection_spends_context_on_math_not_duplicate_lineage(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        actions = []
+        for index in range(8):
+            research_id = f"{index + 10:012x}"
+            actions.append(
+                {
+                    "research_id": research_id,
+                    "workflow_root_research_id": research_id,
+                    "checkpoint_head_state": "current",
+                    "action_class": "workflow_completion",
+                    "next_action": "await_return",
+                    "why_now": "one exact in-flight round remains",
+                    "actionable_research_id": research_id,
+                    "actionable_round_id": (
+                        "round-20260827T000000Z-" + f"{index:08x}"
+                    ),
+                    "current_route_research_ids": [research_id],
+                    "current_terminal_research_ids": [research_id],
+                    "current_route_mathematical_summaries": [
+                        {
+                            "research_id": research_id,
+                            "claim": "R" * 600,
+                        }
+                    ],
+                    "terminal_evidence_research_ids": [],
+                    "mathematical_summary": {
+                        "research_id": research_id,
+                        "kind": "conjecture",
+                        "relation": "extends",
+                        "claim": "C" * 900,
+                        "content": "M" * 900,
+                        "rationale": "D" * 900,
+                    },
+                    "work_completion_status": "pending",
+                    "plan_round_argv": None,
+                }
+            )
+        entry = {
+            "target_id": "camtarget-0000000000000000",
+            "label": "One exact mathematical goal",
+            "root_research_id": self.root_id,
+            "root_claim": "G" * 900,
+            "coverage_status": "in_flight",
+            "work_completion_status": "pending",
+            "action_class": "workflow_completion",
+            "next_action": "await_return",
+            "why_now": "bounded active work",
+            "actionable_research_id": actions[0]["research_id"],
+            "actionable_round_id": actions[0]["actionable_round_id"],
+            "actionable_research_ids": [actions[0]["research_id"]],
+            "active_head_research_ids": [
+                action["research_id"] for action in actions
+            ],
+            "historical_mathematical_summary": [
+                {"research_id": f"{index + 30:012x}", "claim": "H" * 700}
+                for index in range(8)
+            ],
+            "recent_attained_mathematical_history": [
+                {"research_id": f"{index + 50:012x}", "claim": "N" * 700}
+                for index in range(4)
+            ],
+            "active_head_actions": actions,
+            "active_head_semantic_successors": [
+                {
+                    "production_product_research_ids": [
+                        f"{index + 70:012x}" for index in range(8)
+                    ],
+                    "supervision_result_research_ids": [
+                        f"{index + 90:012x}" for index in range(8)
+                    ],
+                }
+            ],
+        }
+        compact = lifecycle._compact_goal_coverage_entry(entry)
+        encoded = json.dumps(compact, sort_keys=True).encode()
+        self.assertLess(len(encoded), 14_000)
+        self.assertEqual(len(compact["active_head_actions"]), 8)
+        self.assertEqual(len(compact["historical_mathematical_summary"]), 2)
+        self.assertEqual(
+            len(compact["recent_attained_mathematical_history"]), 2
+        )
+        self.assertIn(
+            "claim", compact["active_head_actions"][0]["mathematical_summary"]
+        )
+        self.assertIn(
+            "content",
+            compact["active_head_actions"][0]["mathematical_summary"],
+        )
+        self.assertNotIn("active_head_semantic_successors", compact)
+        self.assertNotIn("production_product_research_ids", compact)
+
     def test_too_many_ancient_landmarks_raise_only_an_advisory(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         landmarks = [self.landmark_id]

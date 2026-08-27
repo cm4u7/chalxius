@@ -7,6 +7,15 @@ operations remain valid when graph identity, hashes, dependencies, provenance,
 workflow stage, and owner boundaries are interpretable. The historical rows
 record what older releases did; they are not current graph-operation gates.
 
+The 0.9.11 Frontier and Source Continuity overlay keeps routine Campaign
+frontier context bounded but mathematically decision-useful, extends exact
+target-bound head handoff through completed terminal lineage, and makes
+all-round discovery distinguish private atomic staging from visible malformed
+entries. Source-scope cards may follow an explicitly related Research
+product/review to its completed source-scope sibling and receive only primary
+hashes actually cited by that review. There is no semantic graph scan,
+automatic selector, compatibility layer, workflow gate, or truth effect.
+
 The 0.9.10 Terminal Seal Hygiene overlay separates two exact Finder
 `.DS_Store` locations from terminal authority while keeping the no-follow tree
 inventory and the exact sealed path/hash set strict. Unknown entries,

@@ -1,5 +1,16 @@
 # Chalxius unified Evidence and research architecture
 
+> **0.9.11 frontier-and-source-continuity override.** Routine frontier is
+> bounded mathematical working memory: it retains exact decisions and compact
+> current/recent/historical mathematics while deep repeated topology stays
+> diagnostic. Target-bound planning follows exact completed terminal lineage
+> when handing off an active head. Batch round discovery ignores only a
+> recognized private atomic-staging name and reports it. A source-scope card
+> follows only explicit direct Research workflow provenance to a completed
+> source review and projects that review's actually cited primary hashes. No
+> semantic scan, scheduler, compatibility layer, gate, Candidate effect, or
+> Fact effect is introduced.
+
 > **0.9.10 terminal-seal-hygiene override.** Terminal authority is the exact
 > seal, return, and artifact path/hash set, not Finder decoration. A regular
 > `.DS_Store` is ignored only at the bundle root or its exact `artifacts`

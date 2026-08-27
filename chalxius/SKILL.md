@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.10 — Terminal Seal Hygiene
+# Chalxius 0.9.11 — Frontier and Source Continuity
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -47,6 +47,21 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 `card_authorized_path` plus `returned_copy_path` declaration are equivalent
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
+
+The 0.9.11 repair treats routine frontier context as Main's mathematical
+working memory rather than as a byte-minimization exercise. Goal rows retain
+exact actions, compact current mathematics, and bounded recent and historical
+summaries while removing mechanically repeated diagnostic topology.
+`plan-round --frontier-target` can hand off an active route when the selected
+successor descends from its completed terminal products or reviews, not only
+from the old head itself. Batch round status ignores only a narrowly
+recognized private staging name and reports that fact in a bounded diagnostic;
+visible malformed round names remain visible diagnostics. A downstream
+source-scope supervisor follows only explicit direct Research workflow
+provenance to a completed prior source-scope review and receives that review
+plus the exact primary-source hashes it actually used. These are bounded read
+and nontruth-navigation repairs: they add no semantic search, compatibility
+layer, monitor, gate, Candidate effect, or Fact effect.
 
 The ordinary frontier has one exact workgroup/completion projection. Exact duplicates have one actionable representative; exact related Research remains material to task-card and supervision authority. Completed production and applicable supervision disappear only from actionable views; history remains intact. `limit` bounds entries and members, zero-target planning avoids Fact inventory, and the full set remains a count/digest.
 

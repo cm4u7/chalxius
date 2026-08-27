@@ -165,6 +165,45 @@ class CHX084BatchRoundStatusTests(unittest.TestCase):
                 {"aborted", "completed"},
             )
 
+    def test_batch_ignores_private_staging_and_reports_malformed_visible_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            with patch.object(
+                V5LifecycleManager,
+                "_validate_bound_runtime_binding",
+                return_value={},
+            ):
+                planned = [
+                    self._plan_round(store, f"Valid round {index}.")
+                    for index in range(2)
+                ]
+                (
+                    store.rounds_dir
+                    / ".round-20260827T000000Z-deadbeef.staging-acde1234"
+                ).mkdir()
+                (store.rounds_dir / "round-malformed-visible").mkdir()
+                batch = store.v5_lifecycle().round_statuses()
+
+            self.assertEqual(
+                set(batch["round_states"]),
+                {str(item["round_id"]) for item in planned},
+            )
+            diagnostics = {
+                item["code"]: item
+                for item in batch["discovery_diagnostics"]
+            }
+            self.assertEqual(
+                diagnostics["private_round_staging_ignored"]["count"], 1
+            )
+            malformed = diagnostics[
+                "invalid_visible_round_directories_ignored"
+            ]
+            self.assertEqual(malformed["count"], 1)
+            self.assertEqual(
+                malformed["entry_names"], ["round-malformed-visible"]
+            )
+            self.assertEqual(batch["truth_effect"], "none")
+
 
 if __name__ == "__main__":
     unittest.main()

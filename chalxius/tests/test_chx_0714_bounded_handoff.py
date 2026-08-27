@@ -499,7 +499,7 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 return_payload["attack_learning"] = None
             return_path = Path(assignment["return_path"])
             return_path.write_text(json.dumps(return_payload, sort_keys=True))
-            lifecycle.ingest_return(
+            production_receipt = lifecycle.ingest_return(
                 round_id=production["round_id"],
                 assignment_id=assignment["assignment_id"],
                 worker_final_sha256=sha256_bytes(return_path.read_bytes()),
@@ -510,8 +510,8 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 return_value=True,
             ):
                 supervision = lifecycle.create_supervision_round(
-                production["round_id"],
-                supervisor_scopes=["source_scope"],
+                    production["round_id"],
+                    supervisor_scopes=["source_scope"],
                     host_task_scope_id="supervised-authority-review",
                 )
             supervisor_card = json.loads(
@@ -552,6 +552,203 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 )
             )
             self.assertIn(assignment["task_card_relpath"], paths)
+
+            source_review_assignment = supervision["assignments"][0]
+            review_artifact_dir = (
+                store.root / source_review_assignment["artifact_dir_relpath"]
+            )
+            review_artifact_dir.mkdir(parents=True, exist_ok=True)
+            review_report_path = review_artifact_dir / "source-review.md"
+            review_report_path.write_text(
+                "The exact primary source use is clean.\n",
+                encoding="utf-8",
+            )
+            review_report = {
+                "path": str(review_report_path.relative_to(store.root)),
+                "sha256": sha256_bytes(review_report_path.read_bytes()),
+                "role": "research_supervision_report",
+            }
+            review_payload = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": supervision["round_id"],
+                "assignment_id": source_review_assignment["assignment_id"],
+                "worker_id": source_review_assignment["worker_id"],
+                "task_card_sha256": source_review_assignment[
+                    "task_card_sha256"
+                ],
+                "blackboard_snapshot_sha256": source_review_assignment[
+                    "blackboard_snapshot_sha256"
+                ],
+                "outcome": "challenge",
+                "claim": "The exact primary source use has no bounded defect.",
+                "content": "The review checked the exact cited source bytes.",
+                "narrative": {
+                    "rationale": "Preserve a completed source review downstream.",
+                    "summary": "The exact source use is clean.",
+                    "intuition": "A later reviewer should see this review and source.",
+                    "limitations": "Nontruth Research only.",
+                },
+                "artifacts": [review_report],
+                "obligation_dispositions": [
+                    {
+                        "obligation_id": obligation["obligation_id"],
+                        "status": "complete",
+                        "witness_artifact_sha256s": [review_report["sha256"]],
+                        "rationale": "The exact source review is hash-bound.",
+                    }
+                    for obligation in supervisor_card["assurance_contract"][
+                        "obligations"
+                    ]
+                ],
+                "computation_manifest": None,
+                "research_assurance": {
+                    "source_uses": [
+                        {
+                            "source_key": "frozen-primary-source-review",
+                            "use_kind": "result",
+                            "source_strength": "fixed_object",
+                            "target_strength": "fixed_object",
+                            "source_artifact_sha256": sha256_bytes(
+                                source_path.read_bytes()
+                            ),
+                            "toy_check_artifact_sha256": None,
+                            "bridge_artifact_sha256s": [review_report["sha256"]],
+                        }
+                    ],
+                    "route_invalidations": [],
+                    "extremal_cases": [],
+                    "claim_strength": [],
+                    "contour_substitutions": [],
+                    "claimed_structures": [],
+                    "program_math_alignments": [],
+                },
+                "attack_learning": None,
+            }
+            review_return_path = Path(source_review_assignment["return_path"])
+            review_return_path.write_text(
+                json.dumps(review_payload, sort_keys=True),
+                encoding="utf-8",
+            )
+            source_review_receipt = lifecycle.ingest_return(
+                round_id=supervision["round_id"],
+                assignment_id=source_review_assignment["assignment_id"],
+                worker_final_sha256=sha256_bytes(
+                    review_return_path.read_bytes()
+                ),
+            )
+
+            downstream = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Use the reviewed result in one downstream component.",
+                    "relation": "uses",
+                    "related_research_ids": [production_receipt["research_id"]],
+                },
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            downstream_round = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[downstream["research_id"]],
+                host_task_scope_id="source-continuity-production",
+            )
+            downstream_assignment = downstream_round["assignments"][0]
+            downstream_card = json.loads(
+                Path(downstream_assignment["task_card_path"]).read_text()
+            )
+            downstream_payload = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": downstream_round["round_id"],
+                "assignment_id": downstream_assignment["assignment_id"],
+                "worker_id": downstream_assignment["worker_id"],
+                "task_card_sha256": downstream_assignment["task_card_sha256"],
+                "blackboard_snapshot_sha256": downstream_assignment[
+                    "blackboard_snapshot_sha256"
+                ],
+                "outcome": "proof",
+                "claim": "The downstream bounded consequence holds.",
+                "content": "This fixture tests exact workflow provenance only.",
+                "narrative": {
+                    "rationale": "Exercise downstream source continuity.",
+                    "summary": "One downstream product is complete.",
+                    "intuition": "The source review remains useful context.",
+                    "limitations": "Nontruth Research only.",
+                },
+                "artifacts": [],
+                "obligation_dispositions": [],
+                "computation_manifest": None,
+                "research_assurance": {
+                    "source_uses": [],
+                    "route_invalidations": [],
+                    "extremal_cases": [],
+                    "claim_strength": [],
+                    "contour_substitutions": [],
+                    "claimed_structures": [],
+                    "program_math_alignments": [],
+                },
+            }
+            if "adverse_routing" in downstream_card:
+                downstream_payload["attack_learning"] = None
+            downstream_return_path = Path(downstream_assignment["return_path"])
+            downstream_return_path.write_text(
+                json.dumps(downstream_payload, sort_keys=True),
+                encoding="utf-8",
+            )
+            lifecycle.ingest_return(
+                round_id=downstream_round["round_id"],
+                assignment_id=downstream_assignment["assignment_id"],
+                worker_final_sha256=sha256_bytes(
+                    downstream_return_path.read_bytes()
+                ),
+            )
+            with patch.object(
+                lifecycle,
+                "_task_card_skill_version_at_least",
+                return_value=True,
+            ):
+                downstream_supervision = lifecycle.create_supervision_round(
+                    downstream_round["round_id"],
+                    supervisor_scopes=["source_scope"],
+                    host_task_scope_id="source-continuity-review",
+                )
+            downstream_supervisor_card = json.loads(
+                Path(
+                    downstream_supervision["assignments"][0]["task_card_path"]
+                ).read_text()
+            )
+            downstream_dossier = downstream_supervisor_card[
+                "mathematical_state"
+            ]["source_research_dossier"]
+            self.assertIn(
+                source_review_receipt["research_id"],
+                downstream_dossier["related_research_ids"],
+            )
+            downstream_paths = {
+                item["path"]
+                for item in downstream_supervisor_card["mathematical_state"][
+                    "related_artifacts"
+                ]
+            }
+            self.assertIn("primary-source.pdf", downstream_paths)
+            self.assertIn(
+                review_report["sha256"],
+                {
+                    item["sha256"]
+                    for item in downstream_supervisor_card[
+                        "mathematical_state"
+                    ]["related_artifacts"]
+                },
+            )
+            self.assertFalse(
+                {
+                    "hkr-primary.pdf",
+                    "blr-primary.pdf",
+                    "dml-primary.pdf",
+                }.intersection(downstream_paths)
+            )
 
     def test_structured_source_evidence_requires_all_declared_primary_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

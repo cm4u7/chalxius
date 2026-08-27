@@ -5971,6 +5971,281 @@ class V5LifecycleManager:
             for research_id in sorted(selected_records)
         ]
 
+    def _supervision_manifests_for_production_round(
+        self,
+        production_round_id: str,
+        inspection: RoundInspectionContext,
+    ) -> list[tuple[Path, dict[str, Any]]]:
+        """Return live supervision rounds for one exact production round.
+
+        The index is command-local.  It avoids repeating a whole rounds scan
+        when Candidate projection, frontier inspection, and source-review
+        continuity ask about the same immutable production round.
+        """
+
+        production_round_id = validate_round_id(production_round_id)
+        cached = inspection.supervision_manifests_by_production_round.get(
+            production_round_id
+        )
+        if cached is not None:
+            return cached
+        matching_manifests: list[tuple[Path, dict[str, Any]]] = []
+        if self.store.rounds_dir.exists():
+            for candidate_dir in sorted(self.store.rounds_dir.glob("round-*")):
+                if candidate_dir.is_symlink() or not candidate_dir.is_dir():
+                    continue
+                manifest_path = candidate_dir / "round.json"
+                if manifest_path.is_symlink() or not manifest_path.is_file():
+                    raise ValueError("round ledger contains an unsafe manifest")
+                raw_manifest = self._read_regular_bytes_once(
+                    manifest_path,
+                    label="Research supervision round manifest",
+                )
+                if production_round_id.encode("ascii") not in raw_manifest:
+                    continue
+                round_dir, manifest = self._round_manifest(
+                    candidate_dir.name,
+                    _inspection_context=inspection,
+                )
+                cycle = manifest.get("research_cycle")
+                if (
+                    isinstance(cycle, dict)
+                    and cycle.get("subround") == "supervision"
+                    and cycle.get("source_round_id") == production_round_id
+                    and self.store.reasoning_modes().work_unit_abort(
+                        manifest["round_id"]
+                    )
+                    is None
+                ):
+                    matching_manifests.append((round_dir, manifest))
+        inspection.supervision_manifests_by_production_round[
+            production_round_id
+        ] = matching_manifests
+        return matching_manifests
+
+    def _production_component_for_exact_research_input(
+        self,
+        record: dict[str, Any],
+        inspection: RoundInspectionContext,
+    ) -> tuple[str, str | None] | None:
+        """Resolve explicit Research provenance to its production component.
+
+        This follows only immutable workflow identities.  It deliberately does
+        not infer mathematical relevance from prose or search the wider graph.
+        """
+
+        metadata = record.get("metadata", {})
+        if not isinstance(metadata, dict):
+            return None
+        direct_supervision = metadata.get("research_supervision")
+        if isinstance(direct_supervision, dict):
+            binding = self._validate_research_supervision_binding(
+                direct_supervision,
+                _inspection_context=inspection,
+            )
+            return (
+                binding["source_round_id"],
+                binding.get("source_component_id"),
+            )
+        provenance = metadata.get("assignment_provenance")
+        if not isinstance(provenance, dict):
+            return None
+        round_dir, manifest = self._round_manifest(
+            provenance["round_id"],
+            _inspection_context=inspection,
+        )
+        assignments = [
+            item
+            for item in manifest["assignments"]
+            if item["assignment_id"] == provenance["assignment_id"]
+        ]
+        if len(assignments) != 1:
+            raise ValueError("exact Research input assignment is missing")
+        assignment = assignments[0]
+        product, _receipt = self._research_product_for_assignment(
+            round_dir=round_dir,
+            manifest=manifest,
+            assignment=assignment,
+            _inspection_context=inspection,
+        )
+        if product["research_id"] != record["research_id"]:
+            raise ValueError("exact Research input product/result drifted")
+        cycle = manifest.get("research_cycle")
+        if not isinstance(cycle, dict):
+            return None
+        cycle = self._validate_research_cycle_binding(cycle)
+        if cycle["subround"] == "production":
+            if self._research_is_adverse_assignment(record):
+                return None
+            return (
+                manifest["round_id"],
+                self._source_component_id_for_assignment(
+                    manifest,
+                    assignment["assignment_id"],
+                    _inspection_context=inspection,
+                ),
+            )
+        if cycle["subround"] != "supervision":
+            return None
+        supervisor_task = self._inspection_research_record(
+            assignment["research_id"],
+            inspection,
+        )
+        binding = supervisor_task.get("metadata", {}).get(
+            "research_supervision"
+        )
+        if not isinstance(binding, dict):
+            return None
+        binding = self._validate_research_supervision_binding(
+            binding,
+            _inspection_context=inspection,
+        )
+        return (
+            binding["source_round_id"],
+            binding.get("source_component_id"),
+        )
+
+    def _completed_scope_reviews_for_component(
+        self,
+        *,
+        production_round_id: str,
+        source_component_id: str | None,
+        scope: str,
+        inspection: RoundInspectionContext,
+    ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+        """Return completed review products and their exact frozen task cards."""
+
+        matches: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+        for round_dir, manifest in self._supervision_manifests_for_production_round(
+            production_round_id,
+            inspection,
+        ):
+            cycle = manifest["research_cycle"]
+            if (
+                cycle.get("source_component_id") != source_component_id
+                or scope not in cycle.get("supervisor_scopes", [])
+            ):
+                continue
+            for assignment in manifest["assignments"]:
+                supervisor_task = self._inspection_research_record(
+                    assignment["research_id"],
+                    inspection,
+                )
+                binding = supervisor_task.get("metadata", {}).get(
+                    "research_supervision"
+                )
+                if not isinstance(binding, dict):
+                    continue
+                binding = self._validate_research_supervision_binding(
+                    binding,
+                    _inspection_context=inspection,
+                )
+                if (
+                    binding["supervisor_scope"] != scope
+                    or binding["source_round_id"] != production_round_id
+                    or binding.get("source_component_id") != source_component_id
+                ):
+                    continue
+                try:
+                    product, _receipt = self._research_product_for_assignment(
+                        round_dir=round_dir,
+                        manifest=manifest,
+                        assignment=assignment,
+                        _inspection_context=inspection,
+                    )
+                except ValueError as exc:
+                    if "worker Research product is missing" in str(exc):
+                        continue
+                    raise
+                task_card_path = contained_path(
+                    self.store.root,
+                    assignment["task_card_relpath"],
+                    "completed Research supervisor task card",
+                )
+                raw = self._read_regular_bytes_once(
+                    task_card_path,
+                    label="completed Research supervisor task card",
+                )
+                if sha256_bytes(raw) != assignment["task_card_sha256"]:
+                    raise ValueError("completed supervisor task-card hash drifted")
+                matches[product["research_id"]] = (
+                    product,
+                    self.store._read_json(task_card_path),
+                )
+        return [matches[key] for key in sorted(matches)]
+
+    def _source_scope_continuity_for_card(
+        self,
+        source_card: dict[str, Any],
+        inspection: RoundInspectionContext,
+    ) -> tuple[set[str], list[dict[str, str]]]:
+        """Carry exact prior source review context into a downstream review.
+
+        The route is intentionally narrow: direct Research input, its exact
+        production component, the completed source-scope sibling, and only
+        primary bytes that sibling actually cited in ``source_uses``.
+        """
+
+        dossier = source_card["mathematical_state"]["source_research_dossier"]
+        origins: set[tuple[str, str | None]] = set()
+        for research_id in dossier.get("related_research_ids", []):
+            record = self._inspection_research_record(research_id, inspection)
+            origin = self._production_component_for_exact_research_input(
+                record,
+                inspection,
+            )
+            if origin is not None:
+                origins.add(origin)
+
+        review_ids: set[str] = set()
+        capabilities: dict[tuple[str, str], dict[str, str]] = {}
+        for production_round_id, source_component_id in sorted(
+            origins,
+            key=lambda item: (item[0], item[1] or ""),
+        ):
+            reviews = self._completed_scope_reviews_for_component(
+                production_round_id=production_round_id,
+                source_component_id=source_component_id,
+                scope="source_scope",
+                inspection=inspection,
+            )
+            for review, review_card in reviews:
+                review_id = review["research_id"]
+                review_ids.add(review_id)
+                source_hashes = {
+                    item["source_artifact_sha256"]
+                    for item in review.get("metadata", {}).get(
+                        "source_uses", []
+                    )
+                    if isinstance(item, dict)
+                    and isinstance(item.get("source_artifact_sha256"), str)
+                }
+                state = review_card["mathematical_state"]
+                available = [
+                    *state.get("related_artifacts", []),
+                    *state.get("authority_snapshot", {}).get(
+                        "capabilities", []
+                    ),
+                    *state.get("source_research_dossier", {})
+                    .get("metadata", {})
+                    .get("artifacts", []),
+                ]
+                for capability in available:
+                    if capability.get("sha256") not in source_hashes:
+                        continue
+                    key = (capability["path"], capability["sha256"])
+                    if key in capabilities:
+                        continue
+                    capabilities[key] = {
+                        "path": capability["path"],
+                        "sha256": capability["sha256"],
+                        "source_role": (
+                            f"prior_source_review:{review_id}:"
+                            f"{capability.get('role', 'primary_source')}"
+                        ),
+                    }
+        return review_ids, list(capabilities.values())
+
     def _required_supervision_results_for_candidate(
         self,
         explicit_records: list[dict[str, Any]],
@@ -6020,37 +6295,10 @@ class V5LifecycleManager:
             ):
                 continue
             if production_round_id not in supervision_manifests:
-                matching_manifests: list[tuple[Path, dict[str, Any]]] = []
-                if self.store.rounds_dir.exists():
-                    for candidate_dir in sorted(
-                        self.store.rounds_dir.glob("round-*")
-                    ):
-                        if candidate_dir.is_symlink() or not candidate_dir.is_dir():
-                            continue
-                        manifest_path = candidate_dir / "round.json"
-                        if manifest_path.is_symlink() or not manifest_path.is_file():
-                            raise ValueError("round ledger contains an unsafe manifest")
-                        raw_manifest = self._read_regular_bytes_once(
-                            manifest_path,
-                            label="Research supervision round manifest",
-                        )
-                        if production_round_id.encode("ascii") not in raw_manifest:
-                            continue
-                        round_dir, manifest = self._round_manifest(
-                            candidate_dir.name,
-                            _inspection_context=inspection,
-                        )
-                        cycle = manifest.get("research_cycle")
-                        if (
-                            isinstance(cycle, dict)
-                            and cycle.get("subround") == "supervision"
-                            and self.store.reasoning_modes().work_unit_abort(
-                                manifest["round_id"]
-                            )
-                            is None
-                        ):
-                            matching_manifests.append((round_dir, manifest))
-                supervision_manifests[production_round_id] = matching_manifests
+                self._supervision_manifests_for_production_round(
+                    production_round_id,
+                    inspection,
+                )
             assignment_matches = [
                 assignment
                 for assignment in production_manifest["assignments"]
@@ -8932,8 +9180,27 @@ class V5LifecycleManager:
             if head_id in selected_set:
                 continue
             action = actions.get(head_id, {})
-            route = set(action.get("current_route_research_ids", []))
-            replaced = bool(replacement_basis.intersection(route)) or (
+            # A completed workflow has no current route, but its exact
+            # terminal products and clean review results are still the
+            # mathematical ancestry from which Main may choose the next cut.
+            # Treat that already projected lineage as part of the same head;
+            # otherwise plan-round asks Main to repeat an unambiguous choice
+            # through a separate frontier update and may retain a dead root as
+            # a ninth live head.
+            exact_lineage: set[str] = set()
+            for field in (
+                "current_route_research_ids",
+                "current_terminal_research_ids",
+                "terminal_evidence_research_ids",
+            ):
+                values = action.get(field, [])
+                if isinstance(values, list):
+                    exact_lineage.update(
+                        validate_memory_id(item) for item in values
+                    )
+            replaced = bool(
+                replacement_basis.intersection(exact_lineage)
+            ) or (
                 action.get("actionable_research_id") in selected_set
                 and action.get("actionable_research_id") != head_id
             )
@@ -9075,6 +9342,26 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         """Keep Main's routine goal row exact without copying diagnostics."""
 
+        def bounded_text(value: Any, maximum: int) -> str:
+            text = value if isinstance(value, str) else ""
+            return text if len(text) <= maximum else text[: maximum - 3] + "..."
+
+        def compact_mathematical_summary(value: Any) -> Any:
+            if not isinstance(value, dict):
+                return value
+            summary = {
+                key: value[key]
+                for key in ("research_id", "kind", "relation")
+                if key in value
+            }
+            claim = bounded_text(value.get("claim"), 220)
+            content = bounded_text(value.get("content"), 100)
+            if claim:
+                summary["claim"] = claim
+            if content:
+                summary["content"] = content
+            return summary
+
         routine_fields = (
             "target_id",
             "label",
@@ -9127,14 +9414,61 @@ class V5LifecycleManager:
         compact = {
             key: entry[key] for key in routine_fields if key in entry
         }
+        if isinstance(compact.get("root_claim"), str):
+            compact["root_claim"] = bounded_text(compact["root_claim"], 240)
+        for field, maximum in (
+            ("historical_mathematical_summary", 2),
+            ("recent_attained_mathematical_history", 2),
+        ):
+            values = compact.get(field)
+            if isinstance(values, list):
+                compact[field] = [
+                    {
+                        **{
+                            key: value[key]
+                            for key in ("research_id", "kind", "relation")
+                            if isinstance(value, dict) and key in value
+                        },
+                        **(
+                            {
+                                "claim": bounded_text(
+                                    value.get("claim"), 160
+                                )
+                            }
+                            if isinstance(value, dict)
+                            and bounded_text(value.get("claim"), 160)
+                            else {}
+                        ),
+                    }
+                    for value in values[:maximum]
+                ]
+        workflow_roots = compact.get("active_head_workflow_roots")
+        if isinstance(workflow_roots, list):
+            nontrivial_roots = [
+                item
+                for item in workflow_roots
+                if isinstance(item, dict)
+                and item.get("active_head_research_id")
+                != item.get("workflow_root_research_id")
+            ]
+            if nontrivial_roots:
+                compact["active_head_workflow_roots"] = nontrivial_roots
+            else:
+                compact.pop("active_head_workflow_roots", None)
+        # These exact ids are already partitioned into the curated historical
+        # and recent lists above.  Repeating their concatenation adds no Main
+        # decision information.
+        compact.pop("attained_checkpoint_research_ids", None)
         raw_head_actions = entry.get("active_head_actions")
         if isinstance(raw_head_actions, list):
-            compact["active_head_actions"] = [
-                {
+            compact_actions: list[dict[str, Any]] = []
+            for action in raw_head_actions:
+                if not isinstance(action, dict):
+                    continue
+                compact_action = {
                     key: action[key]
                     for key in (
                         "research_id",
-                        "mathematical_summary",
                         "workflow_root_research_id",
                         "checkpoint_head_state",
                         "action_class",
@@ -9151,48 +9485,46 @@ class V5LifecycleManager:
                     )
                     if key in action
                 }
-                for action in raw_head_actions
-                if isinstance(action, dict)
-            ]
-        diagnostic_rows: list[dict[str, Any]] = []
-        for field in (
-            "active_head_actions",
-            "active_head_semantic_successors",
-            "attained_semantic_successors",
-        ):
-            values = entry.get(field)
-            if not isinstance(values, list):
-                continue
-            diagnostic_rows.extend(
-                value for value in values if isinstance(value, dict)
-            )
-        for field in (
-            "current_route_research_ids",
-            "terminal_research_ids",
-            "terminal_evidence_research_ids",
-            "production_product_research_ids",
-            "supervision_plan_research_ids",
-            "supervision_result_research_ids",
-            "cow_repair_research_ids",
-        ):
-            exact_ids: list[str] = []
-            for row in diagnostic_rows:
-                values = row.get(field)
-                if not isinstance(values, list):
-                    continue
-                for research_id in values:
-                    if (
-                        isinstance(research_id, str)
-                        and research_id not in exact_ids
-                    ):
-                        exact_ids.append(research_id)
-            if not exact_ids:
-                continue
-            compact[field] = exact_ids[:8]
-            if len(exact_ids) > 8:
-                stem = field[:-4] if field.endswith("_ids") else field
-                compact[f"{stem}_count"] = len(exact_ids)
-                compact[f"{stem}_ids_sha256"] = sha256_json(exact_ids)
+                if "mathematical_summary" in action:
+                    compact_action["mathematical_summary"] = (
+                        compact_mathematical_summary(
+                            action["mathematical_summary"]
+                        )
+                    )
+                route_summaries = compact_action.get(
+                    "current_route_mathematical_summaries"
+                )
+                if isinstance(route_summaries, list):
+                    compact_action[
+                        "current_route_mathematical_summaries"
+                    ] = [
+                        {
+                            **(
+                                {"research_id": value["research_id"]}
+                                if isinstance(value, dict)
+                                and "research_id" in value
+                                else {}
+                            ),
+                            **(
+                                {
+                                    "claim": bounded_text(
+                                        value.get("claim"), 140
+                                    )
+                                }
+                                if isinstance(value, dict)
+                                and bounded_text(value.get("claim"), 140)
+                                else {}
+                            ),
+                        }
+                        for value in route_summaries[:2]
+                    ]
+                if (
+                    compact_action.get("workflow_root_research_id")
+                    == compact_action.get("research_id")
+                ):
+                    compact_action.pop("workflow_root_research_id", None)
+                compact_actions.append(compact_action)
+            compact["active_head_actions"] = compact_actions
         return compact
 
     def frontier_decision_surface(
@@ -15008,6 +15340,20 @@ class V5LifecycleManager:
                                 "source_role": capability["role"],
                             }
                         )
+                    prior_review_ids, prior_source_capabilities = (
+                        self._source_scope_continuity_for_card(
+                            source_card,
+                            inspection,
+                        )
+                    )
+                    related_ids.update(prior_review_ids)
+                    source_capabilities.extend(prior_source_capabilities)
+                    source_capabilities = list(
+                        {
+                            (item["path"], item["sha256"]): item
+                            for item in source_capabilities
+                        }.values()
+                    )
                     scoped_semantic = {
                         key: base_receipt[key]
                         for key in (
@@ -17542,10 +17888,27 @@ class V5LifecycleManager:
         if rounds_root.is_symlink() or not rounds_root.is_dir():
             raise ValueError("V5 rounds root is missing or unsafe")
         round_ids: list[str] = []
+        private_staging_count = 0
+        invalid_visible_names: list[str] = []
         for path in sorted(rounds_root.iterdir(), key=lambda item: item.name):
             if path.is_symlink() or not path.is_dir():
                 raise ValueError("V5 rounds root contains an unsafe entry")
-            round_ids.append(validate_round_id(path.name))
+            if re.fullmatch(
+                r"\.round-[^.]+\.staging-[0-9a-f]+", path.name
+            ) is not None:
+                # Atomic creation publishes only the final ``round-*`` path.
+                # A private staging directory may survive a crash, but it is
+                # neither a round nor authority to hide all valid statuses.
+                private_staging_count += 1
+                continue
+            try:
+                round_ids.append(validate_round_id(path.name))
+            except ValueError:
+                # Batch status is an inventory surface.  Preserve strict
+                # validation for direct round access while reporting a
+                # malformed visible directory without discarding every valid
+                # round from Main's view.
+                invalid_visible_names.append(path.name)
         inspection = RoundInspectionContext()
         round_states = {
             round_id: self.round_status(
@@ -17558,7 +17921,7 @@ class V5LifecycleManager:
             state in {"aborted", "completed"}
             for state in round_states.values()
         )
-        return {
+        result = {
             "schema_version": 1,
             "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
             "project_id": self.store.project_id(),
@@ -17567,6 +17930,28 @@ class V5LifecycleManager:
             "round_states": dict(sorted(round_states.items())),
             "truth_effect": "none",
         }
+        diagnostics: list[dict[str, Any]] = []
+        if private_staging_count:
+            diagnostics.append(
+                {
+                    "code": "private_round_staging_ignored",
+                    "count": private_staging_count,
+                }
+            )
+        if invalid_visible_names:
+            diagnostics.append(
+                {
+                    "code": "invalid_visible_round_directories_ignored",
+                    "count": len(invalid_visible_names),
+                    "entry_names": invalid_visible_names[:8],
+                    "entry_names_sha256": sha256_json(
+                        invalid_visible_names
+                    ),
+                }
+            )
+        if diagnostics:
+            result["discovery_diagnostics"] = diagnostics
+        return result
 
     @staticmethod
     def _readiness_action(

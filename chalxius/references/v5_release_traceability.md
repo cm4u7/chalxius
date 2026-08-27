@@ -1,4 +1,23 @@
-# Chalxius V5 traceability through 0.9.10 Terminal Seal Hygiene
+# Chalxius V5 traceability through 0.9.11 Frontier and Source Continuity
+
+## 0.9.11 frontier-and-source-continuity release overlay
+
+- Candidate version: `0.9.11`; release name **Frontier and Source Continuity**.
+- Routine Campaign frontier rows keep exact actionable Research and rounds,
+  concise current mathematics, and bounded recent/historical summaries while
+  omitting repeated diagnostic aggregates and identity-only workflow maps.
+- An explicit `plan-round --frontier-target` handoff recognizes completed
+  terminal product/review lineage beneath the old active route. Unrelated
+  parallel heads remain active, and Main still owns the mathematical choice.
+- `round-status --all` ignores only recognized private atomic-staging names
+  and reports their count. Visible malformed round entries remain bounded
+  diagnostics rather than disappearing or aborting the whole inventory.
+- Source-scope planning follows direct immutable Research workflow provenance
+  to a completed prior source review, carries its report as Research context,
+  and projects only primary-source hashes that review actually named in
+  `source_uses`. It does no global relevance inference or historical rewrite.
+- The release has no automatic selection, dispatch, Candidate,
+  Certification, Gateway, or Fact effect.
 
 ## 0.9.10 terminal-seal-hygiene release overlay
 

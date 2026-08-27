@@ -1,5 +1,17 @@
 # Chalxius portable deployment
 
+## 0.9.11 Frontier and Source Continuity
+
+The `0.9.11` **Frontier and Source Continuity** candidate keeps routine
+frontier output mathematically useful without repeated diagnostic expansion,
+recognizes exact terminal-lineage handoff during target-bound planning, and
+makes batch round discovery tolerate only private atomic-staging names with a
+visible diagnostic. Downstream source-scope reviews inherit an explicitly
+related completed source review and only the primary bytes that review
+actually cited. The project-free installer validates and atomically swaps one
+complete manifest-bound tree. It does not read or migrate a research project,
+and publication remains a separate authorization.
+
 ## 0.9.10 Terminal Seal Hygiene
 
 The `0.9.10` **Terminal Seal Hygiene** candidate keeps an exact terminal
