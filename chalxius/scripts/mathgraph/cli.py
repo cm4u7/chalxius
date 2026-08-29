@@ -911,7 +911,7 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     )
 
     p = sub.add_parser("frontier")
-    p.add_argument("--limit", type=int, default=10)
+    p.add_argument("--limit", type=int, default=12)
     p.add_argument("--campaign")
     p.add_argument("--all-active", action="store_true")
     p.add_argument("--no-collapse-repairs", action="store_true")

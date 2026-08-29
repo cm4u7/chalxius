@@ -3,6 +3,118 @@
   "contract_revision": "chalxius-behavioral-feature-registry-3",
   "truth_effect": "none",
   "features": {
+    "feature.completion_aware_supervision_planning": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Default supervision planning subtracts exact completed or in-flight component scopes and returns a nonmutating no-op when all applicable scopes are covered.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._completed_or_in_flight_supervision_scope_coverage",
+      "activation_predicate": {
+        "predicate_id": "default_supervision_plan_has_existing_exact_scope_coverage",
+        "domain": ["some_scopes_missing", "all_scopes_covered", "explicit_scope_request", "conflicting_overlap"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-completion-aware-supervision-plan-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._completed_or_in_flight_supervision_scope_coverage"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
+      "observable_effect": {
+        "effect_id": "default_supervision_plans_only_missing_scopes",
+        "kind": "state_transition",
+        "description": "A default request creates at most the exact missing scopes; complete live coverage returns informative no-op bytes and writes no round."
+      },
+      "probes": {
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_default_supervision_subtracts_exact_live_scopes_then_noops",
+        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_component_scope_coverage_is_idempotent_and_nonoverlapping",
+        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_concurrent_exact_supervision_retry_creates_one_round"
+      }
+    },
+    "feature.bounded_campaign_goal_projection": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Routine Campaign frontier bounds the complete nested goal projection and carries up to sixteen Main-selected active heads through legacy checkpoint read, current state, plan-round, reconcile, and compact mathematical/action projection while retaining exact total counts, digests, projected ids, and scopes.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage",
+      "activation_predicate": {
+        "predicate_id": "campaign_frontier_requested_routine_or_diagnostic_projection",
+        "domain": ["routine_bounded", "diagnostic_complete", "no_campaign"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-bounded-campaign-goal-projection-2",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "observable_effect": {
+        "effect_id": "routine_frontier_bounds_goals_and_deduplicates_head_representation",
+        "kind": "routing",
+        "description": "Routine output stops at the requested goal limit and keeps every one of up to sixteen Main-selected heads, each with a decision-useful mathematical claim, scope, current-route Research id, next action, and exact actionable Research/round id, without repeating forensic route, terminal, evidence, hash, empty-field, or synonymous-state detail; diagnostic output remains complete."
+      },
+      "probes": {
+        "positive": "tests.test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests.test_sixteen_heads_survive_checkpoint_reconcile_and_plan_projection",
+        "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_active_goal_hint_does_not_filter_the_global_workflow_queue",
+        "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_campaign_snapshot_tamper_fails_closed"
+      }
+    },
+    "feature.semantic_direct_source_capability_role": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Assurance production and return validation share one structural predicate for direct source capabilities across standalone primary and exact authoritative_source semantics.",
+      "production_entry_symbol": "mathgraph.v5_assurance.build_assurance_contract",
+      "producer_symbol": "mathgraph.v5_assurance.detect_risk_signals",
+      "activation_predicate": {
+        "predicate_id": "artifact_role_structurally_declares_direct_external_source_bytes",
+        "domain": ["standalone_primary", "authoritative_source", "computation_or_analytic_source", "concatenated_lookalike"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-semantic-direct-source-capability-role-1",
+        "validator_symbol": "mathgraph.v5_assurance._is_direct_source_capability_role"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._task_primary_source_sha256s",
+      "observable_effect": {
+        "effect_id": "source_capability_role_agrees_across_card_and_return_boundaries",
+        "kind": "validation_gate",
+        "description": "The same exact source artifact activates assurance and can satisfy the corresponding return binding without granting capability to non-source roles."
+      },
+      "probes": {
+        "positive": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_authoritative_source_uses_the_same_capability_predicate",
+        "predicate_false": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_primary_capability_role_tokens_match_lifecycle_extraction",
+        "tamper": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_tamper"
+      }
+    },
+    "feature.frontier_exact_workflow_identity": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Campaign frontier keeps semantic COW completion separate from the exact operational workflow owned by each physical workgroup.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
+      "producer_symbol": "mathgraph.frontier_actions._ActionProjector.groups",
+      "activation_predicate": {
+        "predicate_id": "cow_terminal_belongs_to_distinct_repair_workflow",
+        "domain": ["same_workgroup_terminal", "distinct_repair_terminal", "ambiguous_cow_terminal"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-frontier-exact-workflow-identity-1",
+        "validator_symbol": "mathgraph.frontier_actions._ActionProjector.research"
+      },
+      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._compact_goal_coverage_entry",
+      "observable_effect": {
+        "effect_id": "cow_completion_without_cross_workflow_aliasing",
+        "kind": "routing",
+        "description": "COW terminals decide completion or ambiguity, while action round/product/component/supervision fields come only from physical workgroup members or an exact validated product-to-source binding."
+      },
+      "probes": {
+        "positive": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_cow_terminal_never_aliases_another_workflow_action",
+        "predicate_false": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_exact_multihop_cow_completion_projects_to_original_workgroup",
+        "tamper": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_malformed_or_ambiguous_repair_lineage_never_closes_predecessor"
+      }
+    },
     "feature.paper_changed_surface": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
@@ -697,7 +809,7 @@
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_cow_terminal_members",
       "activation_predicate": {
         "predicate_id": "exact_workgroup_has_unique_current_safe_cow_terminal",
-        "domain": ["safe_production_and_applicable_supervision", "exact_multihop_cow_successor", "exact_active_invalidator_exhaustion", "hash_bound_repair_objective_projection", "pending_unsafe_challenged_blocked_stale_or_ambiguous", "same_workgroup_completion_race"],
+        "domain": ["safe_production_and_applicable_supervision", "exact_multihop_cow_successor", "exact_structured_repair_lineage", "hash_bound_repair_objective_projection", "pending_unsafe_challenged_blocked_stale_or_ambiguous", "same_workgroup_completion_race"],
         "conditional": true
       },
       "typed_handoff": {
@@ -712,7 +824,7 @@
       },
       "probes": {
         "positive": "tests.test_chx_089_frontier_reliability.FrontierReliability089Tests.test_exact_workgroup_completion_is_shared_by_frontier_views",
-        "predicate_false": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_repair_requires_exact_active_invalidator_coverage",
+        "predicate_false": "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests.test_malformed_or_ambiguous_repair_lineage_never_closes_predecessor",
         "tamper": "tests.test_chx_0715_research_obligations.ResearchObligationClosureTests.test_generic_planning_rechecks_obligation_closure_under_lock"
       }
     },
@@ -886,6 +998,39 @@
         "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result",
         "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_waits_for_completed_ingested_supervision",
         "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_seal_rechecks_live_supervision_under_lock"
+      }
+    },
+    "feature.typed_supervision_scope_coverage": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Candidate enforcement and Main's frontier share one exact per-component, per-scope supervision coverage projection while retaining their separate authority and advisory roles.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage",
+      "activation_predicate": {
+        "predicate_id": "constructive_product_has_two_subround_production_provenance",
+        "domain": [
+          "completed_scope",
+          "missing_pending_or_conflicting_scope",
+          "unsafe_scope",
+          "malformed_or_inaccessible_lineage"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-typed-supervision-scope-coverage-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._supervision_scope_coverage_state"
+      },
+      "consumer_symbol": "mathgraph.frontier_actions._ActionProjector._supervision_coverage_route",
+      "observable_effect": {
+        "effect_id": "exact_scope_state_visible_without_candidate_gate_weakening",
+        "kind": "routing",
+        "description": "Frontier names completed, missing, pending, conflicting, and unsafe scopes with exact ids; only malformed or inaccessible graph bytes are lineage-unreadable, while Candidate still requires one completed ingested result per applicable scope."
+      },
+      "probes": {
+        "positive": "tests.test_chx_090_frontier_active_fix.FrontierActiveFix090Tests.test_partial_supervision_projects_exact_missing_scope",
+        "predicate_false": "tests.test_chx_090_frontier_active_fix.FrontierActiveFix090Tests.test_scope_state_routing_distinguishes_non_lineage_states",
+        "tamper": "tests.test_chx_090_frontier_active_fix.FrontierActiveFix090Tests.test_malformed_supervision_bytes_remain_lineage_unreadable"
       }
     },
     "feature.logical_component_research_supervision": {

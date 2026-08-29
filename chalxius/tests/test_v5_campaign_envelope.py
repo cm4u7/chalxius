@@ -475,6 +475,106 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             )
             self.assertEqual(orphaned["workflow_queue"], [])
 
+    def test_routine_frontier_limit_bounds_nested_goal_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            campaign_id = self._campaign(store, "bounded-goals")
+            roots = [
+                self._research(
+                    store,
+                    f"bounded-goal-{index}",
+                    campaign_id=campaign_id,
+                    score=0.9 - index / 100,
+                )
+                for index in range(6)
+            ]
+            with store.v5_mutation_lock(command="bounded-goal-fixture"):
+                target_ids = [
+                    store.campaigns().target_add(
+                        campaign_id,
+                        {
+                            "role": "research_goal",
+                            "subject_kind": "research",
+                            "subject_id": research_id,
+                            "label": f"Resolve bounded goal {index}",
+                        },
+                        actor="main",
+                        fact_exists=lambda _fact_id: False,
+                        research_exists=lambda item, expected=research_id: (
+                            item == expected
+                        ),
+                    )
+                    for index, research_id in enumerate(roots)
+                ]
+                store.campaigns().activate(campaign_id, actor="main")
+
+            lifecycle = store.v5_lifecycle()
+            lifecycle._replace_campaign_frontier_working_state(
+                campaign_id,
+                targets={
+                    target_id: {
+                        "recovery_root_research_id": research_id,
+                        "active_head_research_ids": [research_id],
+                        "historical_landmark_research_ids": [],
+                        "recent_attained_research_ids": [],
+                    }
+                    for target_id, research_id in zip(target_ids, roots)
+                },
+            )
+            with patch.object(
+                lifecycle,
+                "_campaign_attained_semantic_successor_summary",
+                wraps=lifecycle._campaign_attained_semantic_successor_summary,
+            ) as routine_successors:
+                routine = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    limit=2,
+                )
+            with patch.object(
+                lifecycle,
+                "_campaign_attained_semantic_successor_summary",
+                wraps=lifecycle._campaign_attained_semantic_successor_summary,
+            ) as forensic_successors:
+                forensic = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    limit=2,
+                    diagnostic=True,
+                )
+
+            self.assertEqual(routine["goal_target_count"], 6)
+            self.assertEqual(routine["goal_coverage_count"], 2)
+            self.assertEqual(len(routine["goal_coverage"]), 2)
+            self.assertTrue(routine["goal_coverage_truncated"])
+            self.assertFalse(routine["goal_progress"]["projection_complete"])
+            self.assertEqual(
+                routine["goal_progress"]["unprojected_target_count"], 4
+            )
+            self.assertEqual(len(routine["workflow_queue"]), 2)
+            self.assertEqual(routine_successors.call_count, 2)
+            self.assertNotIn("unmapped_campaign_attention", routine)
+            self.assertEqual(
+                {item["target_id"] for item in routine["goal_coverage"]},
+                set(routine["goal_coverage_target_ids"]),
+            )
+            self.assertTrue(
+                {item["root_research_id"] for item in routine["goal_coverage"]}
+                .issubset(set(roots))
+            )
+
+            self.assertEqual(forensic["goal_target_count"], 6)
+            self.assertEqual(forensic["goal_coverage_count"], 6)
+            self.assertEqual(len(forensic["goal_coverage"]), 6)
+            self.assertEqual(forensic_successors.call_count, 6)
+            self.assertFalse(forensic["goal_coverage_truncated"])
+            self.assertTrue(forensic["goal_progress"]["projection_complete"])
+            self.assertEqual(
+                set(forensic["goal_coverage_target_ids"]), set(target_ids)
+            )
+            self.assertLess(
+                len(json.dumps(routine, sort_keys=True)),
+                len(json.dumps(forensic, sort_keys=True)),
+            )
+
     def test_active_goal_hint_does_not_filter_the_global_workflow_queue(
         self,
     ) -> None:
@@ -1025,6 +1125,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                     "metadata": {"campaign_id": campaign_id},
                 },
                 plan_id: {
+                    "kind": "challenge",
                     "relation": "challenges",
                     "related_research_ids": [source_id],
                     "metadata": {

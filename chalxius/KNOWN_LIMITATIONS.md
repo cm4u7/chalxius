@@ -1,10 +1,157 @@
-# Chalxius 0.9.12 architecture findings and residual boundaries
+# Chalxius 0.9.18 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.9.12
-**Frontier Lifecycle Closure**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 0.9.18
+**Frontier Breadth Parity**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 0.9.18 Frontier Breadth Parity
+
+The 0.9.17 representation regression proved that a compact synthetic entry
+could retain sixteen heads, but the normal Campaign state reader,
+`plan-round` advancement, manual reconciliation, legacy checkpoint reader, and
+live goal projection still used independent literal limits of eight. A ninth
+Main-selected branch could therefore be rejected or omitted by the ordinary
+working-memory path even though the renderer had sufficient capacity.
+
+The integrated repair uses one explicit sixteen-head limit across those read
+and write surfaces and adds an end-to-end checkpoint→reconcile→plan-projection
+regression. The limit is per Campaign Target and is independent of the routine
+Target window. Derived successor fan-out remains bounded with full counts and
+digests; `--diagnostic` retains forensic detail. Routine head claims expand
+from 160 to 300 characters, root claims to 400, and projected historical
+claims to 320. On the live local-F0 Campaign this increases the all-target
+routine view from 29307 to 31693 bytes while spending the difference on
+mathematical content. Exact Research bytes remain unchanged and retrievable by
+id. No pager, automatic head selection, scheduler, compatibility layer,
+Candidate effect, or Fact effect is introduced.
+
+## 0.9.17 Stepping-Stones Continuity
+
+The 0.9.16 goal-count bound left a representation-level residual: one projected
+goal still copied overlapping route summaries, terminal/evidence sets, hashes,
+empty fields, and synonymous state into every active-head action. The local-F0
+routine frontier therefore remained much larger than the Main decision it
+represented.
+
+The integrated repair retains every active head and supervision scope while
+reducing each ordinary action to concise mathematical identity, current-route
+Research ids, next action, and exact actionable Research/round ids. Full
+forensic fields remain in `frontier --diagnostic`. The candidate reduced the
+live one-goal projection from 19797 to 13462 bytes and the eight-goal projection
+from 40485 to 29306 bytes. Frontier still builds the global Research envelope
+and takes roughly 2.3–2.8 seconds on this project; no persistent index or
+parallel scan is introduced. The ordinary target default is twelve and a
+16-active-head regression remains lossless; `--limit` controls targets, not
+heads within a target.
+
+The release also names **摸石头过河** as a Main continuation rule around material
+architecture failures. It is an instruction to preserve and resume exact graph
+state, not an automatic failure detector, scheduler, timer, installer,
+publication action, lifecycle gate, Candidate effect, or Fact effect.
+
+## 0.9.16 Bounded Research Coordination
+
+Three live-research defects had independent symptoms but one practical cost:
+Main was asked to reconstruct state already present in exact graph bytes.
+Default supervision planning could reselect an applicable scope already
+reserved or completed; routine `frontier --limit N` still expanded every
+Campaign goal before truncating the visible surface; and a task card could
+declare exact `authoritative_source` bytes that source-assurance recognized but
+return validation did not.
+
+The integrated repair subtracts exact completed or in-flight supervision
+coverage before a default plan and returns an informative no-op when nothing
+remains. Explicit scope requests, exact retry, and conflicting overlap remain
+fail-closed. Routine frontier now bounds the complete nested Campaign goal
+projection while preserving full counts, digests, projected ids, and concise
+mathematical summaries; explicit diagnostic mode retains the full topology.
+Finally, assurance production and return validation share one structural
+direct-source role predicate covering the historical standalone `primary`
+token and exact `authoritative_source` semantics, but not computation,
+analytic, secondary, or concatenated lookalikes.
+
+The routine frontier still builds the existing global Research envelope, so
+this is not a persistent index or universal store-scan elimination. Main still
+chooses mathematics and dispatches workers. No scheduler, pagination layer,
+compatibility adapter, Research status inference, Candidate effect, or Fact
+effect is introduced.
+
+## 0.9.15 Frontier Exact Workflow Identity
+
+The Campaign frontier previously used a semantic COW terminal as the
+operational workflow root of the earlier workgroup it completed. When that
+terminal belonged to a distinct repair assignment, the older head inherited
+the repair's round, product, component, and supervision. Main could therefore
+see a mathematically unrelated product in place of the exact product that had
+actually been produced and challenged.
+
+The integrated repair limits COW terminals to completion and ambiguity. The
+action projector derives workflow state only from the physical workgroup
+members, while retaining the existing exact product-to-source assignment
+redirect when its frozen provenance validates. The live local-F0 canary now
+maps `ad2545c15572` to its true product `565fb0655309` and production round
+`round-20260828T023255Z-bd8f8f93`, not the unrelated `e3ebd063441b` route.
+COW topology, historical landmarks, explicit Main choices, and all truth
+boundaries are unchanged. No scheduler, compatibility layer, Candidate effect,
+or Fact effect is introduced.
+
+## 0.9.14 Typed Supervision Coverage
+
+The ordinary frontier previously caught a readable missing supervision scope
+under the same generic `supervision_result_lineage_unreadable` label used for
+malformed or inaccessible bytes. Main therefore had to reconstruct exact scope
+coverage manually and could repeat a completed review or misclassify ordinary
+unfinished work as corrupted lineage.
+
+The integrated repair extracts one structural coverage reader shared by the
+Candidate gate and frontier. It reports each applicable production component
+and scope as completed, missing, pending, conflicting, or unsafe, including the
+exact result and round ids needed for Main's next action. Truly malformed or
+inaccessible bytes remain unreadable. Candidate construction remains strict:
+every applicable scope still needs exactly one completed, ingested result.
+There is no scheduler, automatic dispatch, compatibility layer, new receipt,
+Research effect, Candidate effect, or Fact effect.
+
+## 0.9.13 Repair and Review Lineage
+
+Two field failures came from treating descriptive relation vocabulary or one
+trigger author type as workflow capability. First, a valid structured repair
+triggered by Main's exact synthesis of multiple supervisor results remained
+parallel to those results, so frontier kept the repaired ancestor and old
+challenges actionable. Second, a reviewer session could be reused across
+scopes without Main seeing which production assignment authored the attacked
+product. A related historical mismatch required source-receipt ids to equal an
+entire supervision plan's related-id set even though the write contract permits
+additional exact review context.
+
+The integrated repair uses the existing typed gear train: assignment
+provenance identifies products and review results; a challenge record plus its
+validated supervision binding identifies the plan; and `kind=repair` plus
+exact repair-of, trigger, source, related ids, Campaign, and chronology
+identifies a structured repair. Relation strings remain descriptive. A Main
+synthesis trigger advances only when its complete research-source set exactly
+matches its related ids. Workgroup completion remains narrower: the source
+must be a complete production product and the repair objective must remain
+hash-bound; the repair's own product and supervision are still required.
+
+`round-status` exposes attacked source assignment/product ids for Main's live
+reviewer comparison. It deliberately cannot authenticate a live agent and does
+not block or dispatch anything. Main may reuse a genuinely independent reviewer
+across scopes and COW stages, but not across the attacked product's author
+boundary. The old disposed local-P2 repair remains noncurrent, and malformed,
+ambiguous, cross-Campaign, or backward-time shapes remain pending. No identity
+registry, new relation vocabulary, compatibility layer, Candidate effect, or
+Fact effect is introduced.
+
+The first integrated-install attempt also exposed a false positive in exact
+runtime-tree validation: two empty `__pycache__` leaves contained no bytes but
+were treated like unmanifested files. Runtime identity has always been bound to
+manifest files, so the validator now ignores only byte-free interpreter-cache
+leaves. A cache containing any file, an unexpected nested tree, or any other
+unmanifested file still fails before installation; historical archives remain
+manifest-only and sealed.
 
 ## 0.9.12 Frontier Lifecycle Closure
 

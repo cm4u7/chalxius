@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.12 — Frontier Lifecycle Closure
+# Chalxius 0.9.18 — Frontier Breadth Parity
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -32,6 +32,68 @@ workflow stages when its derived receipt is absent; missing products,
 stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
 terminal-seal, or final-experiment checks remain blocking at their own owners.
 
+## 摸石头过河
+
+Main continues mathematical Research by default. When live operation exposes a
+material Chalxius architecture failure that threatens reliable research,
+Main saves the exact Campaign target, active Research heads, live rounds,
+returns, ingestion, and pending supervision; performs the bounded integrated
+repair and local installation; rereads those exact graph bytes; and resumes the
+same mathematical boundary. Ordinary mathematical uncertainty, an open proof
+obligation, or a merely interesting refactor does not trigger the repair leg.
+This is a Main operating semantic, not a scheduler, timer, watcher, automatic
+issue detector, automatic installer, publication action, lifecycle gate,
+Candidate effect, or Fact effect.
+
+The 0.9.18 repair makes the compact frontier's advertised breadth usable
+through the ordinary Campaign operations. One shared limit of sixteen now
+governs legacy checkpoint reading, current working-state validation,
+`plan-round --frontier-target`, manual frontier reconciliation, and live goal
+projection. Main-selected heads are never reduced to the old eight-head write
+surface; derived successor summaries remain bounded and diagnostic topology
+remains available explicitly. Routine mathematical summaries use a larger
+decision budget—300 characters per head claim, 400 for the root, and 320 for
+each projected historical claim—while the exact complete Research remains
+retrievable by id. This is bounded working-memory capacity, not paging,
+automatic head selection, scheduling, Candidate authority, or Fact authority.
+
+The 0.9.17 repair also finishes the routine frontier representation boundary.
+Every active head and every applicable supervision scope remains visible, with
+its concise mathematical claim, current route Research ids, next action, and
+exact actionable Research/round ids. Repeated route summaries, terminal trees,
+evidence lists, hashes, empty fields, and equivalent action labels remain
+available through `frontier --diagnostic` instead of being copied into each
+routine head action. Main therefore receives mathematical working memory rather
+than repeated forensic topology; no head is selected, hidden, closed, or
+dispatched automatically. The ordinary default window is twelve Campaign
+targets, and each projected target retains all of its active heads; an explicit
+`--limit` changes the target window, never an intra-target head cap.
+
+The 0.9.16 repair makes three ordinary Main coordination paths agree with the
+graph state they already read. Default supervision planning subtracts exact
+completed or in-flight component scopes and returns a read-only no-op when no
+scope remains; explicit scope selection and overlap rejection stay strict.
+Routine Campaign frontier applies its requested limit to the nested goal
+projection and keeps the complete target count, digest, ids, and mathematical
+summaries; `--diagnostic` retains the full view. Source-bearing task artifacts
+use one shared structural role predicate: the historical standalone `primary`
+token and the exact `authoritative_source` spelling both denote direct source
+bytes, while computation, analytic, secondary, or concatenated lookalikes do
+not. These are coordination and capability projections only, with no automatic
+mathematical choice, scheduler, compatibility layer, Candidate effect, or Fact
+effect.
+
+The 0.9.15 repair keeps semantic COW completion separate from operational
+workflow identity. A COW terminal may prove that an older workgroup is
+completed or ambiguous, but it cannot lend its own assignment, round, product,
+component, or supervision lineage to that older group. Frontier actions are
+projected from the exact physical workgroup members, with the existing
+hash-bound product-to-source assignment redirect used only when its provenance
+validates. This preserves complete COW history while preventing one repair
+route from hiding another route's real product or review state. It adds no
+selector, scheduler, compatibility layer, Research effect, Candidate effect,
+or Fact effect.
+
 Candidate-level fresh-adverse review is scoped to the explicitly selected
 constructive Research heads that themselves carry
 `independent_adverse_required=true`. Historical `related_research_ids` may
@@ -47,6 +109,40 @@ semantics, not one runtime-era field spelling. Current `artifact_path` and
 `card_authorized_path` plus `returned_copy_path` declaration are equivalent
 only when every declared concrete path exists inside the project and has the
 same declared SHA-256. A locator by itself never grants file capability.
+
+The 0.9.14 repair gives Candidate enforcement and Main's frontier one shared,
+typed supervision-coverage reader. For every exact production component and
+applicable scope it distinguishes `completed`, `missing`, `pending`,
+`conflicting`, and `unsafe`; ordinary absence is no longer collapsed into
+`supervision_result_lineage_unreadable`. Malformed or inaccessible graph bytes
+remain unreadable and fail closed. Candidate construction still requires every
+applicable scope to have exactly one completed, ingested result. The projection
+is bounded nontruth working context: it adds no scheduler, automatic dispatch,
+compatibility layer, receipt, Candidate effect, or Fact effect.
+
+The 0.9.13 repair makes typed workflow structure authoritative without adding
+a second relation dictionary. For worker products, supervision plans/results,
+and structured repairs, existing assignment provenance, `kind`, frozen source
+receipts, and exact `repair_of_research_id`/`trigger_research_id`/`source`/
+`related_research_ids` identities determine the lifecycle edge; `relation`
+remains concise Main-authored mathematical context. A supervision receipt set
+must remain unique and fully covered by `related_research_ids`, but the latter
+may also carry exact review context. A structured repair may name a Main
+synthesis trigger instead of a direct supervisor return; when that trigger's
+complete `research:` source set exactly equals its related ids, those reviewed
+inputs lead through the trigger to the repair. Cross-Campaign, malformed,
+backward-time, ambiguous, incomplete-product, or non-hash-bound completion
+shapes still do not close work. Every new repair product still requires its
+applicable supervision before completion; no Research, Candidate, or Fact
+status is inferred from the edge alone.
+
+`round-status` now gives every supervision assignment a read-only
+`reviewer_independence` projection containing the attacked source assignment
+and product ids. Main compares the actual live reviewer with those source
+assignments before dispatch. One independent reviewer session may still be
+reused across scopes or later COW stages; a reviewer that authored an attacked
+product must not self-review it. This is Main-visible dispatch context, not an
+identity registry, scheduler, receipt gate, or automatic rejection mechanism.
 
 The 0.9.12 repair closes three frontier lifecycle seams without adding a
 second state machine. Exact historical Main-authored COW roots may complete a
@@ -430,6 +526,15 @@ repair caches implicitly.
    plans refute; exact IDs do not rebuild the global frontier; Main launches and
    confirms every planned worker, then uses genuinely independent current
    boundaries when visible capacity exists.
+   Successive ranks, dimensions, charges, examples, or other discrete cases are
+   mechanism probes, not a default progress ladder. Before raising such a
+   parameter, Main asks whether the completed cases support a reusable lemma,
+   invariant, obstruction, factorization, or induction interface and normally
+   advances that mechanism-level statement. A higher case is selected when it
+   is the cheapest bounded test of the proposed mechanism, locates its first
+   failure, or supplies genuinely new geometry. This is a research preference,
+   not a gate: Main may continue an important case calculation, but does not
+   substitute mechanical coverage growth for progress toward the Campaign goal.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
    continues. Use at most three failure-informed supervisors: `proof_logic`,

@@ -32,6 +32,7 @@ class _ActionProjector:
         round_ids: list[str] | tuple[str, ...] = (),
         primary_research_id: str | None = None,
         primary_round_id: str | None = None,
+        supervision_coverage: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         ordered_research = sorted(
             set(research_ids),
@@ -85,7 +86,7 @@ class _ActionProjector:
             if next_action == "none"
             else "active"
         )
-        return {
+        projected = {
             "next_action": next_action,
             "pending_reason": reason,
             "next_attention": next_attention,
@@ -105,6 +106,39 @@ class _ActionProjector:
             "actionable_claim_sha256": sha256_bytes(claim.encode("utf-8")),
             "actionable_kind": kind,
         }
+        if supervision_coverage is not None:
+            projected["supervision_coverage"] = supervision_coverage
+            projected["supervision_coverage_count"] = len(
+                supervision_coverage
+            )
+            projected["supervision_coverage_sha256"] = sha256_json(
+                supervision_coverage
+            )
+        return projected
+
+    @staticmethod
+    def _supervision_coverage_route(
+        coverage: list[dict[str, Any]],
+    ) -> tuple[str, str] | None:
+        """Map exact non-complete scope coverage to Main's next operation."""
+
+        states = {
+            item["state"]
+            for item in coverage
+            if item["state"] != "completed"
+        }
+        if not states:
+            return None
+        if "unsafe" in states:
+            return (
+                "main_reconciliation",
+                "supervision_scope_coverage_unsafe",
+            )
+        if "conflicting" in states:
+            return "main_reconciliation", "supervision_scope_conflicting"
+        if "pending" in states:
+            return "await_return", "supervision_scope_pending"
+        return "supervision", "supervision_scope_missing"
 
     def explicit_attention_disposition(
         self,
@@ -134,10 +168,23 @@ class _ActionProjector:
         )
         candidates = []
         for research_id, record in self.bases.items():
-            if (
-                record.get("kind") != "repair"
-                or record.get("relation") not in {"repairs", "extends"}
-            ):
+            if record.get("kind") != "repair":
+                continue
+            lineage = self.lifecycle._structured_repair_lineage(
+                repair_id=research_id,
+                repair=record,
+                bases=self.bases,
+            )
+            if lineage is not None:
+                source_id, trigger_id = lineage
+                if source_id == product_id and trigger_id in invalidators:
+                    candidates.append(research_id)
+                continue
+
+            # Old unstructured repair records have no rigid repair_of/trigger
+            # fields.  Preserve their bounded historical reader, where the
+            # conventional relation label remains part of the legacy shape.
+            if record.get("relation") not in {"repairs", "extends"}:
                 continue
             related = record.get("related_research_ids")
             related_ids = set(related) if isinstance(related, list) else set()
@@ -152,7 +199,12 @@ class _ActionProjector:
             key=lambda item: (self.bases[item]["created_at"], item),
         )
 
-    def research(self, research_id: str) -> dict[str, Any]:
+    def research(
+        self,
+        research_id: str,
+        *,
+        preferred_production_round_id: str | None = None,
+    ) -> dict[str, Any]:
         """Derive one exact Research's next lifecycle operation."""
 
         explicit_disposition = self.explicit_attention_disposition(
@@ -181,6 +233,21 @@ class _ActionProjector:
                 if subround == "production"
             }
         )
+        if preferred_production_round_id is not None:
+            if preferred_production_round_id not in production_rounds:
+                return self.action(
+                    "main_reconciliation",
+                    "preferred_production_round_binding_missing",
+                    research_ids=[research_id],
+                    round_ids=[preferred_production_round_id],
+                    primary_research_id=research_id,
+                    primary_round_id=preferred_production_round_id,
+                )
+            # Campaign active-head projection owns one exact current workflow
+            # lane.  Historical rounds for the same Research remain readable
+            # history, but cannot donate product, completion, or supervision
+            # state to the target-bound round selected by Main.
+            production_rounds = [preferred_production_round_id]
         product_rounds: dict[str, str] = {}
         awaiting: set[str] = set()
         returns: set[str] = set()
@@ -325,43 +392,103 @@ class _ActionProjector:
                     primary_research_id=product_id,
                     primary_round_id=production_round,
                 )
-            return self.action(
+            try:
+                coverage = self.lifecycle._candidate_supervision_scope_coverage(
+                    [product], _inspection_context=self.inspection
+                )
+            except (KeyError, OSError, ValueError):
+                return self.action(
+                    "main_reconciliation",
+                    "supervision_result_lineage_unreadable",
+                    research_ids=[product_id],
+                    round_ids=[production_round],
+                    primary_research_id=product_id,
+                    primary_round_id=production_round,
+                )
+            coverage_route = self._supervision_coverage_route(coverage)
+            next_action, reason = coverage_route or (
                 "supervision",
                 "production_product_awaits_supervision",
+            )
+            coverage_rounds = sorted(
+                {
+                    round_id
+                    for item in coverage
+                    for field in ("pending_round_ids", "unsafe_round_ids")
+                    for round_id in item.get(field, [])
+                }
+            )
+            return self.action(
+                next_action,
+                reason,
                 research_ids=[product_id],
-                round_ids=[production_round],
+                round_ids=[production_round, *coverage_rounds],
                 primary_research_id=product_id,
                 primary_round_id=production_round,
+                supervision_coverage=coverage,
             )
 
         supervision_awaiting: set[str] = set()
         supervision_returns: set[str] = set()
-        supervision_unsafe: set[str] = set()
+        supervision_quarantined: set[str] = set()
+        supervision_unreadable: set[str] = set()
         for round_id in supervision_rounds:
             try:
                 status = self.lifecycle._round_status_with_context(
                     round_id, self.inspection
                 )
             except (KeyError, OSError, ValueError):
-                supervision_unsafe.add(round_id)
+                supervision_unreadable.add(round_id)
                 continue
             states = {
                 assignment.get("state")
                 for assignment in status["assignments"]
             }
             if "quarantined" in states:
-                supervision_unsafe.add(round_id)
+                supervision_quarantined.add(round_id)
             if "return_present" in states:
                 supervision_returns.add(round_id)
             if "awaiting_return" in states:
                 supervision_awaiting.add(round_id)
-        if supervision_unsafe:
+        if supervision_unreadable:
             return self.action(
                 "main_reconciliation",
-                "supervision_round_unreadable_or_quarantined",
+                "supervision_result_lineage_unreadable",
                 research_ids=[product_id],
-                round_ids=list(supervision_unsafe),
+                round_ids=list(supervision_unreadable),
                 primary_research_id=product_id,
+            )
+        try:
+            coverage = self.lifecycle._candidate_supervision_scope_coverage(
+                [product], _inspection_context=self.inspection
+            )
+        except (KeyError, OSError, ValueError):
+            return self.action(
+                "main_reconciliation",
+                "supervision_result_lineage_unreadable",
+                research_ids=[product_id],
+                round_ids=supervision_rounds,
+                primary_research_id=product_id,
+            )
+        if supervision_quarantined:
+            coverage_route = self._supervision_coverage_route(coverage)
+            if coverage_route != (
+                "main_reconciliation",
+                "supervision_scope_coverage_unsafe",
+            ):
+                return self.action(
+                    "main_reconciliation",
+                    "supervision_result_lineage_unreadable",
+                    research_ids=[product_id],
+                    round_ids=list(supervision_quarantined),
+                    primary_research_id=product_id,
+                )
+            return self.action(
+                *coverage_route,
+                research_ids=[product_id],
+                round_ids=list(supervision_quarantined),
+                primary_research_id=product_id,
+                supervision_coverage=coverage,
             )
         if supervision_returns:
             return self.action(
@@ -370,6 +497,7 @@ class _ActionProjector:
                 research_ids=[product_id],
                 round_ids=list(supervision_returns),
                 primary_research_id=product_id,
+                supervision_coverage=coverage,
             )
         if supervision_awaiting:
             return self.action(
@@ -378,6 +506,7 @@ class _ActionProjector:
                 research_ids=[product_id],
                 round_ids=list(supervision_awaiting),
                 primary_research_id=product_id,
+                supervision_coverage=coverage,
             )
 
         # Existing live supervision is an operational fact and remains visible
@@ -396,13 +525,27 @@ class _ActionProjector:
                 round_ids=[production_round, *supervision_rounds],
                 primary_research_id=product_id,
                 primary_round_id=production_round,
+                supervision_coverage=coverage,
             )
 
         try:
+            incomplete = [
+                item for item in coverage if item["state"] != "completed"
+            ]
+            coverage_rounds = sorted(
+                {
+                    round_id
+                    for item in coverage
+                    for field in ("pending_round_ids", "unsafe_round_ids")
+                    for round_id in item.get(field, [])
+                }
+            )
             result_ids = sorted(
-                self.lifecycle._required_supervision_results_for_candidate(
-                    [product], _inspection_context=self.inspection
-                )
+                {
+                    result_id
+                    for item in coverage
+                    for result_id in item["result_research_ids"]
+                }
             )
             results = [
                 self.lifecycle._inspection_research_record(
@@ -418,6 +561,23 @@ class _ActionProjector:
                 round_ids=supervision_rounds,
                 primary_research_id=product_id,
             )
+        if incomplete:
+            coverage_route = self._supervision_coverage_route(coverage)
+            assert coverage_route is not None
+            next_action, reason = coverage_route
+            return self.action(
+                next_action,
+                reason,
+                research_ids=[product_id, *result_ids],
+                round_ids=[
+                    production_round,
+                    *supervision_rounds,
+                    *coverage_rounds,
+                ],
+                primary_research_id=product_id,
+                primary_round_id=production_round,
+                supervision_coverage=coverage,
+            )
         unsafe_results = [
             item["research_id"]
             for item in results
@@ -428,12 +588,24 @@ class _ActionProjector:
             )
         ]
         if unsafe_results:
+            unsafe_ids = set(unsafe_results)
+            coverage = [
+                {
+                    **item,
+                    "state": "unsafe",
+                    "reason": "supervision_result_requires_semantic_disposition",
+                }
+                if unsafe_ids.intersection(item["result_research_ids"])
+                else item
+                for item in coverage
+            ]
             return self.action(
                 "main_reconciliation",
                 "supervision_result_requires_semantic_disposition",
                 research_ids=[product_id, *unsafe_results],
                 round_ids=supervision_rounds,
                 primary_research_id=product_id,
+                supervision_coverage=coverage,
             )
         reason = (
             "clean_supervision_not_reflected_in_automatic_completion"
@@ -446,6 +618,7 @@ class _ActionProjector:
             research_ids=[product_id, *result_ids],
             round_ids=supervision_rounds,
             primary_research_id=product_id,
+            supervision_coverage=coverage,
         )
 
     def groups(
@@ -486,11 +659,19 @@ class _ActionProjector:
                     primary_research_id=members[0] if members else None,
                 )
                 continue
-            terminal_ids = sorted(
-                {value for value in terminal_map.values() if value is not None},
+            # COW terminals decide whether this exact workgroup is complete or
+            # has an ambiguous repair branch.  They are not workflow aliases:
+            # a later repair task owns its own production assignment, product,
+            # component, and supervision lineage.  Project those operational
+            # identities only from the physical members of this workgroup.
+            # Campaign product heads are redirected to their bound assignment
+            # source before work-key selection, where the explicit workflow
+            # identity can be validated against task binding and provenance.
+            workflow_ids = sorted(
+                set(members),
                 key=lambda item: (self.bases[item]["created_at"], item),
             )
-            states = [self.research(item) for item in terminal_ids]
+            states = [self.research(item) for item in workflow_ids]
             nonproduction = [
                 item for item in states if item["next_action"] != "production"
             ]
@@ -539,6 +720,7 @@ def _project_research_action(
     dispositions: dict[str, dict[str, Any]],
     route_staleness: dict[str, list[str]],
     inspection: Any,
+    preferred_production_round_id: str | None = None,
 ) -> dict[str, Any]:
     return _ActionProjector(
         lifecycle,
@@ -546,7 +728,10 @@ def _project_research_action(
         dispositions=dispositions,
         route_staleness=route_staleness,
         inspection=inspection,
-    ).research(research_id)
+    ).research(
+        research_id,
+        preferred_production_round_id=preferred_production_round_id,
+    )
 
 
 def project_frontier_group_actions(

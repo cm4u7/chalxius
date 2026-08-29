@@ -1,5 +1,114 @@
 # Pre-Chalxius capability difference audit
 
+## 0.9.18 Frontier Breadth Parity difference
+
+The 0.9.17 compact representation accepted sixteen synthetic heads, but the
+ordinary Campaign write/read gear train still rejected or sliced after eight.
+The new shared capacity constant applies to legacy checkpoint reading, current
+state validation, planning advancement, manual reconciliation, and live
+projection. An integrated regression carries sixteen real same-Campaign
+Research ids through every one of those boundaries and confirms that a
+seventeenth is rejected explicitly rather than silently truncated.
+
+The repair also distinguishes repeated administrative bytes from useful
+mathematical context. Per-head claims grow from 160 to 300 characters, root
+claims to 400, and historical claims to 320; exact full Research remains
+external to the projection. The live all-target Campaign view grows from
+29307 to 31693 bytes, while the target and workflow structure remains
+unchanged. No pagination, automatic selection, scheduler, compatibility layer,
+Candidate effect, or Fact effect is added.
+
+## 0.9.17 Stepping-Stones Continuity difference
+
+The 0.9.16 nested goal limit still let one goal repeat the same workflow
+topology across every active-head action. A live one-goal local-F0 view used
+439 lines / 19797 bytes, and the eight-goal view used 928 lines / 40485 bytes,
+despite the ordinary surface already carrying goal-level summaries and ids.
+
+The routine representation now keeps all heads and scopes but emits one compact
+per-head mathematical/action index. Diagnostic route summaries,
+terminal/evidence sets, hashes, empty values, and synonymous status labels move
+behind `--diagnostic`. On the same live graph the candidate produced 313 lines /
+13462 bytes for one goal and 710 lines / 29306 bytes for eight goals. The
+remaining roughly 2.3–2.8 second cost is the existing global Research envelope;
+this repair does not add an index. The named **摸石头过河** Main semantic also
+connects material architecture detection, exact-boundary preservation,
+integrated install, reconciliation, and research resumption without automating
+any of those judgments.
+
+## 0.9.16 Bounded Research Coordination difference
+
+The previous default supervision planner recomputed applicable scopes without
+subtracting exact completed or in-flight coverage, routine Campaign frontier
+bounded only its final visible list after expanding all goals, and source
+assurance accepted `authoritative_source` even though return validation still
+recognized only the historical `primary` token.
+
+One existing supervision lineage reader now removes covered default scopes and
+returns a nonmutating no-op when none remain; explicit selection and overlap
+errors are unchanged. The ordinary frontier passes its limit into the nested
+goal projection and preserves full target counts and digests, while diagnostic
+mode remains complete. One shared structural role predicate is used at both
+source capability boundaries. This removes repeated Main reconstruction and
+avoidable context output without adding a scheduler, persistent cache,
+pagination, compatibility layer, Candidate effect, or Fact effect.
+
+## 0.9.15 Frontier Exact Workflow Identity difference
+
+The previous frontier correctly computed semantic COW completion but then
+reused the selected COW terminal as an operational workflow alias. Distinct
+repair tasks could therefore donate their round, product, component, and
+supervision state to the earlier physical workgroup they completed.
+
+The repair preserves the same completion and ambiguity topology while deriving
+actions from physical workgroup members. A product head may still redirect to
+its source assignment through exact frozen task binding and provenance; a
+generic COW successor cannot. This removes the cross-workflow substitution
+without a new relation vocabulary, selector, scheduler, compatibility layer,
+Candidate effect, or Fact effect.
+
+## 0.9.14 Typed Supervision Coverage difference
+
+Candidate admission and Main navigation previously interpreted the same exact
+supervision lineage through different error surfaces. The Candidate path knew
+that one applicable scope was missing, while frontier flattened that ordinary
+state into an unreadable-lineage reconciliation.
+
+One structural coverage reader now classifies every applicable component/scope
+as completed, missing, pending, conflicting, or unsafe and preserves exact
+result/round ids. Candidate continues to reject every non-completed state;
+frontier converts the same data into an advisory next action. Exceptions remain
+reserved for malformed or inaccessible graph bytes. No second state machine,
+selector, scheduler, compatibility layer, Candidate effect, or Fact effect is
+introduced.
+
+## 0.9.13 Repair and Review Lineage difference
+
+Typed workflow records now use the structural fields they already freeze.
+Assignment provenance identifies production and review returns; a validated
+supervision binding identifies a review plan; and a structured repair is the
+exact `kind=repair` repair-of/trigger/source/related/Campaign/time edge.
+Descriptive relation strings no longer duplicate those capabilities. Receipt
+targets remain exact but may be a subset of additional related review context.
+When a repair explicitly names a Main synthesis trigger, only a complete exact
+research-source/related-id match carries the synthesized reviewed inputs into
+that repair. Workgroup completion retains its complete-product, hash-bound
+objective, and later-supervision requirements.
+
+Supervision status also projects attacked source assignment/product ids for
+Main's comparison with the actual live reviewer. It does not claim to
+authenticate a live session. Independent reviewer reuse across scopes or COW
+stages remains efficient; reuse across the attacked author boundary remains
+forbidden by Main's dispatch rule. No new relation taxonomy, identity service,
+automatic repair judgment, compatibility layer, Candidate effect, or Fact
+effect is introduced.
+
+Local installation now distinguishes a byte-free interpreter-cache leaf from
+an unmanifested runtime file. The former has no runtime identity or disclosure
+content and no longer causes a false rejection; every extra file and nonempty
+unexpected tree remains fail-closed, and staging/archive identity stays bound
+to the exact manifest bytes.
+
 ## 0.9.12 Frontier Lifecycle Closure difference
 
 Three defects shared one cause: the frontier projected newer canonical repair

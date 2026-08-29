@@ -274,20 +274,26 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 goal["active_head_actions"][0]["checkpoint_head_state"],
                 "stale_exact_successor_available",
             )
+            self.assertNotIn(
+                "current_terminal_research_ids",
+                goal["active_head_actions"][0],
+            )
+            self.assertNotIn(
+                "current_route_research_ids",
+                goal["active_head_actions"][0],
+            )
+            self.assertNotIn(
+                "terminal_evidence_research_ids",
+                goal["active_head_actions"][0],
+            )
             self.assertEqual(
-                goal["active_head_actions"][0][
+                diagnostic_goal["active_head_actions"][0][
                     "current_terminal_research_ids"
                 ],
                 [review_id],
             )
             self.assertEqual(
-                goal["active_head_actions"][0][
-                    "current_route_research_ids"
-                ],
-                [],
-            )
-            self.assertEqual(
-                goal["active_head_actions"][0][
+                diagnostic_goal["active_head_actions"][0][
                     "terminal_evidence_research_ids"
                 ],
                 [review_id],
@@ -334,12 +340,14 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             challenge_id = "d" * 12
             clean_review_id = "e" * 12
             repair_id = "f" * 12
+            synthesis_id = "9" * 12
             bases = {
                 head_id: {
                     "research_id": head_id,
                     "kind": "direction",
                     "relation": "supports",
                     "related_research_ids": [],
+                    "created_at": "2026-01-01T00:00:00+00:00",
                     "status": "open",
                     "metadata": {"campaign_id": campaign_id},
                 },
@@ -348,6 +356,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     "kind": "proof_attempt",
                     "relation": "responds_to",
                     "related_research_ids": [head_id],
+                    "created_at": "2026-01-01T00:01:00+00:00",
                     "status": "open",
                     "metadata": {
                         "campaign_id": campaign_id,
@@ -361,11 +370,11 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 proof_plan_id: {
                     "research_id": proof_plan_id,
                     "kind": "challenge",
-                    "relation": "challenges",
-                    "related_research_ids": [product_id],
+                    "relation": "reviews_whole_product",
+                    "related_research_ids": sorted([head_id, product_id]),
+                    "created_at": "2026-01-01T00:02:00+00:00",
                     "status": "open",
                     "metadata": {
-                        "campaign_id": campaign_id,
                         "research_supervision": {
                             "source_receipts": [
                                 {"result_research_id": product_id}
@@ -376,11 +385,11 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 challenge_id: {
                     "research_id": challenge_id,
                     "kind": "challenge",
-                    "relation": "responds_to",
+                    "relation": "finds_factor_rank_gap",
                     "related_research_ids": [proof_plan_id],
+                    "created_at": "2026-01-01T00:03:00+00:00",
                     "status": "open",
                     "metadata": {
-                        "campaign_id": campaign_id,
                         "assignment_provenance": {
                             "adverse_assignment": True,
                             "work_mode": "refute",
@@ -395,6 +404,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 "kind": "challenge",
                 "relation": "challenges",
                 "related_research_ids": [product_id],
+                "created_at": "2026-01-01T00:02:30+00:00",
                 "status": "open",
                 "metadata": {
                     "campaign_id": campaign_id,
@@ -410,6 +420,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 "kind": "insight",
                 "relation": "responds_to",
                 "related_research_ids": [source_plan_id],
+                "created_at": "2026-01-01T00:03:30+00:00",
                 "status": "open",
                 "metadata": {
                     "campaign_id": campaign_id,
@@ -420,6 +431,21 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     "worker_outcome": "evidence",
                 },
             }
+
+            # Receipt targets are the rigid supervision coverage.  Additional
+            # related Research is legitimate review context, and relation labels
+            # remain descriptive.  Campaign provenance is still derived exactly
+            # for both the plan and its returned review.
+            self.assertEqual(
+                lifecycle._checkpoint_research_campaign_ids(
+                    proof_plan_id, bases
+                ),
+                frozenset({campaign_id}),
+            )
+            self.assertEqual(
+                lifecycle._checkpoint_research_campaign_ids(challenge_id, bases),
+                frozenset({campaign_id}),
+            )
 
             index = lifecycle._campaign_semantic_successor_index(bases)
             summary, terminals = (
@@ -439,26 +465,43 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 [clean_review_id],
             )
 
-            # Historical canonical COW records did not always carry the later
-            # optional repair_spec projection.  Their exact semantic edge must
-            # still supersede the productive challenge in Main's read-only
-            # freshness view.
-            bases[repair_id] = {
-                "research_id": repair_id,
-                "kind": "repair",
-                "relation": "repairs",
-                "source": f"research:{product_id}",
+            # Structured repair identity is carried by kind plus exact lineage,
+            # not by one reserved relation label or one required trigger author.
+            # It still supersedes the productive challenge in Main's read-only
+            # freshness view without asserting mathematical completion.
+            bases[synthesis_id] = {
+                "research_id": synthesis_id,
+                "kind": "challenge",
+                "relation": "combines_review_findings",
+                "source": (
+                    f"research:{product_id}; research:{challenge_id}"
+                ),
                 "related_research_ids": sorted(
                     {product_id, challenge_id}
                 ),
+                "created_at": "2026-01-01T00:03:45+00:00",
+                "status": "open",
+                "metadata": {"campaign_id": campaign_id},
+            }
+            bases[repair_id] = {
+                "research_id": repair_id,
+                "kind": "repair",
+                "relation": "synthesized_repair",
+                "source": f"research:{product_id}",
+                "related_research_ids": sorted(
+                    {product_id, synthesis_id}
+                ),
+                "created_at": "2026-01-01T00:04:00+00:00",
                 "status": "open",
                 "metadata": {
                     "campaign_id": campaign_id,
                     "repair_of_research_id": product_id,
-                    "trigger_research_id": challenge_id,
+                    "trigger_research_id": synthesis_id,
                 },
             }
             index = lifecycle._campaign_semantic_successor_index(bases)
+            self.assertIn(synthesis_id, index["children"][challenge_id])
+            self.assertIn(repair_id, index["children"][synthesis_id])
             summary, terminals = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=head_id,
@@ -617,9 +660,9 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 goal["active_head_actions"][0]["checkpoint_head_state"],
                 "current_with_in_flight_supervision",
             )
-            self.assertEqual(
-                goal["active_head_actions"][0]["current_terminal_research_ids"],
-                [plan_id],
+            self.assertNotIn(
+                "current_terminal_research_ids",
+                goal["active_head_actions"][0],
             )
             self.assertFalse(surface["checkpoint_refresh"]["recommended"])
 

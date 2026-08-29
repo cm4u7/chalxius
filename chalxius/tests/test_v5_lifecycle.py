@@ -1931,7 +1931,7 @@ class V5LifecycleTests(unittest.TestCase):
                     path=lifecycle._research_path(repair["research_id"]),
                 )
 
-    def test_schema_v2_repair_lineage_is_exact_on_write_and_replay(self) -> None:
+    def test_schema_v2_repair_lineage_is_exact_while_relation_is_descriptive(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"
             store = self._store(root, "schema-v2-repair-lineage")
@@ -1972,16 +1972,6 @@ class V5LifecycleTests(unittest.TestCase):
                 input_capabilities=[input_capability],
             )
             cases: list[tuple[str, dict[str, object], str]] = []
-
-            wrong_relation = copy.deepcopy(payload)
-            wrong_relation["relation"] = "supports"
-            cases.append(
-                (
-                    "relation",
-                    wrong_relation,
-                    "schema-v2 repair relation must be repairs",
-                )
-            )
 
             wrong_source = copy.deepcopy(payload)
             wrong_source["repair_of_research_id"] = other["research_id"]
@@ -2036,6 +2026,20 @@ class V5LifecycleTests(unittest.TestCase):
                 before_research_entries,
             )
 
+            custom_relation = copy.deepcopy(payload)
+            custom_relation["relation"] = "synthesized_repair"
+            custom = lifecycle.add_research(
+                custom_relation,
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            self.assertEqual(custom["kind"], "repair")
+            self.assertEqual(custom["relation"], "synthesized_repair")
+            self.assertEqual(
+                custom["metadata"]["repair_of_research_id"],
+                source["research_id"],
+            )
+
             missing_source_id = "0" * 12
             missing_source = copy.deepcopy(payload)
             missing_manifest = missing_source[
@@ -2069,10 +2073,12 @@ class V5LifecycleTests(unittest.TestCase):
                 assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
             )
             replay_drift = copy.deepcopy(repair)
-            replay_drift["relation"] = "supports"
+            replay_drift["metadata"]["repair_of_research_id"] = other[
+                "research_id"
+            ]
             with self.assertRaisesRegex(
                 ValueError,
-                "schema-v2 repair relation must be repairs",
+                "source lineage disagrees with capability manifest",
             ):
                 lifecycle._validate_research_record(
                     replay_drift,

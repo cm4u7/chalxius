@@ -1,8 +1,52 @@
-Chalxius 0.9.12 — Frontier Lifecycle Closure
+Chalxius 0.9.18 — Frontier Breadth Parity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
+
+Campaign working memory now carries up to sixteen Main-selected heads per
+Target through legacy checkpoint reading, current state, plan-round, explicit
+reconciliation, and live projection. The routine Target window is separate.
+Head claims retain up to 300 characters, root claims 400, and projected
+historical claims 320; complete Research remains retrievable by exact id. Do
+not turn this bounded breadth into paging, automatic head selection, or a
+scheduler.
+
+Routine Campaign frontier now preserves every active head and supervision scope
+in one compact mathematical/action index: concise claim, current-route Research
+ids, next action, and exact actionable Research/round ids. Repeated forensic
+route summaries, terminal/evidence sets, hashes, empty fields, and synonymous
+state remain available with `--diagnostic`.
+
+Use the Main semantic **摸石头过河** during live research: continue research by
+default; when a material architecture failure threatens operation, save the
+exact Campaign/Research/round/return boundary, perform the bounded integrated
+repair and local installation, reconcile those bytes, and resume the same
+mathematical boundary. Do not turn this into a monitor, timer, scheduler,
+automatic issue trigger, automatic installer, publication action, or truth
+gate.
+
+Default supervision planning now subtracts exact completed or in-flight scopes
+and returns a nonmutating no-op when every applicable scope is already covered.
+Routine `frontier --limit N` bounds the nested Campaign goal projection while
+retaining complete counts, digests, ids, and concise mathematics; use
+`--diagnostic` for the full topology. Task-card source assurance and return
+validation share one structural direct-source predicate for standalone
+`primary` and exact `authoritative_source` roles. Explicit scope conflicts,
+malformed source roles, and all truth boundaries remain strict.
+
+Semantic COW terminals determine whether an older workgroup is complete or
+ambiguous; they do not replace that workgroup's assignment, round, product,
+component, or supervision identity. Frontier projects operational actions from
+the exact physical members and follows a product back to its source assignment
+only through validated frozen provenance. This keeps COW history intact while
+preventing one repair route from hiding another route's real work state.
+
+Candidate enforcement and Main's frontier share one exact supervision coverage
+projection. Main sees completed, missing, pending, conflicting, and unsafe
+scopes directly; only malformed or inaccessible bytes are lineage-unreadable.
+Candidate remains strict, and no scheduler, automatic dispatch, compatibility
+layer, Candidate effect, or Fact effect is added.
 
 Before editing or packaging a proposed source root, run
 `scripts/candidate_identity.py --root ROOT --installed-root INSTALLED`. Select
@@ -17,6 +61,21 @@ and attained boundaries. Completion of those heads does not close the semantic
 goal: it requests Main disposition or a new exact head. Only explicit archive
 removes the goal. No note dispatches, schedules, closes, or admits anything,
 and the unscoped workflow queue remains global.
+
+Typed products, supervision plans/results, and structured repairs are operated
+through their existing provenance, receipt, kind, and exact lineage fields;
+relation strings remain concise Main context rather than a second capability
+vocabulary. A structured repair may use an exact Main synthesis trigger whose
+complete research-source set equals its related ids, so repaired review inputs
+do not remain parallel terminal challenges. Malformed, cross-Campaign,
+backward-time, ambiguous, incomplete-product, and unsupervised repair routes do
+not become completed work.
+
+`round-status` exposes the attacked source assignment and product ids on each
+supervision assignment. Main compares those ids with actual live authorship
+before reusing a reviewer. An independent reviewer may be reused across scopes
+or COW stages; an attacked product's author may not self-review it. This is a
+read-only dispatch aid, not an identity registry or gate.
 
 Exact legacy Main-authored COW roots remain directly operable when their
 existing relation, complete source-id set, one completed production product,

@@ -630,6 +630,39 @@ def _expected_archive_directories(expected_files: set[str]) -> set[str]:
     return expected_directories
 
 
+_IGNORABLE_EMPTY_RUNTIME_DIRECTORY_NAMES = frozenset({"__pycache__"})
+
+
+def _ignorable_empty_runtime_directories(
+    actual_directories: set[str],
+    actual_files: set[str],
+) -> set[str]:
+    """Return byte-free interpreter cache leaves that cannot affect identity.
+
+    Runtime identity is manifest-file based.  An empty ``__pycache__`` leaf can
+    be left behind by local Python tooling even when bytecode writing is
+    disabled; it contains no installable bytes and must not be confused with an
+    unmanifested file.  Nonempty caches, nested unexpected directory trees, and
+    every other extra directory remain exact-set failures.
+    """
+
+    ignorable: set[str] = set()
+    for relative in actual_directories:
+        path = PurePosixPath(relative)
+        if path.name not in _IGNORABLE_EMPTY_RUNTIME_DIRECTORY_NAMES:
+            continue
+        prefix = relative + "/"
+        if any(item.startswith(prefix) for item in actual_files):
+            continue
+        if any(
+            item != relative and item.startswith(prefix)
+            for item in actual_directories
+        ):
+            continue
+        ignorable.add(relative)
+    return ignorable
+
+
 def _verify_exact_archive_file_set(
     root: Path,
     expected: set[str],
@@ -680,7 +713,14 @@ def _verify_exact_archive_file_set(
             ):
                 raise ValueError("Chalxius archived runtime contains an unsafe file")
             actual_files.add(path.relative_to(root).as_posix())
-    if actual_files != expected_files or actual_directories != expected_directories:
+    ignorable_directories = _ignorable_empty_runtime_directories(
+        actual_directories,
+        actual_files,
+    )
+    if (
+        actual_files != expected_files
+        or actual_directories - ignorable_directories != expected_directories
+    ):
         raise ValueError("Chalxius archived runtime file set differs from its manifest")
 
 

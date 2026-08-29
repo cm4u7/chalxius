@@ -60,6 +60,14 @@ surface as an `active_hint`: this is nontruth goal/progress context beside the
 global workflow queue, not an implicit Campaign filter. Main compares the
 derived goal coverage with the queue and makes the exact selection itself.
 
+Across every reasoning mode, repeated low-dimensional cases are treated as
+diagnostic samples rather than an automatic coverage ladder. Main first tests
+whether the samples expose a reusable mechanism-level statement and prefers
+that statement when it serves the active goal. The next rank, dimension,
+charge, or example is used as a bounded falsification or boundary test when
+useful; it is not pursued merely because it is next. This preference neither
+forbids case calculations nor changes Research, Candidate, or Fact authority.
+
 New V5 refutation task cards receive the fixed low-cost attack vocabulary plus
 matching Main-approved, mechanism-level rules in every reasoning profile. That
 vocabulary does not itself spawn work. Workers contribute concrete failure

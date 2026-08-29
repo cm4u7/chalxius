@@ -219,6 +219,23 @@ def _semantic_role_tokens(value: Any) -> set[str]:
     }
 
 
+def _is_direct_source_capability_role(value: Any) -> bool:
+    """Recognize the existing semantic spellings for authoritative source bytes.
+
+    Historical cards used a standalone ``primary`` token (including roles such
+    as ``paper primary tex``).  Current producers may instead name the same
+    capability ``authoritative_source``.  Keep the historical predicate and
+    add only the exact authoritative/source token pair; concatenated or merely
+    analytic source-like roles do not acquire direct-source authority.
+    """
+
+    tokens = _semantic_role_tokens(value)
+    return "primary" in tokens or (
+        {"authoritative", "source"}.issubset(tokens)
+        and _role_requires_external_source(tokens)
+    )
+
+
 def _role_requires_external_source(tokens: set[str]) -> bool:
     if "applicability" in tokens:
         return True
@@ -313,7 +330,7 @@ def detect_risk_signals(
     )
     has_exact_primary_capability = any(
         isinstance(artifact, dict)
-        and "primary" in _semantic_role_tokens(artifact.get("role"))
+        and _is_direct_source_capability_role(artifact.get("role"))
         and isinstance(artifact.get("path"), str)
         and bool(artifact["path"].strip())
         and isinstance(artifact.get("sha256"), str)

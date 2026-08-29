@@ -210,6 +210,65 @@ class Chx089SourceAssuranceTests(unittest.TestCase):
             {plus_sha, space_sha},
         )
 
+    def test_authoritative_source_uses_the_same_capability_predicate(self) -> None:
+        authoritative_sha = sha256_bytes(b"authoritative source")
+        primary_sha = sha256_bytes(b"primary source")
+        rejected = {
+            "authoritativesource": sha256_bytes(b"concatenated role"),
+            "authoritative_analysis": sha256_bytes(b"analysis role"),
+            "secondary_source": sha256_bytes(b"secondary source"),
+            "computation_authoritative_source": sha256_bytes(
+                b"program source"
+            ),
+        }
+        related_artifacts = [
+            {
+                "path": "sources/authority.pdf",
+                "role": "authoritative_source",
+                "sha256": authoritative_sha,
+            },
+            {
+                "path": "sources/primary.pdf",
+                "role": "primary_source",
+                "sha256": primary_sha,
+            },
+            *[
+                {
+                    "path": f"work/{role}.txt",
+                    "role": role,
+                    "sha256": digest,
+                }
+                for role, digest in rejected.items()
+            ],
+        ]
+        contract = build_assurance_contract(
+            entry={"claim": "Use exact source capabilities.", "metadata": {}},
+            obligations=[],
+            work_mode="prove",
+            related_artifacts=related_artifacts,
+        )
+        self.assertIn("source_use_required", contract["risk_signals"])
+
+        rejected_contract = build_assurance_contract(
+            entry={"claim": "Use no direct source.", "metadata": {}},
+            obligations=[],
+            work_mode="prove",
+            related_artifacts=[
+                item
+                for item in related_artifacts
+                if item["role"] in rejected
+            ],
+        )
+        self.assertNotIn(
+            "source_use_required", rejected_contract["risk_signals"]
+        )
+
+        card = {"mathematical_state": {"related_artifacts": related_artifacts}}
+        self.assertEqual(
+            V5LifecycleManager._task_primary_source_sha256s(card),
+            {authoritative_sha, primary_sha},
+        )
+
     def test_source_assurance_structural_activation_tamper(self) -> None:
         primary_sha = sha256_bytes(b"frozen primary")
         source_report_sha = sha256_bytes(b"source dossier")

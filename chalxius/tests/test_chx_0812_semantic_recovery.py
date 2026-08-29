@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mathgraph.contracts import sha256_json
+from mathgraph.frontier_actions import project_frontier_group_actions
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_lifecycle import RoundInspectionContext, V5LifecycleManager
 
@@ -228,6 +229,114 @@ class SemanticRecovery0812Tests(unittest.TestCase):
             ("completed_production", root, 1, sha256_json([root])),
         )
 
+    def test_cow_terminal_never_aliases_another_workflow_action(self) -> None:
+        bases, ids = self._two_hop_chain()
+        root, root_product, trigger, repair, repair_product = ids[:5]
+        bases = {
+            research_id: bases[research_id]
+            for research_id in (
+                root,
+                root_product,
+                trigger,
+                repair,
+                repair_product,
+            )
+        }
+        self.assertEqual(
+            V5LifecycleManager._frontier_cow_terminal_members(
+                seed_members=[root],
+                bases=bases,
+                route_staleness={},
+            ),
+            {root: repair},
+        )
+        root_round = "round-20260101T000001Z-00000001"
+        repair_round = "round-20260101T000002Z-00000002"
+        inspection = RoundInspectionContext(
+            completion_obligation_rounds={
+                root: [(root_round, "production")],
+                repair: [(repair_round, "production")],
+            },
+            supervision_round_ids_by_production_round={},
+        )
+        statuses = {
+            root_round: {
+                "assignments": [
+                    {
+                        "research_id": root,
+                        "assignment_role": "primary",
+                        "state": "ingested",
+                        "research_product_id": root_product,
+                    }
+                ]
+            },
+            repair_round: {
+                "assignments": [
+                    {
+                        "research_id": repair,
+                        "assignment_role": "primary",
+                        "state": "ingested",
+                        "research_product_id": repair_product,
+                    }
+                ]
+            },
+        }
+
+        def coverage(records, **_kwargs):
+            product_id = records[0]["research_id"]
+            return [
+                {
+                    "production_round_id": (
+                        root_round if product_id == root_product else repair_round
+                    ),
+                    "source_component_id": f"component-{product_id}",
+                    "scope": "proof_logic",
+                    "state": "missing",
+                    "reason": "no_completed_supervision_result",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                    "unsafe_round_ids": [],
+                }
+            ]
+
+        with tempfile.TemporaryDirectory() as temporary:
+            store = MathGraphStore(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            with (
+                patch.object(
+                    lifecycle,
+                    "_round_status_with_context",
+                    side_effect=lambda round_id, _context: statuses[round_id],
+                ),
+                patch.object(
+                    lifecycle,
+                    "_candidate_supervision_scope_coverage",
+                    side_effect=coverage,
+                ),
+            ):
+                projected = project_frontier_group_actions(
+                    lifecycle,
+                    workgroups={"work": [root]},
+                    work_keys={"work"},
+                    bases=bases,
+                    dispositions={},
+                    route_staleness={},
+                    group_completion={
+                        "work": ("pending", None, 1, sha256_json([root]))
+                    },
+                    inspection=inspection,
+                )["work"]
+
+        self.assertEqual(projected["next_action"], "supervision")
+        self.assertEqual(projected["actionable_research_id"], root_product)
+        self.assertEqual(projected["actionable_round_id"], root_round)
+        self.assertEqual(
+            projected["supervision_coverage"][0]["source_component_id"],
+            f"component-{root_product}",
+        )
+        self.assertNotIn(repair_product, projected["actionable_research_ids"])
+        self.assertNotIn(repair_round, projected["actionable_round_ids"])
+
     def test_exact_legacy_multihop_cow_is_visible_and_completes(self) -> None:
         bases, ids = self._two_hop_chain()
         root, first_product, first_trigger, first_repair = ids[:4]
@@ -292,16 +401,16 @@ class SemanticRecovery0812Tests(unittest.TestCase):
         bases, ids = self._two_hop_chain()
         root, product, trigger, repair = ids[:4]
         negative_variants: list[dict[str, dict[str, object]]] = []
-        for mutate in ("extends", "wrong_product", "unrelated_trigger", "campaign"):
+        for mutate in ("wrong_product", "wrong_source", "campaign", "chronology"):
             variant = copy.deepcopy(bases)
-            if mutate == "extends":
-                variant[repair]["relation"] = "extends"
-            elif mutate == "wrong_product":
+            if mutate == "wrong_product":
                 variant[repair]["metadata"]["repair_of_research_id"] = ids[-1]
-            elif mutate == "unrelated_trigger":
-                variant[trigger]["metadata"]["route_invalidations"] = [ids[-1]]
-            else:
+            elif mutate == "wrong_source":
+                variant[repair]["source"] = f"research:{ids[-1]}"
+            elif mutate == "campaign":
                 variant[repair]["metadata"]["campaign_id"] = "campaign-ffffffffffff"
+            else:
+                variant[repair]["created_at"] = "2026-01-01T00:00:02+00:00"
             negative_variants.append(variant)
         for variant in negative_variants:
             with self.subTest():
@@ -330,9 +439,31 @@ class SemanticRecovery0812Tests(unittest.TestCase):
             )[root]
         )
 
-    def test_repair_requires_exact_active_invalidator_coverage(self) -> None:
+    def test_structured_repair_ignores_label_and_trigger_author_type(self) -> None:
         bases, ids = self._two_hop_chain()
-        root, product, trigger = ids[:3]
+        root, product, trigger, repair = ids[:4]
+        bases = {research_id: bases[research_id] for research_id in ids[:4]}
+        bases[repair]["relation"] = "synthesized_repair_after_whole_review"
+        bases[trigger]["relation"] = "synthesizes"
+        bases[trigger]["metadata"].pop("route_invalidations")
+
+        index = V5LifecycleManager._campaign_semantic_successor_index(bases)
+        self.assertIn(repair, index["cow_repairs"])
+        self.assertIn(repair, index["children"][product])
+        self.assertIn(repair, index["children"][trigger])
+        self.assertEqual(
+            V5LifecycleManager._frontier_cow_terminal_members(
+                seed_members=[root],
+                bases=bases,
+                route_staleness={},
+            )[root],
+            repair,
+        )
+
+    def test_structured_repair_does_not_require_duplicate_invalidator_declaration(self) -> None:
+        bases, ids = self._two_hop_chain()
+        root, product, trigger, repair = ids[:4]
+        bases = {research_id: bases[research_id] for research_id in ids[:4]}
         other_trigger = "a" * 12
         bases[other_trigger] = _challenge(
             other_trigger,
@@ -348,7 +479,7 @@ class SemanticRecovery0812Tests(unittest.TestCase):
                     product: sorted([trigger, other_trigger]),
                 },
             )[root],
-            root,
+            repair,
         )
 
     def test_repair_requires_hash_bound_objective_projection(self) -> None:

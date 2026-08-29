@@ -120,6 +120,14 @@ it creates no persistent reviewer ownership, waiting dependency, receipt gate,
 or reason to avoid another qualified reviewer when the original session is not
 available.
 
+Before reviewer reuse, inspect each supervision assignment's
+`round-status.assignments[].reviewer_independence.attacked_products`. Compare
+those source assignment ids with the work actually authored by the live
+reviewer. Reuse across scopes or COW stages is allowed only when the reviewer
+authored none of the attacked products. Graph worker, assignment, and context
+ids do not authenticate the live process, so this comparison remains Main's
+dispatch judgment; do not add an identity registry or automatic reviewer gate.
+
 This required Research sequencing does not call Pulse. The optional
 execution-profile Pulse below remains a separate compatibility mechanism for a
 task that independently requires snapshot-mediated peer exchange; it cannot

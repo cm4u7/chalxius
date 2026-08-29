@@ -213,3 +213,33 @@ class LocalInstallTests(unittest.TestCase):
             self.assertEqual((installed / "VERSION").read_text(encoding="utf-8"), "0.8.1\n")
             self.assertFalse(archive.exists())
             self.assertFalse(rollback.exists())
+
+    def test_empty_python_cache_does_not_masquerade_as_an_extra_runtime_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            candidate = self._runtime(base / "candidate", "0.8.2", "new")
+            cache = candidate / "__pycache__"
+            cache.mkdir()
+
+            accepted = perform_local_install(
+                candidate_root=candidate,
+                installed_root=base / "skills" / "chalxius",
+                archive_root=base / "archives" / "chalxius",
+                rollback_root=base / "rollbacks" / "chalxius-current",
+                dry_run=True,
+                self_test_runner=self._no_self_test,
+                focused_test_runner=self._no_focused_tests,
+            )
+            self.assertEqual(accepted["status"], "validated_no_install")
+
+            (cache / "unmanifested.pyc").write_bytes(b"not manifest bound")
+            with self.assertRaisesRegex(ValueError, "file set"):
+                perform_local_install(
+                    candidate_root=candidate,
+                    installed_root=base / "skills" / "chalxius",
+                    archive_root=base / "archives" / "chalxius",
+                    rollback_root=base / "rollbacks" / "chalxius-current",
+                    dry_run=True,
+                    self_test_runner=self._no_self_test,
+                    focused_test_runner=self._no_focused_tests,
+                )

@@ -6,9 +6,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from mathgraph.frontier_actions import _project_research_action
+from mathgraph.frontier_actions import (
+    _ActionProjector,
+    _project_research_action,
+)
 from mathgraph.store import MathGraphStore
-from mathgraph.v5_lifecycle import RoundInspectionContext
+from mathgraph.v5_lifecycle import RoundInspectionContext, V5LifecycleManager
 
 
 class FrontierActiveFix090Tests(unittest.TestCase):
@@ -185,6 +188,443 @@ class FrontierActiveFix090Tests(unittest.TestCase):
             self.assertEqual(action["next_action"], "supervision")
             self.assertEqual(action["actionable_research_id"], product_id)
             self.assertEqual(action["actionable_round_id"], round_id)
+
+    def test_partial_supervision_projects_exact_missing_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = self._store(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            root_id = "6" * 12
+            product_id = "7" * 12
+            review_id = "8" * 12
+            production_round = "round-20260828T000000Z-00000001"
+            proof_round = "round-20260828T000000Z-00000002"
+            bases = {
+                root_id: self._record(
+                    root_id, created_at="2026-08-28T00:00:00Z"
+                ),
+                product_id: self._record(
+                    product_id,
+                    created_at="2026-08-28T00:01:00Z",
+                    kind="evidence",
+                    related=[root_id],
+                    complete=True,
+                ),
+                review_id: self._record(
+                    review_id,
+                    created_at="2026-08-28T00:02:00Z",
+                    kind="insight",
+                    related=[product_id],
+                    complete=True,
+                ),
+            }
+            inspection = RoundInspectionContext(
+                completion_obligation_rounds={
+                    root_id: [(production_round, "production")]
+                },
+                supervision_round_ids_by_production_round={
+                    production_round: [proof_round]
+                },
+            )
+            statuses = {
+                production_round: {
+                    "assignments": [
+                        {
+                            "research_id": root_id,
+                            "assignment_role": "primary",
+                            "state": "ingested",
+                            "research_product_id": product_id,
+                        }
+                    ]
+                },
+                proof_round: {"assignments": [{"state": "ingested"}]},
+            }
+            coverage = [
+                {
+                    "production_round_id": production_round,
+                    "source_component_id": "component-" + "1" * 16,
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": [review_id],
+                    "pending_round_ids": [],
+                },
+                {
+                    "production_round_id": production_round,
+                    "source_component_id": "component-" + "1" * 16,
+                    "scope": "source_scope",
+                    "state": "missing",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                },
+            ]
+
+            with patch.object(
+                lifecycle,
+                "_round_status_with_context",
+                side_effect=lambda round_id, _context: statuses[round_id],
+            ), patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                lifecycle,
+                "_inspection_research_record",
+                side_effect=lambda research_id, _context: bases[research_id],
+            ):
+                action = _project_research_action(
+                    lifecycle,
+                    research_id=root_id,
+                    bases=bases,
+                    dispositions={},
+                    route_staleness={},
+                    inspection=inspection,
+                )
+
+            self.assertEqual(action["next_action"], "supervision")
+            self.assertEqual(
+                action["pending_reason"], "supervision_scope_missing"
+            )
+            self.assertEqual(
+                [item["state"] for item in action["supervision_coverage"]],
+                ["completed", "missing"],
+            )
+            self.assertEqual(
+                action["supervision_coverage"][1]["scope"],
+                "source_scope",
+            )
+            self.assertEqual(action["supervision_coverage_count"], 2)
+
+            compact_goal = lifecycle._compact_goal_coverage_entry(
+                {
+                    "target_id": "target-" + "1" * 16,
+                    "supervision_coverage": coverage,
+                    "supervision_coverage_count": 2,
+                    "supervision_coverage_sha256": action[
+                        "supervision_coverage_sha256"
+                    ],
+                    "active_head_actions": [
+                        {
+                            "research_id": root_id,
+                            "next_action": "supervision",
+                            "supervision_coverage": coverage,
+                            "supervision_coverage_count": 2,
+                            "supervision_coverage_sha256": action[
+                                "supervision_coverage_sha256"
+                            ],
+                        }
+                    ],
+                }
+            )
+            self.assertEqual(
+                compact_goal["supervision_coverage"][1]["scope"],
+                "source_scope",
+            )
+            self.assertEqual(
+                compact_goal["active_head_actions"][0][
+                    "supervision_coverage"
+                ][1]["state"],
+                "missing",
+            )
+
+    def test_scope_state_routing_distinguishes_non_lineage_states(self) -> None:
+        self.assertEqual(
+            V5LifecycleManager._supervision_scope_coverage_state(
+                result_research_ids=[],
+                pending_round_ids=[
+                    "round-20260828T000000Z-00000008",
+                    "round-20260828T000000Z-00000009",
+                ],
+            ),
+            "conflicting",
+        )
+        self.assertEqual(
+            V5LifecycleManager._supervision_scope_coverage_state(
+                result_research_ids=[],
+                pending_round_ids=[],
+                unsafe_round_ids=[
+                    "round-20260828T000000Z-00000010"
+                ],
+            ),
+            "unsafe",
+        )
+        base = {
+            "production_round_id": "round-20260828T000000Z-00000005",
+            "source_component_id": "component-" + "2" * 16,
+            "scope": "source_scope",
+            "result_research_ids": [],
+            "pending_round_ids": [],
+        }
+        expected = {
+            "missing": ("supervision", "supervision_scope_missing"),
+            "pending": ("await_return", "supervision_scope_pending"),
+            "conflicting": (
+                "main_reconciliation",
+                "supervision_scope_conflicting",
+            ),
+            "unsafe": (
+                "main_reconciliation",
+                "supervision_scope_coverage_unsafe",
+            ),
+        }
+        for state, route in expected.items():
+            with self.subTest(state=state):
+                self.assertEqual(
+                    _ActionProjector._supervision_coverage_route(
+                        [{**base, "state": state}]
+                    ),
+                    route,
+                )
+
+        self.assertEqual(
+            _ActionProjector._supervision_coverage_route(
+                [
+                    {**base, "state": "conflicting"},
+                    {**base, "scope": "proof_logic", "state": "unsafe"},
+                ]
+            ),
+            (
+                "main_reconciliation",
+                "supervision_scope_coverage_unsafe",
+            ),
+        )
+
+    def test_candidate_gate_rejects_every_noncomplete_scope_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = self._store(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            base = {
+                "production_round_id": (
+                    "round-20260828T000000Z-00000011"
+                ),
+                "source_component_id": "component-" + "4" * 16,
+                "scope": "proof_logic",
+                "result_research_ids": [],
+                "pending_round_ids": [],
+            }
+            cases = [
+                {**base, "state": "missing"},
+                {
+                    **base,
+                    "state": "pending",
+                    "pending_round_ids": [
+                        "round-20260828T000000Z-00000012"
+                    ],
+                },
+                {
+                    **base,
+                    "state": "conflicting",
+                    "result_research_ids": ["d" * 12],
+                    "pending_round_ids": [
+                        "round-20260828T000000Z-00000013"
+                    ],
+                },
+                {
+                    **base,
+                    "state": "unsafe",
+                    "reason": "supervision_round_not_usable",
+                    "unsafe_round_ids": [
+                        "round-20260828T000000Z-00000014"
+                    ],
+                },
+            ]
+            for coverage in cases:
+                with self.subTest(state=coverage["state"]), patch.object(
+                    lifecycle,
+                    "_candidate_supervision_scope_coverage",
+                    return_value=[coverage],
+                ):
+                    with self.assertRaises(ValueError):
+                        lifecycle._required_supervision_results_for_candidate(
+                            []
+                        )
+
+            completed = {
+                **base,
+                "state": "completed",
+                "result_research_ids": ["e" * 12],
+            }
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=[completed],
+            ):
+                self.assertEqual(
+                    lifecycle._required_supervision_results_for_candidate([]),
+                    {"e" * 12},
+                )
+
+    def test_malformed_supervision_bytes_remain_lineage_unreadable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = self._store(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            root_id = "9" * 12
+            product_id = "a" * 12
+            production_round = "round-20260828T000000Z-00000003"
+            supervision_round = "round-20260828T000000Z-00000004"
+            bases = {
+                root_id: self._record(
+                    root_id, created_at="2026-08-28T00:00:00Z"
+                ),
+                product_id: self._record(
+                    product_id,
+                    created_at="2026-08-28T00:01:00Z",
+                    kind="evidence",
+                    related=[root_id],
+                    complete=True,
+                ),
+            }
+            inspection = RoundInspectionContext(
+                completion_obligation_rounds={
+                    root_id: [(production_round, "production")]
+                },
+                supervision_round_ids_by_production_round={
+                    production_round: [supervision_round]
+                },
+            )
+            for supervision_state in (
+                "ingested",
+                "awaiting_return",
+                "return_present",
+            ):
+                with self.subTest(supervision_state=supervision_state):
+                    statuses = {
+                        production_round: {
+                            "assignments": [
+                                {
+                                    "research_id": root_id,
+                                    "assignment_role": "primary",
+                                    "state": "ingested",
+                                    "research_product_id": product_id,
+                                }
+                            ]
+                        },
+                        supervision_round: {
+                            "assignments": [
+                                {"state": supervision_state}
+                            ]
+                        },
+                    }
+
+                    with patch.object(
+                        lifecycle,
+                        "_round_status_with_context",
+                        side_effect=lambda round_id, _context: statuses[
+                            round_id
+                        ],
+                    ), patch.object(
+                        lifecycle,
+                        "_candidate_supervision_scope_coverage",
+                        side_effect=ValueError(
+                            "malformed supervision binding"
+                        ),
+                    ):
+                        action = _project_research_action(
+                            lifecycle,
+                            research_id=root_id,
+                            bases=bases,
+                            dispositions={},
+                            route_staleness={},
+                            inspection=inspection,
+                        )
+
+                    self.assertEqual(
+                        action["next_action"], "main_reconciliation"
+                    )
+                    self.assertEqual(
+                        action["pending_reason"],
+                        "supervision_result_lineage_unreadable",
+                    )
+                    self.assertNotIn("supervision_coverage", action)
+
+    def test_quarantined_supervision_is_unsafe_not_unreadable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = self._store(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            root_id = "b" * 12
+            product_id = "c" * 12
+            production_round = "round-20260828T000000Z-00000006"
+            supervision_round = "round-20260828T000000Z-00000007"
+            bases = {
+                root_id: self._record(
+                    root_id, created_at="2026-08-28T00:00:00Z"
+                ),
+                product_id: self._record(
+                    product_id,
+                    created_at="2026-08-28T00:01:00Z",
+                    kind="evidence",
+                    related=[root_id],
+                    complete=True,
+                ),
+            }
+            inspection = RoundInspectionContext(
+                completion_obligation_rounds={
+                    root_id: [(production_round, "production")]
+                },
+                supervision_round_ids_by_production_round={
+                    production_round: [supervision_round]
+                },
+            )
+            statuses = {
+                production_round: {
+                    "assignments": [
+                        {
+                            "research_id": root_id,
+                            "assignment_role": "primary",
+                            "state": "ingested",
+                            "research_product_id": product_id,
+                        }
+                    ]
+                },
+                supervision_round: {
+                    "assignments": [{"state": "quarantined"}]
+                },
+            }
+            coverage = [
+                {
+                    "production_round_id": production_round,
+                    "source_component_id": "component-" + "3" * 16,
+                    "scope": "proof_logic",
+                    "state": "unsafe",
+                    "reason": "supervision_round_not_usable",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                    "unsafe_round_ids": [supervision_round],
+                }
+            ]
+
+            with patch.object(
+                lifecycle,
+                "_round_status_with_context",
+                side_effect=lambda round_id, _context: statuses[round_id],
+            ), patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ):
+                action = _project_research_action(
+                    lifecycle,
+                    research_id=root_id,
+                    bases=bases,
+                    dispositions={},
+                    route_staleness={},
+                    inspection=inspection,
+                )
+
+            self.assertEqual(action["next_action"], "main_reconciliation")
+            self.assertEqual(
+                action["pending_reason"],
+                "supervision_scope_coverage_unsafe",
+            )
+            self.assertEqual(
+                action["supervision_coverage"][0]["state"], "unsafe"
+            )
+            self.assertEqual(
+                action["supervision_coverage"][0]["unsafe_round_ids"],
+                [supervision_round],
+            )
 
     def test_live_supervision_precedes_pre_supervision_product_safety(
         self,

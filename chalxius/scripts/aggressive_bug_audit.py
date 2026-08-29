@@ -76,6 +76,9 @@ RESEARCH_TWO_SUBROUND_TEST_MODULE = (
 CHX_0812_TEST_MODULE = (
     "tests.test_chx_0812_semantic_recovery.SemanticRecovery0812Tests"
 )
+CHX_089_SOURCE_TEST_MODULE = (
+    "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests"
+)
 CHX_090_TEST_MODULE = (
     "tests.test_chx_090_frontier_active_fix."
     "FrontierActiveFix090Tests"
@@ -155,6 +158,26 @@ MUTANTS = (
         test=(
             f"{CHX_090_TEST_MODULE}."
             "test_live_supervision_precedes_pre_supervision_product_safety"
+        ),
+        target="mathgraph/frontier_actions.py",
+    ),
+    Mutant(
+        name="frontier_cow_terminal_reintroduced_as_workflow_alias",
+        old=(
+            "            workflow_ids = sorted(\n"
+            "                set(members),\n"
+            "                key=lambda item: (self.bases[item][\"created_at\"], item),\n"
+            "            )\n"
+        ),
+        new=(
+            "            workflow_ids = sorted(\n"
+            "                {value for value in terminal_map.values() if value is not None},\n"
+            "                key=lambda item: (self.bases[item][\"created_at\"], item),\n"
+            "            )  # mutant: semantic COW terminal becomes workflow alias\n"
+        ),
+        test=(
+            f"{CHX_0812_TEST_MODULE}."
+            "test_cow_terminal_never_aliases_another_workflow_action"
         ),
         target="mathgraph/frontier_actions.py",
     ),
@@ -293,25 +316,28 @@ MUTANTS = (
         ),
     ),
     Mutant(
-        name="frontier_cow_invalidator_exhaustion_weakened",
+        name="frontier_structured_repair_source_identity_bypassed",
         old=(
-            "                or route_staleness.get(product_id) != [trigger_id]\n"
+            '            repair.get("source") != f"research:{product_id}"\n'
         ),
         new=(
-            "                or trigger_id not in route_staleness.get(product_id, [])"
-            "  # mutant\n"
+            "            False  # mutant: ignore exact repair source identity\n"
         ),
         test=(
             f"{CHX_0812_TEST_MODULE}."
-            "test_repair_requires_exact_active_invalidator_coverage"
+            "test_malformed_or_ambiguous_repair_lineage_never_closes_predecessor"
         ),
     ),
     Mutant(
         name="frontier_cow_repair_continuity_bypassed",
         old=(
-            "                or not cls._frontier_repair_continuity_is_exact(repair=repair)\n"
+            "            if lineage is None or not cls._frontier_repair_continuity_is_exact(\n"
+            "                repair=repair\n"
+            "            ):\n"
         ),
-        new="                or False  # mutant: ignore repair continuity\n",
+        new=(
+            "            if lineage is None or False:  # mutant: ignore repair continuity\n"
+        ),
         test=(
             f"{CHX_0812_TEST_MODULE}."
             "test_repair_requires_hash_bound_objective_projection"
@@ -366,6 +392,45 @@ MUTANTS = (
             f"{TEST_MODULE}."
             "test_frontier_limits_and_explicit_last_entry_have_no_truncation_error"
         ),
+    ),
+    Mutant(
+        name="campaign_goal_nested_limit_bypassed",
+        old="                limit=None if diagnostic else limit,\n",
+        new="                limit=None,  # mutant: expand every Campaign goal\n",
+        test=(
+            f"{CAMPAIGN_TEST_MODULE}."
+            "test_routine_frontier_limit_bounds_nested_goal_projection"
+        ),
+    ),
+    Mutant(
+        name="default_supervision_scope_subtraction_bypassed",
+        old=(
+            "            missing = [scope for scope in applicable if scope not in covered]\n"
+        ),
+        new=(
+            "            missing = list(applicable)  # mutant: repeat covered scopes\n"
+        ),
+        test=(
+            f"{RESEARCH_TWO_SUBROUND_TEST_MODULE}."
+            "test_default_supervision_subtracts_exact_live_scopes_then_noops"
+        ),
+    ),
+    Mutant(
+        name="authoritative_source_capability_dropped",
+        old=(
+            "    return \"primary\" in tokens or (\n"
+            "        {\"authoritative\", \"source\"}.issubset(tokens)\n"
+            "        and _role_requires_external_source(tokens)\n"
+            "    )\n"
+        ),
+        new=(
+            "    return \"primary\" in tokens  # mutant: drop authoritative_source\n"
+        ),
+        test=(
+            f"{CHX_089_SOURCE_TEST_MODULE}."
+            "test_authoritative_source_uses_the_same_capability_predicate"
+        ),
+        target="mathgraph/v5_assurance.py",
     ),
     Mutant(
         name="campaign_frontier_exact_match_bypassed",
@@ -2310,7 +2375,7 @@ MUTANTS = (
 # explicit forensic investigation; it is not a routine agent-facing gate.
 SEMANTIC_MUTANT_NAMES = frozenset(
     {
-        "frontier_limit_minus_one",
+        "authoritative_source_capability_dropped",
         "campaign_snapshot_hash_bypass",
         "typed_fact_closure_authority_expansion_bypassed",
         "typed_fact_closure_non_active_root_accepted",
@@ -2327,7 +2392,7 @@ SEMANTIC_MUTANT_NAMES = frozenset(
         "paper_research_stable_identity_semantic_collision_accepted",
         "cow_supervision_defect_allowlist_restored",
         "frontier_cow_branch_ambiguity_bypassed",
-        "frontier_cow_invalidator_exhaustion_weakened",
+        "frontier_structured_repair_source_identity_bypassed",
         "frontier_cow_original_projection_bypassed",
         "frontier_cow_repair_continuity_bypassed",
         "frontier_cow_terminal_staleness_bypassed",

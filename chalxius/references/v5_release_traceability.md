@@ -1,4 +1,117 @@
-# Chalxius V5 traceability through 0.9.12 Frontier Lifecycle Closure
+# Chalxius V5 traceability through 0.9.18 Frontier Breadth Parity
+
+## 0.9.18 frontier-breadth-parity release overlay
+
+- Candidate version: `0.9.18`; release name **Frontier Breadth Parity**.
+- One explicit capacity of sixteen applies to legacy checkpoint read, current
+  Campaign working state, `plan-round` advancement, Main reconciliation, and
+  live goal projection.
+- A real end-to-end regression preserves all sixteen same-Campaign Research
+  heads and rejects a seventeenth explicitly; the routine `--limit` remains a
+  Target bound, not a head bound.
+- Routine mathematical budgets are 300 characters per head claim, 400 for the
+  root claim, and 320 for each shown historical claim. Exact Research remains
+  unchanged and retrievable by id.
+- The live local-F0 all-target Campaign projection changes from 29307 to 31693
+  bytes, with the additional bytes allocated to mathematics rather than
+  repeated workflow topology.
+- No pager, automatic head selector, scheduler, compatibility layer,
+  publication action, Candidate effect, or Fact effect is introduced.
+
+## 0.9.17 stepping-stones-continuity release overlay
+
+- Candidate version: `0.9.17`; release name **Stepping-Stones Continuity**.
+- Routine Campaign frontier preserves every active head and supervision scope
+  but no longer repeats route summaries, terminal/evidence trees, hashes, empty
+  values, and synonymous action state inside each head.
+- Concise mathematical claims, current-route Research ids, next actions, and
+  exact actionable Research/round ids stay in the ordinary Main surface;
+  `--diagnostic` retains full forensic topology.
+- The ordinary default widens to twelve Campaign targets, while a 16-head
+  regression proves that one projected target is not truncated at eight heads.
+- The Main operating semantic **摸石头过河** records the exact live research
+  boundary before a material integrated repair/install interruption and resumes
+  that boundary afterward. Ordinary mathematical uncertainty never triggers it.
+- Focused projection and live local-F0 canaries verify the reduction without a
+  scheduler, timer, automatic repair/installation, publication action,
+  Candidate effect, or Fact effect.
+
+## 0.9.16 bounded-research-coordination release overlay
+
+- Candidate version: `0.9.16`; release name **Bounded Research Coordination**.
+- Default supervision planning subtracts exact completed or in-flight
+  component scopes; complete coverage returns an informative no-op without a
+  new round.
+- Explicit scope retry and overlap rejection retain their existing strict
+  behavior, including the under-lock recheck.
+- Routine Campaign frontier bounds nested goal projection at the requested
+  limit while preserving total counts, digests, projected ids, and concise
+  mathematical summaries; `--diagnostic` remains complete.
+- Assurance production and return validation share the same structural
+  direct-source predicate for standalone `primary` and exact
+  `authoritative_source` roles; computation, analytic, secondary, and
+  concatenated lookalikes remain excluded.
+- Focused regression covers all three paths, including a synthetic 40-goal
+  frontier benchmark; the release adds no scheduler, persistent cache, pager,
+  compatibility layer, Candidate effect, or Fact effect.
+
+## 0.9.15 frontier-exact-workflow-identity release overlay
+
+- Candidate version: `0.9.15`; release name **Frontier Exact Workflow Identity**.
+- Semantic COW terminals continue to determine completion and ambiguity but no
+  longer act as aliases for assignment, round, product, component, or
+  supervision identity.
+- Frontier actions are derived from exact physical workgroup members; the
+  existing product-to-source redirect remains limited to validated frozen
+  task binding and provenance.
+- The focused regression covers a real historical shape in which one physical
+  product had productive challenges and a later distinct repair route existed.
+- The live local-F0 canary restores `ad2545c15572` to product
+  `565fb0655309` and round `round-20260828T023255Z-bd8f8f93`, with no inherited
+  `e3ebd063441b` workflow.
+- COW history, Research bytes, Candidate enforcement, Certification, Gateway,
+  and Fact authority are unchanged; no scheduler or compatibility layer is
+  added.
+
+## 0.9.14 typed-supervision-coverage release overlay
+
+- Candidate version: `0.9.14`; release name **Typed Supervision Coverage**.
+- Candidate enforcement and Main's frontier consume one exact per-component,
+  per-scope coverage projection.
+- Coverage distinguishes completed, missing, pending, conflicting, and unsafe
+  states; only malformed or inaccessible graph bytes are lineage-unreadable.
+- Frontier carries bounded coverage through ordinary, Campaign-goal, and
+  active-head projections so Main can see the exact unfinished scope.
+- Candidate construction still requires exactly one completed, ingested result
+  for every applicable scope and therefore gains no shortcut.
+- The repair adds no scheduler, automatic dispatch, compatibility layer,
+  receipt, Research effect, Candidate effect, or Fact effect.
+
+## 0.9.13 repair-and-review-lineage release overlay
+
+- Candidate version: `0.9.13`; release name **Repair and Review Lineage**.
+- Existing typed fields identify products, supervision plans/results, and
+  structured repairs; relation strings remain Main-authored context rather than
+  a duplicated capability vocabulary.
+- Unique supervision receipt targets may be a subset of a plan's exact related
+  Research context, matching the existing write contract.
+- A structured repair may name an exact Main synthesis trigger. Only when the
+  trigger's complete research-source set equals its related ids do the reviewed
+  inputs advance through it, preventing superseded challenges from remaining
+  parallel frontier terminals.
+- Workgroup completion still requires one complete production product, an exact
+  hash-bound repair objective, a unique route, and applicable supervision of
+  the repair product. Malformed, cross-Campaign, backward-time, or ambiguous
+  shapes remain pending.
+- `round-status` projects attacked source assignment/product ids. Main compares
+  them with actual live authorship; the projection is not an identity gate.
+- The integrated-install canary exposed two byte-free `__pycache__` leaves in
+  an otherwise exact candidate. Exact-set validation now ignores only an empty
+  interpreter-cache leaf. Any unmanifested file, nonempty cache, nested extra
+  tree, link, special entry, or unsafe mode still fails, and archives continue
+  to copy only manifest-bound bytes.
+- The change has no Research-result, Candidate, Certification, Gateway, or Fact
+  effect and adds no relation dictionary, compatibility layer, or scheduler.
 
 ## 0.9.12 frontier-lifecycle-closure release overlay
 

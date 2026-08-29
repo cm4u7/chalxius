@@ -1,5 +1,60 @@
 # V5 capability preservation matrix
 
+The 0.9.18 Frontier Breadth Parity overlay carries up to sixteen
+Main-selected heads per Campaign Target through legacy checkpoint reading,
+current state validation, planning, reconciliation, and ordinary projection.
+The Target window remains independently bounded, derived successor fan-out
+retains count/digest diagnostics, and exact Research remains retrievable by id.
+Larger claim budgets improve mathematical judgment without restoring repeated
+workflow topology. No paging, automatic selection, scheduler, compatibility
+layer, Candidate effect, or Fact effect is introduced.
+
+The 0.9.17 Stepping-Stones Continuity overlay preserves every routine frontier
+head and supervision scope while removing per-action copies of forensic route,
+terminal, evidence, hash, empty-field, and synonymous-state detail. Concise
+mathematics, current-route Research ids, next action, and exact actionable
+Research/round ids remain visible; `--diagnostic` remains complete. The named
+Main semantic **摸石头过河** saves and resumes the exact research boundary around
+a material integrated repair/install interruption. It adds no automatic
+trigger, scheduler, timer, installer, publication action, Candidate effect, or
+Fact effect.
+
+The 0.9.16 Bounded Research Coordination overlay subtracts exact completed or
+in-flight scopes from default supervision planning, bounds routine nested
+Campaign goal projection at the requested limit, and shares one structural
+direct-source role predicate between assurance and return validation. Explicit
+scope conflicts, full diagnostic topology, Main's mathematical selection, and
+all Candidate/Fact boundaries remain unchanged. No scheduler, persistent
+index, pagination layer, compatibility adapter, Candidate effect, or Fact
+effect is introduced.
+
+The 0.9.15 Frontier Exact Workflow Identity overlay separates semantic COW
+completion from operational workflow projection. COW terminals decide only
+completion or ambiguity; exact physical workgroup members retain their own
+assignment, round, product, component, and supervision identities. The existing
+validated product-to-source redirect remains available. No history is deleted
+and no scheduler, compatibility layer, Candidate effect, or Fact effect is
+introduced.
+
+The 0.9.14 Typed Supervision Coverage overlay gives Candidate enforcement and
+Main's ordinary/Campaign frontier one exact component-and-scope coverage
+projection. Completed, missing, pending, conflicting, and unsafe states remain
+distinct; malformed or inaccessible graph bytes alone are lineage-unreadable.
+Candidate still requires one completed ingested result for every applicable
+scope. The projection is advisory nontruth context with no scheduler,
+automatic dispatch, compatibility layer, Candidate effect, or Fact effect.
+
+The 0.9.13 Repair and Review Lineage overlay uses existing structural types for
+worker products, supervision plans/results, and repairs while leaving relation
+labels as Main context. Supervision receipt targets may be a unique subset of
+additional exact related context. A repair-selected Main synthesis advances
+only through a complete research-source/related-id match; workgroup completion
+still requires a complete product, hash-bound repair objective, unique route,
+and applicable supervision. `round-status` exposes attacked source assignment
+and product ids for Main's live reviewer comparison. No relation dictionary,
+identity registry, automatic repair decision, Candidate effect, or Fact effect
+is introduced.
+
 The 0.9.12 Frontier Lifecycle Closure overlay recognizes one structurally exact
 historical Main-authored COW completion shape, gives an exact in-flight branch
 goal-level precedence without removing sibling reconciliation, and reuses

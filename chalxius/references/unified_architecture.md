@@ -1,5 +1,69 @@
 # Chalxius unified Evidence and research architecture
 
+> **0.9.18 frontier-breadth-parity override.** One sixteen-head capacity now
+> governs legacy Campaign checkpoints, the current working state,
+> `plan-round --frontier-target`, explicit Main reconciliation, and live goal
+> projection. The ordinary Target window is independent. Routine summaries
+> spend more bytes on mathematical judgment—300 characters per head claim,
+> 400 for the root, and 320 for each shown historical claim—while exact
+> Research and full diagnostic topology stay addressable by id. This adds no
+> pager, automatic head choice, scheduler, compatibility layer, Candidate
+> effect, or Fact effect.
+
+> **0.9.17 stepping-stones-continuity override.** Main's named operating
+> semantic **摸石头过河** continues Research by default; a material architecture
+> failure saves the exact Campaign/Research/round boundary, enters bounded
+> integrated repair and local installation, then reconciles and resumes that
+> boundary. It is not triggered by ordinary mathematical uncertainty and adds
+> no monitor, scheduler, timer, automatic installer, publication action, or
+> truth-stage gate. Routine frontier keeps every active head, scope, concise
+> mathematical claim, current-route Research id, next action, and exact
+> actionable Research/round id, while repeated route/terminal/evidence
+> topology stays in `--diagnostic`.
+
+> **0.9.16 bounded-research-coordination override.** Default supervision
+> planning subtracts exact completed or in-flight component scopes and becomes
+> a read-only no-op when all applicable scopes are covered; explicit selection,
+> retry identity, and overlap rejection remain strict. Routine Campaign
+> frontier applies its limit before nested goal expansion and retains exact
+> target counts, digests, ids, and concise mathematical summaries; diagnostic
+> mode remains complete. Task-card assurance and return validation share one
+> structural direct-source role predicate for standalone `primary` and exact
+> `authoritative_source` semantics. Main still makes every mathematical choice,
+> and no scheduler, persistent cache, pager, compatibility layer, Candidate
+> effect, or Fact effect is introduced.
+
+> **0.9.15 frontier-exact-workflow-identity override.** Semantic COW terminals
+> determine completion or ambiguity only. Operational action state is derived
+> from the exact physical workgroup members and may follow a product back to
+> its source assignment only through validated frozen provenance. A distinct
+> repair task cannot lend its round, product, component, or supervision to the
+> earlier route it semantically completes. COW history and every truth boundary
+> remain unchanged; no selector, scheduler, compatibility layer, Candidate
+> effect, or Fact effect is added.
+
+> **0.9.14 typed-supervision-coverage override.** Candidate enforcement and
+> Main's frontier share one exact per-component, per-scope coverage reader.
+> Completed, missing, pending, conflicting, and unsafe remain distinct data
+> states; only malformed or inaccessible graph bytes become
+> `supervision_result_lineage_unreadable`. Candidate still requires exactly one
+> completed, ingested result for every applicable scope. The frontier projection
+> is bounded nontruth context and adds no scheduler, automatic dispatch,
+> compatibility layer, Candidate effect, or Fact effect.
+
+> **0.9.13 repair-and-review-lineage override.** Existing typed structure, not
+> descriptive relation vocabulary, identifies worker products, supervision
+> plans/results, and structured repairs. Receipt targets may be a unique subset
+> of a plan's exact related context. A repair may use an exact Main synthesis
+> trigger whose full research-source set equals its related ids; this advances
+> the repaired route without requiring the trigger to be a direct supervisor
+> return. Completion still requires a complete product, hash-bound repair
+> objective, and applicable supervision. `round-status` exposes attacked source
+> assignment/product ids so Main can avoid reusing the actual product author
+> while freely reusing an independent reviewer across scopes or COW stages. No
+> relation dictionary, identity registry, gate, scheduler, Candidate effect, or
+> Fact effect is added.
+
 > **0.9.12 frontier-lifecycle-closure override.** Exact historical
 > Main-authored COW roots close advisory workgroups only when their recorded
 > relation, complete source-id set, one obligation-complete production

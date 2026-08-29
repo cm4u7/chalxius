@@ -1894,7 +1894,9 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 for item in components
                 if second_assignment["assignment_id"] in item["assignment_ids"]
             )
-            self._ingest_plain_assignment(store, planned, first_assignment)
+            first_receipt = self._ingest_plain_assignment(
+                store, planned, first_assignment
+            )
             Path(str(first_assignment["return_path"])).with_suffix(
                 ".receipt.json"
             ).unlink()
@@ -1912,6 +1914,31 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertEqual(
                 supervision["research_cycle"]["source_component_id"],
                 first_component["component_id"],
+            )
+            supervision_status = lifecycle.round_status(
+                supervision["round_id"]
+            )
+            reviewer_projection = supervision_status["assignments"][0][
+                "reviewer_independence"
+            ]
+            self.assertFalse(reviewer_projection["automatic_gate"])
+            self.assertEqual(reviewer_projection["decision_owner"], "main")
+            self.assertEqual(
+                reviewer_projection["source_round_id"], planned["round_id"]
+            )
+            self.assertEqual(
+                reviewer_projection["attacked_products"],
+                [
+                    {
+                        "source_assignment_id": first_assignment[
+                            "assignment_id"
+                        ],
+                        "result_research_id": first_receipt["research_id"],
+                        "source_research_id": first["research_id"],
+                        "work_mode": "prove",
+                        "outcome": "proof",
+                    }
+                ],
             )
             with self.assertRaisesRegex(
                 ValueError, "worker Research product is missing"
@@ -2554,6 +2581,105 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertNotEqual(
                 first_supervision["round_id"], successor["round_id"]
             )
+
+    def test_default_supervision_subtracts_exact_live_scopes_then_noops(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            premise = lifecycle.add_research(
+                {
+                    "kind": "literature",
+                    "claim": "Freeze one exact primary-source premise.",
+                },
+                actor="main",
+            )
+            dependent = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "Prove a consequence of the frozen premise.",
+                    "relation": "supports",
+                    "related_research_ids": [premise["research_id"]],
+                },
+                actor="main",
+            )
+            production = lifecycle.create_production_round(
+                workers=2,
+                mode="auto",
+                research_ids=[premise["research_id"], dependent["research_id"]],
+                host_task_scope_id="default-scope-production-host",
+            )
+            assignment_by_research = {
+                item["research_id"]: item for item in production["assignments"]
+            }
+            self._ingest_plain_assignment(
+                store,
+                production,
+                assignment_by_research[premise["research_id"]],
+                outcome="evidence",
+            )
+            self._ingest_plain_assignment(
+                store,
+                production,
+                assignment_by_research[dependent["research_id"]],
+                outcome="proof",
+            )
+
+            source_round = lifecycle.create_supervision_round(
+                production["round_id"],
+                supervisor_scopes=["source_scope"],
+                host_task_scope_id="default-scope-source-host",
+            )
+            remaining_round = lifecycle.create_supervision_round(
+                production["round_id"],
+                host_task_scope_id="default-scope-remaining-host",
+            )
+            self.assertEqual(
+                remaining_round["research_cycle"]["supervisor_scopes"],
+                ["integration", "proof_logic"],
+            )
+
+            round_ids_before_noop = {
+                path.name for path in store.rounds_dir.glob("round-*")
+            }
+            no_op = lifecycle.create_supervision_round(
+                production["round_id"],
+                host_task_scope_id="default-scope-noop-host",
+            )
+            self.assertTrue(no_op["no_op"])
+            self.assertTrue(no_op["reuse"])
+            self.assertEqual(no_op["status"], "no_op")
+            self.assertEqual(
+                no_op["covered_supervisor_scopes"],
+                ["integration", "proof_logic", "source_scope"],
+            )
+            self.assertEqual(no_op["missing_supervisor_scopes"], [])
+            self.assertEqual(
+                set(no_op["covering_round_ids"]),
+                {source_round["round_id"], remaining_round["round_id"]},
+            )
+            self.assertEqual(
+                {item["state"] for item in no_op["scope_coverage"]},
+                {"awaiting_return"},
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.glob("round-*")},
+                round_ids_before_noop,
+            )
+
+            exact_retry = lifecycle.create_supervision_round(
+                production["round_id"],
+                supervisor_scopes=["source_scope"],
+                host_task_scope_id="default-scope-source-host",
+            )
+            self.assertEqual(exact_retry["round_id"], source_round["round_id"])
+            with self.assertRaisesRegex(ValueError, "overlapping supervisor"):
+                lifecycle.create_supervision_round(
+                    production["round_id"],
+                    supervisor_scopes=["source_scope"],
+                    host_task_scope_id="default-scope-other-host",
+                )
 
     def test_concurrent_exact_supervision_retry_creates_one_round(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

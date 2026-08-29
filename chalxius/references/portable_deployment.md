@@ -1,5 +1,76 @@
 # Chalxius portable deployment
 
+## 0.9.18 Frontier Breadth Parity
+
+The `0.9.18` **Frontier Breadth Parity** candidate gives the Campaign working
+state, legacy checkpoint reader, `plan-round`, manual reconciliation, and live
+frontier one shared capacity of sixteen Main-selected heads per Target. The
+routine target window remains a separate bound. Mathematical summaries receive
+300 characters per head claim, 400 for the root, and 320 for each displayed
+historical claim; complete Research bytes remain retrievable by exact id and
+diagnostic topology remains explicit. The project-free installer still swaps
+one complete manifest-bound tree and introduces no pager, selector, scheduler,
+compatibility layer, publication effect, Candidate effect, or Fact effect.
+
+## 0.9.17 Stepping-Stones Continuity
+
+The `0.9.17` **Stepping-Stones Continuity** candidate makes routine Campaign
+frontier actions compact at the representation layer without dropping any
+active head or supervision scope. Main keeps concise mathematics, current-route
+Research ids, next action, and exact actionable Research/round ids; full
+route, terminal, evidence, hash, and empty-field detail remains available with
+`--diagnostic`. The default target window is twelve, while every selected target
+retains all active heads; `--limit` is not a per-target head cap.
+
+The same release names the Main operating semantic **摸石头过河**: research is
+the default; a material architecture failure saves the exact live boundary,
+receives one integrated repair and local installation, then resumes from the
+reconciled graph/round state. This installs no watcher, scheduler, timer,
+automatic issue trigger, automatic installation, publication effect, Candidate
+effect, or Fact effect. The installer remains project-free and atomically swaps
+one complete manifest-bound tree.
+
+## 0.9.16 Bounded Research Coordination
+
+The `0.9.16` **Bounded Research Coordination** candidate makes default
+supervision planning completion-aware, applies routine frontier limits to the
+whole nested Campaign goal projection, and gives assurance production and
+return validation one exact source-role predicate. The project-free installer
+validates and atomically swaps one complete manifest-bound tree; it reads and
+writes no research project. Publication is a separate authorization.
+
+## 0.9.15 Frontier Exact Workflow Identity
+
+The `0.9.15` **Frontier Exact Workflow Identity** candidate keeps COW
+completion topology separate from operational assignment/round/product/review
+identity. A semantic repair terminal may complete or make an older route
+ambiguous, but cannot substitute its own workflow for that route's physical
+members. The project-free installer validates and atomically swaps one complete
+manifest-bound tree; it reads and writes no research project. Publication is a
+separate authorization.
+
+## 0.9.14 Typed Supervision Coverage
+
+The `0.9.14` **Typed Supervision Coverage** candidate makes ordinary frontier
+output name exact completed, missing, pending, conflicting, and unsafe review
+scopes while Candidate retains the same strict completion requirement. Truly
+malformed or inaccessible lineage remains fail-closed. The project-free
+installer validates and atomically swaps one complete manifest-bound tree; it
+reads and writes no research project. Publication is a separate authorization.
+
+## 0.9.13 Repair and Review Lineage
+
+The `0.9.13` **Repair and Review Lineage** candidate recognizes typed product,
+supervision, and structured-repair edges from their existing exact fields
+rather than reserved relation wording or one trigger author type. Exact Main
+synthesis triggers can carry their fully declared reviewed inputs into a
+repair; completion remains separately product-, objective-, and supervision-
+bound. Supervision status exposes attacked source assignment/product ids for
+Main's live reviewer comparison without installing an identity service or
+gate. The project-free installer validates and atomically swaps one complete
+manifest-bound tree; it reads and writes no research project. Publication is a
+separate authorization.
+
 ## 0.9.12 Frontier Lifecycle Closure
 
 The `0.9.12` **Frontier Lifecycle Closure** candidate follows exact historical

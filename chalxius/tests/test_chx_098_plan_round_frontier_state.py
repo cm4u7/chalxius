@@ -163,6 +163,93 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         self.assertTrue(self.store.audit().current_ok)
 
+    def test_sixteen_heads_survive_checkpoint_reconcile_and_plan_projection(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        heads = [
+            self._research(
+                f"head-{index}",
+                f"Independent mathematical branch {index}",
+            )
+            for index in range(16)
+        ]
+        with self.store.v5_mutation_lock(command="sixteen-head-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": [
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": research_id}
+                                    for research_id in heads
+                                ],
+                                "attained_checkpoints": [],
+                            }
+                        ],
+                    },
+                },
+                actor="main",
+            )
+
+        legacy_goal = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )["goal_coverage"][0]
+        self.assertEqual(legacy_goal["active_head_research_ids"], heads)
+        self.assertEqual(len(legacy_goal["active_head_actions"]), 16)
+
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "active_head_research_ids": heads,
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][self.target_id][
+                "active_head_research_ids"
+            ],
+            heads,
+        )
+
+        advanced = lifecycle._advance_campaign_frontier_for_plan(
+            campaign_id=self.campaign_id,
+            frontier_target_id=self.target_id,
+            selected_research_ids=heads,
+        )
+        self.assertEqual(
+            advanced["targets"][self.target_id]["active_head_research_ids"],
+            heads,
+        )
+        current_goal = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )["goal_coverage"][0]
+        self.assertEqual(current_goal["active_head_research_ids"], heads)
+        self.assertEqual(len(current_goal["active_head_actions"]), 16)
+
+        seventeenth = self._research(
+            "head-16", "Seventeenth independent mathematical branch"
+        )
+        with self.assertRaisesRegex(ValueError, "at most 16 ids"):
+            lifecycle.reconcile_campaign_frontier(
+                self.campaign_id,
+                {
+                    "kind": "campaign_frontier_update",
+                    "target_id": self.target_id,
+                    "active_head_research_ids": [*heads, seventeenth],
+                },
+            )
+
     def test_auxiliary_round_does_not_claim_a_frontier_target(self) -> None:
         planned = self.store.v5_lifecycle().create_production_round(
             workers=1,
@@ -316,7 +403,8 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         selected_repair = self.landmark_id
         repair_record = {
             "research_id": selected_repair,
-            "relation": "repairs",
+            "kind": "repair",
+            "relation": "synthesized_repair",
             "metadata": {"repair_of_research_id": self.successor_id},
         }
         with (
@@ -552,7 +640,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
     def test_routine_goal_projection_spends_context_on_math_not_duplicate_lineage(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         actions = []
-        for index in range(8):
+        for index in range(16):
             research_id = f"{index + 10:012x}"
             actions.append(
                 {
@@ -585,6 +673,21 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                     },
                     "work_completion_status": "pending",
                     "plan_round_argv": None,
+                    "supervision_coverage": [
+                        {
+                            "production_round_id": (
+                                "round-20260827T000000Z-" + f"{index:08x}"
+                            ),
+                            "source_component_id": f"component-{index:024x}",
+                            "scope": "proof_logic",
+                            "state": "completed",
+                            "result_research_ids": [research_id],
+                            "pending_round_ids": [],
+                            "diagnostic_explanation": "X" * 800,
+                        }
+                    ],
+                    "supervision_coverage_count": 1,
+                    "supervision_coverage_sha256": "f" * 64,
                 }
             )
         entry = {
@@ -615,18 +718,18 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             "active_head_semantic_successors": [
                 {
                     "production_product_research_ids": [
-                        f"{index + 70:012x}" for index in range(8)
+                        f"{index + 70:012x}" for index in range(16)
                     ],
                     "supervision_result_research_ids": [
-                        f"{index + 90:012x}" for index in range(8)
+                        f"{index + 90:012x}" for index in range(16)
                     ],
                 }
             ],
         }
         compact = lifecycle._compact_goal_coverage_entry(entry)
         encoded = json.dumps(compact, sort_keys=True).encode()
-        self.assertLess(len(encoded), 14_000)
-        self.assertEqual(len(compact["active_head_actions"]), 8)
+        self.assertLess(len(encoded), 15_000)
+        self.assertEqual(len(compact["active_head_actions"]), 16)
         self.assertEqual(len(compact["historical_mathematical_summary"]), 2)
         self.assertEqual(
             len(compact["recent_attained_mathematical_history"]), 2
@@ -634,9 +737,35 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertIn(
             "claim", compact["active_head_actions"][0]["mathematical_summary"]
         )
-        self.assertIn(
+        self.assertNotIn(
             "content",
             compact["active_head_actions"][0]["mathematical_summary"],
+        )
+        self.assertNotIn(
+            "current_route_mathematical_summaries",
+            compact["active_head_actions"][0],
+        )
+        self.assertNotIn(
+            "current_terminal_research_ids",
+            compact["active_head_actions"][0],
+        )
+        self.assertNotIn(
+            "terminal_evidence_research_ids",
+            compact["active_head_actions"][0],
+        )
+        self.assertNotIn(
+            "supervision_coverage_sha256",
+            compact["active_head_actions"][0],
+        )
+        self.assertEqual(
+            compact["active_head_actions"][0]["supervision_coverage"],
+            [
+                {
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": ["00000000000a"],
+                }
+            ],
         )
         self.assertNotIn("active_head_semantic_successors", compact)
         self.assertNotIn("production_product_research_ids", compact)
