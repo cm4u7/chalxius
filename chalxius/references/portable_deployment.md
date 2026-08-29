@@ -1,5 +1,29 @@
 # Chalxius portable deployment
 
+## 1.0.0 Fact Alpha
+
+The `1.0.0` **Fact Alpha** candidate keeps one mathematical Research graph and
+adds prospective append-only certification grants to exact whole Research
+records. Main persists only reasoned importance marks and explicit
+active/deferred/dropped dispositions. `fact-frontier` derives live COW
+terminals, certification and reverification state, certified heads, and
+Campaign/Target batch opportunities; it is not a second queue, scheduler, or
+truth authority.
+
+At a natural research window Main freezes selected marks into one bounded plan.
+A packaging agent groups independent components and extracts a semi-formal
+interface whose conclusion remains the exact Research claim. One independent
+verifier checks whole records, rigid certified-predecessor edges, and those
+interfaces; the Gateway accepts only correct components. Minor repairs use a
+complete Research COW and the same verifier, while fundamental failures return
+to ordinary Research. New Research may explicitly bind active certification
+grants as premises. Legacy Candidate/Certification/Fact bytes remain readable
+under their original authority and are never migrated merely by installation.
+
+The project-free installer still validates and atomically swaps one complete
+manifest-bound tree. It does not mark Research, create packages, certify Facts,
+rewrite projects, schedule work, or publish a release.
+
 ## 0.9.18 Frontier Breadth Parity
 
 The `0.9.18` **Frontier Breadth Parity** candidate gives the Campaign working

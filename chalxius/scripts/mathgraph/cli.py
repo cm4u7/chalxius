@@ -384,6 +384,9 @@ READ_ONLY_COMMANDS = {
     "context",
     "targets",
     "frontier",
+    "fact-frontier",
+    "fact-verifier-capsule",
+    "fact-verification-check",
     "adoption-plan",
     "round-status",
     "profile-closure-status",
@@ -445,7 +448,13 @@ def _command_requires_mutation_lock(args: argparse.Namespace) -> bool:
         # The orchestrator owns one complete validation/effect/pulse-failure
         # transaction so CLI exceptions cannot escape outside its lock.
         return False
-    if args.command == "certification-record":
+    if args.command in {
+        "certification-record",
+        "plan-fact-packaging",
+        "fact-package-seal",
+        "fact-verification-record",
+        "fact-certify",
+    }:
         # Certification owns a narrow lock around fresh seal-time replay and
         # Decision publication.  Holding the outer project lock during the
         # expensive neutral-input validation would serialize unrelated reads
@@ -924,6 +933,58 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
             "Campaign successor topology"
         ),
     )
+
+    p = sub.add_parser("fact-frontier-mark")
+    p.add_argument("research_id")
+    p.add_argument("--reason", required=True)
+    p.add_argument("--campaign")
+    p.add_argument("--target")
+
+    p = sub.add_parser("fact-frontier-dispose")
+    p.add_argument("mark_id")
+    p.add_argument(
+        "--status",
+        required=True,
+        choices=("active", "deferred", "dropped"),
+    )
+    p.add_argument("--reason", required=True)
+
+    p = sub.add_parser("fact-frontier")
+    p.add_argument("--limit", type=int, default=32)
+    p.add_argument("--campaign")
+    p.add_argument("--diagnostic", action="store_true")
+
+    p = sub.add_parser("plan-fact-packaging")
+    p.add_argument(
+        "--mark-id",
+        action="append",
+        dest="mark_ids",
+        required=True,
+        help="exact active Main importance mark; repeat to form one batch",
+    )
+    p.add_argument(
+        "--minor-repair-decision",
+        help=(
+            "prior Fact-alpha decision whose minor_repair components are "
+            "being batch-COWed and rechecked by the same verifier"
+        ),
+    )
+
+    p = sub.add_parser("fact-package-seal")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("fact-verifier-capsule")
+    p.add_argument("package_id")
+
+    p = sub.add_parser("fact-verification-record")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("fact-verification-check")
+    p.add_argument("--input", required=True)
+
+    p = sub.add_parser("fact-certify")
+    p.add_argument("decision_id")
+    p.add_argument("--gateway", required=True)
 
     p = sub.add_parser("adoption-plan")
     p.add_argument("--input", required=True)
@@ -2165,6 +2226,135 @@ def main(argv: list[str] | None = None) -> int:
                         include_history=args.history,
                     )
                 )
+        elif args.command == "fact-frontier-mark":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-frontier-mark requires a V5 project")
+            record = store.v5_lifecycle().fact_alpha().mark(
+                args.research_id,
+                rationale=args.reason,
+                campaign_id=args.campaign,
+                target_id=args.target,
+            )
+            _print_json(
+                {
+                    "mark_id": record["mark_id"],
+                    "research_id": record["research_id"],
+                    "record_sha256": record["record_sha256"],
+                    "status": "active",
+                    "truth_effect": "none",
+                }
+            )
+        elif args.command == "fact-frontier-dispose":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-frontier-dispose requires a V5 project")
+            record = store.v5_lifecycle().fact_alpha().dispose(
+                args.mark_id,
+                status=args.status,
+                reason=args.reason,
+            )
+            _print_json(
+                {
+                    "disposition_id": record["disposition_id"],
+                    "mark_id": record["mark_id"],
+                    "status": record["status"],
+                    "truth_effect": "none",
+                }
+            )
+        elif args.command == "fact-frontier":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-frontier requires a V5 project")
+            _print_json(
+                store.v5_lifecycle().fact_alpha().frontier(
+                    limit=args.limit,
+                    campaign_id=args.campaign,
+                    diagnostic=args.diagnostic,
+                )
+            )
+        elif args.command == "plan-fact-packaging":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("plan-fact-packaging requires a V5 project")
+            record = store.v5_lifecycle().fact_alpha().plan_packaging(
+                args.mark_ids,
+                minor_repair_decision_id=args.minor_repair_decision,
+            )
+            _print_json(
+                {
+                    "plan_id": record["plan_id"],
+                    "record_sha256": record["record_sha256"],
+                    "selection": record["selection"],
+                    "truth_effect": "none",
+                }
+            )
+        elif args.command == "fact-package-seal":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-package-seal requires a V5 project")
+            record = store.v5_lifecycle().fact_alpha().seal_package(
+                _json_file(args.input)
+            )
+            _print_json(
+                {
+                    "package_id": record["package_id"],
+                    "record_sha256": record["record_sha256"],
+                    "component_ids": [
+                        item["component_id"] for item in record["components"]
+                    ],
+                    "blocked_entries": record["blocked_entries"],
+                    "status": "sealed_nontruth",
+                }
+            )
+        elif args.command == "fact-verifier-capsule":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-verifier-capsule requires a V5 project")
+            _print_json(
+                store.v5_lifecycle().fact_alpha().verifier_capsule(
+                    args.package_id
+                )
+            )
+        elif args.command in {
+            "fact-verification-record",
+            "fact-verification-check",
+        }:
+            if store.workflow_evidence_version() != 5:
+                raise ValueError(
+                    f"{args.command} requires a V5 project"
+                )
+            record = store.v5_lifecycle().fact_alpha().record_decision(
+                _json_file(args.input),
+                preflight_only=args.command == "fact-verification-check",
+            )
+            _print_json(
+                {
+                    "decision_id": record["decision_id"],
+                    "package_id": record["package_id"],
+                    "component_verdicts": {
+                        item["component_id"]: item["verdict"]
+                        for item in record["component_checks"]
+                    },
+                    "status": (
+                        "preflight_valid"
+                        if args.command == "fact-verification-check"
+                        else "recorded"
+                    ),
+                }
+            )
+        elif args.command == "fact-certify":
+            if store.workflow_evidence_version() != 5:
+                raise ValueError("fact-certify requires a V5 project")
+            record = store.v5_lifecycle().fact_alpha().certify(
+                args.decision_id,
+                gateway=args.gateway,
+            )
+            _print_json(
+                {
+                    "acceptance_id": record["acceptance_id"],
+                    "decision_id": record["decision_id"],
+                    "accepted_component_ids": record[
+                        "accepted_component_ids"
+                    ],
+                    "grant_ids": record["grant_ids"],
+                    "status": "certified",
+                }
+            )
         elif args.command == "adoption-plan":
             _print_json(build_adoption_plan(_json_file(args.input)))
         elif args.command == "plan-supervision-round":

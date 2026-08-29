@@ -1,5 +1,19 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.0 Fact Alpha override.** There is one mathematical node graph:
+> immutable Research. Fact is an append-only whole-Research certification
+> overlay with explicit certified-Research predecessor edges. Main's sparse
+> importance marks are the only persistent Fact-frontier choices; current COW
+> terminals, supervision state, batch opportunities, in-flight packages,
+> certified heads, and `needs_reverification` propagation are derived. A
+> frozen Candidate is a multi-Research transaction, not a proof-rewriting
+> layer. Independent component decisions isolate failures, a bounded minor
+> repair returns complete COW nodes to the same verifier without another
+> supervisor, and fundamental errors return to ordinary Research. New Research
+> may directly bind active certified Research premises. Legacy Fact nodes stay
+> readable and explicitly unmapped. No timer, threshold, scheduler, automatic
+> worker launch, statement-surface retrofit, or claim-hash ceremony is added.
+
 > **0.9.18 frontier-breadth-parity override.** One sixteen-head capacity now
 > governs legacy Campaign checkpoints, the current working state,
 > `plan-round --frontier-target`, explicit Main reconciliation, and live goal

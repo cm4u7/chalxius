@@ -3,7 +3,7 @@
 **Persistent research memory and a reliable working frontier for Codex.**
 
 [Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v0.9.12](https://github.com/cm4u7/chalxius/releases/tag/v0.9.12) ·
+[Download v1.0.0](https://github.com/cm4u7/chalxius/releases/tag/v1.0.0) ·
 [Use cases](USE_CASES.md) ·
 [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md)
@@ -49,30 +49,41 @@ Campaign goals hold durable, non-procedural objectives. Frontier state is
 compact and replaceable. Immutable Research and round records remain the
 history and evidence; neither Campaign nor frontier is a second truth path.
 
-## Truth boundary
+## One Research graph, sparse Fact certification
 
 ```text
-Research -> Candidate Release -> Certification Decision -> Gateway -> Fact
+free supervised Research growth
+        ↓ Main selects important exact nodes
+frozen multi-Research package -> independent verifier -> Gateway
+        ↓
+the same Research nodes carry append-only Fact certification
 ```
 
-Research may be incomplete, disputed, or wrong and still be valuable. A Fact
-must freeze its exact claim, dependencies, sources, and adverse work and pass
-the independent admission path. A report, worker receipt, frontier label, or
-successful computation cannot bypass it.
+Research may be incomplete, disputed, or wrong and still be valuable. Fact is
+not a second proof graph: it is certification of one exact whole Research
+record. Main marks load-bearing nodes and batches them when useful. A packaging
+agent extracts a semi-formal interface without rewriting the claim; one
+independent verifier checks records, explicit certified-predecessor edges, and
+interfaces; the Gateway makes only correct components visible.
+
+The derived Fact frontier records where certification has reached, what Main
+marked important, and what a COW made stale. It does not schedule work or force
+Research and Fact to stay synchronized. Old 0.x Candidate/Fact authority
+remains readable and is not silently migrated.
 
 ## Install
 
 Download from the
-[v0.9.12 release](https://github.com/cm4u7/chalxius/releases/tag/v0.9.12):
+[v1.0.0 release](https://github.com/cm4u7/chalxius/releases/tag/v1.0.0):
 
-- `chalxius-0.9.12-frontier-lifecycle-closure.tar.gz`
-- `chalxius-0.9.12-frontier-lifecycle-closure.tar.gz.sha256`
+- `chalxius-1.0.0-fact-alpha.tar.gz`
+- `chalxius-1.0.0-fact-alpha.tar.gz.sha256`
 
 Then verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-0.9.12-frontier-lifecycle-closure.tar.gz.sha256
-tar -xzf chalxius-0.9.12-frontier-lifecycle-closure.tar.gz
+shasum -a 256 -c chalxius-1.0.0-fact-alpha.tar.gz.sha256
+tar -xzf chalxius-1.0.0-fact-alpha.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -99,21 +110,22 @@ PROJECT=/absolute/path/to/project
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v0.9.12 — Frontier Lifecycle Closure
+## v1.0.0 — Fact Alpha
 
-- exact historical copy-on-write repair chains now reach their actual terminal
-  Research when the frozen graph determines one unambiguous edge;
-- real `await_return` work remains the foreground state of a multi-head goal,
-  while older reconciliation branches stay visible;
-- one frontier command reuses Research bytes already hash-validated in that
-  command, then still performs full record and artifact validation;
-- Main resumes a still-running host command instead of mistaking an
-  intermediate yield for blank output and duplicating a mutating plan.
+- Fact certification is an append-only property of exact Research records;
+- Main keeps sparse importance marks while certification state, COW
+  reverification, heads, and batch opportunities are derived live;
+- Candidate packaging batches multiple Research nodes and preserves their exact
+  claims through semi-formal interfaces;
+- one verifier replaces the duplicated Candidate-adverse/verifier roles;
+- correct independent components can pass beside a failed component;
+- minor repairs return complete COW successors to the same verifier, while
+  fundamental errors return to ordinary Research;
+- new Research can bind exact active certified Research premises directly.
 
-The release adds no automatic selector, scheduler, daemon, compatibility layer,
-workflow gate, Candidate effect, or Fact effect. See [RELEASE.md](RELEASE.md)
-for the complete release note and [VALIDATION.md](VALIDATION.md) for exact
-software evidence.
+The release adds no automatic selector, timer, scheduler, daemon, or background
+Fact worker. See [RELEASE.md](RELEASE.md) for the complete release note and
+[VALIDATION.md](VALIDATION.md) for exact software evidence.
 
 ## Explore
 

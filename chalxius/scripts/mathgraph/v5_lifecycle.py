@@ -444,8 +444,15 @@ _FRONTIER_NONWORK_PROVENANCE_FIELDS = frozenset(
         "truth_effect",
     }
 )
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def _bounded_text(value: Any, maximum: int) -> str:
+    text = value if isinstance(value, str) else ""
+    return text if len(text) <= maximum else text[: maximum - 3] + "..."
 
 
 def _parse_utc_timestamp(value: Any, *, label: str) -> datetime:
@@ -885,6 +892,7 @@ class V5LifecycleManager:
         self.paper_continuation().initialize()
         self.research_draft().initialize()
         self.parallel_verification().initialize()
+        self.fact_alpha().initialize()
 
     def _inspection_paper_logic(
         self,
@@ -931,6 +939,13 @@ class V5LifecycleManager:
         )
 
         return ParallelVerificationLifecycleManager(self)
+
+    def fact_alpha(self) -> Any:
+        """Return the prospective Research certification overlay owner."""
+
+        from .fact_alpha import FactAlphaManager
+
+        return FactAlphaManager(self)
 
     def _research_path(self, research_id: str) -> Path:
         return self.research_entries_dir / f"{validate_memory_id(research_id)}.json"
@@ -1137,6 +1152,48 @@ class V5LifecycleManager:
         if not isinstance(record.get("metadata"), dict):
             raise ValueError("research metadata must be an object")
         metadata = record["metadata"]
+        certified_premises = metadata.get("certified_research_premises", [])
+        if not isinstance(certified_premises, list) or any(
+            not isinstance(item, dict)
+            or set(item)
+            != {
+                "research_id",
+                "research_record_sha256",
+                "grant_id",
+                "grant_record_sha256",
+            }
+            for item in certified_premises
+        ):
+            raise ValueError(
+                "Research certified_research_premises are invalid"
+            )
+        certified_premise_ids: list[str] = []
+        for item in certified_premises:
+            certified_premise_ids.append(
+                validate_memory_id(item["research_id"])
+            )
+            for key in ("research_record_sha256", "grant_record_sha256"):
+                if (
+                    not isinstance(item[key], str)
+                    or SHA256_RE.fullmatch(item[key]) is None
+                ):
+                    raise ValueError(
+                        "Research certified premise hash is invalid"
+                    )
+            grant_id = item["grant_id"]
+            if (
+                not isinstance(grant_id, str)
+                or not grant_id.startswith("fact-grant-")
+                or SHA256_RE.fullmatch(
+                    grant_id.removeprefix("fact-grant-")
+                )
+                is None
+            ):
+                raise ValueError("Research certified premise grant id is invalid")
+        if certified_premise_ids != sorted(set(certified_premise_ids)):
+            raise ValueError(
+                "Research certified premises must be unique and canonical"
+            )
         # Retired goal-intake metadata is inert historical provenance.  The
         # ordinary Campaign id is the only current planning association.
         _research_decision_profile(metadata)
@@ -4389,6 +4446,7 @@ class V5LifecycleManager:
             "relation",
             "related_research_ids",
             "assurance_contract_revision",
+            "certified_research_dependencies",
         }
         metadata = {
             key: value for key, value in payload.items() if key not in reserved
@@ -4396,6 +4454,25 @@ class V5LifecycleManager:
         if "goal_intake_binding" in metadata or "goal_intake_token" in metadata:
             raise ValueError(
                 "retired goal-intake metadata cannot be added to new Research"
+            )
+        certified_research_dependencies = _require_string_list(
+            payload.get("certified_research_dependencies", []),
+            "certified Research dependencies",
+        )
+        certified_research_dependencies = sorted(
+            dict.fromkeys(
+                validate_memory_id(item)
+                for item in certified_research_dependencies
+            )
+        )
+        certified_research_premises: list[dict[str, str]] = []
+        if certified_research_dependencies:
+            certified_research_premises = self.fact_alpha().active_bindings(
+                certified_research_dependencies,
+                inspection=inspection,
+            )
+            metadata["certified_research_premises"] = (
+                certified_research_premises
             )
         payload_campaign = metadata.get("campaign_id")
         if payload_campaign is not None:
@@ -4601,6 +4678,14 @@ class V5LifecycleManager:
                 self._validate_repair_input_capability_files(
                     repair_manifest["input_capabilities"]
                 )
+            if certified_research_dependencies:
+                locked_bindings = self.fact_alpha().active_bindings(
+                    certified_research_dependencies
+                )
+                if locked_bindings != certified_research_premises:
+                    raise ValueError(
+                        "certified Research premises changed before publication"
+                    )
             if reuse_unbound_main_semantics:
                 reusable: list[dict[str, Any]] = []
                 for envelope in self.research_envelopes():
@@ -7335,23 +7420,19 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         """Project canonical Research prose for Main's mathematical judgment."""
 
-        def bounded(value: Any, maximum: int) -> str:
-            text = value if isinstance(value, str) else ""
-            return text if len(text) <= maximum else text[: maximum - 3] + "..."
-
         if compact:
             return {
                 "research_id": record["research_id"],
-                "claim": bounded(record.get("claim"), 240),
+                "claim": _bounded_text(record.get("claim"), 240),
             }
         result: dict[str, Any] = {
             "research_id": record["research_id"],
             "kind": record["kind"],
             "relation": record.get("relation"),
-            "claim": bounded(record.get("claim"), 320),
-            "content": bounded(record.get("content"), 360),
+            "claim": _bounded_text(record.get("claim"), 320),
+            "content": _bounded_text(record.get("content"), 360),
         }
-        rationale = bounded(record.get("rationale"), 180)
+        rationale = _bounded_text(record.get("rationale"), 180)
         if rationale:
             result["rationale"] = rationale
         return result
@@ -9861,10 +9942,6 @@ class V5LifecycleManager:
     ) -> dict[str, Any]:
         """Keep Main's routine goal row exact without copying diagnostics."""
 
-        def bounded_text(value: Any, maximum: int) -> str:
-            text = value if isinstance(value, str) else ""
-            return text if len(text) <= maximum else text[: maximum - 3] + "..."
-
         def compact_mathematical_summary(value: Any) -> Any:
             if not isinstance(value, dict):
                 return value
@@ -9873,7 +9950,7 @@ class V5LifecycleManager:
                 for key in ("research_id", "kind", "relation")
                 if key in value
             }
-            claim = bounded_text(
+            claim = _bounded_text(
                 value.get("claim"),
                 V5_ROUTINE_FRONTIER_HEAD_CLAIM_LIMIT,
             )
@@ -9976,7 +10053,7 @@ class V5LifecycleManager:
             key: entry[key] for key in routine_fields if key in entry
         }
         if isinstance(compact.get("root_claim"), str):
-            compact["root_claim"] = bounded_text(
+            compact["root_claim"] = _bounded_text(
                 compact["root_claim"],
                 V5_ROUTINE_FRONTIER_ROOT_CLAIM_LIMIT,
             )
@@ -9995,13 +10072,13 @@ class V5LifecycleManager:
                         },
                         **(
                             {
-                                "claim": bounded_text(
+                                "claim": _bounded_text(
                                     value.get("claim"),
                                     V5_ROUTINE_FRONTIER_HISTORY_CLAIM_LIMIT,
                                 )
                             }
                             if isinstance(value, dict)
-                            and bounded_text(value.get("claim"), 160)
+                            and _bounded_text(value.get("claim"), 160)
                             else {}
                         ),
                     }
@@ -14632,6 +14709,62 @@ class V5LifecycleManager:
         source_research = self._inspection_research_record(
             card["research_id"], _inspection_context
         )
+        stored_certified_premises = source_research["metadata"].get(
+            "certified_research_premises", []
+        )
+        projected_certified_interfaces = card["mathematical_state"].get(
+            "certified_research_interfaces"
+        )
+        if projected_certified_interfaces is None:
+            if stored_certified_premises:
+                raise ValueError(
+                    "V5 task card omitted certified Research premises"
+                )
+        else:
+            if not isinstance(projected_certified_interfaces, list):
+                raise ValueError(
+                    "V5 certified Research interfaces must be a list"
+                )
+            accepted_grants = self.fact_alpha()._accepted_grants()
+            grants_by_id = {
+                grant["grant_id"]: grant
+                for grant in accepted_grants.values()
+            }
+            expected_certified_interfaces: list[dict[str, Any]] = []
+            for binding in stored_certified_premises:
+                grant = grants_by_id.get(binding["grant_id"])
+                if (
+                    grant is None
+                    or grant["record_sha256"]
+                    != binding["grant_record_sha256"]
+                ):
+                    raise ValueError(
+                        "V5 task-card certified Research grant is missing or drifted"
+                    )
+                premise = self._inspection_research_record(
+                    binding["research_id"], _inspection_context
+                )
+                if (
+                    premise["record_sha256"]
+                    != binding["research_record_sha256"]
+                ):
+                    raise ValueError(
+                        "V5 task-card certified Research premise drifted"
+                    )
+                expected_certified_interfaces.append(
+                    {
+                        **binding,
+                        "statement_interface": grant[
+                            "statement_interface"
+                        ],
+                        "claim": premise["claim"],
+                        "content": premise["content"],
+                    }
+                )
+            if projected_certified_interfaces != expected_certified_interfaces:
+                raise ValueError(
+                    "V5 task-card certified Research interfaces drifted"
+                )
         control = card["control_plane"]
         if "assignment_role" in control:
             expected_control_fields = {
@@ -17450,6 +17583,42 @@ class V5LifecycleManager:
                     )
                     for fact_id in entry["dependencies"]
                 ]
+                certified_research_interfaces: list[dict[str, Any]] = []
+                certified_premises = entry["metadata"].get(
+                    "certified_research_premises", []
+                )
+                if certified_premises:
+                    premise_ids = [
+                        item["research_id"] for item in certified_premises
+                    ]
+                    live_bindings = self.fact_alpha().active_bindings(
+                        premise_ids,
+                        inspection=inspection,
+                    )
+                    if live_bindings != certified_premises:
+                        raise ValueError(
+                            "Research certified premises changed before planning"
+                        )
+                    accepted_grants = self.fact_alpha()._accepted_grants()
+                    grants_by_id = {
+                        grant["grant_id"]: grant
+                        for grant in accepted_grants.values()
+                    }
+                    for binding in certified_premises:
+                        grant = grants_by_id[binding["grant_id"]]
+                        premise = self._inspection_research_record(
+                            binding["research_id"], inspection
+                        )
+                        certified_research_interfaces.append(
+                            {
+                                **binding,
+                                "statement_interface": grant[
+                                    "statement_interface"
+                                ],
+                                "claim": premise["claim"],
+                                "content": premise["content"],
+                            }
+                        )
                 research_context = []
                 related_artifacts: list[dict[str, str]] = []
                 related_artifacts.extend(
@@ -17592,6 +17761,9 @@ class V5LifecycleManager:
                             "snapshot_sha256"
                         ],
                         "predecessor_interfaces": predecessor_interfaces,
+                        "certified_research_interfaces": (
+                            certified_research_interfaces
+                        ),
                         "source_research_dossier": source_dossiers[
                             entry["research_id"]
                         ],
@@ -26051,6 +26223,10 @@ class V5LifecycleManager:
                 _inspection_context=_inspection_context
             )
         )
+        fact_alpha = self.fact_alpha().status()
+        research_certifications = fact_alpha["counts"][
+            "accepted_research_certifications"
+        ]
         decision_records = (
             self.decisions(_inspection_context=_inspection_context)
             if decisions
@@ -26073,10 +26249,17 @@ class V5LifecycleManager:
                 ).is_file()
             )
         )
-        if facts:
+        if facts or research_certifications:
             current_state = "Fact"
             blocking_issue = None
             next_safe_command = "status"
+        elif fact_alpha["counts"]["gateway_pending_packages"]:
+            current_state = "Certification Decision"
+            blocking_issue = (
+                "Fact-alpha verifier decision has correct components awaiting "
+                "mechanical gateway certification"
+            )
+            next_safe_command = "fact-certify"
         elif latest_decision is not None and latest_decision["verdict"] == "correct":
             current_state = "Certification Decision"
             blocking_issue = "accepted decision has not been gateway-admitted"
@@ -26117,7 +26300,9 @@ class V5LifecycleManager:
                 "candidate_releases": releases,
                 "certification_decisions": decisions,
                 "facts": facts,
+                "research_certifications": research_certifications,
             },
+            "fact_alpha": fact_alpha,
             "paper_continuation": paper_continuation,
         }
 
@@ -26412,6 +26597,25 @@ class V5LifecycleManager:
                     raise ValueError("contract hash mismatch")
             except Exception as exc:
                 workflow_error(f"invalid V5 lifecycle contract: {exc}")
+
+        fact_alpha = self.fact_alpha()
+        if fact_alpha.root.exists():
+            if (
+                fact_alpha.root.is_symlink()
+                or not fact_alpha.root.is_dir()
+                or fact_alpha.contract_path.is_symlink()
+                or not fact_alpha.contract_path.is_file()
+            ):
+                workflow_error("Fact-alpha authority root is missing or unsafe")
+            else:
+                try:
+                    if self.store._read_json(
+                        fact_alpha.contract_path
+                    ) != fact_alpha.contract:
+                        raise ValueError("contract bytes differ from the runtime")
+                    fact_alpha.status()
+                except Exception as exc:
+                    workflow_error(f"invalid Fact-alpha lifecycle: {exc}")
 
         for label, directory in (
             ("research entries", self.research_entries_dir),

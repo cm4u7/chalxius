@@ -1,5 +1,40 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.0 Fact Alpha difference
+
+The 0.x post-Research path formed a separate Candidate release, required a
+Candidate-specific adverse stage, and reconstructed atomic candidate Fact
+prose before certification. That shape fit an already designed proof DAG, but
+the live A-model Research graph grows freely through supervised COW branches.
+It therefore made Main rewrite already preserved mathematics, duplicated
+correctness work, and discovered dependency or interface defects only after an
+expensive whole-Candidate handoff.
+
+Fact Alpha treats the immutable Research graph as the sole mathematical graph.
+Main marks important exact Research records; a live derived frontier follows
+COW and certification descendants and proposes bounded batches without
+persisting another workflow queue. A Candidate is only a frozen package of
+multiple Research records. The packager extracts a semi-formal calling
+interface, but its conclusion must be byte-equal to the existing top-level
+claim. No `claim_sha256` is stored because the Research record hash already
+binds that claim.
+
+The verifier and the old Candidate adverse role become one independent Fact
+correctness role. Ordinary Research supervisors retain theorem-attack rules.
+Fact dependencies use only explicit predecessor Research ids plus exact active
+grant hashes; arbitrary relation labels remain Main-facing context. Correct
+independent components can pass when another component fails. Minor errors use
+a complete COW followed by the same verifier, while fundamental errors return
+to ordinary Research. COW never erases a grant: it derives
+`needs_reverification` for the replaced record and certified descendants.
+
+The acceptance reader revalidates the exact package, verifier decision,
+component set, grant set, whole Research hashes, interfaces, reviewer, Gateway,
+and predecessor grants before projecting authority. The single acceptance
+record is the visibility switch, so staged grants are inert. This is a
+prospective authority model; legacy Candidate/Certification/Fact records stay
+readable and are not automatically mapped into the overlay.
+
 ## 0.9.18 Frontier Breadth Parity difference
 
 The 0.9.17 compact representation accepted sixteen synthetic heads, but the

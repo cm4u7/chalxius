@@ -1,10 +1,52 @@
-# Chalxius 0.9.18 architecture findings and residual boundaries
+# Chalxius 1.0.0 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 0.9.18
-**Frontier Breadth Parity**. It describes architecture defects, integrated repairs,
+This file is the release, nontruth disclosure for Chalxius 1.0.0
+**Fact Alpha**. It describes architecture defects, integrated repairs,
 and intentional residual boundaries; it is not mathematical evidence and
 grants no Research, Candidate Release, Certification, Gateway, or Fact
 authority.
+
+## 1.0.0 Fact Alpha
+
+Fact Alpha is prospective. It does not infer a Research identity for the
+existing admitted Fact corpus, so legacy Facts and Research certification
+grants remain two readable authority representations during this release.
+Only new certification uses the single-Research-graph model. A deliberate,
+source-bound migration may be designed later; 1.0.0 does not guess one.
+
+Research records created before 1.0.0 have no internal statement surfaces.
+Certification therefore covers the whole top-level Research `claim` and exact
+proof/support bytes. A mixed claim must first be COWed or split into complete
+Research nodes. The packaging interface is a verified semi-formal calling
+signature, not a locator into arbitrary prose.
+
+The Fact frontier still scans the immutable Research envelope once to resolve
+exact COW terminals. It reports elapsed time and scan counts to Main. It does
+not add a persistent cache, timer, monitor, or background index. This favors a
+single trustworthy projection over another mutable synchronization surface;
+future performance work should be driven by observed large-project timings.
+
+Fact packaging is not automatic. Main must mark important Research, recognize
+a useful batch window, plan a batch, and launch the packaging/verifier agents.
+This preserves mathematical judgment and lets efficiency-first runs defer Fact
+work, but it also means host instructions must actively use the frontier.
+
+The bounded minor-repair lane requires an exact prior `minor_repair` decision,
+a real COW successor for every affected node, complete recheck of the component,
+and the same independent verifier. It does not yet provide an automatic
+mathematical classifier between minor and fundamental errors; that judgment is
+the verifier's recorded conclusion. The Gateway remains mechanical.
+
+Legacy Candidate Release, adverse, Certification, and physical Fact-node code
+remains present only to read and audit old authority. The prospective Fact
+Alpha commands do not call it. Removing those historical readers would make
+existing authority inaccessible and is outside this release.
+
+The existing cross-project Fact Evidence import/export contract still carries
+only legacy admitted Fact files. Research certification grants are validated by
+the project audit but are not yet serialized as external Evidence. Extending
+that boundary requires a complete grant-and-interface evidence capsule; 1.0.0
+does not expose a half-upgraded import path.
 
 ## 0.9.18 Frontier Breadth Parity
 

@@ -1,4 +1,32 @@
-# Chalxius V5 traceability through 0.9.18 Frontier Breadth Parity
+# Chalxius V5 traceability through 1.0.0 Fact Alpha
+
+## 1.0.0 Fact Alpha release overlay
+
+- Candidate version: `1.0.0`; release name **Fact Alpha**.
+- New Fact authority is an append-only certification overlay on complete,
+  immutable Research records. No duplicate Fact proof node or synthetic
+  internal statement surface is authored.
+- Main alone persists sparse importance marks and defer/drop/reactivate
+  judgments. `fact-frontier` derives COW terminals, supervision state,
+  packaging opportunities, in-flight decisions, certified heads, and
+  downstream re-verification.
+- `plan-fact-packaging` freezes up to 128 selected marks. One package may carry
+  up to 128 independent components, and every selected node is explicitly
+  packaged, `needs_split`, or blocked.
+- Semi-formal interfaces preserve the exact Research claim and expose only
+  assumptions, domain/types, quantifiers, limitations, and rigid certified
+  Research predecessors. Descriptive relations do not become proof edges.
+- Independent verification is component-local. Correct components can be
+  certified beside an unrelated failed component. Minor errors use complete
+  COW plus a same-verifier recheck; fundamental errors return to Research.
+- `fact-certify` writes deterministic grants and one acceptance marker as the
+  visibility switch. A COW or stale predecessor removes the affected grant
+  from the active projection and propagates `needs_reverification`.
+- New Research may bind `certified_research_dependencies`; task cards freeze
+  exact grant hashes, statement interfaces, claims, and proof content.
+- Legacy V5 Fact nodes remain readable and auditable but explicitly unmapped.
+  No migration guess, compatibility adapter, timer, threshold, scheduler, or
+  automatic worker dispatch is introduced.
 
 ## 0.9.18 frontier-breadth-parity release overlay
 

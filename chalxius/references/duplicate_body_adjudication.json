@@ -198,6 +198,7 @@
       "definitions": [
         "mathgraph.adverse_routing:_utc_now",
         "mathgraph.campaigns:_utc_now",
+        "mathgraph.fact_alpha:_utc_now",
         "mathgraph.modes:_utc_now",
         "mathgraph.paper_continuation_status:_utc_now",
         "mathgraph.parallel_verification_lifecycle:_utc_now",

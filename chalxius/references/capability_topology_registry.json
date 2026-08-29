@@ -55,7 +55,7 @@
       ]
     },
     "cap.fact_certification": {
-      "summary": "V5 Research, Candidate Release, independent Certification, Gateway admission and verifier-capsule authority path.",
+      "summary": "Prospective Fact Alpha certification of exact Research records plus read-only legacy V5 Candidate Release, Certification, Gateway, and Fact authority.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -111,6 +111,24 @@
           "owner_module": "mathgraph.v5_lifecycle",
           "relationship": "delegated_child",
           "parent_path": "fact_graph"
+        },
+        {
+          "path": "governance/v5/fact-alpha",
+          "owner_module": "mathgraph.fact_alpha",
+          "relationship": "delegated_child",
+          "parent_path": "governance/v5"
+        },
+        {
+          "path": "fact_graph/research_certifications/grants/by-id",
+          "owner_module": "mathgraph.fact_alpha",
+          "relationship": "delegated_child",
+          "parent_path": "fact_graph"
+        },
+        {
+          "path": "fact_graph/research_certifications/acceptances/by-decision",
+          "owner_module": "mathgraph.fact_alpha",
+          "relationship": "delegated_child",
+          "parent_path": "fact_graph"
         }
       ],
       "documents": [
@@ -123,7 +141,8 @@
         "tests/test_independent_adverse_normal_flow.py",
         "tests/test_bttf_field_repairs.py",
         "tests/test_research_draft_admission.py",
-        "tests/test_neutral_review_submission.py"
+        "tests/test_neutral_review_submission.py",
+        "tests/test_fact_alpha.py"
       ],
       "activation_paths": [
         {
@@ -145,6 +164,26 @@
         {
           "kind": "cli",
           "command": "mgraph:fact-admit"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-frontier"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-fact-packaging"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-package-seal"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-verification-record"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:fact-certify"
         },
         {
           "kind": "standalone",
@@ -1144,6 +1183,15 @@
         "domain_service"
       ]
     },
+    "mathgraph.fact_alpha": {
+      "capability_id": "cap.fact_certification",
+      "path": "scripts/mathgraph/fact_alpha.py",
+      "roles": [
+        "authority_gate",
+        "domain_service",
+        "state_owner"
+      ]
+    },
     "mathgraph.v5_lifecycle": {
       "capability_id": "cap.fact_certification",
       "path": "scripts/mathgraph/v5_lifecycle.py",
@@ -1963,6 +2011,69 @@
       "status": "canonical",
       "authority_effects": [
         "none"
+      ]
+    },
+    "mgraph:fact-frontier-mark": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-frontier-dispose": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-frontier": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:plan-fact-packaging": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-package-seal": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "candidate"
+      ]
+    },
+    "mgraph:fact-verifier-capsule": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-verification-record": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "certification"
+      ]
+    },
+    "mgraph:fact-verification-check": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "none"
+      ]
+    },
+    "mgraph:fact-certify": {
+      "capability_id": "cap.fact_certification",
+      "status": "canonical",
+      "authority_effects": [
+        "fact"
       ]
     },
     "mgraph:plan-round": {

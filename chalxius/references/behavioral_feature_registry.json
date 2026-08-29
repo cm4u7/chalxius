@@ -93,7 +93,7 @@
       "required": true,
       "summary": "Campaign frontier keeps semantic COW completion separate from the exact operational workflow owned by each physical workgroup.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
-      "producer_symbol": "mathgraph.frontier_actions._ActionProjector.groups",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage",
       "activation_predicate": {
         "predicate_id": "cow_terminal_belongs_to_distinct_repair_workflow",
         "domain": ["same_workgroup_terminal", "distinct_repair_terminal", "ambiguous_cow_terminal"],
@@ -103,7 +103,7 @@
         "type_id": "chalxius-v5-frontier-exact-workflow-identity-1",
         "validator_symbol": "mathgraph.frontier_actions._ActionProjector.research"
       },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._compact_goal_coverage_entry",
+      "consumer_symbol": "mathgraph.frontier_actions._ActionProjector.groups",
       "observable_effect": {
         "effect_id": "cow_completion_without_cross_workflow_aliasing",
         "kind": "routing",
@@ -806,7 +806,7 @@
       "required": true,
       "summary": "The default production frontier groups only exact executable Research inputs and closes a workgroup through a unique exact copy-on-write terminal with a current valid production result plus every applicable safe supervision result; positive resolution projects back to the original workgroup, while ambiguous, challenged, blocked, adverse, or route-invalidated terminal evidence reopens the work.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_group_completion",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_cow_terminal_members",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._frontier_cow_terminal_members_for_inspection",
       "activation_predicate": {
         "predicate_id": "exact_workgroup_has_unique_current_safe_cow_terminal",
         "domain": ["safe_production_and_applicable_supervision", "exact_multihop_cow_successor", "exact_structured_repair_lineage", "hash_bound_repair_objective_projection", "pending_unsafe_challenged_blocked_stale_or_ambiguous", "same_workgroup_completion_race"],
@@ -1006,7 +1006,7 @@
       "required": true,
       "summary": "Candidate enforcement and Main's frontier share one exact per-component, per-scope supervision coverage projection while retaining their separate authority and advisory roles.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._supervision_scope_coverage_state",
       "activation_predicate": {
         "predicate_id": "constructive_product_has_two_subround_production_provenance",
         "domain": [
@@ -1019,9 +1019,9 @@
       },
       "typed_handoff": {
         "type_id": "chalxius-v5-typed-supervision-scope-coverage-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._supervision_scope_coverage_state"
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage"
       },
-      "consumer_symbol": "mathgraph.frontier_actions._ActionProjector._supervision_coverage_route",
+      "consumer_symbol": "mathgraph.frontier_actions._ActionProjector.research",
       "observable_effect": {
         "effect_id": "exact_scope_state_visible_without_candidate_gate_weakening",
         "kind": "routing",
@@ -1336,6 +1336,39 @@
         "positive": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_positive",
         "predicate_false": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_predicate_false",
         "tamper": "tests.test_chx_089_source_assurance.Chx089SourceAssuranceTests.test_source_assurance_structural_activation_tamper"
+      }
+    },
+    "feature.fact_alpha_research_certification_overlay": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Prospective Fact authority certifies exact whole Research records in bounded multi-record packages while Main's importance frontier, COW reverification, and certified heads remain live derived projections over the one Research graph.",
+      "production_entry_symbol": "mathgraph.fact_alpha.FactAlphaManager.certify",
+      "producer_symbol": "mathgraph.fact_alpha.FactAlphaManager._grant_projection",
+      "activation_predicate": {
+        "predicate_id": "main_selects_important_exact_research_records_for_asynchronous_fact_packaging",
+        "domain": [
+          "marked_eligible_research",
+          "independent_correct_and_failing_components",
+          "cow_stale_certification",
+          "unmarked_or_deferred_research"
+        ],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-fact-alpha-1",
+        "validator_symbol": "mathgraph.fact_alpha.FactAlphaManager._validate_acceptance"
+      },
+      "consumer_symbol": "mathgraph.fact_alpha.FactAlphaManager._accepted_grants",
+      "observable_effect": {
+        "effect_id": "exact_research_record_receives_component_isolated_fact_certification",
+        "kind": "state_transition",
+        "description": "A Gateway acceptance makes only independently verified correct package components visible as exact Research certification grants; staged grants, failed sibling components, descriptive relation prose, and self-consistent cross-record rewrites confer no authority."
+      },
+      "probes": {
+        "positive": "tests.test_fact_alpha.FactAlphaTests.test_single_research_graph_node_receives_fact_overlay",
+        "predicate_false": "tests.test_fact_alpha.FactAlphaTests.test_one_bad_component_does_not_discard_an_independent_good_component",
+        "tamper": "tests.test_fact_alpha.FactAlphaTests.test_self_consistent_acceptance_rewrite_cannot_rebind_grants"
       }
     },
     "feature.active_campaign_implicit_selection": {

@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 0.9.18 — Frontier Breadth Parity
+# Chalxius 1.0.0 — Fact Alpha
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -31,6 +31,64 @@ Research product with valid assignment provenance can be consumed by later
 workflow stages when its derived receipt is absent; missing products,
 stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
 terminal-seal, or final-experiment checks remain blocking at their own owners.
+
+## Fact Alpha: one Research graph, sparse certification
+
+Fact Alpha treats the immutable Research graph as the only mathematical node
+graph. A Fact is an append-only certification grant on one exact complete
+Research record and its top-level `claim`; it is not a second prose node and
+does not require a `claim_sha256` beside the record hash. Legacy admitted Facts
+remain readable authority but are explicitly unmapped: Chalxius never invents
+Research identities or statement surfaces for them.
+
+Main records load-bearing importance with `fact-frontier-mark`. The derived
+`fact-frontier` follows exact COW lineage, hydrates current claims, reports
+supervision and packaging state, propagates `needs_reverification` through
+certified predecessor grants, and derives certified heads. Only the importance
+mark and an explicit `active`, `deferred`, or `dropped` disposition persist;
+the frontier, batches, heads, counts, and next actions are live projections.
+They have no Research or truth effect.
+
+Fact work is intentionally asynchronous. At a Campaign milestone, a meaningful
+backlog, a direction switch, a context handoff, or an explicit user request,
+Main chooses one or more ready marks and runs `plan-fact-packaging`. There is no
+timer, threshold, watcher, scheduler, or automatic Candidate launch. One frozen
+plan can be handled by one `fact-packager` agent across several independent
+components. That narrow role can read the derived Fact frontier and seal the
+explicit plan, but cannot mark importance, verify, decide, or certify.
+`fact-package-seal` requires every selected Research node to be
+either packaged or explicitly returned as `needs_split`/`blocked`; a bad
+component does not discard a correct independent component.
+
+Packaging does not rewrite proofs. For each complete Research node it supplies
+one semi-formal statement interface whose conclusion is byte-for-byte the
+Research `claim`, plus assumptions, domain/types, quantifiers, limitations, and
+explicit certified Research predecessors. Those predecessor ids are the rigid
+load-bearing Fact edges; descriptive Research `relation` strings are never
+reinterpreted as proof dependencies. A predecessor must be in the same acyclic
+component or already have an active grant.
+
+`fact-verifier-capsule` gives one independent correctness verifier the frozen
+Research bytes, interfaces, and component edges. The verifier performs fresh
+whole-node mathematical, scope, dependency, source/computation, and interface
+checks. The learned theorem-attack vocabulary belongs to ordinary Research
+supervision, so Fact verification does not train a second adverse role.
+`fact-verification-record` records component-local decisions; `fact-certify`
+is a mechanical, independent Gateway visibility switch for correct components.
+
+A minor verifier finding returns the complete affected component through COW.
+`plan-fact-packaging --minor-repair-decision ...` requires every node of that
+component, at least one real COW successor for each affected node, and the same
+verifier for a complete recheck; ordinary supervisor dispatch is omitted for
+that bounded lane. The verifier may not author the repair. A fundamental error
+abandons that component and returns to ordinary Research/COW/supervision.
+Existing grants whose Research or certified predecessor acquires a COW
+successor become `needs_reverification`; historical bytes remain readable.
+
+New Research may name `certified_research_dependencies`. Chalxius resolves
+them to exact active Research/grant hashes and freezes their statement
+interfaces and proof bytes into future task cards. This is the operational
+meaning of Fact being a property of Research rather than a parallel graph.
 
 ## 摸石头过河
 
@@ -94,14 +152,11 @@ route from hiding another route's real product or review state. It adds no
 selector, scheduler, compatibility layer, Research effect, Candidate effect,
 or Fact effect.
 
-Candidate-level fresh-adverse review is scoped to the explicitly selected
-constructive Research heads that themselves carry
-`independent_adverse_required=true`. Historical `related_research_ids` may
-still establish dependency and provenance, but they do not silently inherit a
-remote adverse obligation into a different Candidate. When multiple marked
-heads are explicitly selected, only maximal selected heads require separate
-fresh reviews; direct Candidate-byte binding, independent actor, disposition,
-and verifier exclusion remain exact.
+For immutable 0.x Candidate records only, Candidate-level fresh-adverse review
+remains scoped to explicitly selected constructive Research heads carrying
+`independent_adverse_required=true`. This rule preserves old authority; new
+Fact Alpha packages use the one independent Fact verifier and do not launch a
+second Candidate-adverse worker.
 
 Structured source-evidence capabilities are interpreted by their graph
 semantics, not one runtime-era field spelling. Current `artifact_path` and
@@ -356,14 +411,14 @@ they exist.
 
 ## Immutable authority boundary
 
-The only truth path is:
+The prospective truth path is:
 
-`Research -> Candidate Release -> Certification Decision -> Fact`
+`Research -> frozen package -> independent verifier decision -> Gateway Research certification`
 
 Research, Evidence, Paper/Audit, Blackboard, Reader, Learner, CHX, PHX, and
 attack proposals are nontruth. They never become premises by credibility,
-repetition, ingestion, lint, audit, or presentation. V5 Facts are the only
-premise store.
+repetition, ingestion, lint, audit, or presentation. Active legacy V5 Facts and
+active Fact Alpha Research grants are the only premise authorities.
 
 Every worker task card retains three communication planes: compact control, one
 frozen mathematical-state view, and bounded narrative. The card is the
@@ -371,40 +426,13 @@ immutable capability boundary. Current task-referenced authority overrides
 conflicting background prose. Historical artifacts remain readable and are
 repaired copy-on-write, never rewritten.
 
-## Selective Fact-admission checkpoint
+## Legacy 0.x Fact admission
 
-Before expensive Candidate construction, Main explicitly selects the
-load-bearing Research targets and may run
-`selective-fact-checkpoint --input FILE` over at most sixteen explicitly named
-Research targets. The checkpoint fully validates each selected Research record
-and its direct readiness requirements, uses structural envelopes only for
-unselected graph connectivity, and freezes exact ancestry, downstream reuse,
-known blockers, explicit exclusions, and a content-addressed Candidate batch
-seed. It performs no automatic ranking or selection.
-
-The default batch partition first closes the explicitly selected dependency
-graph. Dependency-connected ready targets remain in one atomic unit, while
-independent ready targets remain singleton failure-isolation units. Main may
-combine independent units only after reviewing their logical dependency and
-failure surfaces. Every resulting Candidate still requires exact canonical
-Fact statements or a typed mini-DAG authored or selected by Main, fresh
-Candidate adverse review when applicable, verifier coverage, Certification,
-and Gateway admission. The checkpoint is nontruth and creates no Candidate,
-Decision, admission, or Fact.
-
-For a selected ready Research target and exact project-relative canonical Fact,
-Main first runs
-`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`,
-whose actor is fixed to Main, then passes the returned Research id to
-`plan-candidate-adverse RESEARCH_ID`.
-The canonical bytes may be Main-authored; their author/provenance fields do not
-establish mathematical validity. Preparation binds every applicable completed
-supervision result, while planning is separate from constructive production and
-Research supervision, exact-retry idempotent within one host scope, and creates
-only a nontruth refute assignment and card. Main must actually launch and
-confirm the adverse worker.
-Candidate disposition, fresh verifier review, Gateway-owned Certification, and
-Gateway Fact admission remain mandatory.
+`selective-fact-checkpoint`, Candidate Release, Candidate adverse,
+Certification Decision, and physical Fact-node commands remain available only
+to read, audit, or complete already frozen 0.x authority. Do not start that
+path for a new 1.0.0 certification. Its exact historical contract is retained
+in [references/admission_contract.md](references/admission_contract.md).
 
 ## CHX and PHX
 
@@ -554,10 +582,11 @@ repair caches implicitly.
    review inside the exact scope, never the limit of that review.
 7. New V5 Pulse planning is retired. The production/supervision cycle is the only prospective Research collaboration path.
    Existing historical Pulse records retain status, audit, dispatch, close, void, and abort compatibility.
-8. Before Candidate packaging, require complete applicable supervision and the
-   fresh Candidate-level adverse gate. Recheck live supervisor results under
-   the seal lock, then package once. Iterative repair belongs before expensive
-   packaging.
+8. Fact work is asynchronous. Main marks important Research while ordinary
+   research continues, then freezes a useful multi-node package at a natural
+   window. The Fact verifier is the one fresh correctness review; do not add a
+   Candidate-adverse duplicate. Minor repair returns to the same verifier and
+   fundamental repair returns to ordinary Research.
 9. Generic actionable planning uses one exact workgroup and completion
    projection. Exact completed or duplicate work is omitted only
    from actionable views; original Research, provenance, history, and explicit-

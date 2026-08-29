@@ -103,6 +103,7 @@ class LocalInstallTests(unittest.TestCase):
             "test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests",
             command,
         )
+        self.assertIn("test_fact_alpha.FactAlphaTests", command)
         self.assertIn(
             "test_chx_095_terminal_frontier_context.TerminalFrontierContextTests",
             command,

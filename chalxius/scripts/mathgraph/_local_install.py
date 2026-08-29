@@ -150,6 +150,7 @@ def default_focused_test_runner(root: Path) -> None:
             "test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests",
             "test_chx_090_frontier_active_fix.FrontierActiveFix090Tests",
             "test_chx_093_integrated_cleanup.IntegratedCleanup093Tests",
+            "test_fact_alpha.FactAlphaTests",
             (
                 "test_chx_094_campaign_history_compaction."
                 "CampaignHistoryCompactionTests"

@@ -1,83 +1,79 @@
-# Validation — Chalxius v0.9.12
+# Validation — Chalxius v1.0.0 Fact Alpha
 
 This report records software, package, installation, live-project performance,
-sensitive-information, and CHX-settlement evidence for **Chalxius 0.9.12 —
-Frontier Lifecycle Closure**. It does not certify a mathematical claim.
+sensitive-information, and CHX-settlement evidence. It does not certify a
+mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 0.9.12 |
-| Release date | 2026-08-28 |
-| Manifest entries | 265 |
-| Package files, including manifest | 266 |
-| Manifest SHA-256 | `090139e03f8aa43e69e9b3144f084ee7ec9a7461cc0fda31576bdadc1fd818cc` |
-| Archive | `chalxius-0.9.12-frontier-lifecycle-closure.tar.gz` |
-| Archive bytes | 2,637,850 |
-| Archive regular-file members | 266 |
-| Archive SHA-256 | `fa9b0d6e68c3a1da0a6b33f0b985cc956c7a5f1948a90cd0e17a4c9580f24468` |
-| Checksum-file SHA-256 | `b03881cd86af36e7a12f1a05cbba1bed3ea2dbcf4d767b3693618a291c7073bb` |
+| Version | 1.0.0 |
+| Release date | 2026-08-30 |
+| Manifest entries | 268 |
+| Package files, including manifest | 269 |
+| Manifest SHA-256 | `35ad8484d021035e62a5dcb9efacbf1224f900abd4c61acbc8efcafecc693fcf` |
+| Archive | `chalxius-1.0.0-fact-alpha.tar.gz` |
+| Archive bytes | 2,705,200 |
+| Archive regular-file members | 269 |
+| Archive SHA-256 | `815fa9f6eaa910fafb653825cbe3e2c4e231d40938fea5c8bf3accb67841d850` |
+| Checksum-file SHA-256 | `d280c67857f74b8cc88bdff4cb47f7e2afb69ac09326cfef80bb926cbc172125` |
 
-Independent builds at the repository path and `/tmp` were byte-identical. The
-archive contains only sorted regular files rooted at `chalxius/`; it contains
-no directory, link, device, cache, or bytecode member.
+Two independent archive builds were byte-identical. The archive contains only
+sorted regular package files and no cache or bytecode member.
+
+## Whole-tree architecture and behavioral gates
+
+Strict reconnaissance covered 269 files, 77 Python modules, 57 MathGraph
+modules, and 96 test modules. All 24 duplicate function-body groups had an
+explicit adjudication. It reported zero orphan modules, behavioral orphan
+features, errors, and warnings. The inventory receipt SHA-256 is
+`82fcbb04519f696703b5453aaa00849e9e88937a1c4ae1b7e4e9173f9516efdb`.
+
+The final behavioral gate exercised 53 registered features with 141 executable
+probes. All passed and the source tree remained unchanged. The receipt-file
+SHA-256 is
+`42f7bb5cda9aacc07e214c30b76023b018de60bd669c9815dbc3c2855a9c6edd`.
+
+The complete suite passed 1,068 tests, skipped 2, and failed 0 in 75.047
+seconds.
 
 ## Routine release matrix
 
-One routine profile was selected for the exact final manifest.
-
 | Lane | Result | Elapsed |
 |---|---|---:|
-| Self-test | PASS | 0.844 s |
-| Changed-surface tests | 114 tests, PASS | 9.768 s |
-| Semantic mutation audit | 32/32 killed | 44.832 s |
+| Self-test | PASS | 0.954 s |
+| Changed-surface tests | 132 tests, PASS | 11.153 s |
+| Semantic mutation audit | 32/32 killed | 45.900 s |
 
-The matrix took 54.888 wall seconds. Every lane ran in an isolated
-manifest-only copy and reported an unchanged source tree. The receipt-file
-SHA-256 is
-`03e1803572f4aeed5008473c11d615b438a660700f141a06ea4163235280082f`.
+The matrix completed in 57.426 wall seconds. Every isolated lane reported an
+unchanged source tree. Its receipt-file SHA-256 is
+`cb141dfa1cfd382a218971d9ab4dd65f5fdc60f7df0dce8247a40a0c912764d7`.
 
-The complete historical suite, full mutation registry, behavioral registry,
-and whole-tree reconnaissance remain an opt-in forensic profile. They are not
-an ordinary release gate.
-
-## Focused regression surface
-
-The release regressions establish that:
-
-- exact legacy Main-authored COW roots can reach a unique terminal Research
-  without changing historical bytes;
-- multi-head aggregation keeps real `await_return` work foregrounded while all
-  reconciliation branches remain visible;
-- record validation reuses the exact envelope bytes already hash-validated in
-  one command and still performs full record/artifact checks;
-- an ongoing host session is resumed and does not trigger a duplicate mutating
-  planner;
-- the 0.9.11 frontier/source-continuity behavior remains covered;
-- release and local-install changed-surface matrices include these regressions.
-
-No regression grants Candidate, Certification, Gateway, or Fact authority.
+The regressions cover the complete Fact Alpha command surface, exact package
+binding, component-isolated verifier decisions, minor and fundamental repair
+routes, descendant re-verification propagation, exact certified Research
+dependencies, legacy authority isolation, installation reachability, and
+current target-bound Campaign round precedence.
 
 ## Installation and live-project canary
 
 | Field | Result |
 |---|---|
-| Installer | `scripts/local_install.py` |
-| Installed version | 0.9.12 |
-| Candidate-to-installed tree | exact; 266/266 files unchanged |
-| Installed manifest SHA-256 | `090139e03f8aa43e69e9b3144f084ee7ec9a7461cc0fda31576bdadc1fd818cc` |
-| Previous runtime archived | yes |
+| Installed version | 1.0.0 |
+| Candidate-to-installed tree | exact; 269/269 files unchanged |
+| Installed manifest SHA-256 | `35ad8484d021035e62a5dcb9efacbf1224f900abd4c61acbc8efcafecc693fcf` |
+| Previous runtime archived | 0.9.18 |
 | Direct rollback available | yes |
 | Project reads / writes by installation | 0 / 0 |
-| System restart | not performed |
 
-The installed local-$\mathbb F_0$ canary contained 1,963 Research entries.
-`frontier --campaign campaign-62013035c1ff --limit 4` completed in 2.696
-seconds and emitted 23,960 bytes with SHA-256
-`3f893ed4fee738708fde80627aaa7081b7a49c559ca392d3f4d1a6641d3774ca`.
+The installed local-$\mathbb F_0$ canary scanned 2,247 Research envelopes.
+`fact-frontier --limit 8` completed in 0.942 wall seconds (673.717 ms internal)
+and correctly reported zero Fact Alpha marks, grants, and batch opportunities
+for the untouched project. Legacy Fact authority was reported as
+`read_only_unmapped`.
 
-The read-only audit completed in 12.240 seconds and reported:
+The full read-only audit completed in 14.789 seconds and reported:
 
 | Signal | Result |
 |---|---|
@@ -85,45 +81,44 @@ The read-only audit completed in 12.240 seconds and reported:
 | `history_clean` | true |
 | Graph errors | 0 |
 | Workflow errors | 0 |
+| Research entries | 2,368 |
+| Legacy Fact entries | 82 |
 
-These measurements characterize one project snapshot and are not universal
-performance guarantees.
+The project metadata snapshot SHA-256 was
+`54ecede31f19dc4ef1feb876ba8e2997edfcff93f9f67f57fd325cec2e21d108`
+both before and after the canary.
 
 ## Sensitive-information scan
 
-The packaged tree was scanned for the local username and absolute user path,
+The package was scanned for the local username and absolute user path,
 private-key headers, common cloud access keys, GitHub/OpenAI/Slack token forms,
-and common secret assignments. No true positive was found. Two OpenAI-token
-lexical matches were reviewed: one occurred inside the example identifier
-`hosttask-0123456789abcdef0123456789abcdef`, the other inside
-`v5-task-local-experiment-governance`.
-
-This bounded scan is release evidence, not a general secret-detection
-guarantee. The exact package remains inspectable through `MANIFEST.sha256`.
+and common secret assignments. No true positive was found. The three reviewed
+matches were a generic `/Users/<user>/...` documentation path, a synthetic
+host-task identifier, and an `/Users/example/...` fixture.
 
 ## Global CHX settlement
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-844467f1b76e85af05f240a0970c34897b3c3bcb317c63ce52b8b8267a7c9aa5` |
-| Canonical `record_sha256` | `a3509d5bf88da988a5379d19b24d906ffb76018a3d74ffc4193a1d4cf9e844ff` |
-| Record-file SHA-256 | `aea2ae11ac87692e85f928709a015d3b575830f1535364d8c82a553726f43461` |
-| Inventory SHA-256 | `332f37ff29a419e3a3bbf269117156fe9b3408fbf1bbf50f567e97bf07f91038` |
-| Covered snapshot SHA-256 | `00bec38182e3ad6ef480c04d8e9bc4f950dc0f3dc0fab8962363789d6d5c325c` |
-| Observed / globally resolved | 225 / 225 |
-| Revalidated prior / newly fixed | 221 / 4 |
+| Global repair | `global-repair-f66daf8fa1046e7c4f8dfda1437cd76de7d781bceb4b3ea6f41e0468a88fac80` |
+| Canonical `record_sha256` | `ce4b7f2fa8f790dd41f4b29e8672f2ef16976236578e0247a7f28d0c82bb3c26` |
+| Record-file SHA-256 | `ae1c531980e8cf2f88ee874461be980b0d44875daeaf519d37f568e6ad3c5b75` |
+| Inventory SHA-256 | `f98c1efd08d3b4f11ffbdbb2333637bb5706c70e30fb0c0aab54449a38828f93` |
+| Covered snapshot SHA-256 | `4c636dd928f23faec90df447052e1524097e4bec4e552fe280712e420c87db60` |
+| Observed / globally resolved | 239 / 239 |
+| Revalidated prior / newly fixed | 236 / 3 |
 | Unresolved / uncovered | 0 / 0 |
 | Active open issues | 0 |
 | Lineage errors / report drift | 0 / 0 |
 
-Historical ledger bytes were not rewritten. Thirty-four raw historical ledgers
-retain old open-state provenance, but all of their issue identities are covered
-by the current global settlement; none remains actionable merely because of
-that historical bit.
+Historical ledger bytes were not rewritten. Thirty-seven raw historical
+ledgers retain old open-state provenance, including nine abandoned open
+ledgers, but all observed issues are covered by the current global settlement.
 
 ## Research and truth boundary
 
-Installation wrote no project byte. The live canary performed read-only audit
-and frontier operations. CHX settlement is administrative. This release
-created no Candidate Release, Certification Decision, Gateway admission, or
-Fact. Software validation is not a theorem proof.
+Installation wrote no project byte. The live canary was read-only. CHX
+settlement is administrative. Fact Alpha only grants certification after a
+future exact package, independent verifier decision, and `fact-certify`
+operation; this release itself created no certification grant or mathematical
+Fact.

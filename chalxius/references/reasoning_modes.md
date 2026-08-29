@@ -35,6 +35,15 @@ reviews every authorized successor claim, artifact, and interface inside its
 exact proof, source, program-math, or integration scope; prior findings are
 mandatory but non-exhaustive attack seeds.
 
+Fact Alpha is asynchronous in every reasoning mode. Research may grow freely
+without waiting for certification. Main marks important load-bearing Research
+and, at natural milestones or handoffs, batches ready marks for a packaging
+agent. `fast`, `auto`, and `deep` may influence when Main judges such a window
+worth the cost, but no profile supplies a timer, threshold, automatic packager,
+or synchronous Research-to-Fact rule. A user may defer Fact work for efficiency
+without weakening existing Research or Fact bytes. New certified Research
+premises remain exact and mode-independent.
+
 Reasoning mode does not create a hidden objective compiler. In every mode Main
 may explicitly create or choose a Campaign and atomically bind a new Research
 root with `memory-add --campaign`. The ordinary frontier then reports exact

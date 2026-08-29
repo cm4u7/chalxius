@@ -30,6 +30,15 @@ ALL_COMMANDS = {
     "memory-add",
     "memory-update",
     "frontier",
+    "fact-frontier-mark",
+    "fact-frontier-dispose",
+    "fact-frontier",
+    "plan-fact-packaging",
+    "fact-package-seal",
+    "fact-verifier-capsule",
+    "fact-verification-record",
+    "fact-verification-check",
+    "fact-certify",
     "adoption-plan",
     "plan-round",
     "plan-supervision-round",
@@ -190,6 +199,15 @@ ROLE_COMMANDS = {
         "memory-add",
         "memory-update",
         "frontier",
+        "fact-frontier-mark",
+        "fact-frontier-dispose",
+        "fact-frontier",
+        "plan-fact-packaging",
+        "fact-package-seal",
+        "fact-verifier-capsule",
+        "fact-verification-record",
+        "fact-verification-check",
+        "fact-certify",
         "adoption-plan",
         "plan-round",
         "plan-supervision-round",
@@ -296,6 +314,13 @@ ROLE_COMMANDS = {
     # Verifiers are deliberately not project-shell users.  The orchestrator
     # gives each fresh verifier one frozen packet and one review return path.
     "verifier": set(),
+    # A Fact packager may inspect Main's sparse certification frontier and seal
+    # one explicitly frozen plan. It cannot select marks, verify mathematics,
+    # publish a decision, or make a grant visible.
+    "fact-packager": {
+        "fact-frontier",
+        "fact-package-seal",
+    },
     "gateway": {
         "mode-status",
         "status",
@@ -310,6 +335,11 @@ ROLE_COMMANDS = {
         "certification-record",
         "certification-decision-check",
         "fact-admit",
+        "fact-frontier",
+        "fact-verifier-capsule",
+        "fact-verification-record",
+        "fact-verification-check",
+        "fact-certify",
         "verification-status",
     },
     # Paper auditors can inspect exact frozen/staged paper evidence and append

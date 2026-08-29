@@ -1,206 +1,171 @@
-# Chalxius V5 architecture
+# Chalxius architecture
 
-Chalxius is one integrated system for source reconstruction, mathematical
-exploration, replayable computation, certification, teaching, and offline
-presentation. It has one research engine and one Fact-admission path.
+Chalxius is a local runtime for long mathematical research. It preserves exact
+sources, supervised Research, computations, objections, COW repairs, and trusted
+premises without treating them as one authority level.
 
-Software checks establish whether recorded evidence satisfies Chalxius's
-contract. They do not make a mathematical statement infallible.
+Software checks establish whether recorded bytes satisfy this architecture.
+They do not make a mathematical statement infallible.
 
-## The four durable states
+## One mathematical graph
+
+The immutable Research graph is the only mathematical node graph. Research is
+cumulative nontruth: an attempt, useful obstruction, counterexample, partial
+proof, or failed route may remain valuable without becoming a premise.
+
+From 1.0.0 onward, Fact is an append-only certification property on one exact
+whole Research record:
 
 ```text
-Research -> Candidate Release -> Certification Decision -> Gateway admission -> Fact
+free supervised Research growth
+        ↓ Main selects important exact records
+frozen multi-Research package -> independent verifier -> Gateway
+        ↓
+the same exact Research records carry Fact certification grants
 ```
 
-1. **Research** is cumulative nontruth. It contains attempts, insights,
-   challenges, counterexamples, obstacles, computations, repairs, and
-   dispositions without treating any of them as premises.
-2. **Candidate Release** freezes the exact claim or atomic internal mini-DAG,
-   proof, direct predecessors, source evidence, computation evidence,
-   Paper/Audit references, and linked adverse work proposed for certification.
-3. **Certification Decision** is one immutable record written by the Gateway
-   from a different fresh verifier's review of only the frozen capsule.
-4. **Fact** is the exact accepted release exposed by the Gateway after all
-   bindings are revalidated. Only current Fact nodes may be reused as trusted
-   premises.
+A certification grant binds the Research record hash, its top-level claim, a
+semi-formal calling interface, and exact predecessor certification grants. It
+does not create a duplicate proof node. Old 0.x Candidate Release,
+Certification, and physical Fact-node records retain their original read-only
+authority; Chalxius never guesses a migration from old prose to new Research
+identities.
 
-There are three happy-path authority transitions. Advice, votes, profile
-closure, Reader output, teaching success, and prose confidence do not create a
-fourth path.
+## Authority planes
 
-## Authority and storage planes
-
-| Plane | Purpose | Truth effect |
+| Plane | Purpose | Authority |
 |---|---|---|
-| Paper source | Preserve exact source bytes and relations | Evidence of what a source says |
-| Paper reconstruction | Record an explicit interpretation of the source | Nontruth interpretation |
-| Paper audit | Hold objections, corrections, decisions, and replacement history | Audit evidence only |
-| Research | Accumulate exploration and adverse work | Nontruth |
-| Blackboard | Hold typed exploratory nodes, edges, and snapshots | Nontruth |
-| Candidate Release | Freeze one exact certification proposal | Candidate only |
-| Certification | Store the verifier capsule and Gateway-written immutable decision | Evidence, not a premise by itself |
-| Fact Graph | Store gateway-admitted active Facts and dependencies | Sole trusted premise store |
-| Learning | Hold teaching, attempts, misconceptions, and mastery evidence | Nontruth |
-| Reader | Present frozen projections in one offline page | Presentation only |
+| Paper source | Preserve exact external bytes and locators | Evidence of what a source says |
+| Paper reconstruction/audit | Record interpretations, objections, and replacements | Audit evidence only |
+| Research | Accumulate mathematics, computation, challenges, and COW | Nontruth |
+| Campaign/Target/frontier | Preserve objective, working boundary, and Main decisions | Nontruth coordination |
+| Fact packaging | Freeze selected Research records and interfaces | Candidate only |
+| Fact verification | Record independent component-local correctness decisions | Certification evidence |
+| Fact certification overlay | Bind exact accepted Research and predecessor grants | Trusted premise property |
+| Learning | Record teaching attempts and mastery | Nontruth |
+| Reader | Render a frozen projection | Presentation only |
 
-Authority labels are boundaries, not decoration. Copying a Paper node to the
-Blackboard does not turn it into a source or Fact. A correct Learner answer
-does not enter Research. A positive Certification Decision does not expose a
-Fact until the gateway admits the exact same bytes.
+Authority labels are boundaries. A successful computation, persuasive report,
+worker receipt, frontier label, or positive verifier decision is not a Fact.
+Only the Gateway acceptance makes exact grants visible.
 
-## Certification contract
+## Campaign, Target, and frontier
 
-A V5 Candidate Release can become a Fact only when all applicable checks pass:
+A Campaign holds a durable non-procedural objective. Targets partition the
+current mathematical obligations or branches inside it. Immutable Research and
+round records remain the actual history; Campaign state is a compact working
+memory, not another proof graph.
 
-1. exact statement, proof, direct predecessors, source evidence, candidate
-   artifacts, and release bytes are content-addressed;
-2. every external predecessor is an active V5 Fact statement interface;
-3. source version, hypotheses, notation, glyphs, conventions, quantifiers,
-   witnesses, and applicability are checked exactly;
-4. load-bearing computation is replayable and binds commands, versions,
-   checkpoints, artifacts, outputs, and independent checks;
-5. truncated series computations derive retained-order budgets from the
-   requested coefficient and factor valuations and include a deeper replay;
-6. dependent candidates form one acyclic all-or-none internal mini-DAG;
-7. every linked challenge, counterexample, or obstacle is included and has an
-   exact disposition;
-8. the verifier is fresh and receives only the frozen capsule;
-9. decision, release, capsule, gateway marker, and stored Fact match exactly;
-   and
-10. revocation cascades through dependents and the current audit remains clean.
+The ordinary Research frontier projects current heads, in-flight work,
+supervision gaps, recent attainments, and historical landmarks. Main makes the
+semantic choice. Planning and checkpoints record that choice without selecting
+mathematics automatically. Exact Research search precedes a new named cut so a
+large project does not redo already preserved work.
 
-If any gate is missing, Chalxius reports the exact blocker. It does not lower
-the standard because a task uses `fast` mode or because an exploration profile
-is incomplete.
+The Fact frontier is separate in purpose but not a second graph. Main persists
+only reasoned importance marks and explicit active, deferred, or dropped
+dispositions. The runtime derives current COW terminals, certification and
+reverification states, certified heads, and useful Campaign/Target batch
+opportunities live. Main schedules packaging at natural research windows;
+there is no timer, threshold, watcher, or automatic worker dispatch.
 
 ## Research collaboration
 
-Every worker receives an immutable task card with three communication planes:
+Every worker receives one immutable task card with control, mathematical-state,
+and narrative planes. Main selects Research, creates production or supervision
+rounds, dispatches workers, validates returns, and ingests them. Completed
+logical components may enter independent supervision while unrelated
+production continues.
 
-- compact control and final handoff;
-- one frozen bounded mathematical-state view; and
-- bounded narrative rationale, summary, intuition, limitations, and open
-  boundary.
+Ordinary supervisors own theorem attack, source fidelity, computation replay,
+and proof-logic review. A COW successor preserves exact lineage; ambiguous
+lineage remains visible rather than being guessed. Reconnect and context
+compression are transport states, not evidence that a worker failed.
 
-New V5 Pulse planning is retired. Main explicitly selects Research, planning
-creates immutable production or supervision assignments/cards, and Main
-launches and confirms the workers. Completed logical components may enter fresh
-supervision while unrelated production continues. Historical Pulse records
-remain readable and retain their original status, audit, dispatch, close, void,
-and abort operations.
+## Fact Alpha lifecycle
 
-Main owns exact cross-round and copy-on-write search, completion projection,
-duplicate exclusion, and final dispatch. A unique current safely supervised COW
-terminal closes its original workgroup; terminal invalidation or ambiguous
-lineage reopens it. Main uses visible free slots only for genuine independent
-high-value boundaries. Client reconnect is transport state followed by ordinary
-agent, canonical-return, ingestion, and round inspection—not a worker failure or
-new liveness mechanism.
+1. Main marks load-bearing whole Research records.
+2. At a useful batch window, Main freezes selected marks with
+   `plan-fact-packaging`.
+3. A packaging agent groups independent components. For each record it extracts
+   assumptions, domain/types, quantifiers, explicit certified predecessor
+   Research ids, and limitations. The conclusion must equal the exact existing
+   Research claim.
+4. One independent Fact verifier checks every whole record, dependency edge,
+   source/computation use, and interface. The verifier differs from Research
+   authors and packager.
+5. The Gateway revalidates package, decision, component, Research, and
+   predecessor-grant bytes. Correct independent components may pass even when a
+   sibling component fails.
+6. Deterministic grants are staged first; one acceptance record is the sole
+   visibility switch.
 
-Adverse work uses the Research plane. Candidate preparation binds the exact
-selected canonical claim and all applicable completed supervision, then a
-distinct fresh adverse worker reviews it and Main records the disposition.
-Fresh verifier review, the Gateway-written Certification Decision, and Gateway
-Fact admission remain separate owner boundaries.
+Explicit certified predecessor ids plus exact grant hashes are the rigid Fact
+edges. Descriptive Research `relation` text remains Main-facing context and has
+no proof-dependency effect. A redundant `claim_sha256` is unnecessary because
+the complete Research record hash already binds the claim.
 
-`profile-closure-status` and `profile-closure-record` are compatibility
-surfaces for repair advice. They can identify missing planned work and append
-evidence-bound guidance to Research. They cannot complete, certify, or admit a
-claim.
+New Research may directly name actively certified Research dependencies. The
+writer freezes their Research and grant hashes; production cards carry exact
+interfaces, claims, and proof bytes.
+
+## Error and COW semantics
+
+A minor verifier finding returns a complete affected component through COW to
+the same verifier. That bounded lane does not require another ordinary
+supervisor, and the verifier may not author the repair. A fundamental error
+returns to ordinary Research and may abandon the package component.
+
+A COW never deletes or silently relabels certification. Replacing a certified
+Research record makes its old grant and certified descendants
+`needs_reverification`. Historical records remain readable. If a later run
+discovers a possible problem in an active Fact, Main can inspect and repair the
+important node for as long as needed; PHX does not impose a retry limit.
 
 ## Reasoning profiles
 
-`fast`, `auto`, and `deep` allocate future exploration:
+`fast`, `auto`, and `deep` allocate future exploration effort. They do not
+change Research quality, verifier independence, Gateway ownership, or Fact
+strength. Efficiency-first work may defer Fact packaging while Research grows.
 
-- `fast` keeps costly exploration opt-in;
-- `auto` follows deterministic task signals and is the default;
-- `deep` requests every costly feature that is genuinely applicable.
+## Paper, Learning, and Reader
 
-A mode switch affects future work units only. All modes share the same
-Candidate Release, Certification, and Fact contract.
-
-## Paper, Audit, and correction
-
-Paper source, reconstruction, and audit remain separate. A current reviewed
-Paper Logic snapshot and its Audit snapshot can be bound node-by-node into a
-Candidate Release. Corrections append a challenge, disposition, replacement
-object, and new snapshot; historical bytes are never rewritten.
-
-Research may mirror Paper material onto the Blackboard for exploration, but the
-mirror preserves its nontruth authority and exact receipt.
-
-An active research draft follows the Paper-first lifecycle: freeze its exact
-source, decompose it into a proposition-total DAG, bind targets and dependencies,
-perform nodewise Research and admission work, and reconstruct a copy-on-write
-successor Paper. A finished external publication instead enters the Evidence
-plane with its exact PDF and reviewed Paper Graph. Neither route silently
-inherits Fact authority.
-
-Continuity is domain-indexed. Philosophy can preserve an explicitly declared
-argumentative stance. Mathematics preserves the exact target, hypotheses,
-domains, and quantifiers, and allows proof, disproof, obstruction, or separately
-typed weaker progress. Empirical and mixed work use their own exact target
-adapters rather than borrowing the philosophy stance rule.
-
-## Architecture learning: CHX and PHX
-
-CHX is the append-only issue and repair ledger. A finding is recorded before it
-is classified. A tactical repair is confined to one project run; a repair
-intended for global installation goes directly through the cross-ledger global
-integrated-repair route, without a synthetic tactical precursor. Every observed
-issue still receives an explicit disposition.
-
-PHX is the host-global, project-independent route guide. It distills reusable
-major architecture proposals and measured tradeoffs from CHX and other evidence
-without duplicating concrete problems. PHX search, evaluation, and reporting
-are advisory. A recorded route grants no implementation authority; changing the
-active architecture requires a separate, informed user consultation.
-
-## Historical projects and project background
-
-A new V5 root starts with an empty Fact Graph. V1-V4 and Danus roots remain
-unchanged and readable, but their Facts, reviews, profile closures, migration
-receipts, and acceptance markers are not V5 authority. Chalxius does not
-perform an in-place authority migration.
-
-`PROJECT_BACKGROUND.md` is one bounded nontruth summary. Creating, rebuilding,
-or refreshing it requires an explicit user instruction. A new card freezes its
-complete exact-byte index and one round-local immutable snapshot, then workers
-retrieve only selected chunks through that card; it does not preload the full
-body into active context. If it is absent, Chalxius proceeds without generating
-it. Every chunk remains retrievable, and load-bearing use returns to the exact
-cited source.
-
-## Learner and Reader
+Paper source, reconstruction, and audit remain separate. A research draft and
+a finished external publication have different evidence routes; neither gains
+Fact authority from credibility or presentation.
 
 Chalxius Learner starts only after an explicit academic teaching or testing
-request. It may read frozen snapshots and write only nontruth learning state.
-Grill Me Code is a separate programming assistant and cannot mount research
-graphs.
+request and writes nontruth learning state. Grill Me Code is a separate
+programming assistant and cannot mount research authority. Reader export is a
+deterministic offline view and never writes back into the graph.
 
-The Reader exports one deterministic offline HTML file. It preserves native
-authority, status, source text, hashes, relation direction, and reading order.
-Its runtime interaction state never writes back to Paper, Audit, Research,
-Certification, Fact, Blackboard, or Learning data.
+## CHX and PHX
 
-## Invariants to remember
+CHX records architecture-caused or materially amplified problems, their
+evidence, and repairs. Tactical repair is confined to project operation; a
+repair intended for global installation is integrated repair. Installation
+problems and observed performance costs are themselves eligible CHX evidence.
 
-1. V5 has one engine and one truth path.
-2. Research is cumulative; malformed peers are isolated locally.
-3. Only gateway-admitted V5 Facts are reusable premises.
-4. V4 remains readable but supplies no V5 authority.
-5. Profile closure is repair advice, not certification.
+PHX stores reusable design routes. Its current direction is to reduce brittle
+procedural gates and agent error surfaces while retaining mathematical,
+factual, and exact-byte correctness at their natural owners. PHX advises; it
+does not forbid Main from continuing valuable repairs or create a second legal
+workflow.
+
+## Invariants
+
+1. There is one mathematical Research graph.
+2. Research is cumulative nontruth and may branch freely.
+3. Fact is sparse certification of exact whole Research records.
+4. Only active Gateway-admitted Fact nodes or Research certification grants are
+   trusted premises.
+5. Campaign and both frontiers are working memory, not truth paths.
 6. Modes change exploration cost, not Fact strength.
-7. Paper/Audit corrections and Fact revocations preserve history.
-8. Learner and Reader have no truth effect.
-9. Research drafts continue from complete Paper DAGs; finished publications
-   remain Evidence.
-10. CHX records problems and repairs; PHX advises routes and never authorizes a
-    cutover by itself.
+7. COW and correction preserve history and propagate reverification.
+8. Legacy authority remains readable but is not silently migrated.
+9. Learner, Reader, CHX, and PHX have no mathematical truth effect.
 
 For exact contracts, see
-[`unified_architecture.md`](chalxius/references/unified_architecture.md),
 [`admission_contract.md`](chalxius/references/admission_contract.md),
-[`reasoning_modes.md`](chalxius/references/reasoning_modes.md), and
+[`unified_architecture.md`](chalxius/references/unified_architecture.md), and
 [`v5_release_traceability.md`](chalxius/references/v5_release_traceability.md).

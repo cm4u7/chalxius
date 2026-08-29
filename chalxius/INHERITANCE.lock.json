@@ -1,16 +1,18 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "0.9.18",
-  "release_codename": "Frontier Breadth Parity",
-  "release_display_name": "Chalxius 0.9.18 — Frontier Breadth Parity",
+  "version": "1.0.0",
+  "release_codename": "Fact Alpha",
+  "release_display_name": "Chalxius 1.0.0 — Fact Alpha",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",
-  "architectural_rule": "v5_is_the_only_fact_authority_v4_and_predecessors_are_readable_nontruth",
+  "architectural_rule": "one_v5_research_graph_with_append_only_fact_certification_overlay_legacy_fact_authority_read_only_unmapped",
   "workflow": {
     "default_evidence_version": 5,
-    "truth_path": "research_to_candidate_release_to_certification_decision_to_fact",
+    "truth_path": "research_to_frozen_multi_research_candidate_package_to_independent_verifier_decision_to_gateway_research_certification",
+    "prospective_fact_authority": "exact_research_record_certification_overlay",
+    "legacy_fact_authority": "read_only_unmapped_not_invalidated",
     "v5_initial_fact_authority": "empty",
     "v4_authority_inheritance": false,
     "v4_readability": "preserved",
@@ -19,6 +21,29 @@
       "mathematical_state",
       "narrative"
     ]
+  },
+  "fact_alpha_surface": {
+    "contract_revision": "chalxius-fact-alpha-1",
+    "activation": "prospective_only_for_new_certifications_after_1.0.0",
+    "mathematical_graph": "one_immutable_research_graph",
+    "fact_model": "append_only_certification_property_on_one_exact_whole_research_record",
+    "importance_registry": "main_explicit_reasoned_marks_with_active_deferred_or_dropped_disposition_only",
+    "frontier_projection": "live_derived_state_heads_batch_opportunities_and_cow_reverification_without_second_persistent_queue",
+    "batching": "main_selected_asynchronous_natural_research_windows_without_timer_threshold_scheduler_or_automatic_dispatch",
+    "candidate_role": "frozen_multi_research_packaging_snapshot_not_a_second_proof_graph_or_rewritten_claim",
+    "packager_role": "fact_packager_reads_derived_frontier_and_seals_only_one_main_frozen_plan_without_verification_or_truth_authority",
+    "statement_interface": "packager_extracts_assumptions_domain_types_quantifiers_exact_claim_predecessors_and_limitations_while_conclusion_equals_the_exact_research_claim",
+    "dependency_authority": "explicit_certified_predecessor_research_ids_and_exact_grant_hash_bindings_only_relation_prose_has_no_proof_effect",
+    "verifier_role": "one_independent_fact_correctness_role_without_a_separate_candidate_adverse_stage",
+    "ordinary_research_attack_rules": "remain_in_research_supervision_not_fact_verification",
+    "component_isolation": "independent_correct_components_can_be_certified_when_a_sibling_component_fails",
+    "minor_repair": "complete_research_cow_then_same_verifier_recheck_without_ordinary_supervisor_and_without_verifier_authorship",
+    "fundamental_error": "abandon_affected_component_and_return_to_ordinary_research",
+    "cow_effect": "exact_certified_record_replacement_marks_that_grant_and_certified_descendants_needs_reverification_without_deleting_history",
+    "downstream_research": "may_bind_exact_actively_certified_research_records_and_grants_as_premises",
+    "legacy_boundary": "old_candidate_release_certification_and_fact_bytes_remain_readable_and_authoritative_in_their_original_contract_but_are_not_auto_migrated",
+    "claim_sha256": "not_persisted_because_research_record_sha256_already_binds_the_exact_claim",
+    "truth_effect": "gateway_acceptance_of_independently_verified_exact_research_records_only"
   },
   "evidence_surface": {
     "contract_revision": "chalxius-evidence-library-binding-1",
@@ -1137,5 +1162,5 @@
     "research_draft_as_external_evidence_substitute",
     "external_publication_credibility_as_fact_authority"
   ],
-  "fact_admission_rule": "one_identical_v5_candidate_certification_gateway_contract_across_fast_auto_deep"
+  "fact_admission_rule": "one_identical_fact_alpha_research_certification_contract_across_fast_auto_deep"
 }

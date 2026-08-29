@@ -116,6 +116,7 @@ class ReleaseValidationTests(unittest.TestCase):
             "tests.test_chx_098_plan_round_frontier_state",
             "tests.test_chx_090_frontier_active_fix",
             "tests.test_v5_campaign_envelope",
+            "tests.test_fact_alpha",
             "tests.test_local_install",
             "tests.test_runtime_cutover",
         ):

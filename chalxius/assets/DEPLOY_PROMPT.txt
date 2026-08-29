@@ -1,8 +1,35 @@
-Chalxius 0.9.18 — Frontier Breadth Parity
+Chalxius 1.0.0 — Fact Alpha
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
+
+Prospective Fact admission now certifies exact whole Research records instead
+of constructing a second mathematical graph. Main records important Research
+ids with `fact-frontier-mark`; `fact-frontier` derives current COW terminals,
+certification state, certified heads, and batch opportunities live. At a
+natural research window Main explicitly freezes selected marks with
+`plan-fact-packaging`. No timer, threshold, scheduler, automatic dispatcher, or
+truth inference is installed.
+
+A packaging agent uses the frozen plan to group independent components and
+extract a semi-formal interface for each exact Research record. Its conclusion
+must equal the existing top-level Research claim; assumptions, domain/types,
+quantifiers, explicit certified predecessor Research ids, and limitations make
+the claim callable without rewriting the proof. One independent verifier then
+checks every Research record, dependency edge, and interface. A mechanical
+Gateway may certify exactly the components marked correct. A failing sibling
+component does not discard an independent correct component.
+
+Fact is therefore an append-only certification property of Research. Explicit
+certified predecessor ids and exact grant hashes form its rigid dependency
+subtree; descriptive `relation` prose has no proof effect. A later COW leaves
+history intact and makes the replaced grant and certified descendants
+`needs_reverification`. A minor verifier finding returns a complete COW to the
+same verifier without an ordinary supervisor; a fundamental error returns to
+ordinary Research. The verifier may not author either repair. Old Candidate,
+adverse, Certification, and Fact bytes retain their original read-only
+authority and are not automatically migrated.
 
 Campaign working memory now carries up to sixteen Main-selected heads per
 Target through legacy checkpoint reading, current state, plan-round, explicit
@@ -248,15 +275,14 @@ closure rule must be modeled and tested as a distinct explicit relation.
 
 ## Mathematical workflow boundary
 
-The only truth path is:
+The prospective truth path is:
 
-`Research -> Candidate Release -> Certification Decision -> Fact`
+`Research -> frozen package -> independent verifier decision -> Gateway Research certification`
 
 Production is constructive. Supervision is the later logical review subround;
 it may begin as soon as its own component is ready and need not wait for
-unrelated production. Candidate adverse review, an independent verifier,
-Certification, Gateway admission, and Fact admission retain their own
-mathematical-safety responsibilities. Administrative receipts are optional
+unrelated production. Prospective Fact packaging, one independent verifier,
+and Gateway certification retain separate owners. Administrative receipts are optional
 workflow markers, not a second truth path.
 
 For a current computation, bind formula-to-code, mathematical domain,
