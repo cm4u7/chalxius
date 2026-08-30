@@ -8636,7 +8636,8 @@ class V5LifecycleManager:
         allow_invalid_rebuild: bool = False,
     ) -> dict[str, Any]:
         targets = json.loads(json.dumps(targets, ensure_ascii=False))
-        for row in targets.values():
+        normalized_targets: dict[str, dict[str, Any]] = {}
+        for target_id, row in targets.items():
             historical_ids = row.get(
                 "historical_landmark_research_ids", []
             )
@@ -8651,6 +8652,57 @@ class V5LifecycleManager:
                 for research_id in historical_ids
             }
             row.setdefault("head_contexts", [])
+            # A legitimate many-head state can converge on one new head.
+            # Coalesce the resulting duplicate context key before writing so
+            # an ordinary plan handoff can never create a state that the
+            # formal reader rejects on its next pass.  Exact collisions use
+            # the last current rationale rather than inventing another
+            # lifecycle state or requiring Main to reconcile twice.  Do not
+            # absorb an unattached copy merely because the same Research is
+            # attached to another head: it may record a genuinely ambiguous
+            # split branch.  Only Main's explicit ``attach_context`` operation
+            # has authority to make that cross-attachment disposition.
+            deduplicated_contexts: list[Any] = []
+            context_index: dict[tuple[str, str | None], int] = {}
+            for context in row["head_contexts"]:
+                if (
+                    isinstance(context, dict)
+                    and set(context)
+                    == {
+                        "research_id",
+                        "attached_head_research_id",
+                        "reason",
+                    }
+                    and isinstance(context.get("research_id"), str)
+                    and (
+                        context.get("attached_head_research_id") is None
+                        or isinstance(
+                            context.get("attached_head_research_id"), str
+                        )
+                    )
+                ):
+                    key = (
+                        context["research_id"],
+                        context["attached_head_research_id"],
+                    )
+                    if key in context_index:
+                        deduplicated_contexts[context_index[key]] = context
+                    else:
+                        context_index[key] = len(deduplicated_contexts)
+                        deduplicated_contexts.append(context)
+                else:
+                    # Preserve malformed input for the formal validator below
+                    # to reject; normalization must not turn bad bytes valid.
+                    deduplicated_contexts.append(context)
+            row["head_contexts"] = deduplicated_contexts
+            normalized_targets[target_id] = (
+                self._normalize_campaign_frontier_target_row(
+                    revision=V5_CAMPAIGN_FRONTIER_STATE_REVISION,
+                    target_id=target_id,
+                    row=row,
+                )
+            )
+        targets = normalized_targets
         try:
             current = self._read_campaign_frontier_working_state(campaign_id)
         except ValueError as exc:
@@ -10933,6 +10985,9 @@ class V5LifecycleManager:
         # branch; otherwise the projection shows both the old head and its
         # in-flight repair and falsely asks Main to choose between them.
         replacement_basis = set(selected_set)
+        replacement_basis_by_selected: dict[str, set[str]] = {
+            research_id: {research_id} for research_id in selected
+        }
         nonadvancing_relations = {
             "challenges",
             "copy_on_write_repair",
@@ -10954,7 +11009,9 @@ class V5LifecycleManager:
                     "repair_of_research_id"
                 )
                 if isinstance(repair_of, str):
-                    replacement_basis.add(validate_memory_id(repair_of))
+                    repair_of = validate_memory_id(repair_of)
+                    replacement_basis.add(repair_of)
+                    replacement_basis_by_selected[research_id].add(repair_of)
             elif relation not in nonadvancing_relations:
                 # Selecting a positive Research descendant as the target's
                 # next production head is Main's semantic handoff.  Its exact
@@ -10962,12 +11019,15 @@ class V5LifecycleManager:
                 # workflow remains independently visible, but the old route
                 # must not survive as a second head and later ask Main to make
                 # the same choice again.
-                replacement_basis.update(
+                related = {
                     validate_memory_id(item)
                     for item in record.get("related_research_ids", [])
-                )
+                }
+                replacement_basis.update(related)
+                replacement_basis_by_selected[research_id].update(related)
         preserved: list[str] = []
         retired: list[str] = []
+        context_replacement_by_old: dict[str, str] = {}
         for head_id in row["active_head_research_ids"]:
             if head_id in selected_set:
                 continue
@@ -10996,6 +11056,19 @@ class V5LifecycleManager:
                 action.get("actionable_research_id") in selected_set
                 and action.get("actionable_research_id") != head_id
             )
+            if replaced:
+                replacement_candidates = [
+                    research_id
+                    for research_id in selected
+                    if replacement_basis_by_selected[research_id].intersection(
+                        exact_lineage
+                    )
+                    or action.get("actionable_research_id") == research_id
+                ]
+                if len(replacement_candidates) == 1:
+                    context_replacement_by_old[head_id] = (
+                        replacement_candidates[0]
+                    )
             (retired if replaced or action.get("next_action") == "none" else preserved).append(
                 head_id
             )
@@ -11038,7 +11111,9 @@ class V5LifecycleManager:
                 "attached_head_research_id": (
                     context["attached_head_research_id"]
                     if context["attached_head_research_id"] in active
-                    else None
+                    else context_replacement_by_old.get(
+                        context["attached_head_research_id"]
+                    )
                 ),
             }
             for context in row["head_contexts"]
@@ -11247,8 +11322,15 @@ class V5LifecycleManager:
                     for context in row["head_contexts"]
                     if not (
                         context.get("research_id") == research_id
-                        and context.get("attached_head_research_id")
-                        == attached_head_id
+                        and (
+                            context.get("attached_head_research_id")
+                            == attached_head_id
+                            or (
+                                attached_head_id is not None
+                                and context.get("attached_head_research_id")
+                                is None
+                            )
+                        )
                     )
                 ]
                 row["head_contexts"].append(

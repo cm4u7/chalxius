@@ -1,9 +1,25 @@
-# Chalxius 1.0.3 architecture findings and residual boundaries
+# Chalxius 1.0.4 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 1.0.3
-**Research Route Coordination Repair**. It describes architecture defects,
+This file is the release, nontruth disclosure for Chalxius 1.0.4
+**Frontier Context Handoff Repair**. It describes architecture defects,
 integrated repairs, and intentional residual boundaries; it is not mathematical
 evidence and grants no Research, package, verifier, Gateway, or Fact authority.
+
+## 1.0.4 Frontier Context Handoff Repair
+
+Live local-F0 use reproduced one composition defect in the 1.0.3 working
+memory: a unique `plan-round` head replacement detached its exact-search
+context, and an explicit reattachment left both an unattached and an attached
+copy. Version 1.0.4 carries context across a unique replacement, leaves true
+multi-successor ambiguity unattached, and absorbs an unattached duplicate when
+Main chooses a concrete head. No mathematical state or authority changes.
+
+The context-handoff maintenance prompt also keeps the asynchronous Fact window
+visible without making every compaction dispatch work. Main carries `Fact
+window clock: n/4`, increments it only on an explicit host compaction, resets it
+after a completed packager window, and dispatches one small window at `4/4`.
+User deferral preserves `4/4 deferred` until lifted. This recovery instruction
+creates no timer, daemon, automatic scheduler, or package/certification effect.
 
 ## 1.0.3 Research Route Coordination Repair
 

@@ -1,5 +1,17 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.4 Frontier Context Handoff Repair override.** Exact active-head context
+> follows one uniquely selected `plan-round` successor. A genuinely ambiguous
+> multi-successor handoff remains unattached for Main, and later concrete
+> attachment absorbs an unattached duplicate while retaining other legitimate
+> head-specific uses. After compaction or real handoff, Main inspects the Fact
+> frontier and carries `Fact window clock: n/4`. Only an explicit host
+> compaction increments it; one completed packager window resets it. At `4/4`,
+> Main assigns one small window to a suitable free slot, while user deferral
+> preserves `4/4 deferred` until lifted. The packager still chooses the route.
+> No new selector, truth gate, daemon, automatic scheduler, Research effect,
+> package effect, or truth effect is introduced.
+
 > **1.0.3 Research Route Coordination Repair override.** Campaign frontier is
 > one replaceable Main working-memory projection: active heads, attached exact
 > Research context, sparse landmarks, recent attainment, and rigid COW/split

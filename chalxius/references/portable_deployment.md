@@ -1,5 +1,17 @@
 # Chalxius portable deployment
 
+## 1.0.4 Frontier Context Handoff Repair
+
+The `1.0.4` **Frontier Context Handoff Repair** candidate keeps the 1.0.3
+authority surface and repairs one compact
+Campaign transition. A unique planned successor receives the old head's exact
+contexts; ambiguous successors remain unattached, and later attachment absorbs
+an unattached duplicate. The handoff prompt inspects the Fact frontier but does
+not dispatch on every compaction: Main carries `Fact window clock: n/4`, resets
+it after a completed packager window, and dispatches one small window at `4/4`.
+User deferral preserves `4/4 deferred` until lifted. Installation creates no
+project migration, timer, daemon, automatic scheduler, package, or truth effect.
+
 ## 1.0.3 Research Route Coordination Repair
 
 The `1.0.3` **Research Route Coordination Repair** candidate updates
@@ -35,7 +47,7 @@ committed batch. Deployment creates no Fact-side split supervisor.
 ## Frozen release-history boundary
 
 All lower version sections are frozen descriptions of their then-current
-contracts. They do not override 1.0.3. Old Candidate commands are procedurally
+contracts. They do not override 1.0.4. Old Candidate commands are procedurally
 reserved for explicitly selected 0.x completion/audit; the runtime does not
 authenticate pre-1.0 provenance and installation adds no identity gate.
 

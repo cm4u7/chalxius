@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.3 — Research Route Coordination Repair
+# Chalxius 1.0.4 — Frontier Context Handoff Repair
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -177,6 +177,30 @@ New Research may name `certified_research_dependencies`. Chalxius resolves
 them to exact active Research/grant hashes and freezes their statement
 interfaces and proof bytes into future task cards. This is the operational
 meaning of Fact being a property of Research rather than a parallel graph.
+
+## 1.0.4 frontier context handoff repair
+
+An exact context attached to an active head is part of Main's working memory,
+not disposable annotation. When `plan-round` uniquely replaces that head, the
+context follows the selected successor. If several selected successors could
+own it, the context remains explicitly unattached for Main to place; Chalxius
+does not guess. Attaching the same Research context to a concrete head absorbs
+an older unattached copy while preserving legitimate attachments to other
+heads. These are compact state transitions with no selector, gate, scheduler,
+Research rewrite, package effect, or truth effect.
+
+After context compaction or a real handoff, Main still performs the complete
+rehydration and mathematical-history pass below and inspects the Fact frontier.
+Compaction itself does not dispatch immediately. Main carries one explicit
+`Fact window clock: n/4` in every context-handoff summary, increments it only
+when the host explicitly reports context compaction, and resets it after one
+packager window completes. At `4/4`, Main assigns one bounded packager window
+of one or two packages to the first suitable available slot. A user-requested
+Fact deferral prevents dispatch and is carried as `4/4 deferred` until lifted;
+it does not silently reset. Elapsed time, ordinary turns, reconnects, and real
+handoffs do not increment this clock. The packager still chooses the
+predecessor-closed route. This is a compact Main recovery instruction, not a
+timer, daemon, automatic scheduler, truth gate, or slot quota.
 
 ## 1.0.3 research route coordination repair
 

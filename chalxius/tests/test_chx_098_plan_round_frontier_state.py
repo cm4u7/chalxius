@@ -1411,6 +1411,502 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             ],
         )
 
+    def test_plan_round_retargets_context_on_unique_head_handoff(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        next_id = self._research(
+            "next-cut",
+            "Main selected the exact next cut after searching the old route.",
+            relation="supports",
+            related_research_ids=[self.root_id],
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Old theorem that still constrains the route.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "actionable_research_id": self.root_id,
+                    "current_route_research_ids": [self.root_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "plan_production",
+                }
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[next_id],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [next_id])
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": next_id,
+                    "reason": "Old theorem that still constrains the route.",
+                }
+            ],
+        )
+
+    def test_plan_round_leaves_context_unattached_on_ambiguous_handoff(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        successors = [
+            self._research(
+                f"split-cut-{index}",
+                f"Independent successor surface {index}.",
+                relation="supports",
+                related_research_ids=[self.root_id],
+            )
+            for index in range(2)
+        ]
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "A reference whose split destination is ambiguous.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "actionable_research_id": self.root_id,
+                    "current_route_research_ids": [self.root_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "plan_production",
+                }
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=successors,
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], successors)
+        self.assertEqual(
+            row["head_contexts"][0]["attached_head_research_id"], None
+        )
+
+    def test_context_attach_to_head_absorbs_unattached_duplicate(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": None,
+                            "reason": "Context detached by an earlier head handoff.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "attach_context",
+                        "research_id": self.landmark_id,
+                        "attached_head_research_id": self.root_id,
+                        "reason": "The same context is now attached to this head.",
+                    }
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.root_id,
+                    "reason": "The same context is now attached to this head.",
+                }
+            ],
+        )
+
+    def test_write_preserves_unattached_context_from_an_ambiguous_branch(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "The comparator remains exact for head A.",
+                        },
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": None,
+                            "reason": (
+                                "A split of old head B has no unique context "
+                                "destination."
+                            ),
+                        },
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(len(row["head_contexts"]), 2)
+        self.assertEqual(
+            {
+                context["attached_head_research_id"]
+                for context in row["head_contexts"]
+            },
+            {self.root_id, None},
+        )
+        lifecycle._read_campaign_frontier_working_state(self.campaign_id)
+
+    def test_two_context_heads_converge_without_poisoning_next_read(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        second_head = self._research(
+            "second-head", "A second active mathematical branch."
+        )
+        merged_head = self._research(
+            "merged-head",
+            "One Main-selected cut jointly succeeds both prior branches.",
+            relation="supports",
+            related_research_ids=[self.root_id, second_head],
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id, second_head],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "The comparator as used by the first branch.",
+                        },
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": second_head,
+                            "reason": "The current comparator rationale after convergence.",
+                        },
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": head_id,
+                    "actionable_research_id": head_id,
+                    "current_route_research_ids": [head_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "plan_production",
+                }
+                for head_id in (self.root_id, second_head)
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[merged_head],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [merged_head])
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": merged_head,
+                    "reason": (
+                        "The current comparator rationale after convergence."
+                    ),
+                }
+            ],
+        )
+        reread = lifecycle._read_campaign_frontier_working_state(
+            self.campaign_id
+        )
+        self.assertIsNotNone(reread)
+
+    def test_existing_new_head_context_wins_when_old_head_converges(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [
+                        self.root_id,
+                        self.successor_id,
+                    ],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Older route-specific rationale.",
+                        },
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.successor_id,
+                            "reason": "Rationale already current on the new head.",
+                        },
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "actionable_research_id": self.successor_id,
+                    "current_route_research_ids": [self.root_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "production",
+                },
+                {
+                    "research_id": self.successor_id,
+                    "actionable_research_id": self.successor_id,
+                    "current_route_research_ids": [self.successor_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "production",
+                },
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[self.successor_id],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(len(row["head_contexts"]), 1)
+        self.assertEqual(
+            row["head_contexts"][0]["reason"],
+            "Rationale already current on the new head.",
+        )
+        lifecycle._read_campaign_frontier_working_state(self.campaign_id)
+
+    def test_two_old_heads_can_retarget_same_context_to_two_new_heads(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        second_head = self._research(
+            "parallel-old-head", "A logically independent old branch."
+        )
+        first_new = self._research(
+            "parallel-new-one",
+            "Successor of only the first old branch.",
+            relation="supports",
+            related_research_ids=[self.root_id],
+        )
+        second_new = self._research(
+            "parallel-new-two",
+            "Successor of only the second old branch.",
+            relation="supports",
+            related_research_ids=[second_head],
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id, second_head],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Comparator for branch one.",
+                        },
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": second_head,
+                            "reason": "Comparator for branch two.",
+                        },
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": head_id,
+                    "actionable_research_id": head_id,
+                    "current_route_research_ids": [head_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "production",
+                }
+                for head_id in (self.root_id, second_head)
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[first_new, second_new],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["active_head_research_ids"], [first_new, second_new]
+        )
+        self.assertEqual(
+            {
+                context["attached_head_research_id"]
+                for context in row["head_contexts"]
+            },
+            {first_new, second_new},
+        )
+        lifecycle._read_campaign_frontier_working_state(self.campaign_id)
+
+    def test_repair_of_handoff_carries_context_to_repair_head(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        repair_id = self._research(
+            "repair-head", "A structured repair of the exact route product."
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "A theorem the repair must continue to use.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "actionable_research_id": self.successor_id,
+                    "current_route_research_ids": [self.successor_id],
+                    "current_terminal_research_ids": [],
+                    "terminal_evidence_research_ids": [],
+                    "next_action": "repair",
+                }
+            ],
+        }
+        repair_record = {
+            "research_id": repair_id,
+            "kind": "repair",
+            "relation": "synthesized_repair",
+            "metadata": {"repair_of_research_id": self.successor_id},
+        }
+        with (
+            patch.object(
+                lifecycle,
+                "campaign_goal_coverage",
+                return_value=[projected_goal],
+            ),
+            patch.object(
+                lifecycle,
+                "_research_record",
+                return_value=repair_record,
+            ),
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[repair_id],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [repair_id])
+        self.assertEqual(
+            row["head_contexts"][0]["attached_head_research_id"], repair_id
+        )
+        lifecycle._read_campaign_frontier_working_state(self.campaign_id)
+
     def test_sparse_landmark_records_reason_without_becoming_a_head(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         lifecycle._replace_campaign_frontier_working_state(

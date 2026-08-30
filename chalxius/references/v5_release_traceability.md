@@ -1,4 +1,19 @@
-# Chalxius V5 traceability through 1.0.3 Research Route Coordination Repair
+# Chalxius V5 traceability through 1.0.4 Frontier Context Handoff Repair
+
+## 1.0.4 Frontier Context Handoff Repair overlay
+
+- Candidate version: `1.0.4`; release name **Frontier Context Handoff
+  Repair**.
+- A context attached to an active head follows an exact unique successor during
+  atomic planning. Several possible successors leave it unattached for Main;
+  later concrete attachment absorbs an unattached duplicate.
+- Context compaction still triggers complete operational and mathematical
+  rehydration plus Fact-frontier inspection. Main carries `Fact window clock:
+  n/4`, increments it only on explicit host compaction, resets it after a
+  completed packager window, and dispatches one one-or-two-package window at
+  `4/4`. User deferral preserves `4/4 deferred` until lifted.
+- The change has no automatic selection, dispatch, timer, scheduler, Research,
+  package, verifier, Gateway, or Fact effect.
 
 ## 1.0.3 Research Route Coordination Repair overlay
 

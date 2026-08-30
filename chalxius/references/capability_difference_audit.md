@@ -1,5 +1,20 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.4 Frontier Context Handoff Repair difference
+
+The 1.0.3 head transition kept a context only if its old head remained active;
+otherwise it wrote an unattached entry. Reattaching the same Research to the
+unique successor then preserved the unattached copy because deduplication used
+the complete `(Research, head)` pair. Version 1.0.4 composes the two existing
+operations: unique plan handoff retargets context, true split ambiguity remains
+unattached, and concrete attachment absorbs an unattached copy without erasing
+legitimate context on another head. The deployment prompt requires
+Fact-frontier inspection after handoff and carries `Fact window clock: n/4`:
+explicit host compaction increments it, a completed packager window resets it,
+and `4/4` dispatches one small window unless user deferral preserves `4/4
+deferred`. No new state kind, truth gate, selector, daemon, cache, automatic
+scheduler, Research effect, package effect, or truth effect is added.
+
 ## 1.0.3 Research Route Coordination Repair difference
 
 Earlier releases stored the required mathematical bytes but split working

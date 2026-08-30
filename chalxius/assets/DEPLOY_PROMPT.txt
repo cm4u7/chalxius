@@ -1,10 +1,10 @@
-Chalxius 1.0.3 — Research Route Coordination Repair
+Chalxius 1.0.4 — Frontier Context Handoff Repair
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.3 runtime coordinates Campaign working memory, asynchronous Fact route
+The 1.0.4 runtime coordinates Campaign working memory, asynchronous Fact route
 selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
@@ -18,6 +18,9 @@ Research graph; the separate recent queue uses 64 only as a high-water guard.
 Routine summaries preview four recent items and eight landmarks, retaining
 exact total counts, identity digests, and full diagnostic access so no preview
 becomes a silent first-N selection. Installation does not rewrite frozen project data.
+When one `plan-round` handoff uniquely replaces a head, its attached contexts
+follow that successor. Ambiguous multi-successor handoffs remain visibly
+unattached, and a later concrete attachment absorbs an older unattached copy.
 
 After context compaction or a real handoff, Main makes one compact maintenance
 judgment: rehydrate exact Campaign/Target, frontier, round, agent, return, and
@@ -25,7 +28,10 @@ CHX state; finish visible handoffs without duplication; reconcile rigid
 Research COW/split lineage; curate recent attainment and sparse landmarks;
 step back across ancient landmarks and recent attainment to test the current
 route and active heads against the Campaign objective; choose the next Research
-cut after bounded exact search; consider but never force a Fact window; and
+cut after bounded exact search; inspect the Fact frontier; increment the
+explicit `Fact window clock: n/4` only for this host-reported compaction; and at
+`4/4` assign one packager window of one or two packages to the first suitable
+available slot unless user-requested Fact deferral is active; and
 record only genuine operational architecture failures as CHX. Four and eight
 are only summary previews, 64 protects only recent attainment, sparse landmarks
 have no count quota, and free agent slots are opportunities rather than quotas.
@@ -35,7 +41,12 @@ rehydration, global rereading, and landmark curation; it is not the search clock
 Every material match is placed durably as exact context of an active head or is
 promoted by Main to an active head, never left only in chat or temporary prose.
 Post-compaction search uses the same placement rule; only search/reread scope is
-broader.
+broader. Carry the exact clock value in every context-handoff summary and reset
+it to `0/4` only after a packager window completes. At `4/4`, explicit user
+deferral prevents dispatch and is preserved as `4/4 deferred` until lifted.
+Elapsed time, ordinary turns, reconnects, and non-compaction handoffs do not
+increment it. This is not a timer, daemon, automatic scheduler, truth gate, or
+slot quota; the packager still chooses the route.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research

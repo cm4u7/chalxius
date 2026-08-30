@@ -3,7 +3,16 @@
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5
-> adaptation; the 1.0.3 override is authoritative for prospective work.
+> adaptation; the 1.0.4 override is authoritative for prospective work.
+
+> **1.0.4 coordination override.** A unique planned active-head successor
+> inherits exact head context; split ambiguity remains unattached. Context
+> handoff always includes Fact-frontier inspection. Main carries `Fact window
+> clock: n/4`, increments it only on an explicit host compaction, resets it
+> after a completed packager window, and dispatches one small window at `4/4`.
+> User deferral preserves `4/4 deferred` until lifted. This is a compact Main
+> recovery instruction, not a timer, daemon, automatic scheduler, or Fact
+> authority.
 
 > **1.0.3 Fact Alpha override.** The preceding Candidate sentence describes
 > frozen 0.x authority only. New certification starts from exact immutable
@@ -21,7 +30,7 @@
 > explicitly selected 0.x completion/audit. The runtime does not authenticate
 > pre-1.0 provenance, and this policy adds no provenance or identity gate.
 
-> **Frozen-history boundary.** Except for the 1.0.3 override immediately above,
+> **Frozen-history boundary.** Except for the 1.0.4 and 1.0.3 overrides above,
 > the remaining protocol is frozen versioned history. Later occurrences of
 > “current”, “prospective”, Candidate, or adverse describe the named older
 > contract and are not instructions for new 1.0.x Fact work.
