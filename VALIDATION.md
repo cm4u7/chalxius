@@ -96,8 +96,10 @@ second lifecycle, project effect, or truth effect.
 
 ## Publication boundary
 
-The prepared annotated tag is `v1.0.5`; the release endpoint is
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. The exact remote commit,
-time, and asset confirmation are recorded on `main` after publication.
+The `v1.0.5` annotated tag resolves to
+`bb9f552180ac740740e3ef328cf64464ec298be9`. GitHub published the release at
+`2026-08-30T17:22:54Z`:
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. Both uploaded asset
+sizes and GitHub SHA-256 digests exactly match the frozen archive and sidecar.
 Installation, validation, CHX/PHX settlement, and publication create no Research
 or Fact authority.

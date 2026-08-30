@@ -86,7 +86,7 @@ shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
 ```
 
-Version 1.0.5 is prepared for publication at
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. The exact published
-commit and time are recorded on `main` after remote publication. Publication
-creates no mathematical Fact.
+Version 1.0.5 was published on 2026-08-31 at
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. The annotated tag
+resolves to release commit `bb9f552180ac740740e3ef328cf64464ec298be9`.
+Publication creates no mathematical Fact.
