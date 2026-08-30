@@ -114,6 +114,10 @@ a CHX defect.
 
 ## Publication boundary
 
-The release archive and metadata are prepared locally. No remote push, tag, or
-external publication is claimed here. Installation, validation, CHX settlement,
-and release preparation create no Research or Fact authority.
+The `v1.0.3` annotated tag and release commit
+`baa4eea8b517e5fa5301a70e81ee798da6ff08df` were pushed to
+`https://github.com/cm4u7/chalxius`. The public release is
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.3>. GitHub reports the two
+uploaded asset digests as the same archive and checksum identities recorded
+above. Installation, validation, CHX settlement, and publication create no
+Research or Fact authority.

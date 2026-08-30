@@ -107,5 +107,7 @@ shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
 ```
 
-This document prepares the v1.0.3 release. It does not by itself claim a remote
-push, tag, or publication, and it creates no mathematical Fact.
+Version 1.0.3 was published on 2026-08-30 at
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.3>. The annotated tag
+resolves to release commit `baa4eea8b517e5fa5301a70e81ee798da6ff08df`.
+Publication creates no mathematical Fact.
