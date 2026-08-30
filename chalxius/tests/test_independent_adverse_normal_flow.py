@@ -20,6 +20,8 @@ from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.markdown import validate_fact_round_trip
 from mathgraph.model import Fact
 from mathgraph.protocol import normalize_host_task_scope_id
+from mathgraph.roles import allowed_commands
+from mathgraph.runtime_archive import validate_runtime_binding
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
@@ -132,7 +134,6 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                 "limitations": "This remains nontruth Research, not certification.",
             },
             "artifacts": [],
-            "attack_learning": None,
             "obligation_dispositions": [
                 {
                     "obligation_id": item["obligation_id"],
@@ -153,6 +154,8 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                 "program_math_alignments": [],
             },
         }
+        if "adverse_routing" in card:
+            payload["attack_learning"] = None
         return_path = store.root / card["return_contract"]["return_relpath"]
         return_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -160,7 +163,343 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
         )
         return sha256_bytes(return_path.read_bytes())
 
-    def test_philosophy_primary_gets_distinct_rule_bound_adverse_pair(self) -> None:
+    @staticmethod
+    def _frozen_102_runtime_binding(current: dict) -> dict:
+        """Freeze a coherent 1.0.2 decoder identity without a host dependency."""
+
+        binding = deepcopy(current)
+        binding["skill_version"] = "1.0.2"
+        binding["version_file_sha256"] = sha256_bytes(b"1.0.2\n")
+        content_semantic = {
+            "schema_version": 1,
+            "skill_version": binding["skill_version"],
+            "version_file_sha256": binding["version_file_sha256"],
+            "manifest_file_sha256": binding["manifest_file_sha256"],
+        }
+        binding["runtime_content_sha256"] = sha256_json(content_semantic)
+        archive_root = Path(binding["historical_archive_root"])
+        binding["historical_archive_root"] = str(
+            archive_root.parent / binding["runtime_content_sha256"]
+        )
+        semantic = {
+            key: value
+            for key, value in binding.items()
+            if key != "runtime_identity_sha256"
+        }
+        binding["runtime_identity_sha256"] = sha256_json(semantic)
+        return validate_runtime_binding(binding)
+
+    def _freeze_legacy_102_paired_round(
+        self,
+        store: MathGraphStore,
+        research: dict,
+    ) -> tuple[str, dict, dict]:
+        """Build frozen legacy bytes without invoking prospective pair allocation."""
+
+        lifecycle = store.v5_lifecycle()
+        primary_status = lifecycle.create_round(
+            workers=1,
+            mode="prove",
+            research_ids=[research["research_id"]],
+            host_task_scope_id="frozen-102-pair",
+        )
+        refute_status = lifecycle.create_round(
+            workers=1,
+            mode="refute",
+            research_ids=[research["research_id"]],
+            host_task_scope_id="frozen-102-refute-template",
+        )
+        round_id = primary_status["round_id"]
+        round_dir = store.rounds_dir / round_id
+        manifest_path = round_dir / "round.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        primary_assignment = deepcopy(manifest["assignments"][0])
+        primary_assignment_id = primary_assignment["assignment_id"]
+        adverse_assignment_id = f"a02-{research['research_id']}-refute"
+        handoff = build_paired_proof_philosophy_attack_handoff(
+            research_id=research["research_id"],
+            round_id=round_id,
+            primary_assignment_id=primary_assignment_id,
+            adverse_assignment_id=adverse_assignment_id,
+        )
+
+        primary_card_path = store.root / primary_assignment["task_card_relpath"]
+        primary_card = json.loads(primary_card_path.read_text(encoding="utf-8"))
+        runtime_binding = self._frozen_102_runtime_binding(
+            primary_card["runtime_binding"]
+        )
+        primary_card["runtime_binding"] = runtime_binding
+        primary_card["context_selection"]["mode"] = (
+            lifecycle._legacy_mode_selection(
+                research,
+                requested_mode="prove",
+                index=0,
+                adverse_routing_enabled=True,
+            )
+        )
+        primary_card["context_selection"]["context_selection_sha256"] = (
+            sha256_json(
+                {
+                    key: value
+                    for key, value in primary_card[
+                        "context_selection"
+                    ].items()
+                    if key != "context_selection_sha256"
+                }
+            )
+        )
+        primary_card["control_plane"]["worker_context_id"] = handoff[
+            "primary_binding"
+        ]["worker_context_id"]
+        primary_card["control_plane"]["independent_adverse_pair"] = handoff[
+            "primary_binding"
+        ]
+        primary_semantic = {
+            key: value
+            for key, value in primary_card.items()
+            if key != "task_card_semantic_sha256"
+        }
+        primary_card["task_card_semantic_sha256"] = sha256_json(
+            primary_semantic
+        )
+
+        refute_round_dir = store.rounds_dir / refute_status["round_id"]
+        refute_manifest = json.loads(
+            (refute_round_dir / "round.json").read_text(encoding="utf-8")
+        )
+        refute_assignment = refute_manifest["assignments"][0]
+        adverse_card = json.loads(
+            (
+                refute_round_dir
+                / "task-cards"
+                / f"{refute_assignment['assignment_id']}.json"
+            ).read_text(encoding="utf-8")
+        )
+        adverse_card["runtime_binding"] = runtime_binding
+        adverse_card["context_selection"]["mode"] = (
+            lifecycle._legacy_mode_selection(
+                research,
+                requested_mode="refute",
+                index=1,
+                adverse_routing_enabled=True,
+            )
+        )
+        adverse_card["context_selection"]["context_selection_sha256"] = (
+            sha256_json(
+                {
+                    key: value
+                    for key, value in adverse_card[
+                        "context_selection"
+                    ].items()
+                    if key != "context_selection_sha256"
+                }
+            )
+        )
+        adverse_card["round_id"] = round_id
+        adverse_card["assignment_id"] = adverse_assignment_id
+        adverse_card["worker_id"] = adverse_assignment_id
+        adverse_card["control_plane"].update(
+            {
+                "prompt_relpath": (
+                    f"rounds/{round_id}/assignments/"
+                    f"{adverse_assignment_id}.md"
+                ),
+                "host_task_scope_id": manifest["host_task_scope_id"],
+                "worker_context_id": handoff["adverse_binding"][
+                    "worker_context_id"
+                ],
+                "assignment_role": "paired_adverse",
+                "independent_adverse_pair": handoff["adverse_binding"],
+            }
+        )
+        adverse_card["artifact_capability"].update(
+            {
+                "artifact_dir_relpath": (
+                    f"rounds/{round_id}/artifacts/{adverse_assignment_id}"
+                ),
+                "work_dir_relpath": (
+                    f"rounds/{round_id}/work/{adverse_assignment_id}"
+                ),
+            }
+        )
+        adverse_card["return_contract"]["return_relpath"] = (
+            f"rounds/{round_id}/returns/{adverse_assignment_id}.json"
+        )
+        routes = store.adverse_routes()
+        self.assertFalse(routes.root.exists())
+        # Reconstruct only the immutable historical card projection.  The
+        # retired state materializer is intercepted so fixture construction
+        # cannot re-enable the prospective learning plane.
+        with patch.object(routes, "_materialize_state", return_value=None):
+            adverse_binding = routes.task_card_binding(
+                entry=research,
+                work_mode="refute",
+                related_artifacts=adverse_card["mathematical_state"][
+                    "related_artifacts"
+                ],
+            )
+        self.assertIsNotNone(adverse_binding)
+        adverse_card["adverse_routing"] = adverse_binding
+        adverse_semantic = {
+            key: value
+            for key, value in adverse_card.items()
+            if key != "task_card_semantic_sha256"
+        }
+        adverse_card["task_card_semantic_sha256"] = sha256_json(
+            adverse_semantic
+        )
+
+        def publish_card_and_prompt(card: dict, path: Path) -> tuple[str, str]:
+            path.write_text(
+                json.dumps(card, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n",
+                encoding="utf-8",
+            )
+            task_card_sha256 = sha256_bytes(path.read_bytes())
+            prompt_path = store.root / card["control_plane"]["prompt_relpath"]
+            prompt_path.write_text(
+                lifecycle._compact_prompt(
+                    card=card,
+                    task_card_sha256=task_card_sha256,
+                ),
+                encoding="utf-8",
+            )
+            return task_card_sha256, sha256_bytes(prompt_path.read_bytes())
+
+        primary_task_sha, primary_prompt_sha = publish_card_and_prompt(
+            primary_card,
+            primary_card_path,
+        )
+        adverse_card_path = round_dir / "task-cards" / (
+            f"{adverse_assignment_id}.json"
+        )
+        adverse_task_sha, adverse_prompt_sha = publish_card_and_prompt(
+            adverse_card,
+            adverse_card_path,
+        )
+
+        primary_assignment.update(
+            {
+                "task_card_sha256": primary_task_sha,
+                "prompt_sha256": primary_prompt_sha,
+                "worker_context_id": handoff["primary_binding"][
+                    "worker_context_id"
+                ],
+                "independent_adverse_pair": handoff["primary_binding"],
+            }
+        )
+        primary_assignment["writer_lease_id"] = lifecycle._writer_lease_id(
+            round_id=round_id,
+            assignment_id=primary_assignment_id,
+            task_card_sha256=primary_task_sha,
+            worker_context_id=primary_assignment["worker_context_id"],
+            host_task_scope_id=manifest["host_task_scope_id"],
+        )
+        primary_assignment["assignment_sha256"] = sha256_json(
+            {
+                key: value
+                for key, value in primary_assignment.items()
+                if key != "assignment_sha256"
+            }
+        )
+
+        adverse_assignment = deepcopy(refute_assignment)
+        adverse_assignment.update(
+            {
+                "assignment_id": adverse_assignment_id,
+                "research_id": research["research_id"],
+                "worker_id": adverse_assignment_id,
+                "work_mode": "refute",
+                "prompt_relpath": adverse_card["control_plane"][
+                    "prompt_relpath"
+                ],
+                "prompt_sha256": adverse_prompt_sha,
+                "task_card_relpath": (
+                    f"rounds/{round_id}/task-cards/"
+                    f"{adverse_assignment_id}.json"
+                ),
+                "task_card_sha256": adverse_task_sha,
+                "return_relpath": adverse_card["return_contract"][
+                    "return_relpath"
+                ],
+                "artifact_dir_relpath": adverse_card[
+                    "artifact_capability"
+                ]["artifact_dir_relpath"],
+                "work_dir_relpath": adverse_card["artifact_capability"][
+                    "work_dir_relpath"
+                ],
+                "blackboard_snapshot_id": manifest[
+                    "blackboard_snapshot_id"
+                ],
+                "blackboard_snapshot_sha256": manifest[
+                    "blackboard_snapshot_sha256"
+                ],
+                "host_task_scope_id": manifest["host_task_scope_id"],
+                "worker_context_id": handoff["adverse_binding"][
+                    "worker_context_id"
+                ],
+                "assignment_role": "paired_adverse",
+                "independent_adverse_pair": handoff["adverse_binding"],
+            }
+        )
+        adverse_assignment["writer_lease_id"] = lifecycle._writer_lease_id(
+            round_id=round_id,
+            assignment_id=adverse_assignment_id,
+            task_card_sha256=adverse_task_sha,
+            worker_context_id=adverse_assignment["worker_context_id"],
+            host_task_scope_id=manifest["host_task_scope_id"],
+        )
+        adverse_assignment["assignment_sha256"] = sha256_json(
+            {
+                key: value
+                for key, value in adverse_assignment.items()
+                if key != "assignment_sha256"
+            }
+        )
+        for assignment in (primary_assignment, adverse_assignment):
+            sidecar_path = (
+                round_dir
+                / "assignments"
+                / f"{assignment['assignment_id']}.json"
+            )
+            sidecar_path.write_text(
+                json.dumps(
+                    assignment,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        (round_dir / "artifacts" / adverse_assignment_id).mkdir()
+        (round_dir / "work" / adverse_assignment_id).mkdir()
+        manifest["independent_adverse_pairs"] = [handoff["pair"]]
+        manifest["assignments"] = [
+            primary_assignment,
+            adverse_assignment,
+        ]
+        manifest["manifest_sha256"] = sha256_json(
+            {
+                key: value
+                for key, value in manifest.items()
+                if key != "manifest_sha256"
+            }
+        )
+        manifest_path.write_text(
+            json.dumps(
+                manifest,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        self.assertFalse(routes.root.exists())
+        return round_id, handoff, adverse_card
+
+    def test_current_philosophy_production_does_not_allocate_adverse_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "v5", "paired-philosophy")
             research = self._research(store, domain="philosophy")
@@ -172,32 +511,18 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             )
             primary, adverse = self._roles(planned)
             self.assertEqual(planned["primary_worker_count"], 1)
-            self.assertEqual((len(primary), len(adverse)), (1, 1))
-            self.assertEqual(len(planned["independent_adverse_pairs"]), 1)
-            self.assertEqual(primary[0]["research_id"], adverse[0]["research_id"])
-            self.assertNotEqual(primary[0]["worker_id"], adverse[0]["worker_id"])
-            self.assertNotEqual(
-                primary[0]["worker_context_id"],
-                adverse[0]["worker_context_id"],
+            self.assertEqual((len(primary), len(adverse)), (1, 0))
+            self.assertEqual(planned["independent_adverse_pairs"], [])
+            primary_card = json.loads(
+                Path(primary[0]["task_card_path"]).read_text(encoding="utf-8")
             )
-            adverse_card = json.loads(
-                Path(adverse[0]["task_card_path"]).read_text(encoding="utf-8")
+            self.assertEqual(primary_card["work_mode"], "prove")
+            self.assertIsNone(
+                primary_card["control_plane"]["independent_adverse_pair"]
             )
-            self.assertEqual(adverse_card["work_mode"], "refute")
-            self.assertTrue(
-                adverse_card["control_plane"]["independent_adverse_pair"][
-                    "shared_context_forbidden"
-                ]
-            )
-            rule_ids = {
-                item["rule_id"]
-                for item in adverse_card["adverse_routing"]["baseline_rules"]
-            }
-            self.assertIn(
-                "baseline_philosophy_plain_language_substitution", rule_ids
-            )
+            self.assertNotIn("adverse_routing", primary_card)
 
-    def test_math_proof_uses_same_pair_without_philosophy_stance_rules(self) -> None:
+    def test_current_math_production_does_not_allocate_adverse_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "v5", "paired-math")
             research = self._research(store, domain="mathematics")
@@ -206,22 +531,16 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                 mode="prove",
                 research_ids=[research["research_id"]],
             )
-            _, adverse = self._roles(planned)
-            self.assertEqual(len(adverse), 1)
+            primary, adverse = self._roles(planned)
+            self.assertEqual((len(primary), len(adverse)), (1, 0))
+            self.assertEqual(planned["independent_adverse_pairs"], [])
             card = json.loads(
-                Path(adverse[0]["task_card_path"]).read_text(encoding="utf-8")
+                Path(primary[0]["task_card_path"]).read_text(encoding="utf-8")
             )
-            rule_ids = {
-                item["rule_id"]
-                for item in card["adverse_routing"]["baseline_rules"]
-            }
-            self.assertNotIn(
-                "baseline_philosophy_plain_language_substitution", rule_ids
+            self.assertIsNone(
+                card["control_plane"]["independent_adverse_pair"]
             )
-            self.assertEqual(
-                card["adverse_routing"]["scope_evidence"]["domain_profile"],
-                "mathematics",
-            )
+            self.assertNotIn("adverse_routing", card)
 
     def test_false_predicate_and_existing_refute_or_challenge_do_not_double(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -319,58 +638,43 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                 "no_independent_adverse_dispatch_required_in_scope",
             )
 
-    def test_zero_attack_report_requires_complete_pair_return(self) -> None:
+    def test_frozen_102_paired_round_decodes_tamper_without_backfill(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            store = self._store(Path(temporary) / "v5", "paired-zero")
+            store = self._store(Path(temporary) / "v5", "frozen-102-pair")
             research = self._research(store)
-            planned = store.v5_lifecycle().create_round(
-                workers=1,
-                mode="prove",
-                research_ids=[research["research_id"]],
-                host_task_scope_id="zero-attack-scope",
+            round_id, handoff, adverse_card = (
+                self._freeze_legacy_102_paired_round(store, research)
             )
-            _, adverse = self._roles(planned)
-            pending = store.adverse_routes().report(
-                host_task_scope_id="zero-attack-scope"
-            )
-            self.assertEqual(pending["coverage_status"], "pending")
-            self.assertFalse(pending["scope_complete"])
-            self.assertEqual(pending["attacks"], [])
+            routes = store.adverse_routes()
+            self.assertFalse(routes.root.exists())
+            decoded = store.v5_lifecycle().round_status(round_id)
+            primary, adverse = self._roles(decoded)
+            self.assertEqual((len(primary), len(adverse)), (1, 1))
+            self.assertEqual(decoded["independent_adverse_pairs"], [handoff["pair"]])
             self.assertEqual(
-                pending["zero_attack_interpretation"],
-                "zero_cases_does_not_establish_completed_dispatch",
+                adverse_card["runtime_binding"]["skill_version"],
+                "1.0.2",
             )
+            self.assertIn("adverse_routing", adverse_card)
+            self.assertFalse(routes.root.exists())
 
-            final_sha = self._write_no_attack_return(store, adverse[0])
-            receipt = store.v5_lifecycle().ingest_return(
-                round_id=planned["round_id"],
-                assignment_id=adverse[0]["assignment_id"],
-                worker_final_sha256=final_sha,
+            tampered = deepcopy(adverse_card)
+            tampered["control_plane"]["independent_adverse_pair"][
+                "worker_context_id"
+            ] = handoff["primary_binding"]["worker_context_id"]
+            tampered["task_card_semantic_sha256"] = sha256_json(
+                {
+                    key: value
+                    for key, value in tampered.items()
+                    if key != "task_card_semantic_sha256"
+                }
             )
-            self.assertEqual(receipt["status"], "ingested")
-            complete = store.adverse_routes().report(
-                host_task_scope_id="zero-attack-scope"
-            )
-            self.assertEqual(
-                complete["coverage_status"],
-                "dispatched-no-surviving-attack",
-            )
-            self.assertTrue(complete["scope_complete"])
-            self.assertEqual(complete["attacks"], [])
-            self.assertEqual(len(complete["rounds"]), 1)
-            self.assertEqual(len(complete["cards"]), 2)
-            self.assertEqual(len(complete["returns"]), 2)
-
-            tampered = deepcopy(complete)
-            tampered["scope_complete"] = False
-            semantic = {
-                key: value
-                for key, value in tampered.items()
-                if key != "report_sha256"
-            }
-            tampered["report_sha256"] = sha256_json(semantic)
-            with self.assertRaisesRegex(ValueError, "completion projection"):
-                validate_host_scope_attack_report(tampered)
+            with self.assertRaisesRegex(ValueError, "pair binding drifted"):
+                store.v5_lifecycle().validate_task_card(
+                    tampered,
+                    historical_runtime=True,
+                )
+            self.assertFalse(routes.root.exists())
 
     def test_candidate_release_fails_before_expensive_work_without_fresh_adverse(
         self,
@@ -593,7 +897,7 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             # missing after an interrupted publication.
             Path(str(assignment["return_path"])).with_suffix(
                 ".receipt.json"
-            ).unlink()
+            ).unlink(missing_ok=True)
 
             payload = {
                 "schema_version": 5,
@@ -920,7 +1224,7 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
                         host_task_scope_id="candidate-adverse-active-retry",
                     )
 
-    def test_public_plan_round_keeps_refute_out_of_production(self) -> None:
+    def test_public_plan_round_keeps_refute_out_and_report_cli_retired(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"
             store = self._store(root, "paired-cli-normal-flow")
@@ -952,37 +1256,7 @@ class IndependentAdverseNormalFlowTests(unittest.TestCase):
             self.assertNotEqual(primary["work_mode"], "refute")
             prompt = Path(primary["prompt_path"]).read_text(encoding="utf-8")
             self.assertIn("This is Research subround 1", prompt)
-
-            code, report, error = self._cli(
-                root,
-                "main",
-                "attack-report",
-                "--host-task-scope-id",
-                planned["host_task_scope_id"],
-            )
-            self.assertEqual(code, 0, error)
-            self.assertIsInstance(report, dict)
-            assert report is not None
-            self.assertEqual(report["coverage_status"], "case-projection")
-            self.assertFalse(report["scope_complete"])
-            self.assertEqual(report["recommendations"], [])
-            self.assertNotIn("rounds", report)
-            self.assertNotIn("attacks", report)
-
-            code, full, error = self._cli(
-                root,
-                "main",
-                "attack-report",
-                "--host-task-scope-id",
-                planned["host_task_scope_id"],
-                "--full",
-            )
-            self.assertEqual(code, 0, error)
-            assert full is not None
-            self.assertEqual(len(full["rounds"]), 1)
-            self.assertEqual(len(full["assignments"]), 1)
-            self.assertEqual(len(full["cards"]), 1)
-            self.assertEqual(len(full["returns"]), 1)
+            self.assertNotIn("attack-report", allowed_commands("main"))
 
     def test_public_production_rejects_explicit_or_auto_refute(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

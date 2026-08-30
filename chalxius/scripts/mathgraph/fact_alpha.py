@@ -16,6 +16,7 @@ from .contracts import (
     validate_campaign_target_id,
     validate_memory_id,
 )
+from .research_split import validate_resolved_research_split_relations
 
 
 FACT_ALPHA_CONTRACT_REVISION = "chalxius-fact-alpha-1"
@@ -23,7 +24,8 @@ FACT_FRONTIER_MARK_REVISION = "chalxius-fact-frontier-mark-1"
 FACT_FRONTIER_DISPOSITION_REVISION = (
     "chalxius-fact-frontier-disposition-1"
 )
-FACT_PACKAGING_PLAN_REVISION = "chalxius-fact-packaging-plan-1"
+FACT_PACKAGING_PLAN_LEGACY_REVISION = "chalxius-fact-packaging-plan-1"
+FACT_PACKAGING_PLAN_REVISION = "chalxius-fact-packaging-plan-2"
 FACT_CANDIDATE_PACKAGE_REVISION = "chalxius-fact-candidate-package-1"
 FACT_VERIFIER_CAPSULE_REVISION = "chalxius-fact-verifier-capsule-1"
 FACT_CERTIFICATION_DECISION_REVISION = (
@@ -37,6 +39,9 @@ FACT_CERTIFICATION_ACCEPTANCE_REVISION = (
 )
 FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION = (
     "chalxius-supervised-statement-interfaces-1"
+)
+FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION_V2 = (
+    "chalxius-supervised-statement-interfaces-2"
 )
 FACT_SUPERVISED_INTERFACE_ARTIFACT_ROLE = "fact_statement_interfaces"
 
@@ -303,7 +308,7 @@ class FactAlphaManager:
             record["schema_version"] != 1
             or record["contract_revision"] != FACT_FRONTIER_MARK_REVISION
             or record["project_id"] != self.store.project_id()
-            or record["actor"] != "main"
+            or record["actor"] not in {"main", "fact-packager"}
             or record["truth_effect"] != "none"
         ):
             raise ValueError("Fact frontier mark identity is invalid")
@@ -407,14 +412,17 @@ class FactAlphaManager:
                 latest[record["mark_id"]] = record
         return latest
 
-    def mark(
+    def _new_mark_record(
         self,
         research_id: str,
         *,
         rationale: str,
-        campaign_id: str | None = None,
-        target_id: str | None = None,
+        campaign_id: str | None,
+        target_id: str | None,
+        actor: str,
     ) -> dict[str, Any]:
+        if actor not in {"main", "fact-packager"}:
+            raise ValueError("Fact frontier mark actor is invalid")
         research_id = validate_memory_id(research_id)
         rationale = _require_text(rationale, label="Fact frontier rationale")
         research = self.lifecycle._research_record(research_id)
@@ -441,20 +449,37 @@ class FactAlphaManager:
             "campaign_id": campaign_id,
             "target_id": target_id,
             "rationale": rationale,
-            "actor": "main",
+            "actor": actor,
             "created_at": _utc_now(),
             "truth_effect": "none",
         }
         mark_id = "fact-mark-" + sha256_json(semantic)
         record_without_hash = {**semantic, "mark_id": mark_id}
-        record = {
+        return {
             **record_without_hash,
             "record_sha256": sha256_json(record_without_hash),
         }
+
+    def mark(
+        self,
+        research_id: str,
+        *,
+        rationale: str,
+        campaign_id: str | None = None,
+        target_id: str | None = None,
+        actor: str = "main",
+    ) -> dict[str, Any]:
+        record = self._new_mark_record(
+            research_id,
+            rationale=rationale,
+            campaign_id=campaign_id,
+            target_id=target_id,
+            actor=actor,
+        )
         with self.store.v5_mutation_lock(command="fact-frontier-mark"):
             self._ensure_storage()
             self.store._write_json_once(
-                self.marks_dir / f"{mark_id}.json", record
+                self.marks_dir / f"{record['mark_id']}.json", record
             )
         return record
 
@@ -505,20 +530,28 @@ class FactAlphaManager:
 
     def _validate_plan(self, raw: dict[str, Any]) -> dict[str, Any]:
         path_stem = raw.pop("__path_stem__", None)
+        revision = raw.get("contract_revision")
+        plan_fields = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "selection",
+            "selection_sha256",
+            "planned_by",
+            "minor_repair_context",
+            "truth_effect",
+            "plan_id",
+            "record_sha256",
+        }
+        if revision == FACT_PACKAGING_PLAN_REVISION:
+            plan_fields.update(
+                {"selection_mode", "route_anchor_research_ids"}
+            )
+        elif revision != FACT_PACKAGING_PLAN_LEGACY_REVISION:
+            raise ValueError("Fact packaging plan contract revision is invalid")
         record = _require_exact_fields(
             raw,
-            {
-                "schema_version",
-                "contract_revision",
-                "project_id",
-                "selection",
-                "selection_sha256",
-                "planned_by",
-                "minor_repair_context",
-                "truth_effect",
-                "plan_id",
-                "record_sha256",
-            },
+            plan_fields,
             label="Fact packaging plan",
         )
         plan_id = _require_prefixed_sha_id(
@@ -644,11 +677,44 @@ class FactAlphaManager:
                 raise ValueError("Fact packaging supervision coverage is invalid")
         if len(current_ids) != len(set(current_ids)):
             raise ValueError("Fact packaging plan repeats a current Research node")
+        if revision == FACT_PACKAGING_PLAN_REVISION:
+            selection_mode = record["selection_mode"]
+            if selection_mode not in {
+                "existing_marks",
+                "direct_research_route",
+            }:
+                raise ValueError("Fact packaging selection mode is invalid")
+            route_anchors = _require_text_list(
+                record["route_anchor_research_ids"],
+                label="Fact packaging route anchor Research ids",
+                maximum=FACT_ALPHA_MAX_MARKS_PER_PLAN,
+            )
+            for research_id in route_anchors:
+                validate_memory_id(research_id)
+            if (
+                route_anchors != sorted(set(route_anchors))
+                or not set(route_anchors).issubset(current_ids)
+                or (
+                    selection_mode == "direct_research_route"
+                    and (
+                        record["planned_by"] != "fact-packager"
+                        or not route_anchors
+                    )
+                )
+                or (
+                    selection_mode == "existing_marks" and route_anchors
+                )
+            ):
+                raise ValueError("Fact packaging route anchors are invalid")
         if (
             record["schema_version"] != 1
-            or record["contract_revision"] != FACT_PACKAGING_PLAN_REVISION
+            or revision
+            not in {
+                FACT_PACKAGING_PLAN_LEGACY_REVISION,
+                FACT_PACKAGING_PLAN_REVISION,
+            }
             or record["project_id"] != self.store.project_id()
-            or record["planned_by"] != "main"
+            or record["planned_by"] not in {"main", "fact-packager"}
             or record["truth_effect"] != "none"
             or record["selection_sha256"] != sha256_json(selection)
         ):
@@ -810,21 +876,41 @@ class FactAlphaManager:
     def _validate_supervised_interface_artifact(
         self,
         value: Any,
+        *,
+        expected_split_commits: list[dict[str, Any]] | None = None,
     ) -> dict[str, dict[str, Any]]:
+        if not isinstance(value, dict):
+            raise ValueError(
+                "supervised statement-interface artifact must be one object"
+            )
+        revision = value.get("contract_revision")
+        base_fields = {
+            "schema_version",
+            "contract_revision",
+            "entries",
+            "truth_effect",
+        }
+        fields = (
+            base_fields
+            if revision == FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION
+            else base_fields | {"split_relation_reviews"}
+            if revision == FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION_V2
+            else set()
+        )
+        if not fields:
+            raise ValueError("supervised statement-interface identity is invalid")
         record = _require_exact_fields(
             value,
-            {
-                "schema_version",
-                "contract_revision",
-                "entries",
-                "truth_effect",
-            },
+            fields,
             label="supervised statement-interface artifact",
         )
         if (
             record["schema_version"] != 1
-            or record["contract_revision"]
-            != FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION
+            or revision
+            not in {
+                FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION,
+                FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION_V2,
+            }
             or record["truth_effect"] != "none"
         ):
             raise ValueError("supervised statement-interface identity is invalid")
@@ -886,6 +972,105 @@ class FactAlphaManager:
                 "rationale": rationale,
                 "statement_interface": statement_interface,
             }
+        if revision == FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION:
+            if expected_split_commits:
+                raise ValueError(
+                    "split-batch supervision must include structured relation reviews"
+                )
+            return interfaces
+
+        raw_reviews = record["split_relation_reviews"]
+        if (
+            not isinstance(raw_reviews, list)
+            or not raw_reviews
+            or len(raw_reviews) > FACT_ALPHA_MAX_COMPONENTS
+        ):
+            raise ValueError("split relation reviews are invalid")
+        expected_by_batch = {
+            commit["batch_id"]: commit
+            for commit in (expected_split_commits or [])
+        }
+        reviewed_batches: set[str] = set()
+        for index, raw_review in enumerate(raw_reviews, 1):
+            review = _require_exact_fields(
+                raw_review,
+                {
+                    "schema_version",
+                    "batch_id",
+                    "proposed_relations_sha256",
+                    "final_relations",
+                    "final_relations_sha256",
+                    "completeness_rationale",
+                    "truth_effect",
+                },
+                label=f"split relation review {index}",
+            )
+            batch_id = _require_text(
+                review["batch_id"], label="split relation review batch id"
+            )
+            if batch_id in reviewed_batches:
+                raise ValueError("split relation review repeats a batch")
+            commit = expected_by_batch.get(batch_id)
+            if commit is None:
+                commit = self.lifecycle._validated_research_split_commit(
+                    batch_id
+                )
+            member_ids = {
+                item["research_id"] for item in commit["members"]
+            }
+            final_relations = validate_resolved_research_split_relations(
+                review["final_relations"], member_ids=member_ids
+            )
+            proposed_sha256 = commit.get(
+                "logical_relations_sha256", sha256_json([])
+            )
+            if (
+                review["schema_version"] != 1
+                or review["truth_effect"] != "none"
+                or review["proposed_relations_sha256"] != proposed_sha256
+                or review["final_relations"] != final_relations
+                or review["final_relations_sha256"]
+                != sha256_json(final_relations)
+            ):
+                raise ValueError("split relation review binding drifted")
+            _require_text(
+                review["completeness_rationale"],
+                label="split relation review completeness rationale",
+            )
+            for relation in final_relations:
+                if relation["target_scope"] == "external_research":
+                    self.lifecycle._research_record(
+                        relation["to_research_id"]
+                    )
+            proof_predecessors: dict[str, set[str]] = {
+                research_id: set() for research_id in member_ids
+            }
+            for relation in final_relations:
+                if relation["relation_type"] == "proof_dependency":
+                    proof_predecessors[relation["from_research_id"]].add(
+                        relation["to_research_id"]
+                    )
+            for research_id in member_ids:
+                interface = interfaces.get(research_id)
+                if interface is None or interface["disposition"] != "ready":
+                    continue
+                actual = set(
+                    interface["statement_interface"][
+                        "certified_predecessor_research_ids"
+                    ]
+                )
+                if actual != proof_predecessors[research_id]:
+                    raise ValueError(
+                        "split relation review proof dependencies do not match "
+                        "the final statement interfaces"
+                    )
+            reviewed_batches.add(batch_id)
+        if expected_split_commits is not None and reviewed_batches != set(
+            expected_by_batch
+        ):
+            raise ValueError(
+                "split relation reviews must cover every committed split batch"
+            )
         return interfaces
 
     def _supervised_interface_projection(
@@ -897,7 +1082,17 @@ class FactAlphaManager:
         candidates: list[dict[str, Any]] = []
         invalid_bindings: list[dict[str, str]] = []
         for scope in coverage:
-            if scope.get("state") != "completed":
+            # Fact statement interfaces are mathematical calling surfaces.
+            # Source-scope review may attest external identity, extraction,
+            # literal hypotheses and coverage, but it cannot choose the
+            # conclusion or its certified proof predecessors.  A dual-scope
+            # round therefore remains one reviewer session with two distinct
+            # authorities; only its exact proof_logic assignment can publish
+            # this interface.
+            if (
+                scope.get("state") != "completed"
+                or scope.get("scope") != "proof_logic"
+            ):
                 continue
             result_ids = scope.get("result_research_ids", [])
             if not isinstance(result_ids, list):
@@ -910,6 +1105,24 @@ class FactAlphaManager:
                         {
                             "result_research_id": str(result_id),
                             "reason": str(exc),
+                        }
+                    )
+                    continue
+                supervision_binding = result.get("metadata", {}).get(
+                    "research_supervision"
+                )
+                if (
+                    not isinstance(supervision_binding, dict)
+                    or supervision_binding.get("supervisor_scope")
+                    != "proof_logic"
+                ):
+                    invalid_bindings.append(
+                        {
+                            "result_research_id": str(result_id),
+                            "reason": (
+                                "Fact statement interface lacks exact proof_logic "
+                                "supervision provenance"
+                            ),
                         }
                     )
                     continue
@@ -1139,10 +1352,10 @@ class FactAlphaManager:
                 stack.extend(sorted(adjacency[current].difference(component)))
             remaining.difference_update(component)
             components.append(sorted(component))
-        payload = {
+        proposal = {
             "schema_version": 1,
             "plan_id": plan["plan_id"],
-            "packager": "mechanical-supervision-interface-projection",
+            "packager": "fact-packager",
             "components": [
                 {
                     "component_key": "supervised-interface-"
@@ -1161,25 +1374,15 @@ class FactAlphaManager:
             ],
             "blocked_entries": [],
         }
-        try:
-            package = self.seal_package(payload)
-        except (KeyError, OSError, ValueError) as exc:
-            return {
-                "state": "mechanical_seal_blocked",
-                "package": None,
-                "unavailable": [],
-                "reason": str(exc),
-                "source_bindings_sha256": sha256_json(
-                    [
-                        binding
-                        for item in prepared.values()
-                        for binding in item["source_bindings"]
-                    ]
-                ),
-            }
         return {
-            "state": "mechanically_sealed",
-            "package": package,
+            # The proof supervisor provides a strong deterministic default,
+            # but package selection belongs to the Fact packager.  Returning
+            # a proposal instead of writing the one immutable package slot
+            # lets the packager accept it or submit a different nontruth
+            # interface for the verifier to check in full.
+            "state": "mechanical_proposal_ready",
+            "package": None,
+            "proposal": proposal,
             "unavailable": [],
             "source_bindings_sha256": sha256_json(
                 [
@@ -1546,10 +1749,15 @@ class FactAlphaManager:
         ) = self.lifecycle._frontier_structural_state_for_inspection(
             records, inspection
         )
-        repair_children = self.lifecycle._frontier_cow_repair_children_index(
-            bases=bases,
-            route_staleness=route_staleness,
-        )
+        projection = inspection.frontier_cow_route_projection
+        if projection is None:
+            projection = self.lifecycle._frontier_cow_route_projection(
+                bases=bases,
+                route_staleness=route_staleness,
+            )
+            inspection.frontier_cow_route_projection = projection
+        repair_children = projection["route_children"]
+        inspection.frontier_cow_repair_children = repair_children
         return bases, dispositions, route_staleness, repair_children
 
     def _terminal_for(
@@ -1567,6 +1775,261 @@ class FactAlphaManager:
             repair_children=repair_children,
         )
         return result.get(research_id)
+
+    def _reachable_committed_split_batches(
+        self,
+        research_id: str,
+        *,
+        bases: dict[str, dict[str, Any]],
+        repair_children: dict[str, tuple[str, ...]],
+        inspection: Any,
+    ) -> list[dict[str, Any]]:
+        """Expose exact committed split members from one remembered route.
+
+        A Main mark or Campaign landmark is an attention entry, not a request
+        to choose one child.  When its rigid COW route reaches a committed
+        split, the narrow Fact-packager role must be able to see the complete
+        batch without Main copying every member into a second memory surface.
+        This projection does not select a member or grant Fact authority.
+        """
+
+        reachable_route_ids = {research_id}
+        route_queue = [research_id]
+        while route_queue:
+            route_id = route_queue.pop(0)
+            for child_id in repair_children.get(route_id, ()):
+                if child_id not in reachable_route_ids:
+                    reachable_route_ids.add(child_id)
+                    route_queue.append(child_id)
+        cow_projection = inspection.frontier_cow_route_projection or {}
+        split_batches: list[dict[str, Any]] = []
+        for repair_id, detail in sorted(
+            cow_projection.get("details", {}).items()
+        ):
+            member_ids = detail.get("split_member_research_ids", [])
+            if (
+                detail.get("state") != "committed_split_members"
+                or not isinstance(member_ids, list)
+            ):
+                continue
+            owner_id = detail.get("split_owner_research_id")
+            if (
+                repair_id not in reachable_route_ids
+                and owner_id not in reachable_route_ids
+            ):
+                continue
+            owner = (
+                bases.get(owner_id) if isinstance(owner_id, str) else None
+            )
+            owner_binding = (
+                owner.get("metadata", {}).get("research_split_owner")
+                if isinstance(owner, dict)
+                else None
+            )
+            normalized_member_ids = sorted(member_ids)
+            split_batches.append(
+                {
+                    "repair_research_id": repair_id,
+                    "split_owner_research_id": owner_id,
+                    "split_batch_id": (
+                        owner_binding.get("batch_id")
+                        if isinstance(owner_binding, dict)
+                        else None
+                    ),
+                    "member_research_ids": normalized_member_ids,
+                    "member_count": len(normalized_member_ids),
+                    "member_ids_sha256": sha256_json(
+                        normalized_member_ids
+                    ),
+                }
+            )
+        return split_batches
+
+    @staticmethod
+    def _exact_committed_split_batch_for_route(
+        research_id: str,
+        *,
+        split_batches: list[dict[str, Any]],
+        repair_children: dict[str, tuple[str, ...]],
+    ) -> dict[str, Any] | None:
+        """Recognize when one committed split is the route's only branch."""
+
+        if len(split_batches) != 1:
+            return None
+        batch = split_batches[0]
+        repair_id = batch["repair_research_id"]
+        owner_id = batch["split_owner_research_id"]
+        member_ids = tuple(batch["member_research_ids"])
+
+        def unique_prefix_reaches(target_id: str) -> bool:
+            current_id = research_id
+            prefix_seen: set[str] = set()
+            while current_id != target_id:
+                if current_id in prefix_seen:
+                    return False
+                prefix_seen.add(current_id)
+                children = repair_children.get(current_id, ())
+                if len(children) != 1:
+                    return False
+                current_id = children[0]
+            return True
+
+        branch_ids = [repair_id]
+        if isinstance(owner_id, str):
+            branch_ids.append(owner_id)
+        branch_id = next(
+            (
+                candidate_id
+                for candidate_id in branch_ids
+                if unique_prefix_reaches(candidate_id)
+            ),
+            None,
+        )
+        if branch_id is None or set(
+            repair_children.get(branch_id, ())
+        ) != set(member_ids):
+            return None
+        # Every member may continue through a unique COW chain, but another
+        # unresolved branch would require Main to choose and must not be
+        # hidden behind the already committed split.
+        for member_id in member_ids:
+            current_id = member_id
+            member_seen: set[str] = set()
+            while repair_children.get(current_id, ()):
+                if current_id in member_seen:
+                    return None
+                member_seen.add(current_id)
+                children = repair_children[current_id]
+                if len(children) != 1:
+                    return None
+                current_id = children[0]
+        return batch
+
+    def _candidate_cow_route_projection(
+        self,
+        research_id: str,
+        *,
+        repair_children: dict[str, tuple[str, ...]],
+        bases: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Give the Fact packager a bounded view of one exact COW corridor."""
+
+        candidate_paths: list[list[str]] = []
+        candidate_path_details: list[dict[str, Any]] = []
+        pending_paths: list[list[str]] = [[research_id]]
+        path_preview_was_cut = False
+        while pending_paths and len(candidate_paths) < 8:
+            path = pending_paths.pop(0)
+            children = repair_children.get(path[-1], ())
+            if not children:
+                candidate_paths.append(path)
+                candidate_path_details.append(
+                    {
+                        "path_research_ids": path,
+                        "endpoint_state": "terminal",
+                    }
+                )
+                continue
+            for child_id in children:
+                next_path = [*path, child_id]
+                if child_id in path:
+                    if len(candidate_paths) < 8:
+                        candidate_paths.append(next_path)
+                        candidate_path_details.append(
+                            {
+                                "path_research_ids": next_path,
+                                "endpoint_state": "cycle_cut",
+                            }
+                        )
+                    path_preview_was_cut = True
+                elif len(path) >= 32:
+                    if len(candidate_paths) < 8:
+                        candidate_paths.append(next_path)
+                        candidate_path_details.append(
+                            {
+                                "path_research_ids": next_path,
+                                "endpoint_state": "depth_cut",
+                            }
+                        )
+                    path_preview_was_cut = True
+                else:
+                    pending_paths.append(next_path)
+
+        reachable = {research_id}
+        queue = [research_id]
+        while queue:
+            current_id = queue.pop(0)
+            for child_id in repair_children.get(current_id, ()):
+                if child_id not in reachable:
+                    reachable.add(child_id)
+                    queue.append(child_id)
+        terminal_ids = sorted(
+            research_node_id
+            for research_node_id in reachable
+            if not repair_children.get(research_node_id, ())
+        )
+        terminal_bindings: list[dict[str, Any]] = []
+        for terminal_id in terminal_ids[:FACT_ALPHA_MAX_MARKS_PER_PLAN]:
+            record = bases.get(terminal_id)
+            if not isinstance(record, dict):
+                continue
+            terminal_bindings.append(
+                {
+                    "research_id": terminal_id,
+                    "research_record_sha256": record.get("record_sha256"),
+                    "research_relpath": self.lifecycle._research_path(
+                        terminal_id
+                    ).relative_to(self.store.root).as_posix(),
+                }
+            )
+        terminal_summaries: list[dict[str, Any]] = []
+        for binding in terminal_bindings[:8]:
+            terminal_id = binding["research_id"]
+            record = bases[terminal_id]
+            claim = record.get("claim")
+            rationale = record.get("rationale")
+            terminal_summaries.append(
+                {
+                    **binding,
+                    "kind": record.get("kind"),
+                    "status": record.get("status"),
+                    "relation": record.get("relation"),
+                    "claim": (
+                        claim
+                        if not isinstance(claim, str) or len(claim) <= 480
+                        else claim[:477] + "..."
+                    ),
+                    "rationale": (
+                        rationale
+                        if not isinstance(rationale, str)
+                        or len(rationale) <= 320
+                        else rationale[:317] + "..."
+                    ),
+                }
+            )
+        return {
+            "candidate_cow_paths": candidate_paths,
+            "candidate_cow_path_details": candidate_path_details,
+            "candidate_cow_paths_are_bounded_preview": True,
+            "candidate_cow_paths_shown_count": len(candidate_paths),
+            "candidate_cow_paths_truncated": (
+                bool(pending_paths) or path_preview_was_cut
+            ),
+            "candidate_terminal_research_ids": terminal_ids[
+                :FACT_ALPHA_MAX_MARKS_PER_PLAN
+            ],
+            "candidate_terminal_bindings": terminal_bindings,
+            "candidate_terminal_bindings_are_bounded_projection": (
+                len(terminal_ids) > FACT_ALPHA_MAX_MARKS_PER_PLAN
+            ),
+            "candidate_terminal_summaries": terminal_summaries,
+            "candidate_terminal_summaries_are_bounded_preview": True,
+            "candidate_terminal_count": len(terminal_ids),
+            "candidate_terminal_ids_sha256": sha256_json(terminal_ids),
+            "candidate_terminal_ids_are_bounded_projection": (
+                len(terminal_ids) > FACT_ALPHA_MAX_MARKS_PER_PLAN
+            ),
+        }
 
     def _grant_projection(
         self,
@@ -1757,6 +2220,7 @@ class FactAlphaManager:
         plan_by_research = {
             item["current_research_id"]: item for item in plan["selection"]
         }
+        route_anchor_ids = set(plan.get("route_anchor_research_ids", []))
         components = record["components"]
         if (
             not isinstance(components, list)
@@ -1930,6 +2394,11 @@ class FactAlphaManager:
                 raise ValueError(
                     "Fact Candidate internal edges differ from statement interfaces"
                 )
+            self._require_route_anchor_connectivity(
+                local_ids,
+                normalized_edges,
+                route_anchor_ids=route_anchor_ids,
+            )
             component_semantic = {
                 "component_key": component["component_key"],
                 "entries": component["entries"],
@@ -2379,6 +2848,7 @@ class FactAlphaManager:
         *,
         limit: int = 32,
         campaign_id: str | None = None,
+        target_id: str | None = None,
         diagnostic: bool = False,
     ) -> dict[str, Any]:
         started = time.monotonic()
@@ -2388,6 +2858,13 @@ class FactAlphaManager:
             )
         if campaign_id is not None:
             campaign_id = validate_campaign_id(campaign_id)
+        if target_id is not None:
+            if campaign_id is None:
+                raise ValueError(
+                    "Fact frontier target selection requires --campaign"
+                )
+            target_id = validate_campaign_target_id(target_id)
+        requested_target_id = target_id
         from .v5_lifecycle import RoundInspectionContext
 
         inspection = self.lifecycle._bind_inspection_context(
@@ -2413,7 +2890,11 @@ class FactAlphaManager:
         active_marks = [
             mark
             for mark in all_active_marks
-            if campaign_id is None or mark["campaign_id"] == campaign_id
+            if (campaign_id is None or mark["campaign_id"] == campaign_id)
+            and (
+                requested_target_id is None
+                or mark["target_id"] == requested_target_id
+            )
         ]
         in_scope_mark_ids = {mark["mark_id"] for mark in active_marks}
         filtered_marks = [
@@ -2423,6 +2904,7 @@ class FactAlphaManager:
         ]
         scope_projection = {
             "requested_campaign_id": campaign_id,
+            "requested_target_id": requested_target_id,
             "global_active_mark_count": len(all_active_marks),
             "in_scope_active_mark_count": len(active_marks),
             "filtered_out_active_mark_count": len(filtered_marks),
@@ -2438,8 +2920,145 @@ class FactAlphaManager:
             ),
         }
 
-        grouped: dict[tuple[str | None, str | None, str | None], list[dict[str, Any]]] = {}
+        landmark_routes: list[dict[str, Any]] = []
+        if campaign_id is not None:
+            try:
+                campaign_state = (
+                    self.lifecycle._read_campaign_frontier_working_state(
+                        campaign_id
+                    )
+                )
+            except ValueError:
+                campaign_state = None
+            if campaign_state is not None:
+                for campaign_target_id, row in sorted(
+                    campaign_state["targets"].items()
+                ):
+                    if (
+                        requested_target_id is not None
+                        and campaign_target_id != requested_target_id
+                    ):
+                        continue
+                    for landmark_id in row[
+                        "historical_landmark_research_ids"
+                    ]:
+                        terminal = self._terminal_for(
+                            landmark_id,
+                            bases=bases,
+                            route_staleness=route_staleness,
+                            repair_children=repair_children,
+                        )
+                        route_candidates = (
+                            self._candidate_cow_route_projection(
+                                landmark_id,
+                                repair_children=repair_children,
+                                bases=bases,
+                            )
+                        )
+                        split_batches = (
+                            self._reachable_committed_split_batches(
+                                landmark_id,
+                                bases=bases,
+                                repair_children=repair_children,
+                                inspection=inspection,
+                            )
+                        )
+                        exact_split_batch = (
+                            self._exact_committed_split_batch_for_route(
+                                landmark_id,
+                                split_batches=split_batches,
+                                repair_children=repair_children,
+                            )
+                            if terminal is None
+                            else None
+                        )
+                        # A landmark is a sparse route entry, not an already
+                        # selected Fact package.  Deep supervision/interface
+                        # projection is intentionally deferred until a
+                        # packager selects an exact Research route.  Selected
+                        # active marks below retain the complete projection.
+                        # This keeps routine frontier reads proportional to
+                        # actual Fact work instead of every remembered
+                        # mathematical landmark.
+                        inspection_state = (
+                            "not_needed_certified"
+                            if terminal in active_grants
+                            else "inspect_on_route_selection"
+                        )
+                        landmark_routes.append(
+                            {
+                                "campaign_id": campaign_id,
+                                "target_id": campaign_target_id,
+                                "landmark_research_id": landmark_id,
+                                "reason": row[
+                                    "historical_landmark_reasons"
+                                ][landmark_id],
+                                "current_research_id": terminal,
+                                "route_state": (
+                                    "committed_split_batch"
+                                    if exact_split_batch is not None
+                                    else "needs_packager_cow_choice"
+                                    if terminal is None
+                                    else "certified"
+                                    if terminal in active_grants
+                                    else "needs_packager_route"
+                                ),
+                                **route_candidates,
+                                "exact_split_batches": split_batches,
+                                "exact_split_batch_count": len(split_batches),
+                                "exact_split_batches_sha256": sha256_json(
+                                    split_batches
+                                ),
+                                "nearest_certified_predecessor_research_ids": [],
+                                "uncertified_predecessor_research_ids": [],
+                                "predecessor_projection_state": inspection_state,
+                                "supervision_state": inspection_state,
+                                "statement_interface_state": inspection_state,
+                                "next_action": (
+                                    "none"
+                                    if terminal in active_grants
+                                    else "fact-packager-search-and-select-route"
+                                ),
+                                "selection_effect": "none",
+                            }
+                        )
+
+        # Processable routes must advance through a bounded routine window.
+        # Certified landmarks remain readable history but cannot permanently
+        # starve a later uncertified route merely because their target ids
+        # sort first.
+        landmark_routes.sort(
+            key=lambda item: (
+                item["route_state"] == "certified",
+                item["target_id"],
+                item["landmark_research_id"],
+            )
+        )
+        landmark_route_identities = [
+            {
+                "campaign_id": item["campaign_id"],
+                "target_id": item["target_id"],
+                "landmark_research_id": item[
+                    "landmark_research_id"
+                ],
+                "current_research_id": item["current_research_id"],
+            }
+            for item in landmark_routes
+        ]
+
+        grouped: dict[
+            tuple[
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+            ],
+            list[dict[str, Any]],
+        ] = {}
         route_details: dict[str, dict[str, Any]] = {}
+        split_batches_by_mark: dict[str, list[dict[str, Any]]] = {}
+        route_candidates_by_mark: dict[str, dict[str, Any]] = {}
         for mark in active_marks:
             marked_id = mark["research_id"]
             terminal = self._terminal_for(
@@ -2448,25 +3067,117 @@ class FactAlphaManager:
                 route_staleness=route_staleness,
                 repair_children=repair_children,
             )
-            key = (terminal, mark["campaign_id"], mark["target_id"])
+            split_batches = self._reachable_committed_split_batches(
+                marked_id,
+                bases=bases,
+                repair_children=repair_children,
+                inspection=inspection,
+            )
+            exact_split_batch = (
+                self._exact_committed_split_batch_for_route(
+                    marked_id,
+                    split_batches=split_batches,
+                    repair_children=repair_children,
+                )
+                if terminal is None
+                else None
+            )
+            exact_split_key = (
+                sha256_json([exact_split_batch])
+                if exact_split_batch is not None
+                else None
+            )
+            # Distinct unresolved COW roots are independent Main attention
+            # routes.  They must not collapse merely because both have no
+            # unique terminal.  Exact committed split batches may still share
+            # one package-facing entry; ordinary forks group only repeated
+            # marks of the same root.
+            generic_cow_root_key = (
+                marked_id
+                if terminal is None and exact_split_batch is None
+                else None
+            )
+            key = (
+                terminal,
+                mark["campaign_id"],
+                mark["target_id"],
+                exact_split_key,
+                generic_cow_root_key,
+            )
             grouped.setdefault(key, []).append(mark)
+            split_batches_by_mark[mark["mark_id"]] = split_batches
+            route_candidates = self._candidate_cow_route_projection(
+                marked_id,
+                repair_children=repair_children,
+                bases=bases,
+            )
+            route_candidates_by_mark[mark["mark_id"]] = route_candidates
             route_details[mark["mark_id"]] = {
                 "terminal_research_id": terminal,
                 "route_invalidated_by": route_staleness.get(marked_id, []),
+                "exact_split_batches": split_batches,
+                **route_candidates,
             }
 
         entries: list[dict[str, Any]] = []
-        for (current_id, group_campaign, target_id), marks in grouped.items():
+        for (
+            current_id,
+            group_campaign,
+            target_id,
+            exact_split_key,
+            _generic_cow_root_key,
+        ), marks in grouped.items():
             marks.sort(key=lambda item: (item["created_at"], item["mark_id"]))
             latest_mark = marks[-1]
+            exact_split_batches = (
+                split_batches_by_mark[latest_mark["mark_id"]]
+                if exact_split_key is not None
+                else []
+            )
+            route_candidates = route_candidates_by_mark[
+                latest_mark["mark_id"]
+            ]
             blockers: list[str] = []
             warnings: list[str] = []
             coverage: list[dict[str, Any]] = []
-            state = "waiting_for_batch"
-            next_action = "plan-fact-packaging"
+            state = "needs_packager_route"
+            next_action = "fact-packager-route"
             research: dict[str, Any] | None = None
-            if current_id is None or current_id not in bases:
-                blockers.append("research_cow_route_is_ambiguous")
+            interface_preparation: dict[str, Any] | None = None
+            interface_diagnostics: dict[str, Any] | None = None
+            if exact_split_batches:
+                # The route is structurally known to branch as one committed
+                # split batch.  The packager chooses a predecessor-closed
+                # member route; Main does not repeat the mark or pick a child.
+                state = "needs_packager_route"
+                next_action = "fact-packager-route"
+                interface_preparation = {
+                    "state": "deferred_to_split_members",
+                    "packaging_mode": "fact_packager_select_split_members",
+                }
+                interface_diagnostics = {
+                    "source_count": 0,
+                    "diagnostic_sha256": sha256_json(exact_split_batches),
+                }
+            elif current_id is None:
+                # A Fact mark grants the packager authority to choose which
+                # existing COW branch is worth placing in a nontruth candidate
+                # package.  This does not change Campaign active heads or say
+                # that one mathematical branch supersedes another.
+                state = "needs_packager_route"
+                next_action = "fact-packager-route"
+                interface_preparation = {
+                    "state": "deferred_to_packager_cow_choice",
+                    "packaging_mode": "fact_packager_select_cow_branch",
+                }
+                interface_diagnostics = {
+                    "source_count": 0,
+                    "diagnostic_sha256": route_candidates[
+                        "candidate_terminal_ids_sha256"
+                    ],
+                }
+            elif current_id not in bases:
+                blockers.append("research_cow_route_is_missing")
                 state = "superseded_or_ambiguous"
                 next_action = "main_reconciliation"
             else:
@@ -2522,11 +3233,11 @@ class FactAlphaManager:
                     next_action = "none"
                 elif current_id in stale_grants:
                     state = "needs_reverification"
-                    next_action = "plan-fact-packaging"
+                    next_action = "fact-packager-route"
                     blockers.extend(stale_grants[current_id]["reasons"])
                 elif marked_grant_reasons or marked_certification_moved:
                     state = "needs_reverification"
-                    next_action = "plan-fact-packaging"
+                    next_action = "fact-packager-route"
                     blockers.extend(marked_grant_reasons)
                     if marked_certification_moved:
                         blockers.append("certified_research_has_a_cow_successor")
@@ -2544,12 +3255,12 @@ class FactAlphaManager:
                         latest_plan = related_plans[-1]
                         package = package_by_plan.get(latest_plan["plan_id"])
                         if package is None:
-                            state = "packaging_or_verifying"
+                            state = "package_selected"
                             next_action = "fact-package-seal"
                         else:
                             decision = decision_by_package.get(package["package_id"])
                             if decision is None:
-                                state = "packaging_or_verifying"
+                                state = "package_ready"
                                 next_action = "fact-verifier-capsule"
                             else:
                                 checked_component = next(
@@ -2570,25 +3281,23 @@ class FactAlphaManager:
                                     checked_component is not None
                                     and checked_component["verdict"] == "correct"
                                 ):
-                                    state = "packaging_or_verifying"
+                                    state = "package_ready"
                                     next_action = "fact-certify"
                                 else:
                                     state = "blocked_by_research"
                                     next_action = "research-cow"
                     elif blockers:
-                        state = "blocked_by_research"
-                        next_action = "research-supervision-or-cow"
+                        next_action = "fact-packager-route-or-research-cow"
 
-            interface_preparation: dict[str, Any] | None = None
             if research is not None and (
                 state
                 in {
-                    "waiting_for_batch",
+                    "needs_packager_route",
                     "needs_reverification",
                     "blocked_by_research",
                 }
                 or (
-                    state == "packaging_or_verifying"
+                    state == "package_selected"
                     and next_action == "fact-package-seal"
                 )
             ):
@@ -2597,12 +3306,10 @@ class FactAlphaManager:
                 )
                 interface_preparation = {
                     "state": projection["state"],
-                    "source_count": projection["source_count"],
-                    "diagnostic_sha256": projection["diagnostic_sha256"],
                     "packaging_mode": (
-                        "mechanical_on_plan"
+                        "supervisor_ready_proposal"
                         if projection["state"] == "ready"
-                        else "research_cow_or_split"
+                        else "supervisor_split_recommendation"
                         if projection["state"] == "needs_split"
                         else "human_interface_fallback"
                         if projection["state"] == "missing_or_legacy"
@@ -2614,31 +3321,33 @@ class FactAlphaManager:
                         else {}
                     ),
                 }
+                interface_diagnostics = {
+                    "source_count": projection["source_count"],
+                    "diagnostic_sha256": projection["diagnostic_sha256"],
+                }
                 if projection["state"] == "needs_split":
-                    blockers.append("supervisor_requires_statement_split")
-                    state = "blocked_by_research"
-                    next_action = "research-cow-or-split"
+                    warnings.append("supervisor_recommends_statement_split")
+                    state = "needs_packager_route"
+                    next_action = "fact-packager-route"
                 elif projection["state"] in {"invalid", "conflicting"}:
                     warnings.append(
                         "supervised_statement_interface_requires_reconciliation"
                     )
 
             entry = {
-                "mark_ids": [item["mark_id"] for item in marks],
-                "marked_research_ids": sorted(
-                    {item["research_id"] for item in marks}
-                ),
+                "mark_count": len(marks),
                 "current_research_id": current_id,
-                "current_research_record_sha256": (
-                    research["record_sha256"] if research is not None else None
-                ),
                 "campaign_id": group_campaign,
                 "target_id": target_id,
                 "rationale": latest_mark["rationale"],
                 "state": state,
                 "readiness": (
-                    "ready_for_packaging"
-                    if state == "waiting_for_batch" and not blockers
+                    "route_entry"
+                    if state == "needs_packager_route"
+                    else "package_selected"
+                    if state == "package_selected"
+                    else "package_ready"
+                    if state == "package_ready"
                     else "blocked"
                     if blockers
                     else state
@@ -2648,10 +3357,30 @@ class FactAlphaManager:
                 "next_action": next_action,
                 "claim": research["claim"] if research is not None else None,
                 "kind": research["kind"] if research is not None else None,
-                "supervision_coverage": coverage,
+                "supervision_scopes": [
+                    {"scope": item.get("scope"), "state": item.get("state")}
+                    for item in coverage
+                ],
                 "interface_preparation": interface_preparation,
+                "exact_split_batches": exact_split_batches,
+                "exact_split_batch_count": len(exact_split_batches),
+                "exact_split_batches_sha256": sha256_json(
+                    exact_split_batches
+                ),
+                **route_candidates,
                 **(
                     {
+                        "mark_ids": [item["mark_id"] for item in marks],
+                        "marked_research_ids": sorted(
+                            {item["research_id"] for item in marks}
+                        ),
+                        "current_research_record_sha256": (
+                            research["record_sha256"]
+                            if research is not None
+                            else None
+                        ),
+                        "supervision_coverage": coverage,
+                        "interface_diagnostics": interface_diagnostics,
                         "route_details": {
                             mark_id: route_details[mark_id]
                             for mark_id in [item["mark_id"] for item in marks]
@@ -2671,42 +3400,7 @@ class FactAlphaManager:
                 item["current_research_id"] or "",
             )
         )
-        all_ready = [
-            item
-            for item in entries
-            if item["readiness"] == "ready_for_packaging"
-        ]
         visible_entries = entries[:limit]
-        ready = [
-            item
-            for item in visible_entries
-            if item["readiness"] == "ready_for_packaging"
-        ]
-        opportunities: dict[tuple[str | None, str | None], list[dict[str, Any]]] = {}
-        for item in ready:
-            opportunities.setdefault(
-                (item["campaign_id"], item["target_id"]), []
-            ).append(item)
-        batches = [
-            {
-                "campaign_id": key[0],
-                "target_id": key[1],
-                "research_ids": [
-                    item["current_research_id"] for item in items
-                ],
-                "mark_ids": [
-                    mark_id for item in items for mark_id in item["mark_ids"]
-                ],
-                "research_count": len(items),
-                "selection_sha256": sha256_json(
-                    [item["current_research_id"] for item in items]
-                ),
-                "next_action": "plan-fact-packaging",
-            }
-            for key, items in sorted(
-                opportunities.items(), key=lambda item: ((item[0][0] or ""), (item[0][1] or ""))
-            )
-        ]
         elapsed_ms = round((time.monotonic() - started) * 1000, 3)
         counts: dict[str, int] = {}
         for entry in entries:
@@ -2728,6 +3422,14 @@ class FactAlphaManager:
             "authority_model": "research_graph_with_fact_certification_overlay",
             "legacy_fact_authority": "read_only_unmapped",
             "scope_projection": scope_projection,
+            "landmark_routes": landmark_routes[:limit],
+            "landmark_route_count": len(landmark_routes),
+            "landmark_route_shown_count": min(
+                limit, len(landmark_routes)
+            ),
+            "landmark_route_identities_sha256": sha256_json(
+                landmark_route_identities
+            ),
             "legacy_root_bootstrap": bootstrap,
             "counts": counts,
             "certified_heads": [
@@ -2740,16 +3442,14 @@ class FactAlphaManager:
             ],
             "certified_head_count": len(all_certified_heads),
             "certified_head_ids_sha256": sha256_json(all_certified_heads),
-            "batch_opportunities": batches,
-            "batch_opportunity_count": len(
-                {
-                    (item["campaign_id"], item["target_id"])
-                    for item in all_ready
-                }
+            "route_entry_count": sum(
+                item["state"] == "needs_packager_route" for item in entries
             ),
-            "ready_for_packaging_count": len(all_ready),
-            "ready_research_ids_sha256": sha256_json(
-                [item["current_research_id"] for item in all_ready]
+            "package_selected_count": sum(
+                item["state"] == "package_selected" for item in entries
+            ),
+            "package_ready_count": sum(
+                item["state"] == "package_ready" for item in entries
             ),
             "entries": visible_entries,
             "entry_count": len(entries),
@@ -2770,10 +3470,145 @@ class FactAlphaManager:
 
     def plan_packaging(
         self,
-        mark_ids: list[str],
+        mark_ids: list[str] | None = None,
         *,
+        research_ids: list[str] | None = None,
+        campaign_id: str | None = None,
+        target_id: str | None = None,
+        planned_by: str = "main",
         minor_repair_decision_id: str | None = None,
     ) -> dict[str, Any]:
+        # Route selection, active-mark reuse, Campaign/COW inspection and the
+        # eventual mark/plan publication form one decision.  Keeping only the
+        # final writes under the lock allowed two concurrent packagers to read
+        # the same empty state and publish different timestamped marks.  Hold
+        # the project mutation lock across the complete bounded operation so a
+        # later caller observes and reuses the first exact result.
+        with self.store.v5_mutation_lock(command="plan-fact-packaging"):
+            return self._plan_packaging_locked(
+                mark_ids,
+                research_ids=research_ids,
+                campaign_id=campaign_id,
+                target_id=target_id,
+                planned_by=planned_by,
+                minor_repair_decision_id=minor_repair_decision_id,
+            )
+
+    def _plan_packaging_locked(
+        self,
+        mark_ids: list[str] | None = None,
+        *,
+        research_ids: list[str] | None = None,
+        campaign_id: str | None = None,
+        target_id: str | None = None,
+        planned_by: str = "main",
+        minor_repair_decision_id: str | None = None,
+    ) -> dict[str, Any]:
+        if planned_by not in {"main", "fact-packager"}:
+            raise ValueError("Fact packaging planner role is invalid")
+        if mark_ids and research_ids:
+            raise ValueError(
+                "Fact packaging accepts either existing marks or packager-selected Research"
+            )
+        selection_mode = (
+            "direct_research_route" if research_ids else "existing_marks"
+        )
+        generated_marks: list[dict[str, Any]] = []
+        direct_packager_route_roots: set[str] | None = None
+        direct_packager_route_anchors: set[str] = set()
+        marks = self._marks()
+        dispositions = self._dispositions()
+        if research_ids:
+            if planned_by != "fact-packager":
+                raise ValueError(
+                    "direct Research route selection belongs to the Fact packager"
+                )
+            if minor_repair_decision_id is not None:
+                raise ValueError(
+                    "minor-repair recheck must bind its existing exact marks"
+                )
+            if campaign_id is None or target_id is None:
+                raise ValueError(
+                    "packager Research selection requires Campaign and target"
+                )
+            campaign_id = validate_campaign_id(campaign_id)
+            target_id = validate_campaign_target_id(target_id)
+            normalized_research_ids = sorted(
+                set(validate_memory_id(item) for item in research_ids)
+            )
+            if (
+                not normalized_research_ids
+                or len(normalized_research_ids) != len(research_ids)
+                or len(normalized_research_ids) > FACT_ALPHA_MAX_MARKS_PER_PLAN
+            ):
+                raise ValueError(
+                    "packager Research selection must contain unique bounded ids"
+                )
+            state = self.lifecycle._read_campaign_frontier_working_state(
+                campaign_id
+            )
+            if state is None or target_id not in state["targets"]:
+                raise ValueError("Fact packager target lacks current Campaign memory")
+            row = state["targets"][target_id]
+            landmark_reasons = row["historical_landmark_reasons"]
+            active_existing = [
+                mark
+                for mark in marks.values()
+                if mark["campaign_id"] == campaign_id
+                and mark["target_id"] == target_id
+                and dispositions.get(mark["mark_id"], {}).get(
+                    "status", "active"
+                )
+                == "active"
+            ]
+            direct_packager_route_roots = {
+                *row["historical_landmark_research_ids"],
+                *(
+                    mark["research_id"]
+                    for mark in active_existing
+                    if mark.get("actor") == "main"
+                ),
+            }
+            if not direct_packager_route_roots:
+                raise ValueError(
+                    "Fact packager target has no Main-owned load-bearing "
+                    "landmark or active Fact route mark"
+                )
+            selected_mark_ids: list[str] = []
+            for research_id in normalized_research_ids:
+                existing = [
+                    mark
+                    for mark in active_existing
+                    if mark["research_id"] == research_id
+                ]
+                if existing:
+                    selected_mark_ids.append(
+                        max(
+                            existing,
+                            key=lambda item: (
+                                item["created_at"],
+                                item["mark_id"],
+                            ),
+                        )["mark_id"]
+                    )
+                    continue
+                rationale = landmark_reasons.get(
+                    research_id,
+                    "Fact packager selected this Research as a necessary member of the predecessor-closed route.",
+                )
+                mark = self._new_mark_record(
+                    research_id,
+                    rationale=rationale,
+                    campaign_id=campaign_id,
+                    target_id=target_id,
+                    actor="fact-packager",
+                )
+                generated_marks.append(mark)
+                marks[mark["mark_id"]] = mark
+                selected_mark_ids.append(mark["mark_id"])
+            mark_ids = selected_mark_ids
+        else:
+            mark_ids = list(mark_ids or [])
         if (
             not isinstance(mark_ids, list)
             or not mark_ids
@@ -2785,8 +3620,6 @@ class FactAlphaManager:
         mark_ids = sorted(set(mark_ids))
         if len(mark_ids) == 0:
             raise ValueError("Fact packaging marks cannot be empty")
-        marks = self._marks()
-        dispositions = self._dispositions()
         selected_marks: list[dict[str, Any]] = []
         for mark_id in mark_ids:
             _require_prefixed_sha_id(
@@ -2853,7 +3686,13 @@ class FactAlphaManager:
             self._route_projection(inspection=inspection)
         )
         grouped: dict[
-            tuple[str | None, str | None, str | None], list[dict[str, Any]]
+            tuple[
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+            ],
+            list[dict[str, Any]],
         ] = {}
         for mark in selected_marks:
             terminal = self._terminal_for(
@@ -2863,12 +3702,23 @@ class FactAlphaManager:
                 repair_children=repair_children,
             )
             grouped.setdefault(
-                (terminal, mark["campaign_id"], mark["target_id"]), []
+                (
+                    terminal,
+                    mark["campaign_id"],
+                    mark["target_id"],
+                    mark["research_id"] if terminal is None else None,
+                ),
+                [],
             ).append(mark)
 
         selection: list[dict[str, Any]] = []
         replacement_map: list[dict[str, str]] = []
-        for (current_id, campaign_id, target_id), group_marks in sorted(
+        for (
+            current_id,
+            campaign_id,
+            target_id,
+            _generic_cow_root_key,
+        ), group_marks in sorted(
             grouped.items(),
             key=lambda item: (
                 item[0][1] or "",
@@ -2962,6 +3812,96 @@ class FactAlphaManager:
                     "supervision_coverage": coverage,
                 }
             )
+        if direct_packager_route_roots is not None:
+            # A packager may discover the predecessor-closed route, but it may
+            # not invent an unrelated Fact corridor merely by supplying a
+            # generic rationale.  Start from Main's sparse attention records,
+            # follow only the shared rigid COW/split projection, then admit
+            # additional selected nodes only when a proof-owned supervised
+            # statement interface names them as exact predecessors.
+            corridor = {
+                research_id
+                for research_id in direct_packager_route_roots
+                if research_id in bases
+            }
+            pending = list(sorted(corridor))
+            selection_by_current = {
+                item["current_research_id"]: item for item in selection
+            }
+            coverage_by_research = {
+                research_id: item["supervision_coverage"]
+                for research_id, item in selection_by_current.items()
+            }
+            active_grants = self._grant_projection(
+                bases=bases,
+                route_staleness=route_staleness,
+                repair_children=repair_children,
+            )["active_by_research"]
+            while pending:
+                research_id = pending.pop(0)
+                discovered: set[str] = set(
+                    repair_children.get(research_id, ())
+                )
+                grant = active_grants.get(research_id)
+                if isinstance(grant, dict):
+                    discovered.update(
+                        binding["predecessor_research_id"]
+                        for binding in grant["predecessor_bindings"]
+                    )
+                research = bases.get(research_id)
+                if research is not None:
+                    coverage = coverage_by_research.get(research_id)
+                    if coverage is None:
+                        try:
+                            coverage = (
+                                self.lifecycle._candidate_supervision_scope_coverage(
+                                    [research],
+                                    _inspection_context=inspection,
+                                )
+                            )
+                        except (KeyError, OSError, ValueError):
+                            coverage = []
+                        coverage_by_research[research_id] = coverage
+                    projection = self._supervised_interface_projection(
+                        research,
+                        coverage,
+                    )
+                    statement_interface = projection.get(
+                        "statement_interface"
+                    )
+                    if (
+                        projection.get("state") == "ready"
+                        and isinstance(statement_interface, dict)
+                    ):
+                        ready_predecessors = set(
+                            statement_interface[
+                                "certified_predecessor_research_ids"
+                            ]
+                        )
+                        discovered.update(ready_predecessors)
+                for discovered_id in sorted(discovered):
+                    if discovered_id in bases and discovered_id not in corridor:
+                        corridor.add(discovered_id)
+                        pending.append(discovered_id)
+
+            selected_current_ids = set(selection_by_current)
+            # The Main-owned landmark/mark is the entry into this Fact-review
+            # window; it is not a complete predecessor vocabulary.  Once the
+            # selection contains one exact member of that rigid route, the
+            # authorized packager may add an unmarked prerequisite discovered
+            # while reading the Research graph.  The later package seal binds
+            # the actual interface edges and enforces predecessor closure, and
+            # the verifier reviews every selected record and edge.  Requiring
+            # every member to have appeared in a supervisor-authored interface
+            # here would make the recommendation an unintended route gate.
+            direct_packager_route_anchors = selected_current_ids.intersection(
+                corridor
+            )
+            if not direct_packager_route_anchors:
+                raise ValueError(
+                    "Fact packager Research selection lacks an exact "
+                    "Main-owned Campaign/COW/interface route anchor"
+                )
         if prior_decision is not None:
             prior_package = self.package(prior_decision["package_id"])
             minor_context = {
@@ -2992,7 +3932,11 @@ class FactAlphaManager:
             "project_id": self.store.project_id(),
             "selection": selection,
             "selection_sha256": sha256_json(selection),
-            "planned_by": "main",
+            "planned_by": planned_by,
+            "selection_mode": selection_mode,
+            "route_anchor_research_ids": sorted(
+                direct_packager_route_anchors
+            ),
             "minor_repair_context": minor_context,
             "truth_effect": "none",
         }
@@ -3002,12 +3946,17 @@ class FactAlphaManager:
             **record_without_hash,
             "record_sha256": sha256_json(record_without_hash),
         }
-        with self.store.v5_mutation_lock(command="plan-fact-packaging"):
-            self._ensure_storage()
-            path = self.plans_dir / f"{plan_id}.json"
-            self.store._write_json_once(path, record)
+        self._ensure_storage()
+        for mark in generated_marks:
+            self.store._write_json_once(
+                self.marks_dir / f"{mark['mark_id']}.json",
+                mark,
+            )
+        path = self.plans_dir / f"{plan_id}.json"
+        self.store._write_json_once(path, record)
         mechanical = self._mechanical_package_from_supervision(record)
         package = mechanical.get("package")
+        proposal = mechanical.get("proposal")
         return {
             **record,
             "mechanical_package_state": mechanical["state"],
@@ -3016,6 +3965,10 @@ class FactAlphaManager:
             ),
             "mechanical_package_record_sha256": (
                 package["record_sha256"] if package is not None else None
+            ),
+            "mechanical_package_proposal": proposal,
+            "mechanical_package_proposal_sha256": (
+                sha256_json(proposal) if proposal is not None else None
             ),
             "interface_source_bindings_sha256": mechanical[
                 "source_bindings_sha256"
@@ -3026,7 +3979,7 @@ class FactAlphaManager:
             "next_action": (
                 "fact-verifier-capsule"
                 if package is not None
-                else "research-cow-or-split"
+                else "fact-package-seal-or-research-cow-split"
                 if mechanical["state"] == "research_split_required"
                 else "fact-package-seal"
             ),
@@ -3059,6 +4012,46 @@ class FactAlphaManager:
             raise ValueError("Fact Candidate component dependency graph has a cycle")
         return order
 
+    @staticmethod
+    def _require_route_anchor_connectivity(
+        component_ids: set[str],
+        edges: set[tuple[str, str]],
+        *,
+        route_anchor_ids: set[str],
+    ) -> None:
+        """Keep packager-added nodes on an exact Main-anchored package route.
+
+        The package dependency DAG may point from a prerequisite toward a
+        Main-anchored theorem or from an anchored premise toward a selected
+        consequence, so connectivity is intentionally undirected here.  The
+        directed edge semantics and acyclicity are checked separately.
+        """
+
+        if not route_anchor_ids:
+            return
+        local_anchors = component_ids.intersection(route_anchor_ids)
+        if not local_anchors:
+            raise ValueError(
+                "Fact packager component lacks a frozen Main route anchor"
+            )
+        adjacency = {research_id: set() for research_id in component_ids}
+        for predecessor_id, research_id in edges:
+            adjacency[predecessor_id].add(research_id)
+            adjacency[research_id].add(predecessor_id)
+        reachable = set(local_anchors)
+        pending = list(sorted(local_anchors))
+        while pending:
+            research_id = pending.pop(0)
+            for related_id in sorted(adjacency[research_id]):
+                if related_id not in reachable:
+                    reachable.add(related_id)
+                    pending.append(related_id)
+        if reachable != component_ids:
+            raise ValueError(
+                "Fact packager component contains Research outside its "
+                "frozen Main-anchored dependency route"
+            )
+
     def seal_package(self, payload: dict[str, Any]) -> dict[str, Any]:
         payload = _require_exact_fields(
             payload,
@@ -3081,6 +4074,7 @@ class FactAlphaManager:
             item["current_research_id"]: item for item in plan["selection"]
         }
         selected_ids = set(plan_by_research)
+        route_anchor_ids = set(plan.get("route_anchor_research_ids", []))
         # Reuse the complete derived projection so an older/superseded grant
         # cannot become a package predecessor merely because its file exists.
         from .v5_lifecycle import RoundInspectionContext
@@ -3179,6 +4173,11 @@ class FactAlphaManager:
                 entry["external_predecessor_bindings"].sort(
                     key=lambda item: item["predecessor_research_id"]
                 )
+            self._require_route_anchor_connectivity(
+                component_ids,
+                set(edges),
+                route_anchor_ids=route_anchor_ids,
+            )
             order = self._topological_order(sorted(component_ids), edges)
             entries = [prepared[research_id] for research_id in order]
             rendered_edges = [

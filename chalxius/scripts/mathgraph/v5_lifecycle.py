@@ -125,21 +125,61 @@ from .runtime_archive import (
 )
 from .research_split import (
     RESEARCH_SPLIT_ARTIFACT_ROLE,
+    RESEARCH_SPLIT_BATCH_REVISION,
     RESEARCH_SPLIT_COMMIT_REVISION,
+    RESEARCH_SPLIT_COMMIT_REVISION_V1,
     RESEARCH_SPLIT_MAX_MEMBERS,
     RESEARCH_SPLIT_MEMBER_REVISION,
     RESEARCH_SPLIT_OUTPUT_SHAPE,
     RESEARCH_SPLIT_OWNER_REVISION,
+    RESEARCH_SPLIT_OWNER_REVISION_V1,
     validate_research_split_batch,
+    validate_resolved_research_split_relations,
 )
 
 
 V5_WORKFLOW_EVIDENCE_VERSION = 5
 V5_POLICY_REVISION = "chalxius-v5-minimal-core-2"
-V5_CAMPAIGN_FRONTIER_STATE_REVISION = (
+V5_CAMPAIGN_FRONTIER_STATE_LEGACY_REVISION = (
     "chalxius-v5-campaign-frontier-working-state-1"
 )
+V5_CAMPAIGN_FRONTIER_STATE_REVISION = (
+    "chalxius-v5-campaign-frontier-working-state-2"
+)
 V5_CAMPAIGN_ACTIVE_HEAD_LIMIT = 16
+V5_CAMPAIGN_HEAD_CONTEXT_LIMIT = 32
+# Sparse landmarks are durable mathematical memory selected by Main.  They
+# grow with the Research graph and therefore have no semantic count quota.
+# Only the routine reading surface previews a bounded number of them.
+V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW = 8
+# Recent attainment is an exact work-memory queue between Main's natural
+# curation windows (notably context compaction).  Its storage capacity is
+# deliberately much wider than the routine mathematical-summary preview.
+V5_CAMPAIGN_RECENT_ATTAINED_LIMIT = 64
+V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW = 4
+V5_CAMPAIGN_CHECKPOINT_LOSS_DIAGNOSTICS = frozenset(
+    {
+        "checkpoint_target_list_malformed",
+        "checkpoint_target_list_truncated",
+        "checkpoint_target_entry_malformed",
+        "checkpoint_target_id_malformed",
+        "checkpoint_target_duplicate",
+        "checkpoint_research_list_malformed",
+        "checkpoint_research_list_over_capacity",
+        "checkpoint_research_id_malformed",
+        "checkpoint_active_head_missing_or_cross_campaign",
+        "checkpoint_attained_missing_or_cross_campaign",
+        "checkpoint_context_missing_or_cross_campaign",
+    }
+)
+V5_CAMPAIGN_CHECKPOINT_GLOBAL_LOSS_DIAGNOSTICS = frozenset(
+    {
+        "checkpoint_target_list_malformed",
+        "checkpoint_target_list_truncated",
+        "checkpoint_target_entry_malformed",
+        "checkpoint_target_id_malformed",
+    }
+)
 V5_ROUTINE_FRONTIER_HEAD_CLAIM_LIMIT = 300
 V5_ROUTINE_FRONTIER_ROOT_CLAIM_LIMIT = 400
 V5_ROUTINE_FRONTIER_HISTORY_CLAIM_LIMIT = 320
@@ -370,8 +410,7 @@ V5_LEGACY_RESEARCH_ASSURANCE_SELECTION_POLICY = (
     "static_role_artifact_outcome_with_cross_scope_integration"
 )
 V5_RESEARCH_ASSURANCE_SELECTION_POLICY = (
-    "static_role_artifact_outcome_or_frozen_logic_signal_with_"
-    "cross_scope_integration"
+    "scope_owned_fixed_review_focus_with_cross_scope_integration"
 )
 V5_PROOF_LOGIC_SELECTION_SIGNALS = frozenset(
     {
@@ -381,9 +420,9 @@ V5_PROOF_LOGIC_SELECTION_SIGNALS = frozenset(
         "scope_transport",
     }
 )
-# Append-only release registry.  Entries describe reproduced, high-loss failure
-# families; they are neither agent scores nor mathematical authority.
-V5_RESEARCH_FAILURE_FAMILIES = (
+# Historical release registry used only to validate already frozen supervision
+# records.  It is not consulted by prospective planning.
+V5_LEGACY_RESEARCH_FAILURE_FAMILIES = (
     (
         "program_math_projection",
         "program_math",
@@ -401,6 +440,59 @@ V5_RESEARCH_FAILURE_FAMILIES = (
         "source_scope",
         "exact locators, theorem hypotheses, local/global scope, and convention "
         "or transport applicability",
+    ),
+    (
+        "cross_output_contract",
+        "integration",
+        "conventions, coordinates, premises, and interfaces shared across two "
+        "or more distinct primary assurance scopes",
+    ),
+)
+V5_LEGACY_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256 = sha256_json(
+    [
+        {"family_id": family_id, "supervisor_scope": scope, "focus": focus}
+        for family_id, scope, focus in V5_LEGACY_RESEARCH_FAILURE_FAMILIES
+    ]
+)
+
+# Prospective fixed, scope-owned review guidance.  These are non-exhaustive
+# prompts distilled from durable field experience, not learned rules, trigger
+# vocabulary, agent scoring, or mathematical authority.
+V5_RESEARCH_FAILURE_FAMILIES = (
+    (
+        "program_math_projection",
+        "program_math",
+        "formula-to-code anchors that independently bind semantic extraction "
+        "rather than merely whole-file hashes, signs and conventions, index and domain "
+        "boundaries, object representations, truncation or precision budgets, "
+        "independent checks, and code/output interpretation",
+    ),
+    (
+        "proof_boundary_scope",
+        "proof_logic",
+        "the exact claimed conclusion and both implication directions; explicit "
+        "premises and correct use of internal and external results; object, map, "
+        "operation, type, domain, and codomain consistency; quantifier order and "
+        "witness dependence; route-relative sufficiency versus global necessity, "
+        "minimality, or uniqueness; formal compatibility versus existence of a "
+        "realized object; local/global, fixed/family, pointwise/uniform, "
+        "smooth/degenerate, and cover/descent transport; exhaustive cases and "
+        "boundaries, including empty domains, zero or degenerate objects, vacuous "
+        "cases, endpoints, and declared exceptions; circularity; independently "
+        "falsifiable conjuncts and exact partitions; exact attribution of new, "
+        "inherited, repaired, and still-open conclusions; and, when applicable, "
+        "plain-language substitution, burden "
+        "and strongest-charitable-objection checks, and quantifier/modality/"
+        "operator-scope equivalence",
+    ),
+    (
+        "source_fidelity_coverage",
+        "source_scope",
+        "external source identity, exact bytes and locators, faithful theorem or "
+        "formula extraction, complete stated hypotheses, qualifiers and "
+        "conventions, literal signs, ranges and coordinate phases, and evidence "
+        "coverage distinct from byte integrity; mathematical applicability and "
+        "transport to the target remain proof_logic responsibilities",
     ),
     (
         "cross_output_contract",
@@ -657,6 +749,7 @@ class RoundInspectionContext:
     # snapshot for every requested workgroup.  Build its global adjacency once
     # per command and cache only exact seed projections below it.
     frontier_cow_repair_children: dict[str, tuple[str, ...]] | None = None
+    frontier_cow_route_projection: dict[str, Any] | None = None
     frontier_cow_terminal_members: dict[
         tuple[str, ...], dict[str, str | None]
     ] = field(default_factory=dict)
@@ -3390,6 +3483,62 @@ class V5LifecycleManager:
             selected[assignment_id] = frozenset(signals)
         return selected
 
+    def _source_round_external_source_use_signals(
+        self,
+        manifest: dict[str, Any],
+        descriptors: list[dict[str, Any]],
+        inspection: RoundInspectionContext,
+    ) -> dict[str, bool]:
+        """Identify actual external-source use without changing frozen receipts.
+
+        ``source_uses`` also links a result to its own generated theorem or
+        boundary ledger.  That is useful mathematical provenance, but it is not
+        an external citation and must not automatically allocate source-scope
+        review.  Match each declared source hash to an exact capability whose
+        semantic role grants direct source authority.  Literature work remains
+        source-scoped because external extraction is its declared work mode.
+        """
+
+        assignment_by_id = {
+            assignment["assignment_id"]: assignment
+            for assignment in manifest["assignments"]
+        }
+        signals: dict[str, bool] = {}
+        for descriptor in descriptors:
+            assignment_id = descriptor["assignment_id"]
+            assignment = assignment_by_id.get(assignment_id)
+            if assignment is None:
+                raise ValueError(
+                    "Research supervision descriptor assignment is missing"
+                )
+            if descriptor["work_mode"] == "literature":
+                signals[assignment_id] = True
+                continue
+            result = self._inspection_research_record(
+                descriptor["result_research_id"], inspection
+            )
+            metadata = result.get("metadata", {})
+            uses = metadata.get("source_uses", []) if isinstance(metadata, dict) else []
+            source_hashes = {
+                item.get("source_artifact_sha256")
+                for item in uses
+                if isinstance(item, dict)
+                and isinstance(item.get("source_artifact_sha256"), str)
+            }
+            card = self.store._read_json(
+                self.store.root / assignment["task_card_relpath"]
+            )
+            direct_hashes = self._task_primary_source_sha256s(card)
+            for artifact in metadata.get("artifacts", []):
+                if (
+                    isinstance(artifact, dict)
+                    and _is_direct_source_capability_role(artifact.get("role"))
+                    and isinstance(artifact.get("sha256"), str)
+                ):
+                    direct_hashes.add(artifact["sha256"])
+            signals[assignment_id] = bool(source_hashes.intersection(direct_hashes))
+        return signals
+
     @staticmethod
     def _supervisor_scope_applies(
         scope: str,
@@ -3461,6 +3610,7 @@ class V5LifecycleManager:
         descriptor: dict[str, Any],
         *,
         logic_signals: frozenset[str] = frozenset(),
+        external_source_use: bool = False,
     ) -> bool:
         """Return the narrow prospective 0.7 supervisor-selection rule."""
 
@@ -3483,9 +3633,7 @@ class V5LifecycleManager:
                 {"computation_source", "computation_output"}.intersection(roles)
             )
         if scope == "source_scope":
-            return descriptor["work_mode"] == "literature" or descriptor[
-                "has_source_uses"
-            ]
+            return descriptor["work_mode"] == "literature" or external_source_use
         if scope == "integration":
             return True
         raise ValueError("unsupported Research supervisor scope")
@@ -3496,6 +3644,7 @@ class V5LifecycleManager:
         descriptors: list[dict[str, Any]],
         *,
         selection_logic_signals: dict[str, frozenset[str]] | None = None,
+        external_source_use_signals: dict[str, bool] | None = None,
     ) -> list[str]:
         """Select narrow assurance scopes from static reproduced failure families.
 
@@ -3514,6 +3663,9 @@ class V5LifecycleManager:
                     descriptor,
                     logic_signals=(selection_logic_signals or {}).get(
                         descriptor.get("assignment_id", ""), frozenset()
+                    ),
+                    external_source_use=(external_source_use_signals or {}).get(
+                        descriptor.get("assignment_id", ""), False
                     ),
                 )
                 for descriptor in descriptors
@@ -3562,16 +3714,29 @@ class V5LifecycleManager:
             binding["family_ids"],
             "failure-informed Research assurance family ids",
         )
+        registry_sha256 = binding["registry_sha256"]
+        if registry_sha256 == V5_LEGACY_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256:
+            expected_ids = [
+                family_id
+                for family_id, family_scope, _focus
+                in V5_LEGACY_RESEARCH_FAILURE_FAMILIES
+                if family_scope == supervisor_scope
+            ]
         if (
             binding["revision"]
             != V5_RESEARCH_ASSURANCE_SELECTION_REVISION
-            or binding["registry_sha256"]
-            != V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256
+            or registry_sha256
+            not in {
+                V5_LEGACY_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256,
+                V5_RESEARCH_FAILURE_FAMILY_REGISTRY_SHA256,
+            }
             or family_ids != expected_ids
             or binding["supervisor_scope"] != supervisor_scope
             or binding["selection_policy"]
             not in {
                 V5_LEGACY_RESEARCH_ASSURANCE_SELECTION_POLICY,
+                "static_role_artifact_outcome_or_frozen_logic_signal_with_"
+                "cross_scope_integration",
                 V5_RESEARCH_ASSURANCE_SELECTION_POLICY,
             }
             or binding["truth_effect"] != "none"
@@ -3584,12 +3749,19 @@ class V5LifecycleManager:
         descriptors: list[dict[str, Any]],
         *,
         selection_logic_signals: dict[str, frozenset[str]] | None = None,
+        external_source_use_signals: dict[str, bool] | None = None,
     ) -> list[str]:
         applicable = self._applicable_research_supervisor_scopes(
             descriptors,
             selection_logic_signals=selection_logic_signals,
+            external_source_use_signals=external_source_use_signals,
         )
-        return applicable[:V5_RESEARCH_SUPERVISOR_LIMIT]
+        # This is the required-coverage set, not one dispatch batch.  A
+        # program/proof/source component can also require integration, giving
+        # four scopes even though one supervisor round intentionally carries
+        # at most three assignments.  The planner slices ``missing`` when it
+        # dispatches; correctness coverage must retain the complete set.
+        return applicable
 
     def _validate_research_supervision_binding(
         self,
@@ -5348,7 +5520,7 @@ class V5LifecycleManager:
                 member.get("surface_key"), "Research split-member surface key"
             )
         if owner is not None:
-            fields = {
+            base_fields = {
                 "revision",
                 "batch_id",
                 "source_research_id",
@@ -5360,11 +5532,28 @@ class V5LifecycleManager:
                 "membership_sha256",
                 "truth_effect",
             }
-            if not isinstance(owner, dict) or set(owner) != fields:
+            revision = owner.get("revision") if isinstance(owner, dict) else None
+            fields = (
+                base_fields
+                if revision == RESEARCH_SPLIT_OWNER_REVISION_V1
+                else base_fields
+                | {
+                    "logical_relations",
+                    "logical_relations_sha256",
+                    "relation_allocation_rationale",
+                }
+                if revision == RESEARCH_SPLIT_OWNER_REVISION
+                else set()
+            )
+            if not fields or not isinstance(owner, dict) or set(owner) != fields:
                 raise ValueError("Research split-owner metadata fields are not exact")
             members = owner.get("members")
             if (
-                owner.get("revision") != RESEARCH_SPLIT_OWNER_REVISION
+                revision
+                not in {
+                    RESEARCH_SPLIT_OWNER_REVISION_V1,
+                    RESEARCH_SPLIT_OWNER_REVISION,
+                }
                 or owner.get("truth_effect") != "none"
                 or not isinstance(owner.get("batch_id"), str)
                 or not owner["batch_id"].startswith("split-batch-")
@@ -5400,6 +5589,22 @@ class V5LifecycleManager:
                         item["surface_key"], "Research split-owner surface key"
                     )
                 )
+            if revision == RESEARCH_SPLIT_OWNER_REVISION:
+                logical_relations = validate_resolved_research_split_relations(
+                    owner["logical_relations"], member_ids=seen_ids
+                )
+                if (
+                    logical_relations != owner["logical_relations"]
+                    or owner.get("logical_relations_sha256")
+                    != sha256_json(logical_relations)
+                ):
+                    raise ValueError(
+                        "Research split-owner logical relations drifted"
+                    )
+                _require_nonempty_text(
+                    owner.get("relation_allocation_rationale"),
+                    "Research split-owner relation-allocation rationale",
+                )
             validate_memory_id(owner["source_research_id"])
             validate_memory_id(owner["repair_research_id"])
             for field_name in (
@@ -5407,6 +5612,11 @@ class V5LifecycleManager:
                 "repair_record_sha256",
                 "batch_artifact_sha256",
                 "membership_sha256",
+                *(
+                    ["logical_relations_sha256"]
+                    if revision == RESEARCH_SPLIT_OWNER_REVISION
+                    else []
+                ),
             ):
                 if (
                     not isinstance(owner.get(field_name), str)
@@ -5472,13 +5682,13 @@ class V5LifecycleManager:
             raise ValueError("Research split owner is outside its committed batch")
         return commit
 
-    def _research_split_member_ids_for_supervision_card(
+    def _research_split_commits_for_supervision_card(
         self,
         card: dict[str, Any],
         *,
         _inspection_context: RoundInspectionContext | None = None,
-    ) -> list[str]:
-        """Return the actual committed split membership attacked by a card."""
+    ) -> list[dict[str, Any]]:
+        """Return each committed split batch attacked by a supervision card."""
 
         cycle = card.get("research_cycle")
         if not isinstance(cycle, dict) or cycle.get("subround") != "supervision":
@@ -5500,7 +5710,7 @@ class V5LifecycleManager:
             create=True,
         )
         assert inspection is not None
-        member_ids: set[str] = set()
+        commits: dict[str, dict[str, Any]] = {}
         for descriptor in supervision["source_receipts"]:
             product = self._inspection_research_record(
                 descriptor["result_research_id"], inspection
@@ -5513,10 +5723,27 @@ class V5LifecycleManager:
                 _inspection_context=inspection,
             )
             assert commit is not None
-            member_ids.update(
-                item["research_id"] for item in commit["members"]
-            )
-        return sorted(member_ids)
+            commits[commit["batch_id"]] = commit
+        return [commits[batch_id] for batch_id in sorted(commits)]
+
+    def _research_split_member_ids_for_supervision_card(
+        self,
+        card: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[str]:
+        """Return the actual committed split membership attacked by a card."""
+
+        return sorted(
+            {
+                item["research_id"]
+                for commit in self._research_split_commits_for_supervision_card(
+                    card,
+                    _inspection_context=_inspection_context,
+                )
+                for item in commit["members"]
+            }
+        )
 
     def _validated_research_split_commit(
         self,
@@ -5528,7 +5755,7 @@ class V5LifecycleManager:
         if path.is_symlink() or not path.is_file():
             raise ValueError("Research split batch commit is missing or unsafe")
         record = self.store._read_json(path)
-        fields = {
+        base_fields = {
             "schema_version",
             "contract_revision",
             "project_id",
@@ -5551,11 +5778,28 @@ class V5LifecycleManager:
             "created_at",
             "record_sha256",
         }
-        if not isinstance(record, dict) or set(record) != fields:
+        revision = record.get("contract_revision") if isinstance(record, dict) else None
+        fields = (
+            base_fields
+            if revision == RESEARCH_SPLIT_COMMIT_REVISION_V1
+            else base_fields
+            | {
+                "logical_relations",
+                "logical_relations_sha256",
+                "relation_allocation_rationale",
+            }
+            if revision == RESEARCH_SPLIT_COMMIT_REVISION
+            else set()
+        )
+        if not fields or not isinstance(record, dict) or set(record) != fields:
             raise ValueError("Research split commit fields are not exact")
         if (
             record.get("schema_version") != 1
-            or record.get("contract_revision") != RESEARCH_SPLIT_COMMIT_REVISION
+            or revision
+            not in {
+                RESEARCH_SPLIT_COMMIT_REVISION_V1,
+                RESEARCH_SPLIT_COMMIT_REVISION,
+            }
             or record.get("project_id") != self.store.project_id()
             or record.get("batch_id") != batch_id
             or record.get("truth_effect") != "none"
@@ -5615,19 +5859,20 @@ class V5LifecycleManager:
         owner = self._inspection_research_record(
             validate_memory_id(record["owner_research_id"]), inspection
         )
+        owner_binding = owner.get("metadata", {}).get(
+            "research_split_owner", {}
+        )
         if (
             source["record_sha256"] != record["source_record_sha256"]
             or repair["record_sha256"] != record["repair_record_sha256"]
             or owner["record_sha256"] != record["owner_record_sha256"]
-            or owner.get("metadata", {}).get("research_split_owner", {}).get(
-                "batch_id"
-            )
-            != batch_id
+            or owner_binding.get("batch_id") != batch_id
         ):
             raise ValueError("Research split commit record bindings drifted")
         members = record.get("members")
         if not isinstance(members, list):
             raise ValueError("Research split commit members are invalid")
+        member_ids: set[str] = set()
         for index, item in enumerate(members, 1):
             if not isinstance(item, dict) or set(item) != {
                 "surface_key",
@@ -5638,6 +5883,7 @@ class V5LifecycleManager:
             member = self._inspection_research_record(
                 validate_memory_id(item["research_id"]), inspection
             )
+            member_ids.add(member["research_id"])
             binding = member.get("metadata", {}).get("research_split_member")
             if (
                 member["record_sha256"] != item["record_sha256"]
@@ -5648,6 +5894,43 @@ class V5LifecycleManager:
                 or binding.get("member_count") != len(members)
             ):
                 raise ValueError("Research split commit member binding drifted")
+        expected_owner_revision = (
+            RESEARCH_SPLIT_OWNER_REVISION
+            if revision == RESEARCH_SPLIT_COMMIT_REVISION
+            else RESEARCH_SPLIT_OWNER_REVISION_V1
+        )
+        if (
+            owner_binding.get("revision") != expected_owner_revision
+            or owner_binding.get("members") != members
+            or owner_binding.get("membership_sha256")
+            != record["membership_sha256"]
+        ):
+            raise ValueError("Research split owner/commit membership drifted")
+        if revision == RESEARCH_SPLIT_COMMIT_REVISION:
+            logical_relations = validate_resolved_research_split_relations(
+                record["logical_relations"], member_ids=member_ids
+            )
+            if (
+                logical_relations != record["logical_relations"]
+                or record.get("logical_relations_sha256")
+                != sha256_json(logical_relations)
+                or owner_binding.get("logical_relations")
+                != logical_relations
+                or owner_binding.get("logical_relations_sha256")
+                != record["logical_relations_sha256"]
+                or owner_binding.get("relation_allocation_rationale")
+                != record.get("relation_allocation_rationale")
+            ):
+                raise ValueError("Research split logical relations drifted")
+            _require_nonempty_text(
+                record.get("relation_allocation_rationale"),
+                "Research split relation-allocation rationale",
+            )
+            for relation in logical_relations:
+                if relation["target_scope"] == "external_research":
+                    self._inspection_research_record(
+                        relation["to_research_id"], inspection
+                    )
         return record
 
     @staticmethod
@@ -6966,9 +7249,17 @@ class V5LifecycleManager:
                     descriptors,
                 )
             )
+            external_source_use_signals = (
+                self._source_round_external_source_use_signals(
+                    source_manifest,
+                    descriptors,
+                    inspection,
+                )
+            )
             required_scopes = self._default_research_supervisor_scopes(
                 descriptors,
                 selection_logic_signals=selection_logic_signals,
+                external_source_use_signals=external_source_use_signals,
             )
             if not required_scopes:
                 coverage.append(
@@ -8082,7 +8373,16 @@ class V5LifecycleManager:
                         field=field,
                     )
                     continue
-                for value in values[:maximum]:
+                if len(values) > maximum:
+                    diagnose(
+                        "checkpoint_research_list_over_capacity",
+                        target_id=target_id,
+                        field=field,
+                    )
+                    # Capacity is a Main choice, not an array-order choice.
+                    # Do not project a false exact first-N frontier.
+                    continue
+                for value in values:
                     research_id = (
                         value.get("research_id")
                         if isinstance(value, dict)
@@ -8132,6 +8432,117 @@ class V5LifecycleManager:
             campaign_id
         ) / "frontier-state.json"
 
+    @staticmethod
+    def _normalize_campaign_frontier_target_row(
+        *,
+        revision: str,
+        target_id: str,
+        row: Any,
+    ) -> dict[str, Any]:
+        """Validate one target row so explicit recovery can preserve its peers."""
+
+        validate_campaign_target_id(target_id)
+        expected_fields = {
+            "recovery_root_research_id",
+            "active_head_research_ids",
+            "historical_landmark_research_ids",
+            "recent_attained_research_ids",
+        }
+        if revision == V5_CAMPAIGN_FRONTIER_STATE_REVISION:
+            expected_fields.update(
+                {"historical_landmark_reasons", "head_contexts"}
+            )
+        if not isinstance(row, dict) or set(row) != expected_fields:
+            raise ValueError("Campaign frontier target state is invalid")
+        validate_memory_id(row["recovery_root_research_id"])
+        seen: set[str] = set()
+        for field, maximum in (
+            ("active_head_research_ids", V5_CAMPAIGN_ACTIVE_HEAD_LIMIT),
+            ("historical_landmark_research_ids", None),
+            (
+                "recent_attained_research_ids",
+                V5_CAMPAIGN_RECENT_ATTAINED_LIMIT,
+            ),
+        ):
+            ids = row[field]
+            if not isinstance(ids, list) or (
+                maximum is not None and len(ids) > maximum
+            ):
+                raise ValueError("Campaign frontier Research list is invalid")
+            normalized = [validate_memory_id(item) for item in ids]
+            if len(normalized) != len(set(normalized)) or seen.intersection(
+                normalized
+            ):
+                raise ValueError("Campaign frontier Research ids repeat")
+            seen.update(normalized)
+        historical_ids = row["historical_landmark_research_ids"]
+        if revision == V5_CAMPAIGN_FRONTIER_STATE_REVISION:
+            reasons = row["historical_landmark_reasons"]
+            contexts = row["head_contexts"]
+        else:
+            reasons = {
+                research_id: "Legacy curated Campaign landmark."
+                for research_id in historical_ids
+            }
+            contexts = []
+        if (
+            not isinstance(reasons, dict)
+            or set(reasons) != set(historical_ids)
+            or any(
+                not isinstance(reason, str)
+                or not reason.strip()
+                or len(reason) > 2_048
+                for reason in reasons.values()
+            )
+        ):
+            raise ValueError("Campaign frontier landmark reasons are invalid")
+        if (
+            not isinstance(contexts, list)
+            or len(contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
+        ):
+            raise ValueError("Campaign frontier head contexts are invalid")
+        active_ids = set(row["active_head_research_ids"])
+        context_keys: set[tuple[str, str | None]] = set()
+        normalized_contexts: list[dict[str, Any]] = []
+        for context in contexts:
+            if not isinstance(context, dict) or set(context) != {
+                "research_id",
+                "attached_head_research_id",
+                "reason",
+            }:
+                raise ValueError("Campaign frontier head context is invalid")
+            research_id = validate_memory_id(context["research_id"])
+            attached_head_id = context["attached_head_research_id"]
+            if attached_head_id is not None:
+                attached_head_id = validate_memory_id(attached_head_id)
+                if attached_head_id not in active_ids:
+                    raise ValueError(
+                        "Campaign frontier context is attached to a non-head"
+                    )
+            reason = context["reason"]
+            key = (research_id, attached_head_id)
+            if (
+                research_id in active_ids
+                or key in context_keys
+                or not isinstance(reason, str)
+                or not reason.strip()
+                or len(reason) > 2_048
+            ):
+                raise ValueError("Campaign frontier head context is invalid")
+            context_keys.add(key)
+            normalized_contexts.append(
+                {
+                    "research_id": research_id,
+                    "attached_head_research_id": attached_head_id,
+                    "reason": reason.strip(),
+                }
+            )
+        return {
+            **row,
+            "historical_landmark_reasons": dict(reasons),
+            "head_contexts": normalized_contexts,
+        }
+
     def _read_campaign_frontier_working_state(
         self, campaign_id: str
     ) -> dict[str, Any] | None:
@@ -8144,9 +8555,14 @@ class V5LifecycleManager:
         if path.is_symlink() or not path.is_file():
             raise ValueError("Campaign frontier working state is unsafe")
         value = self.store._read_json(path)
+        revision = value.get("revision") if isinstance(value, dict) else None
         if (
             not isinstance(value, dict)
-            or value.get("revision") != V5_CAMPAIGN_FRONTIER_STATE_REVISION
+            or revision
+            not in {
+                V5_CAMPAIGN_FRONTIER_STATE_LEGACY_REVISION,
+                V5_CAMPAIGN_FRONTIER_STATE_REVISION,
+            }
             or value.get("campaign_id") != campaign_id
             or not isinstance(value.get("generation"), int)
             or value["generation"] < 1
@@ -8155,47 +8571,100 @@ class V5LifecycleManager:
             or len(value) != 5
         ):
             raise ValueError("Campaign frontier working state is invalid")
+        normalized_targets = {
+            target_id: self._normalize_campaign_frontier_target_row(
+                revision=revision,
+                target_id=target_id,
+                row=row,
+            )
+            for target_id, row in value["targets"].items()
+        }
+        return {**value, "targets": normalized_targets}
+
+    def _recover_valid_campaign_frontier_target_rows(
+        self, campaign_id: str
+    ) -> dict[str, dict[str, Any]]:
+        """Read only independently valid rows during explicit Main recovery.
+
+        This never authorizes a write.  It merely prevents one malformed target
+        row from erasing exact peer-target memory when Main repairs that row.
+        """
+
+        campaign_id = validate_campaign_id(campaign_id)
+        path = self._frontier_state_path(campaign_id)
+        if path.is_symlink() or not path.is_file():
+            return {}
+        value = self.store._read_json(path)
+        revision = value.get("revision") if isinstance(value, dict) else None
+        if (
+            not isinstance(value, dict)
+            or set(value) != {
+                "revision",
+                "campaign_id",
+                "generation",
+                "updated_at",
+                "targets",
+            }
+            or revision
+            not in {
+                V5_CAMPAIGN_FRONTIER_STATE_LEGACY_REVISION,
+                V5_CAMPAIGN_FRONTIER_STATE_REVISION,
+            }
+            or value.get("campaign_id") != campaign_id
+            or not isinstance(value.get("targets"), dict)
+        ):
+            return {}
+        recovered: dict[str, dict[str, Any]] = {}
         for target_id, row in value["targets"].items():
-            validate_campaign_target_id(target_id)
-            if not isinstance(row, dict) or set(row) != {
-                "recovery_root_research_id",
-                "active_head_research_ids",
-                "historical_landmark_research_ids",
-                "recent_attained_research_ids",
-            }:
-                raise ValueError("Campaign frontier target state is invalid")
-            validate_memory_id(row["recovery_root_research_id"])
-            seen: set[str] = set()
-            for field, maximum in (
-                (
-                    "active_head_research_ids",
-                    V5_CAMPAIGN_ACTIVE_HEAD_LIMIT,
-                ),
-                ("historical_landmark_research_ids", 8),
-                ("recent_attained_research_ids", 4),
-            ):
-                ids = row[field]
-                if not isinstance(ids, list) or len(ids) > maximum:
-                    raise ValueError("Campaign frontier Research list is invalid")
-                normalized = [validate_memory_id(item) for item in ids]
-                if len(normalized) != len(set(normalized)) or seen.intersection(
-                    normalized
-                ):
-                    raise ValueError("Campaign frontier Research ids repeat")
-                seen.update(normalized)
-        return value
+            try:
+                recovered[target_id] = (
+                    self._normalize_campaign_frontier_target_row(
+                        revision=revision,
+                        target_id=target_id,
+                        row=row,
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+        return recovered
 
     def _replace_campaign_frontier_working_state(
         self,
         campaign_id: str,
         *,
         targets: dict[str, dict[str, Any]],
+        allow_invalid_rebuild: bool = False,
     ) -> dict[str, Any]:
+        targets = json.loads(json.dumps(targets, ensure_ascii=False))
+        for row in targets.values():
+            historical_ids = row.get(
+                "historical_landmark_research_ids", []
+            )
+            existing_reasons = row.get("historical_landmark_reasons", {})
+            if not isinstance(existing_reasons, dict):
+                existing_reasons = {}
+            row["historical_landmark_reasons"] = {
+                research_id: existing_reasons.get(
+                    research_id,
+                    "Legacy curated Campaign landmark.",
+                )
+                for research_id in historical_ids
+            }
+            row.setdefault("head_contexts", [])
         try:
             current = self._read_campaign_frontier_working_state(campaign_id)
-        except ValueError:
+        except ValueError as exc:
+            if not allow_invalid_rebuild:
+                raise ValueError(
+                    "Campaign frontier working state is invalid; explicit Main "
+                    "reconciliation is required before it can be replaced"
+                ) from exc
             current = None
-        if current is not None and current["targets"] == targets:
+        if (
+            current is not None
+            and current["revision"] == V5_CAMPAIGN_FRONTIER_STATE_REVISION
+            and current["targets"] == targets
+        ):
             return current
         value = {
             "revision": V5_CAMPAIGN_FRONTIER_STATE_REVISION,
@@ -8600,67 +9069,15 @@ class V5LifecycleManager:
                 supervision_results.add(research_id)
                 children.setdefault(related[0], set()).add(research_id)
 
-            if record.get("relation") == "repairs" and isinstance(
-                metadata, dict
-            ):
-                source = record.get("source")
-                source_parts = (
-                    [part.strip() for part in source.split(";")]
-                    if isinstance(source, str)
-                    else []
-                )
-                source_research_ids = [
-                    part.removeprefix("research:")
-                    for part in source_parts
-                    if part.startswith("research:")
-                    and MEMORY_ID_RE.fullmatch(
-                        part.removeprefix("research:")
-                    )
-                    is not None
-                ]
-                if (
-                    isinstance(metadata.get("campaign_id"), str)
-                    and isinstance(related, list)
-                    and len(related) >= 2
-                    and len(set(related)) == len(related)
-                    and len(source_research_ids) == len(source_parts)
-                    and set(source_research_ids) == set(related)
-                    and all(item in bases for item in related)
-                    and all(
-                        record.get("created_at", "")
-                        > bases[item].get("created_at", "")
-                        for item in related
-                    )
-                ):
-                    # Before structured repair metadata, the exact ``repairs``
-                    # relation and complete research: source set were the only
-                    # rigid representation.  Keep that historical reader while
-                    # leaving prospective structured records label-independent.
-                    legacy_repair_tasks.add(research_id)
-                    for source_id in related:
-                        children.setdefault(source_id, set()).add(research_id)
-
-            lineage = cls._structured_repair_lineage(
-                repair_id=research_id,
-                repair=record,
-                bases=bases,
-            )
-            if lineage is None:
-                continue
-            product_id, trigger_id = lineage
-            # Campaign freshness follows the rigid COW edge already present in
-            # the immutable graph.  Trigger provenance and relation wording are
-            # Main context, not a second capability gate.  Completion remains a
-            # narrower, independently checked projection below.
-            cow_repairs.add(research_id)
-            children.setdefault(product_id, set()).add(research_id)
-            if trigger_id is not None:
-                children.setdefault(trigger_id, set()).add(research_id)
-                for trigger_input_id in cls._structured_repair_trigger_inputs(
-                    trigger_id=trigger_id,
-                    bases=bases,
-                ):
-                    children.setdefault(trigger_input_id, set()).add(trigger_id)
+        cow_projection = cls._frontier_cow_route_projection(
+            bases=bases,
+            route_staleness={},
+        )
+        for adjacency_name in ("route_children", "context_children"):
+            for parent_id, child_ids in cow_projection[adjacency_name].items():
+                children.setdefault(parent_id, set()).update(child_ids)
+        cow_repairs.update(cow_projection["cow_repairs"])
+        legacy_repair_tasks.update(cow_projection["legacy_repair_tasks"])
 
         return {
             "children": {
@@ -8673,6 +9090,10 @@ class V5LifecycleManager:
             "supervision_results": supervision_results,
             "cow_repairs": cow_repairs,
             "legacy_repair_tasks": legacy_repair_tasks,
+            "cow_route_details": cow_projection["details"],
+            "cow_repair_products": cow_projection["repair_products"],
+            "cow_split_owners": cow_projection["split_owners"],
+            "cow_split_members": cow_projection["split_members"],
         }
 
     def _campaign_attained_semantic_successor_summary(
@@ -8682,7 +9103,7 @@ class V5LifecycleManager:
         campaign_id: str,
         bases: dict[str, dict[str, Any]],
         index: dict[str, Any],
-    ) -> tuple[dict[str, Any], list[str]]:
+    ) -> tuple[dict[str, Any], list[str], list[str]]:
         children = index["children"]
         seen = {attained_research_id}
         pending = list(children.get(attained_research_id, []))
@@ -8749,6 +9170,49 @@ class V5LifecycleManager:
         def bounded_members(member_ids: set[str]) -> list[str]:
             return sorted(successor_set.intersection(member_ids))[:8]
 
+        split_routes: list[dict[str, Any]] = []
+        for repair_id, detail in sorted(
+            index["cow_route_details"].items()
+        ):
+            member_ids = detail.get("split_member_research_ids", [])
+            if (
+                detail.get("state") != "committed_split_members"
+                or not isinstance(member_ids, list)
+                or not successor_set.intersection(member_ids)
+            ):
+                continue
+            owner_id = detail.get("split_owner_research_id")
+            owner = bases.get(owner_id) if isinstance(owner_id, str) else None
+            owner_binding = (
+                owner.get("metadata", {}).get("research_split_owner")
+                if isinstance(owner, dict)
+                else None
+            )
+            split_routes.append(
+                {
+                    "repair_research_id": repair_id,
+                    "split_owner_research_id": owner_id,
+                    "split_batch_id": (
+                        owner_binding.get("batch_id")
+                        if isinstance(owner_binding, dict)
+                        else None
+                    ),
+                    "member_count": len(member_ids),
+                    "member_ids_sha256": sha256_json(sorted(member_ids)),
+                    "exact_member_set_research_id": owner_id,
+                }
+            )
+        requires_main_retarget = bool(split_routes) or len(current_route_ids) > 1
+        route_resolution = (
+            "explicit_main_split_retarget"
+            if split_routes
+            else "explicit_main_branch_retarget"
+            if len(current_route_ids) > 1
+            else "automatic_unique_structural_successor"
+            if len(current_route_ids) == 1
+            else "no_current_workflow_route"
+        )
+
         summary = {
             "attained_research_id": attained_research_id,
             "production_product_research_ids": bounded_members(
@@ -8768,6 +9232,11 @@ class V5LifecycleManager:
             "current_route_research_ids": current_route_ids[:8],
             "current_route_count": len(current_route_ids),
             "current_route_ids_sha256": sha256_json(current_route_ids),
+            "route_resolution": route_resolution,
+            "main_retarget_required": requires_main_retarget,
+            "split_route_count": len(split_routes),
+            "split_routes": split_routes[:8],
+            "split_routes_sha256": sha256_json(split_routes),
             "terminal_evidence_research_ids": terminal_evidence_ids[:8],
             "terminal_evidence_count": len(terminal_evidence_ids),
             "terminal_evidence_ids_sha256": sha256_json(
@@ -8779,7 +9248,7 @@ class V5LifecycleManager:
             "terminal_ids_sha256": sha256_json(terminal_ids),
             "selection_effect": "none",
         }
-        return summary, terminal_ids
+        return summary, terminal_ids, current_route_ids
 
     def _campaign_active_head_preferred_production_round(
         self,
@@ -8983,14 +9452,25 @@ class V5LifecycleManager:
                     historical_ids = checkpoint_target.get(
                         "historical_landmark_research_ids", []
                     )
+                    historical_reasons = checkpoint_target.get(
+                        "historical_landmark_reasons", {}
+                    )
                     recent_attained_ids = checkpoint_target.get(
                         "recent_attained_research_ids", []
+                    )
+                    raw_head_contexts = checkpoint_target.get(
+                        "head_contexts", []
                     )
                 else:
                     # Historical checkpoints used one curated attained list.
                     # Treat it as the durable spine on first bootstrap.
                     historical_ids = list(attained_ids)
+                    historical_reasons = {
+                        research_id: "Imported from an explicit historical Campaign checkpoint."
+                        for research_id in historical_ids
+                    }
                     recent_attained_ids = []
+                    raw_head_contexts = []
                 head_work_keys: list[tuple[str, str]] = []
                 head_action_root_ids: dict[str, str] = {}
                 invalid_head_ids: list[str] = []
@@ -9058,7 +9538,12 @@ class V5LifecycleManager:
                         target_id=target_id,
                         research_ids=invalid_head_ids,
                     )
-                for attained_id in attained_ids[:16]:
+                attained_scan_ids = (
+                    attained_ids
+                    if frontier_source == "working_state"
+                    else attained_ids[:16]
+                )
+                for attained_id in attained_scan_ids:
                     attained = bases.get(attained_id)
                     if (
                         not isinstance(attained, dict)
@@ -9079,15 +9564,53 @@ class V5LifecycleManager:
                     )
                 valid_historical_ids = [
                     research_id
-                    for research_id in historical_ids[:8]
+                    for research_id in historical_ids
                     if research_id in valid_attained_ids
                 ]
                 valid_recent_attained_ids = [
                     research_id
-                    for research_id in recent_attained_ids[:8]
+                    for research_id in recent_attained_ids[
+                        :V5_CAMPAIGN_RECENT_ATTAINED_LIMIT
+                    ]
                     if research_id in valid_attained_ids
                     and research_id not in set(valid_historical_ids)
                 ]
+                valid_head_contexts: list[dict[str, Any]] = []
+                invalid_context_ids: list[str] = []
+                for context in (
+                    raw_head_contexts
+                    if isinstance(raw_head_contexts, list)
+                    else []
+                ):
+                    if not isinstance(context, dict):
+                        continue
+                    context_id = context.get("research_id")
+                    attached_head_id = context.get(
+                        "attached_head_research_id"
+                    )
+                    if (
+                        not isinstance(context_id, str)
+                        or context_id not in bases
+                        or self._checkpoint_research_campaign_ids(
+                            context_id,
+                            bases,
+                        )
+                        != frozenset({campaign_id})
+                        or (
+                            attached_head_id is not None
+                            and attached_head_id not in active_head_ids
+                        )
+                    ):
+                        if isinstance(context_id, str):
+                            invalid_context_ids.append(context_id)
+                        continue
+                    valid_head_contexts.append(context)
+                if invalid_context_ids:
+                    diagnose_checkpoint(
+                        "checkpoint_context_missing_or_cross_campaign",
+                        target_id=target_id,
+                        research_ids=invalid_context_ids,
+                    )
                 attained_semantic_successors: list[dict[str, Any]] = []
                 terminal_successor_ids: set[str] = set()
                 checkpointed_research_ids = set(active_head_ids).union(
@@ -9095,10 +9618,11 @@ class V5LifecycleManager:
                 )
                 active_head_semantic_successors: list[dict[str, Any]] = []
                 head_terminal_ids: dict[str, list[str]] = {}
+                head_current_route_ids: dict[str, list[str]] = {}
                 current_active_head_ids: list[str] = []
                 stale_active_head_ids: list[str] = []
                 for head_id, _work_key in head_work_keys:
-                    summary, terminal_ids = (
+                    summary, terminal_ids, exact_current_route_ids = (
                         self._campaign_attained_semantic_successor_summary(
                             attained_research_id=head_id,
                             campaign_id=campaign_id,
@@ -9110,15 +9634,18 @@ class V5LifecycleManager:
                         summary.pop("attained_research_id")
                     )
                     head_terminal_ids[head_id] = terminal_ids
+                    head_current_route_ids[head_id] = exact_current_route_ids
                     if summary["successor_count"]:
                         stale_active_head_ids.append(head_id)
                         summary["projection_scope"] = (
                             "exact_workflow_successors_of_checkpoint_head"
                         )
                         active_head_semantic_successors.append(summary)
-                        candidates = summary[
-                            "current_route_research_ids"
-                        ]
+                        candidates = (
+                            [head_id]
+                            if summary["main_retarget_required"]
+                            else exact_current_route_ids
+                        )
                     else:
                         candidates = [head_id]
                     for candidate_id in candidates:
@@ -9126,7 +9653,7 @@ class V5LifecycleManager:
                             current_active_head_ids.append(candidate_id)
                 successor_root_ids: list[str] = []
                 for attained_id in valid_attained_ids:
-                    summary, terminal_ids = (
+                    summary, terminal_ids, _exact_current_route_ids = (
                         self._campaign_attained_semantic_successor_summary(
                             attained_research_id=attained_id,
                             campaign_id=campaign_id,
@@ -9200,32 +9727,78 @@ class V5LifecycleManager:
                         "historical_landmark_research_ids": (
                             valid_historical_ids
                         ),
+                        "historical_landmark_count": len(
+                            valid_historical_ids
+                        ),
+                        "historical_landmark_ids_sha256": sha256_json(
+                            valid_historical_ids
+                        ),
+                        "historical_landmarks": [
+                            {
+                                "research_id": research_id,
+                                "reason": historical_reasons.get(
+                                    research_id,
+                                    "Main-curated Campaign landmark.",
+                                ),
+                                "mathematical_summary": (
+                                    self._campaign_mathematical_memory(
+                                        bases[research_id],
+                                        compact=True,
+                                    )
+                                ),
+                            }
+                            for research_id in valid_historical_ids
+                        ],
+                        "head_contexts": [
+                            {
+                                **context,
+                                "mathematical_summary": (
+                                    self._campaign_mathematical_memory(
+                                        bases[context["research_id"]],
+                                        compact=True,
+                                    )
+                                ),
+                            }
+                            for context in valid_head_contexts
+                        ],
                         "recent_attained_research_ids": (
                             valid_recent_attained_ids
+                        ),
+                        "recent_attained_count": len(
+                            valid_recent_attained_ids
+                        ),
+                        "recent_attained_ids_sha256": sha256_json(
+                            valid_recent_attained_ids
+                        ),
+                        "unpartitioned_attained_research_ids": (
+                            []
                         ),
                         "historical_mathematical_summary": [
                             self._campaign_mathematical_memory(
                                 bases[research_id],
                                 compact=True,
                             )
-                            for research_id in valid_historical_ids[:8]
+                            for research_id in valid_historical_ids[
+                                :V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW
+                            ]
                         ],
                         "recent_attained_mathematical_history": [
                             self._campaign_mathematical_memory(
                                 bases[research_id],
                                 compact=True,
                             )
-                            for research_id in valid_recent_attained_ids[:4]
+                            for research_id in valid_recent_attained_ids[
+                                :V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW
+                            ]
                         ],
+                        # This advisory describes a semantic gap, not a
+                        # counter-based maintenance clock.  Four entries are
+                        # only the routine preview size; Main curates history
+                        # at a natural window (including context recovery),
+                        # never merely because a list crossed that number.
                         "history_review_recommended": bool(
-                            len(valid_historical_ids) > 4
-                            or (
-                                valid_recent_attained_ids
-                                and (
-                                    not valid_historical_ids
-                                    or len(valid_recent_attained_ids) >= 4
-                                )
-                            )
+                            valid_recent_attained_ids
+                            and not valid_historical_ids
                         ),
                         "history_review_reasons": [
                             reason
@@ -9234,14 +9807,6 @@ class V5LifecycleManager:
                                     "historical_landmarks_empty",
                                     bool(valid_recent_attained_ids)
                                     and not valid_historical_ids,
-                                ),
-                                (
-                                    "recent_mathematical_progress_accumulated",
-                                    len(valid_recent_attained_ids) >= 4,
-                                ),
-                                (
-                                    "historical_landmarks_need_main_curation",
-                                    len(valid_historical_ids) > 4,
                                 ),
                             )
                             if applies
@@ -9283,7 +9848,9 @@ class V5LifecycleManager:
                             for head_id, _work_key in head_work_keys
                         ],
                         "attained_checkpoint_research_ids": (
-                            valid_attained_ids[:16]
+                            valid_attained_ids
+                            if frontier_source == "working_state"
+                            else valid_attained_ids[:16]
                         ),
                         "attained_semantic_successors": (
                             attained_semantic_successors
@@ -9347,6 +9914,7 @@ class V5LifecycleManager:
                         "_head_work_keys": head_work_keys,
                         "_head_action_root_ids": head_action_root_ids,
                         "_head_terminal_ids": head_terminal_ids,
+                        "_head_current_route_ids": head_current_route_ids,
                         "_uncheckpointed_terminal_ids": (
                             uncheckpointed_terminal_ids
                         ),
@@ -9550,7 +10118,16 @@ class V5LifecycleManager:
                 preferred_action = item.get(
                     "_head_preferred_round_actions", {}
                 ).get(head_id)
-                if preferred_action is not None:
+                exact_current_route_ids = item[
+                    "_head_current_route_ids"
+                ].get(head_id, [])
+                cow_route_advanced = bool(
+                    set(exact_current_route_ids).intersection(
+                        semantic_successor_index["cow_repair_products"]
+                        | semantic_successor_index["cow_split_members"]
+                    )
+                )
+                if preferred_action is not None and not cow_route_advanced:
                     current_head_ids.append(head_id)
                     summary["checkpoint_refresh_required"] = False
                     summary["checkpoint_route_state"] = (
@@ -9574,7 +10151,9 @@ class V5LifecycleManager:
                     in {"await_return", "ingest_return"}
                     and pending_reason.startswith("supervision_")
                 )
-                if not uncheckpointed_ids or plan_only_in_flight:
+                if (not uncheckpointed_ids or plan_only_in_flight) and not (
+                    cow_route_advanced
+                ):
                     current_head_ids.append(head_id)
                     summary["checkpoint_refresh_required"] = False
                     summary["checkpoint_route_state"] = (
@@ -9592,11 +10171,16 @@ class V5LifecycleManager:
                 stale_head_ids.append(head_id)
                 summary["checkpoint_refresh_required"] = True
                 summary["checkpoint_route_state"] = (
-                    "stale_exact_successor_available"
+                    "main_retarget_required"
+                    if summary.get("main_retarget_required")
+                    else "stale_exact_successor_available"
                 )
-                for candidate_id in summary.get(
-                    "current_route_research_ids", []
-                ):
+                replacement_ids = (
+                    [head_id]
+                    if summary.get("main_retarget_required")
+                    else exact_current_route_ids
+                )
+                for candidate_id in replacement_ids:
                     if candidate_id not in current_head_ids:
                         current_head_ids.append(candidate_id)
 
@@ -10142,6 +10726,7 @@ class V5LifecycleManager:
         campaign_id: str,
         *,
         inspection: RoundInspectionContext | None = None,
+        allow_invalid_rebuild: bool = False,
     ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
         """Return one current row per active goal plus its live projection."""
 
@@ -10156,7 +10741,12 @@ class V5LifecycleManager:
         }
         try:
             current = self._read_campaign_frontier_working_state(campaign_id)
-        except ValueError:
+        except ValueError as exc:
+            if not allow_invalid_rebuild:
+                raise ValueError(
+                    "Campaign frontier working state is invalid; use explicit "
+                    "Main reconciliation instead of planning over lost memory"
+                ) from exc
             current = None
         stored = current["targets"] if current is not None else {}
         rows: dict[str, dict[str, Any]] = {}
@@ -10167,13 +10757,100 @@ class V5LifecycleManager:
             ):
                 continue
             if target_id in stored:
-                rows[target_id] = {
-                    key: list(value) if isinstance(value, list) else value
-                    for key, value in stored[target_id].items()
+                row = json.loads(
+                    json.dumps(stored[target_id], ensure_ascii=False)
+                )
+                goal = goals.get(target_id, {})
+                projected = goal.get("current_active_head_research_ids")
+                if isinstance(projected, list):
+                    projected_ids = list(
+                        dict.fromkeys(
+                            validate_memory_id(item) for item in projected
+                        )
+                    )
+                else:
+                    projected_ids = []
+                invalid = {
+                    item
+                    for field in (
+                        "invalid_head_research_ids",
+                        "invalid_attained_checkpoint_research_ids",
+                    )
+                    for item in (
+                        goal.get(field)
+                        if isinstance(goal.get(field), list)
+                        else []
+                    )
                 }
+                projected_ids = [
+                    item for item in projected_ids if item not in invalid
+                ]
+                if projected_ids:
+                    old_heads = set(row["active_head_research_ids"])
+                    new_heads = set(projected_ids)
+                    replacement_by_old: dict[str, str] = {}
+                    for action in goal.get("active_head_actions", []):
+                        if not isinstance(action, dict):
+                            continue
+                        old_id = action.get("research_id")
+                        current_id = action.get("actionable_research_id")
+                        if (
+                            isinstance(old_id, str)
+                            and old_id in old_heads
+                            and isinstance(current_id, str)
+                            and current_id in new_heads
+                        ):
+                            replacement_by_old[old_id] = current_id
+                    row["active_head_research_ids"] = projected_ids
+                    row["historical_landmark_research_ids"] = [
+                        item
+                        for item in row[
+                            "historical_landmark_research_ids"
+                        ]
+                        if item not in new_heads
+                    ]
+                    row["historical_landmark_reasons"] = {
+                        item: reason
+                        for item, reason in row[
+                            "historical_landmark_reasons"
+                        ].items()
+                        if item in row["historical_landmark_research_ids"]
+                    }
+                    row["recent_attained_research_ids"] = [
+                        item
+                        for item in row["recent_attained_research_ids"]
+                        if item not in new_heads
+                    ]
+                    row["head_contexts"] = [
+                        {
+                            **context,
+                            "attached_head_research_id": (
+                                context["attached_head_research_id"]
+                                if context["attached_head_research_id"]
+                                in new_heads
+                                else replacement_by_old.get(
+                                    context["attached_head_research_id"]
+                                )
+                            ),
+                        }
+                        for context in row["head_contexts"]
+                        if context["research_id"] not in new_heads
+                    ]
+                rows[target_id] = row
                 continue
             root_id = validate_memory_id(target["subject_id"])
             goal = goals.get(target_id, {})
+            if (
+                not allow_invalid_rebuild
+                and V5_CAMPAIGN_CHECKPOINT_LOSS_DIAGNOSTICS.intersection(
+                    goal.get("checkpoint_diagnostic_codes", [])
+                )
+            ):
+                raise ValueError(
+                    "Campaign checkpoint lost, ambiguously ordered, or "
+                    "exceeds frontier capacity; explicit Main reconciliation "
+                    "is required"
+                )
             active = goal.get("active_head_research_ids")
             attained = goal.get("attained_checkpoint_research_ids")
             invalid = {
@@ -10191,6 +10868,13 @@ class V5LifecycleManager:
                 for item in (active if isinstance(active, list) else [root_id])
                 if item not in invalid
             ]
+            historical_ids = [
+                item
+                for item in (
+                    attained if isinstance(attained, list) else []
+                )
+                if item not in invalid and item not in active_ids
+            ]
             rows[target_id] = {
                 "recovery_root_research_id": (
                     goal["recovery_root_research_id"]
@@ -10200,13 +10884,12 @@ class V5LifecycleManager:
                     else root_id
                 ),
                 "active_head_research_ids": active_ids or [root_id],
-                "historical_landmark_research_ids": [
-                    item
-                    for item in (
-                        attained if isinstance(attained, list) else []
-                    )
-                    if item not in invalid and item not in active_ids
-                ][:8],
+                "historical_landmark_research_ids": historical_ids,
+                "historical_landmark_reasons": {
+                    item: "Imported from the latest explicit Campaign checkpoint."
+                    for item in historical_ids
+                },
+                "head_contexts": [],
                 "recent_attained_research_ids": [],
             }
         return rows, goals
@@ -10327,17 +11010,46 @@ class V5LifecycleManager:
             for item in row["historical_landmark_research_ids"]
             if item not in active
         ]
-        recent = [
+        historical_reasons = {
+            item: row["historical_landmark_reasons"][item]
+            for item in historical
+        }
+        recent_candidates = [
             item
             for item in dict.fromkeys(
                 [*retired, *row["recent_attained_research_ids"]]
             )
             if item not in active and item not in historical
-        ][:4]
+        ]
+        if len(recent_candidates) > V5_CAMPAIGN_RECENT_ATTAINED_LIMIT:
+            # Choosing which attained Research should become a durable
+            # landmark, remain recent, or stay active is mathematical work
+            # memory curation.  Array order has no authority to forget the
+            # fifth item.  This is a genuine Main choice, unlike the ordinary
+            # atomic head handoff performed by plan-round above.
+            raise ValueError(
+                "Campaign planning would discard attained Research; "
+                "Main must curate the recent-attainment queue before planning"
+            )
+        recent = recent_candidates
+        contexts = [
+            {
+                **context,
+                "attached_head_research_id": (
+                    context["attached_head_research_id"]
+                    if context["attached_head_research_id"] in active
+                    else None
+                ),
+            }
+            for context in row["head_contexts"]
+            if context["research_id"] not in active
+        ]
         rows[target_id] = {
             **row,
             "active_head_research_ids": active,
             "historical_landmark_research_ids": historical,
+            "historical_landmark_reasons": historical_reasons,
+            "head_contexts": contexts,
             "recent_attained_research_ids": recent,
         }
         return self._replace_campaign_frontier_working_state(
@@ -10367,14 +11079,87 @@ class V5LifecycleManager:
             or payload.get("kind") != "campaign_frontier_update"
         ):
             raise ValueError("Campaign frontier update kind is invalid")
-        rows, _goals = self._campaign_frontier_seed(campaign_id)
         target_id = validate_campaign_target_id(payload.get("target_id"))
+        invalid_rebuild = False
+        try:
+            self._read_campaign_frontier_working_state(campaign_id)
+        except ValueError:
+            invalid_rebuild = True
+        recovered_rows = (
+            self._recover_valid_campaign_frontier_target_rows(campaign_id)
+            if invalid_rebuild
+            else {}
+        )
+        rows, goals = self._campaign_frontier_seed(
+            campaign_id,
+            allow_invalid_rebuild=True,
+        )
         if target_id not in rows:
             raise ValueError("Campaign frontier update target is not active")
+        target_loss_codes = V5_CAMPAIGN_CHECKPOINT_LOSS_DIAGNOSTICS.intersection(
+            goals.get(target_id, {}).get("checkpoint_diagnostic_codes", [])
+        )
+        global_loss_codes = V5_CAMPAIGN_CHECKPOINT_GLOBAL_LOSS_DIAGNOSTICS.intersection(
+            {
+                code
+                for goal in goals.values()
+                for code in goal.get("checkpoint_diagnostic_codes", [])
+            }
+        )
+        missing_checkpoint_target_ids = {
+            goal_target_id
+            for goal_target_id, goal in goals.items()
+            if "checkpoint_target_missing"
+            in goal.get("checkpoint_diagnostic_codes", [])
+        }
+        if global_loss_codes and missing_checkpoint_target_ids != {target_id}:
+            raise ValueError(
+                "Campaign checkpoint target loss cannot be repaired by one "
+                "target update; rebuild from an exact complete checkpoint"
+            )
+        complete_row_fields = {
+            "recovery_root_research_id",
+            "active_head_research_ids",
+            "historical_landmark_research_ids",
+            "historical_landmark_reasons",
+            "recent_attained_research_ids",
+            "head_contexts",
+        }
+        if (target_loss_codes or global_loss_codes) and not complete_row_fields.issubset(
+            payload
+        ):
+            raise ValueError(
+                "Campaign checkpoint lost or ambiguously ordered work memory; "
+                "explicit Main reconciliation must supply one complete target row"
+            )
+        if invalid_rebuild:
+            active_target_ids = set(rows)
+            invalid_target_ids = active_target_ids.difference(recovered_rows)
+            if invalid_target_ids not in (set(), {target_id}):
+                raise ValueError(
+                    "invalid Campaign frontier recovery may repair only the "
+                    "sole malformed active row, or a damaged container whose "
+                    "rows all validate; unresolved targets="
+                    + ", ".join(sorted(invalid_target_ids))
+                )
+            rows.update(
+                {
+                    recovered_target_id: recovered_row
+                    for recovered_target_id, recovered_row in (
+                        recovered_rows.items()
+                    )
+                    if recovered_target_id in active_target_ids
+                }
+            )
 
-        def research_ids(field: str, maximum: int) -> list[str]:
+        def research_ids(
+            field: str,
+            maximum: int | None,
+        ) -> list[str]:
             value = payload[field]
-            if not isinstance(value, list) or len(value) > maximum:
+            if not isinstance(value, list):
+                raise ValueError(f"{field} must contain Research ids")
+            if maximum is not None and len(value) > maximum:
                 raise ValueError(f"{field} must contain at most {maximum} ids")
             result = [validate_memory_id(item) for item in value]
             if len(result) != len(set(result)):
@@ -10384,33 +11169,240 @@ class V5LifecycleManager:
         row = dict(rows[target_id])
         fields = {
             "active_head_research_ids": V5_CAMPAIGN_ACTIVE_HEAD_LIMIT,
-            "historical_landmark_research_ids": 8,
-            "recent_attained_research_ids": 4,
+            "historical_landmark_research_ids": None,
+            "recent_attained_research_ids": (
+                V5_CAMPAIGN_RECENT_ATTAINED_LIMIT
+            ),
         }
         changed = False
         for field, maximum in fields.items():
             if field in payload:
                 row[field] = research_ids(field, maximum)
                 changed = True
+        if "historical_landmark_reasons" in payload:
+            reasons = payload["historical_landmark_reasons"]
+            if not isinstance(reasons, dict) or any(
+                not isinstance(research_id, str)
+                or not isinstance(reason, str)
+                or not reason.strip()
+                or len(reason) > 2_048
+                for research_id, reason in reasons.items()
+            ):
+                raise ValueError("historical landmark reasons are invalid")
+            row["historical_landmark_reasons"] = {
+                validate_memory_id(research_id): reason.strip()
+                for research_id, reason in reasons.items()
+            }
+            changed = True
+        if "head_contexts" in payload:
+            contexts = payload["head_contexts"]
+            if (
+                not isinstance(contexts, list)
+                or len(contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
+            ):
+                raise ValueError("head contexts are invalid")
+            row["head_contexts"] = json.loads(
+                json.dumps(contexts, ensure_ascii=False)
+            )
+            changed = True
         if "recovery_root_research_id" in payload:
             row["recovery_root_research_id"] = validate_memory_id(
                 payload["recovery_root_research_id"]
             )
             changed = True
+        updates = payload.get("attention_updates", [])
+        if (
+            not isinstance(updates, list)
+            or len(updates) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
+        ):
+            raise ValueError("Campaign attention updates are invalid")
+        for update in updates:
+            if not isinstance(update, dict):
+                raise ValueError("Campaign attention update is invalid")
+            operation = update.get("operation")
+            research_id = validate_memory_id(update.get("research_id"))
+            if operation == "attach_context":
+                if set(update) != {
+                    "operation",
+                    "research_id",
+                    "attached_head_research_id",
+                    "reason",
+                }:
+                    raise ValueError("attach_context fields are not exact")
+                attached_head_id = update["attached_head_research_id"]
+                if attached_head_id is not None:
+                    attached_head_id = validate_memory_id(attached_head_id)
+                    if attached_head_id not in row["active_head_research_ids"]:
+                        raise ValueError("context attachment is not an active head")
+                reason = update["reason"]
+                if (
+                    research_id in row["active_head_research_ids"]
+                    or not isinstance(reason, str)
+                    or not reason.strip()
+                    or len(reason) > 2_048
+                ):
+                    raise ValueError("Campaign head context is invalid")
+                row["head_contexts"] = [
+                    context
+                    for context in row["head_contexts"]
+                    if not (
+                        context.get("research_id") == research_id
+                        and context.get("attached_head_research_id")
+                        == attached_head_id
+                    )
+                ]
+                row["head_contexts"].append(
+                    {
+                        "research_id": research_id,
+                        "attached_head_research_id": attached_head_id,
+                        "reason": reason.strip(),
+                    }
+                )
+            elif operation == "remove_context":
+                if set(update) != {"operation", "research_id"}:
+                    raise ValueError("remove_context fields are not exact")
+                row["head_contexts"] = [
+                    context
+                    for context in row["head_contexts"]
+                    if context.get("research_id") != research_id
+                ]
+            elif operation == "promote_context":
+                if set(update) not in (
+                    {"operation", "research_id"},
+                    {"operation", "research_id", "replace_head_research_id"},
+                ):
+                    raise ValueError("promote_context fields are not exact")
+                replace_id = update.get("replace_head_research_id")
+                if replace_id is not None:
+                    replace_id = validate_memory_id(replace_id)
+                    if replace_id not in row["active_head_research_ids"]:
+                        raise ValueError("promoted context replacement is not a head")
+                    row["active_head_research_ids"] = [
+                        item
+                        for item in row["active_head_research_ids"]
+                        if item != replace_id
+                    ]
+                    if (
+                        replace_id
+                        not in row["historical_landmark_research_ids"]
+                    ):
+                        row["recent_attained_research_ids"] = list(
+                            dict.fromkeys(
+                                [
+                                    replace_id,
+                                    *row["recent_attained_research_ids"],
+                                ]
+                            )
+                        )
+                if research_id not in row["active_head_research_ids"]:
+                    row["active_head_research_ids"].append(research_id)
+                row["head_contexts"] = [
+                    {
+                        **context,
+                        "attached_head_research_id": (
+                            None
+                            if context.get("attached_head_research_id")
+                            == replace_id
+                            else context.get("attached_head_research_id")
+                        ),
+                    }
+                    for context in row["head_contexts"]
+                    if context.get("research_id") != research_id
+                ]
+            elif operation == "upsert_landmark":
+                if set(update) != {"operation", "research_id", "reason"}:
+                    raise ValueError("upsert_landmark fields are not exact")
+                reason = update["reason"]
+                if (
+                    research_id in row["active_head_research_ids"]
+                    or not isinstance(reason, str)
+                    or not reason.strip()
+                    or len(reason) > 2_048
+                ):
+                    raise ValueError("Campaign landmark is invalid")
+                if research_id not in row["historical_landmark_research_ids"]:
+                    row["historical_landmark_research_ids"].append(research_id)
+                row["historical_landmark_reasons"][research_id] = reason.strip()
+            elif operation == "remove_landmark":
+                if set(update) != {"operation", "research_id"}:
+                    raise ValueError("remove_landmark fields are not exact")
+                row["historical_landmark_research_ids"] = [
+                    item
+                    for item in row["historical_landmark_research_ids"]
+                    if item != research_id
+                ]
+                row["historical_landmark_reasons"].pop(research_id, None)
+            else:
+                raise ValueError("Campaign attention operation is invalid")
+            changed = True
         if not changed:
             raise ValueError("Campaign frontier update contains no state change")
+        if set(row["historical_landmark_reasons"]) != set(
+            row["historical_landmark_research_ids"]
+        ):
+            raise ValueError(
+                "Campaign historical landmarks require one exact Main reason "
+                "per Research id"
+            )
         active = set(row["active_head_research_ids"])
+        if len(active) > V5_CAMPAIGN_ACTIVE_HEAD_LIMIT:
+            raise ValueError("Campaign active-head limit exceeded")
         historical = [
             item
             for item in row["historical_landmark_research_ids"]
             if item not in active
         ]
         row["historical_landmark_research_ids"] = historical
+        row["historical_landmark_reasons"] = {
+            item: row["historical_landmark_reasons"][item]
+            for item in historical
+        }
         row["recent_attained_research_ids"] = [
             item
             for item in row["recent_attained_research_ids"]
             if item not in active and item not in historical
         ]
+        if (
+            len(row["recent_attained_research_ids"])
+            > V5_CAMPAIGN_RECENT_ATTAINED_LIMIT
+        ):
+            raise ValueError("Campaign recent-attainment limit exceeded")
+        normalized_contexts: list[dict[str, Any]] = []
+        context_keys: set[tuple[str, str | None]] = set()
+        for context in row["head_contexts"]:
+            if not isinstance(context, dict) or set(context) != {
+                "research_id",
+                "attached_head_research_id",
+                "reason",
+            }:
+                raise ValueError("Campaign head context is invalid")
+            research_id = validate_memory_id(context["research_id"])
+            attached_head_id = context["attached_head_research_id"]
+            if attached_head_id is not None:
+                attached_head_id = validate_memory_id(attached_head_id)
+                if attached_head_id not in active:
+                    raise ValueError("Campaign context is attached to a non-head")
+            reason = context["reason"]
+            key = (research_id, attached_head_id)
+            if (
+                research_id in active
+                or key in context_keys
+                or not isinstance(reason, str)
+                or not reason.strip()
+                or len(reason) > 2_048
+            ):
+                raise ValueError("Campaign head context is invalid")
+            context_keys.add(key)
+            normalized_contexts.append(
+                {
+                    "research_id": research_id,
+                    "attached_head_research_id": attached_head_id,
+                    "reason": reason.strip(),
+                }
+            )
+        if len(normalized_contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT:
+            raise ValueError("Campaign head-context limit exceeded")
+        row["head_contexts"] = normalized_contexts
 
         bases = {
             item["research_id"]: item
@@ -10423,6 +11415,12 @@ class V5LifecycleManager:
             *row["active_head_research_ids"],
             *row["historical_landmark_research_ids"],
             *row["recent_attained_research_ids"],
+            *[item["research_id"] for item in row["head_contexts"]],
+            *[
+                item["attached_head_research_id"]
+                for item in row["head_contexts"]
+                if item["attached_head_research_id"] is not None
+            ],
         ]
         invalid = [
             item
@@ -10439,12 +11437,17 @@ class V5LifecycleManager:
         state = self._replace_campaign_frontier_working_state(
             campaign_id,
             targets=rows,
+            allow_invalid_rebuild=invalid_rebuild,
         )
         return {
             "campaign_id": campaign_id,
             "state_generation": state["generation"],
             "updated_target_id": target_id,
-            "project_effect": "frontier_working_state_only",
+            "project_effect": (
+                "frontier_working_state_explicit_rebuild"
+                if invalid_rebuild
+                else "frontier_working_state_only"
+            ),
             "truth_effect": "none",
         }
 
@@ -10516,7 +11519,14 @@ class V5LifecycleManager:
             "root_research_id",
             "root_claim",
             "historical_landmark_research_ids",
+            "historical_landmark_count",
+            "historical_landmark_ids_sha256",
+            "historical_landmark_shown_count",
+            "historical_landmarks",
+            "head_contexts",
             "recent_attained_research_ids",
+            "recent_attained_count",
+            "recent_attained_ids_sha256",
             "historical_mathematical_summary",
             "recent_attained_mathematical_history",
             "history_review_recommended",
@@ -10596,6 +11606,45 @@ class V5LifecycleManager:
                     }
                     for value in values[:maximum]
                 ]
+        historical_landmarks = compact.get("historical_landmarks")
+        if isinstance(historical_landmarks, list):
+            landmark_preview = [
+                {
+                    "research_id": item.get("research_id"),
+                    "reason": _bounded_text(item.get("reason"), 320),
+                    "mathematical_summary": compact_mathematical_summary(
+                        item.get("mathematical_summary")
+                    ),
+                }
+                for item in historical_landmarks[
+                    :V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW
+                ]
+                if isinstance(item, dict)
+            ]
+            compact["historical_landmarks"] = landmark_preview
+            compact["historical_landmark_research_ids"] = [
+                item["research_id"] for item in landmark_preview
+            ]
+            compact["historical_landmark_shown_count"] = len(
+                landmark_preview
+            )
+            compact.pop("historical_mathematical_summary", None)
+        head_contexts = compact.get("head_contexts")
+        if isinstance(head_contexts, list):
+            compact["head_contexts"] = [
+                {
+                    "research_id": item.get("research_id"),
+                    "attached_head_research_id": item.get(
+                        "attached_head_research_id"
+                    ),
+                    "reason": _bounded_text(item.get("reason"), 320),
+                    "mathematical_summary": compact_mathematical_summary(
+                        item.get("mathematical_summary")
+                    ),
+                }
+                for item in head_contexts[:V5_CAMPAIGN_HEAD_CONTEXT_LIMIT]
+                if isinstance(item, dict)
+            ]
         workflow_roots = compact.get("active_head_workflow_roots")
         if isinstance(workflow_roots, list):
             nontrivial_roots = [
@@ -11687,11 +12736,36 @@ class V5LifecycleManager:
         bases: dict[str, dict[str, Any]],
         route_staleness: dict[str, list[str]],
     ) -> dict[str, tuple[str, ...]]:
-        """Build the complete exact repair adjacency for one structural view."""
+        """Compatibility wrapper over the shared rigid COW route projector."""
+
+        return cls._frontier_cow_route_projection(
+            bases=bases,
+            route_staleness=route_staleness,
+        )["route_children"]
+
+    @classmethod
+    def _frontier_cow_route_projection(
+        cls,
+        *,
+        bases: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+    ) -> dict[str, Any]:
+        """Project one rigid COW route model for Campaign and Fact consumers.
+
+        Descriptive relation labels remain readable prose.  Prospective COW is
+        recognized from the existing structured repair identity and the exact
+        worker/split bindings.  A completed one-output repair advances to that
+        product; a committed split exposes every member and therefore remains
+        non-canonical; a pending repair stops at its task.  No branch is ranked,
+        no mathematical closure is inferred, and no Fact authority is changed.
+        """
+
+        del route_staleness  # Invalidations are projected separately from COW.
 
         production_parent: dict[str, str] = {}
+        production_by_parent: dict[str, set[str]] = {}
         for product_id, product in bases.items():
-            metadata = product.get("metadata", {})
+            metadata = product.get("metadata")
             provenance = (
                 metadata.get("assignment_provenance")
                 if isinstance(metadata, dict)
@@ -11705,16 +12779,143 @@ class V5LifecycleManager:
                 or not isinstance(related, list)
                 or len(related) != 1
                 or related[0] not in bases
-                or not cls._frontier_product_has_complete_obligations(
-                    product=product
-                )
             ):
                 continue
-            production_parent[product_id] = related[0]
+            parent_id = related[0]
+            parent = bases[parent_id]
+            product_created = product.get("created_at")
+            parent_created = parent.get("created_at")
+            if (
+                not isinstance(product_created, str)
+                or not isinstance(parent_created, str)
+                or product_created <= parent_created
+            ):
+                continue
+            parent_metadata = parent.get("metadata")
+            explicit_campaign_ids = {
+                campaign_id
+                for campaign_id in (
+                    metadata.get("campaign_id")
+                    if isinstance(metadata, dict)
+                    else None,
+                    parent_metadata.get("campaign_id")
+                    if isinstance(parent_metadata, dict)
+                    else None,
+                )
+                if isinstance(campaign_id, str)
+            }
+            if len(explicit_campaign_ids) > 1:
+                continue
+            production_parent[product_id] = parent_id
+            production_by_parent.setdefault(parent_id, set()).add(product_id)
 
-        repair_children: dict[str, set[str]] = {}
+        route_children: dict[str, set[str]] = {}
+        context_children: dict[str, set[str]] = {}
+        details: dict[str, dict[str, Any]] = {}
+        cow_repairs: set[str] = set()
+        legacy_repair_tasks: set[str] = set()
+        repair_products: set[str] = set()
+        split_owners: set[str] = set()
+        split_members: set[str] = set()
+        split_logical_relations_by_subject: dict[
+            str, list[dict[str, str]]
+        ] = {}
+
+        def add_edge(
+            adjacency: dict[str, set[str]], parent_id: str, child_id: str
+        ) -> None:
+            if parent_id != child_id:
+                adjacency.setdefault(parent_id, set()).add(child_id)
+
+        def exact_output(repair_id: str, output_id: str) -> bool:
+            repair = bases[repair_id]
+            output = bases[output_id]
+            repair_metadata = repair.get("metadata")
+            output_metadata = output.get("metadata")
+            explicit_campaign_ids = {
+                campaign_id
+                for campaign_id in (
+                    repair_metadata.get("campaign_id")
+                    if isinstance(repair_metadata, dict)
+                    else None,
+                    output_metadata.get("campaign_id")
+                    if isinstance(output_metadata, dict)
+                    else None,
+                )
+                if isinstance(campaign_id, str)
+            }
+            return (
+                production_parent.get(output_id) == repair_id
+                and len(explicit_campaign_ids) <= 1
+                and repair.get("dependencies") == output.get("dependencies")
+                and isinstance(repair.get("created_at"), str)
+                and isinstance(output.get("created_at"), str)
+                and output["created_at"] > repair["created_at"]
+            )
+
+        def exact_split_members(
+            *, repair_id: str, source_id: str, owner_id: str
+        ) -> tuple[str, ...] | None:
+            owner = bases[owner_id]
+            owner_metadata = owner.get("metadata")
+            owner_binding = (
+                owner_metadata.get("research_split_owner")
+                if isinstance(owner_metadata, dict)
+                else None
+            )
+            if not isinstance(owner_binding, dict):
+                return None
+            try:
+                cls._validate_research_split_metadata(owner_metadata)
+            except (KeyError, TypeError, ValueError):
+                return None
+            if (
+                owner_binding.get("repair_research_id") != repair_id
+                or owner_binding.get("source_research_id") != source_id
+            ):
+                return None
+            member_rows = owner_binding.get("members")
+            if not isinstance(member_rows, list):
+                return None
+            member_ids: list[str] = []
+            for index, row in enumerate(member_rows, 1):
+                if not isinstance(row, dict):
+                    return None
+                member_id = row.get("research_id")
+                member = bases.get(member_id)
+                member_metadata = (
+                    member.get("metadata") if isinstance(member, dict) else None
+                )
+                member_binding = (
+                    member_metadata.get("research_split_member")
+                    if isinstance(member_metadata, dict)
+                    else None
+                )
+                if not isinstance(member_binding, dict):
+                    return None
+                try:
+                    cls._validate_research_split_metadata(member_metadata)
+                except (KeyError, TypeError, ValueError):
+                    return None
+                if (
+                    member_binding.get("batch_id")
+                    != owner_binding.get("batch_id")
+                    or member_binding.get("repair_research_id") != repair_id
+                    or member_binding.get("source_research_id") != source_id
+                    or member_binding.get("surface_key")
+                    != row.get("surface_key")
+                    or member_binding.get("member_index") != index
+                    or member_binding.get("member_count") != len(member_rows)
+                    or member.get("record_sha256") != row.get("record_sha256")
+                    or member.get("dependencies")
+                    != bases[repair_id].get("dependencies")
+                ):
+                    return None
+                member_ids.append(member_id)
+            return tuple(member_ids)
+
         for repair_id, repair in bases.items():
-            metadata = repair.get("metadata", {})
+            metadata = repair.get("metadata")
             if not isinstance(metadata, dict):
                 continue
             related = repair.get("related_research_ids")
@@ -11728,35 +12929,28 @@ class V5LifecycleManager:
                 part.removeprefix("research:")
                 for part in source_parts
                 if part.startswith("research:")
-                and MEMORY_ID_RE.fullmatch(
-                    part.removeprefix("research:")
-                )
+                and MEMORY_ID_RE.fullmatch(part.removeprefix("research:"))
                 is not None
             ]
 
-            # Historical Main-authored COW roots predate the dedicated
-            # ``kind=repair`` metadata projection.  Their exact relation,
-            # complete research: source set, one production product, and
-            # explicit challenge companions already determine the same
-            # nontruth lifecycle edge.  Follow those bytes without rewriting
-            # them or making them Candidate/Fact authority.
-            legacy_product_ids = []
-            legacy_exact = False
-            if repair.get("relation") == "repairs":
-                legacy_product_ids = (
-                    [item for item in related if item in production_parent]
-                    if isinstance(related, list)
-                    else []
-                )
-                legacy_exact = (
-                    isinstance(related, list)
-                    and len(related) >= 2
-                    and len(set(related)) == len(related)
-                    and len(source_research_ids) == len(source_parts)
-                    and set(source_research_ids) == set(related)
-                    and all(item in bases for item in related)
-                    and len(legacy_product_ids) == 1
-                )
+            # Historical exact ``repairs`` records are terminal repair products,
+            # not prospective repair tasks.  Keep their old route readable, but
+            # never use that vocabulary for a new structured decision.
+            legacy_product_ids = (
+                [item for item in related if item in production_parent]
+                if repair.get("relation") == "repairs"
+                and isinstance(related, list)
+                else []
+            )
+            legacy_exact = (
+                isinstance(related, list)
+                and len(related) >= 2
+                and len(set(related)) == len(related)
+                and len(source_research_ids) == len(source_parts)
+                and set(source_research_ids) == set(related)
+                and all(item in bases for item in related)
+                and len(legacy_product_ids) == 1
+            )
             if legacy_exact:
                 legacy_product_id = legacy_product_ids[0]
                 legacy_parent_id = production_parent[legacy_product_id]
@@ -11766,16 +12960,15 @@ class V5LifecycleManager:
                 campaign_id = metadata.get("campaign_id")
                 legacy_parent = bases[legacy_parent_id]
                 legacy_product = bases[legacy_product_id]
-                challenge_shapes_are_exact = all(
-                    bases[item].get("kind")
-                    in {"challenge", "counterexample", "obstacle", "dead_end"}
-                    or bases[item].get("metadata", {}).get("worker_outcome")
-                    in {"challenge", "counterexample", "dead_end"}
-                    for item in challenge_ids
-                )
                 if (
                     isinstance(campaign_id, str)
-                    and challenge_shapes_are_exact
+                    and all(
+                        bases[item].get("kind")
+                        in {"challenge", "counterexample", "obstacle", "dead_end"}
+                        or bases[item].get("metadata", {}).get("worker_outcome")
+                        in {"challenge", "counterexample", "dead_end"}
+                        for item in challenge_ids
+                    )
                     and all(
                         bases[item].get("metadata", {}).get("campaign_id")
                         == campaign_id
@@ -11790,48 +12983,185 @@ class V5LifecycleManager:
                         for item in related
                     )
                 ):
-                    repair_children.setdefault(
-                        legacy_parent_id, set()
-                    ).add(repair_id)
+                    legacy_repair_tasks.add(repair_id)
+                    add_edge(route_children, legacy_parent_id, repair_id)
+                    add_edge(route_children, legacy_product_id, repair_id)
+                    for challenge_id in challenge_ids:
+                        add_edge(context_children, challenge_id, repair_id)
+                    details[repair_id] = {
+                        "repair_research_id": repair_id,
+                        "source_research_id": legacy_product_id,
+                        "trigger_research_id": None,
+                        "state": "legacy_terminal_repair_product",
+                        "outcome_research_ids": [repair_id],
+                        "split_owner_research_id": None,
+                        "split_member_research_ids": [],
+                        "selection_effect": "none",
+                    }
 
             lineage = cls._structured_repair_lineage(
                 repair_id=repair_id,
                 repair=repair,
                 bases=bases,
             )
-            if lineage is None or not cls._frontier_repair_continuity_is_exact(
+            if lineage is None:
+                continue
+            source_id, trigger_id = lineage
+            cow_repairs.add(repair_id)
+            if trigger_id is not None:
+                add_edge(context_children, trigger_id, repair_id)
+                for trigger_input_id in cls._structured_repair_trigger_inputs(
+                    trigger_id=trigger_id,
+                    bases=bases,
+                ):
+                    add_edge(context_children, trigger_input_id, trigger_id)
+
+            continuity_exact = cls._frontier_repair_continuity_is_exact(
                 repair=repair
+            )
+            if not continuity_exact:
+                # Campaign may still show the exact typed repair declaration as
+                # context, but Fact/COW routing does not advance through an
+                # unhashed or drifted objective.
+                add_edge(context_children, source_id, repair_id)
+                details[repair_id] = {
+                    "repair_research_id": repair_id,
+                    "source_research_id": source_id,
+                    "trigger_research_id": trigger_id,
+                    "state": "repair_objective_not_exact",
+                    "outcome_research_ids": [],
+                    "split_owner_research_id": None,
+                    "split_member_research_ids": [],
+                    "selection_effect": "none",
+                }
+                continue
+
+            add_edge(route_children, source_id, repair_id)
+            source_parent_id = production_parent.get(source_id)
+            if (
+                source_parent_id is not None
+                and bases[source_parent_id].get("kind") != "repair"
             ):
+                add_edge(route_children, source_parent_id, repair_id)
+
+            candidate_outputs = sorted(
+                output_id
+                for output_id in production_by_parent.get(repair_id, set())
+                if exact_output(repair_id, output_id)
+            )
+            repair_spec = metadata.get("repair_spec")
+            is_split = (
+                isinstance(repair_spec, dict)
+                and repair_spec.get("output_shape")
+                == RESEARCH_SPLIT_OUTPUT_SHAPE
+            )
+            if is_split:
+                valid_splits = [
+                    (owner_id, members)
+                    for owner_id in candidate_outputs
+                    if (
+                        members := exact_split_members(
+                            repair_id=repair_id,
+                            source_id=source_id,
+                            owner_id=owner_id,
+                        )
+                    )
+                    is not None
+                ]
+                if len(valid_splits) == 1 and len(candidate_outputs) == 1:
+                    owner_id, member_ids = valid_splits[0]
+                    owner_binding = bases[owner_id].get("metadata", {}).get(
+                        "research_split_owner", {}
+                    )
+                    split_logical_relations = list(
+                        owner_binding.get("logical_relations", [])
+                    )
+                    split_owners.add(owner_id)
+                    split_members.update(member_ids)
+                    repair_products.add(owner_id)
+                    for member_id in member_ids:
+                        add_edge(route_children, repair_id, member_id)
+                        add_edge(route_children, owner_id, member_id)
+                    for relation in split_logical_relations:
+                        split_logical_relations_by_subject.setdefault(
+                            relation["from_research_id"], []
+                        ).append(relation)
+                    state = "committed_split_members"
+                elif not candidate_outputs:
+                    owner_id = None
+                    member_ids = ()
+                    split_logical_relations = []
+                    state = "pending_split_product"
+                else:
+                    owner_id = None
+                    member_ids = ()
+                    split_logical_relations = []
+                    state = "ambiguous_or_invalid_split_product"
+                details[repair_id] = {
+                    "repair_research_id": repair_id,
+                    "source_research_id": source_id,
+                    "trigger_research_id": trigger_id,
+                    "state": state,
+                    "outcome_research_ids": candidate_outputs,
+                    "split_owner_research_id": owner_id,
+                    "split_member_research_ids": list(member_ids),
+                    "split_logical_relations": split_logical_relations,
+                    "selection_effect": "none",
+                }
                 continue
-            product_id, trigger_id = lineage
-            parent_id = production_parent.get(product_id)
-            if parent_id is None:
-                continue
-            parent = bases[parent_id]
-            product = bases[product_id]
-            parent_metadata = parent.get("metadata", {})
-            product_metadata = product.get("metadata", {})
-            if not isinstance(parent_metadata, dict) or not isinstance(
-                product_metadata, dict
-            ):
-                continue
-            if not (
-                parent_metadata.get("campaign_id")
-                == product_metadata.get("campaign_id")
-                == metadata.get("campaign_id")
-                and parent.get("dependencies")
-                == product.get("dependencies")
-                == repair.get("dependencies")
-                and parent.get("created_at", "")
-                < product.get("created_at", "")
-                < repair.get("created_at", "")
-            ):
-                continue
-            repair_children.setdefault(parent_id, set()).add(repair_id)
+
+            for output_id in candidate_outputs:
+                add_edge(route_children, repair_id, output_id)
+                repair_products.add(output_id)
+            details[repair_id] = {
+                "repair_research_id": repair_id,
+                "source_research_id": source_id,
+                "trigger_research_id": trigger_id,
+                "state": (
+                    "unique_repair_product"
+                    if len(candidate_outputs) == 1
+                    else "ambiguous_repair_products"
+                    if candidate_outputs
+                    else "pending_repair_product"
+                ),
+                "outcome_research_ids": candidate_outputs,
+                "split_owner_research_id": None,
+                "split_member_research_ids": [],
+                "selection_effect": "none",
+            }
 
         return {
-            parent_id: tuple(sorted(children))
-            for parent_id, children in repair_children.items()
+            "route_children": {
+                research_id: tuple(sorted(children))
+                for research_id, children in route_children.items()
+            },
+            "context_children": {
+                research_id: tuple(sorted(children))
+                for research_id, children in context_children.items()
+            },
+            "details": details,
+            "production_parent": production_parent,
+            "cow_repairs": cow_repairs,
+            "legacy_repair_tasks": legacy_repair_tasks,
+            "repair_products": repair_products,
+            "split_owners": split_owners,
+            "split_members": split_members,
+            "split_logical_relations_by_subject": {
+                research_id: tuple(
+                    sorted(
+                        relations,
+                        key=lambda item: (
+                            item["relation_type"],
+                            item["target_scope"],
+                            item["to_research_id"],
+                            item["label"],
+                        ),
+                    )
+                )
+                for research_id, relations in (
+                    split_logical_relations_by_subject.items()
+                )
+            },
         }
 
     def _frontier_cow_terminal_members_for_inspection(
@@ -11850,10 +13180,14 @@ class V5LifecycleManager:
             return cached
         repair_children = inspection.frontier_cow_repair_children
         if repair_children is None:
-            repair_children = self._frontier_cow_repair_children_index(
-                bases=bases,
-                route_staleness=route_staleness,
-            )
+            projection = inspection.frontier_cow_route_projection
+            if projection is None:
+                projection = self._frontier_cow_route_projection(
+                    bases=bases,
+                    route_staleness=route_staleness,
+                )
+                inspection.frontier_cow_route_projection = projection
+            repair_children = projection["route_children"]
             inspection.frontier_cow_repair_children = repair_children
         terminals = self._frontier_cow_terminal_members(
             seed_members=seed_members,
@@ -12378,7 +13712,7 @@ class V5LifecycleManager:
         )
 
     @staticmethod
-    def _mode_architecture_signature(
+    def _legacy_mode_architecture_signature(
         entry: dict[str, Any],
         *,
         work_mode: str,
@@ -12422,7 +13756,7 @@ class V5LifecycleManager:
         }
         return {**semantic, "signature_sha256": sha256_json(semantic)}
 
-    def _mode_selection(
+    def _legacy_mode_selection(
         self,
         entry: dict[str, Any],
         *,
@@ -12457,7 +13791,7 @@ class V5LifecycleManager:
         )
         if not isinstance(adverse_enabled, bool):
             raise ValueError("adverse-routing freeze state must be boolean")
-        default_signature = self._mode_architecture_signature(
+        default_signature = self._legacy_mode_architecture_signature(
             entry,
             work_mode=default_mode,
             adverse_routing_enabled=adverse_enabled,
@@ -12470,7 +13804,7 @@ class V5LifecycleManager:
         eligible_signatures: list[dict[str, str]] = []
         for suggestion in accepted:
             reason: str | None = None
-            suggestion_signature = self._mode_architecture_signature(
+            suggestion_signature = self._legacy_mode_architecture_signature(
                 entry,
                 work_mode=suggestion,
                 adverse_routing_enabled=adverse_enabled,
@@ -12545,6 +13879,144 @@ class V5LifecycleManager:
             "effect": (
                 "hint_applies_only_when_assurance_and_capability_equivalent"
             ),
+        }
+        return {**semantic, "selection_sha256": sha256_json(semantic)}
+
+    @staticmethod
+    def _mode_architecture_signature(
+        entry: dict[str, Any],
+        *,
+        work_mode: str,
+        computation_design_only: bool = False,
+    ) -> dict[str, Any]:
+        """Project current mode-sensitive effects without adverse learning.
+
+        Automatic mode hints may change research posture only when the exact
+        assurance contract is unchanged.  Prospective cards no longer acquire
+        an adverse-learning capability or a program-math side queue, so those
+        retired effects are absent rather than frozen as false-valued fields.
+        """
+
+        obligations = entry["metadata"].get("obligations", [])
+        assurance = build_assurance_contract(
+            entry=entry,
+            obligations=obligations,
+            work_mode=work_mode,
+            related_artifacts=[],
+            computation_design_only=computation_design_only,
+        )
+        semantic = {
+            "revision": "chalxius-v5-mode-architecture-signature-2",
+            "assurance_contract_without_artifact_roles": assurance,
+        }
+        return {**semantic, "signature_sha256": sha256_json(semantic)}
+
+    def _mode_selection(
+        self,
+        entry: dict[str, Any],
+        *,
+        requested_mode: str,
+        index: int,
+        research_cycle: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if requested_mode != "auto" and requested_mode not in WORK_MODES:
+            raise ValueError(f"unsupported work mode: {requested_mode}")
+        supplied = entry["metadata"].get("suggested_actions")
+        malformed = supplied is not None and (
+            not isinstance(supplied, list)
+            or any(not isinstance(item, str) for item in supplied)
+        )
+        suggestions = (
+            list(supplied)
+            if isinstance(supplied, list) and not malformed
+            else []
+        )
+        accepted: list[str] = []
+        rejected: list[str] = []
+        for suggestion in suggestions:
+            if suggestion in WORK_MODES:
+                if suggestion not in accepted:
+                    accepted.append(suggestion)
+            else:
+                rejected.append(suggestion)
+        default_mode = self._work_mode(entry, index)
+        default_signature = self._mode_architecture_signature(
+            entry,
+            work_mode=default_mode,
+            computation_design_only=self._computation_design_only(
+                entry=entry,
+                work_mode=default_mode,
+                research_cycle=research_cycle,
+            ),
+        )
+        eligible: list[str] = []
+        blocked: list[dict[str, str]] = []
+        eligible_signatures: list[dict[str, str]] = []
+        for suggestion in accepted:
+            suggestion_signature = self._mode_architecture_signature(
+                entry,
+                work_mode=suggestion,
+                computation_design_only=self._computation_design_only(
+                    entry=entry,
+                    work_mode=suggestion,
+                    research_cycle=research_cycle,
+                ),
+            )
+            if (
+                suggestion_signature[
+                    "assurance_contract_without_artifact_roles"
+                ]
+                != default_signature[
+                    "assurance_contract_without_artifact_roles"
+                ]
+            ):
+                blocked.append(
+                    {
+                        "mode": suggestion,
+                        "reason": "would_change_assurance_contract",
+                    }
+                )
+                continue
+            eligible.append(suggestion)
+            eligible_signatures.append(
+                {
+                    "mode": suggestion,
+                    "signature_sha256": suggestion_signature[
+                        "signature_sha256"
+                    ],
+                }
+            )
+        if requested_mode != "auto":
+            selected_mode = requested_mode
+            source = "explicit_user_mode"
+        elif eligible:
+            selected_mode = eligible[0]
+            source = "bounded_research_suggestion"
+        else:
+            selected_mode = default_mode
+            source = "research_kind_default"
+        semantic = {
+            "source": source,
+            "requested_mode": requested_mode,
+            "fallback_index": index,
+            "default_mode": default_mode,
+            "raw_suggestions": suggestions,
+            "accepted_suggestions": accepted,
+            "eligible_suggestions": eligible,
+            "rejected_suggestions": rejected,
+            "blocked_suggestions": blocked,
+            "malformed_suggestions_ignored": malformed,
+            "selected_mode": selected_mode,
+            "architecture_equivalence": {
+                "revision": "chalxius-v5-mode-equivalence-2",
+                "rule": "automatic_suggestion_signature_must_equal_default",
+                "default_signature_sha256": default_signature[
+                    "signature_sha256"
+                ],
+                "eligible_suggestion_signatures": eligible_signatures,
+            },
+            "precedence": "explicit_user_mode_over_suggestion_over_kind_default",
+            "effect": "hint_applies_only_when_assurance_equivalent",
         }
         return {**semantic, "selection_sha256": sha256_json(semantic)}
 
@@ -14994,10 +16466,16 @@ class V5LifecycleManager:
         # to be readable after a software upgrade.  Live cards still recompute
         # the current selector; historical cards are checked by their nested
         # context hash and the task-card semantic hash below.
-        expected_mode = (
-            mode_selection
-            if historical_runtime
-            else self._mode_selection(
+        mode_equivalence = mode_selection.get("architecture_equivalence")
+        mode_revision = (
+            mode_equivalence.get("revision")
+            if isinstance(mode_equivalence, dict)
+            else None
+        )
+        if historical_runtime:
+            expected_mode = mode_selection
+        elif mode_revision == "chalxius-v5-mode-equivalence-1":
+            expected_mode = self._legacy_mode_selection(
                 source_research,
                 requested_mode=requested_mode,
                 index=fallback_index,
@@ -15006,7 +16484,15 @@ class V5LifecycleManager:
                 ),
                 research_cycle=card.get("research_cycle"),
             )
-        )
+        elif mode_revision == "chalxius-v5-mode-equivalence-2":
+            expected_mode = self._mode_selection(
+                source_research,
+                requested_mode=requested_mode,
+                index=fallback_index,
+                research_cycle=card.get("research_cycle"),
+            )
+        else:
+            raise ValueError("V5 mode-selection revision is unsupported")
         if (
             (
                 "adverse_routing" in card
@@ -16659,9 +18145,17 @@ class V5LifecycleManager:
             source_manifest,
             descriptors,
         )
+        external_source_use_signals = (
+            self._source_round_external_source_use_signals(
+                source_manifest,
+                descriptors,
+                inspection,
+            )
+        )
         applicable = self._applicable_research_supervisor_scopes(
             descriptors,
             selection_logic_signals=selection_logic_signals,
+            external_source_use_signals=external_source_use_signals,
         )
         if supervisor_scopes is None:
             if not applicable:
@@ -17077,11 +18571,35 @@ class V5LifecycleManager:
                     "Review the actual successor membership as one whole product; "
                     "check that its claims are genuinely separable, collectively account "
                     "for the declared preserved/open/abandoned source material, and do "
-                    "not inherit a hidden shared gap. If clean, the optional "
-                    "fact_statement_interfaces artifact must give an independent "
-                    "ready/needs_split disposition for every successor Research id in "
-                    "the frozen related set. The successor count was worker-chosen and "
-                    "is not a Main-authored target."
+                    "not inherit a hidden shared gap. Audit every repair-worker-declared "
+                    "relation between successors and from successors to external Research, "
+                    "look for omitted relations, and return the complete corrected relation "
+                    "set. The fact_statement_interfaces artifact must give an independent "
+                    "ready/needs_split disposition for every successor Research id in the "
+                    "frozen related set and one split_relation_review per committed batch. "
+                    "Its final proof_dependency relations must exactly match the certified "
+                    "predecessors in those interfaces; context relations remain navigation "
+                    "only. The successor count was worker-chosen and is not a Main-authored "
+                    "target."
+                )
+                if scoped_split_member_ids and scope == "proof_logic"
+                else (
+                    " This component contains a committed Research split batch. "
+                    "Review every successor as one whole source-scope product, decide "
+                    "whether each claim surface is coherent or needs splitting, and "
+                    "check only external-source identity, exact bytes and locators, "
+                    "faithful extraction, stated hypotheses, qualifiers, conventions, "
+                    "and evidence coverage. Inspect member-external context/source relations "
+                    "within that boundary and report omissions, but do not certify "
+                    "mathematical proof_dependency relations; proof-logic supervision "
+                    "owns their final relation review."
+                )
+                if scoped_split_member_ids and scope == "source_scope"
+                else (
+                    " This component contains a committed Research split batch. "
+                    "Review every successor as one whole product inside this exact "
+                    "scope and report whether COW or further splitting is needed; do "
+                    "not claim authority over proof/source relations outside the scope."
                 )
                 if scoped_split_member_ids
                 else ""
@@ -17114,8 +18632,10 @@ class V5LifecycleManager:
                     "brief: name the separable successor claim surfaces, shared assumptions, "
                     "intended predecessor allocation, and old material that remains open or "
                     "is abandoned; a mechanical prose cut is not a split. The later producer "
-                    "is a Research repair worker, while fresh supervisors of the resulting "
-                    "products author their complete interfaces. Omit the artifact when the "
+                    "is a Research repair worker, while fresh whole-product supervision "
+                    "passes of the resulting products author their complete interfaces. "
+                    "The same author-independent supervisor identity may be reused if it "
+                    "rechecks all new bytes rather than only prior defects. Omit the artifact when the "
                     "review cannot safely decide, carries "
                     "an unresolved defect, or its certified predecessors are not explicit. "
                     "This optional nontruth artifact is not a supervision requirement, "
@@ -17965,19 +19485,12 @@ class V5LifecycleManager:
                     "pair_binding": None,
                 }
                 primary_specs.append(primary_spec)
-                if (
-                    not (
-                        research_cycle is not None
-                        and research_cycle["subround"] == "production"
-                    )
-                    and independent_adverse_pair_is_required(
-                        entry,
-                        primary_work_mode=primary_mode,
-                    )
-                ):
-                    pair_candidates.append(
-                        (entry, primary_spec, primary_assignment_id)
-                    )
+                # Prospective paired-adverse allocation is retired.  Frozen
+                # 0.x cards and manifests remain readable through their exact
+                # historical schema, but a new round never converts a legacy
+                # ``independent_adverse_required`` flag into another worker.
+                # Current theorem-attack guidance belongs to ordinary scoped
+                # Research supervision.
             if len(primary_specs) + len(pair_candidates) > 99:
                 raise ValueError(
                     "V5 primary plus paired adverse assignments exceed the two-digit "
@@ -18308,11 +19821,6 @@ class V5LifecycleManager:
                         "Research work requires capability-bound related artifacts: "
                         + ", ".join(missing_related_roles)
                     )
-                adverse_routing = self.store.adverse_routes().task_card_binding(
-                    entry=entry,
-                    work_mode=work_mode,
-                    related_artifacts=related_artifacts,
-                )
                 assurance_contract = build_assurance_contract(
                     entry=entry,
                     obligations=obligations,
@@ -18431,8 +19939,6 @@ class V5LifecycleManager:
                     "reasoning_mode_binding": reasoning_binding,
                     "assurance_contract": assurance_contract,
                 }
-                if adverse_routing is not None:
-                    card_semantic["adverse_routing"] = adverse_routing
                 if research_cycle is not None:
                     card_semantic["research_cycle"] = research_cycle
                 if campaign_scope is not None:
@@ -18906,9 +20412,16 @@ class V5LifecycleManager:
                         "V5 supervision-only allocation is not a constructive "
                         "production subround"
                     )
+                # Pair retirement starts with the 1.0.3 producer.  Versions
+                # 1.0.0--1.0.2 could still freeze the direct-allocation pair,
+                # so their exact cards retain the historical rule.  This is a
+                # decoder boundary, not a prospective compatibility mode.
                 required_pair = (
                     False
                     if supervision_only_production
+                    or self._task_card_skill_version_at_least(
+                        card, (1, 0, 3)
+                    )
                     else independent_adverse_pair_is_required(
                         source,
                         primary_work_mode=primary_assignment["work_mode"],
@@ -19514,6 +21027,87 @@ class V5LifecycleManager:
             "attacked_products": attacked_products,
         }
 
+    def _supervisor_dispatch_advisory(
+        self,
+        *,
+        manifest: dict[str, Any],
+        inspection: RoundInspectionContext,
+    ) -> dict[str, Any] | None:
+        """Group proof/source assignments into one Main-dispatched host session.
+
+        The two scopes remain separate Research assignments and returns.  This
+        projection merely prevents Main from spending two live agent slots on
+        one frozen product when the source extraction should be checked first
+        and the complete mathematical use checked immediately afterwards by
+        the same independent reviewer.  It is derived, nontruth, and never a
+        worker-identity or completion gate.
+        """
+
+        cycle = manifest.get("research_cycle")
+        if not isinstance(cycle, dict) or cycle.get("subround") != "supervision":
+            return None
+        assignment_by_scope: dict[str, dict[str, Any]] = {}
+        for assignment in manifest["assignments"]:
+            plan = self._inspection_research_record(
+                assignment["research_id"], inspection
+            )
+            metadata = plan.get("metadata")
+            binding = (
+                metadata.get("research_supervision")
+                if isinstance(metadata, dict)
+                else None
+            )
+            if not isinstance(binding, dict):
+                continue
+            scope = binding.get("supervisor_scope")
+            if not isinstance(scope, str) or scope in assignment_by_scope:
+                continue
+            assignment_by_scope[scope] = assignment
+
+        paired_scopes = ("source_scope", "proof_logic")
+        if not all(scope in assignment_by_scope for scope in paired_scopes):
+            return {
+                "automatic_gate": False,
+                "decision_owner": "main",
+                "assignment_count": len(manifest["assignments"]),
+                "host_slot_count": len(manifest["assignments"]),
+                "session_groups": [],
+                "truth_effect": "none",
+            }
+
+        member_assignment_ids = [
+            assignment_by_scope[scope]["assignment_id"]
+            for scope in paired_scopes
+        ]
+        semantic = {
+            "round_id": manifest["round_id"],
+            "source_round_id": cycle["source_round_id"],
+            "source_component_id": cycle.get("source_component_id"),
+            "scope_order": list(paired_scopes),
+            "member_assignment_ids": member_assignment_ids,
+        }
+        session_id = "supervisor-session-" + sha256_json(semantic)
+        session = {
+            "session_id": session_id,
+            "scope_order": list(paired_scopes),
+            "member_assignment_ids": member_assignment_ids,
+            "dispatch_policy": (
+                "one_independent_supervisor_sequential_source_then_proof"
+            ),
+            "host_slot_count": 1,
+            "separate_returns_required": True,
+            "automatic_gate": False,
+            "truth_effect": "none",
+        }
+        return {
+            "automatic_gate": False,
+            "decision_owner": "main",
+            "assignment_count": len(manifest["assignments"]),
+            "host_slot_count": len(manifest["assignments"]) - 1,
+            "session_groups": [session],
+            "truth_effect": "none",
+        }
+
     def _round_status_with_context(
         self,
         round_id: str,
@@ -19529,6 +21123,20 @@ class V5LifecycleManager:
         )
         abort = inspection.round_aborts[round_id]
         completed = inspection.round_completed[round_id]
+        supervisor_dispatch = self._supervisor_dispatch_advisory(
+            manifest=manifest,
+            inspection=inspection,
+        )
+        supervisor_session_by_assignment: dict[str, dict[str, Any]] = {}
+        if supervisor_dispatch is not None:
+            for group in supervisor_dispatch["session_groups"]:
+                for position, assignment_id in enumerate(
+                    group["member_assignment_ids"], start=1
+                ):
+                    supervisor_session_by_assignment[assignment_id] = {
+                        **group,
+                        "position": position,
+                    }
         quarantined = {
             item["assignment_id"]: item
             for item in self._quarantine_records(
@@ -19632,6 +21240,15 @@ class V5LifecycleManager:
                         if reviewer_independence is not None
                         else {}
                     ),
+                    **(
+                        {
+                            "supervisor_session_advisory": (
+                                supervisor_session_by_assignment[assignment_id]
+                            )
+                        }
+                        if assignment_id in supervisor_session_by_assignment
+                        else {}
+                    ),
                 }
             )
         status = {
@@ -19659,6 +21276,11 @@ class V5LifecycleManager:
             "abort_id": abort["abort_id"] if abort is not None else None,
             "work_unit_abort": abort,
             "round_closure_required": False,
+            **(
+                {"supervisor_dispatch_advisory": supervisor_dispatch}
+                if supervisor_dispatch is not None
+                else {}
+            ),
         }
         inspection.round_statuses[round_id] = status
         return status
@@ -20412,8 +22034,15 @@ class V5LifecycleManager:
                 "a nonconstructive split-repair return must report the blocker as "
                 "one ordinary Research result, without successor members"
             )
-        split_review_member_ids = (
-            self._research_split_member_ids_for_supervision_card(card)
+        split_review_commits = (
+            self._research_split_commits_for_supervision_card(card)
+        )
+        split_review_member_ids = sorted(
+            {
+                item["research_id"]
+                for commit in split_review_commits
+                for item in commit["members"]
+            }
         )
         if split_review_member_ids:
             interface_artifacts = [
@@ -20422,6 +22051,30 @@ class V5LifecycleManager:
                 if assurance_enabled
                 and item.get("role") == "fact_statement_interfaces"
             ]
+            supervision_binding = (
+                card.get("mathematical_state", {})
+                .get("source_research_dossier", {})
+                .get("metadata", {})
+                .get("research_supervision")
+            )
+            assignment_scope = (
+                supervision_binding.get("supervisor_scope")
+                if isinstance(supervision_binding, dict)
+                else None
+            )
+            relation_review_required = assignment_scope == "proof_logic" and (
+                any(
+                    commit["contract_revision"]
+                    == RESEARCH_SPLIT_COMMIT_REVISION
+                    for commit in split_review_commits
+                )
+                or self._task_card_skill_version_at_least(card, (1, 0, 3))
+            )
+            if relation_review_required and len(interface_artifacts) != 1:
+                raise ValueError(
+                    "split-batch supervision must return one complete "
+                    "fact_statement_interfaces artifact with relation reviews"
+                )
             if interface_artifacts:
                 interface_item = interface_artifacts[0]
                 try:
@@ -20435,9 +22088,22 @@ class V5LifecycleManager:
                         "split-batch statement-interface artifact is not valid "
                         "UTF-8 JSON"
                     ) from exc
+                if (
+                    assignment_scope != "proof_logic"
+                    and "split_relation_reviews" in interface_payload
+                ):
+                    raise ValueError(
+                        "split relation review belongs to the exact proof_logic "
+                        "assignment, not another scope in the same round"
+                    )
                 interfaces = (
                     self.fact_alpha()._validate_supervised_interface_artifact(
-                        interface_payload
+                        interface_payload,
+                        expected_split_commits=(
+                            split_review_commits
+                            if relation_review_required
+                            else None
+                        ),
                     )
                 )
                 missing_members = sorted(
@@ -20684,149 +22350,6 @@ class V5LifecycleManager:
         self.store._write_json_once(path, record)
         return record
 
-    def _enqueue_program_math_adverse_review(
-        self,
-        *,
-        card: dict[str, Any],
-        assignment: dict[str, Any],
-        result_research: dict[str, Any],
-        payload: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        """Create a typed Research-stage challenge for a computed return.
-
-        The review is queued only for future scheduling.  It does not run a
-        worker, change routing, reject the source Research, or affect Fact
-        truth.  Exact program/output bytes are inherited through the normal
-        related-Research capability boundary.
-        """
-
-        if not self.store.adverse_routes().enabled():
-            return None
-        if card.get("work_mode") == "refute" or "assurance_contract" not in card:
-            return None
-        cycle = card.get("research_cycle")
-        source_metadata = card.get("mathematical_state", {}).get(
-            "source_research_dossier", {}
-        ).get("metadata", {})
-        if (
-            isinstance(cycle, dict)
-            and cycle.get("subround") == "production"
-            and isinstance(source_metadata, dict)
-            and "approved_computation_execution" in source_metadata
-        ):
-            # The explicit second subround owns the exact code/log/output
-            # review.  Do not create the legacy duplicate future queue entry.
-            return None
-        stage_count = card["assurance_contract"].get("computation_stage_count", 0)
-        if isinstance(stage_count, bool) or not isinstance(stage_count, int):
-            raise ValueError("program-math review stage count is invalid")
-        if stage_count == 0 or payload.get("outcome") not in {
-            "proof",
-            "evidence",
-            "insight",
-        }:
-            return None
-        artifacts = payload.get("artifacts", [])
-        by_role = {
-            item["role"]: item
-            for item in artifacts
-            if isinstance(item, dict) and isinstance(item.get("role"), str)
-        }
-        required_roles = {"computation_source", "computation_output"}
-        if not required_roles.issubset(by_role):
-            raise ValueError(
-                "computed Research cannot queue an adverse review without canonical "
-                "computation_source and computation_output artifacts"
-            )
-        manifest = payload.get("computation_manifest")
-        manifest_entries = (
-            manifest.get("entries", []) if isinstance(manifest, dict) else []
-        )
-        load_bearing = any(
-            isinstance(item, dict) and item.get("role") == "load_bearing"
-            for item in manifest_entries
-        )
-        workload = workload_profile_for_entry(
-            {
-                "kind": "computation",
-                "verification_plan": {
-                    "mode": "artifact_replay" if load_bearing else "closed_packet"
-                },
-                "budgets": {"max_wall_seconds": 0},
-            }
-        )
-        workload["computation"]["stage_count"] = stage_count
-        workload = validate_workload_profile(workload)
-        source_artifacts = [
-            {
-                "role": role,
-                "sha256": by_role[role]["sha256"],
-            }
-            for role in sorted(required_roles)
-        ]
-        review = self.add_research(
-            {
-                "kind": "challenge",
-                "status": "open",
-                "claim": (
-                    "Adversarially verify the program-mathematics semantic projection for: "
-                    + result_research["claim"]
-                ),
-                "content": (
-                    "Attack formula-to-code projection, signs and conventions, index/domain "
-                    "boundaries, mathematical-object representation, truncation or precision, "
-                    "output interpretation, and non-independent replay. Preserve any valid "
-                    "mathematical conclusion outside the exact failure boundary."
-                ),
-                "rationale": (
-                    "A computation-bearing Research result needs an adverse semantic review "
-                    "before Candidate promotion; this queue entry has no truth effect."
-                ),
-                "source": f"research:{result_research['research_id']}",
-                "relation": "challenges",
-                "related_research_ids": [result_research["research_id"]],
-                "logic_signals": [
-                    "formula_to_code",
-                    "program_math_hybrid",
-                ],
-                "workload_profile": workload,
-                "decision_profile": dict(
-                    V5_PROGRAM_MATH_REVIEW_DECISION_PROFILE
-                ),
-                "required_related_artifact_roles": sorted(required_roles),
-                "obligations": [
-                    {
-                        "obligation_id": "obl-program-math-adverse-review",
-                        "description": (
-                            "Construct an independent or metamorphic attack on the exact "
-                            "formula-code-output chain and report the narrow success boundary."
-                        ),
-                        "required_artifact_roles": [
-                            "computation_output",
-                            "computation_source",
-                        ],
-                        "evidence_types": [
-                            "deterministic_output",
-                            "executable_source",
-                            "runtime_receipt",
-                        ],
-                        "not_applicable_allowed": False,
-                    }
-                ],
-                "program_math_review": {
-                    "source_research_id": result_research["research_id"],
-                    "source_task_card_sha256": assignment["task_card_sha256"],
-                    "source_artifacts": source_artifacts,
-                    "activation": "typed_program_and_output_artifacts",
-                },
-                "truth_effect": "none",
-                "route_effect": "future_refute_task_only",
-            },
-            actor="v5-adverse-router",
-            assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
-        )
-        return review
-
     def _capture_worker_chx_observations(
         self,
         *,
@@ -20997,6 +22520,8 @@ class V5LifecycleManager:
             raise ValueError("Research split snapshot artifact is invalid JSON") from exc
         _spec, repair, source = contract
         batch = validate_research_split_batch(raw, source_research=source)
+        for relation in batch.get("external_relations", []):
+            self._research_record(relation["to_research_id"])
         return batch, artifact, repair, source
 
     def _materialize_research_split_members(
@@ -21018,8 +22543,16 @@ class V5LifecycleManager:
         inspection: RoundInspectionContext,
     ) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
         batch, artifact, repair, source = split
+        current_relation_contract = (
+            batch["contract_revision"] == RESEARCH_SPLIT_BATCH_REVISION
+        )
+        commit_revision = (
+            RESEARCH_SPLIT_COMMIT_REVISION
+            if current_relation_contract
+            else RESEARCH_SPLIT_COMMIT_REVISION_V1
+        )
         identity_semantic = {
-            "contract_revision": RESEARCH_SPLIT_COMMIT_REVISION,
+            "contract_revision": commit_revision,
             "project_id": self.store.project_id(),
             "source_research_id": source["research_id"],
             "source_record_sha256": source["record_sha256"],
@@ -21106,8 +22639,48 @@ class V5LifecycleManager:
             }
             for index, record in enumerate(member_records)
         ]
+        logical_relations: list[dict[str, str]] = []
+        if current_relation_contract:
+            research_id_by_surface = {
+                item["surface_key"]: item["research_id"] for item in members
+            }
+            logical_relations = [
+                {
+                    "from_research_id": research_id_by_surface[
+                        relation["from_surface_key"]
+                    ],
+                    "to_research_id": research_id_by_surface[
+                        relation["to_surface_key"]
+                    ],
+                    "relation_type": relation["relation_type"],
+                    "target_scope": "split_internal",
+                    "label": relation["label"],
+                    "rationale": relation["rationale"],
+                }
+                for relation in batch["internal_relations"]
+            ] + [
+                {
+                    "from_research_id": research_id_by_surface[
+                        relation["from_surface_key"]
+                    ],
+                    "to_research_id": relation["to_research_id"],
+                    "relation_type": relation["relation_type"],
+                    "target_scope": "external_research",
+                    "label": relation["label"],
+                    "rationale": relation["rationale"],
+                }
+                for relation in batch["external_relations"]
+            ]
+            logical_relations = validate_resolved_research_split_relations(
+                logical_relations,
+                member_ids={item["research_id"] for item in members},
+            )
         owner_metadata = {
-            "revision": RESEARCH_SPLIT_OWNER_REVISION,
+            "revision": (
+                RESEARCH_SPLIT_OWNER_REVISION
+                if current_relation_contract
+                else RESEARCH_SPLIT_OWNER_REVISION_V1
+            ),
             "batch_id": batch_id,
             "source_research_id": source["research_id"],
             "source_record_sha256": source["record_sha256"],
@@ -21116,6 +22689,19 @@ class V5LifecycleManager:
             "batch_artifact_sha256": artifact.sha256,
             "members": members,
             "membership_sha256": sha256_json(members),
+            **(
+                {
+                    "logical_relations": logical_relations,
+                    "logical_relations_sha256": sha256_json(
+                        logical_relations
+                    ),
+                    "relation_allocation_rationale": batch[
+                        "relation_allocation_rationale"
+                    ],
+                }
+                if current_relation_contract
+                else {}
+            ),
             "truth_effect": "none",
         }
         return batch_id, member_records, owner_metadata, identity_semantic
@@ -21136,6 +22722,22 @@ class V5LifecycleManager:
             "owner_record_sha256": owner["record_sha256"],
             "members": owner_metadata["members"],
             "membership_sha256": owner_metadata["membership_sha256"],
+            **(
+                {
+                    "logical_relations": owner_metadata[
+                        "logical_relations"
+                    ],
+                    "logical_relations_sha256": owner_metadata[
+                        "logical_relations_sha256"
+                    ],
+                    "relation_allocation_rationale": owner_metadata[
+                        "relation_allocation_rationale"
+                    ],
+                }
+                if identity_semantic["contract_revision"]
+                == RESEARCH_SPLIT_COMMIT_REVISION
+                else {}
+            ),
         }
         path = self._research_split_batch_path(batch_id)
         if path.exists():
@@ -21467,32 +23069,6 @@ class V5LifecycleManager:
                     owner=research,
                     owner_metadata=split_owner_metadata,
                 )
-            program_math_review = self._enqueue_program_math_adverse_review(
-                card=card,
-                assignment=assignment,
-                result_research=research,
-                payload=payload,
-            )
-            attack_capture = None
-            if "adverse_routing" in card and payload.get("attack_learning") is not None:
-                if card["adverse_routing"].get("schema_version") in (
-                    ADVERSE_STRUCTURED_ATTACK_TASK_CARD_SCHEMAS
-                ):
-                    attack_capture = self.store.adverse_routes().capture_attack(
-                        card=card,
-                        assignment=assignment,
-                        payload=payload,
-                        attack_research_id=research["research_id"],
-                        return_sha256=snapshot.return_sha256,
-                    )
-                elif payload["outcome"] == "counterexample":
-                    attack_capture = self.store.adverse_routes().capture_counterexample(
-                        card=card,
-                        assignment=assignment,
-                        payload=payload,
-                        counterexample_research_id=research["research_id"],
-                        return_sha256=snapshot.return_sha256,
-                    )
             architecture_observation_ids = self._capture_worker_chx_observations(
                 round_id=round_id,
                 assignment=assignment,
@@ -21536,37 +23112,6 @@ class V5LifecycleManager:
                         "terminal_seal_revision": V5_TERMINAL_SEAL_REVISION,
                         "terminal_seal_sha256": terminal_seal["seal_sha256"],
                         "writer_lease_id": assignment["writer_lease_id"],
-                    }
-                )
-            if attack_capture is not None:
-                receipt_semantic.update(
-                    {
-                        "attack_case_id": attack_capture["case_id"],
-                        "route_proposal_id": attack_capture["proposal_id"],
-                        "attack_evidence_status": attack_capture[
-                            "evidence_status"
-                        ],
-                        "route_activation_policy": attack_capture[
-                            "activation_policy"
-                        ],
-                        "effect": (
-                            "one_cumulative_research_entry_plus_nontruth_attack_proposal"
-                        ),
-                    }
-                )
-            if program_math_review is not None:
-                receipt_semantic.update(
-                    {
-                        "program_math_review_research_id": program_math_review[
-                            "research_id"
-                        ],
-                        "program_math_review_policy": (
-                            "queued_for_future_multidimensional_frontier"
-                        ),
-                        "effect": (
-                            receipt_semantic["effect"]
-                            + "_plus_nontruth_program_math_adverse_review"
-                        ),
                     }
                 )
             if architecture_observation_ids:

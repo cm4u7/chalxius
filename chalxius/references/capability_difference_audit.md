@@ -1,5 +1,38 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.3 Research Route Coordination Repair difference
+
+Earlier releases stored the required mathematical bytes but split working
+memory, importance marks, package selection, supervision scope, adverse
+learning, and semantic split lineage across partially overlapping mechanisms.
+The 1.0.3 repair keeps their distinct authorities while making them mesh:
+Campaign exposes heads/context/landmarks, fact-packager selects bounded routes
+without mutating the Campaign active head,
+source and proof own nonoverlapping review surfaces, historical attack
+experience becomes fixed non-exhaustive guidance, and split relation proposals
+receive complete proof review. Structural uniqueness may be projected;
+mathematical choice and ambiguity remain with Main. No second graph, scheduler,
+compatibility adapter, or truth authority is introduced. Recent attainment uses
+context compaction or natural curation, not a hard four-entry clock. Sparse
+landmarks have no count quota and grow with the Research graph. The separate
+recent queue uses 64 only as a high-water guard; routine summaries preview four
+recent items and eight landmarks, while exact counts, identity digests, and
+full diagnostic access prohibit silent first-N selection. `fact-frontier --target`
+requires `--campaign`; route-needing landmarks rank ahead of certified history
+and the 256-item view preserves complete identity count/digest. Supervisor
+`ready`/`needs_split` is only the strong automatic-path recommendation.
+Planning returns `mechanical_proposal_ready` plus a
+`mechanical_package_proposal` and digest but never seals; the packager seals
+once and may choose an alternative interface or whole-node/COW route. An actual
+split request pauses packaging for a Research repair worker and the ordinary
+proof/source supervision layer; there is no Fact-side split supervisor. The
+verifier reviews every record, interface, and edge; Gateway alone certifies.
+
+All lower version sections are frozen then-current history. Candidate CLI
+commands are procedurally reserved for explicitly selected 0.x completion or
+audit; the runtime does not authenticate pre-1.0 provenance and no identity gate
+is added.
+
 ## 1.0.2 Capability Budget Audit Repair difference
 
 The 0.7.16 bounded Repair reader attached one byte accumulator to the whole
@@ -64,8 +97,10 @@ correctness role. Ordinary Research supervisors retain theorem-attack rules.
 Fact dependencies use only explicit predecessor Research ids plus exact active
 grant hashes; arbitrary relation labels remain Main-facing context. Correct
 independent components can pass when another component fails. Minor errors use
-a complete COW followed by the same verifier, while fundamental errors return
-to ordinary Research. COW never erases a grant: it derives
+the historical bounded fast lane only: one-to-one complete-node COW followed by
+the same verifier's full component recheck. Split or other structural ambiguity
+and fundamental errors return to ordinary Research repair and proof/source
+supervision; Gateway remains independent. COW never erases a grant: it derives
 `needs_reverification` for the replaced record and certified descendants.
 
 The acceptance reader revalidates the exact package, verifier decision,
@@ -249,11 +284,13 @@ layer, workflow gate, compatibility adapter, Candidate effect, or Fact effect.
 Campaign planning and navigation now share one explicit Main selection. A
 production `plan-round --frontier-target` transaction replaces only the chosen
 target's compact nontruth working-memory row, preserves unrelated parallel
-heads, and records bounded recent attainment, historical landmarks, and a
+heads, and records bounded recent attainment, unbounded sparse historical
+landmarks, and a
 recovery root without copying Research bodies or appending another Campaign
 snapshot. Sparse Main updates remain for genuine branch reordering and history
-curation. History advisories expose accumulated recent work or an overgrown
-landmark set but do not choose, dispatch, close, or gate research.
+curation. History advisories expose accumulated recent work or missing durable
+history but do not turn landmark count into a clock, choose, dispatch, close,
+or gate research.
 
 Source-scope supervision also retains the semantic `primary_source` marker on
 exact files expanded from structured source evidence. Return validation can

@@ -4,10 +4,13 @@ This is the public contract for a current assurance-bound V5 worker return. It
 applies only to newly generated cards. A frozen older card keeps its original
 schema and is never rewritten or sent back for rework.
 
-The task card is authoritative for identities, obligations, capabilities, risk
-signals, and whether adverse routing is present. This reference explains how to
-project those frozen values into one return without reading implementation code
-or private tests.
+The task card is authoritative for identities, obligations, capabilities, and
+risk signals. Newly generated cards do not contain adverse routing. A frozen
+older card may still contain it; this reference explains how to satisfy that
+historical byte-bound contract without reactivating its retired learning plane.
+That old path is procedurally reserved for explicitly selected 0.x completion
+or audit. The runtime does not authenticate pre-1.0 provenance, and no new
+provenance or identity gate is implied.
 
 ## Copy the binding
 
@@ -25,7 +28,7 @@ role and `worker_context_id`. A `paired_adverse` worker must not receive,
 inherit, summarize, or share the primary worker's active context. It attacks
 the same frozen source Research using the card's `adverse_routing` rules. This
 is a worker-allocation and provenance contract only: the return is nontruth
-Research, and it creates neither a second Candidate review nor certification
+Research, and it creates neither a current Fact-package review nor certification
 authority.
 
 ## Exact top-level object
@@ -70,16 +73,17 @@ A current assurance-bound card without `adverse_routing` uses exactly:
 four shown string fields, each bounded to 400 words.
 
 The three assurance fields are present if and only if the card has
-`assurance_contract`. If the card has `adverse_routing`, add exactly one
+`assurance_contract`. Only when a frozen historical card has
+`adverse_routing`, add exactly one
 top-level `attack_learning` field. It is `null` unless the return meets the
 productive-challenge or surviving-counterexample failure-report contract in
 [adverse_routing_evolution.md](adverse_routing_evolution.md). If the card lacks
 `adverse_routing`, adding the field is an error.
 
-For current cards the worker reports only the concrete failure, witnesses,
-reproduction and boundary. It must not propose a persistent attack rule. Main
-alone compares reports and decides whether a compact mechanism-level route is
-warranted.
+For current cards the worker reports the concrete failure, witnesses,
+reproduction and boundary in the ordinary Research or supervision result.
+There is no attack proposal, persistent-rule synthesis, activation, or extra
+report step.
 
 The copyable no-adverse template is
 `assets/worker_return.v5.assurance-no-adverse.template.json`. Its uppercase
@@ -130,12 +134,34 @@ actual successor membership chosen after reading the old product; Main does not
 predeclare a member count. It contains two through 128 distinct coherent
 successor claims with their content, rationale, old-material disposition and
 limitations, plus shared assumptions, residual/open material, abandoned
-material and one completeness rationale. Do not return a guessed placeholder
-count, several independent returns, or a partial batch. Ingestion derives the
-successor Research ids and assignment owner and publishes a commit only after
-all records exist.
+material and one completeness rationale. A current batch also includes
+`internal_relations`, `external_relations`, and a nonempty
+`relation_allocation_rationale`. Each relation has one rigid type,
+`proof_dependency` or `context`, plus a free label and rationale. Internal
+targets use surface keys because Research ids do not exist yet; external targets
+use exact existing Research ids. The worker must classify the actual logical
+relations and omissions rather than manufacturing sibling-order edges. Do not
+return a guessed placeholder count, several independent returns, or a partial
+batch. Ingestion derives the successor Research ids, resolves the relation map,
+and publishes the assignment owner and commit only after all records exist.
 
-For task cards frozen by Chalxius 0.7.13 or later, an artifact with role
+When performing proof-logic supervision of a current committed split batch, the
+`fact_statement_interfaces` artifact uses revision
+`chalxius-supervised-statement-interfaces-2`. It covers every committed member
+and includes one `split_relation_reviews` entry per batch. The supervisor checks
+every declared member-member and member-external relation, searches for omitted
+relations, and may confirm, remove, retype, or add relations for the mechanical
+package recommendation. The recommended `proof_dependency` targets for each ready member must exactly equal that
+member's `certified_predecessor_research_ids`; final `context` relations have no
+Fact authority.
+Source-scope supervision still reports whether each member is a coherent
+surface, but checks only external-source identity, exact extraction, the
+source's literal hypotheses/qualifiers/conventions, coverage, and corresponding
+context relations. Mathematical applicability and theorem use belong to
+proof-logic supervision; source scope must not certify the proof-dependency set.
+
+On the procedurally reserved 0.x path, task cards frozen by Chalxius 0.7.13 or
+later treat an artifact with role
 `candidate_fact` is not a generic Markdown attachment. Worker preflight parses
 the exact bytes as Fact Markdown, requires canonical round-trip serialization,
 and requires exactly one semantic conclusion atom. A typed semantic interface
@@ -144,7 +170,8 @@ contain exactly one `[CLAIM:*]` clause. This prospective gate does not rewrite
 or retroactively reject returns frozen under an older runtime. It also does not
 require worker authorship: Main may author the same exact canonical Candidate
 Fact bytes. Author and other provenance metadata preserve lineage but are not a
-mathematical gate.
+mathematical gate. The runtime does not authenticate pre-1.0 provenance; Main
+must explicitly select this historical completion/audit path.
 
 If a production compute source contains `approved_computation_execution`, the
 return is a formal execution. Its `computation_source` and
@@ -346,5 +373,6 @@ legacy `return_sha256` field is optional. Ingestion derives the SHA-256 from
 the canonical bytes and treats a supplied legacy value only as an equality
 assertion. Ingestion records Research; it does not create a Fact, decide Paper
 adequacy, approve an attack route, or modify a CHX report. A later verifier
-returns review bytes only; Gateway alone owns `certification-record` and Fact
-admission.
+returns nontruth review bytes only; Gateway alone certifies Research. The old
+`certification-record` command belongs to procedurally reserved 0.x
+compatibility.

@@ -495,7 +495,7 @@ def build_assurance_contract(
             "activation": "computation_stage_count_gt_zero",
             "required_layers": list(_PROGRAM_MATH_LAYERS),
             "research_stage_adverse_policy": (
-                "enqueue_typed_review_when_project_adverse_routing_enabled"
+                "ordinary_program_math_scope_in_research_supervision"
             ),
             "architecture_issue_import": "forbidden",
         },
@@ -584,7 +584,13 @@ def validate_assurance_contract(payload: Any) -> dict[str, Any]:
         or program_math["activation"] != "computation_stage_count_gt_zero"
         or program_math["required_layers"] != list(_PROGRAM_MATH_LAYERS)
         or program_math["research_stage_adverse_policy"]
-        != "enqueue_typed_review_when_project_adverse_routing_enabled"
+        not in {
+            # Frozen pre-1.0.3 cards retain their exact prospective queue
+            # declaration.  The current writer no longer emits or consumes it;
+            # this branch is historical semantic decoding only.
+            "enqueue_typed_review_when_project_adverse_routing_enabled",
+            "ordinary_program_math_scope_in_research_supervision",
+        }
         or program_math["architecture_issue_import"] != "forbidden"
     ):
         raise ValueError("V5 program-math contract is invalid")

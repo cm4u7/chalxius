@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -10,15 +13,73 @@ from unittest.mock import patch
 from mathgraph.store import MathGraphStore
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.roles import allowed_commands_for_workflow
+from mathgraph.cli import main as mgraph_main
 
 
 class FactAlphaTests(unittest.TestCase):
+    def test_plan_cli_exposes_packager_mechanical_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            proposal = {
+                "schema_version": 1,
+                "plan_id": "fact-plan-" + "a" * 64,
+                "packager": "fact-packager",
+                "components": [],
+                "blocked_entries": [],
+            }
+            projected = {
+                "plan_id": proposal["plan_id"],
+                "record_sha256": "b" * 64,
+                "selection": [],
+                "mechanical_package_state": "mechanical_proposal_ready",
+                "mechanical_package_id": None,
+                "mechanical_package_record_sha256": None,
+                "mechanical_package_proposal": proposal,
+                "mechanical_package_proposal_sha256": sha256_json(proposal),
+                "interface_source_bindings_sha256": sha256_json([]),
+                "interface_preparation_unavailable": [],
+                "next_action": "fact-package-seal",
+            }
+            output = StringIO()
+            with patch(
+                "mathgraph.fact_alpha.FactAlphaManager.plan_packaging",
+                return_value=projected,
+            ), redirect_stdout(output):
+                mgraph_main(
+                    [
+                        "--root",
+                        str(store.root),
+                        "--role",
+                        "fact-packager",
+                        "plan-fact-packaging",
+                        "--mark-id",
+                        "fact-mark-" + "c" * 64,
+                    ]
+                )
+            rendered = json.loads(output.getvalue())
+            self.assertEqual(
+                rendered["mechanical_package_state"],
+                "mechanical_proposal_ready",
+            )
+            self.assertEqual(
+                rendered["mechanical_package_proposal"], proposal
+            )
+            self.assertEqual(
+                rendered["mechanical_package_proposal_sha256"],
+                sha256_json(proposal),
+            )
+            self.assertEqual(rendered["next_action"], "fact-package-seal")
+
     def test_fact_packager_role_is_narrow_and_worker_does_not_inherit_it(
         self,
     ) -> None:
         self.assertEqual(
             allowed_commands_for_workflow("fact-packager", 5),
-            {"fact-frontier", "fact-package-seal"},
+            {
+                "fact-frontier",
+                "plan-fact-packaging",
+                "fact-package-seal",
+            },
         )
         worker_commands = allowed_commands_for_workflow("worker", 5)
         self.assertNotIn("fact-frontier", worker_commands)
@@ -252,6 +313,354 @@ class FactAlphaTests(unittest.TestCase):
             mark_text = mark_files[0].read_text(encoding="utf-8")
             self.assertNotIn("A complete direct proof", mark_text)
 
+    def test_packager_selects_landmark_route_and_unmarked_predecessor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            with store.v5_mutation_lock(command="fact-packager-fixture"):
+                campaign_id = store.campaigns().create(
+                    {
+                        "name": "Fact route",
+                        "objective": "Certify a sparse load-bearing route.",
+                        "source_claim_ids": [],
+                        "targets": [],
+                        "constraints": [],
+                        "stop_conditions": [],
+                        "value_definition": "Preserve exact Research ancestry.",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                )
+            lifecycle = store.v5_lifecycle()
+            predecessor = lifecycle.add_research(
+                {
+                    "claim": "A predecessor lemma holds.",
+                    "content": "Proof of the predecessor lemma.",
+                    "campaign_id": campaign_id,
+                },
+                actor="research-author",
+            )
+            landmark = lifecycle.add_research(
+                {
+                    "claim": "The load-bearing theorem follows.",
+                    "content": "Proof using the predecessor lemma.",
+                    "campaign_id": campaign_id,
+                },
+                actor="research-author",
+            )
+            unrelated = lifecycle.add_research(
+                {
+                    "claim": "An unrelated theorem happens to share the Campaign.",
+                    "content": "This result is not on the selected Fact route.",
+                    "campaign_id": campaign_id,
+                },
+                actor="research-author",
+            )
+            alternative_predecessor = lifecycle.add_research(
+                {
+                    "claim": "A prerequisite found by the Fact packager holds.",
+                    "content": (
+                        "This exact prerequisite was not a Main landmark and "
+                        "was not named by the supervisor recommendation."
+                    ),
+                    "campaign_id": campaign_id,
+                },
+                actor="research-author",
+            )
+            with store.v5_mutation_lock(command="fact-packager-fixture"):
+                target_id = store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": landmark["research_id"],
+                        "label": "Certify the load-bearing route",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item == landmark["research_id"],
+                )
+                store.campaigns().activate(campaign_id, actor="main")
+            lifecycle._replace_campaign_frontier_working_state(
+                campaign_id,
+                targets={
+                    target_id: {
+                        "recovery_root_research_id": landmark["research_id"],
+                        "active_head_research_ids": [landmark["research_id"]],
+                        "historical_landmark_research_ids": [
+                            predecessor["research_id"]
+                        ],
+                        "historical_landmark_reasons": {
+                            predecessor["research_id"]: (
+                                "This is the oldest load-bearing certified-route entry."
+                            )
+                        },
+                        "head_contexts": [],
+                        "recent_attained_research_ids": [],
+                    }
+                },
+            )
+            manager = lifecycle.fact_alpha()
+            main_mark = manager.mark(
+                landmark["research_id"],
+                rationale=(
+                    "Main identifies this active Research head as a sparse "
+                    "load-bearing Fact route entry."
+                ),
+                campaign_id=campaign_id,
+                target_id=target_id,
+                actor="main",
+            )
+            existing_mark_plan = manager.plan_packaging(
+                [main_mark["mark_id"]],
+                planned_by="fact-packager",
+            )
+            self.assertEqual(
+                existing_mark_plan["selection_mode"], "existing_marks"
+            )
+            self.assertEqual(
+                existing_mark_plan["route_anchor_research_ids"], []
+            )
+            self.assertEqual(
+                manager.plan(existing_mark_plan["plan_id"])["plan_id"],
+                existing_mark_plan["plan_id"],
+            )
+            cli_output = StringIO()
+            with redirect_stdout(cli_output):
+                mgraph_main(
+                    [
+                        "--root",
+                        str(store.root),
+                        "--role",
+                        "fact-packager",
+                        "plan-fact-packaging",
+                        "--mark-id",
+                        main_mark["mark_id"],
+                    ]
+                )
+            self.assertEqual(
+                json.loads(cli_output.getvalue())["plan_id"],
+                existing_mark_plan["plan_id"],
+            )
+            before = manager.frontier(campaign_id=campaign_id)
+            self.assertEqual(before["landmark_route_count"], 1)
+            self.assertEqual(
+                before["landmark_routes"][0]["route_state"],
+                "needs_packager_route",
+            )
+
+            def plan_route() -> dict[str, object]:
+                return manager.plan_packaging(
+                    research_ids=[
+                        predecessor["research_id"],
+                        landmark["research_id"],
+                    ],
+                    campaign_id=campaign_id,
+                    target_id=target_id,
+                    planned_by="fact-packager",
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                plans = list(executor.map(lambda _index: plan_route(), range(2)))
+            self.assertEqual(plans[0]["plan_id"], plans[1]["plan_id"])
+            self.assertEqual(len(list(manager.plans_dir.glob("*.json"))), 2)
+            self.assertEqual(len(list(manager.marks_dir.glob("*.json"))), 2)
+            plan = plans[0]
+            self.assertEqual(plan["planned_by"], "fact-packager")
+            self.assertEqual(len(plan["selection"]), 2)
+            self.assertEqual(
+                {mark["actor"] for mark in manager._marks().values()},
+                {"main", "fact-packager"},
+            )
+            state = lifecycle._read_campaign_frontier_working_state(
+                campaign_id
+            )
+            self.assertEqual(
+                state["targets"][target_id][
+                    "historical_landmark_research_ids"
+                ],
+                [predecessor["research_id"]],
+            )
+            with self.assertRaisesRegex(
+                ValueError, "lacks an exact Main-owned"
+            ):
+                manager.plan_packaging(
+                    research_ids=[unrelated["research_id"]],
+                    campaign_id=campaign_id,
+                    target_id=target_id,
+                    planned_by="fact-packager",
+                )
+
+            coverage = [
+                {
+                    "production_round_id": "round-20260830T000000Z-00000008",
+                    "source_component_id": None,
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                }
+            ]
+
+            def ready_projection(
+                research: dict[str, object], _coverage: object
+            ) -> dict[str, object]:
+                return {
+                    "state": "ready",
+                    "statement_interface": self._interface(research),
+                    "source_bindings": [],
+                    "source_count": 1,
+                    "rationales": ["One coherent Research surface."],
+                    "diagnostic_sha256": "d" * 64,
+                }
+
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                side_effect=ready_projection,
+            ):
+                alternative_plan = manager.plan_packaging(
+                    research_ids=[
+                        alternative_predecessor["research_id"],
+                        landmark["research_id"],
+                    ],
+                    campaign_id=campaign_id,
+                    target_id=target_id,
+                    planned_by="fact-packager",
+                )
+                landmark_interface = self._interface(landmark)
+                landmark_interface[
+                    "certified_predecessor_research_ids"
+                ] = [alternative_predecessor["research_id"]]
+                alternative_package = manager.seal_package(
+                    {
+                        "schema_version": 1,
+                        "plan_id": alternative_plan["plan_id"],
+                        "packager": "fact-packager",
+                        "components": [
+                            {
+                                "component_key": "packager-alternative-route",
+                                "entries": [
+                                    {
+                                        "research_id": alternative_predecessor[
+                                            "research_id"
+                                        ],
+                                        "statement_interface": self._interface(
+                                            alternative_predecessor
+                                        ),
+                                    },
+                                    {
+                                        "research_id": landmark["research_id"],
+                                        "statement_interface": landmark_interface,
+                                    },
+                                ],
+                            }
+                        ],
+                        "blocked_entries": [],
+                    }
+                )
+            self.assertEqual(
+                alternative_package["components"][0]["entries"][1][
+                    "statement_interface"
+                ]["certified_predecessor_research_ids"],
+                [alternative_predecessor["research_id"]],
+            )
+
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                side_effect=ready_projection,
+            ):
+                unrelated_plan = manager.plan_packaging(
+                    research_ids=[
+                        unrelated["research_id"],
+                        landmark["research_id"],
+                    ],
+                    campaign_id=campaign_id,
+                    target_id=target_id,
+                    planned_by="fact-packager",
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "lacks a frozen Main route anchor"
+                ):
+                    manager.seal_package(
+                        {
+                            "schema_version": 1,
+                            "plan_id": unrelated_plan["plan_id"],
+                            "packager": "fact-packager",
+                            "components": [
+                                {
+                                    "component_key": "anchored-component",
+                                    "entries": [
+                                        {
+                                            "research_id": landmark[
+                                                "research_id"
+                                            ],
+                                            "statement_interface": self._interface(
+                                                landmark
+                                            ),
+                                        }
+                                    ],
+                                },
+                                {
+                                    "component_key": "unrelated-component",
+                                    "entries": [
+                                        {
+                                            "research_id": unrelated[
+                                                "research_id"
+                                            ],
+                                            "statement_interface": self._interface(
+                                                unrelated
+                                            ),
+                                        }
+                                    ],
+                                },
+                            ],
+                            "blocked_entries": [],
+                        }
+                    )
+                with self.assertRaisesRegex(
+                    ValueError, "outside its frozen Main-anchored"
+                ):
+                    manager.seal_package(
+                        {
+                            "schema_version": 1,
+                            "plan_id": unrelated_plan["plan_id"],
+                            "packager": "fact-packager",
+                            "components": [
+                                {
+                                    "component_key": "disconnected-component",
+                                    "entries": [
+                                        {
+                                            "research_id": landmark[
+                                                "research_id"
+                                            ],
+                                            "statement_interface": self._interface(
+                                                landmark
+                                            ),
+                                        },
+                                        {
+                                            "research_id": unrelated[
+                                                "research_id"
+                                            ],
+                                            "statement_interface": self._interface(
+                                                unrelated
+                                            ),
+                                        },
+                                    ],
+                                }
+                            ],
+                            "blocked_entries": [],
+                        }
+                    )
+
     def test_certified_predecessor_closure_and_heads_are_research_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
@@ -457,7 +866,7 @@ class FactAlphaTests(unittest.TestCase):
                 manager._accepted_grants()
             self.assertEqual(len(acceptance["grant_ids"]), 1)
 
-    def test_fact_frontier_limit_bounds_entries_heads_and_batch_ids(self) -> None:
+    def test_fact_frontier_limit_bounds_entries_without_eager_batch_selection(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -479,13 +888,13 @@ class FactAlphaTests(unittest.TestCase):
             self.assertEqual(frontier["entry_count"], 5)
             self.assertEqual(frontier["shown_count"], 2)
             self.assertEqual(len(frontier["entries"]), 2)
-            self.assertEqual(frontier["ready_for_packaging_count"], 5)
-            self.assertEqual(
-                sum(
-                    len(batch["research_ids"])
-                    for batch in frontier["batch_opportunities"]
-                ),
-                2,
+            self.assertEqual(frontier["route_entry_count"], 5)
+            self.assertNotIn("batch_opportunities", frontier)
+            self.assertTrue(
+                all(
+                    entry["state"] == "needs_packager_route"
+                    for entry in frontier["entries"]
+                )
             )
             self.assertLessEqual(len(frontier["certified_heads"]), 2)
 
@@ -786,7 +1195,7 @@ class FactAlphaTests(unittest.TestCase):
             self.assertEqual(manager._marks(), {})
             self.assertEqual(manager._accepted_grants(), {})
 
-    def test_supervised_interface_mechanically_seals_and_preserves_evidence_layer(
+    def test_supervised_interface_proposes_package_and_preserves_evidence_layer(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -866,20 +1275,77 @@ class FactAlphaTests(unittest.TestCase):
                 research["research_id"],
                 rationale="This theorem is load-bearing.",
             )
+            original_research_record = lifecycle._research_record
+
+            def source_scoped_research_record(
+                research_id: str, *args: object, **kwargs: object
+            ) -> dict[str, object]:
+                record = original_research_record(
+                    research_id, *args, **kwargs
+                )
+                if research_id != supervisor["research_id"]:
+                    return record
+                projected = json.loads(json.dumps(record))
+                projected["metadata"]["research_supervision"] = {
+                    "supervisor_scope": "source_scope"
+                }
+                return projected
+
+            source_coverage = [
+                {**coverage[0], "scope": "source_scope"}
+            ]
+            with patch.object(
+                lifecycle,
+                "_research_record",
+                side_effect=source_scoped_research_record,
+            ):
+                source_projection = manager._supervised_interface_projection(
+                    research,
+                    source_coverage,
+                )
+            self.assertEqual(
+                source_projection["state"], "missing_or_legacy"
+            )
+
+            def scoped_research_record(
+                research_id: str, *args: object, **kwargs: object
+            ) -> dict[str, object]:
+                record = original_research_record(
+                    research_id, *args, **kwargs
+                )
+                if research_id != supervisor["research_id"]:
+                    return record
+                projected = json.loads(json.dumps(record))
+                projected["metadata"]["research_supervision"] = {
+                    "supervisor_scope": "proof_logic"
+                }
+                return projected
+
             with patch.object(
                 lifecycle,
                 "_candidate_supervision_scope_coverage",
                 return_value=coverage,
+            ), patch.object(
+                lifecycle,
+                "_research_record",
+                side_effect=scoped_research_record,
             ):
                 plan = manager.plan_packaging([mark["mark_id"]])
 
             self.assertEqual(
-                plan["mechanical_package_state"], "mechanically_sealed"
+                plan["mechanical_package_state"],
+                "mechanical_proposal_ready",
             )
-            package = manager.package(plan["mechanical_package_id"])
+            self.assertIsNone(plan["mechanical_package_id"])
+            proposal = plan["mechanical_package_proposal"]
+            self.assertEqual(
+                plan["mechanical_package_proposal_sha256"],
+                sha256_json(proposal),
+            )
+            package = manager.seal_package(proposal)
             self.assertEqual(
                 package["packager"],
-                "mechanical-supervision-interface-projection",
+                "fact-packager",
             )
             self.assertEqual(
                 set(
@@ -966,13 +1432,591 @@ class FactAlphaTests(unittest.TestCase):
                 plan["mechanical_package_state"], "research_split_required"
             )
             self.assertEqual(plan["mechanical_package_id"], None)
-            self.assertEqual(plan["next_action"], "research-cow-or-split")
             self.assertEqual(
-                frontier["entries"][0]["state"], "blocked_by_research"
+                plan["next_action"],
+                "fact-package-seal-or-research-cow-split",
+            )
+            self.assertEqual(
+                frontier["entries"][0]["state"], "needs_packager_route"
             )
             self.assertEqual(
                 frontier["entries"][0]["interface_preparation"]["state"],
                 "needs_split",
+            )
+            self.assertIn(
+                "supervisor_recommends_statement_split",
+                frontier["entries"][0]["warnings"],
+            )
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                return_value=split_projection,
+            ):
+                manual_package = manager.seal_package(
+                    {
+                        "schema_version": 1,
+                        "plan_id": plan["plan_id"],
+                        "packager": "fact-packager-agent",
+                        "components": [
+                            {
+                                "component_key": "packager-whole-node-proposal",
+                                "entries": [
+                                    {
+                                        "research_id": research["research_id"],
+                                        "statement_interface": self._interface(
+                                            research
+                                        ),
+                                    }
+                                ],
+                            }
+                        ],
+                        "blocked_entries": [],
+                    }
+                )
+            self.assertEqual(
+                manual_package["packager"], "fact-packager-agent"
+            )
+
+    def test_packager_may_propose_alternative_to_supervised_interface(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "claim": "A load-bearing theorem has one supervised surface.",
+                    "content": "The proof establishes exactly that theorem.",
+                },
+                actor="research-author",
+            )
+            manager = lifecycle.fact_alpha()
+            mark = manager.mark(
+                research["research_id"],
+                rationale="The theorem is load-bearing.",
+            )
+            coverage = [
+                {
+                    "production_round_id": "round-20260830T000000Z-00000004",
+                    "source_component_id": None,
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                }
+            ]
+            exact_interface = self._interface(research)
+            ready_projection = {
+                "state": "ready",
+                "statement_interface": exact_interface,
+                "source_bindings": [],
+                "source_count": 1,
+                "rationales": ["The node is one coherent statement."],
+                "diagnostic_sha256": "c" * 64,
+            }
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                return_value=ready_projection,
+            ):
+                plan = manager.plan_packaging([mark["mark_id"]])
+            self.assertEqual(
+                plan["mechanical_package_state"],
+                "mechanical_proposal_ready",
+            )
+            self.assertIsNone(plan["mechanical_package_id"])
+            altered_interface = json.loads(json.dumps(exact_interface))
+            altered_interface["limitations"] = [
+                "The packager tried to replace the supervisor-owned boundary."
+            ]
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                return_value=ready_projection,
+            ):
+                package = manager.seal_package(
+                    {
+                        "schema_version": 1,
+                        "plan_id": plan["plan_id"],
+                        "packager": "fact-packager-agent",
+                        "components": [
+                            {
+                                "component_key": "altered-interface",
+                                "entries": [
+                                    {
+                                        "research_id": research["research_id"],
+                                        "statement_interface": altered_interface,
+                                    }
+                                ],
+                            }
+                        ],
+                        "blocked_entries": [],
+                    }
+                )
+            self.assertEqual(
+                package["components"][0]["entries"][0][
+                    "statement_interface"
+                ]["limitations"],
+                altered_interface["limitations"],
+            )
+
+    def test_main_mark_exposes_complete_committed_split_to_packager(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            records = [
+                lifecycle.add_research(
+                    {
+                        "claim": f"Research surface {index}.",
+                        "content": f"Exact content for surface {index}.",
+                    },
+                    actor="research-author",
+                )
+                for index in range(7)
+            ]
+            source, repair, owner, pending_repair, *members = records
+            manager = lifecycle.fact_alpha()
+            mark = manager.mark(
+                source["research_id"],
+                rationale="This mixed source is a sparse Fact route entry.",
+            )
+            bases = {
+                item["research_id"]: json.loads(json.dumps(item))
+                for item in records
+            }
+            batch_id = "research-split-" + "d" * 64
+            bases[owner["research_id"]].setdefault("metadata", {})[
+                "research_split_owner"
+            ] = {"batch_id": batch_id}
+            member_ids = [item["research_id"] for item in members]
+            repair_children = {
+                source["research_id"]: (repair["research_id"],),
+                repair["research_id"]: tuple(member_ids),
+            }
+            projection = {
+                "route_children": repair_children,
+                "details": {
+                    repair["research_id"]: {
+                        "state": "committed_split_members",
+                        "split_owner_research_id": owner["research_id"],
+                        "split_member_research_ids": member_ids,
+                    }
+                },
+            }
+
+            def route_projection(*, inspection: object) -> tuple[object, ...]:
+                inspection.frontier_cow_route_projection = projection
+                inspection.frontier_cow_repair_children = repair_children
+                return bases, {}, {}, repair_children
+
+            with patch.object(
+                manager, "_route_projection", side_effect=route_projection
+            ):
+                frontier = manager.frontier()
+            self.assertEqual(len(frontier["entries"]), 1)
+            entry = frontier["entries"][0]
+            self.assertEqual(entry["state"], "needs_packager_route")
+            self.assertEqual(entry["next_action"], "fact-packager-route")
+            self.assertEqual(entry["exact_split_batch_count"], 1)
+            self.assertEqual(
+                entry["exact_split_batches"][0]["member_research_ids"],
+                sorted(member_ids),
+            )
+            self.assertEqual(
+                entry["interface_preparation"]["state"],
+                "deferred_to_split_members",
+            )
+            self.assertNotIn("research_cow_route_is_ambiguous", entry["blockers"])
+            self.assertEqual(
+                frontier["entries"][0]["rationale"], mark["rationale"]
+            )
+            mixed_children = {
+                source["research_id"]: (
+                    pending_repair["research_id"],
+                    repair["research_id"],
+                ),
+                repair["research_id"]: tuple(member_ids),
+            }
+            mixed_projection = {
+                **projection,
+                "route_children": mixed_children,
+            }
+
+            def mixed_route_projection(
+                *, inspection: object
+            ) -> tuple[object, ...]:
+                inspection.frontier_cow_route_projection = mixed_projection
+                inspection.frontier_cow_repair_children = mixed_children
+                return bases, {}, {}, mixed_children
+
+            with patch.object(
+                manager,
+                "_route_projection",
+                side_effect=mixed_route_projection,
+            ):
+                mixed_frontier = manager.frontier()
+            mixed_entry = mixed_frontier["entries"][0]
+            self.assertEqual(
+                mixed_entry["state"], "needs_packager_route"
+            )
+            self.assertEqual(
+                mixed_entry["next_action"], "fact-packager-route"
+            )
+            self.assertNotIn(
+                "research_cow_route_is_ambiguous", mixed_entry["blockers"]
+            )
+            self.assertEqual(
+                set(mixed_entry["candidate_terminal_research_ids"]),
+                {pending_repair["research_id"], *member_ids},
+            )
+            manager.mark(
+                owner["research_id"],
+                rationale=(
+                    "The atomic split owner is the ingested Research result."
+                ),
+            )
+            owner_children = {
+                **repair_children,
+                owner["research_id"]: tuple(member_ids),
+            }
+            owner_projection = {
+                **projection,
+                "route_children": owner_children,
+            }
+
+            def owner_route_projection(
+                *, inspection: object
+            ) -> tuple[object, ...]:
+                inspection.frontier_cow_route_projection = owner_projection
+                inspection.frontier_cow_repair_children = owner_children
+                return bases, {}, {}, owner_children
+
+            with patch.object(
+                manager,
+                "_route_projection",
+                side_effect=owner_route_projection,
+            ):
+                owner_frontier = manager.frontier()
+            self.assertEqual(len(owner_frontier["entries"]), 1)
+            self.assertEqual(owner_frontier["entries"][0]["mark_count"], 2)
+            self.assertEqual(
+                owner_frontier["entries"][0]["exact_split_batches"][0][
+                    "member_research_ids"
+                ],
+                sorted(member_ids),
+            )
+
+    def test_distinct_ambiguous_cow_marks_remain_distinct_packager_routes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            records = [
+                lifecycle.add_research(
+                    {
+                        "claim": f"Independent COW route node {index}.",
+                        "content": f"Exact route content {index}.",
+                    },
+                    actor="research-author",
+                )
+                for index in range(6)
+            ]
+            first_root, first_left, first_right, second_root, second_left, second_right = (
+                records
+            )
+            manager = lifecycle.fact_alpha()
+            first_mark = manager.mark(
+                first_root["research_id"],
+                rationale="First independent Fact attention route.",
+            )
+            second_mark = manager.mark(
+                second_root["research_id"],
+                rationale="Second independent Fact attention route.",
+            )
+            bases = {
+                item["research_id"]: json.loads(json.dumps(item))
+                for item in records
+            }
+            repair_children = {
+                first_root["research_id"]: (
+                    first_left["research_id"],
+                    first_right["research_id"],
+                ),
+                second_root["research_id"]: (
+                    second_left["research_id"],
+                    second_right["research_id"],
+                ),
+            }
+            projection = {
+                "route_children": repair_children,
+                "details": {},
+            }
+
+            def route_projection(*, inspection: object) -> tuple[object, ...]:
+                inspection.frontier_cow_route_projection = projection
+                inspection.frontier_cow_repair_children = repair_children
+                return bases, {}, {}, repair_children
+
+            with patch.object(
+                manager, "_route_projection", side_effect=route_projection
+            ):
+                frontier = manager.frontier()
+                plan = manager.plan_packaging(
+                    [first_mark["mark_id"], second_mark["mark_id"]]
+                )
+
+            self.assertEqual(len(frontier["entries"]), 2)
+            terminal_sets = {
+                frozenset(entry["candidate_terminal_research_ids"])
+                for entry in frontier["entries"]
+            }
+            self.assertEqual(
+                terminal_sets,
+                {
+                    frozenset(
+                        {
+                            first_left["research_id"],
+                            first_right["research_id"],
+                        }
+                    ),
+                    frozenset(
+                        {
+                            second_left["research_id"],
+                            second_right["research_id"],
+                        }
+                    ),
+                },
+            )
+            self.assertTrue(
+                all(
+                    entry["state"] == "needs_packager_route"
+                    and entry["next_action"] == "fact-packager-route"
+                    for entry in frontier["entries"]
+                )
+            )
+            self.assertEqual(len(plan["selection"]), 2)
+            self.assertEqual(
+                {
+                    item["marked_research_id"]
+                    for item in plan["selection"]
+                },
+                {first_root["research_id"], second_root["research_id"]},
+            )
+
+    def test_candidate_cow_preview_reports_depth_cut(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            manager = store.v5_lifecycle().fact_alpha()
+            node_ids = [f"{index:012x}" for index in range(40)]
+            branch_ids = [f"{100 + index:012x}" for index in range(20)]
+            bases = {
+                research_id: {
+                    "research_id": research_id,
+                    "record_sha256": "a" * 64,
+                    "kind": "repair",
+                    "status": "open",
+                    "relation": "repairs",
+                    "claim": f"Exact terminal claim {research_id}.",
+                    "rationale": "Bounded packager route evidence.",
+                }
+                for research_id in [*node_ids, *branch_ids]
+            }
+            repair_children = {
+                node_ids[index]: (node_ids[index + 1],)
+                for index in range(len(node_ids) - 1)
+            }
+            result = manager._candidate_cow_route_projection(
+                node_ids[0],
+                repair_children=repair_children,
+                bases=bases,
+            )
+            self.assertTrue(result["candidate_cow_paths_truncated"])
+            self.assertEqual(
+                result["candidate_cow_path_details"][0]["endpoint_state"],
+                "depth_cut",
+            )
+            self.assertEqual(
+                result["candidate_terminal_research_ids"], [node_ids[-1]]
+            )
+            self.assertEqual(
+                result["candidate_terminal_summaries"][0]["research_id"],
+                node_ids[-1],
+            )
+            self.assertEqual(
+                result["candidate_terminal_summaries"][0][
+                    "research_record_sha256"
+                ],
+                "a" * 64,
+            )
+
+            wide_children = {
+                **{
+                    node_ids[index]: (node_ids[index + 1],)
+                    for index in range(31)
+                },
+                node_ids[31]: tuple(branch_ids),
+            }
+            wide_result = manager._candidate_cow_route_projection(
+                node_ids[0],
+                repair_children=wide_children,
+                bases=bases,
+            )
+            self.assertLessEqual(
+                wide_result["candidate_cow_paths_shown_count"], 8
+            )
+            self.assertEqual(
+                len(wide_result["candidate_cow_path_details"]), 8
+            )
+            self.assertTrue(wide_result["candidate_cow_paths_truncated"])
+            self.assertEqual(wide_result["candidate_terminal_count"], 20)
+            self.assertEqual(
+                len(wide_result["candidate_terminal_bindings"]), 20
+            )
+            self.assertEqual(
+                wide_result["candidate_terminal_ids_sha256"],
+                sha256_json(sorted(branch_ids)),
+            )
+            self.assertEqual(
+                len(wide_result["candidate_terminal_summaries"]), 8
+            )
+
+    def test_uncertified_landmark_cannot_be_starved_by_bounded_window(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            manager = lifecycle.fact_alpha()
+            campaign_id = "campaign-" + "a" * 12
+            research_ids = [f"{index:012x}" for index in range(257)]
+            target_ids = [
+                f"camtarget-{index:016x}" for index in range(257)
+            ]
+            bases = {
+                research_id: {
+                    "research_id": research_id,
+                    "claim": f"Landmark theorem {index}",
+                    "kind": "direction",
+                }
+                for index, research_id in enumerate(research_ids)
+            }
+            campaign_state = {
+                "targets": {
+                    target_id: {
+                        "historical_landmark_research_ids": [research_id],
+                        "historical_landmark_reasons": {
+                            research_id: "Exact durable route."
+                        },
+                    }
+                    for target_id, research_id in zip(
+                        target_ids, research_ids, strict=True
+                    )
+                }
+            }
+            certified_ids = research_ids[:256]
+            grant_projection = {
+                "active_by_research": {
+                    research_id: {
+                        "grant_id": "fact-grant-" + "b" * 64
+                    }
+                    for research_id in certified_ids
+                },
+                "stale_by_research": {},
+                "grants": {
+                    research_id: {} for research_id in certified_ids
+                },
+                "certified_heads": certified_ids,
+            }
+
+            def route_projection(*, inspection: object) -> tuple[object, ...]:
+                inspection.frontier_cow_route_projection = {
+                    "route_children": {},
+                    "details": {},
+                }
+                inspection.frontier_cow_repair_children = {}
+                return bases, {}, {}, {}
+
+            with patch.object(
+                manager, "_route_projection", side_effect=route_projection
+            ), patch.object(
+                manager,
+                "_grant_projection",
+                return_value=grant_projection,
+            ), patch.object(
+                lifecycle,
+                "_read_campaign_frontier_working_state",
+                return_value=campaign_state,
+            ), patch.object(
+                manager,
+                "_legacy_root_bootstrap_advisory",
+                return_value=None,
+            ):
+                frontier = manager.frontier(
+                    limit=1, campaign_id=campaign_id
+                )
+                selected = manager.frontier(
+                    limit=1,
+                    campaign_id=campaign_id,
+                    target_id=target_ids[-1],
+                )
+
+            self.assertEqual(frontier["landmark_route_count"], 257)
+            self.assertEqual(
+                frontier["landmark_routes"][0][
+                    "landmark_research_id"
+                ],
+                research_ids[-1],
+            )
+            self.assertEqual(
+                frontier["landmark_routes"][0]["route_state"],
+                "needs_packager_route",
+            )
+            self.assertEqual(selected["landmark_route_count"], 1)
+            self.assertEqual(
+                selected["landmark_routes"][0]["target_id"],
+                target_ids[-1],
+            )
+            self.assertEqual(
+                frontier["landmark_route_identities_sha256"],
+                sha256_json(
+                    [
+                        {
+                            "campaign_id": item["campaign_id"],
+                            "target_id": item["target_id"],
+                            "landmark_research_id": item[
+                                "landmark_research_id"
+                            ],
+                            "current_research_id": item[
+                                "current_research_id"
+                            ],
+                        }
+                        for item in frontier["landmark_routes"]
+                    ]
+                    + [
+                        {
+                            "campaign_id": campaign_id,
+                            "target_id": target_id,
+                            "landmark_research_id": research_id,
+                            "current_research_id": research_id,
+                        }
+                        for target_id, research_id in zip(
+                            target_ids[:-1],
+                            research_ids[:-1],
+                            strict=True,
+                        )
+                    ]
+                ),
             )
 
 

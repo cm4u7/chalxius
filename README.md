@@ -1,27 +1,55 @@
 # Chalxius
 
-**Persistent research memory and a reliable working frontier for Codex.**
+**Persistent Research memory, a reliable working frontier, and sparse Fact
+certification for long-running Codex projects.**
 
-[Live graph](https://cm4u7.github.io/chalxius/) ·
-[Download v1.0.0](https://github.com/cm4u7/chalxius/releases/tag/v1.0.0) ·
-[Use cases](USE_CASES.md) ·
-[Architecture](ARCHITECTURE.md) ·
-[Validation](VALIDATION.md)
+[Download v1.0.3](https://github.com/cm4u7/chalxius/releases/tag/v1.0.3) ·
+[Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
+[Validation](VALIDATION.md) · [License](LICENSE)
+
+> [!IMPORTANT]
+> **Graph Browser and graphical graph generation are temporarily unavailable.**
+> Chalxius 1.0.3 does not present either as a supported release capability.
+> Historical or experimental Reader code and commands may still be present in
+> the repository, but users should not depend on them until the browser is
+> redesigned. This limitation does not affect Research storage, exact search,
+> Campaign/frontier coordination, supervision, or Fact certification.
 
 Chalxius is a local research runtime for projects that outgrow one chat. It
 keeps sources, Research, computations, objections, dependencies, supervision,
-failed routes, and admitted Facts in one content-addressed graph without
+failed routes, and admitted Facts in one content-addressed system without
 collapsing their different authority levels.
 
 Its ordinary frontier is Main's working memory: a compact view of the current
-mathematical boundary, exact work in flight, recently attained results,
+mathematical boundary, exact work in flight, recent attainments, durable
 historical landmarks, and places that genuinely require judgment. Main chooses
 the direction. Chalxius records and projects that choice; it does not select or
 dispatch research automatically.
 
-[![Open the anonymized Chalxius Reader](docs/assets/anonymized-research-topology.png)](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
+## Core model
 
-*A content-free projection of a real research topology. Click to explore it.*
+```text
+Campaign objective
+  └─ Targets
+      └─ active Research heads + attached context + landmarks
+           └─ production / supervision / COW history
+
+one immutable Research graph
+  └─ selected predecessor-closed Research packages
+      └─ independent verification
+          └─ append-only Fact certification on exact Research records
+```
+
+- **Research is cumulative nontruth.** Partial proofs, failed routes,
+  counterexamples, repairs, and open bridges remain useful without becoming
+  trusted premises.
+- **Campaign and frontier are working memory.** They preserve objectives and
+  the current boundary; they are not a second truth path.
+- **Fact is sparse certification.** It is an append-only property of an exact
+  Research record, not a duplicate proof graph.
+- **Main retains mathematical judgment.** The runtime follows explicit rigid
+  workflow relations, but does not infer mathematical completion or choose a
+  research direction.
 
 ## Start
 
@@ -35,55 +63,33 @@ unproved bridge explicitly conditional.
 
 `auto` is the default profile. `fast` narrows the next work unit; `deep` allows
 broader source, route, and computation exploration. Profiles never change the
-Fact-admission standard.
+Research quality or Fact-certification standard.
 
 Main's ordinary loop is short:
 
-1. read the objective and active Campaign goals;
-2. inspect the bounded frontier;
-3. search existing Research before choosing a named target;
-4. plan useful production or independent supervision;
+1. read the objective, active Campaign goals, frontier, and in-flight rounds;
+2. search existing Research before choosing a named cut;
+3. attach useful older results as context or promote them to an active head;
+4. plan production or independent supervision;
 5. ingest the result and read the newly exposed boundary.
 
-Campaign goals hold durable, non-procedural objectives. Frontier state is
-compact and replaceable. Immutable Research and round records remain the
-history and evidence; neither Campaign nor frontier is a second truth path.
-
-## One Research graph, sparse Fact certification
-
-```text
-free supervised Research growth
-        ↓ Main selects important exact nodes
-frozen multi-Research package -> independent verifier -> Gateway
-        ↓
-the same Research nodes carry append-only Fact certification
-```
-
-Research may be incomplete, disputed, or wrong and still be valuable. Fact is
-not a second proof graph: it is certification of one exact whole Research
-record. Main marks load-bearing nodes and batches them when useful. A packaging
-agent extracts a semi-formal interface without rewriting the claim; one
-independent verifier checks records, explicit certified-predecessor edges, and
-interfaces; the Gateway makes only correct components visible.
-
-The derived Fact frontier records where certification has reached, what Main
-marked important, and what a COW made stale. It does not schedule work or force
-Research and Fact to stay synchronized. Old 0.x Candidate/Fact authority
-remains readable and is not silently migrated.
+After a context handoff, Main also revisits recent attainments and historical
+landmarks before choosing the next cut. Landmarks are sparse, persistent, and
+not subject to a numeric quota; routine views show bounded previews while exact
+state retains the full set.
 
 ## Install
 
-Download from the
-[v1.0.0 release](https://github.com/cm4u7/chalxius/releases/tag/v1.0.0):
+Release assets for v1.0.3 are:
 
-- `chalxius-1.0.0-fact-alpha.tar.gz`
-- `chalxius-1.0.0-fact-alpha.tar.gz.sha256`
+- `chalxius-1.0.3-research-route-coordination-repair.tar.gz`
+- `chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256`
 
-Then verify and install:
+Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.0-fact-alpha.tar.gz.sha256
-tar -xzf chalxius-1.0.0-fact-alpha.tar.gz
+shasum -a 256 -c chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256
+tar -xzf chalxius-1.0.3-research-route-coordination-repair.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -103,40 +109,43 @@ MGRAPH=/absolute/path/to/chalxius/scripts/mgraph
 PROJECT=/absolute/path/to/project
 
 "$MGRAPH" --root "$PROJECT" --role main status
-"$MGRAPH" --root "$PROJECT" --role main frontier --limit 5
-"$MGRAPH" --root "$PROJECT" --role main frontier --limit 5 --diagnostic
+"$MGRAPH" --root "$PROJECT" --role main frontier --limit 8
+"$MGRAPH" --root "$PROJECT" --role main frontier --limit 8 --diagnostic
+"$MGRAPH" --root "$PROJECT" --role main search "exact topic" --scope research
 ```
 
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v1.0.0 — Fact Alpha
+## v1.0.3 — Research Route Coordination Repair
 
-- Fact certification is an append-only property of exact Research records;
-- Main keeps sparse importance marks while certification state, COW
-  reverification, heads, and batch opportunities are derived live;
-- Candidate packaging batches multiple Research nodes and preserves their exact
-  claims through semi-formal interfaces;
-- one verifier replaces the duplicated Candidate-adverse/verifier roles;
-- correct independent components can pass beside a failed component;
-- minor repairs return complete COW successors to the same verifier, while
-  fundamental errors return to ordinary Research;
-- new Research can bind exact active certified Research premises directly.
+This release concentrates on large-project coordination:
 
-The release adds no automatic selector, timer, scheduler, daemon, or background
-Fact worker. See [RELEASE.md](RELEASE.md) for the complete release note and
-[VALIDATION.md](VALIDATION.md) for exact software evidence.
+- completed COW routes no longer remain disguised as active work;
+- active heads can retain exact older Research as attached context;
+- recent attainments and unbounded sparse landmarks survive context handoff
+  without bloating routine frontier output;
+- Fact navigation landmarks are separated from packager-selected routes and
+  sealed packages;
+- the packager chooses predecessor-closed certification routes instead of
+  requiring Main to enumerate every package member;
+- source review owns external source identity and faithful extraction, while
+  proof review owns mathematical correctness and theorem use;
+- proof and source scopes normally reuse one independent supervisor session;
+- split repair batches carry explicit internal and external logical relations
+  for whole-product supervision; and
+- historical adverse-learning proposals remain readable but no longer route
+  current supervision.
 
-## Explore
+The release adds no automatic mathematical selector, timer, scheduler, daemon,
+background Fact worker, persistent graph cache, or compatibility layer.
 
-- [Anonymized research topology](https://cm4u7.github.io/chalxius/cases/anonymized-research-topology.html)
-- [Philosophy source-and-audit workflow](https://cm4u7.github.io/chalxius/cases/philosophy.html)
-- [Guarded proof graph](https://cm4u7.github.io/chalxius/cases/xy-swap-potential.html)
-- [Skill contract](chalxius/SKILL.md)
-- [Worker return contract](chalxius/references/v5_worker_return_contract.md)
-- [Fact admission contract](chalxius/references/admission_contract.md)
+## Authority boundary
 
-Examples demonstrate workflow and graph structure; they do not declare the
-displayed mathematics admitted. Software validation establishes package
-behavior, not a theorem. Licensed under [Apache-2.0](LICENSE); see
-[acknowledgements](ACKNOWLEDGEMENTS.md) for design lineage and credits.
+Software validation establishes package behavior, not a theorem. Research,
+Campaign, frontier, Reader remnants, CHX, PHX, and release records have no Fact
+effect. Only exact verification followed by Gateway acceptance creates active
+Fact certification.
+
+Licensed under [Apache-2.0](LICENSE). See
+[ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for design lineage and credits.

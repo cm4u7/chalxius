@@ -1,4 +1,4 @@
-# Validation — Chalxius v1.0.0 Fact Alpha
+# Validation — Chalxius v1.0.3 Research Route Coordination Repair
 
 This report records software, package, installation, live-project performance,
 sensitive-information, and CHX-settlement evidence. It does not certify a
@@ -8,117 +8,112 @@ mathematical claim.
 
 | Field | Value |
 |---|---|
-| Version | 1.0.0 |
+| Version | 1.0.3 |
 | Release date | 2026-08-30 |
-| Manifest entries | 268 |
-| Package files, including manifest | 269 |
-| Manifest SHA-256 | `35ad8484d021035e62a5dcb9efacbf1224f900abd4c61acbc8efcafecc693fcf` |
-| Archive | `chalxius-1.0.0-fact-alpha.tar.gz` |
-| Archive bytes | 2,705,200 |
-| Archive regular-file members | 269 |
-| Archive SHA-256 | `815fa9f6eaa910fafb653825cbe3e2c4e231d40938fea5c8bf3accb67841d850` |
-| Checksum-file SHA-256 | `d280c67857f74b8cc88bdff4cb47f7e2afb69ac09326cfef80bb926cbc172125` |
+| Manifest entries | 269 |
+| Package files, including manifest | 270 |
+| Manifest SHA-256 | `de3c4d76dd4408cc2c5c73bfa9ed899e3424a7e38bb255e60563613b6b9f77bb` |
+| Archive | `chalxius-1.0.3-research-route-coordination-repair.tar.gz` |
+| Archive bytes | 2,782,957 |
+| Archive regular-file members | 270 |
+| Archive SHA-256 | `220f7077212132dd6a71aef00e7bf9e4459b12dee7b802ac07f7fb9e34e2bcc1` |
+| Checksum-file SHA-256 | `9bbc3a01937166fd25b6211b2fb3256d1e8574c0dac0ace5c8b97a926b0f114b` |
 
 Two independent archive builds were byte-identical. The archive contains only
 sorted regular package files and no cache or bytecode member.
 
-## Whole-tree architecture and behavioral gates
+## Supported-capability boundary
 
-Strict reconnaissance covered 269 files, 77 Python modules, 57 MathGraph
-modules, and 96 test modules. All 24 duplicate function-body groups had an
-explicit adjudication. It reported zero orphan modules, behavioral orphan
-features, errors, and warnings. The inventory receipt SHA-256 is
-`82fcbb04519f696703b5453aaa00849e9e88937a1c4ae1b7e4e9173f9516efdb`.
+Graph Browser and graphical graph generation are temporarily unavailable and
+are not supported v1.0.3 release capabilities. Historical or experimental
+Reader bytes and an old command entry may remain in the package. Their
+mechanical self-tests passing does not restore a public support claim.
 
-The final behavioral gate exercised 53 registered features with 141 executable
-probes. All passed and the source tree remained unchanged. The receipt-file
-SHA-256 is
-`42f7bb5cda9aacc07e214c30b76023b018de60bd669c9815dbc3c2855a9c6edd`.
-
-The complete suite passed 1,068 tests, skipped 2, and failed 0 in 75.047
-seconds.
+This presentation boundary does not affect Research storage, exact search,
+Campaign/frontier coordination, textual graph inspection, supervision, COW,
+Fact packaging, verification, or certification.
 
 ## Routine release matrix
 
+The exact final manifest passed the manifest-bound routine matrix:
+
 | Lane | Result | Elapsed |
-|---|---|---:|
-| Self-test | PASS | 0.954 s |
-| Changed-surface tests | 132 tests, PASS | 11.153 s |
-| Semantic mutation audit | 32/32 killed | 45.900 s |
+|---|---:|---:|
+| Self-test | PASS | 1.186 s |
+| Changed-surface regression | 154 tests, PASS | 14.183 s |
+| Semantic mutation audit | 32/32 killed | 51.285 s |
 
-The matrix completed in 57.426 wall seconds. Every isolated lane reported an
-unchanged source tree. Its receipt-file SHA-256 is
-`cb141dfa1cfd382a218971d9ab4dd65f5fdc60f7df0dce8247a40a0c912764d7`.
+The matrix completed in 65.890 wall seconds. Every isolated lane reported an
+unchanged candidate tree. The receipt-file SHA-256 is
+`dd0972d94b79a769735731b0d7c5ac3529280c5d2c8a5caf2b36ceb4c53330d2`.
 
-The regressions cover the complete Fact Alpha command surface, exact package
-binding, component-isolated verifier decisions, minor and fundamental repair
-routes, descendant re-verification propagation, exact certified Research
-dependencies, legacy authority isolation, installation reachability, and
-current target-bound Campaign round precedence.
+Focused evidence also includes 25/25 Campaign/frontier tests, 38/38 combined
+frontier/capability/registry tests, 19/19 Fact Alpha tests, 17/17 current
+adverse-compatibility tests, 20/20 BTTF field-repair tests, and the atomic
+schema-v3 split regression. A synthetic 21-landmark Campaign retained the full
+exact state while routine output showed eight ids plus the exact total and
+identity digest.
 
-## Installation and live-project canary
+## Installation
 
 | Field | Result |
 |---|---|
-| Installed version | 1.0.0 |
-| Candidate-to-installed tree | exact; 269/269 files unchanged |
-| Installed manifest SHA-256 | `35ad8484d021035e62a5dcb9efacbf1224f900abd4c61acbc8efcafecc693fcf` |
-| Previous runtime archived | 0.9.18 |
+| Installed version | 1.0.3 |
+| Candidate-to-installed manifest | exact; 269/269 entries |
+| Installed manifest SHA-256 | `de3c4d76dd4408cc2c5c73bfa9ed899e3424a7e38bb255e60563613b6b9f77bb` |
+| Installed self-test | PASS |
+| Previous runtime archived | yes; exact preceding 1.0.3 bytes |
 | Direct rollback available | yes |
 | Project reads / writes by installation | 0 / 0 |
 
-The installed local-$\mathbb F_0$ canary scanned 2,247 Research envelopes.
-`fact-frontier --limit 8` completed in 0.942 wall seconds (673.717 ms internal)
-and correctly reported zero Fact Alpha marks, grants, and batch opportunities
-for the untouched project. Legacy Fact authority was reported as
-`read_only_unmapped`.
+The archived preceding runtime content identity is
+`d04e977f23a39ea9397cc009b9f0f55bb02683430554018812bcd5657f12f4f7`.
 
-The full read-only audit completed in 14.789 seconds and reported:
+## Live-project canary and performance
 
-| Signal | Result |
-|---|---|
-| `current_ok` | true |
-| `history_clean` | true |
-| Graph errors | 0 |
-| Workflow errors | 0 |
-| Research entries | 2,368 |
-| Legacy Fact entries | 82 |
+The installed runtime read the 2,393-Research local-$\mathbb F_0$ project
+without mutation.
 
-The project metadata snapshot SHA-256 was
-`54ecede31f19dc4ef1feb876ba8e2997edfcff93f9f67f57fd325cec2e21d108`
-both before and after the canary.
+- Campaign frontier: approximately 3.05 s and 37,617 output bytes, with four
+  targets and landmark counts 7, 2, 1, and 3.
+- Fact frontier: approximately 3.59 s wall time, 3.01 s internal time, and
+  26,659 output bytes for 17 active marks, eight in scope, three landmark
+  routes, and seven route entries.
+
+These are one-snapshot observations, not universal latency bounds. The byte
+sizes are reported because reasonable use of Main's context is part of the
+performance surface.
 
 ## Sensitive-information scan
 
-The package was scanned for the local username and absolute user path,
-private-key headers, common cloud access keys, GitHub/OpenAI/Slack token forms,
-and common secret assignments. No true positive was found. The three reviewed
-matches were a generic `/Users/<user>/...` documentation path, a synthetic
-host-task identifier, and an `/Users/example/...` fixture.
+The repository and package were scanned for the local username and path,
+private-key headers, AWS access keys, GitHub/OpenAI/Slack token forms, and
+common secret assignments. No true credential or private path was found. Two
+OpenAI-like matches were substrings of synthetic `hosttask-...` and
+`v5-task-...` fixture ids. Other generic secret-assignment matches were code,
+vendored MathJax, or generated public Reader examples.
 
 ## Global CHX settlement
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-f66daf8fa1046e7c4f8dfda1437cd76de7d781bceb4b3ea6f41e0468a88fac80` |
-| Canonical `record_sha256` | `ce4b7f2fa8f790dd41f4b29e8672f2ef16976236578e0247a7f28d0c82bb3c26` |
-| Record-file SHA-256 | `ae1c531980e8cf2f88ee874461be980b0d44875daeaf519d37f568e6ad3c5b75` |
-| Inventory SHA-256 | `f98c1efd08d3b4f11ffbdbb2333637bb5706c70e30fb0c0aab54449a38828f93` |
-| Covered snapshot SHA-256 | `4c636dd928f23faec90df447052e1524097e4bec4e552fe280712e420c87db60` |
-| Observed / globally resolved | 239 / 239 |
-| Revalidated prior / newly fixed | 236 / 3 |
-| Unresolved / uncovered | 0 / 0 |
-| Active open issues | 0 |
+| Global repair | `global-repair-d83c800c595ec9b5e1a580db262038bc64149645ef4918c866bec3dff68af8b6` |
+| Canonical `record_sha256` | `ee5645709380ed45b44862dc545d5bfa6c7d5d1edd28c52156d69cd3bfb42188` |
+| Record-file SHA-256 | `f58a06a84c3be8ca430186b1b9dab62d92d467945b5848d1c3d2bec6c93ba3f5` |
+| Inventory SHA-256 | `e5253580ab7c63c0dd9fa842edc57f8661e3348cc975b021d147eb02efee1d2b` |
+| Covered snapshot SHA-256 | `f084abf88d23216478a0f7cacb1277e74237fa2658c7cf08b3da6aff640377a5` |
+| Observed / covered | 256 / 256 |
+| Revalidated prior / newly fixed | 244 / 12 |
+| Uncovered | 0 |
 | Lineage errors / report drift | 0 / 0 |
 
-Historical ledger bytes were not rewritten. Thirty-seven raw historical
-ledgers retain old open-state provenance, including nine abandoned open
-ledgers, but all observed issues are covered by the current global settlement.
+Historical ledger bytes were not rewritten. Old open-state provenance remains
+readable, but the current exact installed manifest covers every observed issue.
+Graph Browser withdrawal is a release-scope decision and was not fabricated as
+a CHX defect.
 
-## Research and truth boundary
+## Publication boundary
 
-Installation wrote no project byte. The live canary was read-only. CHX
-settlement is administrative. Fact Alpha only grants certification after a
-future exact package, independent verifier decision, and `fact-certify`
-operation; this release itself created no certification grant or mathematical
-Fact.
+The release archive and metadata are prepared locally. No remote push, tag, or
+external publication is claimed here. Installation, validation, CHX settlement,
+and release preparation create no Research or Fact authority.

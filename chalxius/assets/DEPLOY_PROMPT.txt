@@ -1,33 +1,71 @@
-Chalxius 1.0.2 — Capability Budget Audit Repair
+Chalxius 1.0.3 — Research Route Coordination Repair
 
 This is a deployment and runtime-handoff guide. It is not mathematical
-evidence and has no Research, Candidate, Certification, Gateway, or Fact
+evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.2 validator gives each structured Repair capability manifest its own
-existing 64 MiB budget while retaining one command-local read-once byte and
-path/digest-conflict cache. Historical validity is therefore independent of
-full-ledger traversal order. One oversized manifest, a conflicting declaration,
-a no-follow violation, or hash-drifted bytes still fails closed. Installation
-does not rewrite frozen project data.
+The 1.0.3 runtime coordinates Campaign working memory, asynchronous Fact route
+selection, proof/source supervision, and semantic split lineage. Main still
+chooses mathematical direction. An authorized packager may select a bounded
+predecessor-closed Research corridor; source and proof retain nonoverlapping
+review ownership and may reuse one independent host session; split relations
+are proposed by the Research repair worker and finalized by ordinary proof
+supervision; there is no Fact-side split supervisor. Dynamic
+adverse-learning routes are retired for new work while frozen history remains
+readable. Recent attainment follows context compaction or natural curation, not
+a four-slot gate. Sparse landmarks have no count quota and grow with the
+Research graph; the separate recent queue uses 64 only as a high-water guard.
+Routine summaries preview four recent items and eight landmarks, retaining
+exact total counts, identity digests, and full diagnostic access so no preview
+becomes a silent first-N selection. Installation does not rewrite frozen project data.
+
+After context compaction or a real handoff, Main makes one compact maintenance
+judgment: rehydrate exact Campaign/Target, frontier, round, agent, return, and
+CHX state; finish visible handoffs without duplication; reconcile rigid
+Research COW/split lineage; curate recent attainment and sparse landmarks;
+step back across ancient landmarks and recent attainment to test the current
+route and active heads against the Campaign objective; choose the next Research
+cut after bounded exact search; consider but never force a Fact window; and
+record only genuine operational architecture failures as CHX. Four and eight
+are only summary previews, 64 protects only recent attainment, sparse landmarks
+have no count quota, and free agent slots are opportunities rather than quotas.
+Independently of compaction, Main performs the bounded exact Research search
+every time it freezes the next Research cut. Compaction or a real handoff adds
+rehydration, global rereading, and landmark curation; it is not the search clock.
+Every material match is placed durably as exact context of an active head or is
+promoted by Main to an active head, never left only in chat or temporary prose.
+Post-compaction search uses the same placement rule; only search/reread scope is
+broader.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research
-ids with `fact-frontier-mark`; `fact-frontier` derives current COW terminals,
-certification state, certified heads, and batch opportunities live. At a
-natural research window Main explicitly freezes selected marks with
-`plan-fact-packaging`. No timer, threshold, scheduler, automatic dispatcher, or
-truth inference is installed.
+ids with sparse landmarks or `fact-frontier-mark`; `fact-frontier` derives
+current COW/split terminals and certification state live. `--target` requires
+`--campaign`; route-needing landmarks rank before certified history and a
+bounded 256-item display retains complete identity count/digest. At a natural review
+window Main opens the work and a fact-packager chooses the exact bounded route
+with `plan-fact-packaging`. No timer, threshold, scheduler, automatic
+dispatcher, or truth inference is installed.
+A direct-Research plan freezes its `selection_mode` and exact Main route
+anchors. Every sealed component must contain an anchor, and any added unmarked
+node must connect to it through actual package dependency edges. Existing
+`--mark-id` plans remain `existing_marks` and do not gain this anchor rule.
 
 For prospective clean Research, a supervisor may already emit the exact
-semi-formal interface or an explicit `needs_split` disposition. An all-ready
-plan seals mechanically; historical, missing, or custom interface work retains
-the narrow packaging-agent fallback. The interface conclusion must equal the
+semi-formal interface or an explicit `needs_split` disposition. This is a
+strong automatic-path recommendation only. An all-ready plan returns
+`mechanical_proposal_ready` with a `mechanical_package_proposal` and digest; it
+does not seal. The packager performs one seal and may accept that proposal,
+supply an alternative six-field interface, choose the whole node, or select a
+COW/split route without changing the Campaign active head. If it requests an
+actual split, packaging pauses while a Research repair worker produces the
+complete batch and the ordinary proof/source supervisors review it; only then
+may packaging resume. The interface conclusion must equal the
 existing top-level Research claim; assumptions, domain/types, quantifiers,
 explicit certified predecessor Research ids, and limitations make the claim
 callable without rewriting the proof. One independent verifier then
-checks every Research record, dependency edge, and interface. A mechanical
-Gateway may certify exactly the components marked correct. A failing sibling
+checks every exact Research record, dependency edge, and selected interface,
+regardless of its author. A mechanical Gateway alone may certify exactly the components marked correct. A failing sibling
 component does not discard an independent correct component.
 
 A prospective schema-v3 split repair uses one worker-chosen finite batch rather
@@ -39,11 +77,17 @@ Fact is therefore an append-only certification property of Research. Explicit
 certified predecessor ids and exact grant hashes form its rigid dependency
 subtree; descriptive `relation` prose has no proof effect. A later COW leaves
 history intact and makes the replaced grant and certified descendants
-`needs_reverification`. A minor verifier finding returns a complete COW to the
-same verifier without an ordinary supervisor; a fundamental error returns to
-ordinary Research. The verifier may not author either repair. Old Candidate,
-adverse, Certification, and Fact bytes retain their original read-only
-authority and are not automatically migrated.
+`needs_reverification`. The historical 1.0.0 fast-supervision promise is only a
+bounded same-verifier minor lane: complete one-to-one node COW, full component
+recheck, and no ordinary supervisor. Split, statement-surface, relation, or
+other structural ambiguity returns to a Research repair worker and ordinary
+proof/source supervision; a fundamental error also returns to ordinary
+Research. Gateway remains independent, and the verifier may not author either
+repair. Old Candidate and
+adverse commands are procedurally reserved compatibility for an explicitly
+selected frozen 0.x completion/audit; the runtime does not authenticate pre-1.0
+provenance and adds no identity gate. Historical Certification and Fact bytes
+retain their original readable authority and are not automatically migrated.
 
 Campaign working memory now carries up to sixteen Main-selected heads per
 Target through legacy checkpoint reading, current state, plan-round, explicit

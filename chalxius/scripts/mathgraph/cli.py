@@ -418,8 +418,6 @@ READ_ONLY_COMMANDS = {
     "make-bundle-verifier-task",
     "fact-bundle-verifier-task",
     "mode-status",
-    "attack-route-status",
-    "attack-report",
     "fact-graph-inventory",
     "fact-graph-append-target",
     "evidence-library-status",
@@ -952,6 +950,7 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p = sub.add_parser("fact-frontier")
     p.add_argument("--limit", type=int, default=32)
     p.add_argument("--campaign")
+    p.add_argument("--target")
     p.add_argument("--diagnostic", action="store_true")
 
     p = sub.add_parser("plan-fact-packaging")
@@ -959,9 +958,19 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
         "--mark-id",
         action="append",
         dest="mark_ids",
-        required=True,
-        help="exact active Main importance mark; repeat to form one batch",
+        help="exact active legacy/explicit route mark; repeat to form one batch",
     )
+    p.add_argument(
+        "--research-id",
+        action="append",
+        dest="fact_route_research_ids",
+        help=(
+            "Fact-packager selected Research route member; repeat for one "
+            "predecessor-closed package selection"
+        ),
+    )
+    p.add_argument("--campaign")
+    p.add_argument("--target")
     p.add_argument(
         "--minor-repair-decision",
         help=(
@@ -1110,30 +1119,6 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
             "when omitted, ingestion derives the hash from canonical return bytes"
         ),
     )
-
-    p = sub.add_parser("attack-route-enable")
-    p.add_argument("--actor", required=True)
-    p.add_argument("--reason", required=True)
-
-    sub.add_parser("attack-route-status")
-
-    p = sub.add_parser("attack-report")
-    p.add_argument("--host-task-scope-id", required=True)
-    p.add_argument(
-        "--full",
-        action="store_true",
-        help="include the complete technical coverage/case audit",
-    )
-
-    p = sub.add_parser("attack-route-decide")
-    p.add_argument("proposal_id")
-    p.add_argument("--input", required=True)
-    p.add_argument("--actor", required=True)
-
-    p = sub.add_parser("attack-route-disable")
-    p.add_argument("rule_id")
-    p.add_argument("--reason", required=True)
-    p.add_argument("--actor", required=True)
 
     p = sub.add_parser("make-verifier-task")
     p.add_argument("fact_id")
@@ -2234,6 +2219,11 @@ def main(argv: list[str] | None = None) -> int:
                 rationale=args.reason,
                 campaign_id=args.campaign,
                 target_id=args.target,
+                actor=(
+                    "fact-packager"
+                    if args.role == "fact-packager"
+                    else "main"
+                ),
             )
             _print_json(
                 {
@@ -2267,6 +2257,7 @@ def main(argv: list[str] | None = None) -> int:
                 store.v5_lifecycle().fact_alpha().frontier(
                     limit=args.limit,
                     campaign_id=args.campaign,
+                    target_id=args.target,
                     diagnostic=args.diagnostic,
                 )
             )
@@ -2275,6 +2266,14 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("plan-fact-packaging requires a V5 project")
             record = store.v5_lifecycle().fact_alpha().plan_packaging(
                 args.mark_ids,
+                research_ids=args.fact_route_research_ids,
+                campaign_id=args.campaign,
+                target_id=args.target,
+                planned_by=(
+                    "fact-packager"
+                    if args.role == "fact-packager"
+                    else "main"
+                ),
                 minor_repair_decision_id=args.minor_repair_decision,
             )
             _print_json(
@@ -2282,6 +2281,28 @@ def main(argv: list[str] | None = None) -> int:
                     "plan_id": record["plan_id"],
                     "record_sha256": record["record_sha256"],
                     "selection": record["selection"],
+                    "mechanical_package_state": record[
+                        "mechanical_package_state"
+                    ],
+                    "mechanical_package_id": record[
+                        "mechanical_package_id"
+                    ],
+                    "mechanical_package_record_sha256": record[
+                        "mechanical_package_record_sha256"
+                    ],
+                    "mechanical_package_proposal": record[
+                        "mechanical_package_proposal"
+                    ],
+                    "mechanical_package_proposal_sha256": record[
+                        "mechanical_package_proposal_sha256"
+                    ],
+                    "interface_source_bindings_sha256": record[
+                        "interface_source_bindings_sha256"
+                    ],
+                    "interface_preparation_unavailable": record[
+                        "interface_preparation_unavailable"
+                    ],
+                    "next_action": record["next_action"],
                     "truth_effect": "none",
                 }
             )
@@ -2612,43 +2633,6 @@ def main(argv: list[str] | None = None) -> int:
                         worker_final_sha256=args.worker_final_sha256,
                     )
                 )
-        elif args.command == "attack-route-enable":
-            _print_json(
-                store.adverse_routes().initialize(
-                    actor=args.actor,
-                    reason=args.reason,
-                )
-            )
-        elif args.command == "attack-route-status":
-            _print_json(store.adverse_routes().status())
-        elif args.command == "attack-report":
-            _print_json(
-                (
-                    store.adverse_routes().report(
-                        host_task_scope_id=args.host_task_scope_id
-                    )
-                    if args.full
-                    else store.adverse_routes().recommendation_report(
-                        host_task_scope_id=args.host_task_scope_id
-                    )
-                )
-            )
-        elif args.command == "attack-route-decide":
-            _print_json(
-                store.adverse_routes().decide(
-                    args.proposal_id,
-                    _json_file(args.input),
-                    actor=args.actor,
-                )
-            )
-        elif args.command == "attack-route-disable":
-            _print_json(
-                store.adverse_routes().disable(
-                    args.rule_id,
-                    reason=args.reason,
-                    actor=args.actor,
-                )
-            )
         elif args.command == "make-verifier-task":
             if store.workflow_evidence_version() == 5:
                 release = store.v5_lifecycle().release_for_fact(args.fact_id)

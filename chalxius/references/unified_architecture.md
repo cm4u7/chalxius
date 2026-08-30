@@ -1,5 +1,47 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.3 Research Route Coordination Repair override.** Campaign frontier is
+> one replaceable Main working-memory projection: active heads, attached exact
+> Research context, sparse landmarks, recent attainment, and rigid COW/split
+> lineage. Recent attainment uses a context-compaction or natural-curation
+> window, not a hard four-entry clock. Sparse landmarks have no numeric quota
+> and grow with the Research graph under Main's judgment. The distinct recent
+> queue's 64-entry limit is only high-water runaway protection. Routine views
+> preview four recent items and eight landmarks, retain exact total counts and
+> identity digests, and leave full landmark ids available through exact state
+> and diagnostic reads rather than silently selecting first N.
+> After compaction or a real handoff, Main rehydrates exact operation, completes
+> visible handoffs, reconciles rigid lineage, curates recent/landmark memory,
+> chooses the next Research cut, considers but never forces a Fact window, and
+> records genuine operational architecture failures as CHX. Neither preview
+> sizes nor available agent slots are semantic quotas; 64 applies only to the
+> recent-attainment queue, not landmarks. Main performs bounded exact
+> Research search before every next-cut freeze. Every material match is attached
+> by exact Research id as active-head context or promoted to an active head;
+> post-compaction search follows the same placement rule with only broader
+> search/reread scope. Fact landmarks are route entries, not ready packages;
+> `fact-frontier --target`
+> requires `--campaign`, route-needing landmarks rank ahead of certified
+> history, and a bounded 256-item view retains complete identity count/digest.
+> An authorized packager selects the predecessor-closed corridor without
+> mutating the Campaign active head. Direct-Research plans freeze selection mode
+> and exact Main anchors; each sealed component contains an anchor and connects
+> added unmarked nodes through actual package edges, while existing-mark plans do
+> not acquire that rule. Current supervisors receive fixed non-exhaustive
+> attack guidance: source owns external fidelity/coverage and proof owns
+> mathematical use; both may share one independent host session with separate
+> records. Dynamic adverse learning is prospectively retired. Semantic split
+> batches carry proposed typed relations which proof supervision reviews and
+> binds to recommended successor interfaces. A clean supervisor disposition is
+> only a strong mechanical-path recommendation: planning returns
+> `mechanical_proposal_ready` with `mechanical_package_proposal` plus digest and
+> never seals. The packager seals once, choosing that proposal or an alternative
+> interface/whole-node route. If it requests a split, packaging pauses for a
+> Research repair worker and the ordinary proof/source supervision layer; no
+> Fact-side split supervisor exists. The verifier fully reviews every exact record,
+> interface, and edge, and Gateway alone certifies. Main semantic choice, Research immutability,
+> ambiguity visibility, and every truth boundary remain unchanged.
+
 > **1.0.2 Capability Budget Audit Repair override.** The 64 MiB aggregate
 > capability limit is one structured Repair manifest's closure invariant, not
 > a full-ledger command budget. A manifest-local counter composes with the
@@ -14,7 +56,8 @@
 > all-ready Fact plans seal mechanically, while legacy/missing/custom work
 > retains the packager fallback. A legacy packager that chooses split/COW stops
 > authoring interfaces; a Research repair worker produces complete coherent
-> successors from the split brief, and fresh supervisors of those products
+> successors from the split brief, and fresh whole-product supervision passes
+> (which may reuse the same author-independent supervisor identity)
 > author the successor interfaces. Zero-state legacy-root advice and Campaign scope-filter
 > counts are bounded nontruth projections with no selection or migration
 > effect. Research artifacts remain the sole evidence-locator layer, and the
@@ -22,20 +65,26 @@
 > split repair is one worker-chosen finite batch: Main binds the source and brief,
 > the worker declares the actual membership, ingestion writes members and one
 > ordinary assignment owner before a head-last commit, and the committed batch is
-> reviewed whole by one supervisor per scope. Uncommitted staged records have no
+> reviewed whole in every applicable scope. Proof and source normally share one
+> author-independent supervisor session while keeping separate returns.
+> Uncommitted staged records have no
 > frontier or Fact visibility. This is explicit structure, not relation-name or
 > single-terminal inference.
 
 > **1.0.0 Fact Alpha override.** There is one mathematical node graph:
 > immutable Research. Fact is an append-only whole-Research certification
 > overlay with explicit certified-Research predecessor edges. Main's sparse
-> importance marks are the only persistent Fact-frontier choices; current COW
-> terminals, supervision state, batch opportunities, in-flight packages,
-> certified heads, and `needs_reverification` propagation are derived. A
+> importance marks and sparse Campaign landmarks are persistent route entries,
+> not package choices; current COW terminals, supervision state, packager route
+> state, in-flight packages,
+> certified heads, and `needs_reverification` propagation are derived. An
+> authorized packager selects the bounded predecessor-closed transaction. A
 > frozen Candidate is a multi-Research transaction, not a proof-rewriting
-> layer. Independent component decisions isolate failures, a bounded minor
-> repair returns complete COW nodes to the same verifier without another
-> supervisor, and fundamental errors return to ordinary Research. New Research
+> layer. Independent component decisions isolate failures. The historical
+> fast-supervision promise is only bounded one-to-one complete-node minor COW
+> followed by the same verifier's full component recheck; split or structural
+> ambiguity and fundamental errors return to ordinary Research repair and
+> proof/source supervision. Gateway remains independent. New Research
 > may directly bind active certified Research premises. Legacy Fact nodes stay
 > readable and explicitly unmapped. No timer, threshold, scheduler, automatic
 > worker launch, statement-surface retrofit, or claim-hash ceremony is added.
@@ -339,33 +388,38 @@ intake state, fuzzy matching, or parallel planner remains. Historical sidecar
 bytes stay inert and readable as nontruth provenance. The ordinary frontier is
 the only Main planning surface.
 
-## Authority domains and truth path
+## Current authority domains and Fact Alpha truth path
 
-V5 has four persistent authority domains and one derived presentation surface:
+The current system has four persistent authority domains and one derived
+presentation surface:
 
 | Domain | Contents | Truth effect |
 |---|---|---|
 | Research Ledger | cumulative claims, attempts, insights, challenges, counterexamples, obstacles, experiments, repairs, and dispositions | none |
 | Evidence sidecar | reviewed Paper graphs, explicitly imported external Fact capsules, dispositions, and prepared bridges | none |
-| Certification Ledger | Gateway-owned immutable decisions over exact sealed Candidate Releases | certification evidence only |
-| V5 Fact Graph | admitted statements, active predecessor edges, admissions, and revocations | sole premise store |
+| Fact-package and verifier records | frozen nontruth packages plus independent decisions over exact Research records, interfaces, and edges | none |
+| Research certification grants and legacy V5 Fact Graph | Gateway grants over exact Research plus readable unmapped legacy Facts | sole premise authority |
 | Reader projection | deterministic packet-v1/HTML view over the domains plus Paper/Audit, Blackboard, and optional background | none |
 
 The only truth-bearing path is:
 
 ```text
-Research --release--> Candidate Release --decide--> Certification Decision --admit--> Fact
-Evidence --verified_bridge/nontruth input--> Candidate Release
+Research --package/nontruth--> frozen Fact package --review/nontruth--> verifier decision
+verifier decision --Gateway revalidation--> Research certification grant
 ```
 
-The fresh verifier supplies the bounded review return. Gateway alone publishes
-the immutable Certification Decision with `certification-record`, then performs
-the separate admission revalidation. Main cannot substitute provenance,
-planning state, or a verifier draft for either Gateway-owned transition.
+The fresh verifier supplies the complete package review return but creates no
+certification authority. Gateway alone revalidates exact Research/COW and
+predecessor-grant bindings, publishes the grants, and switches their visibility.
+Main cannot substitute provenance, planning state, a supervisor recommendation,
+or a verifier decision for the Gateway-owned transition.
 
 There is no Round Closure, Pulse Closure, Profile Closure, Campaign Closure, or
-separate adverse-review object on this path. Compatibility commands may report
-process readiness, but they cannot supply admission authority.
+separate adverse-review object on this path. Old Candidate commands are
+procedurally reserved compatibility for an explicitly selected 0.x completion
+or audit. The runtime does not authenticate pre-1.0 provenance; this is a Main
+policy boundary, not a new identity/provenance gate, and those commands do not
+belong to prospective Fact Alpha work.
 
 ### Prospective Research cycle: production, then supervision
 
@@ -494,7 +548,15 @@ cycle. Existing Pulse records keep their status, audit, dispatch, close, void,
 and abort operations so an upgrade cannot strand prior work; V4 retains its
 original compatibility contract.
 
-Candidate construction has a cheap prospective supervision gate before
+### Procedurally reserved 0.x Candidate completion contract
+
+The remainder of this Candidate-specific subsection freezes the historical 0.x
+contract for explicitly selected completion/audit only. Its words “current”,
+“prospective”, “mandatory”, and “Candidate” are then-current historical terms,
+not 1.0.3 instructions. The runtime does not authenticate pre-1.0 provenance;
+Main policy selects the compatibility path, with no new identity gate.
+
+Candidate construction has a cheap historical supervision gate before
 fingerprinting, source audit, or sealing. If an explicitly selected constructive
 Research result came from this production contract, each deterministic
 applicable supervisor scope for its exact component must have exactly one live,
@@ -856,7 +918,7 @@ mutation capability in 0.4.4.
 ## Paper Logic, Audit, Blackboard, and computation
 
 Paper Logic and Audit retain their mature append-only storage and correction
-semantics. A V5 paper Candidate Release binds current, nonsuperseded Logic and
+semantics. On the procedurally reserved 0.x path, a V5 paper Candidate Release binds current, nonsuperseded Logic and
 Audit snapshots through exact `paper_evidence_refs`, nodewise target coverage,
 source artifact hashes, and explicit certification checks. Paper/Audit objects
 are never copied into the Fact Graph.
@@ -911,41 +973,26 @@ V4 roots and original Danus material are never rewritten or recertified by V5.
 Their readability is preserved by the original files and, when present, the
 single background projection—not by inherited Fact authority.
 
-## Main-governed adverse-routing evolution
+## Fixed Research review guidance and historical adverse compatibility
 
-V5 adverse reporting is prospectively enabled by default. Reading status or
-producing an empty report is nonmutating; the first newly frozen `refute` card
-lazily materializes one project-local nontruth routing store at
-`PROJECT/governance/adverse-routing/`. It is never backfilled. A frozen task
-card created before this default retains its old schema and does not acquire an
-attack-learning obligation.
+Prospective production and supervision use fixed, scope-owned,
+non-exhaustive review guidance distilled from durable failure patterns. Source
+review owns external identity, bytes, locators, faithful extraction, literal
+hypotheses and evidence coverage. Proof review owns all mathematical
+correctness, including applicability and transport of internal or external
+results. Program-math and genuine cross-scope integration retain their own
+bounded responsibilities. A concrete defect remains in its immutable Research
+and supervision lineage; it does not create a second proposal or routing
+lifecycle.
 
-For current adverse-bound work, a surviving counterexample or productive
-challenge binds structured witnesses, reproduction steps, an exact success
-boundary, and concrete load-bearing before/after/evidence value effects.
-Workers do not write triggers or route rules. Ingestion records an immutable
-nontruth failure report. At every host-task completion, a separate attack
-report presents a sparse queue to Main, including an explicit zero report.
-Main compares reports and may reject them or synthesize one mechanism-level
-rule. Persistent rules have Unicode code-point and a sixteen-active-rule hard cap;
-oversize text must be semantically compressed and is never truncated. Every
-effect is limited to task cards frozen afterward.
-
-Approved route rules remain exploration guidance. They neither certify their
-source counterexample nor create a new adverse-review state on the truth path.
-At most sixteen matching synthesized rules may enter one refutation card; excess fails
-visibly rather than truncating. The attack report is not a CHX architecture
-report, and neither report is Fact evidence. See
-`adverse_routing_evolution.md`.
-
-When a successful Research return has an actual
-computation stage plus exact source/output artifacts, ingestion may queue one
-future nontruth program-math refutation review. New ordinary refutation cards
-carry the original eight rules plus the general hidden-conjunct split. An exact
-frozen `philosophy` or `mixed` domain adds only the three user-approved
-ordinary-language, dialectical-burden/failure-surface, and operator-equivalence
-rules; content keywords cannot activate them. Only the generated computation
-review gets the further semantic-alignment rule. Earlier frozen cards retain
+The former adverse-learning store is historical nontruth state. Prospective
+cards do not contain `adverse_routing`, returns do not add `attack_learning`,
+ingestion creates no attack cases, proposals, rules, host reports, or
+program-math side queue, and the former mutation/report commands are absent
+from the public CLI. Existing cards and returns remain readable and an already
+frozen round may complete under its exact old schema. Historical rules are
+searchable context only and are never consulted by current planning. See
+`adverse_routing_evolution.md` solely for frozen-record decoding.
 their exact baseline. The queue does not interrupt the producer, and CHX
 issues are never imported as attacks.
 

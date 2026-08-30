@@ -1,16 +1,24 @@
-# V5 exact Candidate-adverse bootstrap
+# Frozen 0.x exact Candidate-adverse bootstrap
 
-This is the complete compact startup contract for one current whole-Candidate
-adverse worker. It attacks one exact Main-selected canonical Candidate Fact
-after every applicable Research supervision result is complete and before
-Candidate packaging; the applicable set may be empty when no supervision scope
-applies. The canonical bytes may be Main-authored; authorship and provenance
-metadata are lineage rather than mathematical validity. The worker creates
-nontruth Research only.
+This is the complete compact startup contract only for an already frozen 0.x
+whole-Candidate adverse card. It attacks the exact Main-selected canonical
+Candidate Fact bound by that historical card after every applicable Research
+supervision result is complete and before historical Candidate packaging; the
+applicable set may be empty when no supervision scope applies. The canonical
+bytes may be Main-authored; authorship and provenance metadata are lineage
+rather than mathematical validity. The worker creates nontruth Research only.
+
+Do not use this bootstrap to begin new 1.0.x certification. Fact Alpha uses a
+packager-selected Research package, one independent Fact verifier, and Gateway
+Research certification; it has no duplicate Candidate-adverse stage.
+This old path is procedurally reserved for explicitly selected 0.x completion
+or audit. The runtime does not authenticate pre-1.0 provenance; Main policy
+selects it, and this bootstrap adds no provenance or identity gate.
 
 ## Applicability
 
-Use this path only when the immutable task card has all of these literal facts:
+Use this path only when an already frozen historical task card has all of these
+literal facts:
 
 - `work_mode="refute"`;
 - no `research_cycle` field;
@@ -67,9 +75,10 @@ actor/provenance metadata. Attack the exact authorized bytes and their literal
 interfaces. The later fresh verifier returns review bytes; Gateway alone owns
 `certification-record` and Fact admission.
 
-Workers report concrete failures and boundaries. They never write a persistent
-attack-route rule or philosophical abstraction. Main alone may compare reports
-and synthesize a bounded mechanism-level future rule. Keep
+This bootstrap exists for frozen Candidate-adverse cards. Workers report
+concrete failures and boundaries; they never write a persistent attack-route
+rule or philosophical abstraction. No new proposal or rule is synthesized.
+Keep
 `attack_learning=null` for a clean result, concern, or non-load-bearing
 suggestion. Before returning a surviving counterexample or a productive
 challenge with non-null `attack_learning`, read

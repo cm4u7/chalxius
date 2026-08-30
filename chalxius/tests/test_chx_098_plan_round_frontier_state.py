@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from mathgraph.contracts import sha256_json
 from mathgraph.store import MathGraphStore
 
 
@@ -158,7 +159,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(goal["next_action"], "await_return")
         self.assertEqual(goal["actionable_round_id"], planned["round_id"])
         self.assertEqual(
-            goal["historical_mathematical_summary"][0]["claim"],
+            goal["historical_landmarks"][0]["mathematical_summary"]["claim"],
             "Claim landmark",
         )
         self.assertTrue(self.store.audit().current_ok)
@@ -250,6 +251,373 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 },
             )
 
+    def test_seventeen_checkpoint_heads_require_main_choice_without_truncation(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        heads = [
+            self._research(
+                f"over-capacity-head-{index}",
+                f"Independent branch {index}",
+            )
+            for index in range(17)
+        ]
+        with self.store.v5_mutation_lock(command="seventeen-head-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": [
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": research_id}
+                                    for research_id in heads
+                                ],
+                                "attained_checkpoints": [],
+                            }
+                        ],
+                    },
+                },
+                actor="main",
+            )
+        surface = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )
+        self.assertIn(
+            "checkpoint_research_list_over_capacity",
+            surface["goal_coverage"][0]["checkpoint_diagnostic_codes"],
+        )
+        with self.assertRaisesRegex(ValueError, "exceeds frontier capacity"):
+            lifecycle.create_production_round(
+                workers=1,
+                research_ids=[heads[0]],
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+            )
+        self.assertFalse(
+            (
+                self.root
+                / "campaigns"
+                / self.campaign_id
+                / "frontier-state.json"
+            ).exists()
+        )
+
+    def test_historical_checkpoint_imports_all_attained_landmarks(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        attained = [
+            self._research(
+                f"attained-{index}",
+                f"Completed mathematical milestone {index}",
+            )
+            for index in range(9)
+        ]
+        with self.store.v5_mutation_lock(command="nine-attained-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": [
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": self.root_id}
+                                ],
+                                "attained_checkpoints": [
+                                    {"research_id": research_id}
+                                    for research_id in attained
+                                ],
+                            }
+                        ],
+                    },
+                },
+                actor="main",
+            )
+        goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
+        self.assertEqual(goal["historical_landmark_research_ids"], attained)
+        self.assertEqual(goal["historical_landmark_count"], len(attained))
+        self.assertEqual(
+            goal["historical_landmark_ids_sha256"], sha256_json(attained)
+        )
+        self.assertEqual(goal["unpartitioned_attained_research_ids"], [])
+        self.assertNotIn(
+            "checkpoint_attained_requires_frontier_partition",
+            goal["checkpoint_diagnostic_codes"],
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "recovery_root_research_id": self.root_id,
+                "active_head_research_ids": [self.root_id],
+                "historical_landmark_research_ids": attained,
+                "historical_landmark_reasons": {
+                    research_id: "Explicitly retained mathematical landmark."
+                    for research_id in attained
+                },
+                "recent_attained_research_ids": [],
+                "head_contexts": [],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["historical_landmark_research_ids"], attained
+        )
+        self.assertEqual(row["recent_attained_research_ids"], [])
+
+    def test_duplicate_checkpoint_target_requires_complete_main_reconcile(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        with self.store.v5_mutation_lock(command="duplicate-target-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": [
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": self.root_id}
+                                ],
+                                "attained_checkpoints": [],
+                            },
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": self.successor_id}
+                                ],
+                                "attained_checkpoints": [],
+                            },
+                        ],
+                    },
+                },
+                actor="main",
+            )
+        goal = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )["goal_coverage"][0]
+        self.assertIn(
+            "checkpoint_target_duplicate",
+            goal["checkpoint_diagnostic_codes"],
+        )
+        with self.assertRaisesRegex(ValueError, "exceeds frontier capacity"):
+            lifecycle.create_production_round(
+                workers=1,
+                research_ids=[self.root_id],
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+            )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "recovery_root_research_id": self.root_id,
+                "active_head_research_ids": [self.successor_id],
+                "historical_landmark_research_ids": [],
+                "historical_landmark_reasons": {},
+                "recent_attained_research_ids": [],
+                "head_contexts": [],
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][self.target_id][
+                "active_head_research_ids"
+            ],
+            [self.successor_id],
+        )
+
+    def test_truncated_checkpoint_target_list_cannot_hide_omitted_goal(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        target_rows = [
+            {
+                "target_id": self.target_id,
+                "recovery_root_research_id": self.root_id,
+                "active_heads": [{"research_id": self.root_id}],
+                "attained_checkpoints": [],
+            }
+        ]
+        omitted_target_id = ""
+        omitted_root_id = ""
+        for index in range(64):
+            research_id = self._research(
+                f"many-target-{index}",
+                f"Independent target branch {index}",
+            )
+            with self.store.v5_mutation_lock(command="many-target-fixture"):
+                target_id = self.store.campaigns().target_add(
+                    self.campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_id,
+                        "label": f"Resolve branch {index}",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item, expected=research_id: (
+                        item == expected
+                    ),
+                )
+            target_rows.append(
+                {
+                    "target_id": target_id,
+                    "recovery_root_research_id": research_id,
+                    "active_heads": [{"research_id": research_id}],
+                    "attained_checkpoints": (
+                        [{"research_id": self.landmark_id}]
+                        if index == 63
+                        else []
+                    ),
+                }
+            )
+            if index == 63:
+                omitted_target_id = target_id
+                omitted_root_id = research_id
+        with self.store.v5_mutation_lock(command="many-target-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": target_rows,
+                    },
+                },
+                actor="main",
+            )
+        goals = lifecycle.campaign_goal_coverage(self.campaign_id)
+        omitted_goal = next(
+            item for item in goals if item["target_id"] == omitted_target_id
+        )
+        self.assertIn(
+            "checkpoint_target_list_truncated",
+            omitted_goal["checkpoint_diagnostic_codes"],
+        )
+        self.assertIn(
+            "checkpoint_target_missing",
+            omitted_goal["checkpoint_diagnostic_codes"],
+        )
+        with self.assertRaisesRegex(ValueError, "exceeds frontier capacity"):
+            lifecycle.create_production_round(
+                workers=1,
+                research_ids=[omitted_root_id],
+                campaign_id=self.campaign_id,
+                frontier_target_id=omitted_target_id,
+            )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": omitted_target_id,
+                "recovery_root_research_id": omitted_root_id,
+                "active_head_research_ids": [omitted_root_id],
+                "historical_landmark_research_ids": [self.landmark_id],
+                "historical_landmark_reasons": {
+                    self.landmark_id: "Explicitly restored omitted history."
+                },
+                "recent_attained_research_ids": [],
+                "head_contexts": [],
+            },
+        )
+        state = self._state()
+        self.assertEqual(len(state["targets"]), 65)
+        self.assertEqual(
+            state["targets"][omitted_target_id][
+                "historical_landmark_research_ids"
+            ],
+            [self.landmark_id],
+        )
+
+    def test_missing_checkpoint_head_cannot_fail_open_to_root(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        missing_id = "e" * 12
+        with self.store.v5_mutation_lock(command="missing-head-checkpoint"):
+            self.store.campaigns().update(
+                self.campaign_id,
+                {
+                    "type": "note",
+                    "payload": {
+                        "kind": "campaign_frontier_head_checkpoint",
+                        "generation": 1,
+                        "supersedes_event_id": None,
+                        "target_frontiers": [
+                            {
+                                "target_id": self.target_id,
+                                "recovery_root_research_id": self.root_id,
+                                "active_heads": [
+                                    {"research_id": missing_id}
+                                ],
+                                "attained_checkpoints": [],
+                            }
+                        ],
+                    },
+                },
+                actor="main",
+            )
+        goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
+        self.assertIn(
+            "checkpoint_active_head_missing_or_cross_campaign",
+            goal["checkpoint_diagnostic_codes"],
+        )
+        rounds_before = set(self.store.rounds_dir.glob("round-*"))
+        with self.assertRaisesRegex(ValueError, "explicit Main reconciliation"):
+            lifecycle.create_production_round(
+                workers=1,
+                research_ids=[self.root_id],
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+            )
+        self.assertEqual(
+            set(self.store.rounds_dir.glob("round-*")), rounds_before
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "recovery_root_research_id": self.root_id,
+                "active_head_research_ids": [self.root_id],
+                "historical_landmark_research_ids": [],
+                "historical_landmark_reasons": {},
+                "recent_attained_research_ids": [],
+                "head_contexts": [],
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][self.target_id][
+                "active_head_research_ids"
+            ],
+            [self.root_id],
+        )
+
     def test_auxiliary_round_does_not_claim_a_frontier_target(self) -> None:
         planned = self.store.v5_lifecycle().create_production_round(
             workers=1,
@@ -317,6 +685,12 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 "kind": "campaign_frontier_update",
                 "target_id": self.target_id,
                 "historical_landmark_research_ids": [self.landmark_id],
+                "historical_landmark_reasons": {
+                    self.landmark_id: (
+                        "Ancient mechanism retained at the natural curation "
+                        "window."
+                    )
+                },
                 "recent_attained_research_ids": [],
             },
         )
@@ -375,6 +749,64 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(
             row["historical_landmark_research_ids"], [self.landmark_id]
         )
+
+    def test_five_completed_heads_accumulate_until_natural_curation_window(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        completed_heads = [
+            self._research(
+                f"completed-head-{index}",
+                f"Completed independent branch {index}",
+            )
+            for index in range(5)
+        ]
+        selected = self._research(
+            "selected-after-completions",
+            "Next Main-selected research direction",
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": completed_heads,
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected = {
+            "target_id": self.target_id,
+            "active_head_actions": [
+                {
+                    "research_id": research_id,
+                    "next_action": "none",
+                }
+                for research_id in completed_heads
+            ],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected],
+        ):
+            lifecycle._advance_campaign_frontier_for_plan(
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+                selected_research_ids=[selected],
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [selected])
+        self.assertEqual(row["historical_landmark_research_ids"], [])
+        self.assertEqual(row["recent_attained_research_ids"], completed_heads)
+        goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
+        self.assertEqual(goal["recent_attained_count"], 5)
+        self.assertEqual(
+            goal["recent_attained_ids_sha256"],
+            sha256_json(completed_heads),
+        )
+        self.assertTrue(goal["history_review_recommended"])
 
     def test_repair_of_current_terminal_retires_stored_route_head(self) -> None:
         lifecycle = self.store.v5_lifecycle()
@@ -565,9 +997,14 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 frontier_target_id=self.target_id,
                 selected_research_ids=[next_id],
             )
+        completed_heads = other_heads[1:]
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
             row["active_head_research_ids"], [next_id, in_flight_id]
+        )
+        self.assertEqual(
+            set(row["recent_attained_research_ids"]),
+            {self.root_id, *completed_heads},
         )
         self.assertTrue(self.store.audit().current_ok)
 
@@ -770,12 +1207,12 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertNotIn("active_head_semantic_successors", compact)
         self.assertNotIn("production_product_research_ids", compact)
 
-    def test_too_many_ancient_landmarks_raise_only_an_advisory(self) -> None:
+    def test_ancient_landmark_count_is_not_a_maintenance_clock(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         landmarks = [self.landmark_id]
         landmarks.extend(
             self._research(f"ancient-{index}", f"Ancient turn {index}")
-            for index in range(4)
+            for index in range(20)
         )
         lifecycle._replace_campaign_frontier_working_state(
             self.campaign_id,
@@ -789,12 +1226,32 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
         goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
-        self.assertTrue(goal["history_review_recommended"])
         self.assertEqual(
-            goal["history_review_reasons"],
-            ["historical_landmarks_need_main_curation"],
+            goal["historical_landmark_research_ids"], landmarks
         )
+        self.assertEqual(goal["historical_landmark_count"], len(landmarks))
+        self.assertEqual(
+            goal["historical_landmark_ids_sha256"], sha256_json(landmarks)
+        )
+        self.assertFalse(goal["history_review_recommended"])
+        self.assertEqual(goal["history_review_reasons"], [])
         self.assertEqual(goal["next_action"], "production")
+        routine = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )["goal_coverage"][0]
+        self.assertEqual(
+            routine["historical_landmark_research_ids"], landmarks[:8]
+        )
+        self.assertEqual(len(routine["historical_landmarks"]), 8)
+        self.assertEqual(routine["historical_landmark_shown_count"], 8)
+        self.assertEqual(
+            routine["historical_landmark_count"], len(landmarks)
+        )
+        self.assertEqual(
+            routine["historical_landmark_ids_sha256"],
+            sha256_json(landmarks),
+        )
 
     def test_working_state_never_requests_a_legacy_checkpoint_copy(self) -> None:
         lifecycle = self.store.v5_lifecycle()
@@ -823,6 +1280,201 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         self.assertNotIn("checkpoint", surface["main_selection_policy"])
 
+    def test_exact_search_context_can_attach_then_promote_atomically(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "attach_context",
+                        "research_id": self.successor_id,
+                        "attached_head_research_id": self.root_id,
+                        "reason": "Exact search found a likely bridge for this head.",
+                    }
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.successor_id,
+                    "attached_head_research_id": self.root_id,
+                    "reason": "Exact search found a likely bridge for this head.",
+                }
+            ],
+        )
+        goal = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=2,
+        )["goal_coverage"][0]
+        self.assertEqual(
+            goal["head_contexts"][0]["mathematical_summary"]["claim"],
+            "Claim successor",
+        )
+
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "promote_context",
+                        "research_id": self.successor_id,
+                        "replace_head_research_id": self.root_id,
+                    }
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(row["head_contexts"], [])
+        self.assertEqual(row["recent_attained_research_ids"], [self.root_id])
+
+    def test_context_attach_absorbs_exact_structural_head_refresh(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        projected_goal = {
+            "target_id": self.target_id,
+            "current_active_head_research_ids": [self.successor_id],
+            "active_head_actions": [
+                {
+                    "research_id": self.root_id,
+                    "actionable_research_id": self.successor_id,
+                }
+            ],
+            "invalid_head_research_ids": [],
+            "invalid_attained_checkpoint_research_ids": [],
+        }
+        with patch.object(
+            lifecycle,
+            "campaign_goal_coverage",
+            return_value=[projected_goal],
+        ):
+            lifecycle.reconcile_campaign_frontier(
+                self.campaign_id,
+                {
+                    "kind": "campaign_frontier_update",
+                    "target_id": self.target_id,
+                    "attention_updates": [
+                        {
+                            "operation": "attach_context",
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.successor_id,
+                            "reason": (
+                                "Exact search recovered a prior theorem that "
+                                "changes this current cut."
+                            ),
+                        }
+                    ],
+                },
+            )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.successor_id,
+                    "reason": (
+                        "Exact search recovered a prior theorem that changes "
+                        "this current cut."
+                    ),
+                }
+            ],
+        )
+
+    def test_sparse_landmark_records_reason_without_becoming_a_head(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "upsert_landmark",
+                        "research_id": self.landmark_id,
+                        "reason": "Mechanism change that future route selection must remember.",
+                    }
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.root_id])
+        self.assertEqual(
+            row["historical_landmark_research_ids"], [self.landmark_id]
+        )
+        self.assertEqual(
+            row["historical_landmark_reasons"][self.landmark_id],
+            "Mechanism change that future route selection must remember.",
+        )
+
+    def test_landmark_ids_cannot_silently_receive_a_generic_reason(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        state_before = self._state()
+        with self.assertRaisesRegex(
+            ValueError, "one exact Main reason"
+        ):
+            lifecycle.reconcile_campaign_frontier(
+                self.campaign_id,
+                {
+                    "kind": "campaign_frontier_update",
+                    "target_id": self.target_id,
+                    "historical_landmark_research_ids": [self.landmark_id],
+                },
+            )
+        self.assertEqual(self._state(), state_before)
+
     def test_malformed_work_memory_falls_back_and_main_can_rebuild_it(self) -> None:
         state_path = (
             self.root
@@ -849,6 +1501,103 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
         self.assertEqual(self._state()["generation"], 1)
+
+    def test_invalid_target_row_blocks_plan_and_reconcile_preserves_peer(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        peer_root = self._research("peer-root", "Independent peer target")
+        peer_landmark = self._research(
+            "peer-landmark", "Durable peer mechanism"
+        )
+        peer_context = self._research(
+            "peer-context", "Reference needed by the peer target"
+        )
+        with self.store.v5_mutation_lock(command="frontier-state-fixture"):
+            peer_target_id = self.store.campaigns().target_add(
+                self.campaign_id,
+                {
+                    "role": "research_goal",
+                    "subject_kind": "research",
+                    "subject_id": peer_root,
+                    "label": "Preserve the independent peer target",
+                },
+                actor="main",
+                fact_exists=lambda _fact_id: False,
+                research_exists=lambda item: item == peer_root,
+            )
+        peer_row = {
+            "recovery_root_research_id": peer_root,
+            "active_head_research_ids": [peer_root],
+            "historical_landmark_research_ids": [peer_landmark],
+            "historical_landmark_reasons": {
+                peer_landmark: "Peer mechanism that must survive recovery."
+            },
+            "head_contexts": [
+                {
+                    "research_id": peer_context,
+                    "attached_head_research_id": peer_root,
+                    "reason": "Exact peer reference.",
+                }
+            ],
+            "recent_attained_research_ids": [],
+        }
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [self.landmark_id],
+                    "historical_landmark_reasons": {
+                        self.landmark_id: "Primary durable mechanism."
+                    },
+                    "head_contexts": [],
+                    "recent_attained_research_ids": [],
+                },
+                peer_target_id: peer_row,
+            },
+        )
+        corrupted = self._state()
+        del corrupted["targets"][self.target_id][
+            "historical_landmark_reasons"
+        ]
+        state_path = (
+            self.root
+            / "campaigns"
+            / self.campaign_id
+            / "frontier-state.json"
+        )
+        state_path.write_text(
+            json.dumps(corrupted, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        rounds_before = set(self.store.rounds_dir.glob("round-*"))
+        with self.assertRaisesRegex(
+            ValueError, "explicit Main reconciliation"
+        ):
+            lifecycle.create_production_round(
+                workers=1,
+                research_ids=[self.root_id],
+                campaign_id=self.campaign_id,
+                frontier_target_id=self.target_id,
+            )
+        self.assertEqual(
+            set(self.store.rounds_dir.glob("round-*")), rounds_before
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "active_head_research_ids": [self.root_id],
+                "historical_landmark_research_ids": [self.landmark_id],
+                "historical_landmark_reasons": {
+                    self.landmark_id: "Primary durable mechanism."
+                },
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][peer_target_id], peer_row
+        )
 
 
 if __name__ == "__main__":

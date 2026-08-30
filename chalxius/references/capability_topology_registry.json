@@ -55,7 +55,7 @@
       ]
     },
     "cap.fact_certification": {
-      "summary": "Prospective Fact Alpha certification of exact Research records plus read-only legacy V5 Candidate Release, Certification, Gateway, and Fact authority.",
+      "summary": "Prospective Fact Alpha uses one packager-selected nontruth Research package, full independent verifier review of every record/interface/edge, and Gateway-only certification. Direct-Research plans freeze exact Main anchors and each sealed component connects every added unmarked node to one through actual package edges; existing-mark plans are exempt. A packager-requested split pauses for a Research repair worker and ordinary proof/source supervision; no Fact-side split supervisor exists. The historical fast lane is bounded one-to-one complete-node minor COW plus full same-verifier component recheck only. Old Candidate, adverse, Certification, and Fact commands are procedurally reserved for explicitly selected 0.x completion/audit; the runtime does not authenticate pre-1.0 provenance.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -236,7 +236,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, direct exact-ID predecessor context, worker returns, ingestion, bounded repair execution, static failure-family selective second-subround assurance, manifest-bound compact production and supervisor startup projections, exact-ID planning without unrelated frontier reconstruction, mode-preserving repair, early computation disposition rejection, automatic card-bound CHX observation projection, command-local planning inspection reuse, and one canonical computation-design role contract.",
+      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution including commit-last semantic research_split batches, static scope-owned second-subround assurance, and compact production/supervisor projections. A split requested from Fact work returns to the same ordinary Research repair and proof/source supervision layer, never a new Fact-side supervisor. Supervisor interfaces are strong mechanical recommendations only; package, verifier, and Gateway authority remain separate.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -267,7 +267,8 @@
         "tests/test_research_two_subround.py",
         "tests/test_v4_preflight_return.py",
         "tests/test_v4_protocol.py",
-        "tests/test_chx_095_terminal_frontier_context.py"
+        "tests/test_chx_095_terminal_frontier_context.py",
+        "tests/test_fact_alpha.py"
       ],
       "activation_paths": [
         {
@@ -293,8 +294,8 @@
       ]
     },
     "cap.adverse_routing": {
-      "summary": "Prospective nontruth worker failure reports, exact-Candidate pre-release readiness, sparse Main synthesis queues, full attack audits, bounded persistent rules, and Main decisions.",
-      "status": "active",
+      "summary": "Historical nontruth adverse cards, returns, cases, proposals, decisions, and rules retained for exact frozen-record validation and explicitly selected 0.x completion, which may append its old-schema records. Prospective learning/reporting/mutation are retired; no machine-authenticated pre-1.0 provenance gate exists.",
+      "status": "compatibility",
       "stateful": true,
       "state_roots": [
         {
@@ -313,13 +314,10 @@
       ],
       "activation_paths": [
         {
-          "kind": "cli",
-          "command": "mgraph:attack-report"
-        },
-        {
           "kind": "automatic",
           "module": "mathgraph.adverse_routing",
-          "consumer_module": "mathgraph.v5_lifecycle"
+          "consumer_module": "mathgraph.v5_lifecycle",
+          "predicate": "frozen_historical_card_or_receipt_contains_adverse_binding"
         }
       ],
       "authority_effects": [
@@ -391,7 +389,7 @@
       ]
     },
     "cap.campaign_frontier": {
-      "summary": "Campaign envelopes, atomic Research binding, and the ordinary Main frontier with exact terminal-successor context for attained checkpoints.",
+      "summary": "Campaign envelopes, atomic Research binding, exact active heads/context/landmarks, one bounded exact Research search before every next-cut freeze, and judgment-led post-compaction maintenance across handoffs, rigid lineage, mathematical curation, optional Fact windows, and CHX observation. Every material match is attached by exact Research id as active-head context or promoted by Main to an active head, never left only in temporary prose. Compaction adds rehydration/global reread/landmark curation and broader search/reread scope, but uses the same placement rule and is not the search clock. Sparse landmarks have no count quota and grow with the Research graph; routine output previews eight with exact total count/digest and full diagnostic ids. The distinct recent queue uses 64 only as a high-water guard and previews four; slots are not quotas.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -408,7 +406,8 @@
         "tests/test_v5_campaign_envelope.py",
         "tests/test_chx_093_integrated_cleanup.py",
         "tests/test_chx_094_campaign_history_compaction.py",
-        "tests/test_chx_095_terminal_frontier_context.py"
+        "tests/test_chx_095_terminal_frontier_context.py",
+        "tests/test_chx_098_plan_round_frontier_state.py"
       ],
       "activation_paths": [
         {
@@ -1268,6 +1267,14 @@
         "domain_service"
       ]
     },
+    "mathgraph.research_split": {
+      "capability_id": "cap.research_execution",
+      "path": "scripts/mathgraph/research_split.py",
+      "roles": [
+        "authority_gate",
+        "domain_service"
+      ]
+    },
     "mathgraph.frontier_actions": {
       "capability_id": "cap.research_execution",
       "path": "scripts/mathgraph/frontier_actions.py",
@@ -2045,7 +2052,7 @@
       "capability_id": "cap.fact_certification",
       "status": "canonical",
       "authority_effects": [
-        "candidate"
+        "none"
       ]
     },
     "mgraph:fact-verifier-capsule": {
@@ -2059,7 +2066,7 @@
       "capability_id": "cap.fact_certification",
       "status": "canonical",
       "authority_effects": [
-        "certification"
+        "none"
       ]
     },
     "mgraph:fact-verification-check": {
@@ -2137,41 +2144,6 @@
       "status": "canonical",
       "authority_effects": [
         "research"
-      ]
-    },
-    "mgraph:attack-route-enable": {
-      "capability_id": "cap.adverse_routing",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:attack-route-status": {
-      "capability_id": "cap.adverse_routing",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:attack-report": {
-      "capability_id": "cap.adverse_routing",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:attack-route-decide": {
-      "capability_id": "cap.adverse_routing",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
-      ]
-    },
-    "mgraph:attack-route-disable": {
-      "capability_id": "cap.adverse_routing",
-      "status": "canonical",
-      "authority_effects": [
-        "none"
       ]
     },
     "mgraph:novelty-record": {

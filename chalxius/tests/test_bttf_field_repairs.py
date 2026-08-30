@@ -626,7 +626,6 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     "limitations": "This is not a proof.",
                 },
                 "artifacts": [],
-                "attack_learning": None,
                 "obligation_dispositions": [],
                 "computation_manifest": None,
                 "research_assurance": {
@@ -639,6 +638,12 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     "program_math_alignments": [],
                 },
             }
+            # New 1.0.3 refute cards no longer carry the retired prospective
+            # adverse-learning plane.  Frozen historical cards that still
+            # expose that exact field remain readable, but a current return
+            # must not invent it merely because its work mode is ``refute``.
+            if "adverse_routing" in card:
+                payload["attack_learning"] = None
             return_path = Path(assignment["return_path"])
             return_path.write_text(
                 json.dumps(payload, ensure_ascii=False, sort_keys=True),
@@ -1209,6 +1214,11 @@ class BTTFFieldRepairTests(unittest.TestCase):
                     research_ids=[source["research_id"]],
                 )
                 assignment = planned["assignments"][0]
+                card = json.loads(
+                    Path(assignment["task_card_path"]).read_text(
+                        encoding="utf-8"
+                    )
+                )
                 payload = {
                     "schema_version": 5,
                     "project_id": store.project_id(),
@@ -1229,7 +1239,6 @@ class BTTFFieldRepairTests(unittest.TestCase):
                         "limitations": "This bounded check is not a proof.",
                     },
                     "artifacts": [],
-                    "attack_learning": None,
                     "obligation_dispositions": [],
                     "computation_manifest": None,
                     "research_assurance": {
@@ -1242,6 +1251,8 @@ class BTTFFieldRepairTests(unittest.TestCase):
                         "program_math_alignments": [],
                     },
                 }
+                if "adverse_routing" in card:
+                    payload["attack_learning"] = None
                 return_path = Path(assignment["return_path"])
                 return_path.write_text(
                     json.dumps(payload, ensure_ascii=False, sort_keys=True),

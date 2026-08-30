@@ -1,111 +1,111 @@
-# Chalxius v1.0.0 — Fact Alpha
+# Chalxius v1.0.3 — Research Route Coordination Repair
 
-Chalxius 1.0.0 introduces a post-Research correctness-certification layer
-without creating a second mathematical graph. Research remains the single
-immutable graph; a Fact is now an append-only certification grant attached to
-the exact bytes of a whole Research node.
+Chalxius 1.0.3 repairs the working-memory and review routes exposed by a large,
+branching Research project. It does not change the mathematical authority
+boundary: Research remains cumulative nontruth, and only an exact verifier
+decision followed by Gateway acceptance creates Fact certification.
 
-The release does not migrate or reinterpret legacy 0.x Candidate,
-Certification, Gateway, or Fact authority. Those records remain readable as
-historical, unmapped authority.
+## Graph Browser status
 
-## Fact Alpha workflow
+**Graph Browser and graphical graph generation are temporarily unavailable.**
+They are not supported release capabilities in v1.0.3. Historical or
+experimental Reader code, assets, and command entries may remain in the source
+tree, but their presence is not a compatibility promise and they should not be
+used as a production interface until the browser is redesigned.
 
-Main may mark mathematically important Research nodes in a lightweight Fact
-frontier. Current terminals, certified heads, stale descendants, and batch
-opportunities are derived live; there is no timer, background scheduler, or
-automatic mathematical selector.
+This withdrawal affects presentation only. Research storage, exact search,
+Campaign and frontier operations, textual graph inspection, supervision, COW,
+Fact packaging, verification, and certification remain in scope.
 
-A packager freezes several exact Research nodes into one candidate package.
-For each component it records the node's exact claim, assumptions,
-domain/types, quantifiers, limitations, and exact certified predecessor grants.
-The package is an inspection and batching object, not a second proof graph.
+## Research frontier and Campaign coordination
 
-One independent verifier decides each component. Successful decisions create
-append-only Research certification grants. A minor correction uses complete
-component COW and may be rechecked by the same verifier without an extra
-ordinary supervisor; a fundamental error returns to the ordinary Research
-workflow. Replacing a certified Research node derives
-`needs_reverification` for certified descendants through exact predecessor
-grants.
+- Campaign targets retain exact active heads, attached context, recent
+  attainment, and sparse historical landmarks.
+- A unique rigid COW or repair lineage may advance an advisory working
+  projection; ambiguous or split lineage is displayed rather than guessed.
+- Exact-search discoveries can be attached to an active head as context or
+  promoted to a head, so useful older Research survives context handoff.
+- Sparse landmarks have no numeric quota and may grow with the Research graph.
+  Routine views show a bounded preview with exact total count and identity
+  digest; exact state and diagnostic reads preserve all ids and reasons.
+- Recent attainment is curated at natural context or direction handoffs. Its
+  separate 64-entry high-water bound is a runaway guard, not a research clock.
+- Main still decides importance, mathematical completion, and direction. No
+  automatic selector, worker dispatcher, timer, or background monitor was
+  introduced.
 
-New public commands are:
+## Fact-route coordination
 
-- `fact-frontier-mark`, `fact-frontier-dispose`, and `fact-frontier`;
-- `plan-fact-packaging` and `fact-package-seal`;
-- `fact-verifier-capsule`, `fact-verification-record`, and
-  `fact-verification-check`;
-- `fact-certify`.
+Fact remains certification of exact Research records rather than a second
+proof graph.
 
-The new `fact-packager` role is deliberately narrow. Learned theorem attacks
-remain part of ordinary Research supervision rather than being duplicated in
-Fact verification.
+- Campaign landmarks and explicit Fact marks are navigation inputs, not ready
+  packages.
+- An authorized packager reads the landmarks, existing grants, exact Research
+  graph, COW/split state, supervision, and interfaces, then selects a bounded
+  predecessor-closed route.
+- A mechanically complete supervisor recommendation produces a package
+  proposal, not an automatic seal. The packager performs the single seal and
+  may accept the proposal, author a complete alternative interface, choose the
+  whole node, or return the node to Research COW/splitting.
+- Direct Research selection freezes exact Main anchors. Additional unmarked
+  prerequisites must connect to an anchor through actual package dependency
+  edges.
+- Package planning, sealing, verification, Gateway acceptance, and
+  certification remain distinct authority steps.
 
-## Validation and installation
+## Supervision and split repair
 
-The exact 268-entry manifest passed whole-tree architecture reconnaissance,
-141 behavioral probes, the complete 1,068-test suite, and the routine release
-matrix:
+- Source scope checks external source identity, bytes, locators, faithful
+  extraction, literal hypotheses, conventions, and evidence coverage.
+- Proof scope checks mathematical correctness, including the correctness of
+  applying internal and external results.
+- When both scopes apply, one author-independent supervisor session normally
+  performs them sequentially while preserving separate scope records.
+- A supervisor may recommend `ready` or `needs_split`, but the authorized
+  packager retains control of the Fact route.
+- An actual semantic split is not a minor repair. One Research repair worker
+  chooses the finite successor set and proposes explicit member/member and
+  member/external `proof_dependency` or `context` relations. Whole-product
+  supervision checks the complete split batch and its relation allocation.
+- The same independent supervisor may review repaired bytes again; freshness
+  applies to the review pass and product bytes, not to a forced identity change.
 
-| Lane | Result | Elapsed |
-|---|---:|---:|
-| Self-test | PASS | 0.954 s |
-| Changed-surface regression | 132 tests, PASS | 11.153 s |
-| Semantic mutation audit | 32/32 killed | 45.900 s |
+Historical adverse-learning cases and proposals remain readable nontruth.
+Their reusable attack guidance has been distilled into fixed, scope-owned,
+non-exhaustive review guidance; the old learning loop no longer routes current
+work.
 
-The routine matrix completed in 57.426 seconds and left the source tree
-unchanged. Architecture reconnaissance found no orphan module, behavioral
-orphan, error, or warning.
+## Intentional boundaries
 
-The globally installed runtime is byte-exact with the candidate across all 269
-package files. Direct rollback to 0.9.18 is available. Installation read and
-wrote no project byte.
+- Fact packaging remains asynchronous and may be deferred while Research grows.
+- Main remains responsible for selecting mathematically useful cuts after an
+  exact Research search.
+- Large-project forensic audit remains more expensive than routine frontier
+  use; this release adds no persistent index or cache.
+- Legacy 0.x Candidate, Certification, Gateway, and Fact authority remains
+  readable and is not silently migrated.
+- Graph Browser and graphical graph generation remain outside the supported
+  v1.0.3 capability surface, as stated above.
 
-On the 2,247-Research local-$\mathbb F_0$ project, the installed
-`fact-frontier --limit 8` completed in 0.942 seconds. A full read-only audit
-completed in 14.789 seconds with `current_ok=true`, `history_clean=true`, and
-no graph or workflow error. Project metadata was byte-identical before and
-after the canary. These measurements describe one snapshot, not universal
-latency bounds.
+## Validation and distribution
 
-The bounded sensitive-information scan found no credential, private key,
-personal path, or true token. Three fixture/documentation strings were reviewed
-as non-secret examples.
-
-## Global CHX settlement
-
-`global-repair-f66daf8fa1046e7c4f8dfda1437cd76de7d781bceb4b3ea6f41e0468a88fac80`
-covers all 239 observed qualified issues under the exact installed 1.0.0
-manifest:
-
-- 236 immutable prior dispositions were revalidated without replay;
-- 1 current-round frontier precedence defect was revalidated as fixed;
-- 2 Fact Alpha integration defects were fixed by this release;
-- 0 issues remain unresolved or uncovered.
-
-Historical task-ledger bytes were not rewritten. Thirty-seven old ledgers
-retain an open-state provenance bit, but none carries an actionable issue under
-the current settlement.
-
-## Distribution
+The final manifest, release-matrix results, installed-tree identity, sensitive-
+information scan, CHX settlement, and deterministic archive identity are
+recorded in [VALIDATION.md](VALIDATION.md) and `RELEASE.lock.json`.
 
 Release assets:
 
-- `chalxius-1.0.0-fact-alpha.tar.gz`
-- `chalxius-1.0.0-fact-alpha.tar.gz.sha256`
-
-The deterministic archive contains 269 regular files, is 2,705,200 bytes, and
-has SHA-256
-`815fa9f6eaa910fafb653825cbe3e2c4e231d40938fea5c8bf3accb67841d850`.
+- `chalxius-1.0.3-research-route-coordination-repair.tar.gz`
+- `chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256`
 
 ```sh
-shasum -a 256 -c chalxius-1.0.0-fact-alpha.tar.gz.sha256
-tar -xzf chalxius-1.0.0-fact-alpha.tar.gz
+shasum -a 256 -c chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256
+tar -xzf chalxius-1.0.3-research-route-coordination-repair.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
 ```
 
-This local release is installed and sealed with tag `v1.0.0`. No remote push is
-claimed by this document. Software validation and CHX settlement create no
-mathematical Fact by themselves.
+This document prepares the v1.0.3 release. It does not by itself claim a remote
+push, tag, or publication, and it creates no mathematical Fact.

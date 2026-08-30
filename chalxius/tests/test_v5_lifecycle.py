@@ -29,6 +29,7 @@ from mathgraph.paper_logic_contracts import (
 )
 from mathgraph.reader_html import render_reader_html
 from mathgraph.store import MathGraphStore
+from mathgraph.research_split import validate_research_split_batch
 from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 from mathgraph.v5_lifecycle import (
     V5_LIFECYCLE_CONTRACT_SHA256,
@@ -1881,7 +1882,7 @@ class V5LifecycleTests(unittest.TestCase):
             artifact_path = artifact_dir / "research-split-batch.json"
             batch = {
                 "schema_version": 1,
-                "contract_revision": "chalxius-research-split-batch-1",
+                "contract_revision": "chalxius-research-split-batch-2",
                 "source_research_id": source["research_id"],
                 "source_record_sha256": source["record_sha256"],
                 "shared_assumptions": ["The frozen old argument is read as one whole."],
@@ -1907,12 +1908,56 @@ class V5LifecycleTests(unittest.TestCase):
                 ],
                 "residual_open_material": ["Whether condition B is globally available."],
                 "abandoned_material": [],
+                "internal_relations": [
+                    {
+                        "from_surface_key": "geometric-surface",
+                        "to_surface_key": "algebraic-surface",
+                        "relation_type": "proof_dependency",
+                        "label": "uses-algebraic-lemma",
+                        "rationale": (
+                            "The geometric reduction invokes the separated "
+                            "algebraic conclusion."
+                        ),
+                    }
+                ],
+                "external_relations": [
+                    {
+                        "from_surface_key": "algebraic-surface",
+                        "to_research_id": source["research_id"],
+                        "relation_type": "context",
+                        "label": "extracted-from-mixed-source",
+                        "rationale": (
+                            "The old mixed node remains provenance and context, "
+                            "not a certified proof premise."
+                        ),
+                    }
+                ],
+                "relation_allocation_rationale": (
+                    "The worker allocated the one internal proof use and kept "
+                    "the old mixed node only as provenance context."
+                ),
                 "completeness_rationale": (
                     "Every sentence of the mixed source is allocated to one member or "
                     "the explicit residual list."
                 ),
                 "truth_effect": "none",
             }
+            legacy_batch = copy.deepcopy(batch)
+            legacy_batch["contract_revision"] = (
+                "chalxius-research-split-batch-1"
+            )
+            for field_name in (
+                "internal_relations",
+                "external_relations",
+                "relation_allocation_rationale",
+            ):
+                legacy_batch.pop(field_name)
+            self.assertEqual(
+                validate_research_split_batch(
+                    legacy_batch, source_research=source
+                )["contract_revision"],
+                "chalxius-research-split-batch-1",
+            )
             artifact_bytes = (
                 json.dumps(batch, ensure_ascii=False, sort_keys=True) + "\n"
             ).encode("utf-8")
@@ -1975,6 +2020,40 @@ class V5LifecycleTests(unittest.TestCase):
                 receipt["split_batch_id"]
             )
             self.assertEqual(commit["owner_research_id"], owner["research_id"])
+            self.assertEqual(
+                commit["contract_revision"],
+                "chalxius-research-split-commit-2",
+            )
+            algebraic_id, geometric_id = receipt[
+                "split_successor_research_ids"
+            ]
+            self.assertEqual(
+                commit["logical_relations"],
+                [
+                    {
+                        "from_research_id": geometric_id,
+                        "to_research_id": algebraic_id,
+                        "relation_type": "proof_dependency",
+                        "target_scope": "split_internal",
+                        "label": "uses-algebraic-lemma",
+                        "rationale": (
+                            "The geometric reduction invokes the separated "
+                            "algebraic conclusion."
+                        ),
+                    },
+                    {
+                        "from_research_id": algebraic_id,
+                        "to_research_id": source["research_id"],
+                        "relation_type": "context",
+                        "target_scope": "external_research",
+                        "label": "extracted-from-mixed-source",
+                        "rationale": (
+                            "The old mixed node remains provenance and context, "
+                            "not a certified proof premise."
+                        ),
+                    },
+                ],
+            )
             for index, research_id in enumerate(
                 receipt["split_successor_research_ids"], 1
             ):
@@ -2082,6 +2161,11 @@ class V5LifecycleTests(unittest.TestCase):
             )
 
             def interface_entry(member: dict[str, object]) -> dict[str, object]:
+                predecessors = (
+                    [algebraic_id]
+                    if member["research_id"] == geometric_id
+                    else []
+                )
                 return {
                     "research_id": member["research_id"],
                     "research_record_sha256": member["record_sha256"],
@@ -2092,7 +2176,7 @@ class V5LifecycleTests(unittest.TestCase):
                         "assumptions": ["The split batch shared assumptions hold."],
                         "domain_and_types": ["Objects lie in the frozen test domain."],
                         "quantifiers": ["For every object satisfying the assumptions."],
-                        "certified_predecessor_research_ids": [],
+                        "certified_predecessor_research_ids": predecessors,
                         "limitations": ["Only this successor surface is asserted."],
                     },
                 }
@@ -2105,10 +2189,30 @@ class V5LifecycleTests(unittest.TestCase):
                         {
                             "schema_version": 1,
                             "contract_revision": (
-                                "chalxius-supervised-statement-interfaces-1"
+                                "chalxius-supervised-statement-interfaces-2"
                             ),
                             "entries": [
                                 interface_entry(member) for member in selected
+                            ],
+                            "split_relation_reviews": [
+                                {
+                                    "schema_version": 1,
+                                    "batch_id": commit["batch_id"],
+                                    "proposed_relations_sha256": commit[
+                                        "logical_relations_sha256"
+                                    ],
+                                    "final_relations": commit[
+                                        "logical_relations"
+                                    ],
+                                    "final_relations_sha256": sha256_json(
+                                        commit["logical_relations"]
+                                    ),
+                                    "completeness_rationale": (
+                                        "Every internal and external relation "
+                                        "was checked against both successors."
+                                    ),
+                                    "truth_effect": "none",
+                                }
                             ],
                             "truth_effect": "none",
                         },
@@ -2187,6 +2291,35 @@ class V5LifecycleTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(
                 ValueError, "must cover every committed successor"
+            ):
+                lifecycle.preflight_return(
+                    round_id=supervision["round_id"],
+                    assignment_id=supervisor_assignment["assignment_id"],
+                )
+            mismatched_interface = write_interfaces(member_records)
+            mismatched_payload = json.loads(
+                interface_path.read_text(encoding="utf-8")
+            )
+            for entry in mismatched_payload["entries"]:
+                if entry["research_id"] == geometric_id:
+                    entry["statement_interface"][
+                        "certified_predecessor_research_ids"
+                    ] = []
+            interface_path.write_text(
+                json.dumps(mismatched_payload, sort_keys=True),
+                encoding="utf-8",
+            )
+            mismatched_interface["sha256"] = sha256_bytes(
+                interface_path.read_bytes()
+            )
+            supervisor_return_path.write_text(
+                json.dumps(
+                    supervisor_payload(mismatched_interface), sort_keys=True
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError, "proof dependencies do not match"
             ):
                 lifecycle.preflight_return(
                     round_id=supervision["round_id"],
@@ -3531,8 +3664,8 @@ class V5LifecycleTests(unittest.TestCase):
                 if item["assignment_role"] == "primary"
             ]
             self.assertEqual(len(primary_assignments), 2)
-            self.assertGreaterEqual(
-                len(round_status["independent_adverse_pairs"]), 1
+            self.assertEqual(
+                round_status["independent_adverse_pairs"], []
             )
             result_ids: dict[str, str] = {}
             analysis_artifacts: list[dict[str, str]] = []
@@ -3829,7 +3962,6 @@ class V5LifecycleTests(unittest.TestCase):
                     "limitations": "This remains nontruth Research.",
                 },
                 "artifacts": [],
-                "attack_learning": None,
                 "obligation_dispositions": [
                     {
                         "obligation_id": item["obligation_id"],
@@ -3850,6 +3982,8 @@ class V5LifecycleTests(unittest.TestCase):
                     "program_math_alignments": [],
                 },
             }
+            if "adverse_routing" in adverse_card:
+                adverse_return["attack_learning"] = None
             adverse_return_path = Path(str(adverse_assignment["return_path"]))
             adverse_return_path.write_text(
                 json.dumps(adverse_return, ensure_ascii=False, sort_keys=True),

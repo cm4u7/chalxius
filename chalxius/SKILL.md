@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.2 — Capability Budget Audit Repair
+# Chalxius 1.0.3 — Research Route Coordination Repair
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -45,44 +45,94 @@ non-adverse constructive Research product carries the byte-identical
 `candidate_fact` artifact. That advisory creates no mapping, mark, grant,
 Campaign binding, or truth effect.
 
-Main records load-bearing importance with `fact-frontier-mark`. The derived
-`fact-frontier` follows exact COW lineage, hydrates current claims, reports
-supervision and packaging state, propagates `needs_reverification` through
-certified predecessor grants, and derives certified heads. Only the importance
-mark and an explicit `active`, `deferred`, or `dropped` disposition persist;
-the frontier, batches, heads, counts, and next actions are live projections.
-They have no Research or truth effect.
+Main normally records sparse load-bearing importance as a reasoned Campaign
+landmark. Existing `fact-frontier-mark` records remain explicit route marks,
+and an authorized packager may create or reuse them only for members of a route
+it has actually selected. The derived `fact-frontier` reads both surfaces,
+follows exact COW lineage, hydrates current claims, reports supervision and
+packaging state, propagates `needs_reverification` through certified
+predecessor grants, and derives certified heads. Campaign landmarks and exact
+mark dispositions persist; frontier routes, package states, heads, counts, and
+next actions are live projections. They have no Research or truth effect.
 
 Fact work is intentionally asynchronous. At a Campaign milestone, a meaningful
 backlog, a direction switch, a context handoff, or an explicit user request,
-Main chooses one or more ready marks and runs `plan-fact-packaging`. There is no
-timer, threshold, watcher, scheduler, or automatic Candidate launch. A clean
+Main opens a bounded Fact-review window but does not need to enumerate package
+members. An authorized `fact-packager` reads the sparse Campaign landmarks,
+active Fact marks, accepted grants, exact Research graph, COW/split projection,
+supervision, and interfaces; it normally selects one or two useful
+predecessor-closed packages, while that size remains advisory rather than a
+gate. Direct Research selection may atomically create or reuse route marks for
+the chosen members, including an unmarked prerequisite. Unselected Main
+landmarks and marks remain active for later windows. There is no timer,
+threshold, watcher, scheduler, or automatic Candidate launch. A direct-Research
+route plan freezes `selection_mode` and its exact Main anchors; every sealed
+component must contain one such anchor, and any added unmarked node must connect
+to it through that component's actual package dependency edges. Existing
+`--mark-id` plans remain `selection_mode="existing_marks"` and do not acquire
+this direct-route anchor rule. A clean
 prospective Research supervisor may optionally emit a Research-hash-bound
-`ready` statement interface or an explicit `needs_split` disposition. The plan
-mechanically seals packages when every selected node is `ready`; it never
-guesses mathematical surfaces or predecessor edges. An explicit `needs_split`
-returns to Research COW/splitting. Older products, omitted interfaces, and
-genuinely custom component grouping retain the narrow `fact-packager` fallback.
-That role can read the derived Fact frontier and seal the explicit plan, but
-cannot mark importance, verify, decide, or certify. If the packager sends a
-legacy node to split/COW, the producer is explicitly a Research repair worker.
-It follows a precise split brief and produces complete coherent successors,
-never mechanically sliced prose. The complete split batch receives fresh
-supervision, and those new supervisors—not the repair worker or old packager—
-author the successor interfaces. For a prospective schema-v3 split repair,
+`ready` statement interface or an explicit `needs_split` disposition. Proof and
+source supervision own Research review and the strong recommendation used by
+the automatic mechanical path; they do not own the final Fact-package route or
+interface. `plan-fact-packaging` therefore returns
+`state="mechanical_proposal_ready"`, a `mechanical_package_proposal`, and its
+digest when that recommendation is mechanically complete. It never seals a
+package, guesses a mathematical surface, or invents a predecessor edge.
+`needs_split` blocks only that automatic path and reports
+`fact-package-seal-or-research-cow-split`; it does not veto a packager-authored
+alternative. The authorized `fact-packager` chooses the route and performs the
+one package seal: it may accept the proposal, state a different complete
+six-field interface, choose a whole-node route, or return the node to Research
+COW/splitting. It cannot change Main's importance judgment or Campaign active
+head, verify, decide, or certify. If the packager requests an actual split, its
+package work pauses. A Research repair worker follows the precise split brief
+and produces complete coherent successors, never mechanically sliced prose;
+the ordinary Research proof/source supervision layer then reviews the committed
+batch as a whole before packaging resumes. There is no independent Fact-side
+split supervisor. The same author-independent Research supervisor may be reused
+across COW generations or adjacent scopes when it rechecks the complete new
+product rather than only the previously known defects.
+For a prospective schema-v3 split repair,
 Main freezes the source and split brief but does not guess how many successors
 exist. One repair worker returns one finite `research_split_batch` containing
-the complete actual membership. Ingestion stages every member plus one batch
+the complete actual membership and its proposed internal/external logical
+relation allocation. Relation type is rigid (`proof_dependency` or `context`),
+while a free label and rationale preserve mathematical meaning; no generic
+sibling edge is manufactured. Ingestion resolves surface keys to actual ids,
+stages every member plus one batch
 owner and publishes a commit record last; before that commit, staged bytes are
 recovery material only and are absent from Research frontier and Fact work.
-One supervisor per requested scope reviews the committed batch as a whole. If
-it supplies optional statement interfaces, the artifact covers every committed
-successor; each successor still receives its own `ready` or `needs_split`
-disposition.
+Each requested scope remains a separate assignment, but proof plus source
+normally share one independent supervisor session and one host slot, with
+source fidelity reviewed before complete mathematical use. Other requested
+scopes remain separate unless Main deliberately reuses the same qualified
+reviewer after useful independent mathematical slots are filled. Each scope
+reviews the committed batch as a whole. For a current proof-logic split review
+it returns one relation review per batch, checking all member-member and
+member-external proof uses and omissions; final proof relations must exactly
+match the successor interfaces, while context relations remain navigation only.
+Source scope separately owns only external-source fidelity and coverage, while
+still judging surface coherence. The artifact covers
+every committed successor; each successor still receives its own `ready` or
+`needs_split` disposition.
 A bad component does not discard a correct independent component.
 
-Packaging does not rewrite proofs. For each complete Research node it supplies
-one semi-formal statement interface whose conclusion is byte-for-byte the
+Statement splitting is deliberately exceptional. Main and production workers
+should construct ordinary Research nodes around one independently stateable
+load-bearing claim instead of accumulating a theorem, stronger variant,
+examples, and open obstructions into one top-level node. Every proof-logic or
+source-scope supervisor nevertheless records whether the attacked product is
+coherent, needs splitting, or cannot yet be decided for the strong mechanical
+recommendation. That disposition does not transfer Fact-package authority from
+the packager. A `needs_split` brief
+combines the surface allocation with all proof/source defects found in that
+review so one repair worker can resolve them together before a fresh
+whole-product supervision pass. The same author-independent supervisor identity
+may be reused for that pass.
+
+Packaging does not rewrite proofs. For each complete Research node the packager
+selects and seals one semi-formal statement interface whose conclusion is byte-for-byte the
 Research `claim`, plus assumptions, domain/types, quantifiers, limitations, and
 explicit certified Research predecessors. Those predecessor ids are the rigid
 load-bearing Fact edges; descriptive Research `relation` strings are never
@@ -95,22 +145,31 @@ hashes. Exact evidence locators remain solely in the Research record's
 beside the interface. Do not copy locators into `limitations`.
 
 `fact-verifier-capsule` gives one independent correctness verifier the frozen
-Research bytes, interfaces, and component edges. The verifier performs fresh
-whole-node mathematical, scope, dependency, source/computation, and interface
-checks. The learned theorem-attack vocabulary belongs to ordinary Research
-supervision, so Fact verification does not train a second adverse role.
-`fact-verification-record` records component-local decisions; `fact-certify`
-is a mechanical, independent Gateway visibility switch for correct components.
+complete Research records, every packager-selected interface, and all component
+edges. Regardless of whether an interface followed or replaced the supervisor's
+mechanical recommendation, the verifier freshly reviews every whole node,
+interface, dependency edge, scope boundary, and source/computation use. The
+learned theorem-attack vocabulary belongs to ordinary Research supervision, so
+Fact verification does not train a second adverse role.
+`fact-verification-record` records nontruth component-local decisions;
+`fact-certify` is the sole mechanical Gateway certification and visibility
+switch for correct components.
 The current `verifier` CLI role has exactly the capsule, record, and check
 commands; it has no package, Research-mutation, Gateway, or certification
 authority.
 
-A minor verifier finding returns the complete affected component through COW.
+A minor verifier finding may use the historical 1.0.0 bounded “fast
+supervision” promise; this is not a supervisor role or execution mode. It
+returns the complete affected component through one-to-one complete-node COW.
 `plan-fact-packaging --minor-repair-decision ...` requires every node of that
 component, at least one real COW successor for each affected node, and the same
 verifier for a complete recheck; ordinary supervisor dispatch is omitted for
-that bounded lane. The verifier may not author the repair. A fundamental error
-abandons that component and returns to ordinary Research/COW/supervision.
+that bounded lane. The verifier may not author the repair. Any required split,
+statement-surface change, relation-allocation ambiguity, or other structural COW
+ambiguity leaves the fast lane and returns to a Research repair worker plus
+ordinary proof/source supervision. A fundamental error likewise abandons that
+component and returns to ordinary Research/COW/supervision. Gateway remains the
+independent sole certification switch after either route.
 Existing grants whose Research or certified predecessor acquires a COW
 successor become `needs_reverification`; historical bytes remain readable.
 
@@ -118,6 +177,69 @@ New Research may name `certified_research_dependencies`. Chalxius resolves
 them to exact active Research/grant hashes and freezes their statement
 interfaces and proof bytes into future task cards. This is the operational
 meaning of Fact being a property of Research rather than a parallel graph.
+
+## 1.0.3 research route coordination repair
+
+This release coordinates the nontruth Research work surfaces without adding a
+second scheduler or truth path. Campaign frontier state now keeps exact active
+heads, head-bound context, sparse mathematical landmarks, recent attainment,
+and rigid COW/split projections in one compact Main working-memory surface.
+Recent attainment follows the current context-compaction or natural-curation
+window; it is not a four-slot gate. Sparse landmarks have no numeric quota:
+Main may retain more as the Research graph grows. The distinct recent-attainment
+queue retains up to 64 entries only as a high-water runaway guard. Routine
+mathematical summaries preview four recent items and eight landmarks while
+preserving exact total counts and identity digests; full landmark ids remain
+available from exact working state and diagnostic views.
+After context compaction or a real handoff, Main performs one judgment-led
+maintenance pass: rehydrate the exact Campaign/Target, frontier, rounds, agents,
+returns, and CHX boundary; finish visible handoffs without duplicate dispatch;
+reconcile rigid Research COW/split lineage; curate recent attainment into sparse
+landmarks only when mathematically durable; step back across ancient landmarks
+and recent attainment to test whether the current route and active heads still
+serve the Campaign objective; choose the next Research cut after bounded exact
+search and duplicate exclusion; consider but never force a Fact window; and
+record only genuine operational architecture failures as CHX. Four and eight
+are reading previews, 64 protects only the recent-attainment queue, sparse
+landmarks have no count quota, and available agent slots are opportunities
+rather than a semantic quota.
+The bounded exact Research search is independently mandatory every time Main
+freezes the next Research cut, including turns without compaction. Compaction or
+a real handoff additionally triggers the rehydrate, global reread, and landmark
+curation pass; it is not the search clock.
+Every material exact-search match must be made durable by attaching its exact
+Research id as context of an active head or by Main promoting it to an active
+head; it must not remain only in chat or temporary prose. Post-compaction search
+uses this same placement rule as an ordinary turn; only its search and reread
+scope is broader. `plan-round` advances the selected target atomically, while
+manual frontier reconciliation remains an explicit semantic override.
+
+Fact landmarks are route entries, not ready packages. `fact-frontier --target`
+requires `--campaign`. Landmark routes rank uncertified or route-needing work
+ahead of already certified history and preserve complete identity count/digest,
+so a bounded preview, including one cut from more than 256 landmarks, is never
+treated as the complete route set. An authorized
+`fact-packager` may inspect the Research graph, accepted grants, supervision,
+interfaces, and COW/split lineage, then select a small predecessor-closed route
+without forcing Main to enumerate every member. Unique rigid repair chains are
+followed advisory-only; split ambiguity exposes the complete batch for explicit
+retargeting and never fans importance or Fact authority out automatically.
+
+Current Research supervision uses fixed, scope-owned, non-exhaustive attack
+guidance distilled from durable historical experience. `source_scope` owns
+external identity, bytes, locators, extraction, hypotheses, conventions, and
+coverage; `proof_logic` owns mathematical correctness and every internal or
+external theorem application. When both apply, one author-independent
+supervisor normally performs the two exact reviews sequentially in one host
+session. Dynamic adverse learning, proposal activation, and persistent route
+rules are retired prospectively; frozen historical records remain readable.
+
+One semantic split repair may return a worker-sized atomic batch plus proposed
+typed logical relations. Proof supervision rechecks all member/member and
+member/external dependencies and omissions, then binds the complete final
+relation set to successor statement interfaces. No generic sibling edge,
+automatic mathematical-closure judgment, Candidate effect, Gateway effect, or
+Fact effect is introduced.
 
 ## 1.0.2 capability budget audit repair
 
@@ -393,18 +515,13 @@ idle work; it is not a numeric threshold or monitoring subsystem.
 
 The same repair eliminates reproduced work: selective checkpoints share one command-local inspection; exact supervision retry filters unrelated manifests before rebuilding Research; and independent Research without Fact dependencies skips active-Fact lineage. Proof/program/integration supervisors receive the production card, selected outputs, and active Fact premises; only source-scope projects source-only capabilities. Existing exact path/SHA-256/role artifacts remain directly operable regardless of historical assurance labels. Projections never persist across commands or mutations. Content bytes/final SHA-256 outrank harmless mtime/ctime drift, while device, inode, type, size, link, containment, and hash checks remain exact. Worker examples execute the selected skill root's `scripts/mgraph` shell entry.
 
-Main may author the exact canonical Candidate Fact bytes, including a canonical
-Fact file inside a sealed Main-authored Candidate Release. Worker authorship,
-container identity, and other provenance metadata remain useful lineage, but
-none is a mathematical validity gate. Main calls
-`prepare-candidate-adverse-target SELECTED_RESEARCH_ID --candidate-fact PROJECT_RELATIVE_PATH`.
-The public command fixes the actor to Main and accepts no `--actor` override.
-It consumes those exact canonical Fact bytes and binds every
-applicable completed supervision result for the selected Research (possibly
-none when no supervision scope applies); it does not infer, rewrite, or
-validate the theorem merely from provenance. Fresh adverse work, its
-disposition, a fresh verifier, Gateway-owned `certification-record`, and Gateway
-Fact admission remain separate mandatory boundaries.
+For an already frozen 0.x Candidate route, Main may author the exact canonical
+Candidate Fact bytes, and the historical Candidate-adverse bootstrap retains
+its exact hash and role semantics. That route is not started for new 1.0.x
+certification. Fact Alpha instead freezes a packager-selected Research package,
+uses one independent Fact verifier, and lets Gateway certify exact Research
+records. Worker authorship, container identity, and other provenance metadata
+remain useful lineage but never establish mathematical validity.
 
 ## Start through the smallest applicable contract
 
@@ -414,8 +531,8 @@ Read this complete router first. Then select exactly one startup path:
    [references/v5_production_worker_bootstrap.md](references/v5_production_worker_bootstrap.md).
 2. A current task card with `research_cycle.subround="supervision"` uses
    [references/v5_supervisor_worker_bootstrap.md](references/v5_supervisor_worker_bootstrap.md).
-3. A current whole-Candidate refute card with no `research_cycle` and literal
-   `independent_adverse_required=true` uses
+3. An already frozen 0.x whole-Candidate refute card with no `research_cycle`
+   and literal `independent_adverse_required=true` uses
    [references/v5_candidate_adverse_worker_bootstrap.md](references/v5_candidate_adverse_worker_bootstrap.md).
 4. An explicitly requested, bounded edit of an existing Chalxius Learner
    teaching Markdown uses
@@ -449,7 +566,7 @@ they exist.
   and [references/external_source_reliability.md](references/external_source_reliability.md).
 - Computation or replay:
   [references/computational_verification_v4.md](references/computational_verification_v4.md).
-- Candidate/adverse routing:
+- Frozen Candidate/adverse records or legacy return recovery only:
   [references/adverse_routing_evolution.md](references/adverse_routing_evolution.md).
 - Campaigns, historical migration, and Main's active frontier:
   [references/campaigns_and_migration_v4.md](references/campaigns_and_migration_v4.md).
@@ -482,13 +599,16 @@ immutable capability boundary. Current task-referenced authority overrides
 conflicting background prose. Historical artifacts remain readable and are
 repaired copy-on-write, never rewritten.
 
-## Legacy 0.x Fact admission
+## Procedurally reserved 0.x Fact admission compatibility
 
 `selective-fact-checkpoint`, Candidate Release, Candidate adverse,
-Certification Decision, and physical Fact-node commands remain available only
-to read, audit, or complete already frozen 0.x authority. Do not start that
-path for a new 1.0.0 certification. Its exact historical contract is retained
-in [references/admission_contract.md](references/admission_contract.md).
+Certification Decision, and physical Fact-node commands remain as
+procedurally reserved compatibility for an explicitly selected frozen 0.x
+completion or audit. They are not the prospective 1.0.x path. The runtime does
+not authenticate pre-1.0 provenance, so Main policy must select historical use;
+this boundary deliberately adds no provenance, installation-identity, or
+runtime-identity gate. Its exact historical contract is retained in
+[references/admission_contract.md](references/admission_contract.md).
 
 ## CHX and PHX
 
@@ -575,8 +695,10 @@ valid work.
 
 Default to `auto` unless the user explicitly selects fast or deep. Modes affect
 future exploration only. Missing source, replay, convention, quantifier,
-atomic-DAG, adverse-disposition, or fresh-verifier evidence remains an explicit
-Candidate or Certification blocker in every mode.
+dependency-DAG, supervision, or fresh-verifier evidence remains an explicit
+package-verification or Gateway-certification blocker in every mode. The
+historical 0.x Candidate path retains its frozen requirements when explicitly
+selected.
 
 Initialize a writable project outside the skill tree:
 
@@ -621,15 +743,19 @@ repair caches implicitly.
    substitute mechanical coverage growth for progress toward the Campaign goal.
 4. Logical components, not wall-clock barriers, determine supervision. A
    completed component may enter subround 2 while unrelated production
-   continues. Use at most three failure-informed supervisors: `proof_logic`,
+   continues. Use at most three failure-informed scope assignments:
+   `proof_logic`,
    `source_scope`, `program_math`, and `integration` only for a genuine
-   cross-primary interface.
+   cross-primary interface. When `proof_logic` and `source_scope` both apply to
+   one frozen component, dispatch the two exact cards sequentially to one
+   independent supervisor session and consume one host slot; keep their reports,
+   returns, ingestion, and scope coverage separate.
 5. Completing one Research subround is not completing the host task. At that
    boundary validate the exact card, hash-bound Research product, supervision
    state, and affected local projection; treat a worker-ingestion receipt as
    optional provenance rather than a startup capability gate; do not automatically run a whole-
    project audit. Reserve the full audit for an explicit user request,
-   Candidate/Fact or final-delivery boundary, shared-runtime change, detected
+   Fact verification/certification or final-delivery boundary, shared-runtime change, detected
    drift, or a user-configured cumulative cadence. No fixed round-count
    threshold is implicit.
 6. A supervisor challenge opens a later copy-on-write repair round. The repair
@@ -639,10 +765,18 @@ repair caches implicitly.
 7. New V5 Pulse planning is retired. The production/supervision cycle is the only prospective Research collaboration path.
    Existing historical Pulse records retain status, audit, dispatch, close, void, and abort compatibility.
 8. Fact work is asynchronous. Main marks important Research while ordinary
-   research continues, then freezes a useful multi-node package at a natural
-   window. The Fact verifier is the one fresh correctness review; do not add a
-   Candidate-adverse duplicate. Minor repair returns to the same verifier and
-   fundamental repair returns to ordinary Research.
+   research continues and opens a natural review window. The packager selects a
+   useful predecessor-closed route and seals one nontruth package; ordinary COW
+   branch selection does not mutate the Campaign active head. A supervisor
+   `ready`/`needs_split` result is only the strong mechanical recommendation.
+   A requested split pauses packaging and returns to a Research repair worker
+   plus the ordinary proof/source supervision layer; there is no Fact-side split
+   supervisor.
+   The Fact verifier fully rechecks every Research record, chosen interface, and
+   dependency edge; Gateway alone certifies. Do not add a Candidate-adverse
+   duplicate. Only bounded one-to-one complete-node minor COW returns directly
+   to the same verifier; split or structural ambiguity and fundamental repair
+   return to ordinary Research.
 9. Generic actionable planning uses one exact workgroup and completion
    projection. Exact completed or duplicate work is omitted only
    from actionable views; original Research, provenance, history, and explicit-
@@ -679,10 +813,18 @@ Load-bearing theorem/formula use requires exact source bytes, locator,
 hypotheses, conventions, and applicability. Current erratum/retraction status is
 optional metadata in ordinary Research: retain a negative status claim only
 with an exact frozen response receipt. Otherwise mark it `not_assessed` or
-`unresolved`; this alone does not trigger a repair cycle. Candidate and Fact
-work may demand stricter current-status evidence when it is load-bearing.
+`unresolved`; this alone does not trigger a repair cycle. Fact-package
+verification and Gateway certification may demand stricter current-status
+evidence when it is load-bearing. Historical Candidate work does so only on the
+explicitly selected frozen 0.x compatibility path.
 
-## Candidate, verifier, and Fact
+## Procedurally reserved 0.x Candidate, verifier, and Fact compatibility
+
+This section preserves the frozen 0.x contract for an explicitly selected
+historical completion or audit. It is not the prospective Fact Alpha route, and
+the implementation does not authenticate pre-1.0 provenance. Current work uses
+the nontruth Fact package, full independent verifier review, and Gateway-only
+certification described above; no new provenance or identity gate is implied.
 
 Candidate preflight binds exact statements, proofs, active predecessor closure,
 sources, computation evidence, internal mini-DAGs, supervision, adverse work,
@@ -729,13 +871,13 @@ inspection context through its design, supervision, receipt, disposition, and
 task-card closure. This is a recursion boundary, not an admission shortcut or a
 persistent authority cache.
 
-Workers report at most three deduplicated, well-supported concrete failure
-families and their success boundaries. They do not author persistent attack
-rules. Main may reject a report or synthesize one compact mechanism-level rule
-for future work. Current rules use English internal prose, accept at most
-sixteen active project rules, and fail closed on an oversized rule until Main
-provides semantic compression; they are never truncated. This routing plane has
-no truth or admission effect.
+Current supervisors use fixed, scope-owned, non-exhaustive review guidance
+distilled from durable field experience. Concrete failures and success
+boundaries stay in immutable Research and supervision history; they do not
+enter a proposal queue or create persistent routing rules. Frozen older cards,
+returns, cases, proposals, decisions, and rules remain readable as nontruth
+history, but prospective planning neither consults nor extends that dynamic
+learning plane. This review guidance has no truth or admission effect.
 
 ## Paper, Evidence, and Reader
 

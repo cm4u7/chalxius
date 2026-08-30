@@ -305,6 +305,91 @@ def main() -> int:
     )
     validate_release_audit_revision_bindings(skill_root)
     validate_public_disclosure_contract(skill_root)
+    fact_alpha_surface = inheritance_lock.get("fact_alpha_surface")
+    campaign_surface = inheritance_lock.get("v5_campaign_scope_surface")
+    adverse_surface = inheritance_lock.get("adverse_routing_surface")
+    if (
+        not isinstance(fact_alpha_surface, dict)
+        or fact_alpha_surface.get("research_split_supervision")
+        != "packager_requested_split_pauses_package_work_research_repair_worker_produces_exact_committed_batch_then_ordinary_author_independent_proof_source_supervision_reviews_it_before_packaging_resumes_with_no_independent_fact_side_split_supervisor"
+        or fact_alpha_surface.get("minor_repair")
+        != "historical_1_0_0_bounded_fast_lane_only_one_to_one_complete_node_research_cow_then_same_verifier_full_component_recheck_without_ordinary_supervisor_or_verifier_authorship"
+        or fact_alpha_surface.get("minor_repair_exclusions")
+        != "split_statement_surface_change_relation_allocation_or_other_structural_cow_ambiguity_returns_to_research_repair_worker_and_ordinary_proof_source_supervision"
+        or fact_alpha_surface.get("direct_research_route_anchor_binding")
+        != "plan_freezes_selection_mode_and_exact_main_route_anchor_research_ids_every_packager_sealed_component_contains_one_frozen_anchor_and_every_added_unmarked_node_is_connected_to_it_by_actual_package_dependency_edges"
+        or fact_alpha_surface.get("existing_mark_plan_anchor_policy")
+        != "selection_mode_existing_marks_with_empty_route_anchor_research_ids_does_not_apply_the_direct_research_route_anchor_rule"
+        or not isinstance(campaign_surface, dict)
+        or campaign_surface.get("recent_attainment_exact_queue_high_water_limit") != 64
+        or campaign_surface.get("recent_attainment_routine_preview") != 4
+        or campaign_surface.get("recent_attainment_complete_projection")
+        != "exact_ids_count_and_digest_retained_beyond_preview"
+        or campaign_surface.get("historical_landmark_count_quota") is not None
+        or campaign_surface.get("historical_landmark_routine_preview") != 8
+        or campaign_surface.get("historical_landmark_complete_projection")
+        != "exact_working_state_and_diagnostic_ids_plus_routine_total_count_and_identity_digest"
+        or campaign_surface.get("post_compaction_nonquota_boundary")
+        != "four_and_eight_are_routine_previews_64_protects_only_recent_attainment_sparse_landmarks_have_no_count_quota_and_available_agent_slots_are_opportunities_not_semantic_quotas"
+        or campaign_surface.get("next_research_cut_exact_search_invariant")
+        != "main_runs_one_bounded_exact_research_search_before_every_next_research_cut_freeze_with_or_without_context_compaction"
+        or campaign_surface.get("exact_search_result_policy")
+        != "main_attaches_every_material_match_by_exact_research_id_as_active_head_context_or_promotes_it_to_an_active_head_instead_of_leaving_it_only_in_chat_or_temporary_prose"
+        or campaign_surface.get("context_compaction_additional_duties")
+        != "rehydrate_exact_operation_global_reread_and_landmark_curation_with_the_same_exact_match_placement_semantics_as_ordinary_turns_but_broader_search_and_reread_scope_not_the_exact_search_clock"
+        or not isinstance(adverse_surface, dict)
+        or adverse_surface.get("status")
+        != "prospective_retired_frozen_completion_and_historical_readability"
+        or adverse_surface.get("provenance_gate")
+        != "none_main_policy_selects_historical_compatibility_without_new_identity_or_installation_gate"
+    ):
+        raise RuntimeError(
+            "current Fact Alpha, Campaign, or historical-adverse release metadata drifted"
+        )
+    topology_registry = json.loads(
+        (skill_root / "references" / "capability_topology_registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    topology_modules = topology_registry.get("modules", {})
+    topology_commands = topology_registry.get("commands", {})
+    if (
+        topology_modules.get("mathgraph.research_split", {}).get("path")
+        != "scripts/mathgraph/research_split.py"
+        or topology_commands.get("mgraph:candidate-release", {}).get("status")
+        != "canonical"
+    ):
+        raise RuntimeError("capability topology release metadata drifted")
+    behavior_registry = json.loads(
+        (skill_root / "references" / "behavioral_feature_registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    behavior_features = behavior_registry.get("features", {})
+    for feature_id in (
+        "feature.host_scope_attack_coverage",
+        "feature.concise_attack_route_recommendations",
+        "feature.historical_adverse_initialization",
+        "feature.historical_adverse_counterexample_capture",
+        "feature.historical_adverse_attack_capture",
+        "feature.historical_adverse_decision",
+        "feature.historical_adverse_disablement",
+        "feature.historical_adverse_task_card_binding",
+    ):
+        if behavior_features.get(feature_id, {}).get("classification") != "compatibility":
+            raise RuntimeError("historical adverse behavior registry boundary drifted")
+    for feature_id in (
+        "feature.paper_continuation_release_capsule",
+        "feature.candidate_fresh_adverse_readiness",
+        "feature.candidate_preflight_work_elimination",
+        "feature.selective_fact_admission_checkpoint",
+        "feature.candidate_fact_prepackaging_atomicity",
+        "feature.prospective_candidate_adverse_planner",
+        "feature.bounded_candidate_adverse_handoff",
+        "feature.research_supervision_candidate_gate",
+    ):
+        if behavior_features.get(feature_id, {}).get("classification") != "compatibility":
+            raise RuntimeError("historical Candidate behavior registry boundary drifted")
     skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
     skill_line_count = len(skill_text.splitlines())
     policy_paths = (
@@ -377,7 +462,6 @@ def main() -> int:
             "Future releases do not owe runtime or procedural forward compatibility.",
             "Mathematical-safety and Fact-authority",
             "Fact Alpha treats the immutable Research graph",
-            "narrow `fact-packager` fallback",
             "For immutable 0.x Candidate records only",
             "Start through the smallest applicable contract",
             "references/v5_production_worker_bootstrap.md",
@@ -437,14 +521,13 @@ def main() -> int:
             '"component_validation": "authoritatively_rederived_from_exact_research_ancestry_with_stored_partition_as_witness_only"',
             '"supervision_validation": "one_ephemeral_command_local_component_bound_cycle_safe_inspection_context_shared_across_planning_subaudits_with_complete_outer_authority_and_hash_validation"',
             '"planning_validation_reuse": "one_command_local_context_only_without_persistent_cache_and_with_fresh_lock_held_overlap_and_liveness_recheck"',
-            '"candidate_supervision_gate": "selected_constructive_production_result_requires_exactly_one_live_completed_ingested_result_for_each_deterministic_component_scope_before_candidate_expense_and_lock_held_immediately_before_seal"',
+            '"candidate_fields_scope": "procedurally_reserved_0x_compatibility_for_explicit_completion_or_audit_without_machine_authenticated_pre_1_0_provenance_or_new_identity_gate"',
             '"assurance_selection_revision": "chalxius-v5-failure-informed-selective-assurance-1"',
-            '"failure_family_registry": "static_append_only_release_registry_without_agent_scores_dynamic_learning_or_truth_authority"',
+            '"failure_family_registry": "fixed_scope_owned_non_exhaustive_current_registry_with_exact_legacy_hash_readability_and_without_agent_scores_dynamic_learning_or_truth_authority"',
             '"blackboard_default_write": "none_unless_exact_space_capability_is_explicitly_requested"',
             '"route_key": "route.failure_informed_selective_assurance"',
-            '"candidate_seal_liveness_recheck": "exact_required_supervision_result_set_recomputed_under_candidate_mutation_lock_before_artifact_seal"',
             '"execution_gate": "safe_live_nonaborted_assignment_local_latest_program_math_disposition_then_exact_supervised_source_and_dependencies_with_lock_held_authority_recheck_before_round_write"',
-            '"aborted_supervision_downstream_authority": "never_authorizes_candidate_or_computation_and_reserves_no_coverage"',
+            '"aborted_supervision_downstream_authority": "never_authorizes_current_fact_package_computation_or_historical_candidate_and_reserves_no_coverage"',
             '"partial_write_recovery": "content_addressed_supervisor_research_reused_by_identical_retry_before_single_round_seal"',
             '"candidate_verifier_gateway_fact_change": false',
             '"layout": "deterministic_theme_multicenter_orbit_fields"',
@@ -465,15 +548,16 @@ def main() -> int:
             '"older_run_policy": "no_backfill_reclassification_invalidation_or_redo"',
             '"contract_revision": "chalxius-adverse-routing-evolution-4"',
             '"user_rule_contract_revision": "chalxius-adverse-routing-evolution-3"',
-            '"recommendation_report_revision": "chalxius-main-route-synthesis-queue-3"',
+            '"recommendation_report_revision": "historical_0x_chalxius-main-route-synthesis-queue-3"',
             '"productive_contract_revision": "chalxius-adverse-routing-evolution-2"',
             '"legacy_contract_revision": "chalxius-adverse-routing-evolution-1"',
-            '"activation": "prospective_default_for_new_v5_tasks_with_lazy_project_materialization"',
-            '"proposal_activation": "main_decision_only"',
-            '"persistent_rule_authority": "main_only"',
-            '"maximum_active_current_rules_per_project": 16',
-            '"oversize_policy": "semantic_compression_required_truncation_forbidden"',
-            '"attack_report": "required_for_every_newly_governed_v5_host_task_including_zero_and_separate_from_chx"',
+            '"status": "prospective_retired_frozen_completion_and_historical_readability"',
+            '"activation": "procedurally_reserved_explicit_historical_completion_and_audit_only_without_machine_authenticated_pre_1_0_provenance"',
+            '"prospective_supervision_guidance": "fixed_scope_owned_non_exhaustive_failure_families_in_every_current_supervision_card"',
+            '"prospective_learning_writes": "forbidden"',
+            '"proposal_activation": "retired_no_new_proposal_synthesis"',
+            '"persistent_rule_authority": "none_for_prospective_work_historical_rules_are_inert_nontruth"',
+            '"attack_report": "no_prospective_attack_report_or_zero_report_ceremony"',
             '"worker_runtime_binding": "optional_diagnostic_provenance_content_hash_and_workflow_owner_checks_remain_exact"',
             '"automatic_inheritance": false',
             '"admission_lineage_validation": "two_phase_command_local_projection_with_bounded_reentry_and_exact_provisional_full_agreement"',
@@ -486,11 +570,20 @@ def main() -> int:
             '"batch_seed_revision": "chalxius-v5-candidate-batch-seed-3"',
             '"candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact"',
             '"exact_repair_specification": "optional_main_json_is_normalized_hash_bound_into_repair_research_and_task_card"',
-            '"contract_revision": "chalxius-v5-campaign-scope-1"',
+            '"contract_revision": "chalxius-v5-campaign-scope-2"',
+            '"legacy_contract_revision": "chalxius-v5-campaign-scope-1"',
+            '"frontier_working_state_revision": "chalxius-v5-campaign-frontier-working-state-2"',
             '"selection": "main_selected_research_with_optional_explicit_campaign_scope"',
             '"research_creation": "atomic_memory_add_campaign_binding"',
             '"plan_selection_receipt": "selection_source_exact_research_ids_campaign_and_copy_safe_replay_argv_frozen_in_new_round_manifest"',
             '"scheduler": "v5_main_four_factor_frontier"',
+            '"exact_search_result_policy": "main_attaches_every_material_match_by_exact_research_id_as_active_head_context_or_promotes_it_to_an_active_head_instead_of_leaving_it_only_in_chat_or_temporary_prose"',
+            '"recent_attainment_exact_queue_high_water_limit": 64',
+            '"recent_attainment_routine_preview": 4',
+            '"recent_attainment_complete_projection": "exact_ids_count_and_digest_retained_beyond_preview"',
+            '"historical_landmark_count_quota": null',
+            '"historical_landmark_routine_preview": 8',
+            '"historical_landmark_complete_projection": "exact_working_state_and_diagnostic_ids_plus_routine_total_count_and_identity_digest"',
             '"preflight_revision": "chalxius-research-draft-admission-preflight-1"',
             '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
             '"project_lifecycle_revision": "chalxius-parallel-verification-lifecycle-1"',
@@ -577,13 +670,13 @@ def main() -> int:
             "external_theorem_applicability.md",
             "external_source_reliability.md",
             "computational_verification_v4.md",
-            "adverse_routing_evolution.md",
+            "A frozen historical card may still contain `adverse_routing`",
             "chx_runtime_ledger.md",
             "computation_source",
             "computation_design",
             "computation_dependencies",
             "preflight-return",
-            "Candidate Release",
+            "Gateway alone certifies Research",
         ),
         "references/v5_supervisor_worker_bootstrap.md": (
             "research_cycle.subround=\"supervision\"",
@@ -592,19 +685,19 @@ def main() -> int:
             "computational_verification_v4.md",
             "external_theorem_applicability.md",
             "external_source_reliability.md",
-            "adverse_routing_evolution.md",
+            "A frozen historical card may still contain `adverse_routing`",
             "chx_runtime_ledger.md",
             "--task-card /absolute/path/to/exact-task-card.json",
             "research_supervision_report",
             "preflight-return",
-            "Candidate Release, fresh Candidate adverse review",
+            "there is no duplicate Candidate-adverse stage",
             "supervised_production_authority",
         ),
         "references/v5_candidate_adverse_worker_bootstrap.md": (
             'work_mode="refute"',
             "no `research_cycle` field",
             "must not load `v5_production_worker_bootstrap.md`",
-            "Main alone",
+            "No new proposal or rule is synthesized",
             "attack_learning=null",
             "preflight-return",
             "validate-return",
@@ -743,14 +836,14 @@ def main() -> int:
             "64 MiB aggregate",
             "C0 control bytes",
             "no generated bytecode",
-            "standing authorization",
-            "attack-report",
+            "retired dynamic",
+            "no separate attack-report ceremony",
             "Never backfill attack cases",
             "loads some 0.4.1-or-later",
             "The Fact-admission contract is invariant in all modes",
             "V5 `profile-closure-status` computes local process",
             "V5 never activates a V1-V4 root",
-            "Candidate Release/Certification/Fact boundary",
+            "Fact-package/verifier/Gateway boundary",
             "Preserve runtime continuity before every global cutover",
             "archive_runtime.py",
             "runtime_cutover_project_validation.py",
@@ -879,6 +972,8 @@ def main() -> int:
         for relative, markers in identity_requirements.items()
         for marker in markers
         if marker not in policy_texts[relative]
+        and " ".join(marker.split())
+        not in " ".join(policy_texts[relative].split())
     ]
     if missing_identity_markers:
         raise RuntimeError(
@@ -909,227 +1004,41 @@ def main() -> int:
             or ledger_status(ledger_path) != closed
         ):
             raise RuntimeError("CHX close/idempotence contract failed")
-    with tempfile.TemporaryDirectory(prefix="chalxius-self-test-adverse-") as directory:
-        adverse_store = MathGraphStore(Path(directory) / "project")
-        adverse_store.initialize(
-            project_id="self-test-adverse",
-            title="Self-test adverse routing",
+    with tempfile.TemporaryDirectory(prefix="chalxius-self-test-fixed-review-") as directory:
+        review_store = MathGraphStore(Path(directory) / "project")
+        review_store.initialize(
+            project_id="self-test-fixed-review",
+            title="Self-test fixed Research review guidance",
             workflow_evidence_version=5,
         )
-        initial_adverse = adverse_store.adverse_routes().status()
-        if (
-            not initial_adverse["enabled"]
-            or initial_adverse["state_materialized"]
-            or initial_adverse["activation"]
-            != "prospective_default_user_authorization"
-        ):
-            raise RuntimeError("default adverse status must be enabled and nonmutating")
-        adverse_store.adverse_routes().initialize(
-            actor="self-test-user",
-            reason="Exercise user-governed adverse learning.",
-        )
-        adverse_lifecycle = adverse_store.v5_lifecycle()
-        target = adverse_lifecycle.add_research(
+        review_lifecycle = review_store.v5_lifecycle()
+        target = review_lifecycle.add_research(
             {
                 "kind": "challenge",
-                "claim": "Stress-test the uniform witness claim.",
+                "claim": "Check one quantifier-sensitive claim.",
                 "logic_signals": ["quantifier_sensitive"],
             },
             actor="self-test-main",
         )
-        adverse_round = adverse_lifecycle.create_round(
+        planned = review_lifecycle.create_round(
             workers=1,
             research_ids=[target["research_id"]],
-            host_task_scope_id="self-test-adverse-task",
+            host_task_scope_id="self-test-fixed-review-task",
         )
-        adverse_assignment = adverse_round["assignments"][0]
-        adverse_card_path = Path(adverse_assignment["task_card_path"])
-        adverse_card = json.loads(adverse_card_path.read_text(encoding="utf-8"))
-        adverse_rule_ids = {
-            item["rule_id"]
-            for item in adverse_card.get("adverse_routing", {}).get(
-                "baseline_rules", []
-            )
-        }
-        if (
-            len(adverse_rule_ids) != 9
-            or "baseline_hidden_conjunct_split" not in adverse_rule_ids
-            or any(
-                item.startswith("baseline_philosophy_")
-                for item in adverse_rule_ids
-            )
-            or adverse_card["adverse_routing"]["approved_rules"]
-        ):
-            raise RuntimeError("adverse baseline task-card binding failed")
-        philosophy_target = adverse_lifecycle.add_research(
-            {
-                "kind": "challenge",
-                "claim": "Stress-test one explicitly philosophical argument.",
-                "adverse_domain_profile": "philosophy",
-            },
-            actor="self-test-main",
-        )
-        philosophy_round = adverse_lifecycle.create_round(
-            workers=1,
-            research_ids=[philosophy_target["research_id"]],
-            host_task_scope_id="self-test-philosophy-adverse-task",
-        )
-        philosophy_card = json.loads(
-            Path(
-                philosophy_round["assignments"][0]["task_card_path"]
-            ).read_text(encoding="utf-8")
-        )
-        philosophy_rule_ids = {
-            item["rule_id"]
-            for item in philosophy_card["adverse_routing"]["baseline_rules"]
-        }
-        if (
-            len(philosophy_rule_ids) != 12
-            or {
-                "baseline_philosophy_plain_language_substitution",
-                "baseline_philosophy_burden_charity_failure_surface",
-                "baseline_philosophy_operator_scope_equivalence",
-            }.difference(philosophy_rule_ids)
-        ):
-            raise RuntimeError("philosophy-only adverse baseline binding failed")
-        adverse_return = {
-            "schema_version": 5,
-            "project_id": adverse_store.project_id(),
-            "round_id": adverse_round["round_id"],
-            "assignment_id": adverse_assignment["assignment_id"],
-            "worker_id": adverse_assignment["worker_id"],
-            "task_card_sha256": adverse_assignment["task_card_sha256"],
-            "blackboard_snapshot_sha256": adverse_assignment[
-                "blackboard_snapshot_sha256"
-            ],
-            "outcome": "counterexample",
-            "claim": "The uniform witness conclusion fails.",
-            "content": "Two parameters require incompatible witnesses.",
-            "narrative": {
-                "rationale": "Attack witness identity.",
-                "summary": "No common witness exists.",
-                "intuition": "Local choices disagree.",
-                "limitations": "Pointwise existence remains possible.",
-            },
-            "artifacts": [],
-            "obligation_dispositions": [
-                {
-                    "obligation_id": item["obligation_id"],
-                    "status": "complete",
-                    "witness_artifact_sha256s": [],
-                    "rationale": (
-                        "This logical counterexample has no artifact-bearing "
-                        "obligation."
-                    ),
-                }
-                for item in adverse_card["assurance_contract"]["obligations"]
-            ],
-            "computation_manifest": None,
-            "research_assurance": {
-                "source_uses": [],
-                "route_invalidations": [],
-                "extremal_cases": [],
-                "claim_strength": [],
-                "contour_substitutions": [],
-                "claimed_structures": [],
-                "program_math_alignments": [],
-            },
-            "attack_learning": {
-                "schema_version": 3,
-                "result_kind": "surviving_counterexample",
-                "attack_family": "quantifier_witness",
-                "target_pattern": "Pointwise witnesses are treated as uniform.",
-                "failure_mechanism": "One witness is reused outside its scope.",
-                "premise_witnesses": ["Each parameter has a valid local witness."],
-                "conclusion_failure_witness": "The two valid-witness sets are disjoint.",
-                "reproduction_steps": [
-                    "Choose two parameters.",
-                    "Check their premises.",
-                    "Compare their witness sets.",
-                ],
-                "success_boundary": "Refutes uniformity, not pointwise existence.",
-                "value_effects": [
-                    {
-                        "effect_kind": "claim_refuted",
-                        "before": "One uniform witness is asserted.",
-                        "after": "Only parameterwise witnesses remain viable.",
-                        "evidence": "The two valid witness sets are disjoint.",
-                    }
-                ],
-            },
-        }
-        adverse_return_path = Path(adverse_assignment["return_path"])
-        adverse_return_path.write_text(
-            json.dumps(adverse_return, sort_keys=True), encoding="utf-8"
-        )
-        adverse_return_sha = sha256_bytes(adverse_return_path.read_bytes())
-        adverse_receipt = adverse_lifecycle.ingest_return(
-            round_id=adverse_round["round_id"],
-            assignment_id=adverse_assignment["assignment_id"],
-            worker_final_sha256=adverse_return_sha,
-        )
-        adverse_report = adverse_store.adverse_routes().report(
-            host_task_scope_id="self-test-adverse-task"
-        )
-        if (
-            "attack_case_id" not in adverse_receipt
-            or adverse_report["summary"]["pending_main_synthesis_count"] != 1
-            or adverse_report["user_decision_required"]
-            or adverse_report["routing_change_policy"]
-            != "no_route_change_without_main_synthesis"
-            or adverse_report["truth_effect"] != "none"
-        ):
-            raise RuntimeError("adverse case/proposal/report contract failed")
-        adverse_decision = adverse_store.adverse_routes().decide(
-            adverse_receipt["route_proposal_id"],
-            {
-                "action": "approve_modified",
-                "reason": "Several reports can share this guarded mechanism.",
-                "rule": {
-                    "attack_family": "quantifier_witness",
-                    "trigger": {
-                        "research_kinds": ["challenge"],
-                        "claim_terms_any": ["uniform"],
-                        "metadata_signals_any": ["quantifier_sensitive"],
-                        "universal_refute": False,
-                    },
-                    "instruction": "Attack changes in witness dependency or quantifier order.",
-                    "false_positive_guards": [
-                        "Accept explicitly pointwise conclusions."
-                    ],
-                    "scope_note": "Use when witness dependency is load-bearing.",
-                },
-                "governance": {
-                    "abstraction_level": "mechanism",
-                    "concrete_evidence_excluded": True,
-                    "compression": "within_budget",
-                },
-            },
-            actor="main",
-        )
-        future_target = adverse_lifecycle.add_research(
-            {
-                "kind": "challenge",
-                "claim": "Stress-test another uniform witness claim.",
-                "logic_signals": ["quantifier_sensitive"],
-            },
-            actor="self-test-main",
-        )
-        future_round = adverse_lifecycle.create_round(
-            workers=1,
-            research_ids=[future_target["research_id"]],
-            host_task_scope_id="self-test-adverse-future",
-        )
-        future_card = json.loads(
-            Path(future_round["assignments"][0]["task_card_path"]).read_text(
+        card = json.loads(
+            Path(planned["assignments"][0]["task_card_path"]).read_text(
                 encoding="utf-8"
             )
         )
-        if [
-            item["rule_id"]
-            for item in future_card["adverse_routing"]["approved_rules"]
-        ] != [adverse_decision["rule_id"]]:
-            raise RuntimeError("approved adverse rule did not bind future task card")
+        if (
+            "adverse_routing" in card
+            or "adverse_routing_enabled_at_freeze"
+            in card["context_selection"]["mode"]
+            or review_store.adverse_routes().status()["state_materialized"]
+        ):
+            raise RuntimeError(
+                "prospective fixed review unexpectedly activated adverse learning"
+            )
     if "Start every paper-reading response" in policy_texts[
         "references/paper-reading-modes.md"
     ]:
@@ -1840,11 +1749,16 @@ def main() -> int:
             "does not invoke a Grill",
         ),
     }
+    # Markdown line wrapping is presentation, not a release-contract change.
+    # Accept exact markers or the same text after ordinary whitespace
+    # normalization so a harmless reflow cannot break installation.
     missing_by_surface = [
         f"{relative}: {marker}"
         for relative, markers in surface_requirements.items()
         for marker in markers
         if marker not in policy_texts[relative]
+        and " ".join(marker.split())
+        not in " ".join(policy_texts[relative].split())
     ]
     if missing_by_surface:
         raise RuntimeError(
@@ -2699,7 +2613,7 @@ def main() -> int:
         "actual_time_policy=PASS hard_caps=PASS pulse_abort=PASS "
         "preflight_return=PASS campaign_atomic_create=PASS "
         "paper_logic=PASS paper_review_gate=PASS "
-        "reader_html=PASS chx_runtime_ledger=PASS adverse_routing=PASS "
+        "reader_html=PASS chx_runtime_ledger=PASS fixed_review=PASS "
         "research_draft_roles=PASS verification_lifecycle_roles=PASS "
         "verification_registry_identity=PASS "
         "campaign_frontier=PASS chx_public_disclosure=PASS "

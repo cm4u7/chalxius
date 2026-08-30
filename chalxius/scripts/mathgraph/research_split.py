@@ -8,14 +8,21 @@ from .contracts import SHA256_RE, validate_memory_id
 
 RESEARCH_SPLIT_OUTPUT_SHAPE = "research_split_batch"
 RESEARCH_SPLIT_ARTIFACT_ROLE = "research_split_batch"
-RESEARCH_SPLIT_BATCH_REVISION = "chalxius-research-split-batch-1"
-RESEARCH_SPLIT_COMMIT_REVISION = "chalxius-research-split-commit-1"
+RESEARCH_SPLIT_BATCH_REVISION_V1 = "chalxius-research-split-batch-1"
+RESEARCH_SPLIT_BATCH_REVISION = "chalxius-research-split-batch-2"
+RESEARCH_SPLIT_COMMIT_REVISION_V1 = "chalxius-research-split-commit-1"
+RESEARCH_SPLIT_COMMIT_REVISION = "chalxius-research-split-commit-2"
 RESEARCH_SPLIT_MEMBER_REVISION = "chalxius-research-split-member-1"
-RESEARCH_SPLIT_OWNER_REVISION = "chalxius-research-split-owner-1"
+RESEARCH_SPLIT_OWNER_REVISION_V1 = "chalxius-research-split-owner-1"
+RESEARCH_SPLIT_OWNER_REVISION = "chalxius-research-split-owner-2"
 RESEARCH_SPLIT_MAX_MEMBERS = 128
 
 _SURFACE_KEY_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 _CONSTRUCTIVE_OUTCOMES = frozenset({"proof", "evidence", "insight"})
+RESEARCH_SPLIT_RELATION_TYPES = frozenset({"proof_dependency", "context"})
+RESEARCH_SPLIT_RELATION_TARGET_SCOPES = frozenset(
+    {"split_internal", "external_research"}
+)
 
 
 def _text(value: Any, label: str, *, cap: int) -> str:
@@ -55,7 +62,7 @@ def validate_research_split_batch(
     one batch only after every successor Research record has been published.
     """
 
-    required = {
+    base_fields = {
         "schema_version",
         "contract_revision",
         "source_research_id",
@@ -67,13 +74,32 @@ def validate_research_split_batch(
         "completeness_rationale",
         "truth_effect",
     }
-    if not isinstance(value, dict) or set(value) != required:
+    if not isinstance(value, dict):
+        raise ValueError("Research split-batch fields are not exact")
+    revision = value.get("contract_revision")
+    required = (
+        base_fields
+        if revision == RESEARCH_SPLIT_BATCH_REVISION_V1
+        else base_fields
+        | {
+            "internal_relations",
+            "external_relations",
+            "relation_allocation_rationale",
+        }
+        if revision == RESEARCH_SPLIT_BATCH_REVISION
+        else set()
+    )
+    if not required or set(value) != required:
         raise ValueError("Research split-batch fields are not exact")
     source_id = validate_memory_id(value.get("source_research_id"))
     source_sha = value.get("source_record_sha256")
     if (
         value.get("schema_version") != 1
-        or value.get("contract_revision") != RESEARCH_SPLIT_BATCH_REVISION
+        or revision
+        not in {
+            RESEARCH_SPLIT_BATCH_REVISION_V1,
+            RESEARCH_SPLIT_BATCH_REVISION,
+        }
         or value.get("truth_effect") != "none"
         or source_id != source_research.get("research_id")
         or not isinstance(source_sha, str)
@@ -164,9 +190,9 @@ def validate_research_split_batch(
                 "limitations": limitations,
             }
         )
-    return {
+    normalized = {
         "schema_version": 1,
-        "contract_revision": RESEARCH_SPLIT_BATCH_REVISION,
+        "contract_revision": revision,
         "source_research_id": source_id,
         "source_record_sha256": source_sha,
         "shared_assumptions": shared_assumptions,
@@ -176,3 +202,188 @@ def validate_research_split_batch(
         "completeness_rationale": completeness_rationale,
         "truth_effect": "none",
     }
+    if revision == RESEARCH_SPLIT_BATCH_REVISION_V1:
+        return normalized
+
+    relation_allocation_rationale = _text(
+        value["relation_allocation_rationale"],
+        "Research split relation-allocation rationale",
+        cap=16_384,
+    )
+    internal_fields = {
+        "from_surface_key",
+        "to_surface_key",
+        "relation_type",
+        "label",
+        "rationale",
+    }
+    external_fields = {
+        "from_surface_key",
+        "to_research_id",
+        "relation_type",
+        "label",
+        "rationale",
+    }
+    internal_relations: list[dict[str, str]] = []
+    external_relations: list[dict[str, str]] = []
+    seen_relations: set[tuple[str, ...]] = set()
+    raw_internal = value["internal_relations"]
+    raw_external = value["external_relations"]
+    if not isinstance(raw_internal, list) or len(raw_internal) > 512:
+        raise ValueError("Research split internal relations are invalid")
+    if not isinstance(raw_external, list) or len(raw_external) > 512:
+        raise ValueError("Research split external relations are invalid")
+    for index, relation in enumerate(raw_internal, 1):
+        if not isinstance(relation, dict) or set(relation) != internal_fields:
+            raise ValueError(
+                f"Research split internal relation {index} fields are not exact"
+            )
+        from_key = relation["from_surface_key"]
+        to_key = relation["to_surface_key"]
+        relation_type = relation["relation_type"]
+        if (
+            from_key not in surface_keys
+            or to_key not in surface_keys
+            or from_key == to_key
+            or relation_type not in RESEARCH_SPLIT_RELATION_TYPES
+        ):
+            raise ValueError("Research split internal relation is invalid")
+        label = _text(
+            relation["label"], "Research split relation label", cap=512
+        )
+        rationale = _text(
+            relation["rationale"],
+            "Research split relation rationale",
+            cap=8_192,
+        )
+        key = ("surface", from_key, to_key, relation_type, label)
+        if key in seen_relations:
+            raise ValueError("Research split relation is duplicated")
+        seen_relations.add(key)
+        internal_relations.append(
+            {
+                "from_surface_key": from_key,
+                "to_surface_key": to_key,
+                "relation_type": relation_type,
+                "label": label,
+                "rationale": rationale,
+            }
+        )
+    for index, relation in enumerate(raw_external, 1):
+        if not isinstance(relation, dict) or set(relation) != external_fields:
+            raise ValueError(
+                f"Research split external relation {index} fields are not exact"
+            )
+        from_key = relation["from_surface_key"]
+        to_research_id = validate_memory_id(relation["to_research_id"])
+        relation_type = relation["relation_type"]
+        if (
+            from_key not in surface_keys
+            or relation_type not in RESEARCH_SPLIT_RELATION_TYPES
+        ):
+            raise ValueError("Research split external relation is invalid")
+        label = _text(
+            relation["label"], "Research split relation label", cap=512
+        )
+        rationale = _text(
+            relation["rationale"],
+            "Research split relation rationale",
+            cap=8_192,
+        )
+        key = (
+            "research",
+            from_key,
+            to_research_id,
+            relation_type,
+            label,
+        )
+        if key in seen_relations:
+            raise ValueError("Research split relation is duplicated")
+        seen_relations.add(key)
+        external_relations.append(
+            {
+                "from_surface_key": from_key,
+                "to_research_id": to_research_id,
+                "relation_type": relation_type,
+                "label": label,
+                "rationale": rationale,
+            }
+        )
+    normalized["internal_relations"] = internal_relations
+    normalized["external_relations"] = external_relations
+    normalized["relation_allocation_rationale"] = (
+        relation_allocation_rationale
+    )
+    return normalized
+
+
+def validate_resolved_research_split_relations(
+    value: Any,
+    *,
+    member_ids: set[str],
+) -> list[dict[str, str]]:
+    """Validate the worker-declared relation allocation after id resolution.
+
+    These relations are Research navigation data, not certified proof edges.
+    ``proof_dependency`` remains a proposal until a supervisor writes it into
+    a statement interface.  ``context`` remains non-premise navigation data.
+    """
+
+    fields = {
+        "from_research_id",
+        "to_research_id",
+        "relation_type",
+        "target_scope",
+        "label",
+        "rationale",
+    }
+    if not isinstance(value, list) or len(value) > 1024:
+        raise ValueError("Research split resolved relations are invalid")
+    normalized: list[dict[str, str]] = []
+    seen: set[tuple[str, ...]] = set()
+    for index, relation in enumerate(value, 1):
+        if not isinstance(relation, dict) or set(relation) != fields:
+            raise ValueError(
+                f"Research split resolved relation {index} fields are not exact"
+            )
+        from_id = validate_memory_id(relation["from_research_id"])
+        to_id = validate_memory_id(relation["to_research_id"])
+        relation_type = relation["relation_type"]
+        target_scope = relation["target_scope"]
+        if (
+            from_id not in member_ids
+            or relation_type not in RESEARCH_SPLIT_RELATION_TYPES
+            or target_scope not in RESEARCH_SPLIT_RELATION_TARGET_SCOPES
+            or (
+                target_scope == "split_internal"
+                and (to_id not in member_ids or to_id == from_id)
+            )
+            or (
+                target_scope == "external_research"
+                and to_id in member_ids
+            )
+        ):
+            raise ValueError("Research split resolved relation is invalid")
+        label = _text(
+            relation["label"], "Research split relation label", cap=512
+        )
+        rationale = _text(
+            relation["rationale"],
+            "Research split relation rationale",
+            cap=8_192,
+        )
+        key = (from_id, to_id, relation_type, target_scope, label)
+        if key in seen:
+            raise ValueError("Research split resolved relation is duplicated")
+        seen.add(key)
+        normalized.append(
+            {
+                "from_research_id": from_id,
+                "to_research_id": to_id,
+                "relation_type": relation_type,
+                "target_scope": target_scope,
+                "label": label,
+                "rationale": rationale,
+            }
+        )
+    return normalized

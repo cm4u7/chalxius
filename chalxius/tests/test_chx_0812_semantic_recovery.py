@@ -197,13 +197,22 @@ class SemanticRecovery0812Tests(unittest.TestCase):
 
     def test_exact_multihop_cow_completion_projects_to_original_workgroup(self) -> None:
         bases, ids = self._two_hop_chain()
-        root, first_product, first_trigger, _, second_product, second_trigger, terminal, _ = ids
+        (
+            root,
+            first_product,
+            first_trigger,
+            _,
+            second_product,
+            second_trigger,
+            _,
+            terminal_product,
+        ) = ids
         terminals = V5LifecycleManager._frontier_cow_terminal_members(
             seed_members=[root],
             bases=bases,
             route_staleness=self._two_hop_staleness(ids),
         )
-        self.assertEqual(terminals, {root: terminal})
+        self.assertEqual(terminals, {root: terminal_product})
 
         with tempfile.TemporaryDirectory() as temporary:
             store = MathGraphStore(Path(temporary) / "project")
@@ -211,7 +220,7 @@ class SemanticRecovery0812Tests(unittest.TestCase):
             with patch.object(
                 lifecycle,
                 "_validated_completed_research_obligation_statuses",
-                return_value={terminal: "completed_production"},
+                return_value={terminal_product: "completed_production"},
             ):
                 projected = lifecycle._frontier_group_completion(
                     workgroups={"work": [root]},
@@ -248,7 +257,7 @@ class SemanticRecovery0812Tests(unittest.TestCase):
                 bases=bases,
                 route_staleness={},
             ),
-            {root: repair},
+            {root: repair_product},
         )
         root_round = "round-20260101T000001Z-00000001"
         repair_round = "round-20260101T000002Z-00000002"

@@ -17,6 +17,7 @@ from chx_ledger import (
 )
 from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.model import Fact
+from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_assurance import V5_ASSURANCE_CONTRACT_REVISION
 
@@ -807,7 +808,6 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             historical_projection = lifecycle._mode_architecture_signature(
                 research,
                 work_mode="compute",
-                adverse_routing_enabled=False,
                 computation_design_only=True,
             )
             historical_roles = {
@@ -2134,7 +2134,15 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             ]
             assurance = source["metadata"]["failure_informed_assurance"]
             self.assertEqual(assurance["family_ids"], ["proof_boundary_scope"])
-            self.assertIn("claim-scope inflation", source["content"])
+            for retained_rule in (
+                "correct use of internal and external results",
+                "quantifier order and witness dependence",
+                "type, domain, and codomain consistency",
+                "formal compatibility versus existence of a realized object",
+                "empty domains, zero or degenerate objects",
+                "exact partitions",
+            ):
+                self.assertIn(retained_rule, source["content"])
 
             production_prompt = Path(
                 str(planned["assignments"][0]["prompt_path"])
@@ -2157,7 +2165,6 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "Role-specific expansion",
                 "computational_verification_v4.md",
                 "external_theorem_applicability.md",
-                "adverse_routing_evolution.md",
                 "computation_source",
                 "computation_design",
                 "computation_dependencies",
@@ -2216,11 +2223,10 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 "Conditional expansion is local",
                 "computational_verification_v4.md",
                 "external_theorem_applicability.md",
-                "adverse_routing_evolution.md",
                 "--task-card /absolute/path/to/exact-task-card.json",
                 "research_supervision_report",
                 "preflight-return",
-                "Candidate Release, fresh Candidate adverse review",
+                "there is no duplicate Candidate-adverse stage",
                 "First-output checkpoint",
                 "consecutive",
                 "Once the required supervision report exists",
@@ -2314,6 +2320,89 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                 ["proof_logic"],
             )
 
+    def test_self_artifact_source_use_does_not_allocate_source_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            descriptor = {
+                "assignment_id": "a01-000000000001-prove",
+                "work_mode": "prove",
+                "outcome": "proof",
+                "artifact_bindings": [],
+                "has_source_uses": True,
+            }
+            self.assertEqual(
+                lifecycle._applicable_research_supervisor_scopes(
+                    [descriptor],
+                    external_source_use_signals={
+                        descriptor["assignment_id"]: False
+                    },
+                ),
+                ["proof_logic"],
+            )
+            self.assertEqual(
+                lifecycle._applicable_research_supervisor_scopes(
+                    [descriptor],
+                    external_source_use_signals={
+                        descriptor["assignment_id"]: True
+                    },
+                ),
+                ["proof_logic", "source_scope"],
+            )
+
+    def test_current_round_uses_fixed_review_without_dynamic_adverse_state(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            target = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "Check one quantifier-sensitive theorem.",
+                    "logic_signals": ["quantifier_sensitive"],
+                },
+                actor="main",
+            )
+            planned = lifecycle.create_round(
+                workers=1,
+                research_ids=[target["research_id"]],
+                host_task_scope_id="fixed-review-host",
+            )
+            assignment = planned["assignments"][0]
+            card = json.loads(
+                Path(str(assignment["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertNotIn("adverse_routing", card)
+            self.assertNotIn(
+                "adverse_routing_enabled_at_freeze",
+                card["context_selection"]["mode"],
+            )
+            for command in (
+                "attack-route-enable",
+                "attack-route-status",
+                "attack-report",
+                "attack-route-decide",
+                "attack-route-disable",
+            ):
+                self.assertNotIn(command, allowed_commands("main"))
+                self.assertNotIn(command, allowed_commands("operator"))
+            receipt = self._ingest_plain_assignment(
+                store,
+                planned,
+                assignment,
+                outcome="proof",
+            )
+            for retired_field in (
+                "attack_case_id",
+                "route_proposal_id",
+                "program_math_review_research_id",
+            ):
+                self.assertNotIn(retired_field, receipt)
+            self.assertFalse(store.adverse_routes().status()["state_materialized"])
+
     def test_interpretive_proof_boundary_signal_receives_proof_supervisor(
         self,
     ) -> None:
@@ -2361,8 +2450,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             ]["metadata"]["failure_informed_assurance"]
             self.assertEqual(
                 assurance["selection_policy"],
-                "static_role_artifact_outcome_or_frozen_logic_signal_with_"
-                "cross_scope_integration",
+                "scope_owned_fixed_review_focus_with_cross_scope_integration",
             )
 
     def test_main_can_select_proof_scope_for_literature_complete_successor(
@@ -2458,6 +2546,84 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     )
                 ),
                 [],
+            )
+
+    def test_proof_and_source_share_one_advisory_supervisor_session(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "kind": "direction",
+                    "claim": "Prove one theorem using one exact external source.",
+                },
+                actor="main",
+            )
+            production = lifecycle.create_production_round(
+                workers=1,
+                mode="prove",
+                research_ids=[research["research_id"]],
+                host_task_scope_id="dual-scope-production-host",
+            )
+            self._ingest_plain_assignment(
+                store,
+                production,
+                production["assignments"][0],
+                outcome="proof",
+            )
+            supervision = lifecycle.create_supervision_round(
+                production["round_id"],
+                supervisor_scopes=["source_scope", "proof_logic"],
+                host_task_scope_id="dual-scope-supervision-host",
+            )
+            status = lifecycle.round_status(supervision["round_id"])
+            dispatch = status["supervisor_dispatch_advisory"]
+            self.assertFalse(dispatch["automatic_gate"])
+            self.assertEqual(dispatch["decision_owner"], "main")
+            self.assertEqual(dispatch["assignment_count"], 2)
+            self.assertEqual(dispatch["host_slot_count"], 1)
+            self.assertEqual(len(dispatch["session_groups"]), 1)
+            group = dispatch["session_groups"][0]
+            self.assertEqual(
+                group["scope_order"], ["source_scope", "proof_logic"]
+            )
+            self.assertEqual(group["host_slot_count"], 1)
+            self.assertTrue(group["separate_returns_required"])
+            by_scope = {}
+            for assignment in status["assignments"]:
+                plan = lifecycle._research_record(assignment["research_id"])
+                scope = plan["metadata"]["research_supervision"][
+                    "supervisor_scope"
+                ]
+                by_scope[scope] = assignment
+            self.assertEqual(
+                group["member_assignment_ids"],
+                [
+                    by_scope["source_scope"]["assignment_id"],
+                    by_scope["proof_logic"]["assignment_id"],
+                ],
+            )
+            self.assertEqual(
+                by_scope["source_scope"]["supervisor_session_advisory"][
+                    "position"
+                ],
+                1,
+            )
+            self.assertEqual(
+                by_scope["proof_logic"]["supervisor_session_advisory"][
+                    "position"
+                ],
+                2,
+            )
+            self.assertEqual(
+                by_scope["source_scope"]["supervisor_session_advisory"][
+                    "session_id"
+                ],
+                by_scope["proof_logic"]["supervisor_session_advisory"][
+                    "session_id"
+                ],
             )
 
     def test_failure_informed_assurance_tamper_fails_closed(self) -> None:

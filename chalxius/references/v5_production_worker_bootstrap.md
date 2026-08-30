@@ -65,10 +65,11 @@ projection needed to start safely.
   only the exact supervised source and dependencies bound by the card.
 - `interpret`: no broad expansion by default. Load a domain protocol only when
   the card explicitly requires that domain's typed artifact or evidence.
-- Before returning a surviving `counterexample`, a productive `challenge`
-  with non-null `attack_learning`, read `adverse_routing_evolution.md`.
-  Report the concrete failure and its boundary only. Workers never propose
-  persistent route rules; Main alone performs bounded mechanism-level synthesis.
+- A frozen historical card may still contain `adverse_routing`. Read
+  `v5_worker_return_contract.md` and satisfy that card's exact historical
+  return field so the old work remains operable, but treat its rules only as
+  non-exhaustive review hints. Current production has no adverse-learning,
+  proposal, activation, or persistent route-rule step.
 - The compact CHX procedure below is sufficient for normal start and close.
   If architecture causes or materially amplifies a problem, read
   `chx_runtime_ledger.md` completely before recording or repairing it.
@@ -120,11 +121,21 @@ to restate the task card, authority snapshot, source dossier, or predecessor
 list. Reuse one artifact for multiple obligations only when the card permits
 the same canonical role and the artifact genuinely discharges each obligation.
 
-Research output is nontruth. It does not create a Candidate Release,
-Certification Decision, Gateway acceptance, or Fact. A later verifier returns
-review bytes only; Gateway alone owns `certification-record` and Fact admission.
+Research output is nontruth. It does not create or seal a Fact package, decide a
+package, certify Research, or create a Fact. A later verifier returns nontruth
+review bytes only; Gateway alone certifies Research. Candidate Release and
+Certification Decision are procedurally reserved 0.x compatibility, not this
+prospective path.
 
 ## Research repair worker and statement splitting
+
+Statement splitting is an expensive recovery path, not a normal authoring
+strategy. Main should freeze one independently stateable load-bearing claim per
+ordinary production card, and the production worker should keep the returned
+Research node semantically coherent even when its proof has several steps. Do
+not accumulate several theorem strengths, unrelated examples, and open
+obstructions into one top-level claim merely because they were discovered in
+one session.
 
 When the exact source Research is `kind="repair"` or carries a frozen
 `repair_spec`, this production worker is a **Research repair worker**. If the
@@ -136,23 +147,42 @@ assumptions, domains/types, quantifiers, predecessor dependencies, complete
 proof/evidence, and an exact account of which old material is preserved,
 weakened, assigned to a named sibling surface, left open, or abandoned.
 
-The repair worker does not certify the split and does not author the final
-Fact statement interface. Every successor receives fresh ordinary supervision;
-that new supervisor writes its complete interface or returns `needs_split`
-again. A normal assignment returns one Research product. A prospective
+The repair worker does not certify the split and does not author a Fact-package
+interface. Every successor receives a fresh ordinary whole-product supervision
+pass; an author-independent supervisor writes the strong mechanical-path
+interface recommendation or returns `needs_split` again. This is the ordinary
+Research proof/source supervision layer, not a Fact-side split supervisor. The
+packager may later
+accept or replace that recommendation in one frozen nontruth package, after
+which the verifier reviews every exact record/interface/edge and Gateway alone
+certifies. The same supervisor identity
+may be reused when it rereads the complete COW product rather than checking only
+the old defect list. A normal assignment returns one Research product. A prospective
 schema-v3 card with `repair_spec.output_shape="research_split_batch"` is the
 sole exception: the task card binds the exact old Research and split brief, but
 does not predict the number of successors. Read the entire product, choose the
 actual finite membership needed for a complete semantic split, and return one
 `research_split_batch` artifact containing two through 128 coherent members,
 shared assumptions, residual/open material, abandoned material, and a
-completeness rationale. This one return owns the batch; do not create sibling
-assignments, emit a partial batch, or pad membership to an expected count.
+completeness rationale. A current batch also declares the repair worker's
+complete proposed logical allocation: `internal_relations` link one named
+surface to another, `external_relations` link a surface to an exact pre-existing
+Research id, and `relation_allocation_rationale` explains why the allocation is
+complete. Each relation has one rigid type—`proof_dependency` or `context`—plus
+a free label and rationale. Here “from” means “this new surface uses or is
+contextualized by the target”; it does not mean sibling order. Classify the
+actual logical relation rather than connecting all split members mechanically.
+This one return owns the batch; do not create sibling assignments, emit a
+partial batch, or pad membership to an expected count.
 
 Ingestion, not the worker, derives immutable Research ids, stages all members
 plus a single assignment-owner Research record, and commits the batch last.
 Until that commit exists the staged bytes are recovery material only. The
 worker still makes no Fact or supervision decision.
+The relation allocation is likewise nontruth Research navigation data. A fresh
+supervisor reviews all internal and external relations and may add, remove, or
+retype them for the strong mechanical recommendation. The packager owns the
+final nontruth package interface; the verifier still reviews all chosen edges.
 
 ## Computation boundary
 

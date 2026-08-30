@@ -1,4 +1,22 @@
-# Adverse routing evolution and attack reports
+# Historical adverse-routing records and frozen-card recovery
+
+> **Compatibility status.** The dynamic adverse-learning plane described below
+> is retired for prospective work. Current production and supervision use
+> fixed, scope-owned, non-exhaustive review guidance and create no attack cases,
+> proposals, decisions, persistent rules, or host-scope attack reports. The
+> historical material is retained so immutable cards, returns, cases,
+> proposals, decisions, and rules remain inspectable and an explicitly selected
+> frozen 0.x round can finish under its exact byte-bound schema, including
+> appending the historical records that contract required. This is procedurally
+> reserved compatibility, not a read-only claim and not a prospective route.
+> The runtime does not authenticate pre-1.0 provenance; Main policy selects the
+> old path, and no new provenance or identity gate is implied. None of the
+> commands below is a current public CLI surface.
+
+> **Frozen terminology.** Every heading and paragraph below documents the
+> then-current 0.x design. Terms such as “prospective”, “current”, “mandatory”,
+> Candidate, report, activation, and future routing are historical inside that
+> contract and must not be read as 1.0.3 instructions.
 
 ## Contents
 

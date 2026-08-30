@@ -2,10 +2,29 @@
 
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
-> `profile_obligations`. Current V5 cards instead bind the mode event and a
-> prospective assurance contract; the legacy execution profile is not attached
-> automatically. Every mode uses the same V5 Candidate Release, Certification
-> Decision, and Fact gateway.
+> `profile_obligations`. The sentences below describe their then-current V5
+> adaptation; the 1.0.3 override is authoritative for prospective work.
+
+> **1.0.3 Fact Alpha override.** The preceding Candidate sentence describes
+> frozen 0.x authority only. New certification starts from exact immutable
+> Research records, a packager-selected predecessor-closed package, one
+> independent Fact verifier decision, and Gateway Research certification.
+> Proof/source `ready` or `needs_split` is only a strong mechanical-path
+> recommendation. Planning returns a proposal and never seals; the packager may
+> seal a different interface or whole-node route. A requested split pauses Fact
+> work for a Research repair worker and the ordinary proof/source supervision
+> layer; no Fact-side split supervisor exists. Only bounded one-to-one
+> complete-node minor COW uses the historical same-verifier fast lane; split or
+> structural ambiguity returns to ordinary Research. The verifier reviews the
+> complete records/interfaces/edges, and Gateway alone certifies. Candidate
+> Release and Candidate-adverse commands are procedurally reserved for an
+> explicitly selected 0.x completion/audit. The runtime does not authenticate
+> pre-1.0 provenance, and this policy adds no provenance or identity gate.
+
+> **Frozen-history boundary.** Except for the 1.0.3 override immediately above,
+> the remaining protocol is frozen versioned history. Later occurrences of
+> “current”, “prospective”, Candidate, or adverse describe the named older
+> contract and are not instructions for new 1.0.x Fact work.
 
 > **0.8.0 override.** The historical runtime-binding paragraphs in this
 > reference describe older release contracts only. Current agents use graph
@@ -409,9 +428,9 @@ fields. The complete exact-key contract, status enums, evidence-binding rules,
 and a no-adverse template are in
 [v5_worker_return_contract.md](v5_worker_return_contract.md) and
 `assets/worker_return.v5.assurance-no-adverse.template.json`; a worker must not
-infer these shapes from private implementation code. For an
-adverse-routing-bound V5 card it additionally contains exactly
-one `attack_learning` field. A current counterexample requires schema-2
+infer these shapes from private implementation code. For a frozen historical
+adverse-routing-bound V5 card it additionally contains exactly one
+`attack_learning` field. A historical counterexample requires schema-2
 `result_kind=surviving_counterexample`; `evidence`, `insight`, or `challenge`
 may use `result_kind=productive_challenge` only with a concrete load-bearing
 before/after/evidence value effect. Otherwise the field is `null`.
@@ -420,12 +439,13 @@ outcome is `evidence` or `insight`: ingestion records the exact card, worker,
 mode, and assignment independently of Research kind. A later Candidate Release
 must bind and dispose it and exclude that worker from verification, while the
 null learning field creates no attack case or route proposal.
-A reportable attack supplies a typed result and family, target pattern, failure mechanism,
+A historically reportable attack supplies a typed result and family, target pattern, failure mechanism,
 premise and conclusion-failure witnesses, reproduction steps, exact success
 boundary, value effects, and one proposed route with trigger, instruction, false-positive
-guards, and scope. Ingestion may record the case and proposal, but only a later
-operator decision can affect future routing. See
-`adverse_routing_evolution.md` for the exact schema and attack-report procedure.
+guards, and scope. Historical ingestion may record the case and proposal so an
+already frozen round can finish. Prospective planning creates neither field nor
+route rule. See `adverse_routing_evolution.md` only for exact frozen-schema
+recovery.
 
 The delta may add only content-addressed nodes and edges allowed by the task card. Validation must
 finish before merge. A validation error has zero ingestion effect.

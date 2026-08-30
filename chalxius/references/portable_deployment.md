@@ -1,5 +1,44 @@
 # Chalxius portable deployment
 
+## 1.0.3 Research Route Coordination Repair
+
+The `1.0.3` **Research Route Coordination Repair** candidate updates
+nontruth Research coordination rather than project data. It unifies Campaign
+active heads, attached context, sparse landmarks, recent attainment, and rigid
+COW/split navigation. Recent attainment uses context compaction or natural
+curation rather than a four-slot clock; exact working state has a 64-entry
+high-water guard, while routine summaries preview four and retain complete ids,
+count, and digest without silent first-N selection. It gives the fact-packager
+bounded route-selection authority without Fact authority; assigns fixed historical attack abstractions to their
+proper proof/source scopes; retires prospective adverse-learning routes; and
+adds atomic split-relation proposal and whole-batch proof review. Existing
+Research, rounds, task cards, historical adverse records, Candidate authority,
+Certification, Gateway, and Facts are not rewritten. `fact-frontier --target`
+requires `--campaign`; route-needing landmarks rank before certified history,
+and the 256-item display preserves complete identity count/digest.
+
+Local installation remains one manifest-bound atomic cutover. It creates no
+timer, daemon, persistent cache, automatic worker dispatch, automatic frontier
+choice, Fact package, or truth effect. A same-session proof/source review is a
+host-slot reuse preference with separate exact scope records, not a new receipt
+or reviewer-identity gate. A supervisor `ready`/`needs_split` result is the
+strong automatic-path recommendation only. Planning may return
+`mechanical_proposal_ready` with `mechanical_package_proposal` plus digest but
+never seals. The packager seals once, accepting it or choosing an alternative
+interface/whole-node/COW route without changing the Campaign active head; the
+verifier fully reviews all records, interfaces, and edges, and Gateway alone
+certifies.
+If the packager requests an actual split, packaging pauses for a Research
+repair worker and fresh ordinary proof/source supervision of the complete
+committed batch. Deployment creates no Fact-side split supervisor.
+
+## Frozen release-history boundary
+
+All lower version sections are frozen descriptions of their then-current
+contracts. They do not override 1.0.3. Old Candidate commands are procedurally
+reserved for explicitly selected 0.x completion/audit; the runtime does not
+authenticate pre-1.0 provenance and installation adds no identity gate.
+
 ## 1.0.2 Capability Budget Audit Repair
 
 The `1.0.2` **Capability Budget Audit Repair** candidate changes only the
@@ -44,13 +83,18 @@ terminals, certification and reverification state, certified heads, and
 Campaign/Target batch opportunities; it is not a second queue, scheduler, or
 truth authority.
 
-At a natural research window Main freezes selected marks into one bounded plan.
-A packaging agent groups independent components and extracts a semi-formal
-interface whose conclusion remains the exact Research claim. One independent
+At a natural research window Main opens bounded Fact review without enumerating
+the batch. An authorized packaging agent reads sparse landmarks, marks, grants,
+Research/COW lineage, supervision, and interfaces, then freezes a small
+predecessor-closed route; unselected landmarks remain active. The packager
+groups independent components and extracts a semi-formal interface whose
+conclusion remains the exact Research claim. One independent
 verifier checks whole records, rigid certified-predecessor edges, and those
-interfaces; the Gateway accepts only correct components. Minor repairs use a
-complete Research COW and the same verifier, while fundamental failures return
-to ordinary Research. New Research may explicitly bind active certification
+interfaces; the Gateway accepts only correct components. The historical
+fast-supervision promise covers only bounded one-to-one complete-node minor COW
+and a full same-verifier component recheck. Split or structural ambiguity and
+fundamental failures return to a Research repair worker plus ordinary
+proof/source supervision. New Research may explicitly bind active certification
 grants as premises. Legacy Candidate/Certification/Fact bytes remain readable
 under their original authority and are never migrated merely by installation.
 
@@ -843,42 +887,17 @@ original status even if the installed skill changes or it loads some 0.4.1-or-la
 bytes. Do not backfill its ledger, recertify it, mark it noncompliant, invalidate
 its work, or request a redo.
 
-## Produce Attack reports prospectively
+## Historical adverse records
 
-Global installation makes the adverse-routing commands available but does not
-rewrite any project. The standing authorization makes V5 status and zero
-reports available read-only; the first newly frozen refute card lazily
-materializes project-local governance. The compatibility command may do so
-explicitly before planning:
-
-```bash
-"$MGRAPH" --root "$PROJECT" --role operator attack-route-enable \
-  --actor USER --reason "Enable prospective user-governed Attack reports."
-"$MGRAPH" --root "$PROJECT" --role main attack-route-status
-```
-
-Do not materialize it in V1-V4 roots, in the middle of a frozen work unit, or
-merely to modernize an old project. Never backfill attack cases, change an old
+Installation does not activate the retired dynamic adverse-learning family for
+prospective work. An explicitly selected frozen 0.x completion may use its
+procedurally reserved compatibility surface; the runtime does not authenticate
+pre-1.0 provenance. Never backfill attack cases, change an old
 return schema, invalidate prior work, or request a redo. Every previously
-frozen task card remains byte-for-byte under its original contract.
-
-For every host task, produce the separate report even when it has zero
-cases:
-
-```bash
-"$MGRAPH" --root "$PROJECT" --role main attack-report \
-  --host-task-scope-id HOST_TASK_SCOPE_ID
-```
-
-The default report contains at most three selective, family-deduplicated attack
-types with one reviewed ordinary-language sentence saying what each checks,
-its applicability, and its support. It exposes no technical case internals or
-worker-authored instructions. Unknown families remain in `--full` until their
-user-facing explanation is reviewed. Use `--full` only for the complete
-worker-reported nontruth coverage/case audit. Main alone may reject a report or
-synthesize a compact mechanism-level rule; the operator may disable an active
-rule. Decisions affect future task cards only.
-Attack reports never become CHX architecture reports or Fact evidence.
+frozen task card remains byte-for-byte under its original contract, and its
+project-local historical cases, proposals, decisions, and rules remain
+readable. Current supervisors receive fixed scope-owned review guidance through
+their task cards and prompts; no separate attack-report ceremony is required.
 
 ## Initialize and route
 
@@ -920,17 +939,19 @@ for a panel and produce actual plan, ingestion, barrier, trusted dispatch,
 cross-review, and closure evidence for a Pulse. Each valid Pulse contribution
 enters cumulative Research independently; a malformed peer is quarantined
 locally. Estimated cost, duration, burden, and score remain priority/load
-ordering only and never weaken a V5 Candidate Release or Certification
-requirement.
+ordering only and never weaken current Fact-package verification or Gateway
+certification. An explicitly selected 0.x Candidate completion retains its
+frozen requirements.
 
 After canonical ingestion, V5 `profile-closure-status` computes local process
 repair advice from current round, release, decision, and admission state;
 `profile-closure-record` may append that advice to cumulative Research. It does
 not reconstruct or pretend to freeze the V4 profile fields. Neither command is
-required before constructing a verifier capsule, sealing a Candidate Release,
-recording a Certification Decision, or admitting a Fact. Missing source,
-replay, adverse-disposition, atomic-DAG, convention, quantifier, or fresh-
-verifier evidence still fails at its exact V5 gate.
+required before constructing a Fact verifier capsule, sealing a nontruth
+package, recording a verifier decision, or asking Gateway to certify. Missing
+source, replay, dependency-DAG, convention, quantifier, or fresh-verifier
+evidence still fails at its exact current gate. Candidate Release and
+Certification Decision commands remain only the procedurally reserved 0.x path.
 
 The automatic V5 frontier uses the compact four-factor score and projects
 legacy eight-metric Research without rewriting it. It is an ordering aid only,
@@ -1167,8 +1188,8 @@ multi-root federation remains disabled.
 Tell the receiving host to read `SKILL.md`, verify the candidate, choose an
 external project root, start the prospective CHX ledger in that project's
 `chx-ledgers/` directory, select a reasoning
-mode, and report mode event, repair advice, audit state, and
-Candidate Release/Certification/Fact boundary. Close the ledger and apply conditional
+mode, and report mode event, repair advice, audit state, and the
+Fact-package/verifier/Gateway boundary. Close the ledger and apply conditional
 feedback without changing any project status. Installation,
 global replacement, packaging, migration, and cutover each require separate
 explicit authorization. An explicit publication request includes merging the

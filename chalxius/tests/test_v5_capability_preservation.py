@@ -59,6 +59,10 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         campaign_scope = lock["v5_campaign_scope_surface"]
         self.assertEqual(
             campaign_scope["contract_revision"],
+            "chalxius-v5-campaign-scope-2",
+        )
+        self.assertEqual(
+            campaign_scope["legacy_contract_revision"],
             "chalxius-v5-campaign-scope-1",
         )
         self.assertEqual(

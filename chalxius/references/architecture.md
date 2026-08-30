@@ -2,10 +2,18 @@
 
 > **Historical V4 storage reference.** This file preserves the detailed V4
 > object layout and audit vocabulary for read compatibility. It is not the V5
-> authority model. V5 starts with an empty Fact Graph, treats every V1-V4 root
-> as readable nontruth lineage, and uses only `Research -> Candidate Release ->
-> Certification Decision -> Fact`. See `unified_architecture.md` and
-> `admission_contract.md` for current rules.
+> authority model. The current prospective path is `Research -> frozen
+> nontruth Fact package -> independent verifier decision -> Gateway Research
+> certification`. The older Candidate Release / Certification Decision CLI is
+> procedurally reserved for an explicitly selected 0.x completion or audit; the
+> runtime does not authenticate pre-1.0 provenance and no identity gate is
+> implied. A packager-requested split pauses Fact work and returns to a Research
+> repair worker plus ordinary proof/source supervision; no Fact-side split
+> supervisor exists. The historical fast lane is only bounded one-to-one
+> complete-node minor COW with a full same-verifier component recheck; split or
+> structural ambiguity returns to ordinary Research, and Gateway stays
+> independent. See `unified_architecture.md` and `admission_contract.md` for current
+> rules. Everything below remains frozen V4 storage history.
 
 ```text
 hash-bound execution profile -> required: full-width distinct clean-context dispatch

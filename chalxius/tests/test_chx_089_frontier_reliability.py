@@ -225,9 +225,9 @@ class FrontierReliability089Tests(unittest.TestCase):
                 wraps=lifecycle._research_record_envelope,
             ) as envelope_read, patch.object(
                 lifecycle,
-                "_frontier_cow_repair_children_index",
-                wraps=lifecycle._frontier_cow_repair_children_index,
-            ) as cow_index:
+                "_frontier_cow_route_projection",
+                wraps=lifecycle._frontier_cow_route_projection,
+            ) as route_projection:
                 actual = lifecycle.frontier_decision_surface(
                     campaign_id=campaign_id,
                     limit=8,
@@ -241,7 +241,7 @@ class FrontierReliability089Tests(unittest.TestCase):
             self.assertEqual(actual, expected)
             self.assertEqual(repeated, expected)
             self.assertEqual(envelope_read.call_count, entry_count)
-            self.assertEqual(cow_index.call_count, 1)
+            self.assertEqual(route_projection.call_count, 1)
             self.assertGreaterEqual(
                 len(inspection.frontier_completion_statuses), 8
             )

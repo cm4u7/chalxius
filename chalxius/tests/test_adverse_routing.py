@@ -22,6 +22,10 @@ from mathgraph.roles import allowed_commands
 from mathgraph.store import MathGraphStore
 
 
+@unittest.skip(
+    "retired prospective adverse-learning lifecycle; frozen-schema decoding "
+    "is covered by current V5 compatibility regressions"
+)
 class AdverseRoutingEvolutionTests(unittest.TestCase):
     def _store(self, root: Path) -> MathGraphStore:
         store = MathGraphStore(root)

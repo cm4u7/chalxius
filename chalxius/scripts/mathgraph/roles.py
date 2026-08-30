@@ -55,11 +55,6 @@ ALL_COMMANDS = {
     "preflight-return",
     "validate-return",
     "ingest-return",
-    "attack-route-enable",
-    "attack-route-status",
-    "attack-report",
-    "attack-route-decide",
-    "attack-route-disable",
     "plan-repair-round",
     "make-verifier-task",
     "novelty-record",
@@ -154,7 +149,6 @@ ALL_COMMANDS = {
 OPERATOR_COMMANDS = ALL_COMMANDS - {
     "preflight-return",
     "pulse-dispatch",
-    "attack-route-decide",
     "selective-fact-checkpoint",
 }
 
@@ -227,9 +221,6 @@ ROLE_COMMANDS = {
         "profile-closure-record",
         "validate-return",
         "ingest-return",
-        "attack-route-status",
-        "attack-report",
-        "attack-route-decide",
         "plan-repair-round",
         "make-verifier-task",
         "novelty-record",
@@ -320,11 +311,12 @@ ROLE_COMMANDS = {
     # A Fact Alpha verifier may inspect one frozen package and append/check its
     # decision. It cannot package, certify, cross Gateway, or mutate Research.
     "verifier": V5_FACT_VERIFIER_COMMANDS,
-    # A Fact packager may inspect Main's sparse certification frontier and seal
-    # one explicitly frozen plan. It cannot select marks, verify mathematics,
-    # publish a decision, or make a grant visible.
+    # A Fact packager owns bounded route selection from Main's sparse landmarks,
+    # then seals that exact plan. It cannot edit landmarks, verify mathematics,
+    # publish a decision, rewrite Research, or make a grant visible.
     "fact-packager": {
         "fact-frontier",
+        "plan-fact-packaging",
         "fact-package-seal",
     },
     "gateway": {

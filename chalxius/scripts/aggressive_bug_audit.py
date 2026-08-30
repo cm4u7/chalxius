@@ -41,9 +41,6 @@ PAPER_TEST_MODULE = "tests.test_paper_logic_graph.PaperLogicGraphTests"
 CAMPAIGN_TEST_MODULE = (
     "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests"
 )
-ADVERSE_TEST_MODULE = (
-    "tests.test_adverse_routing.AdverseRoutingEvolutionTests"
-)
 RESEARCH_DRAFT_CONTRACT_TEST_MODULE = (
     "tests.test_research_draft_contracts.ResearchDraftContractTests"
 )
@@ -331,12 +328,14 @@ MUTANTS = (
     Mutant(
         name="frontier_cow_repair_continuity_bypassed",
         old=(
-            "            if lineage is None or not cls._frontier_repair_continuity_is_exact(\n"
+            "            continuity_exact = cls._frontier_repair_continuity_is_exact(\n"
             "                repair=repair\n"
-            "            ):\n"
+            "            )\n"
+            "            if not continuity_exact:\n"
         ),
         new=(
-            "            if lineage is None or False:  # mutant: ignore repair continuity\n"
+            "            continuity_exact = True  # mutant: ignore repair continuity\n"
+            "            if not continuity_exact:\n"
         ),
         test=(
             f"{CHX_0812_TEST_MODULE}."
@@ -546,61 +545,6 @@ MUTANTS = (
             "test_scoped_round_freezes_lightweight_nontruth_campaign_envelope"
         ),
         target="mathgraph/cli.py",
-    ),
-    Mutant(
-        name="general_hidden_conjunct_baseline_omitted",
-        old="        baseline = list(BASELINE_ATTACK_RULES)\n",
-        new="        baseline = list(LEGACY_BASELINE_ATTACK_RULES)\n",
-        test=(
-            f"{ADVERSE_TEST_MODULE}."
-            "test_philosophy_baselines_require_an_explicit_validated_domain"
-        ),
-        target="mathgraph/adverse_routing.py",
-    ),
-    Mutant(
-        name="philosophy_baselines_activated_by_claim_keyword",
-        old=(
-            '            "philosophy_active": domain_profile in {"philosophy", "mixed"},\n'
-        ),
-        new=(
-            '            "philosophy_active": domain_profile in {"philosophy", "mixed"} '
-            'or "philosophy" in entry["claim"].casefold(),\n'
-        ),
-        test=(
-            f"{ADVERSE_TEST_MODULE}."
-            "test_philosophy_baselines_require_an_explicit_validated_domain"
-        ),
-        target="mathgraph/adverse_routing.py",
-    ),
-    Mutant(
-        name="philosophy_baselines_not_appended_for_exact_domain",
-        old='        if philosophy_scope["philosophy_active"]:\n',
-        new='        if False and philosophy_scope["philosophy_active"]:\n',
-        test=(
-            f"{ADVERSE_TEST_MODULE}."
-            "test_philosophy_baselines_require_an_explicit_validated_domain"
-        ),
-        target="mathgraph/adverse_routing.py",
-    ),
-    Mutant(
-        name="philosophy_scope_task_card_drift_bypassed",
-        old=(
-            "                if any(\n"
-            "                    scope[key] != expected_philosophy_scope[key]\n"
-            "                    for key in philosophy_scope_fields\n"
-            "                ):\n"
-        ),
-        new=(
-            "                if False and any(\n"
-            "                    scope[key] != expected_philosophy_scope[key]\n"
-            "                    for key in philosophy_scope_fields\n"
-            "                ):\n"
-        ),
-        test=(
-            f"{ADVERSE_TEST_MODULE}."
-            "test_philosophy_baselines_require_an_explicit_validated_domain"
-        ),
-        target="mathgraph/adverse_routing.py",
     ),
     Mutant(
         name="paper_edge_delta_diagnostic_removed",

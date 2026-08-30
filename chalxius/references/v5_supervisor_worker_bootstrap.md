@@ -50,17 +50,19 @@ Load a broader protocol only at one of the conditional branches below.
 
 - For `program_math`, read `computational_verification_v4.md` before judging
   mathematical-to-program projection or an actual computation output.
-- For `source_scope`, read both `external_theorem_applicability.md` and
-  `external_source_reliability.md`. A supervisor in another scope must also read
-  them before introducing any new external theorem, formula, or source as
-  evidence. Existing source bytes are not authority for a new use merely
-  because the production return cited them.
-- Keep `attack_learning=null` by default. Before returning a surviving
-  `counterexample` or a non-null productive-challenge `attack_learning`, read
-  `adverse_routing_evolution.md` and use its exact current failure-report
-  schema. Report concrete evidence and boundaries only; never synthesize a
-  persistent route rule. A concern, clean result, or non-load-bearing
-  suggestion does not qualify.
+- For `source_scope`, read `external_source_reliability.md` and the
+  source-identity/extraction portions of `external_theorem_applicability.md`.
+  Check only external source identity, exact bytes and locators, faithful
+  extraction, the source's literal hypotheses/qualifiers/conventions, and
+  evidence coverage. Whether those extracted results apply correctly in the
+  product is mathematical proof work and belongs to `proof_logic`. A
+  supervisor in another scope must still read the relevant source bytes before
+  introducing a new external theorem, formula, or source as evidence.
+- A frozen historical card may still contain `adverse_routing`. In that case,
+  read `v5_worker_return_contract.md` and satisfy its exact historical return
+  shape so the old work remains operable. Treat every frozen rule as a
+  non-exhaustive historical hint only. Do not synthesize, activate, or propose
+  a persistent route rule; current supervision has no adverse-learning loop.
 - The compact CHX procedure below is sufficient for normal start and close. If
   the worker observes a problem caused or materially amplified by Chalxius
   architecture, read `chx_runtime_ledger.md` completely and record the finding
@@ -137,17 +139,44 @@ do not treat the supervisor Research's own narrower authority snapshot as a
 description of the attacked production route. A missing or hash-drifted closure
 is a capability blocker, not permission to reconstruct it from prose.
 
-Scope meanings are narrow:
+Scope ownership is exact and non-overlapping:
 
-- `proof_logic`: test the asserted inference, hypotheses, quantifiers,
-  boundary cases, typing, and claimed strength;
+- `proof_logic`: own the complete mathematical correctness of the product.
+  Test the exact claimed conclusion and implication directions; all explicit
+  and hidden premises; correct use of every internal and external cited
+  result; object/map/operation types, domains and codomains; quantifier order
+  and witness dependence; route-relative sufficiency versus global necessity,
+  minimality or uniqueness; formal compatibility versus existence of a
+  realized object; local/global, fixed/family, pointwise/uniform,
+  smooth/degenerate and cover/descent transport; exhaustive cases and
+  boundaries, including empty domains, zero or degenerate objects, vacuous
+  cases, endpoints and declared exceptions; circularity; independently
+  falsifiable conjuncts and exact partitions; and exact attribution of new,
+  inherited, repaired and still-open conclusions. For philosophy or mixed
+  work, also test faithful plain-language
+  substitution, burden and strongest-charitable-objection surfaces, and
+  quantifier/modality/operator-scope equivalence. This list is a fixed
+  non-exhaustive prompt, never a defect allowlist;
 - `program_math`: test formula/domain/representation projection, conventions,
-  computation plan or executed bytes, and output interpretation;
-- `source_scope`: test exact locators, source strength, theorem hypotheses,
-  conventions, and transport to the claimed target;
+  computation plan or executed bytes, and output interpretation. A whole-file
+  hash binds identity, not the claimed locator/formula-to-code projection;
+- `source_scope`: test only external source identity, bytes, locators,
+  faithful theorem/formula extraction, complete stated hypotheses,
+  qualifiers and conventions, literal signs, ranges and coordinate phases,
+  and evidence coverage distinct from byte integrity. Do not decide whether
+  the extracted result is correctly applied or transported to the product;
+  that is `proof_logic`;
 - `integration`: test only interfaces shared across the distinct primary scopes
   frozen into the component, including coordinates, conventions, premises, and
   output contracts.
+
+When Main gives one live supervisor both the `source_scope` and `proof_logic`
+cards for the same frozen component, handle them sequentially in that one host
+session: source fidelity first, then complete mathematical use. The cards,
+artifacts, reports, preflights, canonical returns, and ingestion remain exact
+and separate. Do not merge their scope findings into one return or infer that
+completion of the first card completes the second. This is host-slot reuse,
+not a reviewer identity registry, receipt dependency, or additional gate.
 
 Do not widen the assignment into a generic audit, score agents, search for new
 counterexamples to already admitted Facts, or replace the production worker's
@@ -203,16 +232,33 @@ directory and bind its SHA-256 in the return. It must identify:
 - whether later copy-on-write repair is required.
 
 The report is nontruth Research. It does not mutate the attacked artifacts and
-does not itself dispose a later Candidate challenge.
+does not itself select or certify a later Fact package.
 
 After a bounded clean result, the supervisor may additionally write one
 `fact_statement_interfaces` JSON artifact when it can faithfully state the
 complete attacked Research claim and its explicit load-bearing certified
 Research predecessors. This is optional prospective work, not another
-supervision obligation or a condition for a valid return. Omit it rather than
-guess when the product needs statement splitting, has an unresolved defect, or
-the predecessor surface is not explicit. Older products and omitted interfaces
-remain available to a later human/agent packager.
+supervision obligation or a condition for a valid return. It is the strong
+recommendation for an automatic/mechanical package proposal, not final
+Fact-package authority. Omit it rather than guess when the product needs
+statement splitting, has an unresolved defect, or the predecessor surface is
+not explicit. Older products and omitted interfaces remain available to a
+later human/agent packager.
+
+Every proof-logic or source-scope review must also decide whether each attacked
+Research product is one coherent statement surface. Record the result in the
+ordinary report as `coherent`, `needs_split`, or `undetermined`, with reasons.
+This is an expensive backstop: ordinary production should already keep one
+independently stateable load-bearing claim per node. When splitting is needed,
+emit `needs_split` in the interface artifact and make its rationale a combined
+repair brief covering the surface allocation and every proof/source defect
+found in the same review. Main should freeze those exact reports and source
+capabilities into one repair task for one repair worker; the repaired products
+then receive a fresh whole-product supervision pass. This does not require a
+different supervisor identity: the same author-independent supervisor may be
+reused when it reviews all new bytes and all possible defects, rather than only
+checking the earlier findings. Prior findings are mandatory but
+non-exhaustive attack seeds, never the complete review checklist.
 
 The optional file has this exact schema:
 
@@ -240,28 +286,89 @@ The optional file has this exact schema:
 
 Use `disposition="ready"` only with a complete valid `statement_interface`.
 When the supervisor judges that one Research node mixes materially different
-claim strengths or cannot be certified as a whole, use
+claim strengths or is not mechanically ready as a whole, use
 `disposition="needs_split"`, give a precise rationale, and set
-`statement_interface` to `null`. That explicit disposition sends the work back
-to a Research repair worker for split/COW; it is not a Fact rejection. The
+`statement_interface` to `null`. That explicit disposition recommends Research
+split/COW and blocks only the automatic mechanical proposal; it is not a Fact
+rejection or a transfer of package authority. The
 `needs_split` rationale is also the repair brief: identify the separable
 successor claim surfaces, their shared assumptions, intended predecessor
 allocation, and which parts of the old product remain open or are abandoned.
-Do not satisfy this requirement by suggesting a mechanical prose cut. The later packager may
-author an interface for legacy or simply missing artifacts, but it must not
-override an explicit supervisor `needs_split` disposition. After split/COW,
-every new Research product receives fresh ordinary supervision, and those new
-supervisors—not the old packager—author the successor interfaces.
+Do not satisfy this requirement by suggesting a mechanical prose cut. The
+source/proof supervisor owns Research review and automatic-interface advice,
+not the final Fact package. A later `fact-packager` may accept the recommendation
+or, in one frozen nontruth package seal, propose an alternative complete
+six-field interface or whole-node route despite `needs_split`; it may instead
+request Research COW/split. An actual split pauses packaging: a Research repair
+worker produces the complete committed batch and this ordinary proof/source
+supervision layer reviews it before packaging resumes. There is no Fact-side
+split supervisor. The independent Fact verifier must then review the
+complete capsule—every exact Research record, selected node/interface, and all
+dependency edges—regardless of who proposed the interface. Gateway alone
+certifies. After an actual split or ordinary Research COW, every new Research
+product receives a fresh ordinary whole-product supervision pass; its interfaces
+are again mechanical-path recommendations, and the same author-independent
+supervisor identity may be reused. The only exception is the historical bounded
+one-to-one complete-node minor-COW lane, which returns the entire affected
+component to the same Fact verifier. Any split or structural ambiguity is
+ineligible for that exception and stays on the ordinary Research route.
 
 When the frozen attacked receipt is the owner of a committed
 `research_split_batch`, treat the exact committed member set as one whole
 product. Review every successor in that set under the requested scope; do not
 review only the owner summary and do not request one supervisor launch per
 member. The ordinary supervision report must state the disposition of the
-complete batch. The optional `fact_statement_interfaces` artifact, if emitted,
-must contain one exact `ready` or `needs_split` entry for every committed
-successor Research id. Omit the optional artifact if the scope does not support
-a complete interface judgment; never return a partial interface set.
+complete batch. In proof-logic scope, inspect the repair worker's proposed
+relations between split members and from members to external Research, search
+for omitted relations, and decide the complete final relation set. For a
+current proof-logic split review the `fact_statement_interfaces` artifact is
+required, must use contract revision
+`chalxius-supervised-statement-interfaces-2`, and must contain one exact
+`ready` or `needs_split` entry for every committed successor Research id plus
+one `split_relation_reviews` entry for every committed batch. A relation review
+binds the batch id and proposed-relation hash, gives the final complete relation
+set and its hash, and explains completeness. The supervisor may confirm,
+remove, retype, or add relations. For every `ready` member, the targets of the
+final `proof_dependency` relations must equal its
+`certified_predecessor_research_ids`; final `context` relations remain
+navigation only. Never return a partial member set or relation review.
+
+Source scope still decides whether every successor is a coherent statement
+surface, but its relation authority is limited to external-source identity,
+exact extraction, the source's literal hypotheses/qualifiers/conventions, and
+coverage. It checks member-external
+source/context relations within that boundary and reports omissions; it does
+not certify mathematical `proof_dependency` relations. When both scopes apply,
+the same supervisor session should perform source first and proof second, with
+the proof-logic artifact carrying the complete final relation set.
+
+The split relation-review extension has this shape (the ordinary `entries`
+array is unchanged):
+
+```json
+{
+  "schema_version": 1,
+  "contract_revision": "chalxius-supervised-statement-interfaces-2",
+  "entries": ["ONE ENTRY FOR EVERY COMMITTED MEMBER"],
+  "split_relation_reviews": [{
+    "schema_version": 1,
+    "batch_id": "COPY_COMMITTED_BATCH_ID",
+    "proposed_relations_sha256": "COPY_COMMITTED_RELATION_HASH",
+    "final_relations": [{
+      "from_research_id": "MEMBER_USING_THE_TARGET",
+      "to_research_id": "MEMBER_OR_EXTERNAL_RESEARCH_TARGET",
+      "relation_type": "proof_dependency",
+      "target_scope": "split_internal",
+      "label": "FREE_CONCISE_RELATION_LABEL",
+      "rationale": "WHY THIS EXACT LOGICAL RELATION HOLDS"
+    }],
+    "final_relations_sha256": "SHA256_OF_FINAL_RELATIONS",
+    "completeness_rationale": "WHY NO INTERNAL OR EXTERNAL RELATION WAS OMITTED",
+    "truth_effect": "none"
+  }],
+  "truth_effect": "none"
+}
+```
 
 The mathematical interface contains no file paths or evidence hashes. Evidence
 locators remain the attacked Research record's exact `metadata.artifacts`
@@ -272,9 +379,9 @@ in an obligation witness unless a future card explicitly makes it required.
 
 ## Exact return
 
-Use exactly the following top-level keys. Add `attack_learning` if and only if
-the card contains `adverse_routing`; for current supervisor cards it is normally
-present and normally `null`.
+Use exactly the following top-level keys for a current supervisor card. A
+historical card containing `adverse_routing` follows the exact additional
+field specified by `v5_worker_return_contract.md`; current cards never add it.
 
 ```json
 {
@@ -314,8 +421,7 @@ present and normally `null`.
     "contour_substitutions": [],
     "claimed_structures": [],
     "program_math_alignments": []
-  },
-  "attack_learning": null
+  }
 }
 ```
 
@@ -327,8 +433,8 @@ obligation and no others. Status is `complete`, `blocked`, or
 `not_applicable`; the last is allowed only when the card says so. Every witness
 must be a declared artifact hash, and each complete obligation must cite every
 required artifact role. `outcome` is one value allowed by the card. Use
-`counterexample` only for a surviving falsification satisfying the full attack
-learning contract; use `challenge` for a concrete bounded defect, and
+`counterexample` only for a surviving falsification supported by the complete
+scope report; use `challenge` for a concrete bounded defect, and
 `evidence` or `insight` for a clean bounded result. All four narrative values
 are strings of at most 400 words.
 
@@ -372,7 +478,8 @@ and follows the ordinary local-quarantine path.
 Close worker CHX, then hand off exactly `assignment_id` and `status`. The legacy
 `return_sha256` field is optional; Main derives the canonical hash during
 ingestion and treats a supplied value only as an equality assertion. Ingestion creates cumulative
-nontruth Research only. Candidate Release, fresh Candidate adverse review, and
-later truth stages remain distinct; a fresh verifier returns review bytes,
-while Gateway owns
-`certification-record` and the later Fact admission.
+nontruth Research only. For prospective Fact Alpha work, the independent Fact
+verifier reviews the later frozen Research package and Gateway alone certifies
+exact Research records; there is no duplicate Candidate-adverse stage. Frozen
+0.x Candidate routes retain their historical Release/adverse/verifier/Gateway
+contracts without governing new certification.

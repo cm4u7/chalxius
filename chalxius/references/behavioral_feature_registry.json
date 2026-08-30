@@ -35,7 +35,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Routine Campaign frontier bounds the complete nested goal projection and carries up to sixteen Main-selected active heads through legacy checkpoint read, current state, plan-round, reconcile, and compact mathematical/action projection while retaining exact total counts, digests, projected ids, and scopes.",
+      "summary": "Routine Campaign frontier bounds the complete nested goal projection and carries up to sixteen Main-selected active heads through legacy checkpoint read, current state, plan-round, reconcile, and compact mathematical/action projection. Sparse historical landmarks have no count quota and grow with the Research graph; routine output previews eight with exact total count and identity digest while diagnostic state retains every id and reason.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage",
       "activation_predicate": {
@@ -51,7 +51,7 @@
       "observable_effect": {
         "effect_id": "routine_frontier_bounds_goals_and_deduplicates_head_representation",
         "kind": "routing",
-        "description": "Routine output stops at the requested goal limit and keeps every one of up to sixteen Main-selected heads, each with a decision-useful mathematical claim, scope, current-route Research id, next action, and exact actionable Research/round id, without repeating forensic route, terminal, evidence, hash, empty-field, or synonymous-state detail; diagnostic output remains complete."
+        "description": "Routine output stops at the requested goal limit and keeps every one of up to sixteen Main-selected heads, each with a decision-useful mathematical claim, scope, current-route Research id, next action, and exact actionable Research/round id. It previews at most eight sparse landmarks while carrying their exact total count and identity digest; diagnostic output retains the complete unbounded landmark id/reason set without repeating forensic route, terminal, evidence, hash, empty-field, or synonymous-state detail."
       },
       "probes": {
         "positive": "tests.test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests.test_sixteen_heads_survive_checkpoint_reconcile_and_plan_projection",
@@ -144,32 +144,14 @@
       }
     },
     "feature.paper_continuation_release_capsule": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "A continuation-descended Candidate Release must consume one content-addressed scoped capsule and reuse its bounded currentness proof at the verifier boundary.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "producer_symbol": "mathgraph.paper_continuation.prepare_candidate_continuation_release_capsule",
-      "activation_predicate": {
-        "predicate_id": "candidate_research_descends_from_one_continuation_plan",
-        "domain": ["one_continuation_plan", "no_continuation_plan", "mixed_plans"],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-paper-continuation-release-capsule-1",
-        "validator_symbol": "mathgraph.paper_continuation.validate_candidate_continuation_release_capsule"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._require_current_paper_continuation_release",
-      "observable_effect": {
-        "effect_id": "scoped_continuation_capsule_visible_to_fresh_verifier",
-        "kind": "validation_gate",
-        "description": "Candidate and verifier capsules expose the exact status generation, Paper closure, artifacts, dispositions, and changed Fact interfaces without replaying the full continuation history."
-      },
-      "probes": {
-        "positive": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_continuation_release_capsule_normal_flow",
-        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_nodewise_release_binds_current_logic_audit_and_coverage",
-        "tamper": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_continuation_release_capsule_tamper_fails_closed"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "A continuation-descended frozen 0.x Candidate Release retains its content-addressed scoped Paper capsule and bounded currentness proof.",
+      "boundary_reason": "This is an explicitly selected historical Candidate completion gate, not the prospective Fact Alpha package or verifier route, and it grants no new provenance or identity authority.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "boundary_probe": "tests.test_v5_lifecycle.V5LifecycleTests.test_paper_continuation_release_capsule_normal_flow"
     },
     "feature.native_successor_topology": {
       "classification": "normal_flow",
@@ -459,13 +441,13 @@
       "summary": "Historical direct-allocation cards may retain exact paired adverse worker/context bindings, but prospective public production never creates them.",
       "boundary_reason": "Frozen direct-allocation history must remain readable without reactivating paired adverse dispatch in the prospective public Research cycle.",
       "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
-      "boundary_probe": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_philosophy_primary_gets_distinct_rule_bound_adverse_pair"
+      "boundary_probe": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_current_philosophy_production_does_not_allocate_adverse_pair"
     },
     "feature.production_supervision_refute_boundary": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Prospective public production is constructive-only; formal Research refute work begins in the supervision subround and Candidate adverse review remains later.",
+      "summary": "Prospective public production is constructive-only; formal Research refute work begins in the ordinary supervision subround, while Candidate-adverse review is procedurally reserved historical compatibility rather than a later current stage.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_production_round",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
       "activation_predicate": {
@@ -484,73 +466,30 @@
         "description": "The production manifest contains no refute assignment or adverse pair; admitted Facts remain frozen premises unless exact conflict evidence is separately escalated."
       },
       "probes": {
-        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_plan_round_keeps_refute_out_of_production",
+        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_plan_round_keeps_refute_out_and_report_cli_retired",
         "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_legacy_round_is_not_backfilled",
         "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_production_rejects_explicit_or_auto_refute"
       }
     },
     "feature.candidate_fresh_adverse_readiness": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "An explicitly selected marked constructive Candidate head must fail cheaply unless one later independent ingested refute binds its exact canonical Candidate Fact bytes and disposition; historical ancestry does not create a new target.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._fresh_adverse_readiness",
-      "activation_predicate": {
-        "predicate_id": "maximal_explicitly_selected_research_head_requires_independent_adverse",
-        "domain": ["required_and_ready", "required_and_missing", "predicate_false", "candidate_bytes_changed"],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-candidate-fresh-adverse-readiness-2",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_fresh_adverse_readiness"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.release",
-      "observable_effect": {
-        "effect_id": "fresh_adverse_fails_before_release_cost",
-        "kind": "validation_gate",
-        "description": "Missing, stale, aborted, inherited, or differently hashed adverse work exits before artifact normalization, source audit, capsule construction, or seal."
-      },
-      "probes": {
-        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_accepts_only_exact_candidate_bound_refute",
-        "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_release_decision_and_gateway_admit_one_exact_fact",
-        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_fails_before_expensive_work_without_fresh_adverse"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "For frozen 0.x Candidate completion only, an explicitly selected marked constructive Candidate head fails cheaply unless one later independent ingested refute binds its exact canonical Candidate Fact bytes and disposition; Fact Alpha does not enter this route.",
+      "boundary_reason": "The check may finish an explicitly selected historical Candidate route but is never a prospective Research, package, verifier, Gateway, or Fact prerequisite.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "boundary_probe": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_release_accepts_only_exact_candidate_bound_refute"
     },
     "feature.candidate_preflight_work_elimination": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Candidate-local assurance shape and exact current-assurance statement-interface errors fail before global Research replay, and supervision history is loaded only after production provenance is established, without replacing authoritative validation.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._precheck_candidate_statement_interfaces",
-      "activation_predicate": {
-        "predicate_id": "candidate_local_shape_interface_or_production_supervision_lookup_required",
-        "domain": [
-          "locally_valid_shape",
-          "locally_invalid_shape",
-          "locally_invalid_statement_interface",
-          "language_neutral_typed_interface",
-          "production_supervision_required",
-          "manual_or_historical_research"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-candidate-preflight-work-elimination-2",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_requested_assurance"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "observable_effect": {
-        "effect_id": "candidate_local_failure_precedes_global_replay",
-        "kind": "validation_gate",
-        "description": "A locally malformed Candidate or current-assurance statement interface fails from submitted bytes and immutable selected Research envelopes before full Research replay; valid inputs still reach the complete assurance, supervision, source, adverse, seal, verifier, Certification, Gateway, and Fact gates."
-      },
-      "probes": {
-        "positive": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_language_neutral_interface_passes_early_projection",
-        "predicate_false": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_missing_premise_anchor_fails_before_full_research_replay",
-        "tamper": "tests.test_v5_lifecycle.V5LifecycleTests.test_candidate_release_cannot_hide_linked_existing_adverse_work"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Frozen 0.x Candidate completion retains its local assurance-shape and statement-interface precheck before expensive historical replay.",
+      "boundary_reason": "The optimization is bounded to the procedurally reserved Candidate route and cannot replace full historical validation or become a prospective Fact Alpha authority gate.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "boundary_probe": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_language_neutral_interface_passes_early_projection"
     },
     "feature.reentrant_active_fact_validation_projection": {
       "classification": "normal_flow",
@@ -585,68 +524,24 @@
       }
     },
     "feature.selective_fact_admission_checkpoint": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Main may freeze a bounded explicit load-bearing Research selection and deterministic dependency-closed Candidate authoring batches before expensive Candidate construction, without ranking, atomizing, or truth effect.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.selective_fact_checkpoint",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._selected_dependency_edges",
-      "activation_predicate": {
-        "predicate_id": "main_requests_selective_fact_admission_checkpoint",
-        "domain": [
-          "explicit_targets_ready",
-          "explicit_targets_blocked",
-          "invalid_or_oversize_selection"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-selective-fact-checkpoint-2",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_selective_fact_checkpoint_record"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.selective_fact_checkpoint",
-      "observable_effect": {
-        "effect_id": "content_addressed_selective_candidate_seed_visible",
-        "kind": "state_transition",
-        "description": "A checkpoint records exact selected ancestry and dependency edges, propagates selected-premise blockers, emits disjoint dependency-closed authoring batches, requires one semantic conclusion per later Fact plus exact Candidate-DAG closure, and creates no Candidate, Decision, admission, or Fact."
-      },
-      "probes": {
-        "positive": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_checkpoint_is_main_owned_idempotent_and_nonauthorizing",
-        "predicate_false": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_checkpoint_reports_stale_target_and_keeps_main_selection_explicit",
-        "tamper": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_atomization_closes_selected_dependencies_and_propagates_blockers"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Main may freeze a bounded explicit load-bearing Research selection and dependency-closed authoring batches only for an explicitly selected frozen 0.x Candidate completion or audit.",
+      "boundary_reason": "The checkpoint is nonauthorizing historical compatibility: it creates no prospective package, verifier decision, Gateway certification, or Fact and installs no provenance gate.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.selective_fact_checkpoint",
+      "boundary_probe": "tests.test_selective_fact_checkpoint.SelectiveFactCheckpointTests.test_checkpoint_is_main_owned_idempotent_and_nonauthorizing"
     },
     "feature.candidate_fact_prepackaging_atomicity": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Prospective Candidate Facts and new candidate_fact worker artifacts fail before expensive replay or ingestion unless they are canonical and expose one semantic conclusion.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_fact_fingerprints_for_adverse",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._canonical_atomic_candidate_fact_bytes",
-      "activation_predicate": {
-        "predicate_id": "prospective_candidate_fact_enters_authoring_or_candidate_preflight",
-        "domain": [
-          "one_semantic_conclusion",
-          "multiple_semantic_conclusions",
-          "noncanonical_candidate_fact_artifact"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-candidate-fact-prepackaging-atomicity-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._canonical_atomic_candidate_fact_bytes"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_fact_fingerprints_for_adverse",
-      "observable_effect": {
-        "effect_id": "non_atomic_candidate_rejected_before_research_replay",
-        "kind": "validation_gate",
-        "description": "One-conclusion Candidate bytes continue to ordinary gates; separable conclusions or noncanonical worker bytes fail before global Research replay, packaging, verifier work, or truth effect."
-      },
-      "probes": {
-        "positive": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_single_claim_canonical_candidate_artifact_passes",
-        "predicate_false": "tests.test_candidate_preflight_work_elimination.CandidatePreflightWorkEliminationTests.test_explicit_semantic_interface_keeps_one_conclusion_with_premise_clause",
-        "tamper": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_multi_claim_candidate_artifact_fails_worker_preflight"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Frozen 0.x Candidate Fact artifacts retain canonical one-semantic-conclusion preflight before historical replay or ingestion.",
+      "boundary_reason": "The Candidate artifact check is a bounded old-route guard, not a prospective Fact Alpha package atomizer or authority transfer.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_fact_fingerprints_for_adverse",
+      "boundary_probe": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_single_claim_canonical_candidate_artifact_passes"
     },
     "feature.exact_repair_spec_transport": {
       "classification": "normal_flow",
@@ -681,124 +576,104 @@
       }
     },
     "feature.prospective_candidate_adverse_planner": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Main can plan one exact Candidate-bound adverse refute without reopening constructive production or bypassing later admission gates.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_round",
-      "activation_predicate": {
-        "predicate_id": "main_requests_exact_candidate_bound_adverse_review",
-        "domain": [
-          "active_exact_candidate_target",
-          "ordinary_or_stale_or_scope_drift_target"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-candidate-adverse-round-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._round_manifest"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
-      "observable_effect": {
-        "effect_id": "exact_candidate_bound_refute_round_visible",
-        "kind": "routing",
-        "description": "One active non-stale target with one exact candidate_fact binding and an adverse marker creates or reuses one host-scope-bound ordinary refute round with no truth effect; a validated aborted round is excluded before old round or task-card reconstruction."
-      },
-      "probes": {
-        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_candidate_adverse_planner_is_exact_and_idempotent",
-        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_plan_round_keeps_refute_out_of_production",
-        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_candidate_adverse_retry_skips_aborted_pre_cutover_card"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "For an already frozen 0.x Candidate route only, Main can complete one exact Candidate-bound adverse refute without reopening constructive production or bypassing its historical later admission gates; new Fact Alpha work does not use this planner.",
+      "boundary_reason": "Despite its historical feature id, this planner is not prospective normal flow; it is a procedurally reserved old-schema completion surface with no Fact Alpha effect.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
+      "boundary_probe": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_public_candidate_adverse_planner_is_exact_and_idempotent"
     },
     "feature.bounded_candidate_adverse_handoff": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Main selects one load-bearing Research head and one canonical Candidate Fact regardless of author provenance; every applicable completed supervision result is bound and the refute card selects a dedicated compact bootstrap.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.prepare_candidate_adverse_target",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.add_research",
-      "activation_predicate": {
-        "predicate_id": "main_selects_canonical_candidate_fact_with_applicable_live_research_supervision",
-        "domain": [
-          "exact_main_selected_research_and_candidate_fact",
-          "manual_research_with_zero_applicable_supervision",
-          "production_research_with_all_applicable_supervision",
-          "missing_stale_or_noncanonical_input"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-candidate-adverse-target-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_candidate_fact_artifact_bytes"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.plan_candidate_adverse_round",
-      "observable_effect": {
-        "effect_id": "one_command_main_selected_candidate_target_and_compact_refute_route",
-        "kind": "routing",
-        "description": "One content-addressed nontruth synthesis binds the Main-selected canonical Candidate Fact and every applicable completed supervision result without treating worker authorship as capability; its refute prompt selects the Candidate-adverse bootstrap and never the production bootstrap."
-      },
-      "probes": {
-        "positive": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_prepare_candidate_adverse_target_is_one_main_command",
-        "predicate_false": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_candidate_adverse_prompt_uses_dedicated_bootstrap",
-        "tamper": "tests.test_candidate_fact_role_gate.CandidateFactRoleGateTests.test_multi_claim_candidate_artifact_fails_worker_preflight"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "For an already frozen 0.x Candidate route only, Main selects its load-bearing Research head and canonical Candidate Fact regardless of author provenance; every applicable completed supervision result is bound and the historical refute card selects its compact bootstrap.",
+      "boundary_reason": "The handoff remains byte-compatible for explicit historical completion and does not install a pre-1.0 provenance check, prospective adverse stage, or current package authority.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.prepare_candidate_adverse_target",
+      "boundary_probe": "tests.test_chx_0714_bounded_handoff.BoundedHandoff0714Tests.test_prepare_candidate_adverse_target_is_one_main_command"
     },
     "feature.host_scope_attack_coverage": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "Every completed host task must expose a scope-complete attack report, including an explicit zero report.",
-      "production_entry_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.report",
-      "producer_symbol": "mathgraph.adverse_routing.validate_host_scope_attack_report",
-      "activation_predicate": {
-        "predicate_id": "host_task_completion_reached",
-        "domain": ["completion_reached", "task_still_running"],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-host-scope-attack-report-1",
-        "validator_symbol": "mathgraph.adverse_routing.validate_host_scope_attack_report"
-      },
-      "consumer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.report",
-      "observable_effect": {
-        "effect_id": "host_scope_attack_report_visible",
-        "kind": "bounded_output",
-        "description": "Host completion status exposes covered cases, pending proposals, and zero/nonzero report state for the exact scope."
-      },
-      "probes": {
-        "positive": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_zero_attack_report_requires_complete_pair_return",
-        "predicate_false": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_predicate_false_is_explicitly_not_required",
-        "tamper": "tests.test_independent_adverse_normal_flow.IndependentAdverseNormalFlowTests.test_attack_report_tamper_is_rejected_after_hash_recomputation"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Procedurally reserved 0.x host-scope report compatibility; prospective work has no report or zero-report ceremony and the runtime does not authenticate pre-1.0 provenance.",
+      "replacement_feature_id": "",
+      "boundary_reason": "An explicitly selected frozen 0.x completion may read or append its exact historical report schema; this surface never routes current supervision or grants package, verifier, Gateway, or Fact authority.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.report",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_default_reporting_preserves_a_legacy_frozen_round_without_backfill"
     },
     "feature.concise_attack_route_recommendations": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "The default Main-facing attack report exposes at most three family-deduplicated concrete worker failure families; workers provide no persistent route text and technical case detail remains behind --full.",
-      "production_entry_symbol": "mathgraph.cli.main",
-      "producer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
-      "activation_predicate": {
-        "predicate_id": "selective_pending_worker_failure_reports_exist",
-        "domain": ["recommendations_present", "zero_or_filtered", "more_than_three", "duplicate_family"],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-main-route-synthesis-queue-3",
-        "validator_symbol": "mathgraph.adverse_routing.validate_attack_route_recommendation_report"
-      },
-      "consumer_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
-      "observable_effect": {
-        "effect_id": "sparse_main_route_synthesis_surface",
-        "kind": "bounded_output",
-        "description": "Main sees concrete failures and boundaries, then may reject or synthesize one compact mechanism-level future rule; worker text is never activated."
-      },
-      "probes": {
-        "positive": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_counterexample_creates_case_proposal_and_separate_attack_report",
-        "predicate_false": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_reject_keeps_route_unchanged_and_zero_report_is_still_explicit",
-        "tamper": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_concise_report_deduplicates_attack_families"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Procedurally reserved 0.x recommendation-report compatibility; current supervisors use fixed scope-owned review guidance and create no proposal queue or route rule.",
+      "replacement_feature_id": "",
+      "boundary_reason": "Frozen 0.x records remain inspectable and explicitly selected completion may finish its old schema, but the output is inert nontruth and never controls prospective routing.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.recommendation_report",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_concise_report_deduplicates_attack_families"
+    },
+    "feature.historical_adverse_initialization": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Procedurally reserved initialization of an explicitly selected frozen 0.x adverse store; never prospective activation.",
+      "replacement_feature_id": "",
+      "boundary_reason": "The runtime does not authenticate pre-1.0 provenance; Main policy selects historical completion and no identity gate or current route is introduced.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.initialize",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_default_reporting_preserves_a_legacy_frozen_round_without_backfill"
+    },
+    "feature.historical_adverse_counterexample_capture": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Exact old-schema counterexample capture for explicitly selected frozen 0.x completion only.",
+      "replacement_feature_id": "",
+      "boundary_reason": "Historical completion may append its required immutable case records; prospective supervision creates no cases, proposals, reports, or rules.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.capture_counterexample",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_counterexample_creates_case_proposal_and_separate_attack_report"
+    },
+    "feature.historical_adverse_attack_capture": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Exact old-schema attack capture for explicitly selected frozen 0.x completion only.",
+      "replacement_feature_id": "",
+      "boundary_reason": "This retained writer is bounded historical recovery, not a prospective learning plane or current Fact gate.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.capture_attack",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_productive_challenge_creates_a_pending_rule_suggestion_without_refutation"
+    },
+    "feature.historical_adverse_decision": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Exact old-schema Main decision for explicitly selected frozen 0.x completion only.",
+      "replacement_feature_id": "",
+      "boundary_reason": "Historical decisions remain inert for prospective planning and have no package, verifier, Gateway, or Fact effect.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.decide",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_main_alone_decides_routes"
+    },
+    "feature.historical_adverse_disablement": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Exact old-schema route disablement for explicitly selected frozen 0.x completion only.",
+      "replacement_feature_id": "",
+      "boundary_reason": "The mutation affects only the frozen historical contract and never current task-card routing.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.disable",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_main_synthesis_and_disablement_are_future_only"
+    },
+    "feature.historical_adverse_task_card_binding": {
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "required": false,
+      "summary": "Exact reading of an old adverse binding on an explicitly selected frozen 0.x card.",
+      "replacement_feature_id": "",
+      "boundary_reason": "The binding preserves byte compatibility only; prospective cards receive fixed scope-owned guidance and no dynamic routing state.",
+      "guard_symbol": "mathgraph.adverse_routing.AdverseRoutingManager.task_card_binding",
+      "boundary_probe": "tests.test_adverse_routing.AdverseRoutingEvolutionTests.test_schema_three_frozen_baseline_remains_valid_without_backfill"
     },
     "feature.production_research_obligation_closure": {
       "classification": "normal_flow",
@@ -888,7 +763,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Prospective Research freezes first-subround logical components and sends sparse scoped supervisors over one exact completed component before Candidate construction, with component-bound cycle-safe full outer validation and lock-held same-host retry.",
+      "summary": "Prospective Research freezes first-subround logical components and sends sparse scoped supervisors over one exact completed component before mechanical Fact-package advice, with component-bound cycle-safe full outer validation and lock-held same-host retry; the old Candidate gate is historical compatibility.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_supervision_round",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._source_round_receipt_descriptors",
       "activation_predicate": {
@@ -944,7 +819,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "A current machine-bound second-subround supervisor starts from one compact versioned contract and loads broad source, computation, attack-learning, or CHX-repair protocols only when the exact scope or observed event makes them applicable.",
+      "summary": "A current machine-bound second-subround supervisor starts from one compact versioned contract and loads broad source, computation, fixed scope-owned attack guidance, or CHX-repair protocols only when the exact scope or observed event makes them applicable.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._create_round_impl",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._compact_prompt",
       "activation_predicate": {
@@ -969,42 +844,20 @@
       }
     },
     "feature.research_supervision_candidate_gate": {
-      "classification": "normal_flow",
-      "lifecycle_decision": "retain_and_integrate",
-      "required": true,
-      "summary": "A prospective constructive Research result cannot enter expensive Candidate work until every deterministic component supervisor has one live completed ingested result; Candidate sealing rechecks the exact set under its mutation lock, and review records cannot replace the constructive anchor.",
-      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._required_supervision_results_for_candidate",
-      "activation_predicate": {
-        "predicate_id": "selected_constructive_result_has_two_subround_production_provenance",
-        "domain": [
-          "complete_ingested_supervision",
-          "pending_or_missing_supervision",
-          "review_only_anchor"
-        ],
-        "conditional": true
-      },
-      "typed_handoff": {
-        "type_id": "chalxius-v5-research-supervision-candidate-gate-1",
-        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._required_supervision_results_for_candidate"
-      },
-      "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
-      "observable_effect": {
-        "effect_id": "completed_supervisor_results_bound_before_candidate_expense",
-        "kind": "validation_gate",
-        "description": "Missing, pending, duplicate, aborted, wrong-component, or wrong-revision review fails before Candidate expense; the one valid result per scope is automatically included in the release closure and its liveness is rechecked under the seal lock."
-      },
-      "probes": {
-        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result",
-        "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_waits_for_completed_ingested_supervision",
-        "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_seal_rechecks_live_supervision_under_lock"
-      }
+      "classification": "compatibility",
+      "lifecycle_decision": "retain_bounded",
+      "replacement_feature_id": "",
+      "required": false,
+      "summary": "Frozen 0.x Candidate completion retains its exact completed-supervision prerequisite and lock-held liveness recheck.",
+      "boundary_reason": "This gate is bounded to an explicitly selected historical Candidate route; prospective Fact Alpha uses supervisor advice, a packager-selected package, a full verifier recheck, and Gateway certification instead.",
+      "guard_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.candidate_release",
+      "boundary_probe": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_candidate_gate_binds_completed_supervision_result"
     },
     "feature.typed_supervision_scope_coverage": {
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Candidate enforcement and Main's frontier share one exact per-component, per-scope supervision coverage projection while retaining their separate authority and advisory roles.",
+      "summary": "Main's prospective frontier exposes one exact per-component, per-scope Research supervision coverage projection; the old Candidate gate may read the same primitive only inside its bounded historical route.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._candidate_supervision_scope_coverage",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._supervision_scope_coverage_state",
       "activation_predicate": {
@@ -1023,9 +876,9 @@
       },
       "consumer_symbol": "mathgraph.frontier_actions._ActionProjector.research",
       "observable_effect": {
-        "effect_id": "exact_scope_state_visible_without_candidate_gate_weakening",
+        "effect_id": "exact_scope_state_visible_with_historical_candidate_reuse_bounded",
         "kind": "routing",
-        "description": "Frontier names completed, missing, pending, conflicting, and unsafe scopes with exact ids; only malformed or inaccessible graph bytes are lineage-unreadable, while Candidate still requires one completed ingested result per applicable scope."
+        "description": "Frontier names completed, missing, pending, conflicting, and unsafe scopes with exact ids; only malformed or inaccessible graph bytes are lineage-unreadable, and reuse by the procedurally reserved Candidate route does not make Candidate a prospective stage."
       },
       "probes": {
         "positive": "tests.test_chx_090_frontier_active_fix.FrontierActiveFix090Tests.test_partial_supervision_projects_exact_missing_scope",
@@ -1342,7 +1195,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Prospective Fact authority certifies exact whole Research records in bounded multi-record packages while Main's importance frontier, COW reverification, and certified heads remain live derived projections over the one Research graph.",
+      "summary": "Prospective Fact authority certifies exact whole Research records in packager-selected bounded packages; direct routes freeze exact Main anchors and package-edge connectivity, a requested split returns to ordinary Research repair/supervision, the historical fast lane is bounded one-to-one minor COW only, and Gateway remains the sole certification switch.",
       "production_entry_symbol": "mathgraph.fact_alpha.FactAlphaManager.certify",
       "producer_symbol": "mathgraph.fact_alpha.FactAlphaManager._grant_projection",
       "activation_predicate": {
@@ -1363,7 +1216,7 @@
       "observable_effect": {
         "effect_id": "exact_research_record_receives_component_isolated_fact_certification",
         "kind": "state_transition",
-        "description": "A Gateway acceptance makes only independently verified correct package components visible as exact Research certification grants; staged grants, failed sibling components, descriptive relation prose, and self-consistent cross-record rewrites confer no authority."
+        "description": "A Gateway acceptance makes only independently verified correct package components visible as exact Research certification grants; a split has no separate Fact-side supervisor, the verifier cannot certify, and staged grants, failed sibling components, descriptive relation prose, or self-consistent cross-record rewrites confer no authority."
       },
       "probes": {
         "positive": "tests.test_fact_alpha.FactAlphaTests.test_single_research_graph_node_receives_fact_overlay",
