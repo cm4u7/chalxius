@@ -38,9 +38,12 @@ searchable history but removes it from live COW and frontier routing. Published
 repair products still project normally. This is a read-time working-memory
 projection, not a new lifecycle state or compatibility layer.
 
-The current local-$\mathbb F_0$ Campaign was reconciled at generation 194:
+The current local-$\mathbb F_0$ Campaign was reconciled at generation 194. It
+contains four targets: two research-open targets with current heads, and two
+targets that legitimately remain `needs_main_choice`. For the two targets
+touched by this repair:
 
-- both targets have current active heads and no stale head;
+- both repaired targets have current active heads and no stale head;
 - three paused split ids are absent from target decision surfaces and the
   workflow queue;
 - one completed negative branch no longer appears as active work; and

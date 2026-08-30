@@ -47,11 +47,13 @@ is intentionally diagnostic, not a publication gate.
 ## Live-project canary
 
 The installed runtime read and reconciled the local-$\mathbb F_0$ project.
-Campaign generation 194 reports both targets current and no stale head. The
-three paused split ids are absent from target decision surfaces and the workflow
-queue. Their original rounds and existing returns remain readable, unvalidated,
-uningested, and unmodified. A completed negative branch was removed from active
-work, while its Research history remains intact.
+Campaign generation 194 contains four targets: two are `research_open` with
+current active heads, two legitimately remain `needs_main_choice`, and no target
+has a stale active head. The three paused split ids are absent from target
+decision surfaces and the workflow queue. Their original rounds and existing
+returns remain readable, unvalidated, uningested, and unmodified. A completed
+negative branch was removed from active work, while its Research history
+remains intact.
 
 The split authorization is one-shot: it is absent from Research, task cards,
 receipts, frontier state, and replay arguments. Regular source/proof supervision,

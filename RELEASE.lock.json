@@ -55,8 +55,10 @@
   },
   "project_canary": {
     "campaign_generation": 194,
-    "current_targets": 2,
-    "stale_targets": 0,
+    "campaign_target_count": 4,
+    "research_open_targets": 2,
+    "needs_main_choice_targets": 2,
+    "stale_active_head_count": 0,
     "dormant_split_rounds": 3,
     "dormant_split_rounds_ingested": 0,
     "immutable_research_or_truth_bytes_rewritten": false,
