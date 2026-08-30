@@ -310,8 +310,10 @@ def main() -> int:
     adverse_surface = inheritance_lock.get("adverse_routing_surface")
     if (
         not isinstance(fact_alpha_surface, dict)
+        or fact_alpha_surface.get("research_split_planning")
+        != "new_schema_v3_split_production_disabled_by_default_exact_research_ids_and_current_explicit_user_request_plus_one_shot_user_authorized_split_choice_required_not_persisted_in_research_card_receipt_frontier_or_replay"
         or fact_alpha_surface.get("research_split_supervision")
-        != "packager_requested_split_pauses_package_work_research_repair_worker_produces_exact_committed_batch_then_ordinary_author_independent_proof_source_supervision_reviews_it_before_packaging_resumes_with_no_independent_fact_side_split_supervisor"
+        != "split_recommendation_pauses_package_route_only_after_explicit_user_authorization_research_repair_worker_produces_exact_committed_batch_then_ordinary_author_independent_proof_source_supervision_reviews_it_before_packaging_resumes_with_no_independent_fact_side_split_supervisor"
         or fact_alpha_surface.get("minor_repair")
         != "historical_1_0_0_bounded_fast_lane_only_one_to_one_complete_node_research_cow_then_same_verifier_full_component_recheck_without_ordinary_supervisor_or_verifier_authorship"
         or fact_alpha_surface.get("minor_repair_exclusions")

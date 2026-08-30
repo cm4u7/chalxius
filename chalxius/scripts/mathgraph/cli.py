@@ -1032,6 +1032,14 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
             "explicit Main-planner selection into new V5 cards"
         ),
     )
+    p.add_argument(
+        "--user-authorized-split",
+        action="store_true",
+        help=(
+            "confirm the user's explicit authorization when the exact selected "
+            "Research includes a prospective schema-v3 split repair"
+        ),
+    )
     p = sub.add_parser("plan-supervision-round")
     p.add_argument("source_round_id")
     p.add_argument(
@@ -1141,6 +1149,14 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     p.add_argument(
         "--frontier-target",
         help="Main-selected Campaign research goal advanced by this repair",
+    )
+    p.add_argument(
+        "--user-authorized-split",
+        action="store_true",
+        help=(
+            "confirm the user's explicit authorization for this prospective "
+            "schema-v3 Research split; ignored inference is not permitted"
+        ),
     )
     p = sub.add_parser("novelty-record")
     p.add_argument("--input", required=True)
@@ -2447,12 +2463,18 @@ def main(argv: list[str] | None = None) -> int:
                         host_task_scope_id=normalized_host_scope,
                         background_chunk_ids=args.background_chunk_ids,
                         frontier_target_id=args.frontier_target,
+                        user_authorized_split=args.user_authorized_split,
                     )
                 )
             else:
-                if args.campaign or args.frontier_target:
+                if (
+                    args.campaign
+                    or args.frontier_target
+                    or args.user_authorized_split
+                ):
                     raise ValueError(
-                        "explicit plan-round --campaign/--frontier-target is available only for V5; "
+                        "explicit plan-round --campaign/--frontier-target/"
+                        "--user-authorized-split is available only for V5; "
                         "V4 keeps its frozen active-Campaign behavior"
                     )
                 if args.background_chunk_ids:
@@ -2689,12 +2711,14 @@ def main(argv: list[str] | None = None) -> int:
                             _json_file(args.input) if args.input else None
                         ),
                         frontier_target_id=args.frontier_target,
+                        user_authorized_split=args.user_authorized_split,
                     )
                 )
             else:
-                if args.frontier_target:
+                if args.frontier_target or args.user_authorized_split:
                     raise ValueError(
-                        "plan-repair-round --frontier-target requires V5"
+                        "plan-repair-round --frontier-target and "
+                        "--user-authorized-split require V5"
                     )
                 _print_json(
                     create_repair_round(

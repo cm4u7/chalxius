@@ -3,13 +3,13 @@
 **Persistent Research memory, a reliable working frontier, and sparse Fact
 certification for long-running Codex projects.**
 
-[Download v1.0.3](https://github.com/cm4u7/chalxius/releases/tag/v1.0.3) ·
+[Download v1.0.5](https://github.com/cm4u7/chalxius/releases/tag/v1.0.5) ·
 [Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md) · [License](LICENSE)
 
 > [!IMPORTANT]
 > **Graph Browser and graphical graph generation are temporarily unavailable.**
-> Chalxius 1.0.3 does not present either as a supported release capability.
+> Chalxius 1.0.5 does not present either as a supported release capability.
 > Historical or experimental Reader code and commands may still be present in
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
@@ -80,16 +80,16 @@ state retains the full set.
 
 ## Install
 
-Release assets for v1.0.3 are:
+Release assets for v1.0.5 are:
 
-- `chalxius-1.0.3-research-route-coordination-repair.tar.gz`
-- `chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256`
+- `chalxius-1.0.5-split-opt-in-repair.tar.gz`
+- `chalxius-1.0.5-split-opt-in-repair.tar.gz.sha256`
 
 Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.3-research-route-coordination-repair.tar.gz.sha256
-tar -xzf chalxius-1.0.3-research-route-coordination-repair.tar.gz
+shasum -a 256 -c chalxius-1.0.5-split-opt-in-repair.tar.gz.sha256
+tar -xzf chalxius-1.0.5-split-opt-in-repair.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -117,28 +117,27 @@ PROJECT=/absolute/path/to/project
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v1.0.3 — Research Route Coordination Repair
+## v1.0.5 — Split Opt-In Repair
 
-This release concentrates on large-project coordination:
+This release keeps semantic splitting available without making it a routine
+repair reflex:
 
-- completed COW routes no longer remain disguised as active work;
-- active heads can retain exact older Research as attached context;
-- recent attainments and unbounded sparse landmarks survive context handoff
-  without bloating routine frontier output;
-- Fact navigation landmarks are separated from packager-selected routes and
-  sealed packages;
-- the packager chooses predecessor-closed certification routes instead of
-  requiring Main to enumerate every package member;
-- source review owns external source identity and faithful extraction, while
-  proof review owns mathematical correctness and theorem use;
-- proof and source scopes normally reuse one independent supervisor session;
-- split repair batches carry explicit internal and external logical relations
-  for whole-product supervision; and
-- historical adverse-learning proposals remain readable but no longer route
-  current supervision.
+- every new Research or Fact split requires the current explicit
+  `--user-authorized-split` planning choice;
+- `needs_split` remains a diagnosis, not automatic authorization or dispatch;
+- historical split rounds, returns, and replay remain readable;
+- ordinary source/proof supervision, mixed-product diagnosis, and one-to-one
+  COW continue without split authorization;
+- productless repairs with an explicit inactive disposition remain historical
+  evidence instead of occupying the live frontier; and
+- the local-$\mathbb F_0$ Campaign was reconciled to generation 194 without
+  rewriting Research, round, return, Candidate, Fact, or graph bytes.
 
-The release adds no automatic mathematical selector, timer, scheduler, daemon,
-background Fact worker, persistent graph cache, or compatibility layer.
+Installation owns software correctness testing. Publication then checks the
+exact asset identity, checksum, file set, and absence of sensitive local data.
+Heavy mutation and forensic matrices remain optional diagnostics rather than
+release gates. The release adds no automatic selector, scheduler, inferred
+authorization, compatibility layer, second lifecycle, or truth effect.
 
 ## Authority boundary
 

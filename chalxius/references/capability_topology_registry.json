@@ -55,7 +55,7 @@
       ]
     },
     "cap.fact_certification": {
-      "summary": "Prospective Fact Alpha uses one packager-selected nontruth Research package, full independent verifier review of every record/interface/edge, and Gateway-only certification. Direct-Research plans freeze exact Main anchors and each sealed component connects every added unmarked node to one through actual package edges; existing-mark plans are exempt. A packager-requested split pauses for a Research repair worker and ordinary proof/source supervision; no Fact-side split supervisor exists. The historical fast lane is bounded one-to-one complete-node minor COW plus full same-verifier component recheck only. Old Candidate, adverse, Certification, and Fact commands are procedurally reserved for explicitly selected 0.x completion/audit; the runtime does not authenticate pre-1.0 provenance.",
+      "summary": "Prospective Fact Alpha uses one packager-selected nontruth Research package, full independent verifier review of every record/interface/edge, and Gateway-only certification. Direct-Research plans freeze exact Main anchors and each sealed component connects every added unmarked node to one through actual package edges; existing-mark plans are exempt. A packager split recommendation pauses the route and may return to a Research repair worker and ordinary proof/source supervision only after a current one-shot user opt-in; no Fact-side split supervisor exists. The historical fast lane is bounded one-to-one complete-node minor COW plus full same-verifier component recheck only. Old Candidate, adverse, Certification, and Fact commands are procedurally reserved for explicitly selected 0.x completion/audit; the runtime does not authenticate pre-1.0 provenance.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -236,7 +236,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution including commit-last semantic research_split batches, static scope-owned second-subround assurance, and compact production/supervisor projections. A split requested from Fact work returns to the same ordinary Research repair and proof/source supervision layer, never a new Fact-side supervisor. Supervisor interfaces are strong mechanical recommendations only; package, verifier, and Gateway authority remain separate.",
+      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution including commit-last semantic research_split batches, static scope-owned second-subround assurance, and compact production/supervisor projections. New split production is disabled by default and requires exact Research selection plus a current one-shot user opt-in at the common production boundary; the choice is not persisted or replayed. A split recommendation from Fact work may return to the same ordinary Research repair and proof/source supervision layer only after that opt-in, never to a new Fact-side supervisor. Supervisor interfaces are strong mechanical recommendations only; package, verifier, and Gateway authority remain separate.",
       "status": "active",
       "stateful": true,
       "state_roots": [

@@ -1,5 +1,16 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.5 Split Opt-In Repair difference
+
+Earlier schema-v3 split support treated a supervisor or packager recommendation
+as sufficient input for immediate repair planning, and an existing split repair
+could also enter ordinary production through `plan-round`. Version 1.0.5 keeps
+one split implementation but requires exact Research selection plus a current
+one-shot user opt-in at the common production boundary. The coupled repair
+planner uses the same policy before writing its repair node. Authorization is
+not transported through Research, cards, receipts, or replay. Fact-side
+`needs_split` remains diagnostic/manual and creates no second gate or worker.
+
 ## 1.0.4 Frontier Context Handoff Repair difference
 
 The 1.0.3 head transition kept a context only if its old head remained active;

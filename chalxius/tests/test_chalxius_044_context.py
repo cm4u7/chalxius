@@ -248,7 +248,7 @@ class Chalxius044ContextTests(unittest.TestCase):
             )
             self.assertEqual(
                 selection["mode"]["effect"],
-                "hint_applies_only_when_assurance_and_capability_equivalent",
+                "hint_applies_only_when_assurance_equivalent",
             )
             lifecycle.validate_task_card(card, expected_path=card_path)
 
@@ -433,16 +433,9 @@ class Chalxius044ContextTests(unittest.TestCase):
             )
             _, future_review_card = self._card(store, future_review_round)
             future_review_mode = future_review_card["context_selection"]["mode"]
-            self.assertEqual(future_review_card["work_mode"], "prove")
-            self.assertEqual(
-                future_review_mode["blocked_suggestions"],
-                [
-                    {
-                        "mode": "refute",
-                        "reason": "would_change_program_math_adverse_review",
-                    }
-                ],
-            )
+            self.assertEqual(future_review_card["work_mode"], "refute")
+            self.assertEqual(future_review_mode["blocked_suggestions"], [])
+            self.assertNotIn("adverse_routing", future_review_card)
 
             store.adverse_routes().initialize(
                 actor="operator",
@@ -465,7 +458,7 @@ class Chalxius044ContextTests(unittest.TestCase):
             routing_mode = routing_card["context_selection"]["mode"]
             self.assertEqual(routing_card["work_mode"], "refute")
             self.assertEqual(routing_mode["blocked_suggestions"], [])
-            self.assertIn("adverse_routing", routing_card)
+            self.assertNotIn("adverse_routing", routing_card)
 
     def test_legacy_043_card_remains_valid_without_rewrite(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

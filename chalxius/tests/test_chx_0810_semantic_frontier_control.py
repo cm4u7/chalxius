@@ -57,7 +57,13 @@ class SemanticFrontierControl0810Tests(unittest.TestCase):
         ):
             self.assertIn(excluded, semantic)
         self.assertFalse(contract["persistent_cache"])
-        self.assertEqual(contract["candidate_effect"], "none_until_existing_candidate_release_command")
+        self.assertEqual(
+            contract["candidate_effect"],
+            (
+                "historical_0x_none_until_procedurally_reserved_"
+                "candidate_release_command"
+            ),
+        )
         self.assertEqual(contract["fact_effect"], "none")
         self.assertEqual(contract["truth_effect"], "none")
 

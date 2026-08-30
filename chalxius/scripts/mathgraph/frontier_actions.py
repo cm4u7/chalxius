@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .contracts import sha256_bytes, sha256_json
+from .contracts import ACTIVE_MEMORY_STATUSES, sha256_bytes, sha256_json
 
 
 class _ActionProjector:
@@ -155,6 +155,18 @@ class _ActionProjector:
             else None
         )
 
+    def effective_status(self, research_id: str) -> str | None:
+        """Return the latest explicit lifecycle status for one Research id."""
+
+        value = self.dispositions.get(research_id, {}).get(
+            "metadata", {}
+        ).get("disposition_status")
+        if isinstance(value, str):
+            return value
+        base = self.bases.get(research_id, {})
+        status = base.get("status")
+        return status if isinstance(status, str) else None
+
     def historical_repairs(
         self,
         product_id: str,
@@ -169,6 +181,8 @@ class _ActionProjector:
         candidates = []
         for research_id, record in self.bases.items():
             if record.get("kind") != "repair":
+                continue
+            if self.effective_status(research_id) not in ACTIVE_MEMORY_STATUSES:
                 continue
             lineage = self.lifecycle._structured_repair_lineage(
                 repair_id=research_id,
@@ -632,6 +646,7 @@ class _ActionProjector:
             work_key: self.lifecycle._frontier_cow_terminal_members_for_inspection(
                 seed_members=workgroups.get(work_key, []),
                 bases=self.bases,
+                dispositions=self.dispositions,
                 route_staleness=self.route_staleness,
                 inspection=self.inspection,
             )

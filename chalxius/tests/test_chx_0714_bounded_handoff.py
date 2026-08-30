@@ -623,8 +623,9 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     "claimed_structures": [],
                     "program_math_alignments": [],
                 },
-                "attack_learning": None,
             }
+            if "adverse_routing" in supervisor_card:
+                review_payload["attack_learning"] = None
             review_return_path = Path(source_review_assignment["return_path"])
             review_return_path.write_text(
                 json.dumps(review_payload, sort_keys=True),

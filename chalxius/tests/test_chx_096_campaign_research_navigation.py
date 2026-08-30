@@ -448,7 +448,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             )
 
             index = lifecycle._campaign_semantic_successor_index(bases)
-            summary, terminals = (
+            summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=head_id,
                     campaign_id=campaign_id,
@@ -460,6 +460,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             self.assertEqual(
                 summary["current_route_research_ids"], [challenge_id]
             )
+            self.assertEqual(current_routes, [challenge_id])
             self.assertEqual(
                 summary["terminal_evidence_research_ids"],
                 [clean_review_id],
@@ -502,7 +503,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             index = lifecycle._campaign_semantic_successor_index(bases)
             self.assertIn(synthesis_id, index["children"][challenge_id])
             self.assertIn(repair_id, index["children"][synthesis_id])
-            summary, terminals = (
+            summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=head_id,
                     campaign_id=campaign_id,
@@ -514,6 +515,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             self.assertEqual(
                 summary["current_route_research_ids"], [repair_id]
             )
+            self.assertEqual(current_routes, [repair_id])
             self.assertEqual(
                 summary["terminal_evidence_research_ids"],
                 [clean_review_id],
@@ -962,7 +964,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             }
 
             index = lifecycle._campaign_semantic_successor_index(bases)
-            summary, terminals = (
+            summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=root_id,
                     campaign_id=campaign_id,
@@ -980,6 +982,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 summary["production_product_research_ids"],
             )
             self.assertEqual(summary["current_route_research_ids"], [])
+            self.assertEqual(current_routes, [])
             self.assertEqual(
                 summary["terminal_evidence_research_ids"],
                 [clean_review_id],

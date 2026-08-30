@@ -1,5 +1,15 @@
 # V5 capability preservation matrix
 
+The 1.0.5 Split Opt-In Repair preserves all split batch, relation, supervision,
+ingestion, and recovery capabilities while disabling new split production by
+default. Exact `plan-repair-round` or `plan-round --memory-id` requires a
+current explicit user request and the one-shot `--user-authorized-split`
+choice. The same common production check closes direct API and manually added
+repair-node planning; generic frontier selection fails visibly rather than
+silently skipping a split. Authorization is not persisted or replayed. Ordinary
+supervision, one-to-one COW, Fact packaging alternatives, and every truth
+authority remain unchanged.
+
 The 1.0.4 Frontier Context Handoff Repair preserves the 1.0.3 coordination
 surface and makes two existing operations compose: exact head-bound context
 follows a unique `plan-round` successor, while true multi-successor ambiguity

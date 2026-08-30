@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.4 — Frontier Context Handoff Repair
+# Chalxius 1.0.5 — Split Opt-In Repair
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -80,20 +80,28 @@ interface. `plan-fact-packaging` therefore returns
 digest when that recommendation is mechanically complete. It never seals a
 package, guesses a mathematical surface, or invents a predecessor edge.
 `needs_split` blocks only that automatic path and reports
-`fact-package-seal-or-research-cow-split`; it does not veto a packager-authored
+`fact-package-seal-or-await-user-authorized-research-split`; it does not veto a packager-authored
 alternative. The authorized `fact-packager` chooses the route and performs the
 one package seal: it may accept the proposal, state a different complete
-six-field interface, choose a whole-node route, or return the node to Research
-COW/splitting. It cannot change Main's importance judgment or Campaign active
-head, verify, decide, or certify. If the packager requests an actual split, its
-package work pauses. A Research repair worker follows the precise split brief
-and produces complete coherent successors, never mechanically sliced prose;
+six-field interface, choose a whole-node route, use ordinary one-to-one COW, or
+leave the node unready with a precise split recommendation. It cannot change
+Main's importance judgment or Campaign active head, verify, decide, certify, or
+start a split. A split recommendation pauses that package route. A Research
+repair worker may follow the precise split brief only after a current explicit
+user request; it produces complete coherent successors, never mechanically sliced prose;
 the ordinary Research proof/source supervision layer then reviews the committed
 batch as a whole before packaging resumes. There is no independent Fact-side
 split supervisor. The same author-independent Research supervisor may be reused
 across COW generations or adjacent scopes when it rechecks the complete new
 product rather than only the previously known defects.
-For a prospective schema-v3 split repair,
+For a prospective schema-v3 split repair, Main must bind exact Research ids and
+the split specification and supply `--user-authorized-split` to
+`plan-repair-round` or exact `plan-round` only after a current explicit user
+request. The one-shot choice is not stored in Research, task cards, receipts,
+frontier state, or replay argv and is never inferred from `needs_split`, a
+packager recommendation, an old card, or an active head. Without it, planning
+fails before Research or round bytes are written. Historical frozen split cards,
+returns, commits, validation, and ingestion remain readable. After authorization,
 Main freezes the source and split brief but does not guess how many successors
 exist. One repair worker returns one finite `research_split_batch` containing
 the complete actual membership and its proposed internal/external logical
@@ -125,11 +133,13 @@ examples, and open obstructions into one top-level node. Every proof-logic or
 source-scope supervisor nevertheless records whether the attacked product is
 coherent, needs splitting, or cannot yet be decided for the strong mechanical
 recommendation. That disposition does not transfer Fact-package authority from
-the packager. A `needs_split` brief
+the packager or authorize split execution. A `needs_split` brief
 combines the surface allocation with all proof/source defects found in that
-review so one repair worker can resolve them together before a fresh
-whole-product supervision pass. The same author-independent supervisor identity
-may be reused for that pass.
+review so Main has an exact option if the user later authorizes a split. Until
+then ordinary supervision, alternative whole-node packaging, one-to-one COW, or
+an explicitly unready route remain available. If authorized, one repair worker
+may resolve the brief before a fresh whole-product supervision pass. The same
+author-independent supervisor identity may be reused for that pass.
 
 Packaging does not rewrite proofs. For each complete Research node the packager
 selects and seals one semi-formal statement interface whose conclusion is byte-for-byte the
@@ -177,6 +187,25 @@ New Research may name `certified_research_dependencies`. Chalxius resolves
 them to exact active Research/grant hashes and freezes their statement
 interfaces and proof bytes into future task cards. This is the operational
 meaning of Fact being a property of Research rather than a parallel graph.
+
+## 1.0.5 split opt-in repair
+
+Prospective statement splitting is disabled by default across both Research
+and Fact coordination. Supervisors may diagnose `needs_split`, and a packager
+may preserve a split recommendation, but neither starts work. The sole
+execution boundary is the existing Research production planner: a schema-v3
+split requires exact Research selection plus the one-shot
+`--user-authorized-split` choice after an explicit current user request. The
+same check covers direct `plan-repair-round`, ordinary `plan-round`, and direct
+production-round calls; it is not a transported capability or reusable
+receipt. Generic frontier planning fails visibly if its selected window
+contains a split repair instead of silently skipping it. Ordinary supervision
+and one-to-one COW are unchanged. Existing split history remains readable and
+no Research, package, verifier, Gateway, or Fact authority changes.
+If Main explicitly pauses an already-created pending split repair, record the
+ordinary `blocked` Research disposition. The live COW/frontier projector then
+keeps that task as searchable history but does not promote it as a successor;
+an already-published repair product is never hidden by a later disposition.
 
 ## 1.0.4 frontier context handoff repair
 
@@ -793,9 +822,10 @@ repair caches implicitly.
    useful predecessor-closed route and seals one nontruth package; ordinary COW
    branch selection does not mutate the Campaign active head. A supervisor
    `ready`/`needs_split` result is only the strong mechanical recommendation.
-   A requested split pauses packaging and returns to a Research repair worker
-   plus the ordinary proof/source supervision layer; there is no Fact-side split
-   supervisor.
+   A split recommendation pauses that package route. It returns to a Research
+   repair worker plus the ordinary proof/source supervision layer only after a
+   current explicit user request and exact one-shot split planning; there is no
+   Fact-side split supervisor.
    The Fact verifier fully rechecks every Research record, chosen interface, and
    dependency edge; Gateway alone certifies. Do not add a Candidate-adverse
    duplicate. Only bounded one-to-one complete-node minor COW returns directly
@@ -947,7 +977,12 @@ boundaries, manifest/inventory, focused regression, self-test, and only the
 broader suite justified by shared-runtime risk. Main selects one validation
 profile per exact manifest; a successful forensic profile subsumes the routine
 profile for unchanged bytes, and its receipt exposes elapsed and slowest-lane
-cost. Install the validated candidate locally before publication. The sole public host-global path is
+cost. Mutation and forensic profiles are diagnostics, not publication
+formalities. Install the validated candidate locally before publication; the
+installer owns the final executable self-test and focused regression evidence.
+Once those installed bytes are fixed, publication checks only the archive and
+checksum identity, the intended file set, and absence of local or sensitive
+information rather than rerunning the installation tests. The sole public host-global path is
 `scripts/local_install.py`: it validates one complete candidate tree, runs the
 self-test and the two changed-surface regressions, archives the prior runtime,
 atomically swaps `/Users/<user>/.codex/skills/chalxius`, and keeps one direct

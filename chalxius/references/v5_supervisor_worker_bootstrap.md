@@ -253,7 +253,10 @@ independently stateable load-bearing claim per node. When splitting is needed,
 emit `needs_split` in the interface artifact and make its rationale a combined
 repair brief covering the surface allocation and every proof/source defect
 found in the same review. Main should freeze those exact reports and source
-capabilities into one repair task for one repair worker; the repaired products
+capabilities as a precise option, but `needs_split` does not authorize or start
+the repair. Only after a current explicit user request may Main bind exact
+Research ids/specification and use the one-shot `--user-authorized-split`
+choice to create one repair task for one repair worker; the repaired products
 then receive a fresh whole-product supervision pass. This does not require a
 different supervisor identity: the same author-independent supervisor may be
 reused when it reviews all new bytes and all possible defects, rather than only
@@ -290,7 +293,7 @@ claim strengths or is not mechanically ready as a whole, use
 `disposition="needs_split"`, give a precise rationale, and set
 `statement_interface` to `null`. That explicit disposition recommends Research
 split/COW and blocks only the automatic mechanical proposal; it is not a Fact
-rejection or a transfer of package authority. The
+rejection, a transfer of package authority, or split-execution authorization. The
 `needs_split` rationale is also the repair brief: identify the separable
 successor claim surfaces, their shared assumptions, intended predecessor
 allocation, and which parts of the old product remain open or are abandoned.
@@ -300,7 +303,8 @@ not the final Fact package. A later `fact-packager` may accept the recommendatio
 or, in one frozen nontruth package seal, propose an alternative complete
 six-field interface or whole-node route despite `needs_split`; it may instead
 request Research COW/split. An actual split pauses packaging: a Research repair
-worker produces the complete committed batch and this ordinary proof/source
+worker is planned only after a current explicit user request and exact one-shot
+split authorization, then produces the complete committed batch and this ordinary proof/source
 supervision layer reviews it before packaging resumes. There is no Fact-side
 split supervisor. The independent Fact verifier must then review the
 complete capsule—every exact Research record, selected node/interface, and all

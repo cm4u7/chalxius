@@ -667,47 +667,15 @@ class Chalxius043UpgradeTests(unittest.TestCase):
                 worker_final_sha256=sha256_bytes(return_path.read_bytes()),
             )
             self.assertEqual(receipt["status"], "ingested")
-            review_id = receipt["program_math_review_research_id"]
+            self.assertNotIn("program_math_review_research_id", receipt)
+            self.assertNotIn("program_math_review_policy", receipt)
             self.assertEqual(card_before, card_path.read_bytes())
-            self.assertEqual(store.v5_lifecycle().frontier(limit=1)[0]["research_id"], review_id)
-
-            review_round = store.v5_lifecycle().create_round(
-                workers=1,
-                research_ids=[review_id],
-                host_task_scope_id="program-math-host",
-            )
-            review_card = json.loads(
-                Path(str(review_round["assignments"][0]["task_card_path"])).read_text(
-                    encoding="utf-8"
-                )
-            )
-            self.assertEqual(review_card["work_mode"], "refute")
-            self.assertTrue(
-                review_card["adverse_routing"]["scope_evidence"]["active"]
-            )
-            self.assertIn(
-                "baseline_program_math_semantic_alignment",
-                {
-                    item["rule_id"]
-                    for item in review_card["adverse_routing"]["baseline_rules"]
-                },
-            )
-            route_projection = {
-                "adverse_routing": review_card["adverse_routing"],
-                "program_math_contract": review_card["assurance_contract"][
-                    "program_math_contract"
-                ],
-                "source_research_dossier": review_card["mathematical_state"][
-                    "source_research_dossier"
-                ],
-                "narrative_plane": review_card["narrative_plane"],
-            }
-            self.assertNotIn("chx-", json.dumps(route_projection).casefold())
             self.assertEqual(
-                review_card["assurance_contract"]["program_math_contract"][
-                    "architecture_issue_import"
-                ],
-                "forbidden",
+                {
+                    item["research_id"]
+                    for item in store.v5_lifecycle().research_records()
+                },
+                {source["research_id"], receipt["research_id"]},
             )
 
             ordinary = store.v5_lifecycle().add_research(
@@ -726,12 +694,7 @@ class Chalxius043UpgradeTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(
-                len(ordinary_card["adverse_routing"]["baseline_rules"]), 9
-            )
-            self.assertFalse(
-                ordinary_card["adverse_routing"]["scope_evidence"]["active"]
-            )
+            self.assertNotIn("adverse_routing", ordinary_card)
 
     def test_v5_frontier_uses_four_dimensions_but_explicit_ids_remain_schedulable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

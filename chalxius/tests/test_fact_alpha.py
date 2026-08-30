@@ -1416,6 +1416,12 @@ class FactAlphaTests(unittest.TestCase):
                 ],
                 "diagnostic_sha256": "b" * 64,
             }
+            before_research_entries = {
+                path.name for path in lifecycle.research_entries_dir.iterdir()
+            }
+            before_round_entries = {
+                path.name for path in store.rounds_dir.iterdir()
+            }
             with patch.object(
                 lifecycle,
                 "_candidate_supervision_scope_coverage",
@@ -1429,12 +1435,21 @@ class FactAlphaTests(unittest.TestCase):
                 frontier = manager.frontier()
 
             self.assertEqual(
+                {path.name for path in lifecycle.research_entries_dir.iterdir()},
+                before_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                before_round_entries,
+            )
+
+            self.assertEqual(
                 plan["mechanical_package_state"], "research_split_required"
             )
             self.assertEqual(plan["mechanical_package_id"], None)
             self.assertEqual(
                 plan["next_action"],
-                "fact-package-seal-or-research-cow-split",
+                "fact-package-seal-or-await-user-authorized-research-split",
             )
             self.assertEqual(
                 frontier["entries"][0]["state"], "needs_packager_route"

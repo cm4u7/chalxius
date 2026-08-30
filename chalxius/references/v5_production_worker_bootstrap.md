@@ -137,6 +137,14 @@ not accumulate several theorem strengths, unrelated examples, and open
 obstructions into one top-level claim merely because they were discovered in
 one session.
 
+A new schema-v3 split production card can be created only after Main binds the
+exact Research/specification and supplies the one-shot
+`--user-authorized-split` choice following a current explicit user request.
+That choice is intentionally absent from the immutable Research/card: the
+frozen split card itself is the worker's execution capability, while old cards
+and retry/recovery remain readable. A `needs_split` diagnosis alone never starts
+this worker.
+
 When the exact source Research is `kind="repair"` or carries a frozen
 `repair_spec`, this production worker is a **Research repair worker**. If the
 repair objective is statement splitting, do not mechanically divide prose or

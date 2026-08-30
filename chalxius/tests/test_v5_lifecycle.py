@@ -10,7 +10,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from mathgraph.cli import main as cli_main
+from mathgraph.cli import build_parser, main as cli_main
 from mathgraph.blackboard import make_node
 from mathgraph.computations import INDEPENDENCE_AXES
 from mathgraph.contracts import sha256_bytes, sha256_json
@@ -1860,6 +1860,148 @@ class V5LifecycleTests(unittest.TestCase):
                 "input_capabilities": [],
                 "output_shape": "research_split_batch",
             }
+            before_research_entries = {
+                path.name for path in lifecycle.research_entries_dir.iterdir()
+            }
+            before_round_entries = {
+                path.name for path in store.rounds_dir.iterdir()
+            }
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires explicit user authorization",
+            ):
+                lifecycle.create_repair_round(
+                    source["research_id"],
+                    repair_spec=spec,
+                    host_task_scope_id="schema-v3-research-split-denied",
+                )
+            self.assertEqual(
+                {path.name for path in lifecycle.research_entries_dir.iterdir()},
+                before_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                before_round_entries,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires an exact selected schema-v3 split repair",
+            ):
+                lifecycle.create_repair_round(
+                    source["research_id"],
+                    user_authorized_split=True,
+                    host_task_scope_id="schema-v3-research-split-misbound",
+                )
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires exact Research ids",
+            ):
+                lifecycle.create_production_round(
+                    workers=1,
+                    user_authorized_split=True,
+                    host_task_scope_id="schema-v3-generic-frontier-opt-in",
+                )
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires an exact selected schema-v3 split repair",
+            ):
+                lifecycle.create_production_round(
+                    workers=1,
+                    research_ids=[source["research_id"]],
+                    user_authorized_split=True,
+                    host_task_scope_id="schema-v3-ordinary-round-misbound",
+                )
+            self.assertEqual(
+                {path.name for path in lifecycle.research_entries_dir.iterdir()},
+                before_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                before_round_entries,
+            )
+            parsed = build_parser().parse_args(
+                [
+                    "--root",
+                    str(root),
+                    "--role",
+                    "main",
+                    "plan-repair-round",
+                    source["research_id"],
+                    "--input",
+                    str(root / "split-spec.json"),
+                    "--user-authorized-split",
+                ]
+            )
+            self.assertTrue(parsed.user_authorized_split)
+            parsed_round = build_parser().parse_args(
+                [
+                    "--root",
+                    str(root),
+                    "--role",
+                    "main",
+                    "plan-round",
+                    "--workers",
+                    "1",
+                    "--memory-id",
+                    source["research_id"],
+                    "--user-authorized-split",
+                ]
+            )
+            self.assertTrue(parsed_round.user_authorized_split)
+            spec_path = root / "split-spec.json"
+            spec_path.write_text(
+                json.dumps(spec, ensure_ascii=False, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            with patch.object(
+                V5LifecycleManager,
+                "create_repair_round",
+                return_value={"status": "planned"},
+            ) as repair_call, redirect_stdout(StringIO()):
+                self.assertEqual(
+                    cli_main(
+                        [
+                            "--root",
+                            str(root),
+                            "--role",
+                            "main",
+                            "plan-repair-round",
+                            source["research_id"],
+                            "--input",
+                            str(spec_path),
+                            "--user-authorized-split",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertTrue(
+                repair_call.call_args.kwargs["user_authorized_split"]
+            )
+            with patch.object(
+                V5LifecycleManager,
+                "create_production_round",
+                return_value={"status": "planned"},
+            ) as round_call, redirect_stdout(StringIO()):
+                self.assertEqual(
+                    cli_main(
+                        [
+                            "--root",
+                            str(root),
+                            "--role",
+                            "main",
+                            "plan-round",
+                            "--workers",
+                            "1",
+                            "--memory-id",
+                            source["research_id"],
+                            "--user-authorized-split",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertTrue(
+                round_call.call_args.kwargs["user_authorized_split"]
+            )
             with patch.object(
                 lifecycle,
                 "_validate_bound_runtime_binding",
@@ -1869,6 +2011,7 @@ class V5LifecycleTests(unittest.TestCase):
                     source["research_id"],
                     repair_spec=spec,
                     host_task_scope_id="schema-v3-research-split",
+                    user_authorized_split=True,
                 )
             assignment = planned["assignments"][0]
             card = json.loads(
@@ -1876,7 +2019,72 @@ class V5LifecycleTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
+            round_record_text = (
+                root / "rounds" / planned["round_id"] / "round.json"
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("--user-authorized-split", round_record_text)
+            self.assertNotIn("user_authorized_split", round_record_text)
             self.assertEqual(card["work_mode"], "prove")
+            self.assertNotIn(
+                "user_authorized_split",
+                card["mathematical_state"]["source_research_dossier"][
+                    "metadata"
+                ],
+            )
+            authorized_research_entries = {
+                path.name for path in lifecycle.research_entries_dir.iterdir()
+            }
+            authorized_round_entries = {
+                path.name for path in store.rounds_dir.iterdir()
+            }
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires explicit user authorization",
+            ):
+                lifecycle.create_production_round(
+                    workers=1,
+                    mode="prove",
+                    research_ids=[planned["research_id"]],
+                    host_task_scope_id="schema-v3-plan-round-bypass",
+                )
+            self.assertEqual(
+                {path.name for path in lifecycle.research_entries_dir.iterdir()},
+                authorized_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                authorized_round_entries,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "requires explicit user authorization",
+            ):
+                lifecycle.create_round(
+                    workers=1,
+                    mode="prove",
+                    research_ids=[planned["research_id"]],
+                    host_task_scope_id="schema-v3-create-round-bypass",
+                    research_cycle=lifecycle.production_research_cycle_binding(),
+                )
+            self.assertEqual(
+                {path.name for path in lifecycle.research_entries_dir.iterdir()},
+                authorized_research_entries,
+            )
+            self.assertEqual(
+                {path.name for path in store.rounds_dir.iterdir()},
+                authorized_round_entries,
+            )
+            with self.assertRaisesRegex(
+                ValueError,
+                "may be scheduled only in a production round",
+            ):
+                lifecycle.create_round(
+                    workers=1,
+                    mode="prove",
+                    research_ids=[planned["research_id"]],
+                    host_task_scope_id="schema-v3-nonproduction-round",
+                    user_authorized_split=True,
+                )
             artifact_dir = root / assignment["artifact_dir_relpath"]
             artifact_dir.mkdir(parents=True, exist_ok=True)
             artifact_path = artifact_dir / "research-split-batch.json"

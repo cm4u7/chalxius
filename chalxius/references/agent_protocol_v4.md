@@ -3,7 +3,14 @@
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5
-> adaptation; the 1.0.4 override is authoritative for prospective work.
+> adaptation; the 1.0.5 override is authoritative for prospective work.
+
+> **1.0.5 split opt-in override.** `needs_split` is diagnosis and routing
+> advice only. A new schema-v3 split production is disabled until the user
+> explicitly authorizes the current exact Research/specification and Main uses
+> the one-shot `--user-authorized-split` choice. That choice is not stored or
+> replayed. Existing frozen split work remains readable; ordinary supervision
+> and one-to-one COW are unaffected.
 
 > **1.0.4 coordination override.** A unique planned active-head successor
 > inherits exact head context; split ambiguity remains unattached. Context
@@ -30,7 +37,7 @@
 > explicitly selected 0.x completion/audit. The runtime does not authenticate
 > pre-1.0 provenance, and this policy adds no provenance or identity gate.
 
-> **Frozen-history boundary.** Except for the 1.0.4 and 1.0.3 overrides above,
+> **Frozen-history boundary.** Except for the 1.0.5, 1.0.4, and 1.0.3 overrides above,
 > the remaining protocol is frozen versioned history. Later occurrences of
 > “current”, “prospective”, Candidate, or adverse describe the named older
 > contract and are not instructions for new 1.0.x Fact work.

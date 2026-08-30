@@ -5076,6 +5076,7 @@ class V5LifecycleManager:
         actor: str = "v5-orchestrator",
         host_task_scope_id: str | None = None,
         frontier_target_id: str | None = None,
+        user_authorized_split: bool = False,
     ) -> dict[str, Any]:
         """Append one repair branch and plan exactly one bounded work unit."""
 
@@ -5114,6 +5115,16 @@ class V5LifecycleManager:
             None
             if repair_spec is None
             else self._normalize_exact_repair_spec(repair_spec)
+        )
+        split_repair_requested = self._is_prospective_split_repair_spec(
+            normalized_repair_spec
+        )
+        self._validate_prospective_split_authorization(
+            split_repair_research_ids=(
+                [source["research_id"]] if split_repair_requested else []
+            ),
+            user_authorized_split=user_authorized_split,
+            exact_research_selection=True,
         )
         if (
             normalized_repair_spec is not None
@@ -5274,6 +5285,7 @@ class V5LifecycleManager:
             ),
             host_task_scope_id=host_task_scope_id,
             frontier_target_id=frontier_target_id,
+            user_authorized_split=user_authorized_split,
             _inspection_context=inspection,
         )
         return {
@@ -5291,6 +5303,39 @@ class V5LifecycleManager:
                 "repair_input_capability_manifest"
             ]["manifest_sha256"],
         }
+
+    @staticmethod
+    def _is_prospective_split_repair_spec(value: Any) -> bool:
+        return (
+            isinstance(value, dict)
+            and value.get("schema_version") == 3
+            and value.get("output_shape") == RESEARCH_SPLIT_OUTPUT_SHAPE
+        )
+
+    @staticmethod
+    def _validate_prospective_split_authorization(
+        *,
+        split_repair_research_ids: list[str],
+        user_authorized_split: bool,
+        exact_research_selection: bool,
+    ) -> None:
+        if not isinstance(user_authorized_split, bool):
+            raise ValueError("user_authorized_split must be boolean")
+        if user_authorized_split and not exact_research_selection:
+            raise ValueError(
+                "user-authorized split planning requires exact Research ids"
+            )
+        if split_repair_research_ids and not user_authorized_split:
+            raise ValueError(
+                "prospective schema-v3 split production requires explicit user "
+                "authorization (--user-authorized-split): "
+                + ", ".join(sorted(split_repair_research_ids))
+            )
+        if user_authorized_split and not split_repair_research_ids:
+            raise ValueError(
+                "--user-authorized-split requires an exact selected schema-v3 "
+                "split repair"
+            )
 
     @staticmethod
     def _normalize_exact_repair_spec(value: Any) -> dict[str, Any]:
@@ -9030,6 +9075,7 @@ class V5LifecycleManager:
     def _campaign_semantic_successor_index(
         cls,
         bases: dict[str, dict[str, Any]],
+        dispositions: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Index exact production, supervision, and COW workflow edges.
 
@@ -9124,6 +9170,7 @@ class V5LifecycleManager:
         cow_projection = cls._frontier_cow_route_projection(
             bases=bases,
             route_staleness={},
+            dispositions=dispositions,
         )
         for adjacency_name in ("route_children", "context_children"):
             for parent_id, child_ids in cow_projection[adjacency_name].items():
@@ -9467,7 +9514,8 @@ class V5LifecycleManager:
             inspection,
         )
         semantic_successor_index = self._campaign_semantic_successor_index(
-            bases
+            bases,
+            dispositions,
         )
         prepared: list[dict[str, Any]] = []
         goal_work_keys: set[str] = set()
@@ -12775,6 +12823,7 @@ class V5LifecycleManager:
         seed_members: list[str],
         bases: dict[str, dict[str, Any]],
         route_staleness: dict[str, list[str]],
+        dispositions: dict[str, dict[str, Any]] | None = None,
         repair_children: dict[str, tuple[str, ...]] | None = None,
     ) -> dict[str, str | None]:
         """Resolve exact, unique COW terminals for original workgroup members.
@@ -12791,6 +12840,7 @@ class V5LifecycleManager:
             repair_children = cls._frontier_cow_repair_children_index(
                 bases=bases,
                 route_staleness=route_staleness,
+                dispositions=dispositions,
             )
 
         terminals: dict[str, str | None] = {}
@@ -12817,12 +12867,14 @@ class V5LifecycleManager:
         *,
         bases: dict[str, dict[str, Any]],
         route_staleness: dict[str, list[str]],
+        dispositions: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, tuple[str, ...]]:
         """Compatibility wrapper over the shared rigid COW route projector."""
 
         return cls._frontier_cow_route_projection(
             bases=bases,
             route_staleness=route_staleness,
+            dispositions=dispositions,
         )["route_children"]
 
     @classmethod
@@ -12831,6 +12883,7 @@ class V5LifecycleManager:
         *,
         bases: dict[str, dict[str, Any]],
         route_staleness: dict[str, list[str]],
+        dispositions: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Project one rigid COW route model for Campaign and Fact consumers.
 
@@ -12843,6 +12896,7 @@ class V5LifecycleManager:
         """
 
         del route_staleness  # Invalidations are projected separately from COW.
+        dispositions = dispositions or {}
 
         production_parent: dict[str, str] = {}
         production_by_parent: dict[str, set[str]] = {}
@@ -13090,6 +13144,48 @@ class V5LifecycleManager:
                 continue
             source_id, trigger_id = lineage
             cow_repairs.add(repair_id)
+            candidate_outputs = sorted(
+                output_id
+                for output_id in production_by_parent.get(repair_id, set())
+                if exact_output(repair_id, output_id)
+            )
+            disposition = dispositions.get(repair_id)
+            effective_status = repair.get("status")
+            if isinstance(disposition, dict):
+                disposition_status = disposition.get("metadata", {}).get(
+                    "disposition_status"
+                )
+                if disposition_status in MEMORY_STATUSES:
+                    effective_status = disposition_status
+            repair_spec = metadata.get("repair_spec")
+            is_split = (
+                isinstance(repair_spec, dict)
+                and repair_spec.get("output_shape")
+                == RESEARCH_SPLIT_OUTPUT_SHAPE
+            )
+            if (
+                effective_status not in ACTIVE_MEMORY_STATUSES
+                and not candidate_outputs
+            ):
+                # A disposed task remains exact history, but it is not a
+                # successor on Main's live work route.  Existing products are
+                # still projected below, so a later disposition cannot erase
+                # an already-published COW result.
+                details[repair_id] = {
+                    "repair_research_id": repair_id,
+                    "source_research_id": source_id,
+                    "trigger_research_id": trigger_id,
+                    "state": (
+                        "inactive_pending_split_repair"
+                        if is_split
+                        else "inactive_pending_repair"
+                    ),
+                    "outcome_research_ids": [],
+                    "split_owner_research_id": None,
+                    "split_member_research_ids": [],
+                    "selection_effect": "none",
+                }
+                continue
             if trigger_id is not None:
                 add_edge(context_children, trigger_id, repair_id)
                 for trigger_input_id in cls._structured_repair_trigger_inputs(
@@ -13126,17 +13222,6 @@ class V5LifecycleManager:
             ):
                 add_edge(route_children, source_parent_id, repair_id)
 
-            candidate_outputs = sorted(
-                output_id
-                for output_id in production_by_parent.get(repair_id, set())
-                if exact_output(repair_id, output_id)
-            )
-            repair_spec = metadata.get("repair_spec")
-            is_split = (
-                isinstance(repair_spec, dict)
-                and repair_spec.get("output_shape")
-                == RESEARCH_SPLIT_OUTPUT_SHAPE
-            )
             if is_split:
                 valid_splits = [
                     (owner_id, members)
@@ -13251,6 +13336,7 @@ class V5LifecycleManager:
         *,
         seed_members: list[str],
         bases: dict[str, dict[str, Any]],
+        dispositions: dict[str, dict[str, Any]],
         route_staleness: dict[str, list[str]],
         inspection: RoundInspectionContext,
     ) -> dict[str, str | None]:
@@ -13267,6 +13353,7 @@ class V5LifecycleManager:
                 projection = self._frontier_cow_route_projection(
                     bases=bases,
                     route_staleness=route_staleness,
+                    dispositions=dispositions,
                 )
                 inspection.frontier_cow_route_projection = projection
             repair_children = projection["route_children"]
@@ -13275,6 +13362,7 @@ class V5LifecycleManager:
             seed_members=seed_members,
             bases=bases,
             route_staleness=route_staleness,
+            dispositions=dispositions,
             repair_children=repair_children,
         )
         inspection.frontier_cow_terminal_members[key] = terminals
@@ -13296,6 +13384,7 @@ class V5LifecycleManager:
             work_key: self._frontier_cow_terminal_members_for_inspection(
                 seed_members=workgroups.get(work_key, []),
                 bases=bases,
+                dispositions=dispositions,
                 route_staleness=route_staleness,
                 inspection=_inspection_context,
             )
@@ -17531,6 +17620,7 @@ class V5LifecycleManager:
         host_task_scope_id: str | None = None,
         background_chunk_ids: list[str] | None = None,
         frontier_target_id: str | None = None,
+        user_authorized_split: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Plan constructive Research subround 1 without changing legacy cards."""
@@ -17549,6 +17639,7 @@ class V5LifecycleManager:
             host_task_scope_id=host_task_scope_id,
             background_chunk_ids=background_chunk_ids,
             frontier_target_id=frontier_target_id,
+            user_authorized_split=user_authorized_split,
             research_cycle=self.production_research_cycle_binding(),
             _inspection_context=_inspection_context,
         )
@@ -19091,6 +19182,7 @@ class V5LifecycleManager:
         background_chunk_ids: list[str] | None = None,
         frontier_target_id: str | None = None,
         research_cycle: dict[str, Any] | None = None,
+        user_authorized_split: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         """Plan one round while keeping incomplete materialization private."""
@@ -19106,6 +19198,7 @@ class V5LifecycleManager:
                 background_chunk_ids=background_chunk_ids,
                 frontier_target_id=frontier_target_id,
                 research_cycle=research_cycle,
+                user_authorized_split=user_authorized_split,
                 _inspection_context=_inspection_context,
             )
         finally:
@@ -19125,6 +19218,7 @@ class V5LifecycleManager:
         background_chunk_ids: list[str] | None = None,
         frontier_target_id: str | None = None,
         research_cycle: dict[str, Any] | None = None,
+        user_authorized_split: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
         inspection = self._bind_inspection_context(
@@ -19279,6 +19373,37 @@ class V5LifecycleManager:
                 f"requested {workers} workers but only {len(selected)} active "
                 f"V5 Research entries{scope_note} are available"
             )
+        production_selection = (
+            research_cycle is not None
+            and research_cycle["subround"] == "production"
+        )
+        selected_split_repair_ids: list[str] = []
+        for item in selected:
+            record = self._inspection_research_record(
+                item["research_id"],
+                inspection,
+            )
+            metadata = record.get("metadata", {})
+            if (
+                record.get("kind") == "repair"
+                and isinstance(metadata, dict)
+                and self._is_prospective_split_repair_spec(
+                    metadata.get("repair_spec")
+                )
+            ):
+                selected_split_repair_ids.append(record["research_id"])
+        selected_split_repair_ids.sort()
+        if selected_split_repair_ids and not production_selection:
+            raise ValueError(
+                "prospective schema-v3 split repair may be scheduled only in "
+                "a production round: "
+                + ", ".join(selected_split_repair_ids)
+            )
+        self._validate_prospective_split_authorization(
+            split_repair_research_ids=selected_split_repair_ids,
+            user_authorized_split=user_authorized_split,
+            exact_research_selection=research_ids is not None,
+        )
         if research_cycle is not None and research_cycle["subround"] == "supervision":
             self._validate_supervision_round_selection(
                 research_cycle=research_cycle,

@@ -105,6 +105,13 @@ class LocalInstallTests(unittest.TestCase):
         )
         self.assertIn("test_fact_alpha.FactAlphaTests", command)
         self.assertIn(
+            (
+                "test_v5_lifecycle.V5LifecycleTests."
+                "test_schema_v3_split_repair_commits_worker_chosen_members_atomically"
+            ),
+            command,
+        )
+        self.assertIn(
             "test_chx_095_terminal_frontier_context.TerminalFrontierContextTests",
             command,
         )

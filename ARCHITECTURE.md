@@ -82,6 +82,21 @@ and proof-logic review. A COW successor preserves exact lineage; ambiguous
 lineage remains visible rather than being guessed. Reconnect and context
 compression are transport states, not evidence that a worker failed.
 
+### Split is an explicit exception
+
+`needs_split` is a supervisor or packager diagnosis. It does not authorize a
+split, select successor claims, or dispatch a worker. Every prospective
+Research-side or Fact-side split requires a current explicit user choice at the
+planning boundary. That one-shot choice is deliberately absent from Research,
+cards, receipts, frontier state, and replay arguments. Historical split cards,
+returns, recovery, and ingestion remain readable, while ordinary source/proof
+supervision and one-to-one COW remain available without split authorization.
+
+A productless repair carrying an explicit inactive disposition stays searchable
+history but is not projected as a live COW route. This is a compact read-time
+interpretation of existing bytes, not a new lifecycle, migration layer, or
+mathematical completion claim.
+
 ## Fact Alpha lifecycle
 
 1. Main marks load-bearing whole Research records.
@@ -152,6 +167,16 @@ factual, and exact-byte correctness at their natural owners. PHX advises; it
 does not forbid Main from continuing valuable repairs or create a second legal
 workflow.
 
+## Installation and publication
+
+Installation owns software-correctness validation: manifest integrity,
+regressions proportional to the changed surface, self-test, atomic replacement,
+rollback availability, and exact candidate-to-installed identity. Once those
+bytes are installed, publication checks only the intended archive identity,
+checksum and file set, plus the absence of local paths or sensitive data.
+Mutation and forensic matrices may be run diagnostically, but are not release
+gates and do not need to be repeated during publication.
+
 ## Invariants
 
 1. There is one mathematical Research graph.
@@ -164,6 +189,8 @@ workflow.
 7. COW and correction preserve history and propagate reverification.
 8. Legacy authority remains readable but is not silently migrated.
 9. Learner, Reader, CHX, and PHX have no mathematical truth effect.
+10. Prospective semantic split is opt-in and requires a current explicit user
+    choice.
 
 For exact contracts, see
 [`admission_contract.md`](chalxius/references/admission_contract.md),

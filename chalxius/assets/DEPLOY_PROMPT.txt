@@ -1,10 +1,10 @@
-Chalxius 1.0.4 — Frontier Context Handoff Repair
+Chalxius 1.0.5 — Split Opt-In Repair
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.4 runtime coordinates Campaign working memory, asynchronous Fact route
+The 1.0.5 runtime coordinates Campaign working memory, asynchronous Fact route
 selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
@@ -67,9 +67,12 @@ semi-formal interface or an explicit `needs_split` disposition. This is a
 strong automatic-path recommendation only. An all-ready plan returns
 `mechanical_proposal_ready` with a `mechanical_package_proposal` and digest; it
 does not seal. The packager performs one seal and may accept that proposal,
-supply an alternative six-field interface, choose the whole node, or select a
-COW/split route without changing the Campaign active head. If it requests an
-actual split, packaging pauses while a Research repair worker produces the
+supply an alternative six-field interface, choose the whole node, select
+ordinary one-to-one COW, or retain a split recommendation without changing the
+Campaign active head. A split recommendation pauses that route. No worker is
+started until the user explicitly authorizes the current exact Research/spec
+and Main supplies the one-shot `--user-authorized-split` choice. Once
+authorized, a Research repair worker produces the
 complete batch and the ordinary proof/source supervisors review it; only then
 may packaging resume. The interface conclusion must equal the
 existing top-level Research claim; assumptions, domain/types, quantifiers,
@@ -79,8 +82,12 @@ checks every exact Research record, dependency edge, and selected interface,
 regardless of its author. A mechanical Gateway alone may certify exactly the components marked correct. A failing sibling
 component does not discard an independent correct component.
 
-A prospective schema-v3 split repair uses one worker-chosen finite batch rather
-than one assignment per successor. Ingestion stages all members and one owner,
+A prospective schema-v3 split repair is disabled by default. Exact
+`plan-repair-round` or `plan-round --memory-id` may create its worker only with
+the one-shot `--user-authorized-split` choice after a current explicit user
+request. The choice is not stored or replayed; generic frontier planning fails
+visibly instead of skipping a selected split. An authorized split uses one
+worker-chosen finite batch rather than one assignment per successor. Ingestion stages all members and one owner,
 then commits the batch last; uncommitted staged records are not frontier or Fact
 work. One supervisor per scope reviews the complete committed membership.
 

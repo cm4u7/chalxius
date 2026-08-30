@@ -1,9 +1,35 @@
-# Chalxius 1.0.4 architecture findings and residual boundaries
+# Chalxius 1.0.5 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 1.0.4
-**Frontier Context Handoff Repair**. It describes architecture defects,
+This file is the release, nontruth disclosure for Chalxius 1.0.5
+**Split Opt-In Repair**. It describes architecture defects,
 integrated repairs, and intentional residual boundaries; it is not mathematical
 evidence and grants no Research, package, verifier, Gateway, or Fact authority.
+
+## 1.0.5 Split Opt-In Repair
+
+Live use showed statement splitting becoming a default repair reflex: a
+supervisor or packager could recommend `needs_split`, Main could immediately
+create a schema-v3 repair, and the same repair could be scheduled later through
+ordinary `plan-round`. Version 1.0.5 keeps the diagnostic and historical batch
+interfaces but disables every new split production by default. Both the coupled
+repair planner and the common production-round boundary now require exact
+Research selection plus the one-shot `--user-authorized-split` choice after a
+current explicit user request. The choice is not stored, inferred, or replayed.
+
+This is an execution pause, not a Fact veto. Supervisors may still diagnose a
+mixed node; packagers may select an alternative whole-node interface, ordinary
+one-to-one COW, or leave the route unready. Regular proof/source supervision is
+unchanged. Frozen split cards, returns, commits, ingestion, and commit-last
+recovery remain readable so interrupted historical work is not damaged. Generic
+frontier planning reports a selected split instead of silently skipping it.
+No scheduler, compatibility layer, second graph, project migration, or truth
+authority was added.
+
+An already-created pending split task can be made operationally dormant with
+the existing `blocked` Research disposition. The derived COW/frontier route
+then omits only that productless task while preserving its exact history and
+every already-published repair outcome. Resumption remains an explicit Main
+choice and still requires a current user split authorization.
 
 ## 1.0.4 Frontier Context Handoff Repair
 
@@ -110,7 +136,7 @@ was added.
 
 Every lower version section is a frozen account of the contract then in force.
 Words such as “current”, “prospective”, “Candidate”, or “adverse” below are
-historical within that named release and do not override the 1.0.3 Fact Alpha
+historical within that named release and do not override the 1.0.5 prospective
 route above. The old Candidate CLI is procedurally reserved compatibility for
 explicitly selected 0.x completion/audit; the runtime does not authenticate
 pre-1.0 provenance, and this release adds no provenance or identity gate.

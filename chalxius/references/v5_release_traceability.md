@@ -1,4 +1,29 @@
-# Chalxius V5 traceability through 1.0.4 Frontier Context Handoff Repair
+# Chalxius V5 traceability through 1.0.5 Split Opt-In Repair
+
+## 1.0.5 Split Opt-In Repair overlay
+
+- Candidate version: `1.0.5`; release name **Split Opt-In Repair**.
+- New schema-v3 split production is disabled by default. The coupled repair
+  planner and common production-round planner require exact Research selection,
+  a current explicit user request, and the one-shot
+  `--user-authorized-split` choice.
+- Ordinary `plan-round`, direct production-round calls, and manually written
+  split repair nodes cannot bypass the same check. Generic frontier selection
+  reports a selected split rather than silently skipping it.
+- The authorization choice is absent from Research, task cards, receipts,
+  frontier state, and exact replay argv. Frozen cards, returns, ingestion, and
+  commit-last recovery remain readable.
+- `needs_split` is a supervisor/packager recommendation only. Ordinary
+  supervision, one-to-one COW, package alternatives, verifier, Gateway, and
+  Fact authority are unchanged.
+- A productless repair task with an explicit `blocked` disposition remains
+  searchable history but leaves the live COW/frontier route; published repair
+  outcomes remain visible.
+- Correctness tests belong to candidate installation. Publication reuses that
+  exact installed manifest and checks only archive/checksum/file-set identity
+  plus local-sensitive-information absence. Semantic mutation and full forensic
+  profiles remain optional diagnostics; they are not repeated publication
+  gates.
 
 ## 1.0.4 Frontier Context Handoff Repair overlay
 

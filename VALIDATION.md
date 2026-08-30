@@ -1,123 +1,103 @@
-# Validation — Chalxius v1.0.3 Research Route Coordination Repair
+# Validation — Chalxius v1.0.5 Split Opt-In Repair
 
-This report records software, package, installation, live-project performance,
-sensitive-information, and CHX-settlement evidence. It does not certify a
-mathematical claim.
+This report records software, installation, package, live-project, CHX/PHX,
+and publication evidence. It does not certify a mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 1.0.3 |
-| Release date | 2026-08-30 |
+| Version | 1.0.5 |
+| Release date | 2026-08-31 |
 | Manifest entries | 269 |
 | Package files, including manifest | 270 |
-| Manifest SHA-256 | `de3c4d76dd4408cc2c5c73bfa9ed899e3424a7e38bb255e60563613b6b9f77bb` |
-| Archive | `chalxius-1.0.3-research-route-coordination-repair.tar.gz` |
-| Archive bytes | 2,782,957 |
+| Manifest SHA-256 | `f8f7cd04201b4f3761d16619b089a832e8f32348430f7882bcd26b07398a7508` |
+| Archive | `chalxius-1.0.5-split-opt-in-repair.tar.gz` |
+| Archive bytes | 2,794,846 |
 | Archive regular-file members | 270 |
-| Archive SHA-256 | `220f7077212132dd6a71aef00e7bf9e4459b12dee7b802ac07f7fb9e34e2bcc1` |
-| Checksum-file SHA-256 | `9bbc3a01937166fd25b6211b2fb3256d1e8574c0dac0ace5c8b97a926b0f114b` |
+| Archive SHA-256 | `921c273825388199725d10ea0bbfc7bfb1186138de3e2b9b32fa7f42f5b71335` |
+| Checksum-file SHA-256 | `5771e5bb04d14e4a88d8d930d13cc8fbb267b183d2e74125c1ffdd89ae7a58cd` |
 
 Two independent archive builds were byte-identical. The archive contains only
-sorted regular package files and no cache or bytecode member.
+the 270 sorted regular package files and no directory, cache, or bytecode
+member.
 
-## Supported-capability boundary
+## Correctness validation and installation
 
-Graph Browser and graphical graph generation are temporarily unavailable and
-are not supported v1.0.3 release capabilities. Historical or experimental
-Reader bytes and an old command entry may remain in the package. Their
-mechanical self-tests passing does not restore a public support claim.
+Correctness validation was completed before publication:
 
-This presentation boundary does not affect Research storage, exact search,
-Campaign/frontier coordination, textual graph inspection, supervision, COW,
-Fact packaging, verification, or certification.
+- full suite: 1,104 tests passed, 19 skipped;
+- routine changed-surface lane: 164 tests passed;
+- semantic mutation diagnostic: 32/32 selected mutations killed;
+- installer dry run, installer self-test, focused split/frontier regressions,
+  atomic swap, and rollback preparation: PASS;
+- candidate-to-installed identity: exact at all 269 manifest entries; and
+- project reads/writes performed by installation: 0/0.
 
-## Routine release matrix
+The exact installed manifest is
+`f8f7cd04201b4f3761d16619b089a832e8f32348430f7882bcd26b07398a7508`.
+The archived 1.0.4 runtime remains available for direct rollback.
 
-The exact final manifest passed the manifest-bound routine matrix:
+A separate forensic diagnostic also passed architecture, behavior, full-suite,
+self-test, and 144/144 preflight checks. One historical mutation-harness
+self-test mutation survived inside the diagnostic harness; it did not alter the
+candidate, installed identity, changed surface, or release decision. This lane
+is intentionally diagnostic, not a publication gate.
 
-| Lane | Result | Elapsed |
-|---|---:|---:|
-| Self-test | PASS | 1.186 s |
-| Changed-surface regression | 154 tests, PASS | 14.183 s |
-| Semantic mutation audit | 32/32 killed | 51.285 s |
+## Live-project canary
 
-The matrix completed in 65.890 wall seconds. Every isolated lane reported an
-unchanged candidate tree. The receipt-file SHA-256 is
-`dd0972d94b79a769735731b0d7c5ac3529280c5d2c8a5caf2b36ceb4c53330d2`.
+The installed runtime read and reconciled the local-$\mathbb F_0$ project.
+Campaign generation 194 reports both targets current and no stale head. The
+three paused split ids are absent from target decision surfaces and the workflow
+queue. Their original rounds and existing returns remain readable, unvalidated,
+uningested, and unmodified. A completed negative branch was removed from active
+work, while its Research history remains intact.
 
-Focused evidence also includes 25/25 Campaign/frontier tests, 38/38 combined
-frontier/capability/registry tests, 19/19 Fact Alpha tests, 17/17 current
-adverse-compatibility tests, 20/20 BTTF field-repair tests, and the atomic
-schema-v3 split regression. A synthetic 21-landmark Campaign retained the full
-exact state while routine output showed eight ids plus the exact total and
-identity digest.
+The split authorization is one-shot: it is absent from Research, task cards,
+receipts, frontier state, and replay arguments. Regular source/proof supervision,
+mixed-product diagnosis, and ordinary one-to-one COW remain available.
 
-## Installation
+## Publication scan
 
-| Field | Result |
-|---|---|
-| Installed version | 1.0.3 |
-| Candidate-to-installed manifest | exact; 269/269 entries |
-| Installed manifest SHA-256 | `de3c4d76dd4408cc2c5c73bfa9ed899e3424a7e38bb255e60563613b6b9f77bb` |
-| Installed self-test | PASS |
-| Previous runtime archived | yes; exact preceding 1.0.3 bytes |
-| Direct rollback available | yes |
-| Project reads / writes by installation | 0 / 0 |
-
-The archived preceding runtime content identity is
-`d04e977f23a39ea9397cc009b9f0f55bb02683430554018812bcd5657f12f4f7`.
-
-## Live-project canary and performance
-
-The installed runtime read the 2,393-Research local-$\mathbb F_0$ project
-without mutation.
-
-- Campaign frontier: approximately 3.05 s and 37,617 output bytes, with four
-  targets and landmark counts 7, 2, 1, and 3.
-- Fact frontier: approximately 3.59 s wall time, 3.01 s internal time, and
-  26,659 output bytes for 17 active marks, eight in scope, three landmark
-  routes, and seven route entries.
-
-These are one-snapshot observations, not universal latency bounds. The byte
-sizes are reported because reasonable use of Main's context is part of the
-performance surface.
-
-## Sensitive-information scan
-
-The repository and package were scanned for the local username and path,
-private-key headers, AWS access keys, GitHub/OpenAI/Slack token forms, and
-common secret assignments. No true credential or private path was found. Two
-OpenAI-like matches were substrings of synthetic `hosttask-...` and
-`v5-task-...` fixture ids. Other generic secret-assignment matches were code,
-vendored MathJax, or generated public Reader examples.
+Publication uses the already installed bytes. Its gate is limited to exact
+archive identity, checksum sidecar, repository file set, and absence of local
+paths or sensitive data. The exact final archive and staged public diff were
+scanned; no credential, private-key material, local username/path, private
+Campaign id, or current ledger id is included in the published package or
+release-facing files. Three classified matches remain: two visibly synthetic
+fixture ids and one historical project label already present in public release
+traceability. None contains a secret or local path. Heavy mutation and forensic
+matrices were not repeated.
 
 ## Global CHX settlement
 
 | Field | Result |
 |---|---|
-| Global repair | `global-repair-d83c800c595ec9b5e1a580db262038bc64149645ef4918c866bec3dff68af8b6` |
-| Canonical `record_sha256` | `ee5645709380ed45b44862dc545d5bfa6c7d5d1edd28c52156d69cd3bfb42188` |
-| Record-file SHA-256 | `f58a06a84c3be8ca430186b1b9dab62d92d467945b5848d1c3d2bec6c93ba3f5` |
-| Inventory SHA-256 | `e5253580ab7c63c0dd9fa842edc57f8661e3348cc975b021d147eb02efee1d2b` |
-| Covered snapshot SHA-256 | `f084abf88d23216478a0f7cacb1277e74237fa2658c7cf08b3da6aff640377a5` |
-| Observed / covered | 256 / 256 |
-| Revalidated prior / newly fixed | 244 / 12 |
+| Global repair | `global-repair-15192f1156b72b5563a45c2f58d3b439fec41c8c6bf46c5b13d5d1ef9353d447` |
+| Canonical `record_sha256` | `cd6520c035467a77d7e48ab82197661e9c56acba7870fd5ad4f33a36fc7449ef` |
+| Record-file SHA-256 | `955a7ab9a51732475616d4e24af77e9df7681a760721506ddf7f6401b899597f` |
+| Inventory SHA-256 | `64b78dd78fbec944fb16e0f7bc384841ae05e7bdc4c2fc77918b21f68721d655` |
+| Covered snapshot SHA-256 | `01235b486fb3134ff4636544d1a29bd6172c00b068c9f6a999b7717379ad16dd` |
+| Observed / covered | 258 / 258 |
+| Revalidated prior / newly fixed | 257 / 1 |
 | Uncovered | 0 |
-| Lineage errors / report drift | 0 / 0 |
 
-Historical ledger bytes were not rewritten. Old open-state provenance remains
-readable, but the current exact installed manifest covers every observed issue.
-Graph Browser withdrawal is a release-scope decision and was not fabricated as
-a CHX defect.
+Historical ledger bytes were not rewritten. The current exact installed
+manifest covers every qualified observation in the terminal inventory.
+
+## PHX adoption
+
+The explicit split opt-in route is adopted as
+`adoption-01787a30b6bc8dacd56fcd78eb7647bd3f6845ea5926453f3f262f32333e01ff`
+from supported measurement
+`measurement-e957a3effa813e5b846b35c6c8294b4d657ad1886b93ef9f04b3cfb6351728ab`.
+It introduces no scheduler, inferred authorization, compatibility layer,
+second lifecycle, project effect, or truth effect.
 
 ## Publication boundary
 
-The `v1.0.3` annotated tag and release commit
-`baa4eea8b517e5fa5301a70e81ee798da6ff08df` were pushed to
-`https://github.com/cm4u7/chalxius`. The public release is
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.3>. GitHub reports the two
-uploaded asset digests as the same archive and checksum identities recorded
-above. Installation, validation, CHX settlement, and publication create no
-Research or Fact authority.
+The prepared annotated tag is `v1.0.5`; the release endpoint is
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. The exact remote commit,
+time, and asset confirmation are recorded on `main` after publication.
+Installation, validation, CHX/PHX settlement, and publication create no Research
+or Fact authority.

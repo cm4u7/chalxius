@@ -192,6 +192,10 @@ def default_focused_test_runner(root: Path) -> None:
                 "test_v5_lifecycle.V5LifecycleTests."
                 "test_candidate_release_does_not_walk_administrative_related_history"
             ),
+            (
+                "test_v5_lifecycle.V5LifecycleTests."
+                "test_schema_v3_split_repair_commits_worker_chosen_members_atomically"
+            ),
         ],
         cwd=root,
         env=environment,

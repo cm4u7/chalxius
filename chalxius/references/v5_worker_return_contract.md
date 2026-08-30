@@ -144,6 +144,10 @@ relations and omissions rather than manufacturing sibling-order edges. Do not
 return a guessed placeholder count, several independent returns, or a partial
 batch. Ingestion derives the successor Research ids, resolves the relation map,
 and publishes the assignment owner and commit only after all records exist.
+The planner creates a new card of this form only after exact one-shot
+`--user-authorized-split` selection following a current explicit user request.
+The authorization is not part of the return and is not rechecked during frozen-
+card validation, ingestion, idempotent retry, or commit-last recovery.
 
 When performing proof-logic supervision of a current committed split batch, the
 `fact_statement_interfaces` artifact uses revision

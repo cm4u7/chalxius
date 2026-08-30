@@ -8,7 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mathgraph.contracts import sha256_json
-from mathgraph.frontier_actions import project_frontier_group_actions
+from mathgraph.frontier_actions import (
+    _ActionProjector,
+    project_frontier_group_actions,
+)
 from mathgraph.store import MathGraphStore
 from mathgraph.v5_lifecycle import RoundInspectionContext, V5LifecycleManager
 
@@ -468,6 +471,76 @@ class SemanticRecovery0812Tests(unittest.TestCase):
             )[root],
             repair,
         )
+
+    def test_disposed_pending_repair_is_history_not_an_active_cow_route(
+        self,
+    ) -> None:
+        bases, ids = self._two_hop_chain()
+        root, product, trigger, repair = ids[:4]
+        bases = {
+            research_id: bases[research_id]
+            for research_id in (root, product, trigger, repair)
+        }
+        dispositions = {
+            repair: {
+                "metadata": {
+                    "disposition_status": "blocked",
+                }
+            }
+        }
+
+        projection = V5LifecycleManager._frontier_cow_route_projection(
+            bases=bases,
+            route_staleness={product: [trigger]},
+            dispositions=dispositions,
+        )
+        self.assertIn(repair, projection["cow_repairs"])
+        self.assertEqual(
+            projection["details"][repair]["state"],
+            "inactive_pending_repair",
+        )
+        self.assertFalse(
+            any(
+                repair in children
+                for children in projection["route_children"].values()
+            )
+        )
+        self.assertFalse(
+            any(
+                repair in children
+                for children in projection["context_children"].values()
+            )
+        )
+        self.assertEqual(
+            V5LifecycleManager._frontier_cow_terminal_members(
+                seed_members=[root],
+                bases=bases,
+                route_staleness={product: [trigger]},
+                dispositions=dispositions,
+            ),
+            {root: root},
+        )
+        index = V5LifecycleManager._campaign_semantic_successor_index(
+            bases,
+            dispositions,
+        )
+        self.assertNotIn(repair, index["children"].get(product, []))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            lifecycle = MathGraphStore(
+                Path(temporary) / "project"
+            ).v5_lifecycle()
+            projector = _ActionProjector(
+                lifecycle,
+                bases=bases,
+                dispositions=dispositions,
+                route_staleness={product: [trigger]},
+                inspection=RoundInspectionContext(),
+            )
+            self.assertEqual(
+                projector.historical_repairs(product, [trigger]),
+                [],
+            )
 
     def test_structured_repair_does_not_require_duplicate_invalidator_declaration(self) -> None:
         bases, ids = self._two_hop_chain()

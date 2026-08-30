@@ -1,5 +1,18 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.5 Split Opt-In Repair override.** `needs_split` remains a proof/source
+> diagnosis and strong packaging recommendation, not execution authority.
+> Every new schema-v3 split production is stopped by default. Main may plan it
+> only from exact Research ids/specification with the one-shot
+> `--user-authorized-split` choice after a current explicit user request. The
+> choice is checked at the common production-round boundary, is not stored or
+> replayed, and does not affect frozen split history, ordinary supervision,
+> one-to-one COW, packages, verification, Gateway, or Fact authority. Generic
+> frontier planning reports a selected split rather than silently skipping it.
+> A pending split task explicitly disposed as `blocked` remains readable
+> history but is absent from the live COW successor route; dispositions never
+> hide an already-published repair product.
+
 > **1.0.4 Frontier Context Handoff Repair override.** Exact active-head context
 > follows one uniquely selected `plan-round` successor. A genuinely ambiguous
 > multi-successor handoff remains unattached for Main, and later concrete

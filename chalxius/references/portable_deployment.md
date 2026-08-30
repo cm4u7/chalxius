@@ -1,5 +1,16 @@
 # Chalxius portable deployment
 
+## 1.0.5 Split Opt-In Repair
+
+The `1.0.5` **Split Opt-In Repair** candidate keeps every historical split
+interface readable but stops new schema-v3 split production by default.
+`plan-repair-round` and exact `plan-round` require a current explicit user
+request plus the one-shot `--user-authorized-split` choice. The common
+production boundary also covers direct API planning and refuses generic
+frontier opt-in or silent skipping. The choice is not persisted or replayed.
+Ordinary supervision, one-to-one COW, installation, and all truth boundaries
+are unchanged; deployment creates no project migration or compatibility layer.
+
 ## 1.0.4 Frontier Context Handoff Repair
 
 The `1.0.4` **Frontier Context Handoff Repair** candidate keeps the 1.0.3
@@ -47,7 +58,7 @@ committed batch. Deployment creates no Fact-side split supervisor.
 ## Frozen release-history boundary
 
 All lower version sections are frozen descriptions of their then-current
-contracts. They do not override 1.0.4. Old Candidate commands are procedurally
+contracts. They do not override 1.0.5. Old Candidate commands are procedurally
 reserved for explicitly selected 0.x completion/audit; the runtime does not
 authenticate pre-1.0 provenance and installation adds no identity gate.
 

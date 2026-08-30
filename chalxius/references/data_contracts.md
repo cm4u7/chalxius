@@ -3,8 +3,9 @@
 > **V5 authority boundary.** The V3/V4 schemas below remain readable
 > compatibility contracts. They do not define V5 truth transitions and no V4
 > review, acceptance marker, profile closure, import, or migration receipt is
-> V5 authority. Current truth-bearing data follows `Research -> Candidate
-> Release -> Certification Decision -> Fact` under `admission_contract.md`.
+> V5 authority. Current truth-bearing data follows `Research -> frozen
+> multi-Research nontruth package -> independent verifier decision -> Gateway
+> Research certification grant` under `admission_contract.md`.
 > Compatibility commands that submit new work map into that V5 lifecycle.
 
 All ids are lowercase hexadecimal: fact ids are 16 characters, memory ids 12, and review,
@@ -485,13 +486,25 @@ scope-bearing citation claims must therefore remain in the hashed proof text.
 For a V5 project, `plan-repair-round MEMORY_ID` creates one copy-on-write repair
 Research branch and plans one bound production work unit. The optional
 `--trigger-memory-id CHALLENGE_ID` binds the triggering Research record. The
-optional `--input REPAIR_SPEC.json` carries an exact schema-v1 object with only
-`schema_version`, `claim`, `content`, `rationale`, `work_mode`, `obligations`,
-and `stop_conditions`. The normalized object and its SHA-256 are stored in the
+optional `--input REPAIR_SPEC.json` carries an exact schema-v1, schema-v2, or
+schema-v3 object. Every version includes `schema_version`, `claim`, `content`,
+`rationale`, `work_mode`, `obligations`, and `stop_conditions`; schema-v2 adds
+verified `input_capabilities`, while schema-v3 additionally fixes
+`output_shape="research_split_batch"`. The normalized object and its SHA-256 are stored in the
 repair Research metadata and therefore in the immutable task-card dossier. No
 worker or planner may replace that exact instruction with a generic repair
-summary. The repair remains Research until it traverses the ordinary Candidate,
-verifier, Certification, and Gateway path.
+summary. New schema-v3 split production is disabled by default and requires
+exact Research selection plus the one-shot `--user-authorized-split` choice
+after a current explicit user request. That choice is not part of the typed
+specification, Research, card, receipt, or replay. The repair remains nontruth
+Research unless later selected into the current package, verifier, and Gateway
+Research-certification path.
+
+The existing `memory-update ... --status blocked` disposition can make an
+already-created, productless repair task dormant. COW/frontier projection keeps
+the immutable repair and disposition readable but does not treat the task as a
+live successor. A repair with an already-published exact product continues to
+project that historical outcome.
 
 Older V4 projects retain their historical two-branch repair adapter.
 

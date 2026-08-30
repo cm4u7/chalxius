@@ -1754,6 +1754,7 @@ class FactAlphaManager:
             projection = self.lifecycle._frontier_cow_route_projection(
                 bases=bases,
                 route_staleness=route_staleness,
+                dispositions=dispositions,
             )
             inspection.frontier_cow_route_projection = projection
         repair_children = projection["route_children"]
@@ -3979,7 +3980,7 @@ class FactAlphaManager:
             "next_action": (
                 "fact-verifier-capsule"
                 if package is not None
-                else "fact-package-seal-or-research-cow-split"
+                else "fact-package-seal-or-await-user-authorized-research-split"
                 if mechanical["state"] == "research_split_required"
                 else "fact-package-seal"
             ),

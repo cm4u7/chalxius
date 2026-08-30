@@ -36,11 +36,15 @@ Current admission requires:
    `state="mechanical_proposal_ready"`, a `mechanical_package_proposal`, and its
    digest, but does not seal. The packager performs the one seal and may accept
    that recommendation, supply a different complete six-field interface, choose
-   a whole-node route, or request split/COW. An explicit `needs_split` therefore blocks only the automatic path
-   and reports `fact-package-seal-or-research-cow-split`; it is not a veto over
+   a whole-node route, use ordinary one-to-one COW, or retain a split
+   recommendation. An explicit `needs_split` therefore blocks only the automatic path
+   and reports `fact-package-seal-or-await-user-authorized-research-split`; it is not a veto over
    the packager's alternative interface or route. If the packager requests an
-   actual split, package work pauses. The split is performed by a Research
-   repair worker from a precise brief, not by the packager or by mechanically
+   actual split, package work pauses. No split worker is started unless the user
+   explicitly authorizes the current exact Research/specification and Main
+   supplies the one-shot `--user-authorized-split` choice at Research production
+   planning. That choice is not persisted or replayed. Once authorized, the split
+   is performed by a Research repair worker from a precise brief, not by the packager or by mechanically
    cutting prose. Split successors undergo the ordinary proof/source
    supervision layer afresh, and those whole-product passes author their
    interfaces before packaging resumes; there is no Fact-side split supervisor.

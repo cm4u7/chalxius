@@ -8,8 +8,9 @@
 > procedurally reserved for an explicitly selected 0.x completion or audit; the
 > runtime does not authenticate pre-1.0 provenance and no identity gate is
 > implied. A packager-requested split pauses Fact work and returns to a Research
-> repair worker plus ordinary proof/source supervision; no Fact-side split
-> supervisor exists. The historical fast lane is only bounded one-to-one
+> repair worker plus ordinary proof/source supervision only after a current
+> explicit user request and exact one-shot `--user-authorized-split` planning;
+> no Fact-side split supervisor exists. The historical fast lane is only bounded one-to-one
 > complete-node minor COW with a full same-verifier component recheck; split or
 > structural ambiguity returns to ordinary Research, and Gateway stays
 > independent. See `unified_architecture.md` and `admission_contract.md` for current

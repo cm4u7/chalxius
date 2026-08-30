@@ -838,10 +838,26 @@ MUTANTS = (
     ),
     Mutant(
         name="mode_free_text_becomes_route",
-        old="            if suggestion in WORK_MODES:\n",
+        old=(
+            "        for suggestion in suggestions:\n"
+            "            if suggestion in WORK_MODES:\n"
+            "                if suggestion not in accepted:\n"
+            "                    accepted.append(suggestion)\n"
+            "            else:\n"
+            "                rejected.append(suggestion)\n"
+            "        default_mode = self._work_mode(entry, index)\n"
+            "        default_signature = self._mode_architecture_signature(\n"
+        ),
         new=(
+            "        for suggestion in suggestions:\n"
             "            if suggestion in WORK_MODES or "
             "suggestion.startswith('prove'):\n"
+            "                if suggestion not in accepted:\n"
+            "                    accepted.append(suggestion)\n"
+            "            else:\n"
+            "                rejected.append(suggestion)\n"
+            "        default_mode = self._work_mode(entry, index)\n"
+            "        default_signature = self._mode_architecture_signature(\n"
         ),
         test=(
             f"{CONTEXT_TEST_MODULE}."

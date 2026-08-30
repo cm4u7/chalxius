@@ -547,7 +547,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Main may bind one exact bounded repair specification through copy-on-write Research into the immutable production task card.",
+      "summary": "Main may bind one exact bounded repair specification through copy-on-write Research into the immutable production task card; schema-v3 split execution separately requires a current one-shot user opt-in that is not transported by this feature.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.create_repair_round",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._normalize_exact_repair_spec",
       "activation_predicate": {
@@ -567,7 +567,7 @@
       "observable_effect": {
         "effect_id": "exact_repair_instruction_visible_in_task_card",
         "kind": "routing",
-        "description": "The normalized claim, content, rationale, mode, obligations, and stop conditions are hash-bound in repair Research and visible unchanged in the task card; malformed or drifted input fails closed."
+        "description": "The normalized claim, content, rationale, mode, obligations, and stop conditions are hash-bound in repair Research and visible unchanged in the task card; malformed or drifted input fails closed. A schema-v3 split additionally requires contemporaneous explicit user opt-in at production planning, and that one-shot choice is absent from the typed handoff."
       },
       "probes": {
         "positive": "tests.test_v5_lifecycle.V5LifecycleTests.test_exact_repair_spec_is_hash_bound_into_research_and_task_card",
@@ -1195,7 +1195,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Prospective Fact authority certifies exact whole Research records in packager-selected bounded packages; direct routes freeze exact Main anchors and package-edge connectivity, a requested split returns to ordinary Research repair/supervision, the historical fast lane is bounded one-to-one minor COW only, and Gateway remains the sole certification switch.",
+      "summary": "Prospective Fact authority certifies exact whole Research records in packager-selected bounded packages; direct routes freeze exact Main anchors and package-edge connectivity, a split recommendation returns to ordinary Research repair/supervision only after a current one-shot user opt-in, the historical fast lane is bounded one-to-one minor COW only, and Gateway remains the sole certification switch.",
       "production_entry_symbol": "mathgraph.fact_alpha.FactAlphaManager.certify",
       "producer_symbol": "mathgraph.fact_alpha.FactAlphaManager._grant_projection",
       "activation_predicate": {
