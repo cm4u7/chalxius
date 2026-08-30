@@ -4,10 +4,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from mathgraph.store import MathGraphStore
-from mathgraph.contracts import sha256_json
+from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.roles import allowed_commands_for_workflow
 
 
@@ -24,6 +25,19 @@ class FactAlphaTests(unittest.TestCase):
         self.assertNotIn("fact-package-seal", worker_commands)
         self.assertNotIn("fact-verification-record", worker_commands)
         self.assertNotIn("fact-certify", worker_commands)
+
+        self.assertEqual(
+            allowed_commands_for_workflow("verifier", 5),
+            {
+                "fact-verifier-capsule",
+                "fact-verification-record",
+                "fact-verification-check",
+            },
+        )
+        self.assertEqual(
+            allowed_commands_for_workflow("verifier", 4),
+            set(),
+        )
 
     @staticmethod
     def _store(root: Path) -> MathGraphStore:
@@ -120,6 +134,10 @@ class FactAlphaTests(unittest.TestCase):
             for item in research
         ]
         plan = manager.plan_packaging([item["mark_id"] for item in marks])
+        self.assertEqual(
+            plan["mechanical_package_state"],
+            "interface_preparation_required",
+        )
         components = (
             [
                 {
@@ -663,6 +681,299 @@ class FactAlphaTests(unittest.TestCase):
                 repair_decision["decision_id"], gateway="mechanical-gateway"
             )
             self.assertEqual(len(acceptance["grant_ids"]), 1)
+
+    def test_scoped_frontier_explains_filtered_unbound_marks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "claim": "A shared root claim is available globally.",
+                    "content": "A complete root argument.",
+                },
+                actor="root-author",
+            )
+            manager = lifecycle.fact_alpha()
+            manager.mark(
+                research["research_id"],
+                rationale="This is a shared load-bearing root.",
+            )
+
+            scoped = manager.frontier(campaign_id="campaign-aaaaaaaaaaaa")
+
+            self.assertEqual(scoped["entries"], [])
+            self.assertEqual(
+                scoped["scope_projection"]["global_active_mark_count"], 1
+            )
+            self.assertEqual(
+                scoped["scope_projection"]["in_scope_active_mark_count"], 0
+            )
+            self.assertEqual(
+                scoped["scope_projection"]["filtered_out_unbound_mark_count"], 1
+            )
+            self.assertIn(
+                "global Fact frontier",
+                scoped["scope_projection"]["note"],
+            )
+
+    def test_empty_overlay_advises_unique_legacy_production_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            artifact = store.root / "evidence" / "legacy-root.md"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_text("legacy root bytes", encoding="utf-8")
+            artifact_binding = {
+                "path": artifact.relative_to(store.root).as_posix(),
+                "sha256": sha256_bytes(artifact.read_bytes()),
+                "role": "candidate_fact",
+            }
+            production = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "The exact legacy root statement holds.",
+                    "content": "A complete constructive proof.",
+                    "worker_outcome": "proof",
+                    "assignment_provenance": {
+                        "schema_version": 1,
+                        "round_id": "round-20260830T000000Z-00000001",
+                        "assignment_id": "a01-aaaaaaaaaaaa-prove",
+                        "worker_id": "a01-aaaaaaaaaaaa-prove",
+                        "task_card_sha256": "a" * 64,
+                        "work_mode": "prove",
+                        "adverse_assignment": False,
+                    },
+                    "artifacts": [artifact_binding],
+                },
+                actor="a01-aaaaaaaaaaaa-prove",
+            )
+            lifecycle.add_research(
+                {
+                    "kind": "synthesis",
+                    "claim": "A synthesis reuses the legacy bytes.",
+                    "content": "This is not a production carrier.",
+                    "artifacts": [artifact_binding],
+                },
+                actor="main-synthesis",
+            )
+            manager = lifecycle.fact_alpha()
+            legacy_fact = SimpleNamespace(
+                fact_id="1111111111111111",
+                predecessors=[],
+                statement="The exact legacy root statement holds.",
+            )
+            with patch.object(
+                store,
+                "facts",
+                return_value={legacy_fact.fact_id: legacy_fact},
+            ), patch.object(
+                store,
+                "statement_interface",
+                return_value={"stored_fact_sha256": artifact_binding["sha256"]},
+            ):
+                frontier = manager.frontier()
+
+            bootstrap = frontier["legacy_root_bootstrap"]
+            self.assertEqual(
+                bootstrap["state"], "exact_legacy_roots_available"
+            )
+            self.assertEqual(bootstrap["exact_candidate_count"], 1)
+            self.assertEqual(bootstrap["ambiguous_count"], 0)
+            self.assertEqual(
+                bootstrap["candidates"][0]["production_carrier_research_id"],
+                production["research_id"],
+            )
+            self.assertEqual(manager._marks(), {})
+            self.assertEqual(manager._accepted_grants(), {})
+
+    def test_supervised_interface_mechanically_seals_and_preserves_evidence_layer(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            evidence = store.root / "evidence" / "proof.md"
+            evidence.parent.mkdir(parents=True)
+            evidence.write_text("complete proof evidence", encoding="utf-8")
+            evidence_binding = {
+                "path": evidence.relative_to(store.root).as_posix(),
+                "sha256": sha256_bytes(evidence.read_bytes()),
+                "role": "research_product",
+            }
+            research = lifecycle.add_research(
+                {
+                    "claim": "The supervised whole-node theorem holds.",
+                    "content": "A complete proof of the theorem.",
+                    "artifacts": [evidence_binding],
+                },
+                actor="research-author",
+            )
+            interface_artifact = (
+                store.root / "evidence" / "supervised-interface.json"
+            )
+            interface_payload = {
+                "schema_version": 1,
+                "contract_revision": (
+                    "chalxius-supervised-statement-interfaces-1"
+                ),
+                "entries": [
+                    {
+                        "research_id": research["research_id"],
+                        "research_record_sha256": research["record_sha256"],
+                        "disposition": "ready",
+                        "rationale": (
+                            "The complete Research claim is one coherent surface."
+                        ),
+                        "statement_interface": self._interface(research),
+                    }
+                ],
+                "truth_effect": "none",
+            }
+            interface_artifact.write_text(
+                json.dumps(interface_payload, sort_keys=True), encoding="utf-8"
+            )
+            supervisor = lifecycle.add_research(
+                {
+                    "kind": "insight",
+                    "claim": "Bounded proof-logic supervision is clean.",
+                    "content": "The complete theorem and interface were reviewed.",
+                    "artifacts": [
+                        {
+                            "path": interface_artifact.relative_to(
+                                store.root
+                            ).as_posix(),
+                            "sha256": sha256_bytes(
+                                interface_artifact.read_bytes()
+                            ),
+                            "role": "fact_statement_interfaces",
+                        }
+                    ],
+                },
+                actor="independent-supervisor",
+            )
+            coverage = [
+                {
+                    "production_round_id": "round-20260830T000000Z-00000002",
+                    "source_component_id": None,
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": [supervisor["research_id"]],
+                    "pending_round_ids": [],
+                }
+            ]
+            manager = lifecycle.fact_alpha()
+            mark = manager.mark(
+                research["research_id"],
+                rationale="This theorem is load-bearing.",
+            )
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ):
+                plan = manager.plan_packaging([mark["mark_id"]])
+
+            self.assertEqual(
+                plan["mechanical_package_state"], "mechanically_sealed"
+            )
+            package = manager.package(plan["mechanical_package_id"])
+            self.assertEqual(
+                package["packager"],
+                "mechanical-supervision-interface-projection",
+            )
+            self.assertEqual(
+                set(
+                    package["components"][0]["entries"][0][
+                        "statement_interface"
+                    ]
+                ),
+                {
+                    "conclusion",
+                    "assumptions",
+                    "domain_and_types",
+                    "quantifiers",
+                    "certified_predecessor_research_ids",
+                    "limitations",
+                },
+            )
+            capsule = manager.verifier_capsule(package["package_id"])
+            capsule_research = capsule["research_records"][0][
+                "research_record"
+            ]
+            self.assertEqual(
+                capsule_research["metadata"]["artifacts"], [evidence_binding]
+            )
+            self.assertNotIn(
+                evidence_binding["path"],
+                package["components"][0]["entries"][0][
+                    "statement_interface"
+                ]["limitations"],
+            )
+
+    def test_supervisor_needs_split_blocks_mechanical_packaging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            research = lifecycle.add_research(
+                {
+                    "claim": (
+                        "One node currently mixes a lemma and a stronger theorem."
+                    ),
+                    "content": (
+                        "The two strengths require separate certification surfaces."
+                    ),
+                },
+                actor="research-author",
+            )
+            manager = lifecycle.fact_alpha()
+            mark = manager.mark(
+                research["research_id"],
+                rationale="The node is important but structurally mixed.",
+            )
+            coverage = [
+                {
+                    "production_round_id": "round-20260830T000000Z-00000003",
+                    "source_component_id": None,
+                    "scope": "proof_logic",
+                    "state": "completed",
+                    "result_research_ids": [],
+                    "pending_round_ids": [],
+                }
+            ]
+            split_projection = {
+                "state": "needs_split",
+                "statement_interface": None,
+                "source_bindings": [],
+                "source_count": 1,
+                "rationales": [
+                    "The lemma and stronger theorem have different assumptions."
+                ],
+                "diagnostic_sha256": "b" * 64,
+            }
+            with patch.object(
+                lifecycle,
+                "_candidate_supervision_scope_coverage",
+                return_value=coverage,
+            ), patch.object(
+                manager,
+                "_supervised_interface_projection",
+                return_value=split_projection,
+            ):
+                plan = manager.plan_packaging([mark["mark_id"]])
+                frontier = manager.frontier()
+
+            self.assertEqual(
+                plan["mechanical_package_state"], "research_split_required"
+            )
+            self.assertEqual(plan["mechanical_package_id"], None)
+            self.assertEqual(plan["next_action"], "research-cow-or-split")
+            self.assertEqual(
+                frontier["entries"][0]["state"], "blocked_by_research"
+            )
+            self.assertEqual(
+                frontier["entries"][0]["interface_preparation"]["state"],
+                "needs_split",
+            )
 
 
 if __name__ == "__main__":

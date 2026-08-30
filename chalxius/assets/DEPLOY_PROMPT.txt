@@ -1,8 +1,15 @@
-Chalxius 1.0.0 — Fact Alpha
+Chalxius 1.0.2 — Capability Budget Audit Repair
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, Candidate, Certification, Gateway, or Fact
 authority.
+
+The 1.0.2 validator gives each structured Repair capability manifest its own
+existing 64 MiB budget while retaining one command-local read-once byte and
+path/digest-conflict cache. Historical validity is therefore independent of
+full-ledger traversal order. One oversized manifest, a conflicting declaration,
+a no-follow violation, or hash-drifted bytes still fails closed. Installation
+does not rewrite frozen project data.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research
@@ -12,14 +19,21 @@ natural research window Main explicitly freezes selected marks with
 `plan-fact-packaging`. No timer, threshold, scheduler, automatic dispatcher, or
 truth inference is installed.
 
-A packaging agent uses the frozen plan to group independent components and
-extract a semi-formal interface for each exact Research record. Its conclusion
-must equal the existing top-level Research claim; assumptions, domain/types,
-quantifiers, explicit certified predecessor Research ids, and limitations make
-the claim callable without rewriting the proof. One independent verifier then
+For prospective clean Research, a supervisor may already emit the exact
+semi-formal interface or an explicit `needs_split` disposition. An all-ready
+plan seals mechanically; historical, missing, or custom interface work retains
+the narrow packaging-agent fallback. The interface conclusion must equal the
+existing top-level Research claim; assumptions, domain/types, quantifiers,
+explicit certified predecessor Research ids, and limitations make the claim
+callable without rewriting the proof. One independent verifier then
 checks every Research record, dependency edge, and interface. A mechanical
 Gateway may certify exactly the components marked correct. A failing sibling
 component does not discard an independent correct component.
+
+A prospective schema-v3 split repair uses one worker-chosen finite batch rather
+than one assignment per successor. Ingestion stages all members and one owner,
+then commits the batch last; uncommitted staged records are not frontier or Fact
+work. One supervisor per scope reviews the complete committed membership.
 
 Fact is therefore an append-only certification property of Research. Explicit
 certified predecessor ids and exact grant hashes form its rigid dependency

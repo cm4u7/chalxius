@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +9,8 @@ from typing import Any
 from .contracts import (
     MEMORY_ID_RE,
     SHA256_RE,
+    contained_path,
+    sha256_bytes,
     sha256_json,
     validate_campaign_id,
     validate_campaign_target_id,
@@ -32,6 +35,10 @@ FACT_CERTIFICATION_GRANT_REVISION = (
 FACT_CERTIFICATION_ACCEPTANCE_REVISION = (
     "chalxius-research-certification-acceptance-1"
 )
+FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION = (
+    "chalxius-supervised-statement-interfaces-1"
+)
+FACT_SUPERVISED_INTERFACE_ARTIFACT_ROLE = "fact_statement_interfaces"
 
 FACT_ALPHA_MAX_MARKS_PER_PLAN = 128
 FACT_ALPHA_MAX_FRONTIER_LIMIT = 256
@@ -411,6 +418,7 @@ class FactAlphaManager:
         research_id = validate_memory_id(research_id)
         rationale = _require_text(rationale, label="Fact frontier rationale")
         research = self.lifecycle._research_record(research_id)
+        self.lifecycle._research_split_commit_for_record(research)
         if campaign_id is not None:
             campaign_id = validate_campaign_id(campaign_id)
             campaign = self.store.campaigns().status(campaign_id)
@@ -797,6 +805,389 @@ class FactAlphaManager:
             "quantifiers": quantifiers,
             "certified_predecessor_research_ids": predecessors,
             "limitations": limitations,
+        }
+
+    def _validate_supervised_interface_artifact(
+        self,
+        value: Any,
+    ) -> dict[str, dict[str, Any]]:
+        record = _require_exact_fields(
+            value,
+            {
+                "schema_version",
+                "contract_revision",
+                "entries",
+                "truth_effect",
+            },
+            label="supervised statement-interface artifact",
+        )
+        if (
+            record["schema_version"] != 1
+            or record["contract_revision"]
+            != FACT_SUPERVISED_INTERFACE_ARTIFACT_REVISION
+            or record["truth_effect"] != "none"
+        ):
+            raise ValueError("supervised statement-interface identity is invalid")
+        raw_interfaces = record["entries"]
+        if (
+            not isinstance(raw_interfaces, list)
+            or not raw_interfaces
+            or len(raw_interfaces) > FACT_ALPHA_MAX_INTERFACE_ITEMS
+        ):
+            raise ValueError(
+                "supervised statement-interface artifact has invalid interfaces"
+            )
+        interfaces: dict[str, dict[str, Any]] = {}
+        for index, raw in enumerate(raw_interfaces, 1):
+            item = _require_exact_fields(
+                raw,
+                {
+                    "research_id",
+                    "research_record_sha256",
+                    "disposition",
+                    "rationale",
+                    "statement_interface",
+                },
+                label=f"supervised statement interface {index}",
+            )
+            research_id = validate_memory_id(item["research_id"])
+            if research_id in interfaces:
+                raise ValueError(
+                    "supervised statement-interface artifact repeats Research"
+                )
+            research = self.lifecycle._research_record(research_id)
+            if research["record_sha256"] != item["research_record_sha256"]:
+                raise ValueError(
+                    "supervised statement interface Research binding drifted"
+                )
+            disposition = item["disposition"]
+            if disposition not in {"ready", "needs_split"}:
+                raise ValueError(
+                    "supervised statement-interface disposition is invalid"
+                )
+            rationale = _require_text(
+                item["rationale"],
+                label="supervised statement-interface rationale",
+            )
+            statement_interface: dict[str, Any] | None = None
+            if disposition == "ready":
+                statement_interface = self._validate_statement_interface(
+                    item["statement_interface"], research=research
+                )
+            elif item["statement_interface"] is not None:
+                raise ValueError(
+                    "needs_split statement-interface disposition must not "
+                    "supply a whole-node interface"
+                )
+            interfaces[research_id] = {
+                "research_id": research_id,
+                "research_record_sha256": research["record_sha256"],
+                "disposition": disposition,
+                "rationale": rationale,
+                "statement_interface": statement_interface,
+            }
+        return interfaces
+
+    def _supervised_interface_projection(
+        self,
+        research: dict[str, Any],
+        coverage: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        research_id = research["research_id"]
+        candidates: list[dict[str, Any]] = []
+        invalid_bindings: list[dict[str, str]] = []
+        for scope in coverage:
+            if scope.get("state") != "completed":
+                continue
+            result_ids = scope.get("result_research_ids", [])
+            if not isinstance(result_ids, list):
+                continue
+            for result_id in result_ids:
+                try:
+                    result = self.lifecycle._research_record(result_id)
+                except (KeyError, OSError, ValueError) as exc:
+                    invalid_bindings.append(
+                        {
+                            "result_research_id": str(result_id),
+                            "reason": str(exc),
+                        }
+                    )
+                    continue
+                artifacts = result.get("metadata", {}).get("artifacts", [])
+                if not isinstance(artifacts, list):
+                    continue
+                for artifact in artifacts:
+                    if (
+                        not isinstance(artifact, dict)
+                        or artifact.get("role")
+                        != FACT_SUPERVISED_INTERFACE_ARTIFACT_ROLE
+                    ):
+                        continue
+                    binding = {
+                        "result_research_id": result["research_id"],
+                        "result_research_record_sha256": result[
+                            "record_sha256"
+                        ],
+                        "artifact_path": str(artifact.get("path", "")),
+                        "artifact_sha256": str(artifact.get("sha256", "")),
+                    }
+                    try:
+                        artifact_path = contained_path(
+                            self.store.root,
+                            binding["artifact_path"],
+                            "supervised statement-interface artifact",
+                        )
+                        if artifact_path.is_symlink() or not artifact_path.is_file():
+                            raise ValueError(
+                                "supervised statement-interface artifact is unsafe"
+                            )
+                        raw_bytes = artifact_path.read_bytes()
+                        if sha256_bytes(raw_bytes) != binding["artifact_sha256"]:
+                            raise ValueError(
+                                "supervised statement-interface artifact hash drifted"
+                            )
+                        payload = json.loads(raw_bytes.decode("utf-8"))
+                        interfaces = self._validate_supervised_interface_artifact(
+                            payload
+                        )
+                        interface = interfaces.get(research_id)
+                        if interface is not None:
+                            candidates.append(
+                                {
+                                    "disposition": interface["disposition"],
+                                    "rationale": interface["rationale"],
+                                    "statement_interface": interface[
+                                        "statement_interface"
+                                    ],
+                                    "source_binding": binding,
+                                }
+                            )
+                    except (
+                        OSError,
+                        UnicodeDecodeError,
+                        ValueError,
+                    ) as exc:
+                        invalid_bindings.append(
+                            {
+                                "result_research_id": result["research_id"],
+                                "reason": str(exc),
+                            }
+                        )
+        if invalid_bindings:
+            return {
+                "state": "invalid",
+                "statement_interface": None,
+                "source_bindings": [],
+                "source_count": 0,
+                "rationales": [],
+                "diagnostic_sha256": sha256_json(invalid_bindings),
+            }
+        if not candidates:
+            return {
+                "state": "missing_or_legacy",
+                "statement_interface": None,
+                "source_bindings": [],
+                "source_count": 0,
+                "rationales": [],
+                "diagnostic_sha256": sha256_json([]),
+            }
+        by_interface: dict[str, list[dict[str, Any]]] = {}
+        for candidate in candidates:
+            digest = sha256_json(
+                {
+                    "disposition": candidate["disposition"],
+                    "statement_interface": candidate["statement_interface"],
+                }
+            )
+            by_interface.setdefault(digest, []).append(candidate)
+        if len(by_interface) != 1:
+            return {
+                "state": "conflicting",
+                "statement_interface": None,
+                "source_bindings": [],
+                "source_count": len(candidates),
+                "rationales": sorted(
+                    {item["rationale"] for item in candidates}
+                ),
+                "diagnostic_sha256": sha256_json(sorted(by_interface)),
+            }
+        selected = next(iter(by_interface.values()))
+        sources = sorted(
+            [item["source_binding"] for item in selected],
+            key=lambda item: (
+                item["result_research_id"],
+                item["artifact_sha256"],
+            ),
+        )
+        disposition = selected[0]["disposition"]
+        return {
+            "state": disposition,
+            "statement_interface": (
+                selected[0]["statement_interface"]
+                if disposition == "ready"
+                else None
+            ),
+            "source_bindings": sources,
+            "source_count": len(sources),
+            "rationales": sorted(
+                {item["rationale"] for item in selected}
+            ),
+            "diagnostic_sha256": sha256_json(
+                {
+                    "sources": sources,
+                    "disposition": disposition,
+                    "rationales": sorted(
+                        {item["rationale"] for item in selected}
+                    ),
+                }
+            ),
+        }
+
+    def _mechanical_package_from_supervision(
+        self,
+        plan: dict[str, Any],
+    ) -> dict[str, Any]:
+        existing = sorted(
+            (
+                package
+                for package in self._packages().values()
+                if package["plan_id"] == plan["plan_id"]
+            ),
+            key=lambda package: package["package_id"],
+        )
+        if len(existing) > 1:
+            return {
+                "state": "existing_package_conflict",
+                "package": None,
+                "unavailable": [],
+                "source_bindings_sha256": sha256_json([]),
+            }
+        if existing:
+            return {
+                "state": "already_sealed",
+                "package": existing[0],
+                "unavailable": [],
+                "source_bindings_sha256": sha256_json([]),
+            }
+        prepared: dict[str, dict[str, Any]] = {}
+        unavailable: list[dict[str, str]] = []
+        for item in plan["selection"]:
+            research_id = item["current_research_id"]
+            if item["eligibility"] != "eligible":
+                unavailable.append(
+                    {"research_id": research_id, "state": "plan_blocked"}
+                )
+                continue
+            research = self.lifecycle._research_record(research_id)
+            projection = self._supervised_interface_projection(
+                research, item["supervision_coverage"]
+            )
+            if projection["state"] != "ready":
+                unavailable.append(
+                    {"research_id": research_id, "state": projection["state"]}
+                )
+                continue
+            prepared[research_id] = {
+                "research_id": research_id,
+                "statement_interface": projection["statement_interface"],
+                "source_bindings": projection["source_bindings"],
+            }
+        if unavailable or not prepared:
+            return {
+                "state": (
+                    "research_split_required"
+                    if any(
+                        item["state"] == "needs_split"
+                        for item in unavailable
+                    )
+                    else "interface_preparation_required"
+                ),
+                "package": None,
+                "unavailable": sorted(
+                    unavailable, key=lambda item: item["research_id"]
+                ),
+                "source_bindings_sha256": sha256_json(
+                    [
+                        binding
+                        for item in prepared.values()
+                        for binding in item["source_bindings"]
+                    ]
+                ),
+            }
+
+        selected_ids = set(prepared)
+        adjacency = {research_id: set() for research_id in selected_ids}
+        for research_id, item in prepared.items():
+            predecessors = item["statement_interface"][
+                "certified_predecessor_research_ids"
+            ]
+            for predecessor_id in predecessors:
+                if predecessor_id in selected_ids:
+                    adjacency[research_id].add(predecessor_id)
+                    adjacency[predecessor_id].add(research_id)
+        components: list[list[str]] = []
+        remaining = set(selected_ids)
+        while remaining:
+            root = min(remaining)
+            stack = [root]
+            component: set[str] = set()
+            while stack:
+                current = stack.pop()
+                if current in component:
+                    continue
+                component.add(current)
+                stack.extend(sorted(adjacency[current].difference(component)))
+            remaining.difference_update(component)
+            components.append(sorted(component))
+        payload = {
+            "schema_version": 1,
+            "plan_id": plan["plan_id"],
+            "packager": "mechanical-supervision-interface-projection",
+            "components": [
+                {
+                    "component_key": "supervised-interface-"
+                    + sha256_json(component_ids)[:16],
+                    "entries": [
+                        {
+                            "research_id": research_id,
+                            "statement_interface": prepared[research_id][
+                                "statement_interface"
+                            ],
+                        }
+                        for research_id in component_ids
+                    ],
+                }
+                for component_ids in components
+            ],
+            "blocked_entries": [],
+        }
+        try:
+            package = self.seal_package(payload)
+        except (KeyError, OSError, ValueError) as exc:
+            return {
+                "state": "mechanical_seal_blocked",
+                "package": None,
+                "unavailable": [],
+                "reason": str(exc),
+                "source_bindings_sha256": sha256_json(
+                    [
+                        binding
+                        for item in prepared.values()
+                        for binding in item["source_bindings"]
+                    ]
+                ),
+            }
+        return {
+            "state": "mechanically_sealed",
+            "package": package,
+            "unavailable": [],
+            "source_bindings_sha256": sha256_json(
+                [
+                    binding
+                    for item in prepared.values()
+                    for binding in item["source_bindings"]
+                ]
+            ),
         }
 
     def _validate_grant(self, raw: dict[str, Any]) -> dict[str, Any]:
@@ -1753,6 +2144,184 @@ class FactAlphaManager:
                 active.append(mark)
         return active
 
+    def _legacy_root_bootstrap_advisory(
+        self,
+        *,
+        bases: dict[str, dict[str, Any]],
+        route_staleness: dict[str, list[str]],
+        repair_children: dict[str, tuple[str, ...]],
+        inspection: Any,
+        active_mark_count: int,
+        accepted_grant_count: int,
+        limit: int,
+    ) -> dict[str, Any] | None:
+        """Suggest exact old Fact roots only while the alpha overlay is empty.
+
+        This projection is deliberately advisory.  It recognizes a legacy
+        Fact only through an exact ``candidate_fact`` artifact SHA on one
+        constructive, non-adverse worker result.  Synthesis reuse and prose
+        similarity do not create a mapping or any authority effect.
+        """
+
+        if active_mark_count or accepted_grant_count:
+            return None
+
+        roots = [
+            fact
+            for fact in self.store.facts(
+                _inspection_context=inspection
+            ).values()
+            if not fact.predecessors
+        ]
+        roots.sort(key=lambda fact: fact.fact_id)
+        production_by_fact_sha: dict[str, list[str]] = {}
+        for research_id, research in bases.items():
+            metadata = research.get("metadata")
+            if not isinstance(metadata, dict):
+                continue
+            provenance = metadata.get("assignment_provenance")
+            if (
+                not isinstance(provenance, dict)
+                or provenance.get("adverse_assignment") is not False
+                or metadata.get("worker_outcome")
+                not in {"proof", "evidence", "insight"}
+            ):
+                continue
+            artifacts = metadata.get("artifacts")
+            if not isinstance(artifacts, list):
+                continue
+            for artifact in artifacts:
+                if (
+                    isinstance(artifact, dict)
+                    and artifact.get("role") == "candidate_fact"
+                    and isinstance(artifact.get("sha256"), str)
+                    and SHA256_RE.fullmatch(artifact["sha256"]) is not None
+                ):
+                    production_by_fact_sha.setdefault(
+                        artifact["sha256"], []
+                    ).append(research_id)
+
+        candidates: list[dict[str, Any]] = []
+        ambiguous: list[dict[str, Any]] = []
+        unsafe: list[dict[str, str]] = []
+        for fact in roots:
+            try:
+                interface = self.store.statement_interface(
+                    fact.fact_id,
+                    materialize=False,
+                    _inspection_context=inspection,
+                )
+                fact_sha = interface["stored_fact_sha256"]
+            except (KeyError, OSError, ValueError) as exc:
+                unsafe.append(
+                    {"legacy_fact_id": fact.fact_id, "reason": str(exc)}
+                )
+                continue
+            carrier_ids = sorted(
+                set(production_by_fact_sha.get(fact_sha, []))
+            )
+            if len(carrier_ids) != 1:
+                if len(carrier_ids) > 1:
+                    ambiguous.append(
+                        {
+                            "legacy_fact_id": fact.fact_id,
+                            "production_carrier_ids": carrier_ids,
+                        }
+                    )
+                continue
+            carrier_id = carrier_ids[0]
+            terminal_id = self._terminal_for(
+                carrier_id,
+                bases=bases,
+                route_staleness=route_staleness,
+                repair_children=repair_children,
+            )
+            current: dict[str, Any] | None = bases[carrier_id]
+            coverage: list[dict[str, Any]] = []
+            coverage_state = "cow_route_ambiguous"
+            if terminal_id is not None and terminal_id in bases:
+                current = self.lifecycle._inspection_research_record(
+                    terminal_id, inspection
+                )
+                try:
+                    coverage = (
+                        self.lifecycle._candidate_supervision_scope_coverage(
+                            [current], _inspection_context=inspection
+                        )
+                    )
+                    coverage_states = {
+                        item.get("state") for item in coverage
+                    }
+                    coverage_state = (
+                        "settled"
+                        if coverage
+                        and not coverage_states.intersection(
+                            {"missing", "pending", "conflicting", "unsafe"}
+                        )
+                        else "missing"
+                        if not coverage or "missing" in coverage_states
+                        else "not_settled"
+                    )
+                except (KeyError, OSError, ValueError) as exc:
+                    coverage_state = "unsafe"
+                    unsafe.append(
+                        {
+                            "legacy_fact_id": fact.fact_id,
+                            "reason": str(exc),
+                        }
+                    )
+            suggested_id = terminal_id or carrier_id
+            candidates.append(
+                {
+                    "legacy_fact_id": fact.fact_id,
+                    "legacy_fact_statement": fact.statement,
+                    "legacy_fact_sha256": fact_sha,
+                    "production_carrier_research_id": carrier_id,
+                    "suggested_research_id": suggested_id,
+                    "suggested_research_record_sha256": current[
+                        "record_sha256"
+                    ],
+                    "claim": current["claim"],
+                    "cow_route_state": (
+                        "current"
+                        if terminal_id == carrier_id
+                        else "advanced"
+                        if terminal_id is not None
+                        else "ambiguous"
+                    ),
+                    "supervision_state": coverage_state,
+                    "supervision_coverage_sha256": sha256_json(coverage),
+                    "next_action": "fact-frontier-mark",
+                }
+            )
+
+        candidates.sort(
+            key=lambda item: (
+                item["supervision_state"] != "settled",
+                item["legacy_fact_id"],
+            )
+        )
+        diagnostic = {
+            "ambiguous": ambiguous,
+            "unsafe": unsafe,
+        }
+        return {
+            "state": (
+                "exact_legacy_roots_available"
+                if candidates
+                else "no_exact_legacy_root_carrier"
+            ),
+            "legacy_root_count": len(roots),
+            "exact_candidate_count": len(candidates),
+            "ambiguous_count": len(ambiguous),
+            "unsafe_count": len(unsafe),
+            "diagnostic_sha256": sha256_json(diagnostic),
+            "candidates": candidates[:limit],
+            "shown_count": min(limit, len(candidates)),
+            "truth_effect": "none",
+            "selection_effect": "none",
+        }
+
     def status(self) -> dict[str, Any]:
         """Return a bounded lifecycle summary without rebuilding Research."""
 
@@ -1840,11 +2409,34 @@ class FactAlphaManager:
         decisions = self._decisions()
         package_by_plan = {item["plan_id"]: item for item in packages.values()}
         decision_by_package = decisions
+        all_active_marks = self._active_mark_records()
         active_marks = [
             mark
-            for mark in self._active_mark_records()
+            for mark in all_active_marks
             if campaign_id is None or mark["campaign_id"] == campaign_id
         ]
+        in_scope_mark_ids = {mark["mark_id"] for mark in active_marks}
+        filtered_marks = [
+            mark
+            for mark in all_active_marks
+            if mark["mark_id"] not in in_scope_mark_ids
+        ]
+        scope_projection = {
+            "requested_campaign_id": campaign_id,
+            "global_active_mark_count": len(all_active_marks),
+            "in_scope_active_mark_count": len(active_marks),
+            "filtered_out_active_mark_count": len(filtered_marks),
+            "filtered_out_unbound_mark_count": sum(
+                1 for mark in filtered_marks if mark["campaign_id"] is None
+            ),
+            "note": (
+                "Campaign scope excludes unbound shared roots; use the global "
+                "Fact frontier to inspect them."
+                if campaign_id is not None
+                and any(mark["campaign_id"] is None for mark in filtered_marks)
+                else None
+            ),
+        }
 
         grouped: dict[tuple[str | None, str | None, str | None], list[dict[str, Any]]] = {}
         route_details: dict[str, dict[str, Any]] = {}
@@ -1987,6 +2579,50 @@ class FactAlphaManager:
                         state = "blocked_by_research"
                         next_action = "research-supervision-or-cow"
 
+            interface_preparation: dict[str, Any] | None = None
+            if research is not None and (
+                state
+                in {
+                    "waiting_for_batch",
+                    "needs_reverification",
+                    "blocked_by_research",
+                }
+                or (
+                    state == "packaging_or_verifying"
+                    and next_action == "fact-package-seal"
+                )
+            ):
+                projection = self._supervised_interface_projection(
+                    research, coverage
+                )
+                interface_preparation = {
+                    "state": projection["state"],
+                    "source_count": projection["source_count"],
+                    "diagnostic_sha256": projection["diagnostic_sha256"],
+                    "packaging_mode": (
+                        "mechanical_on_plan"
+                        if projection["state"] == "ready"
+                        else "research_cow_or_split"
+                        if projection["state"] == "needs_split"
+                        else "human_interface_fallback"
+                        if projection["state"] == "missing_or_legacy"
+                        else "main_reconciliation"
+                    ),
+                    **(
+                        {"rationales": projection["rationales"]}
+                        if projection["state"] == "needs_split"
+                        else {}
+                    ),
+                }
+                if projection["state"] == "needs_split":
+                    blockers.append("supervisor_requires_statement_split")
+                    state = "blocked_by_research"
+                    next_action = "research-cow-or-split"
+                elif projection["state"] in {"invalid", "conflicting"}:
+                    warnings.append(
+                        "supervised_statement_interface_requires_reconciliation"
+                    )
+
             entry = {
                 "mark_ids": [item["mark_id"] for item in marks],
                 "marked_research_ids": sorted(
@@ -2013,6 +2649,7 @@ class FactAlphaManager:
                 "claim": research["claim"] if research is not None else None,
                 "kind": research["kind"] if research is not None else None,
                 "supervision_coverage": coverage,
+                "interface_preparation": interface_preparation,
                 **(
                     {
                         "route_details": {
@@ -2075,12 +2712,23 @@ class FactAlphaManager:
         for entry in entries:
             counts[entry["state"]] = counts.get(entry["state"], 0) + 1
         all_certified_heads = grant_projection["certified_heads"]
+        bootstrap = self._legacy_root_bootstrap_advisory(
+            bases=bases,
+            route_staleness=route_staleness,
+            repair_children=repair_children,
+            inspection=inspection,
+            active_mark_count=len(all_active_marks),
+            accepted_grant_count=len(grant_projection["grants"]),
+            limit=limit,
+        )
         return {
             "schema_version": 1,
             "contract_revision": FACT_ALPHA_CONTRACT_REVISION,
             "project_id": self.store.project_id(),
             "authority_model": "research_graph_with_fact_certification_overlay",
             "legacy_fact_authority": "read_only_unmapped",
+            "scope_projection": scope_projection,
+            "legacy_root_bootstrap": bootstrap,
             "counts": counts,
             "certified_heads": [
                 {
@@ -2109,7 +2757,13 @@ class FactAlphaManager:
             "performance": {
                 "elapsed_ms": elapsed_ms,
                 "research_envelopes_scanned": len(bases),
-                "active_marks_scanned": len(active_marks),
+                "active_marks_scanned": len(all_active_marks),
+                "in_scope_active_marks": len(active_marks),
+                "legacy_roots_scanned": (
+                    bootstrap["legacy_root_count"]
+                    if bootstrap is not None
+                    else 0
+                ),
                 "accepted_grants_scanned": len(grant_projection["grants"]),
             },
         }
@@ -2352,7 +3006,31 @@ class FactAlphaManager:
             self._ensure_storage()
             path = self.plans_dir / f"{plan_id}.json"
             self.store._write_json_once(path, record)
-        return record
+        mechanical = self._mechanical_package_from_supervision(record)
+        package = mechanical.get("package")
+        return {
+            **record,
+            "mechanical_package_state": mechanical["state"],
+            "mechanical_package_id": (
+                package["package_id"] if package is not None else None
+            ),
+            "mechanical_package_record_sha256": (
+                package["record_sha256"] if package is not None else None
+            ),
+            "interface_source_bindings_sha256": mechanical[
+                "source_bindings_sha256"
+            ],
+            "interface_preparation_unavailable": mechanical.get(
+                "unavailable", []
+            ),
+            "next_action": (
+                "fact-verifier-capsule"
+                if package is not None
+                else "research-cow-or-split"
+                if mechanical["state"] == "research_split_required"
+                else "fact-package-seal"
+            ),
+        }
 
     @staticmethod
     def _topological_order(

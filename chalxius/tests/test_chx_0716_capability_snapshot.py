@@ -270,6 +270,172 @@ class CHX0716CapabilitySnapshotTests(unittest.TestCase):
             self.assertTrue(localized)
             self.assertEqual(typed[0]["sha256"], hashlib.sha256(raw).hexdigest())
 
+    def test_independent_repair_budgets_share_one_command_read_snapshot(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary))
+            first_path = store.root / "first-repair-input.bin"
+            second_path = store.root / "second-repair-input.bin"
+            first_raw = b"abcdef"
+            second_raw = b"ghijkl"
+            first_path.write_bytes(first_raw)
+            second_path.write_bytes(second_raw)
+            symlink_path = store.root / "linked-repair-input.bin"
+            symlink_path.symlink_to(first_path.name)
+            first_capability = {
+                "path": first_path.relative_to(store.root).as_posix(),
+                "sha256": hashlib.sha256(first_raw).hexdigest(),
+                "role": "first",
+            }
+            second_capability = {
+                "path": second_path.relative_to(store.root).as_posix(),
+                "sha256": hashlib.sha256(second_raw).hexdigest(),
+                "role": "second",
+            }
+
+            def repair_record(
+                research_id: str,
+                capabilities: list[dict[str, str]],
+            ) -> dict[str, object]:
+                manifest_semantic = {
+                    "revision": V5_REPAIR_INPUT_CAPABILITY_REVISION,
+                    "source_research_id": research_id,
+                    "trigger_research_id": None,
+                    "input_capabilities": copy.deepcopy(capabilities),
+                    "selection_policy": (
+                        "direct_research_plus_one_verified_assignment_or_source_receipt_hop"
+                    ),
+                    "max_capabilities": V5_MAX_REPAIR_INPUT_CAPABILITIES,
+                    "truth_effect": "none",
+                }
+                manifest = {
+                    **manifest_semantic,
+                    "manifest_sha256": sha256_json(manifest_semantic),
+                }
+                return {
+                    "research_id": research_id,
+                    "kind": "repair",
+                    "relation": "repairs",
+                    "metadata": {
+                        "assurance_contract_revision": (
+                            V5_ASSURANCE_CONTRACT_REVISION
+                        ),
+                        "repair_input_capability_manifest": manifest,
+                        "repair_spec": {
+                            "schema_version": 2,
+                            "input_capabilities": copy.deepcopy(capabilities),
+                        },
+                        "source_dependent": True,
+                        "artifacts": copy.deepcopy(capabilities),
+                    },
+                }
+
+            first = repair_record("a" * 12, [first_capability])
+            repeated = repair_record("b" * 12, [first_capability])
+            second = repair_record("c" * 12, [second_capability])
+            combined = repair_record(
+                "d" * 12,
+                [first_capability, second_capability],
+            )
+            conflicting = repair_record(
+                "e" * 12,
+                [
+                    {
+                        **first_capability,
+                        "sha256": hashlib.sha256(b"other bytes").hexdigest(),
+                    }
+                ],
+            )
+            symlinked = repair_record(
+                "f" * 12,
+                [
+                    {
+                        **first_capability,
+                        "path": symlink_path.relative_to(store.root).as_posix(),
+                    }
+                ],
+            )
+            lifecycle = store.v5_lifecycle()
+            shared_command_context = RoundInspectionContext()
+            with patch.object(
+                v5_lifecycle_module,
+                "V5_MAX_REPAIR_INPUT_CAPABILITY_BYTES",
+                10,
+            ), patch.object(
+                lifecycle,
+                "_read_regular_bytes_once",
+                wraps=lifecycle._read_regular_bytes_once,
+            ) as read_once:
+                self.assertEqual(
+                    len(
+                        lifecycle._typed_research_artifacts(
+                            first,
+                            _inspection_context=shared_command_context,
+                        )
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    len(
+                        lifecycle._typed_research_artifacts(
+                            repeated,
+                            _inspection_context=shared_command_context,
+                        )
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    len(
+                        lifecycle._typed_research_artifacts(
+                            second,
+                            _inspection_context=shared_command_context,
+                        )
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    shared_command_context.repair_capability_total_bytes,
+                    0,
+                )
+                self.assertEqual(read_once.call_count, 2)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Research capability artifact drifted",
+                ):
+                    lifecycle._typed_research_artifacts(
+                        combined,
+                        _inspection_context=shared_command_context,
+                    )
+                self.assertEqual(read_once.call_count, 2)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Research capability artifact drifted",
+                ):
+                    lifecycle._typed_research_artifacts(
+                        conflicting,
+                        _inspection_context=shared_command_context,
+                    )
+                self.assertEqual(read_once.call_count, 2)
+
+                second_path.write_bytes(b"tamper")
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Research capability artifact drifted",
+                ):
+                    lifecycle._typed_research_artifacts(
+                        second,
+                        _inspection_context=RoundInspectionContext(),
+                    )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Research capability artifact drifted",
+                ):
+                    lifecycle._typed_research_artifacts(
+                        symlinked,
+                        _inspection_context=RoundInspectionContext(),
+                    )
+
     def test_repair_artifacts_still_consume_the_bounded_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary))

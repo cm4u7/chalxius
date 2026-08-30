@@ -1,4 +1,4 @@
-# Fact admission contract: 1.0.0 Fact Alpha and legacy V5 authority
+# Fact admission contract: 1.0.1 Fact Alpha and legacy V5 authority
 
 ## Current prospective path: Research certification overlay
 
@@ -16,11 +16,22 @@ Current admission requires:
 2. `plan-fact-packaging` freezes the active marks, exact current COW terminals,
    record hashes, Campaign/target associations, and Research supervision
    coverage. The plan neither selects mathematics nor launches a worker.
-3. A packaging agent classifies every selected node as packaged,
-   `needs_split`, or `blocked`. Each packaged node receives a semi-formal
-   interface whose conclusion exactly equals the Research `claim`; assumptions,
-   domain/types, quantifiers, limitations, and certified Research predecessors
-   are explicit.
+3. A clean prospective Research supervisor may classify the exact whole node as
+   `ready` and emit its semi-formal interface, or classify it as `needs_split`
+   with no whole-node interface. Every `ready` conclusion exactly equals the
+   Research `claim`; assumptions, domain/types, quantifiers, limitations, and
+   certified Research predecessors are explicit. `plan-fact-packaging` seals an
+   all-ready plan mechanically. A human/agent packager remains the fallback for
+   legacy or omitted interfaces and custom grouping. It may either author the
+   old whole-node interface or send the node to split/COW, but may not override
+   an explicit prospective supervisor `needs_split`. The split is performed by
+   a Research repair worker from a precise brief, not by the packager or by
+   mechanically cutting prose. Split successors undergo fresh supervision, and
+   those new supervisors author their interfaces. A prospective schema-v3
+   split is one committed worker-chosen batch: the worker declares the actual
+   complete membership, ingestion commits it last, and one supervisor per scope
+   reviews the exact committed set. Uncommitted staged records cannot enter the
+   Fact frontier or be marked.
 4. Every certified predecessor is either earlier in the same acyclic component
    or already has an active Research certification grant. Descriptive
    `relation` strings, receipts, source links, and general Research context are
@@ -29,10 +40,10 @@ Current admission requires:
    scope, proof dependencies, sources/computation, and interface. Component
    decisions are isolated: correct components may advance even if an
    independent component has a minor or fundamental error.
-6. The verifier differs from the Research authors and packager. The verifier
+6. The verifier differs from the Research authors and interface author. The verifier
    may falsify freely, but does not train or duplicate the ordinary Research
    supervisor's theorem-attack learner.
-7. The mechanical Gateway differs from verifier and packager, rechecks exact
+7. The mechanical Gateway differs from verifier and any interface author, rechecks exact
    current Research/COW and predecessor-grant bindings, writes all grants, and
    publishes one acceptance marker as the sole visibility switch.
 8. A minor error uses complete-node COW and a same-verifier batch recheck of
@@ -48,6 +59,18 @@ marks and explicit dispositions persist; ready batches, in-flight state,
 certified heads, and re-verification propagation are recomputed. Main schedules
 packaging at natural research windows. No timer, backlog threshold, automatic
 worker dispatch, or synchronous Research-to-Fact requirement exists.
+
+When the overlay has no marks or grants, the frontier may show exact legacy-root
+bootstrap candidates only through a unique non-adverse constructive Research
+product carrying the byte-identical `candidate_fact` artifact. This is bounded
+advice, not authority migration or automatic selection. A Campaign-scoped view
+also reports how many global active marks were filtered, including unbound
+shared roots. No Campaign association is inferred.
+
+The statement interface is mathematical only. Research `metadata.artifacts`
+remains the unique path/SHA evidence-locator layer, and the verifier capsule
+carries the complete Research record beside the package. Locator text is not
+duplicated into interface limitations.
 
 New Research may declare `certified_research_dependencies`. The Research writer
 resolves each id to an active grant and freezes exact Research/grant hashes;

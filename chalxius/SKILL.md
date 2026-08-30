@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.0 — Fact Alpha
+# Chalxius 1.0.2 — Capability Budget Audit Repair
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -39,7 +39,11 @@ graph. A Fact is an append-only certification grant on one exact complete
 Research record and its top-level `claim`; it is not a second prose node and
 does not require a `claim_sha256` beside the record hash. Legacy admitted Facts
 remain readable authority but are explicitly unmapped: Chalxius never invents
-Research identities or statement surfaces for them.
+Research identities or statement surfaces for them. When the fresh overlay has
+no marks or grants, `fact-frontier` may advise an exact old root only when one
+non-adverse constructive Research product carries the byte-identical
+`candidate_fact` artifact. That advisory creates no mapping, mark, grant,
+Campaign binding, or truth effect.
 
 Main records load-bearing importance with `fact-frontier-mark`. The derived
 `fact-frontier` follows exact COW lineage, hydrates current claims, reports
@@ -52,13 +56,30 @@ They have no Research or truth effect.
 Fact work is intentionally asynchronous. At a Campaign milestone, a meaningful
 backlog, a direction switch, a context handoff, or an explicit user request,
 Main chooses one or more ready marks and runs `plan-fact-packaging`. There is no
-timer, threshold, watcher, scheduler, or automatic Candidate launch. One frozen
-plan can be handled by one `fact-packager` agent across several independent
-components. That narrow role can read the derived Fact frontier and seal the
-explicit plan, but cannot mark importance, verify, decide, or certify.
-`fact-package-seal` requires every selected Research node to be
-either packaged or explicitly returned as `needs_split`/`blocked`; a bad
-component does not discard a correct independent component.
+timer, threshold, watcher, scheduler, or automatic Candidate launch. A clean
+prospective Research supervisor may optionally emit a Research-hash-bound
+`ready` statement interface or an explicit `needs_split` disposition. The plan
+mechanically seals packages when every selected node is `ready`; it never
+guesses mathematical surfaces or predecessor edges. An explicit `needs_split`
+returns to Research COW/splitting. Older products, omitted interfaces, and
+genuinely custom component grouping retain the narrow `fact-packager` fallback.
+That role can read the derived Fact frontier and seal the explicit plan, but
+cannot mark importance, verify, decide, or certify. If the packager sends a
+legacy node to split/COW, the producer is explicitly a Research repair worker.
+It follows a precise split brief and produces complete coherent successors,
+never mechanically sliced prose. The complete split batch receives fresh
+supervision, and those new supervisors—not the repair worker or old packager—
+author the successor interfaces. For a prospective schema-v3 split repair,
+Main freezes the source and split brief but does not guess how many successors
+exist. One repair worker returns one finite `research_split_batch` containing
+the complete actual membership. Ingestion stages every member plus one batch
+owner and publishes a commit record last; before that commit, staged bytes are
+recovery material only and are absent from Research frontier and Fact work.
+One supervisor per requested scope reviews the committed batch as a whole. If
+it supplies optional statement interfaces, the artifact covers every committed
+successor; each successor still receives its own `ready` or `needs_split`
+disposition.
+A bad component does not discard a correct independent component.
 
 Packaging does not rewrite proofs. For each complete Research node it supplies
 one semi-formal statement interface whose conclusion is byte-for-byte the
@@ -68,6 +89,11 @@ load-bearing Fact edges; descriptive Research `relation` strings are never
 reinterpreted as proof dependencies. A predecessor must be in the same acyclic
 component or already have an active grant.
 
+The six-field mathematical interface never carries file paths or evidence
+hashes. Exact evidence locators remain solely in the Research record's
+`metadata.artifacts`; the verifier capsule carries the complete Research record
+beside the interface. Do not copy locators into `limitations`.
+
 `fact-verifier-capsule` gives one independent correctness verifier the frozen
 Research bytes, interfaces, and component edges. The verifier performs fresh
 whole-node mathematical, scope, dependency, source/computation, and interface
@@ -75,6 +101,9 @@ checks. The learned theorem-attack vocabulary belongs to ordinary Research
 supervision, so Fact verification does not train a second adverse role.
 `fact-verification-record` records component-local decisions; `fact-certify`
 is a mechanical, independent Gateway visibility switch for correct components.
+The current `verifier` CLI role has exactly the capsule, record, and check
+commands; it has no package, Research-mutation, Gateway, or certification
+authority.
 
 A minor verifier finding returns the complete affected component through COW.
 `plan-fact-packaging --minor-repair-decision ...` requires every node of that
@@ -89,6 +118,33 @@ New Research may name `certified_research_dependencies`. Chalxius resolves
 them to exact active Research/grant hashes and freezes their statement
 interfaces and proof bytes into future task cards. This is the operational
 meaning of Fact being a property of Research rather than a parallel graph.
+
+## 1.0.2 capability budget audit repair
+
+Each structured Repair capability manifest owns its existing 64 MiB aggregate
+byte budget. A project-wide command keeps one ephemeral read-once byte and
+path/digest-conflict cache, but independent frozen manifests never consume one
+another's budget. Repeated capabilities therefore reuse the exact command
+snapshot without making audit order part of historical validity. One manifest
+that exceeds the bound, a path/digest conflict, a no-follow violation, or bytes
+that do not match the frozen SHA-256 still fails closed. This is a validator
+scope repair, not a compatibility layer, migration, new workflow gate, or
+Research/Candidate/Certification/Gateway/Fact effect.
+
+## 1.0.1 field repair
+
+The first Fact Alpha field run removed three avoidable Main burdens without
+adding a workflow gate. A zero-state frontier now offers bounded exact-root
+bootstrap advice; Campaign-scoped views explain filtered unbound shared marks;
+and prospective supervisors can hand a clean whole-node interface directly to
+mechanical packaging or explicitly return `needs_split`. Legacy interface
+authorship remains human/agent work. Verifier role projection is now usable and
+strictly read/decision-only. Prospective schema-v3 repair cards can now return
+one worker-chosen, committed split batch without predicting its cardinality or
+allocating one assignment per successor. The commit-last protocol keeps a
+partial batch out of frontier and Fact projections, while whole-batch
+supervision reuses one reviewer per scope. These projections have no Campaign,
+legacy-Fact migration, certification, Gateway, or truth effect.
 
 ## 摸石头过河
 

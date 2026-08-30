@@ -29,7 +29,7 @@ from mathgraph.orchestrator import (
     round_status,
     validate_return,
 )
-from mathgraph.roles import allowed_commands
+from mathgraph.roles import allowed_commands, allowed_commands_for_workflow
 from mathgraph.store import MathGraphStore
 from mathgraph.worker_returns import validate_worker_return
 
@@ -538,7 +538,7 @@ class StoreTests(unittest.TestCase):
         )
         self.assertEqual(task["claim_relation"], "proves")
         self.assertEqual(task["spawn_contract"]["fork_turns"], "none")
-        self.assertEqual(allowed_commands("verifier"), set())
+        self.assertEqual(allowed_commands_for_workflow("verifier", 4), set())
 
     def test_external_result_requires_complete_applicability_certificate(self) -> None:
         fact = Fact(
@@ -2055,7 +2055,14 @@ class GraphRoleAndCliTests(unittest.TestCase):
             graph.topological_order()
 
     def test_verifier_unknown_and_worker_roles_fail_closed(self) -> None:
-        self.assertEqual(allowed_commands("verifier"), set())
+        self.assertEqual(
+            allowed_commands("verifier"),
+            {
+                "fact-verifier-capsule",
+                "fact-verification-record",
+                "fact-verification-check",
+            },
+        )
         self.assertEqual(allowed_commands("typo-role"), set())
         self.assertNotIn("memory-add", allowed_commands("worker"))
         self.assertNotIn("record-review", allowed_commands("worker"))
@@ -2120,10 +2127,19 @@ class GraphRoleAndCliTests(unittest.TestCase):
             main(["--root", "/tmp/help-only-project", "--help"])
         self.assertEqual(stopped.exception.code, 0)
         help_text = " ".join(output.getvalue().split())
-        self.assertIn("no project-shell commands", help_text)
-        self.assertIn("external capsule", help_text)
-        self.assertNotIn("certification-record", help_text)
-        self.assertNotIn("paper-continuation-plan", help_text)
+        for command in (
+            "fact-verifier-capsule",
+            "fact-verification-record",
+            "fact-verification-check",
+        ):
+            self.assertIn(command, help_text)
+        for command in (
+            "fact-package-seal",
+            "fact-certify",
+            "certification-record",
+            "paper-continuation-plan",
+        ):
+            self.assertNotIn(command, help_text)
 
     def test_cli_requires_root_and_has_no_context_or_packet_output_option(self) -> None:
         parser = build_parser()

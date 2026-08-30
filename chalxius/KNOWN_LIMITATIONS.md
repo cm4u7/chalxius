@@ -1,10 +1,74 @@
-# Chalxius 1.0.0 architecture findings and residual boundaries
+# Chalxius 1.0.2 architecture findings and residual boundaries
 
-This file is the release, nontruth disclosure for Chalxius 1.0.0
-**Fact Alpha**. It describes architecture defects, integrated repairs,
-and intentional residual boundaries; it is not mathematical evidence and
-grants no Research, Candidate Release, Certification, Gateway, or Fact
-authority.
+This file is the release, nontruth disclosure for Chalxius 1.0.2
+**Capability Budget Audit Repair**. It describes architecture defects,
+integrated repairs, and intentional residual boundaries; it is not mathematical
+evidence and grants no Research, Candidate Release, Certification, Gateway, or
+Fact authority.
+
+## 1.0.2 Capability Budget Audit Repair
+
+The bounded capability reader introduced in 0.7.16 correctly limited one
+structured Repair closure to 64 MiB, but a full-ledger inspection reused its
+byte counter across every historical Repair. Once unrelated valid manifests
+collectively crossed the bound, traversal order selected a later batch for the
+misleading `Research capability artifact drifted` error even though each
+manifest was individually below the cap and every declared file still matched
+its frozen SHA-256. This latent scope defect is not a 1.0.1 capability-schema
+change and requires no historical-card migration.
+
+The repair separates manifest-local budget accounting from the command-local
+read snapshot. Independent manifests receive independent 64 MiB counters;
+exact repeated path/SHA bytes are still read once per command, and one shared
+path-to-digest map still rejects conflicting declarations. A fresh command
+continues to perform lexical containment, no-follow regular-file reads, and
+SHA-256 validation, while a single oversized manifest remains invalid. No
+frozen Research, task card, round, artifact, Candidate, Certification, Gateway,
+or Fact byte is rewritten. Installation and publication remain separate,
+explicit actions.
+
+## 1.0.1 Fact Alpha Field Repair
+
+The first live Fact Alpha run exposed three coordination gaps. An empty overlay
+did not guide Main toward byte-exact legacy root carriers; a Campaign-scoped
+view did not explain that unbound shared marks were filtered; and prospective
+supervision discarded the exact statement-boundary work that a later packager
+had to repeat. The `verifier` role projection was also unusably empty.
+
+The repair adds bounded zero-state advice only for legacy root Facts with one
+unique non-adverse constructive Research product carrying the byte-identical
+`candidate_fact` artifact. It never writes a mapping, mark, Campaign binding,
+grant, or authority effect. Scoped views expose global/in-scope/filtered mark
+counts. Prospective clean supervisors may optionally return a Research-hash-
+bound `ready` interface or `needs_split` disposition; all-ready plans seal
+mechanically. Missing historical interfaces still require a human/agent
+packager, which may author the interface or send the node to Research split/COW.
+The mathematical split belongs to a Research repair worker following a precise
+surface/dependency/residual brief, not to the packager and not to a mechanical
+prose cut. Split products require fresh supervision and receive their interfaces
+from the new supervisors, not the repair worker or old packager.
+
+Prospective schema-v3 repair cards may instead request
+`output_shape="research_split_batch"`. Main freezes the old Research and the
+split brief but not a guessed member count. One repair worker declares the
+complete actual finite membership (two through 128 coherent successors) in one
+return. Ingestion publishes immutable member records and a single assignment
+owner, then writes one commit record as the visibility boundary. A missing
+commit leaves those staged records outside Research frontier and Fact marking.
+The committed membership is the unit of fresh supervision: one supervisor per
+scope reviews the whole batch, and any optional interface artifact must cover
+every successor.
+
+The mathematical interface remains six semantic fields. Evidence locators are
+not duplicated: Research `metadata.artifacts` is the only path/SHA layer, and
+the verifier capsule carries the complete Research record. The verifier CLI
+role owns only capsule, decision-record, and decision-check commands.
+
+The split-batch protocol does not infer mathematical completeness, certify the
+successors, or automatically move old/new Fact marks. The repair worker states
+the completeness rationale and residual/open/abandoned material; fresh
+supervision judges each resulting product. Legacy cards and ordinary
+single-product repairs keep their frozen contract and are not retrofitted.
 
 ## 1.0.0 Fact Alpha
 

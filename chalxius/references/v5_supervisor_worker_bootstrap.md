@@ -187,9 +187,7 @@ creates no inbox entry or second report.
 ## Required report
 
 Write one concise `research_supervision_report` inside the exact artifact
-directory and bind its SHA-256 in the return. Unless the card explicitly names
-another required output role, this report is the only returned artifact. It
-must identify:
+directory and bind its SHA-256 in the return. It must identify:
 
 - the supervisor scope and failure-family focus;
 - every frozen product descriptor and reviewed artifact hash;
@@ -206,6 +204,71 @@ must identify:
 
 The report is nontruth Research. It does not mutate the attacked artifacts and
 does not itself dispose a later Candidate challenge.
+
+After a bounded clean result, the supervisor may additionally write one
+`fact_statement_interfaces` JSON artifact when it can faithfully state the
+complete attacked Research claim and its explicit load-bearing certified
+Research predecessors. This is optional prospective work, not another
+supervision obligation or a condition for a valid return. Omit it rather than
+guess when the product needs statement splitting, has an unresolved defect, or
+the predecessor surface is not explicit. Older products and omitted interfaces
+remain available to a later human/agent packager.
+
+The optional file has this exact schema:
+
+```json
+{
+  "schema_version": 1,
+  "contract_revision": "chalxius-supervised-statement-interfaces-1",
+  "entries": [{
+    "research_id": "EXACT_ATTACKED_PRODUCTION_RESEARCH_ID",
+    "research_record_sha256": "EXACT_RESEARCH_RECORD_SHA256",
+    "disposition": "ready",
+    "rationale": "The complete Research claim is one coherent certifiable surface.",
+    "statement_interface": {
+      "conclusion": "BYTE-IDENTICAL_RESEARCH_CLAIM",
+      "assumptions": ["Explicit assumptions already present in the product."],
+      "domain_and_types": ["Exact domains and types used by the claim."],
+      "quantifiers": ["Exact quantifiers used by the claim."],
+      "certified_predecessor_research_ids": [],
+      "limitations": ["Exact boundary not included in the conclusion."]
+    }
+  }],
+  "truth_effect": "none"
+}
+```
+
+Use `disposition="ready"` only with a complete valid `statement_interface`.
+When the supervisor judges that one Research node mixes materially different
+claim strengths or cannot be certified as a whole, use
+`disposition="needs_split"`, give a precise rationale, and set
+`statement_interface` to `null`. That explicit disposition sends the work back
+to a Research repair worker for split/COW; it is not a Fact rejection. The
+`needs_split` rationale is also the repair brief: identify the separable
+successor claim surfaces, their shared assumptions, intended predecessor
+allocation, and which parts of the old product remain open or are abandoned.
+Do not satisfy this requirement by suggesting a mechanical prose cut. The later packager may
+author an interface for legacy or simply missing artifacts, but it must not
+override an explicit supervisor `needs_split` disposition. After split/COW,
+every new Research product receives fresh ordinary supervision, and those new
+supervisors—not the old packager—author the successor interfaces.
+
+When the frozen attacked receipt is the owner of a committed
+`research_split_batch`, treat the exact committed member set as one whole
+product. Review every successor in that set under the requested scope; do not
+review only the owner summary and do not request one supervisor launch per
+member. The ordinary supervision report must state the disposition of the
+complete batch. The optional `fact_statement_interfaces` artifact, if emitted,
+must contain one exact `ready` or `needs_split` entry for every committed
+successor Research id. Omit the optional artifact if the scope does not support
+a complete interface judgment; never return a partial interface set.
+
+The mathematical interface contains no file paths or evidence hashes. Evidence
+locators remain the attacked Research record's exact `metadata.artifacts`
+bindings, which the verifier capsule carries separately. Never copy those
+locators into `limitations`. The optional interface file itself must be listed
+in the return with role `fact_statement_interfaces`; it does not need to appear
+in an obligation witness unless a future card explicitly makes it required.
 
 ## Exact return
 
@@ -255,6 +318,9 @@ present and normally `null`.
   "attack_learning": null
 }
 ```
+
+When the optional interface file is produced, append its path/hash/role object
+to `artifacts`; do not change the required report witness or top-level schema.
 
 Copy identities literally. Create exactly one disposition for every card
 obligation and no others. Status is `complete`, `blocked`, or

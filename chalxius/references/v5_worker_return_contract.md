@@ -122,6 +122,19 @@ audit, add agent scoring, or re-attack admitted Fact premises without separate
 contradiction evidence. A worker cannot edit or propose a replacement for the
 registry through its return.
 
+If a prospective schema-v3 Research repair card sets
+`repair_spec.output_shape="research_split_batch"`, the return still belongs to
+one assignment but specializes its product shape. Include exactly one artifact
+with role `research_split_batch`. That JSON artifact declares the complete
+actual successor membership chosen after reading the old product; Main does not
+predeclare a member count. It contains two through 128 distinct coherent
+successor claims with their content, rationale, old-material disposition and
+limitations, plus shared assumptions, residual/open material, abandoned
+material and one completeness rationale. Do not return a guessed placeholder
+count, several independent returns, or a partial batch. Ingestion derives the
+successor Research ids and assignment owner and publishes a commit only after
+all records exist.
+
 For task cards frozen by Chalxius 0.7.13 or later, an artifact with role
 `candidate_fact` is not a generic Markdown attachment. Worker preflight parses
 the exact bytes as Fact Markdown, requires canonical round-trip serialization,

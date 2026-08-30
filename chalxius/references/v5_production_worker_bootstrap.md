@@ -124,6 +124,36 @@ Research output is nontruth. It does not create a Candidate Release,
 Certification Decision, Gateway acceptance, or Fact. A later verifier returns
 review bytes only; Gateway alone owns `certification-record` and Fact admission.
 
+## Research repair worker and statement splitting
+
+When the exact source Research is `kind="repair"` or carries a frozen
+`repair_spec`, this production worker is a **Research repair worker**. If the
+repair objective is statement splitting, do not mechanically divide prose or
+merely shorten the old claim. Follow the frozen repair specification and the
+trigger supervisor's split rationale, and make the returned successor a
+complete Research product with one coherent top-level claim, explicit
+assumptions, domains/types, quantifiers, predecessor dependencies, complete
+proof/evidence, and an exact account of which old material is preserved,
+weakened, assigned to a named sibling surface, left open, or abandoned.
+
+The repair worker does not certify the split and does not author the final
+Fact statement interface. Every successor receives fresh ordinary supervision;
+that new supervisor writes its complete interface or returns `needs_split`
+again. A normal assignment returns one Research product. A prospective
+schema-v3 card with `repair_spec.output_shape="research_split_batch"` is the
+sole exception: the task card binds the exact old Research and split brief, but
+does not predict the number of successors. Read the entire product, choose the
+actual finite membership needed for a complete semantic split, and return one
+`research_split_batch` artifact containing two through 128 coherent members,
+shared assumptions, residual/open material, abandoned material, and a
+completeness rationale. This one return owns the batch; do not create sibling
+assignments, emit a partial batch, or pad membership to an expected count.
+
+Ingestion, not the worker, derives immutable Research ids, stages all members
+plus a single assignment-owner Research record, and commits the batch last.
+Until that commit exists the staged bytes are recovery material only. The
+worker still makes no Fact or supervision decision.
+
 ## Computation boundary
 
 A first-subround computation design returns exactly these three canonical

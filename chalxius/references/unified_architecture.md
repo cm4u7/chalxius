@@ -1,5 +1,31 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.2 Capability Budget Audit Repair override.** The 64 MiB aggregate
+> capability limit is one structured Repair manifest's closure invariant, not
+> a full-ledger command budget. A manifest-local counter composes with the
+> existing command-local read-once byte and path/digest-conflict snapshot, so
+> repeated frozen inputs remain efficient while independent historical Repairs
+> cannot invalidate one another by traversal order. Exact containment,
+> no-follow, regular-file, hash, conflict, and per-manifest size checks remain
+> fail closed. No workflow or truth authority changes.
+
+> **1.0.1 Fact Alpha Field Repair override.** A new clean supervisor may emit
+> one exact Research-bound whole-node interface or `needs_split` disposition;
+> all-ready Fact plans seal mechanically, while legacy/missing/custom work
+> retains the packager fallback. A legacy packager that chooses split/COW stops
+> authoring interfaces; a Research repair worker produces complete coherent
+> successors from the split brief, and fresh supervisors of those products
+> author the successor interfaces. Zero-state legacy-root advice and Campaign scope-filter
+> counts are bounded nontruth projections with no selection or migration
+> effect. Research artifacts remain the sole evidence-locator layer, and the
+> verifier role is restricted to capsule/record/check. A prospective schema-v3
+> split repair is one worker-chosen finite batch: Main binds the source and brief,
+> the worker declares the actual membership, ingestion writes members and one
+> ordinary assignment owner before a head-last commit, and the committed batch is
+> reviewed whole by one supervisor per scope. Uncommitted staged records have no
+> frontier or Fact visibility. This is explicit structure, not relation-name or
+> single-terminal inference.
+
 > **1.0.0 Fact Alpha override.** There is one mathematical node graph:
 > immutable Research. Fact is an append-only whole-Research certification
 > overlay with explicit certified-Research predecessor edges. Main's sparse

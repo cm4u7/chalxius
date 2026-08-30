@@ -23,7 +23,7 @@ from mathgraph.interfaces import build_statement_interface
 from mathgraph.migration import project_tree_snapshot
 from mathgraph.model import Fact
 from mathgraph.orchestrator import create_round, create_verifier_assignment
-from mathgraph.roles import allowed_commands
+from mathgraph.roles import allowed_commands_for_workflow
 from mathgraph.store import MathGraphStore
 from mathgraph.verification_bundles import (
     VerificationBundleStore,
@@ -1672,7 +1672,7 @@ class V4ComputationAndBundleTests(unittest.TestCase):
         )
         fact_id = self.store.submit(fact, worker="worker")
         assignment = create_verifier_assignment(self.store, fact_id)
-        self.assertEqual(allowed_commands("verifier"), set())
+        self.assertEqual(allowed_commands_for_workflow("verifier", 4), set())
         task = assignment["spawn_contract"]["task"]
         self.assertIn("Do not invoke a project CLI", task)
         self.assertNotIn("mgraph", assignment["spawn_contract"]["capability"])

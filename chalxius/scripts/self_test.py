@@ -50,7 +50,11 @@ from mathgraph.reader_html import (  # noqa: E402
     load_reader_packet,
     render_reader_html,
 )
-from mathgraph.roles import allowed_commands, allowed_commands_for_workflow  # noqa: E402
+from mathgraph.roles import (  # noqa: E402
+    V5_FACT_VERIFIER_COMMANDS,
+    allowed_commands,
+    allowed_commands_for_workflow,
+)
 from mathgraph.store import MathGraphStore  # noqa: E402
 
 
@@ -81,8 +85,14 @@ def main() -> int:
     current_skill_version = (
         Path(__file__).resolve().parents[1] / "VERSION"
     ).read_text(encoding="utf-8").strip()
-    if allowed_commands("verifier") or allowed_commands("unknown-role"):
-        raise RuntimeError("verifier or unknown role received project CLI capabilities")
+    if (
+        allowed_commands("verifier") != V5_FACT_VERIFIER_COMMANDS
+        or allowed_commands_for_workflow("verifier", 5)
+        != V5_FACT_VERIFIER_COMMANDS
+        or allowed_commands_for_workflow("verifier", 4)
+        or allowed_commands("unknown-role")
+    ):
+        raise RuntimeError("verifier or unknown role projection is invalid")
     basepoint_public_key = (bytes([0x58]) + bytes([0x66]) * 31).hex()
     alias_planner = pv.build_trusted_key_record(
         project_id="self-test-key-registry",
@@ -367,7 +377,7 @@ def main() -> int:
             "Future releases do not owe runtime or procedural forward compatibility.",
             "Mathematical-safety and Fact-authority",
             "Fact Alpha treats the immutable Research graph",
-            "one `fact-packager` agent",
+            "narrow `fact-packager` fallback",
             "For immutable 0.x Candidate records only",
             "Start through the smallest applicable contract",
             "references/v5_production_worker_bootstrap.md",

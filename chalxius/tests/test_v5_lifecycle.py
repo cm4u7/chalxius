@@ -1833,6 +1833,388 @@ class V5LifecycleTests(unittest.TestCase):
                 before_round_entries,
             )
 
+    def test_schema_v3_split_repair_commits_worker_chosen_members_atomically(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "schema-v3-research-split")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "A mixed old node contains two separable conclusions.",
+                    "content": "The first conclusion is algebraic; the second is geometric.",
+                },
+                actor="legacy-worker",
+            )
+            spec = {
+                "schema_version": 3,
+                "claim": "Split the mixed old node into coherent Research successors.",
+                "content": "Preserve every supported surface and identify residual material.",
+                "rationale": "Later Fact certification needs independently addressable claims.",
+                "work_mode": "auto",
+                "obligations": [],
+                "stop_conditions": ["Stop if a fundamental error prevents a sound split."],
+                "input_capabilities": [],
+                "output_shape": "research_split_batch",
+            }
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    source["research_id"],
+                    repair_spec=spec,
+                    host_task_scope_id="schema-v3-research-split",
+                )
+            assignment = planned["assignments"][0]
+            card = json.loads(
+                Path(str(assignment["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(card["work_mode"], "prove")
+            artifact_dir = root / assignment["artifact_dir_relpath"]
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            artifact_path = artifact_dir / "research-split-batch.json"
+            batch = {
+                "schema_version": 1,
+                "contract_revision": "chalxius-research-split-batch-1",
+                "source_research_id": source["research_id"],
+                "source_record_sha256": source["record_sha256"],
+                "shared_assumptions": ["The frozen old argument is read as one whole."],
+                "members": [
+                    {
+                        "surface_key": "algebraic-surface",
+                        "outcome": "proof",
+                        "claim": "The algebraic conclusion holds under assumption A.",
+                        "content": "A bounded algebraic argument proves the first conclusion.",
+                        "rationale": "This conclusion has its own hypotheses and proof.",
+                        "source_material_disposition": "Preserves the algebraic half only.",
+                        "limitations": ["No geometric conclusion is included."],
+                    },
+                    {
+                        "surface_key": "geometric-surface",
+                        "outcome": "insight",
+                        "claim": "The geometric conclusion reduces to condition B.",
+                        "content": "The old geometric discussion gives the stated reduction.",
+                        "rationale": "This reduction is independent of the algebraic proof.",
+                        "source_material_disposition": "Preserves the geometric reduction only.",
+                        "limitations": ["Condition B remains to be discharged."],
+                    },
+                ],
+                "residual_open_material": ["Whether condition B is globally available."],
+                "abandoned_material": [],
+                "completeness_rationale": (
+                    "Every sentence of the mixed source is allocated to one member or "
+                    "the explicit residual list."
+                ),
+                "truth_effect": "none",
+            }
+            artifact_bytes = (
+                json.dumps(batch, ensure_ascii=False, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            artifact_path.write_bytes(artifact_bytes)
+            artifact = {
+                "path": artifact_path.relative_to(root).as_posix(),
+                "sha256": sha256_bytes(artifact_bytes),
+                "role": "research_split_batch",
+            }
+            payload = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": planned["round_id"],
+                "assignment_id": assignment["assignment_id"],
+                "worker_id": assignment["worker_id"],
+                "task_card_sha256": assignment["task_card_sha256"],
+                "blackboard_snapshot_sha256": assignment[
+                    "blackboard_snapshot_sha256"
+                ],
+                "outcome": "insight",
+                "claim": "The old Research node splits into two coherent surfaces.",
+                "content": "The exact successor membership is carried by the batch artifact.",
+                "narrative": {
+                    "rationale": "One worker can preserve the global split boundary.",
+                    "summary": "Two successors were produced.",
+                    "intuition": "Split claims, not prose pages.",
+                    "limitations": "Fresh supervision must review both successors.",
+                },
+                "artifacts": [artifact],
+                "obligation_dispositions": [],
+                "computation_manifest": None,
+                "research_assurance": {
+                    "source_uses": [],
+                    "route_invalidations": [],
+                    "extremal_cases": [],
+                    "claim_strength": [],
+                    "contour_substitutions": [],
+                    "claimed_structures": [],
+                    "program_math_alignments": [],
+                },
+            }
+            return_path = Path(str(assignment["return_path"]))
+            return_path.write_text(
+                json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            receipt = lifecycle.ingest_return(
+                round_id=planned["round_id"],
+                assignment_id=assignment["assignment_id"],
+            )
+            self.assertEqual(receipt["status"], "ingested")
+            self.assertEqual(len(receipt["split_successor_research_ids"]), 2)
+            owner = lifecycle._research_record(receipt["research_id"])
+            owner_binding = owner["metadata"]["research_split_owner"]
+            self.assertEqual(
+                receipt["split_successor_research_ids"],
+                [item["research_id"] for item in owner_binding["members"]],
+            )
+            commit = lifecycle._validated_research_split_commit(
+                receipt["split_batch_id"]
+            )
+            self.assertEqual(commit["owner_research_id"], owner["research_id"])
+            for index, research_id in enumerate(
+                receipt["split_successor_research_ids"], 1
+            ):
+                member = lifecycle._research_record(research_id)
+                self.assertEqual(
+                    member["metadata"]["research_split_member"]["member_index"],
+                    index,
+                )
+                self.assertNotIn(
+                    "assignment_provenance", member["metadata"]
+                )
+            commit_path = lifecycle._research_split_batch_path(
+                receipt["split_batch_id"]
+            )
+            staged_commit_path = commit_path.with_suffix(".staged")
+            commit_path.rename(staged_commit_path)
+            try:
+                frontier_ids = {
+                    item["research_id"]
+                    for item in lifecycle.frontier(
+                        limit=64,
+                        include_history=True,
+                    )
+                }
+                self.assertNotIn(owner["research_id"], frontier_ids)
+                self.assertTrue(
+                    set(receipt["split_successor_research_ids"]).isdisjoint(
+                        frontier_ids
+                    )
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "not yet committed"
+                ):
+                    lifecycle.fact_alpha().mark(
+                        receipt["split_successor_research_ids"][0],
+                        rationale="An uncommitted split member is not actionable.",
+                    )
+            finally:
+                staged_commit_path.rename(commit_path)
+            replay = lifecycle.ingest_return(
+                round_id=planned["round_id"],
+                assignment_id=assignment["assignment_id"],
+            )
+            self.assertEqual(replay["receipt_id"], receipt["receipt_id"])
+            round_dir, manifest = lifecycle._round_manifest(planned["round_id"])
+            product, _ = lifecycle._research_product_for_assignment(
+                round_dir=round_dir,
+                manifest=manifest,
+                assignment=manifest["assignments"][0],
+            )
+            self.assertEqual(product["research_id"], owner["research_id"])
+            component_id = planned["supervision_components"][0][
+                "component_id"
+            ]
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                supervision = lifecycle.create_supervision_round(
+                    planned["round_id"],
+                    source_component_id=component_id,
+                    supervisor_scopes=["proof_logic"],
+                    host_task_scope_id="schema-v3-split-supervision",
+                )
+            supervisor_assignment = supervision["assignments"][0]
+            supervisor_task = lifecycle._research_record(
+                supervisor_assignment["research_id"]
+            )
+            self.assertTrue(
+                set(receipt["split_successor_research_ids"]).issubset(
+                    supervisor_task["related_research_ids"]
+                )
+            )
+            self.assertIn(
+                "committed Research split batch", supervisor_task["content"]
+            )
+            member_records = [
+                lifecycle._research_record(research_id)
+                for research_id in receipt["split_successor_research_ids"]
+            ]
+            supervisor_card = json.loads(
+                Path(str(supervisor_assignment["task_card_path"])).read_text(
+                    encoding="utf-8"
+                )
+            )
+            supervisor_artifact_dir = (
+                root / supervisor_assignment["artifact_dir_relpath"]
+            )
+            supervisor_artifact_dir.mkdir(parents=True, exist_ok=True)
+            supervision_report_path = (
+                supervisor_artifact_dir / "split-supervision.md"
+            )
+            supervision_report_path.write_text(
+                "The actual split membership was reviewed as one whole batch.\n",
+                encoding="utf-8",
+            )
+            supervision_report = {
+                "path": supervision_report_path.relative_to(root).as_posix(),
+                "sha256": sha256_bytes(supervision_report_path.read_bytes()),
+                "role": "research_supervision_report",
+            }
+            interface_path = (
+                supervisor_artifact_dir / "split-interfaces.json"
+            )
+
+            def interface_entry(member: dict[str, object]) -> dict[str, object]:
+                return {
+                    "research_id": member["research_id"],
+                    "research_record_sha256": member["record_sha256"],
+                    "disposition": "ready",
+                    "rationale": "This successor is one coherent claim surface.",
+                    "statement_interface": {
+                        "conclusion": member["claim"],
+                        "assumptions": ["The split batch shared assumptions hold."],
+                        "domain_and_types": ["Objects lie in the frozen test domain."],
+                        "quantifiers": ["For every object satisfying the assumptions."],
+                        "certified_predecessor_research_ids": [],
+                        "limitations": ["Only this successor surface is asserted."],
+                    },
+                }
+
+            def write_interfaces(
+                selected: list[dict[str, object]],
+            ) -> dict[str, str]:
+                interface_path.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": 1,
+                            "contract_revision": (
+                                "chalxius-supervised-statement-interfaces-1"
+                            ),
+                            "entries": [
+                                interface_entry(member) for member in selected
+                            ],
+                            "truth_effect": "none",
+                        },
+                        sort_keys=True,
+                    ),
+                    encoding="utf-8",
+                )
+                return {
+                    "path": interface_path.relative_to(root).as_posix(),
+                    "sha256": sha256_bytes(interface_path.read_bytes()),
+                    "role": "fact_statement_interfaces",
+                }
+
+            def supervisor_payload(
+                interface_artifact: dict[str, str],
+            ) -> dict[str, object]:
+                payload: dict[str, object] = {
+                    "schema_version": 5,
+                    "project_id": store.project_id(),
+                    "round_id": supervision["round_id"],
+                    "assignment_id": supervisor_assignment["assignment_id"],
+                    "worker_id": supervisor_assignment["worker_id"],
+                    "task_card_sha256": supervisor_assignment[
+                        "task_card_sha256"
+                    ],
+                    "blackboard_snapshot_sha256": supervisor_assignment[
+                        "blackboard_snapshot_sha256"
+                    ],
+                    "outcome": "evidence",
+                    "claim": "The committed split batch is clean in proof scope.",
+                    "content": "Every actual successor and its separation were reviewed.",
+                    "narrative": {
+                        "rationale": "One supervisor owns the whole batch review.",
+                        "summary": "The bounded split is coherent.",
+                        "intuition": "Membership is learned from the commit.",
+                        "limitations": "This is nontruth Research supervision.",
+                    },
+                    "artifacts": [supervision_report, interface_artifact],
+                    "obligation_dispositions": [
+                        {
+                            "obligation_id": obligation["obligation_id"],
+                            "status": "complete",
+                            "witness_artifact_sha256s": [
+                                supervision_report["sha256"]
+                            ],
+                            "rationale": "The exact report covers the whole batch.",
+                        }
+                        for obligation in supervisor_card[
+                            "assurance_contract"
+                        ]["obligations"]
+                    ],
+                    "computation_manifest": None,
+                    "research_assurance": {
+                        "source_uses": [],
+                        "route_invalidations": [],
+                        "extremal_cases": [],
+                        "claim_strength": [],
+                        "contour_substitutions": [],
+                        "claimed_structures": [],
+                        "program_math_alignments": [],
+                    },
+                }
+                if "adverse_routing" in supervisor_card:
+                    payload["attack_learning"] = None
+                return payload
+
+            incomplete_interface = write_interfaces(member_records[:1])
+            supervisor_return_path = Path(
+                str(supervisor_assignment["return_path"])
+            )
+            supervisor_return_path.write_text(
+                json.dumps(
+                    supervisor_payload(incomplete_interface), sort_keys=True
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError, "must cover every committed successor"
+            ):
+                lifecycle.preflight_return(
+                    round_id=supervision["round_id"],
+                    assignment_id=supervisor_assignment["assignment_id"],
+                )
+            complete_interface = write_interfaces(member_records)
+            supervisor_return_path.write_text(
+                json.dumps(
+                    supervisor_payload(complete_interface), sort_keys=True
+                ),
+                encoding="utf-8",
+            )
+            self.assertTrue(
+                lifecycle.preflight_return(
+                    round_id=supervision["round_id"],
+                    assignment_id=supervisor_assignment["assignment_id"],
+                )["valid"]
+            )
+            coverage = lifecycle._candidate_supervision_scope_coverage(
+                member_records
+            )
+            self.assertTrue(coverage)
+            self.assertEqual(
+                {item["production_round_id"] for item in coverage},
+                {planned["round_id"]},
+            )
+            self.assertIn("pending", {item["state"] for item in coverage})
+
     def test_schema_v2_repair_direct_write_rejects_noncanonical_capabilities(
         self,
     ) -> None:

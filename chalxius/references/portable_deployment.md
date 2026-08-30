@@ -1,5 +1,39 @@
 # Chalxius portable deployment
 
+## 1.0.2 Capability Budget Audit Repair
+
+The `1.0.2` **Capability Budget Audit Repair** candidate changes only the
+structured Repair audit boundary. Each immutable capability manifest owns the
+existing 64 MiB aggregate budget, while one command still shares exact
+read-once bytes and path/digest conflicts across repeated validation. This
+removes traversal-order false drift without weakening lexical containment,
+no-follow, regular-file, SHA-256, conflicting-declaration, or single-manifest
+size checks. Installation is project-free and does not migrate or rewrite
+historical Research, rounds, task cards, or artifacts.
+
+## 1.0.1 Fact Alpha Field Repair
+
+The `1.0.1` **Fact Alpha Field Repair** candidate keeps the 1.0.0 authority
+model and repairs its live
+coordination surface. Empty overlays receive bounded exact-root advice only
+from unique byte-identical non-adverse constructive Research carriers;
+Campaign-scoped Fact frontiers explain filtered unbound marks. Prospective clean
+supervisors may emit Research-bound `ready` interfaces or explicit
+`needs_split`; all-ready plans seal mechanically. Historical/missing/custom
+interface work retains the human/agent packager fallback. A Research repair
+worker performs any mathematical split from a precise brief rather than a
+mechanical prose cut, and split successors require fresh supervision before
+their new interfaces are packaged. For new schema-v3 split repairs, one worker
+may return one complete, worker-sized successor batch; installation provides a
+commit-last materializer and whole-batch supervision projection. Partial staged
+records remain invisible to frontier and Fact work.
+
+The six-field interface contains mathematics only. Research artifact bindings
+remain the sole evidence-locator layer and travel in the verifier capsule. The
+V5 verifier role has only capsule, record, and check commands. Installation
+does not migrate legacy Facts, infer Campaign membership, select mathematics,
+run split/COW, certify Research, mutate a project, or publish a release.
+
 ## 1.0.0 Fact Alpha
 
 The `1.0.0` **Fact Alpha** candidate keeps one mathematical Research graph and

@@ -1,5 +1,45 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.2 Capability Budget Audit Repair difference
+
+The 0.7.16 bounded Repair reader attached one byte accumulator to the whole
+inspection context. A full historical audit therefore treated independent
+capability manifests as one growing closure and eventually reported valid
+later records as drifted. The 1.0.2 repair retains the command-level immutable
+byte and path/digest caches but gives every structured Repair manifest a local
+deduplicated budget. No command, role, authority, workflow state, compatibility
+adapter, or persistent cache is added.
+
+## 1.0.1 Fact Alpha Field Repair difference
+
+The 1.0.0 prospective path always deferred statement-interface authorship to a
+separate packager, gave an empty overlay no exact root advice, hid unbound marks
+inside Campaign-scoped filtering, and accidentally projected no usable V5
+commands to the independent verifier role.
+
+The repair reuses exact mathematical work at its natural owner. A clean new
+supervisor may emit a Research-bound `ready` interface or explicit
+`needs_split`; an all-ready plan seals mechanically. Legacy or absent interface
+work still goes to a human/agent packager. A Research repair worker performs
+any mathematical split from a precise surface/dependency/residual brief rather
+than cutting prose; split successors then obtain fresh supervision and new
+supervisor-authored interfaces. The six-field mathematical
+interface does not duplicate evidence paths or hashes. Zero-state root advice
+uses only byte-identical unique constructive carriers and creates no authority
+mapping. The verifier role remains independent and has only its three decision
+commands. No relation inference, scheduler, automatic Main selection,
+Campaign binding, legacy migration, or truth effect is added.
+
+The field repair also closes the prospective one-to-many Research split gap
+without multiplying Main assignments. A schema-v3 repair card binds the source
+and semantic brief; one worker chooses the actual finite successor set and
+returns it as one batch. Ingestion stages all members and one lookup owner,
+publishes a commit last, and exposes only committed batches to frontier and
+Fact. Supervision expands the owner receipt to the complete committed set, so
+one independent reviewer per scope can assess the whole product while retaining
+per-successor interface dispositions. The program validates structure and
+atomic visibility, not mathematical completeness.
+
 ## 1.0.0 Fact Alpha difference
 
 The 0.x post-Research path formed a separate Candidate release, required a

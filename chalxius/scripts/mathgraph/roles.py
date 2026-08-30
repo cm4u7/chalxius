@@ -158,6 +158,12 @@ OPERATOR_COMMANDS = ALL_COMMANDS - {
     "selective-fact-checkpoint",
 }
 
+V5_FACT_VERIFIER_COMMANDS = {
+    "fact-verifier-capsule",
+    "fact-verification-record",
+    "fact-verification-check",
+}
+
 
 ROLE_COMMANDS = {
     "worker": {
@@ -311,9 +317,9 @@ ROLE_COMMANDS = {
         "verification-packet-record",
         "verification-status",
     },
-    # Verifiers are deliberately not project-shell users.  The orchestrator
-    # gives each fresh verifier one frozen packet and one review return path.
-    "verifier": set(),
+    # A Fact Alpha verifier may inspect one frozen package and append/check its
+    # decision. It cannot package, certify, cross Gateway, or mutate Research.
+    "verifier": V5_FACT_VERIFIER_COMMANDS,
     # A Fact packager may inspect Main's sparse certification frontier and seal
     # one explicitly frozen plan. It cannot select marks, verify mathematics,
     # publish a decision, or make a grant visible.
@@ -391,6 +397,10 @@ def allowed_commands_for_workflow(
     workflow_evidence_version: int,
 ) -> set[str]:
     commands = allowed_commands(role)
+    if role == "verifier" and workflow_evidence_version >= 5:
+        return commands.intersection(V5_FACT_VERIFIER_COMMANDS)
+    if role == "verifier":
+        return set()
     if role == "worker" and workflow_evidence_version >= 5:
         return commands.intersection(V5_WORKER_COMMANDS)
     if role == "worker" and workflow_evidence_version == 4:

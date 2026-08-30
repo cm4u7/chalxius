@@ -123,6 +123,15 @@ from .runtime_archive import (
     runtime_binding_from_root,
     validate_runtime_binding,
 )
+from .research_split import (
+    RESEARCH_SPLIT_ARTIFACT_ROLE,
+    RESEARCH_SPLIT_COMMIT_REVISION,
+    RESEARCH_SPLIT_MAX_MEMBERS,
+    RESEARCH_SPLIT_MEMBER_REVISION,
+    RESEARCH_SPLIT_OUTPUT_SHAPE,
+    RESEARCH_SPLIT_OWNER_REVISION,
+    validate_research_split_batch,
+)
 
 
 V5_WORKFLOW_EVIDENCE_VERSION = 5
@@ -549,6 +558,14 @@ V5_LEGACY_TRUTH_WRITER_COMMANDS = frozenset(
 
 
 @dataclass(slots=True)
+class _RepairCapabilityBudget:
+    """One bounded Repair manifest's byte accounting state."""
+
+    keys: set[tuple[str, str]] = field(default_factory=set)
+    total_bytes: int = 0
+
+
+@dataclass(slots=True)
 class RoundInspectionContext:
     """Ephemeral caches for one exact all-round read phase.
 
@@ -831,6 +848,9 @@ class V5LifecycleManager:
         self.research_root = store.root / "research"
         self.research_entries_dir = self.research_root / "entries" / "by-id"
         self.quarantine_dir = self.research_root / "quarantine" / "by-id"
+        self.research_split_batches_dir = (
+            self.research_root / "split-batches" / "by-id"
+        )
         self.candidate_releases_dir = (
             store.root / "candidate_releases" / "by-id"
         )
@@ -874,6 +894,7 @@ class V5LifecycleManager:
             self.root,
             self.research_entries_dir,
             self.quarantine_dir,
+            self.research_split_batches_dir,
             self.candidate_releases_dir,
             self.candidate_artifacts_dir,
             self.certification_decisions_dir,
@@ -1206,6 +1227,7 @@ class V5LifecycleManager:
             kind=record["kind"],
             metadata=metadata,
         )
+        self._validate_research_split_metadata(metadata)
         repair_manifest = self._validate_repair_input_capability_metadata(
             kind=record["kind"],
             metadata=metadata,
@@ -1603,6 +1625,7 @@ class V5LifecycleManager:
         *,
         label: str,
         _inspection_context: RoundInspectionContext | None = None,
+        _manifest_budget: _RepairCapabilityBudget | None = None,
         require_single_link: bool = False,
     ) -> bytes:
         """Read one repair capability once inside a command-local snapshot.
@@ -1614,7 +1637,10 @@ class V5LifecycleManager:
         no-follow read.
         """
 
-        context = self._bind_inspection_context(_inspection_context)
+        context = self._bind_inspection_context(
+            _inspection_context,
+            create=_manifest_budget is not None,
+        )
         if context is None:
             raw = self._read_regular_bytes_once(
                 path,
@@ -1633,25 +1659,38 @@ class V5LifecycleManager:
         if previous_digest is not None and previous_digest != digest:
             raise ValueError(f"{label} path has conflicting declared bytes")
         key = (relative, digest)
-        cached = context.repair_capability_bytes.get(key)
-        if cached is not None:
-            return cached
-        raw = self._read_regular_bytes_once(
-            path,
-            label=label,
-            containment_root=self.store.root,
-            require_single_link=require_single_link,
+        raw = context.repair_capability_bytes.get(key)
+        was_cached = raw is not None
+        if raw is None:
+            raw = self._read_regular_bytes_once(
+                path,
+                label=label,
+                containment_root=self.store.root,
+                require_single_link=require_single_link,
+            )
+            if sha256_bytes(raw) != digest:
+                raise ValueError(f"{label} bytes/hash mismatch")
+        if _manifest_budget is None and was_cached:
+            return raw
+        if _manifest_budget is not None and key in _manifest_budget.keys:
+            return raw
+        current_total = (
+            _manifest_budget.total_bytes
+            if _manifest_budget is not None
+            else context.repair_capability_total_bytes
         )
-        if sha256_bytes(raw) != digest:
-            raise ValueError(f"{label} bytes/hash mismatch")
-        projected_total = context.repair_capability_total_bytes + len(raw)
+        projected_total = current_total + len(raw)
         if projected_total > V5_MAX_REPAIR_INPUT_CAPABILITY_BYTES:
             raise ValueError(
                 "repair input capability bytes exceed the 64 MiB aggregate cap"
             )
         context.repair_capability_digests_by_path[relative] = digest
         context.repair_capability_bytes[key] = raw
-        context.repair_capability_total_bytes = projected_total
+        if _manifest_budget is not None:
+            _manifest_budget.keys.add(key)
+            _manifest_budget.total_bytes = projected_total
+        else:
+            context.repair_capability_total_bytes = projected_total
         return raw
 
     def _ordinary_capability_bytes(
@@ -1714,23 +1753,23 @@ class V5LifecycleManager:
         *,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any] | None:
-        """Return the validated manifest only for an explicit schema-v2 Repair."""
+        """Return the validated manifest for a capability-bound Repair."""
 
         metadata = record.get("metadata")
         if not isinstance(metadata, dict):
             return None
         spec = metadata.get("repair_spec")
-        if not isinstance(spec, dict) or spec.get("schema_version") != 2:
+        if not isinstance(spec, dict) or spec.get("schema_version") not in {2, 3}:
             return None
         if record.get("kind") != "repair":
-            raise ValueError("schema-v2 repair capability scope requires repair kind")
+            raise ValueError("structured repair capability scope requires repair kind")
         manifest = self._validate_repair_input_capability_metadata(
             kind="repair",
             metadata=metadata,
             _inspection_context=_inspection_context,
         )
         if not isinstance(manifest, dict):
-            raise ValueError("schema-v2 repair capability scope lacks its manifest")
+            raise ValueError("structured repair capability scope lacks its manifest")
         return manifest
 
     def _typed_research_artifacts(
@@ -1777,20 +1816,18 @@ class V5LifecycleManager:
                 item["path"], "Research capability artifact"
             )
             try:
-                if repair_capability_scope:
-                    self._repair_capability_bytes(
-                        path,
-                        item["sha256"],
-                        label="Research capability artifact",
-                        _inspection_context=_inspection_context,
-                    )
-                else:
+                if not repair_capability_scope:
                     self._ordinary_capability_bytes(
                         path,
                         item["sha256"],
                         label="Research capability artifact",
                         _inspection_context=_inspection_context,
                     )
+                # A structured Repair's canonical artifacts are exactly its
+                # capability manifest.  The manifest validator above has just
+                # read and hash-checked those bytes inside the manifest's own
+                # bounded snapshot, so charging them again to the command-wide
+                # inspection context would couple independent frozen Repairs.
             except ValueError as exc:
                 # Preserve the historical Research-record interface while
                 # allowing the shared CHX-016 reader to expose precise errors
@@ -1921,6 +1958,7 @@ class V5LifecycleManager:
         *,
         bounded_repair: bool = True,
         _inspection_context: RoundInspectionContext | None = None,
+        _manifest_budget: _RepairCapabilityBudget | None = None,
     ) -> None:
         for item in capabilities:
             try:
@@ -1933,6 +1971,7 @@ class V5LifecycleManager:
                         item["sha256"],
                         label="repair input capability",
                         _inspection_context=_inspection_context,
+                        _manifest_budget=_manifest_budget,
                     )
                 else:
                     self._ordinary_capability_bytes(
@@ -2432,10 +2471,25 @@ class V5LifecycleManager:
             or value["manifest_sha256"] != sha256_json(semantic)
         ):
             raise ValueError("repair input capability manifest is invalid")
+        # The 64 MiB bound belongs to this one immutable Repair manifest, not
+        # to every Repair encountered by a full-ledger command.  Keep that
+        # accounting local while the owning command continues to share its
+        # exact read-once bytes and path/digest conflict cache.  A standalone
+        # validation still gets one ephemeral read snapshot.  Schema-1 history
+        # remains on the ordinary capability reader.
+        capability_context = _inspection_context
+        manifest_budget: _RepairCapabilityBudget | None = None
+        if bounded_repair:
+            capability_context = self._bind_inspection_context(
+                _inspection_context,
+                create=True,
+            )
+            manifest_budget = _RepairCapabilityBudget()
         self._validate_repair_input_capability_files(
             capabilities,
             bounded_repair=bounded_repair,
-            _inspection_context=_inspection_context,
+            _inspection_context=capability_context,
+            _manifest_budget=manifest_budget,
         )
         return value
 
@@ -2455,7 +2509,7 @@ class V5LifecycleManager:
             )
         spec = metadata.get("repair_spec")
         bounded_repair = (
-            isinstance(spec, dict) and spec.get("schema_version") == 2
+            isinstance(spec, dict) and spec.get("schema_version") in {2, 3}
         )
         manifest = self._validate_repair_input_capability_manifest(
             manifest,
@@ -2485,10 +2539,10 @@ class V5LifecycleManager:
             raise ValueError(
                 "repair input capability manifest requires source_dependent=true"
             )
-        if isinstance(spec, dict) and spec.get("schema_version") == 2:
+        if isinstance(spec, dict) and spec.get("schema_version") in {2, 3}:
             if spec.get("input_capabilities") != capabilities:
                 raise ValueError(
-                    "schema-v2 repair specification and capability manifest disagree"
+                    "structured repair specification and capability manifest disagree"
                 )
         return manifest
 
@@ -2503,21 +2557,23 @@ class V5LifecycleManager:
         _inspection_context: RoundInspectionContext | None = None,
     ) -> None:
         spec = metadata.get("repair_spec")
-        if not isinstance(spec, dict) or spec.get("schema_version") != 2:
+        if not isinstance(spec, dict) or spec.get("schema_version") not in {2, 3}:
             return
+        schema_version = spec["schema_version"]
+        label = f"schema-v{schema_version} repair"
         if kind != "repair":
-            raise ValueError("schema-v2 repair lineage requires one repair record")
+            raise ValueError(f"{label} lineage requires one repair record")
         # ``kind`` and the structured lineage fields are the rigid type.
         # ``relation`` is deliberately retained as Main-authored descriptive
         # vocabulary and is not a second repair capability.
 
         manifest = metadata.get("repair_input_capability_manifest")
         if not isinstance(manifest, dict):
-            raise ValueError("schema-v2 repair lineage lacks its capability manifest")
+            raise ValueError(f"{label} lineage lacks its capability manifest")
         source_research_id = validate_memory_id(
             _require_nonempty_text(
                 metadata.get("repair_of_research_id"),
-                "schema-v2 repair source Research id",
+                f"{label} source Research id",
             )
         )
         trigger_research_id = metadata.get("trigger_research_id")
@@ -2525,16 +2581,16 @@ class V5LifecycleManager:
             trigger_research_id = validate_memory_id(
                 _require_nonempty_text(
                     trigger_research_id,
-                    "schema-v2 repair trigger Research id",
+                    f"{label} trigger Research id",
                 )
             )
         if manifest.get("source_research_id") != source_research_id:
             raise ValueError(
-                "schema-v2 repair source lineage disagrees with capability manifest"
+                f"{label} source lineage disagrees with capability manifest"
             )
         if manifest.get("trigger_research_id") != trigger_research_id:
             raise ValueError(
-                "schema-v2 repair trigger lineage disagrees with capability manifest"
+                f"{label} trigger lineage disagrees with capability manifest"
             )
         expected_related = sorted(
             dict.fromkeys(
@@ -2550,7 +2606,7 @@ class V5LifecycleManager:
         )
         if related_research_ids != expected_related:
             raise ValueError(
-                "schema-v2 repair related Research lineage is not exact"
+                f"{label} related Research lineage is not exact"
             )
         if require_existing:
             inspection = self._bind_inspection_context(
@@ -4501,6 +4557,7 @@ class V5LifecycleManager:
             kind=kind,
             metadata=metadata,
         )
+        self._validate_research_split_metadata(metadata)
         repair_manifest = self._validate_repair_input_capability_metadata(
             kind=kind,
             metadata=metadata,
@@ -4891,6 +4948,11 @@ class V5LifecycleManager:
             and normalized_repair_spec["work_mode"] != "auto"
         ):
             repair_mode = normalized_repair_spec["work_mode"]
+        elif (
+            normalized_repair_spec is not None
+            and normalized_repair_spec["schema_version"] == 3
+        ):
+            repair_mode = "prove"
         explicit_input_capabilities = (
             normalized_repair_spec.get("input_capabilities", [])
             if normalized_repair_spec is not None
@@ -4911,7 +4973,10 @@ class V5LifecycleManager:
                 "schema-v2 repair specification requires at least one verified "
                 "input capability"
             )
-        if normalized_repair_spec is not None and normalized_repair_spec["schema_version"] == 2:
+        if (
+            normalized_repair_spec is not None
+            and normalized_repair_spec["schema_version"] in {2, 3}
+        ):
             normalized_repair_spec = {
                 **normalized_repair_spec,
                 "input_capabilities": repair_input_manifest[
@@ -5073,6 +5138,12 @@ class V5LifecycleManager:
             required = base_required
         elif schema_version == 2:
             required = {*base_required, "input_capabilities"}
+        elif schema_version == 3:
+            required = {
+                *base_required,
+                "input_capabilities",
+                "output_shape",
+            }
         else:
             raise ValueError("exact repair specification schema_version is invalid")
         if set(value) != required:
@@ -5111,12 +5182,23 @@ class V5LifecycleManager:
             ),
             "stop_conditions": list(stop_conditions),
         }
-        if schema_version == 2:
+        if schema_version in {2, 3}:
             normalized["input_capabilities"] = (
                 V5LifecycleManager._normalize_repair_input_capabilities(
                     value.get("input_capabilities")
                 )
             )
+        if schema_version == 3:
+            if value.get("output_shape") != RESEARCH_SPLIT_OUTPUT_SHAPE:
+                raise ValueError(
+                    "schema-v3 repair output_shape must be research_split_batch"
+                )
+            normalized["output_shape"] = RESEARCH_SPLIT_OUTPUT_SHAPE
+            if work_mode not in {"auto", "prove", "literature", "interpret"}:
+                raise ValueError(
+                    "schema-v3 split repair work_mode must be auto, prove, "
+                    "literature, or interpret"
+                )
         raw = json.dumps(
             normalized,
             ensure_ascii=False,
@@ -5145,8 +5227,11 @@ class V5LifecycleManager:
         normalized = cls._normalize_exact_repair_spec(spec)
         if normalized != spec or digest != sha256_json(normalized):
             raise ValueError("exact repair specification metadata drifted")
-        if normalized["schema_version"] == 2:
-            if not normalized["input_capabilities"]:
+        if normalized["schema_version"] in {2, 3}:
+            if (
+                normalized["schema_version"] == 2
+                and not normalized["input_capabilities"]
+            ):
                 raise ValueError(
                     "schema-v2 repair specification requires at least one verified "
                     "input capability"
@@ -5158,8 +5243,412 @@ class V5LifecycleManager:
                 != normalized["input_capabilities"]
             ):
                 raise ValueError(
-                    "schema-v2 repair specification is not bound to its capability manifest"
+                    "structured repair specification is not bound to its capability manifest"
                 )
+
+    def _research_split_contract_for_card(
+        self,
+        card: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]] | None:
+        """Return the typed split contract, repair task, and original source.
+
+        The split cardinality is intentionally absent.  Main freezes only the
+        output shape; the one repair worker declares the actual finite member
+        set in its artifact.
+        """
+
+        dossier = card.get("mathematical_state", {}).get(
+            "source_research_dossier"
+        )
+        if not isinstance(dossier, dict):
+            return None
+        metadata = dossier.get("metadata")
+        if not isinstance(metadata, dict):
+            return None
+        spec = metadata.get("repair_spec")
+        if not isinstance(spec, dict) or spec.get("schema_version") != 3:
+            return None
+        normalized = self._normalize_exact_repair_spec(spec)
+        if normalized != spec or normalized.get("output_shape") != (
+            RESEARCH_SPLIT_OUTPUT_SHAPE
+        ):
+            raise ValueError("Research split repair specification drifted")
+        repair_id = validate_memory_id(dossier.get("research_id"))
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        repair = self._inspection_research_record(repair_id, inspection)
+        if repair.get("kind") != "repair" or repair.get("metadata", {}).get(
+            "repair_spec_sha256"
+        ) != sha256_json(normalized):
+            raise ValueError("Research split task is not the frozen schema-v3 repair")
+        source_id = validate_memory_id(
+            _require_nonempty_text(
+                metadata.get("repair_of_research_id"),
+                "Research split source Research id",
+            )
+        )
+        source = self._inspection_research_record(source_id, inspection)
+        return normalized, repair, source
+
+    @staticmethod
+    def _validate_research_split_metadata(metadata: dict[str, Any]) -> None:
+        member = metadata.get("research_split_member")
+        owner = metadata.get("research_split_owner")
+        if member is not None and owner is not None:
+            raise ValueError("Research cannot be both split member and batch owner")
+        if member is not None:
+            fields = {
+                "revision",
+                "batch_id",
+                "source_research_id",
+                "source_record_sha256",
+                "repair_research_id",
+                "repair_record_sha256",
+                "batch_artifact_sha256",
+                "surface_key",
+                "member_index",
+                "member_count",
+                "truth_effect",
+            }
+            if not isinstance(member, dict) or set(member) != fields:
+                raise ValueError("Research split-member metadata fields are not exact")
+            if (
+                member.get("revision") != RESEARCH_SPLIT_MEMBER_REVISION
+                or member.get("truth_effect") != "none"
+                or not isinstance(member.get("batch_id"), str)
+                or not member["batch_id"].startswith("split-batch-")
+                or SHA256_RE.fullmatch(
+                    member["batch_id"].removeprefix("split-batch-")
+                )
+                is None
+                or member.get("member_count", 0) < 2
+                or member.get("member_count", 0) > RESEARCH_SPLIT_MAX_MEMBERS
+                or not isinstance(member.get("member_index"), int)
+                or not 1 <= member["member_index"] <= member["member_count"]
+            ):
+                raise ValueError("Research split-member metadata is invalid")
+            validate_memory_id(member["source_research_id"])
+            validate_memory_id(member["repair_research_id"])
+            for field_name in (
+                "source_record_sha256",
+                "repair_record_sha256",
+                "batch_artifact_sha256",
+            ):
+                if (
+                    not isinstance(member.get(field_name), str)
+                    or SHA256_RE.fullmatch(member[field_name]) is None
+                ):
+                    raise ValueError("Research split-member hash is invalid")
+            _require_nonempty_text(
+                member.get("surface_key"), "Research split-member surface key"
+            )
+        if owner is not None:
+            fields = {
+                "revision",
+                "batch_id",
+                "source_research_id",
+                "source_record_sha256",
+                "repair_research_id",
+                "repair_record_sha256",
+                "batch_artifact_sha256",
+                "members",
+                "membership_sha256",
+                "truth_effect",
+            }
+            if not isinstance(owner, dict) or set(owner) != fields:
+                raise ValueError("Research split-owner metadata fields are not exact")
+            members = owner.get("members")
+            if (
+                owner.get("revision") != RESEARCH_SPLIT_OWNER_REVISION
+                or owner.get("truth_effect") != "none"
+                or not isinstance(owner.get("batch_id"), str)
+                or not owner["batch_id"].startswith("split-batch-")
+                or SHA256_RE.fullmatch(
+                    owner["batch_id"].removeprefix("split-batch-")
+                )
+                is None
+                or not isinstance(members, list)
+                or not 2 <= len(members) <= RESEARCH_SPLIT_MAX_MEMBERS
+                or owner.get("membership_sha256") != sha256_json(members)
+            ):
+                raise ValueError("Research split-owner metadata is invalid")
+            seen_ids: set[str] = set()
+            seen_surfaces: set[str] = set()
+            for item in members:
+                if not isinstance(item, dict) or set(item) != {
+                    "surface_key",
+                    "research_id",
+                    "record_sha256",
+                }:
+                    raise ValueError("Research split-owner member fields are not exact")
+                research_id = validate_memory_id(item["research_id"])
+                if (
+                    research_id in seen_ids
+                    or item["surface_key"] in seen_surfaces
+                    or not isinstance(item["record_sha256"], str)
+                    or SHA256_RE.fullmatch(item["record_sha256"]) is None
+                ):
+                    raise ValueError("Research split-owner membership is invalid")
+                seen_ids.add(research_id)
+                seen_surfaces.add(
+                    _require_nonempty_text(
+                        item["surface_key"], "Research split-owner surface key"
+                    )
+                )
+            validate_memory_id(owner["source_research_id"])
+            validate_memory_id(owner["repair_research_id"])
+            for field_name in (
+                "source_record_sha256",
+                "repair_record_sha256",
+                "batch_artifact_sha256",
+                "membership_sha256",
+            ):
+                if (
+                    not isinstance(owner.get(field_name), str)
+                    or SHA256_RE.fullmatch(owner[field_name]) is None
+                ):
+                    raise ValueError("Research split-owner hash is invalid")
+
+    def _research_split_batch_path(self, batch_id: str) -> Path:
+        if (
+            not isinstance(batch_id, str)
+            or not batch_id.startswith("split-batch-")
+            or SHA256_RE.fullmatch(batch_id.removeprefix("split-batch-")) is None
+        ):
+            raise ValueError("Research split batch id is invalid")
+        return self.research_split_batches_dir / f"{batch_id}.json"
+
+    def _research_split_commit_for_record(
+        self,
+        record: dict[str, Any],
+        *,
+        allow_uncommitted: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any] | None:
+        """Resolve the commit that makes a split owner/member operational.
+
+        Member and owner Research bytes are written before the head-last batch
+        commit so an interrupted ingest can retry without rewriting them.  The
+        staged records remain immutable Research history, but they are not an
+        actionable frontier or Fact surface until that one commit exists.
+        """
+
+        metadata = record.get("metadata")
+        if not isinstance(metadata, dict):
+            return None
+        member = metadata.get("research_split_member")
+        owner = metadata.get("research_split_owner")
+        binding = member if isinstance(member, dict) else owner
+        if not isinstance(binding, dict):
+            return None
+        batch_id = binding.get("batch_id")
+        path = self._research_split_batch_path(batch_id)
+        if path.is_symlink():
+            raise ValueError("Research split batch commit is unsafe")
+        if not path.exists():
+            if allow_uncommitted:
+                return None
+            raise ValueError("Research split record is not yet committed")
+        if not path.is_file():
+            raise ValueError("Research split batch commit is unsafe")
+        commit = self._validated_research_split_commit(
+            batch_id,
+            _inspection_context=_inspection_context,
+        )
+        research_id = validate_memory_id(record.get("research_id"))
+        if isinstance(member, dict):
+            if research_id not in {
+                item["research_id"] for item in commit["members"]
+            }:
+                raise ValueError(
+                    "Research split member is outside its committed batch"
+                )
+        elif commit["owner_research_id"] != research_id:
+            raise ValueError("Research split owner is outside its committed batch")
+        return commit
+
+    def _research_split_member_ids_for_supervision_card(
+        self,
+        card: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[str]:
+        """Return the actual committed split membership attacked by a card."""
+
+        cycle = card.get("research_cycle")
+        if not isinstance(cycle, dict) or cycle.get("subround") != "supervision":
+            return []
+        dossier = card.get("mathematical_state", {}).get(
+            "source_research_dossier"
+        )
+        metadata = dossier.get("metadata") if isinstance(dossier, dict) else None
+        supervision = (
+            metadata.get("research_supervision")
+            if isinstance(metadata, dict)
+            else None
+        )
+        if not isinstance(supervision, dict):
+            return []
+        supervision = self._validate_research_supervision_binding(supervision)
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        member_ids: set[str] = set()
+        for descriptor in supervision["source_receipts"]:
+            product = self._inspection_research_record(
+                descriptor["result_research_id"], inspection
+            )
+            owner = product.get("metadata", {}).get("research_split_owner")
+            if not isinstance(owner, dict):
+                continue
+            commit = self._research_split_commit_for_record(
+                product,
+                _inspection_context=inspection,
+            )
+            assert commit is not None
+            member_ids.update(
+                item["research_id"] for item in commit["members"]
+            )
+        return sorted(member_ids)
+
+    def _validated_research_split_commit(
+        self,
+        batch_id: str,
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        path = self._research_split_batch_path(batch_id)
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Research split batch commit is missing or unsafe")
+        record = self.store._read_json(path)
+        fields = {
+            "schema_version",
+            "contract_revision",
+            "project_id",
+            "batch_id",
+            "source_research_id",
+            "source_record_sha256",
+            "repair_research_id",
+            "repair_record_sha256",
+            "round_id",
+            "assignment_id",
+            "task_card_sha256",
+            "return_sha256",
+            "batch_artifact_sha256",
+            "batch_payload_sha256",
+            "owner_research_id",
+            "owner_record_sha256",
+            "members",
+            "membership_sha256",
+            "truth_effect",
+            "created_at",
+            "record_sha256",
+        }
+        if not isinstance(record, dict) or set(record) != fields:
+            raise ValueError("Research split commit fields are not exact")
+        if (
+            record.get("schema_version") != 1
+            or record.get("contract_revision") != RESEARCH_SPLIT_COMMIT_REVISION
+            or record.get("project_id") != self.store.project_id()
+            or record.get("batch_id") != batch_id
+            or record.get("truth_effect") != "none"
+            or record.get("record_sha256")
+            != sha256_json(
+                {key: value for key, value in record.items() if key != "record_sha256"}
+            )
+            or record.get("membership_sha256")
+            != sha256_json(record.get("members"))
+        ):
+            raise ValueError("Research split commit identity is invalid")
+        _parse_utc_timestamp(
+            record.get("created_at"), label="Research split commit created_at"
+        )
+        identity_semantic = {
+            key: record[key]
+            for key in (
+                "contract_revision",
+                "project_id",
+                "source_research_id",
+                "source_record_sha256",
+                "repair_research_id",
+                "repair_record_sha256",
+                "round_id",
+                "assignment_id",
+                "task_card_sha256",
+                "return_sha256",
+                "batch_artifact_sha256",
+                "batch_payload_sha256",
+                "truth_effect",
+            )
+        }
+        if batch_id != "split-batch-" + sha256_json(identity_semantic):
+            raise ValueError("Research split batch content id drifted")
+        for field_name in (
+            "task_card_sha256",
+            "return_sha256",
+            "batch_artifact_sha256",
+            "batch_payload_sha256",
+        ):
+            if (
+                not isinstance(record.get(field_name), str)
+                or SHA256_RE.fullmatch(record[field_name]) is None
+            ):
+                raise ValueError("Research split commit hash is invalid")
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        source = self._inspection_research_record(
+            validate_memory_id(record["source_research_id"]), inspection
+        )
+        repair = self._inspection_research_record(
+            validate_memory_id(record["repair_research_id"]), inspection
+        )
+        owner = self._inspection_research_record(
+            validate_memory_id(record["owner_research_id"]), inspection
+        )
+        if (
+            source["record_sha256"] != record["source_record_sha256"]
+            or repair["record_sha256"] != record["repair_record_sha256"]
+            or owner["record_sha256"] != record["owner_record_sha256"]
+            or owner.get("metadata", {}).get("research_split_owner", {}).get(
+                "batch_id"
+            )
+            != batch_id
+        ):
+            raise ValueError("Research split commit record bindings drifted")
+        members = record.get("members")
+        if not isinstance(members, list):
+            raise ValueError("Research split commit members are invalid")
+        for index, item in enumerate(members, 1):
+            if not isinstance(item, dict) or set(item) != {
+                "surface_key",
+                "research_id",
+                "record_sha256",
+            }:
+                raise ValueError("Research split commit member fields are not exact")
+            member = self._inspection_research_record(
+                validate_memory_id(item["research_id"]), inspection
+            )
+            binding = member.get("metadata", {}).get("research_split_member")
+            if (
+                member["record_sha256"] != item["record_sha256"]
+                or not isinstance(binding, dict)
+                or binding.get("batch_id") != batch_id
+                or binding.get("surface_key") != item["surface_key"]
+                or binding.get("member_index") != index
+                or binding.get("member_count") != len(members)
+            ):
+                raise ValueError("Research split commit member binding drifted")
+        return record
 
     @staticmethod
     def _validate_supervised_production_authority_metadata(
@@ -6385,9 +6874,30 @@ class V5LifecycleManager:
 
         checked_components: set[tuple[str, str | None]] = set()
         for record in explicit_records:
-            provenance = record.get("metadata", {}).get(
-                "assignment_provenance"
-            )
+            record_metadata = record.get("metadata", {})
+            provenance = record_metadata.get("assignment_provenance")
+            split_owner_id: str | None = None
+            split_member = record_metadata.get("research_split_member")
+            if not isinstance(provenance, dict) and isinstance(
+                split_member, dict
+            ):
+                commit = self._validated_research_split_commit(
+                    split_member["batch_id"],
+                    _inspection_context=inspection,
+                )
+                if record["research_id"] not in {
+                    item["research_id"] for item in commit["members"]
+                }:
+                    raise ValueError(
+                        "Candidate Research split member is outside its committed batch"
+                    )
+                split_owner_id = commit["owner_research_id"]
+                owner = self._inspection_research_record(
+                    split_owner_id, inspection
+                )
+                provenance = owner.get("metadata", {}).get(
+                    "assignment_provenance"
+                )
             if not isinstance(provenance, dict):
                 continue
             if self._research_is_adverse_assignment(record):
@@ -6430,7 +6940,9 @@ class V5LifecycleManager:
                     _inspection_context=inspection,
                 )
             )
-            if production_product["research_id"] != record["research_id"]:
+            if production_product["research_id"] != (
+                split_owner_id or record["research_id"]
+            ):
                 raise ValueError(
                     "Candidate Research production product/result drifted"
                 )
@@ -10986,7 +11498,21 @@ class V5LifecycleManager:
 
         cached = inspection.frontier_structural_state
         if cached is None:
-            cached = self._frontier_structural_state(records)
+            committed_records: list[dict[str, Any]] = []
+            for record in records:
+                metadata = record.get("metadata")
+                is_split_record = isinstance(metadata, dict) and (
+                    isinstance(metadata.get("research_split_member"), dict)
+                    or isinstance(metadata.get("research_split_owner"), dict)
+                )
+                if is_split_record and self._research_split_commit_for_record(
+                    record,
+                    allow_uncommitted=True,
+                    _inspection_context=inspection,
+                ) is None:
+                    continue
+                committed_records.append(record)
+            cached = self._frontier_structural_state(committed_records)
             inspection.frontier_structural_state = cached
         return cached  # type: ignore[return-value]
 
@@ -14995,20 +15521,22 @@ class V5LifecycleManager:
                 path = self._lexical_contained_path(
                     item["path"], "V5 task-card related artifact"
                 )
-                if repair_capability_scope:
-                    self._repair_capability_bytes(
-                        path,
-                        item["sha256"],
-                        label="V5 task-card related artifact",
-                        _inspection_context=_inspection_context,
-                    )
-                else:
+                if not (
+                    repair_capability_scope
+                    and item["source_research_id"]
+                    == source_research["research_id"]
+                ):
                     self._ordinary_capability_bytes(
                         path,
                         item["sha256"],
                         label="V5 task-card related artifact",
                         _inspection_context=_inspection_context,
                     )
+                # Exact source-Repair items were already read and bounded by
+                # that Research record's manifest validator.  The closure
+                # equality check below rejects any card-side omission,
+                # substitution, or extra item; unrelated context artifacts
+                # retain their ordinary path/SHA validation above.
             self._validate_repair_task_capability_closure(
                 record=source_research,
                 related_artifacts=related_artifacts,
@@ -15155,10 +15683,15 @@ class V5LifecycleManager:
                 )
         research_cycle_note = ""
         cycle = card.get("research_cycle")
+        source_metadata: dict[str, Any] = {}
+        mathematical_state = card.get("mathematical_state")
+        if isinstance(mathematical_state, dict):
+            source_dossier = mathematical_state.get("source_research_dossier")
+            if isinstance(source_dossier, dict) and isinstance(
+                source_dossier.get("metadata"), dict
+            ):
+                source_metadata = source_dossier["metadata"]
         if cycle is not None:
-            source_metadata = card["mathematical_state"][
-                "source_research_dossier"
-            ]["metadata"]
             if cycle["subround"] == "supervision":
                 supervision = source_metadata["research_supervision"]
                 research_cycle_note = (
@@ -15222,6 +15755,28 @@ class V5LifecycleManager:
                     "peer outputs are not visible. Your exact return will be eligible for "
                     "a later scoped subround-2 supervisor review.\n\n"
                 )
+        split_repair_note = ""
+        repair_spec = source_metadata.get("repair_spec")
+        if (
+            isinstance(repair_spec, dict)
+            and repair_spec.get("schema_version") == 3
+            and repair_spec.get("output_shape") == RESEARCH_SPLIT_OUTPUT_SHAPE
+        ):
+            split_repair_note = (
+                "This is one Research split-repair assignment, not one assignment per "
+                "successor. Main has not predicted the successor count. Read the whole "
+                "old Research claim and return one `research_split_batch` JSON artifact "
+                "containing the complete actual finite member set. Separate claims, "
+                "assumptions, proof content, limitations, and the disposition of old "
+                "material semantically; do not cut prose mechanically. The batch must "
+                "explain residual open and abandoned material. A constructive return "
+                "requires at least two distinct members. If a fundamental blocker, "
+                "counterexample, challenge, or dead end prevents a sound split, return "
+                "that ordinary nonconstructive outcome without successor members. "
+                "Ingestion derives all successor ids and commits their actual membership "
+                "after every member exists. Fresh batch supervision, not this repair "
+                "worker, writes the members' Fact statement interfaces.\n\n"
+            )
         assurance_note = ""
         if "assurance_contract" in card:
             assurance_contract = card["assurance_contract"]
@@ -15387,6 +15942,7 @@ class V5LifecycleManager:
             f"Research claim: {card['narrative_plane']['claim']}\n\n"
             f"{pair_note}"
             f"{research_cycle_note}"
+            f"{split_repair_note}"
             f"{adverse_note}"
             f"{assurance_note}"
             f"{campaign_note}"
@@ -16246,6 +16802,23 @@ class V5LifecycleManager:
         source_assignment_by_id = {
             item["assignment_id"]: item for item in source_manifest["assignments"]
         }
+        split_members_by_result: dict[str, list[str]] = {}
+        for descriptor in descriptors:
+            product = self._inspection_research_record(
+                descriptor["result_research_id"], inspection
+            )
+            owner = product.get("metadata", {}).get("research_split_owner")
+            if not isinstance(owner, dict):
+                continue
+            commit = self._validated_research_split_commit(
+                owner["batch_id"],
+                _inspection_context=inspection,
+            )
+            if commit["owner_research_id"] != product["research_id"]:
+                raise ValueError("Research split owner/commit supervision drifted")
+            split_members_by_result[product["research_id"]] = [
+                item["research_id"] for item in commit["members"]
+            ]
         current_closure = all(
             self._task_card_skill_version_at_least(
                 self.store._read_json(
@@ -16352,6 +16925,16 @@ class V5LifecycleManager:
             related_ids = {
                 item["result_research_id"] for item in scoped_receipts
             }
+            scoped_split_member_ids = sorted(
+                {
+                    member_id
+                    for item in scoped_receipts
+                    for member_id in split_members_by_result.get(
+                        item["result_research_id"], []
+                    )
+                }
+            )
+            related_ids.update(scoped_split_member_ids)
             supervised_fact_ids: set[str] = set()
             supervised_capabilities: dict[
                 tuple[str, str], dict[str, str]
@@ -16488,6 +17071,21 @@ class V5LifecycleManager:
             failure_family_ids, supervision_focus = (
                 self._research_supervision_focus(scope)
             )
+            split_supervision_note = (
+                (
+                    " This component contains a committed Research split batch. "
+                    "Review the actual successor membership as one whole product; "
+                    "check that its claims are genuinely separable, collectively account "
+                    "for the declared preserved/open/abandoned source material, and do "
+                    "not inherit a hidden shared gap. If clean, the optional "
+                    "fact_statement_interfaces artifact must give an independent "
+                    "ready/needs_split disposition for every successor Research id in "
+                    "the frozen related set. The successor count was worker-chosen and "
+                    "is not a Main-authored target."
+                )
+                if scoped_split_member_ids
+                else ""
+            )
             payload: dict[str, Any] = {
                 "kind": "challenge",
                 "status": "open",
@@ -16506,7 +17104,23 @@ class V5LifecycleManager:
                     "The evidenced focus for this scope is: "
                     f"{supervision_focus}. Do not widen the review beyond the exact "
                     "receipts or re-attack admitted Fact premises without separately "
-                    "escalated contradiction evidence."
+                    "escalated contradiction evidence. If the bounded result is clean "
+                    "and the exact whole-product claim can be stated without guessing, "
+                    "the supervisor may also return one optional Research-hash-bound "
+                    "fact_statement_interfaces JSON artifact for later mechanical Fact "
+                    "packaging. If the whole node needs claim splitting, the same artifact "
+                    "may instead carry an explicit needs_split disposition with no whole-"
+                    "node interface. Its rationale must serve as a precise Research-repair "
+                    "brief: name the separable successor claim surfaces, shared assumptions, "
+                    "intended predecessor allocation, and old material that remains open or "
+                    "is abandoned; a mechanical prose cut is not a split. The later producer "
+                    "is a Research repair worker, while fresh supervisors of the resulting "
+                    "products author their complete interfaces. Omit the artifact when the "
+                    "review cannot safely decide, carries "
+                    "an unresolved defect, or its certified predecessors are not explicit. "
+                    "This optional nontruth artifact is not a supervision requirement, "
+                    "Fact decision, or Gateway effect."
+                    + split_supervision_note
                 ),
                 "rationale": (
                     "A dedicated second subround catches reasoning, projection, source, "
@@ -18467,6 +19081,12 @@ class V5LifecycleManager:
             "terminal_seal_sha256",
             "writer_lease_id",
         }
+        split_fields = {
+            "split_batch_id",
+            "split_batch_record_sha256",
+            "split_membership_sha256",
+            "split_successor_research_ids",
+        }
         if not isinstance(receipt, dict):
             raise ValueError("V5 ingestion receipt must be one object")
         receipt_fields = set(receipt)
@@ -18475,6 +19095,7 @@ class V5LifecycleManager:
         has_architecture_observations = bool(
             receipt_fields.intersection(architecture_observation_fields)
         )
+        has_split = bool(receipt_fields.intersection(split_fields))
         terminal_seal_required = (
             assignment.get("terminal_seal_revision")
             == V5_TERMINAL_SEAL_REVISION
@@ -18486,6 +19107,8 @@ class V5LifecycleManager:
             expected_fields.update(program_math_fields)
         if has_architecture_observations:
             expected_fields.update(architecture_observation_fields)
+        if has_split:
+            expected_fields.update(split_fields)
         if terminal_seal_required:
             expected_fields.update(terminal_seal_fields)
         if receipt_fields != expected_fields:
@@ -18563,6 +19186,24 @@ class V5LifecycleManager:
                 raise ValueError("V5 ingested return bytes/hash mismatch")
 
         expected_effect = "one_cumulative_research_entry"
+        if has_split:
+            batch_id = receipt.get("split_batch_id")
+            commit = self._validated_research_split_commit(
+                batch_id,
+                _inspection_context=_inspection_context,
+            )
+            successor_ids = receipt.get("split_successor_research_ids")
+            if (
+                commit["owner_research_id"] != research_id
+                or receipt.get("split_batch_record_sha256")
+                != commit["record_sha256"]
+                or receipt.get("split_membership_sha256")
+                != commit["membership_sha256"]
+                or successor_ids
+                != [item["research_id"] for item in commit["members"]]
+            ):
+                raise ValueError("V5 ingestion receipt split-batch binding drifted")
+            expected_effect += "_plus_committed_research_split_batch"
         if has_attack:
             case_id = receipt.get("attack_case_id")
             proposal_id = receipt.get("route_proposal_id")
@@ -19734,6 +20375,80 @@ class V5LifecycleManager:
                 )
         if total_bytes > capability["max_total_bytes"]:
             raise ValueError("V5 worker artifacts exceed total-byte cap")
+        split_contract = self._research_split_contract_for_card(card)
+        split_artifacts = [
+            item
+            for item in artifacts
+            if assurance_enabled
+            and item.get("role") == RESEARCH_SPLIT_ARTIFACT_ROLE
+        ]
+        if split_contract is None:
+            if split_artifacts:
+                raise ValueError(
+                    "research_split_batch artifact requires a schema-v3 split repair"
+                )
+        elif payload["outcome"] in {"proof", "evidence", "insight"}:
+            if len(split_artifacts) != 1:
+                raise ValueError(
+                    "constructive schema-v3 split repair must return exactly one "
+                    "research_split_batch artifact"
+                )
+            split_item = split_artifacts[0]
+            try:
+                split_value = json.loads(
+                    artifact_bytes_by_sha256[split_item["sha256"]].decode("utf-8")
+                )
+            except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    "Research split-batch artifact is not valid UTF-8 JSON"
+                ) from exc
+            _spec, _repair, source_research = split_contract
+            validate_research_split_batch(
+                split_value,
+                source_research=source_research,
+            )
+        elif split_artifacts:
+            raise ValueError(
+                "a nonconstructive split-repair return must report the blocker as "
+                "one ordinary Research result, without successor members"
+            )
+        split_review_member_ids = (
+            self._research_split_member_ids_for_supervision_card(card)
+        )
+        if split_review_member_ids:
+            interface_artifacts = [
+                item
+                for item in artifacts
+                if assurance_enabled
+                and item.get("role") == "fact_statement_interfaces"
+            ]
+            if interface_artifacts:
+                interface_item = interface_artifacts[0]
+                try:
+                    interface_payload = json.loads(
+                        artifact_bytes_by_sha256[
+                            interface_item["sha256"]
+                        ].decode("utf-8")
+                    )
+                except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise ValueError(
+                        "split-batch statement-interface artifact is not valid "
+                        "UTF-8 JSON"
+                    ) from exc
+                interfaces = (
+                    self.fact_alpha()._validate_supervised_interface_artifact(
+                        interface_payload
+                    )
+                )
+                missing_members = sorted(
+                    set(split_review_member_ids).difference(interfaces)
+                )
+                if missing_members:
+                    raise ValueError(
+                        "split-batch statement-interface artifact must cover every "
+                        "committed successor Research id; missing="
+                        + ",".join(missing_members)
+                    )
         if assurance_enabled:
             validate_return_assurance(
                 payload=payload,
@@ -20255,6 +20970,194 @@ class V5LifecycleManager:
                 observation_ids.add(observation_id)
         return sorted(observation_ids)
 
+    def _research_split_from_snapshot(
+        self,
+        *,
+        card: dict[str, Any],
+        snapshot: TerminalIngestSnapshot,
+    ) -> tuple[dict[str, Any], TerminalArtifactSnapshot, dict[str, Any], dict[str, Any]] | None:
+        contract = self._research_split_contract_for_card(card)
+        if contract is None or snapshot.payload["outcome"] not in {
+            "proof",
+            "evidence",
+            "insight",
+        }:
+            return None
+        matches = [
+            item
+            for item in snapshot.artifacts
+            if item.role == RESEARCH_SPLIT_ARTIFACT_ROLE
+        ]
+        if len(matches) != 1:
+            raise ValueError("Research split snapshot lacks its unique batch artifact")
+        artifact = matches[0]
+        try:
+            raw = json.loads(artifact.raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("Research split snapshot artifact is invalid JSON") from exc
+        _spec, repair, source = contract
+        batch = validate_research_split_batch(raw, source_research=source)
+        return batch, artifact, repair, source
+
+    def _materialize_research_split_members(
+        self,
+        *,
+        round_id: str,
+        assignment: dict[str, Any],
+        card: dict[str, Any],
+        snapshot: TerminalIngestSnapshot,
+        split: tuple[
+            dict[str, Any],
+            TerminalArtifactSnapshot,
+            dict[str, Any],
+            dict[str, Any],
+        ],
+        persisted_artifacts: list[dict[str, str]],
+        assurance_metadata: dict[str, Any],
+        assurance_revision: str,
+        inspection: RoundInspectionContext,
+    ) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+        batch, artifact, repair, source = split
+        identity_semantic = {
+            "contract_revision": RESEARCH_SPLIT_COMMIT_REVISION,
+            "project_id": self.store.project_id(),
+            "source_research_id": source["research_id"],
+            "source_record_sha256": source["record_sha256"],
+            "repair_research_id": repair["research_id"],
+            "repair_record_sha256": repair["record_sha256"],
+            "round_id": round_id,
+            "assignment_id": assignment["assignment_id"],
+            "task_card_sha256": assignment["task_card_sha256"],
+            "return_sha256": snapshot.return_sha256,
+            "batch_artifact_sha256": artifact.sha256,
+            "batch_payload_sha256": sha256_json(batch),
+            "truth_effect": "none",
+        }
+        batch_id = "split-batch-" + sha256_json(identity_semantic)
+        member_count = len(batch["members"])
+        kind_by_outcome = {
+            "proof": "proof_attempt",
+            "evidence": "insight",
+            "insight": "insight",
+        }
+        campaign_id = card.get("campaign_id")
+        member_records: list[dict[str, Any]] = []
+        for index, member in enumerate(batch["members"], 1):
+            member_binding = {
+                "revision": RESEARCH_SPLIT_MEMBER_REVISION,
+                "batch_id": batch_id,
+                "source_research_id": source["research_id"],
+                "source_record_sha256": source["record_sha256"],
+                "repair_research_id": repair["research_id"],
+                "repair_record_sha256": repair["record_sha256"],
+                "batch_artifact_sha256": artifact.sha256,
+                "surface_key": member["surface_key"],
+                "member_index": index,
+                "member_count": member_count,
+                "truth_effect": "none",
+            }
+            narrative = {
+                "rationale": member["rationale"],
+                "summary": member["claim"],
+                "intuition": member["source_material_disposition"],
+                "limitations": "; ".join(member["limitations"]),
+            }
+            record = self.add_research(
+                {
+                    "kind": kind_by_outcome[member["outcome"]],
+                    "status": "open",
+                    "claim": member["claim"],
+                    "content": member["content"],
+                    "rationale": member["rationale"],
+                    "dependencies": repair["dependencies"],
+                    "source": (
+                        f"research:{source['research_id']}; "
+                        f"research:{repair['research_id']}"
+                    ),
+                    "relation": "repairs",
+                    "related_research_ids": sorted(
+                        [source["research_id"], repair["research_id"]]
+                    ),
+                    "worker_outcome": member["outcome"],
+                    "narrative": narrative,
+                    "artifacts": persisted_artifacts,
+                    "source_dependent": bool(persisted_artifacts),
+                    "requested_claim_relation": card[
+                        "requested_claim_relation"
+                    ],
+                    "research_split_member": member_binding,
+                    **(
+                        {"campaign_id": campaign_id}
+                        if campaign_id is not None
+                        else {}
+                    ),
+                    **assurance_metadata,
+                },
+                actor=assignment["worker_id"],
+                assurance_contract_revision=assurance_revision,
+                _inspection_context=inspection,
+            )
+            member_records.append(record)
+        members = [
+            {
+                "surface_key": batch["members"][index]["surface_key"],
+                "research_id": record["research_id"],
+                "record_sha256": record["record_sha256"],
+            }
+            for index, record in enumerate(member_records)
+        ]
+        owner_metadata = {
+            "revision": RESEARCH_SPLIT_OWNER_REVISION,
+            "batch_id": batch_id,
+            "source_research_id": source["research_id"],
+            "source_record_sha256": source["record_sha256"],
+            "repair_research_id": repair["research_id"],
+            "repair_record_sha256": repair["record_sha256"],
+            "batch_artifact_sha256": artifact.sha256,
+            "members": members,
+            "membership_sha256": sha256_json(members),
+            "truth_effect": "none",
+        }
+        return batch_id, member_records, owner_metadata, identity_semantic
+
+    def _commit_research_split_batch(
+        self,
+        *,
+        batch_id: str,
+        identity_semantic: dict[str, Any],
+        owner: dict[str, Any],
+        owner_metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        semantic = {
+            "schema_version": 1,
+            **identity_semantic,
+            "batch_id": batch_id,
+            "owner_research_id": owner["research_id"],
+            "owner_record_sha256": owner["record_sha256"],
+            "members": owner_metadata["members"],
+            "membership_sha256": owner_metadata["membership_sha256"],
+        }
+        path = self._research_split_batch_path(batch_id)
+        if path.exists():
+            existing = self._validated_research_split_commit(batch_id)
+            expected_existing = {
+                key: existing[key] for key in semantic
+            }
+            if expected_existing != semantic:
+                raise ValueError(
+                    "existing Research split commit has different membership"
+                )
+            return existing
+        record_without_hash = {**semantic, "created_at": _utc_now()}
+        record = {
+            **record_without_hash,
+            "record_sha256": sha256_json(record_without_hash),
+        }
+        self.store._write_json_once(
+            path, record
+        )
+        return self._validated_research_split_commit(batch_id)
+
     def ingest_return(
         self,
         *,
@@ -20460,6 +21363,42 @@ class V5LifecycleManager:
                         "risk_signals"
                     ],
                 }
+            inspection = self._bind_inspection_context(None, create=True)
+            assert inspection is not None
+            persisted_artifacts = (
+                sealed_artifacts
+                if terminal_seal is not None
+                else payload["artifacts"]
+            )
+            split = self._research_split_from_snapshot(
+                card=card,
+                snapshot=snapshot,
+            )
+            split_batch_id: str | None = None
+            split_member_records: list[dict[str, Any]] = []
+            split_owner_metadata: dict[str, Any] | None = None
+            split_identity_semantic: dict[str, Any] | None = None
+            if split is not None:
+                if assurance_metadata.get("route_invalidations"):
+                    raise ValueError(
+                        "constructive Research split batch cannot invalidate an existing route"
+                    )
+                (
+                    split_batch_id,
+                    split_member_records,
+                    split_owner_metadata,
+                    split_identity_semantic,
+                ) = self._materialize_research_split_members(
+                    round_id=round_id,
+                    assignment=assignment,
+                    card=card,
+                    snapshot=snapshot,
+                    split=split,
+                    persisted_artifacts=persisted_artifacts,
+                    assurance_metadata=assurance_metadata,
+                    assurance_revision=assurance_revision,
+                    inspection=inspection,
+                )
             research = self.add_research(
                 {
                     "kind": kind_by_outcome[payload["outcome"]],
@@ -20470,17 +21409,18 @@ class V5LifecycleManager:
                     "related_research_ids": [assignment["research_id"]],
                     "worker_outcome": payload["outcome"],
                     "narrative": payload["narrative"],
-                    "artifacts": (
-                        sealed_artifacts
-                        if terminal_seal is not None
-                        else payload["artifacts"]
-                    ),
+                    "artifacts": persisted_artifacts,
                     **(
                         {"campaign_id": card["campaign_id"]}
                         if card.get("campaign_id") is not None
                         else {}
                     ),
                     **assurance_metadata,
+                    **(
+                        {"research_split_owner": split_owner_metadata}
+                        if split_owner_metadata is not None
+                        else {}
+                    ),
                     "requested_claim_relation": card[
                         "requested_claim_relation"
                     ],
@@ -20515,7 +21455,18 @@ class V5LifecycleManager:
                     ),
                 },
                 assurance_contract_revision=assurance_revision,
+                _inspection_context=inspection,
             )
+            split_commit: dict[str, Any] | None = None
+            if split_batch_id is not None:
+                assert split_owner_metadata is not None
+                assert split_identity_semantic is not None
+                split_commit = self._commit_research_split_batch(
+                    batch_id=split_batch_id,
+                    identity_semantic=split_identity_semantic,
+                    owner=research,
+                    owner_metadata=split_owner_metadata,
+                )
             program_math_review = self._enqueue_program_math_adverse_review(
                 card=card,
                 assignment=assignment,
@@ -20559,6 +21510,26 @@ class V5LifecycleManager:
                 "research_id": research["research_id"],
                 "effect": "one_cumulative_research_entry",
             }
+            if split_commit is not None:
+                receipt_semantic.update(
+                    {
+                        "split_batch_id": split_commit["batch_id"],
+                        "split_batch_record_sha256": split_commit[
+                            "record_sha256"
+                        ],
+                        "split_membership_sha256": split_commit[
+                            "membership_sha256"
+                        ],
+                        "split_successor_research_ids": [
+                            item["research_id"]
+                            for item in split_commit["members"]
+                        ],
+                        "effect": (
+                            "one_cumulative_research_entry_plus_committed_"
+                            "research_split_batch"
+                        ),
+                    }
+                )
             if terminal_seal is not None:
                 receipt_semantic.update(
                     {

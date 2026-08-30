@@ -1,4 +1,75 @@
-# Chalxius V5 traceability through 1.0.0 Fact Alpha
+# Chalxius V5 traceability through 1.0.2 Capability Budget Audit Repair
+
+## 1.0.2 Capability Budget Audit Repair overlay
+
+- Candidate version: `1.0.2`; release name **Capability Budget Audit Repair**.
+- The existing 64 MiB aggregate bound is evaluated independently for each
+  structured Repair capability manifest. Full-ledger traversal order and bytes
+  declared by unrelated frozen manifests no longer affect that result.
+- One command-level inspection context still owns the exact read-once byte
+  cache and path-to-digest conflict map. Repeated path/SHA capabilities are not
+  reread, while a fresh command still rejects missing, symlinked, nonregular,
+  hash-drifted, or conflicting bytes.
+- Focused regression evidence covers independent closures, a genuinely
+  oversized single closure, repeated-capability cache reuse, cross-manifest
+  path/digest conflict, fresh-snapshot tampering, and no-follow rejection. The
+  repaired candidate audits the live 0721 V5 project with `current_ok=true`,
+  `history_clean=true`, and no workflow error.
+- The nontruth architecture finding is recorded as
+  `run-20260830T014128719031Z-123999beff00/CHX-001`. It remains open until an
+  explicitly authorized installation/global settlement; candidate validation
+  does not itself modify project authority or install the runtime.
+- No compatibility adapter, data migration, new gate, scheduler, Research
+  mutation, Candidate effect, Certification effect, Gateway effect, or Fact
+  effect is added.
+
+### Follow-up supervisor scheduling advisory
+
+- For one product that requires both `proof_logic` and `source_scope`, the
+  default future scheduler behavior should consume one agent slot: assign both
+  scopes to the same independent supervisor and complete them sequentially in
+  the same session so already-read material can be reused.
+- Split the scopes across slots or replace the supervisor only when the first
+  supervisor is explicitly unavailable, has failed, cannot cover the required
+  expertise, or the run is recovering from interruption. Ordinary free slots
+  and specialization may still be used for other products.
+- This is a scheduling preference, not a new validity gate, receipt,
+  compatibility adapter, or truth condition. Chalxius 1.0.2 does not change
+  supervisor dispatch for this follow-up, and the advisory does not delay the
+  capability-budget repair's installation.
+
+## 1.0.1 Fact Alpha Field Repair overlay
+
+- Candidate version: `1.0.1`; release name **Fact Alpha Field Repair**.
+- `fact-frontier` exposes scope-filter counts and, only for an overlay with no
+  marks or grants, bounded exact-root advice from one unique non-adverse
+  constructive `candidate_fact` Research carrier. The advice has no selection,
+  migration, Campaign, certification, or truth effect.
+- Prospective clean supervision may return one optional
+  `fact_statement_interfaces` artifact. Each exact Research entry is `ready`
+  with a six-field whole-node interface or `needs_split` with a rationale and
+  no interface. All-ready plans seal mechanically; historical/missing/custom
+  work remains available to the narrow packager fallback.
+- A legacy packager that routes one node to split/COW does not author successor
+  interfaces. A Research repair worker performs the mathematical split from a
+  precise surface/dependency/residual brief rather than cutting prose. The
+  split products require fresh supervision; their new supervisors author the
+  complete interfaces.
+- Research artifact path/SHA bindings remain the only evidence-locator layer
+  and are carried in the verifier capsule rather than copied into interface
+  limitations.
+- The V5 `verifier` role exposes exactly capsule construction, verification
+  record, and verification check. It cannot package, mutate Research, certify,
+  or operate the Gateway. V4 verifier projection remains empty.
+- Prospective schema-v3 repair cards may freeze
+  `output_shape="research_split_batch"`. One repair worker chooses and returns
+  the complete actual membership (two through 128) in one artifact; Main does
+  not predict the number of products. Ingestion stages every member and one
+  assignment owner, then publishes a batch commit last. Before the commit those
+  records are excluded from frontier and Fact projection. Supervision expands
+  the owner receipt to the exact committed membership and reviews it as one
+  product batch per scope; an optional interface artifact must cover every
+  successor. Legacy cards are unchanged.
 
 ## 1.0.0 Fact Alpha release overlay
 
