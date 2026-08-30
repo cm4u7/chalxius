@@ -53,40 +53,6 @@
     "forensic_matrix": "optional diagnostic; not a publication gate",
     "sensitive_information_scan": "pass with 0 true positives"
   },
-  "project_canary": {
-    "campaign_generation": 194,
-    "campaign_target_count": 4,
-    "research_open_targets": 2,
-    "needs_main_choice_targets": 2,
-    "stale_active_head_count": 0,
-    "dormant_split_rounds": 3,
-    "dormant_split_rounds_ingested": 0,
-    "immutable_research_or_truth_bytes_rewritten": false,
-    "truth_effect": "none"
-  },
-  "chx_settlement": {
-    "status": "current",
-    "global_repair_id": "global-repair-15192f1156b72b5563a45c2f58d3b439fec41c8c6bf46c5b13d5d1ef9353d447",
-    "canonical_record_sha256": "cd6520c035467a77d7e48ab82197661e9c56acba7870fd5ad4f33a36fc7449ef",
-    "record_file_sha256": "955a7ab9a51732475616d4e24af77e9df7681a760721506ddf7f6401b899597f",
-    "inventory_sha256": "64b78dd78fbec944fb16e0f7bc384841ae05e7bdc4c2fc77918b21f68721d655",
-    "covered_snapshot_sha256": "01235b486fb3134ff4636544d1a29bd6172c00b068c9f6a999b7717379ad16dd",
-    "observed": 258,
-    "covered": 258,
-    "revalidated_prior": 257,
-    "newly_fixed": 1,
-    "uncovered": 0,
-    "historical_ledgers_rewritten": false,
-    "truth_effect": "none"
-  },
-  "phx_adoption": {
-    "route_id": "PHX-004",
-    "measurement_id": "measurement-e957a3effa813e5b846b35c6c8294b4d657ad1886b93ef9f04b3cfb6351728ab",
-    "adoption_id": "adoption-01787a30b6bc8dacd56fcd78eb7647bd3f6845ea5926453f3f262f32333e01ff",
-    "outcome": "supported",
-    "truth_effect": "none",
-    "project_effect": "none"
-  },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius.git",
     "tag": "v1.0.5",

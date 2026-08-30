@@ -38,17 +38,9 @@ searchable history but removes it from live COW and frontier routing. Published
 repair products still project normally. This is a read-time working-memory
 projection, not a new lifecycle state or compatibility layer.
 
-The current local-$\mathbb F_0$ Campaign was reconciled at generation 194. It
-contains four targets: two research-open targets with current heads, and two
-targets that legitimately remain `needs_main_choice`. For the two targets
-touched by this repair:
-
-- both repaired targets have current active heads and no stale head;
-- three paused split ids are absent from target decision surfaces and the
-  workflow queue;
-- one completed negative branch no longer appears as active work; and
-- immutable Research, rounds, returns, Candidate, Fact, and graph bytes were
-  not rewritten.
+A real-project reconciliation confirmed that dormant repairs disappear from
+the live frontier while their historical records remain readable. No immutable
+Research or truth-authority bytes were rewritten.
 
 ## Validation, installation, and publication
 
@@ -72,9 +64,9 @@ diagnostic tools, not publication gates.
 
 ## Distribution
 
-The final manifest, installed-tree identity, sensitive-information scan, CHX
-settlement, PHX adoption, and deterministic archive identity are recorded in
-[VALIDATION.md](VALIDATION.md) and `RELEASE.lock.json`.
+The final manifest, installed-tree identity, sensitive-information scan, and
+deterministic archive identity are recorded in [VALIDATION.md](VALIDATION.md)
+and `RELEASE.lock.json`.
 
 Release assets:
 

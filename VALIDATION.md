@@ -1,7 +1,7 @@
 # Validation — Chalxius v1.0.5 Split Opt-In Repair
 
-This report records software, installation, package, live-project, CHX/PHX,
-and publication evidence. It does not certify a mathematical claim.
+This report records software, installation, package, real-project canary, and
+publication evidence. It does not certify a mathematical claim.
 
 ## Frozen identity
 
@@ -46,14 +46,10 @@ is intentionally diagnostic, not a publication gate.
 
 ## Live-project canary
 
-The installed runtime read and reconciled the local-$\mathbb F_0$ project.
-Campaign generation 194 contains four targets: two are `research_open` with
-current active heads, two legitimately remain `needs_main_choice`, and no target
-has a stale active head. The three paused split ids are absent from target
-decision surfaces and the workflow queue. Their original rounds and existing
-returns remain readable, unvalidated, uningested, and unmodified. A completed
-negative branch was removed from active work, while its Research history
-remains intact.
+The installed runtime passed a read-only canary on a large real project.
+Dormant repairs were absent from the live decision surface while their original
+history remained readable and unchanged. No project data or truth-authority
+record was modified by installation or canary inspection.
 
 The split authorization is one-shot: it is absent from Research, task cards,
 receipts, frontier state, and replay arguments. Regular source/proof supervision,
@@ -64,37 +60,10 @@ mixed-product diagnosis, and ordinary one-to-one COW remain available.
 Publication uses the already installed bytes. Its gate is limited to exact
 archive identity, checksum sidecar, repository file set, and absence of local
 paths or sensitive data. The exact final archive and staged public diff were
-scanned; no credential, private-key material, local username/path, private
-Campaign id, or current ledger id is included in the published package or
-release-facing files. Three classified matches remain: two visibly synthetic
-fixture ids and one historical project label already present in public release
-traceability. None contains a secret or local path. Heavy mutation and forensic
-matrices were not repeated.
-
-## Global CHX settlement
-
-| Field | Result |
-|---|---|
-| Global repair | `global-repair-15192f1156b72b5563a45c2f58d3b439fec41c8c6bf46c5b13d5d1ef9353d447` |
-| Canonical `record_sha256` | `cd6520c035467a77d7e48ab82197661e9c56acba7870fd5ad4f33a36fc7449ef` |
-| Record-file SHA-256 | `955a7ab9a51732475616d4e24af77e9df7681a760721506ddf7f6401b899597f` |
-| Inventory SHA-256 | `64b78dd78fbec944fb16e0f7bc384841ae05e7bdc4c2fc77918b21f68721d655` |
-| Covered snapshot SHA-256 | `01235b486fb3134ff4636544d1a29bd6172c00b068c9f6a999b7717379ad16dd` |
-| Observed / covered | 258 / 258 |
-| Revalidated prior / newly fixed | 257 / 1 |
-| Uncovered | 0 |
-
-Historical ledger bytes were not rewritten. The current exact installed
-manifest covers every qualified observation in the terminal inventory.
-
-## PHX adoption
-
-The explicit split opt-in route is adopted as
-`adoption-01787a30b6bc8dacd56fcd78eb7647bd3f6845ea5926453f3f262f32333e01ff`
-from supported measurement
-`measurement-e957a3effa813e5b846b35c6c8294b4d657ad1886b93ef9f04b3cfb6351728ab`.
-It introduces no scheduler, inferred authorization, compatibility layer,
-second lifecycle, project effect, or truth effect.
+scanned; no credential, private-key material, local username/path, or private
+runtime identifier is included in the published package or release-facing
+files. Synthetic fixtures and existing public traceability text were classified
+as non-sensitive. Heavy mutation and forensic matrices were not repeated.
 
 ## Publication boundary
 
@@ -103,5 +72,4 @@ The `v1.0.5` annotated tag resolves to
 `2026-08-30T17:22:54Z`:
 <https://github.com/cm4u7/chalxius/releases/tag/v1.0.5>. Both uploaded asset
 sizes and GitHub SHA-256 digests exactly match the frozen archive and sidecar.
-Installation, validation, CHX/PHX settlement, and publication create no Research
-or Fact authority.
+Installation, validation, and publication create no Research or Fact authority.

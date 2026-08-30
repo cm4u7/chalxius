@@ -130,8 +130,8 @@ repair reflex:
   COW continue without split authorization;
 - productless repairs with an explicit inactive disposition remain historical
   evidence instead of occupying the live frontier; and
-- the local-$\mathbb F_0$ Campaign was reconciled to generation 194 without
-  rewriting Research, round, return, Candidate, Fact, or graph bytes.
+- dormant repairs no longer occupy the live frontier, while their historical
+  records remain readable and unchanged.
 
 Installation owns software correctness testing. Publication then checks the
 exact asset identity, checksum, file set, and absence of sensitive local data.
@@ -142,9 +142,8 @@ authorization, compatibility layer, second lifecycle, or truth effect.
 ## Authority boundary
 
 Software validation establishes package behavior, not a theorem. Research,
-Campaign, frontier, Reader remnants, CHX, PHX, and release records have no Fact
-effect. Only exact verification followed by Gateway acceptance creates active
-Fact certification.
+coordination, diagnostic, and release records have no Fact effect. Only exact
+verification followed by Gateway acceptance creates active Fact certification.
 
 Licensed under [Apache-2.0](LICENSE). See
 [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for design lineage and credits.
