@@ -65,6 +65,10 @@ No mutation or forensic matrix is repeated as a publication ceremony.
 
 ## Publication boundary
 
-The annotated `v1.0.7` tag and GitHub release identify the archive above.
+The annotated `v1.0.7` tag resolves to
+`9a4f034358a3b1cf34fbd9f851b28f7a784803cb`. GitHub published the release at
+`2026-08-31T05:48:32Z`:
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.7>. Both uploaded asset
+sizes and GitHub SHA-256 digests exactly match the frozen archive and sidecar.
 Installation, validation, Campaign coordination, and publication create no
 Research or Fact authority.

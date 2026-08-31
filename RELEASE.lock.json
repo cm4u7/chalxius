@@ -3,7 +3,7 @@
   "package": "chalxius",
   "version": "1.0.7",
   "release_display_name": "Campaign Attention Continuity",
-  "status": "ready_to_publish",
+  "status": "published",
   "release_date": "2026-08-31",
   "workflow_authority": "V5 Research plus Fact Alpha certification overlay",
   "truth_path": "research_to_exact_multi_research_package_to_independent_verifier_decision_to_research_certification_grant",
@@ -65,16 +65,16 @@
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius.git",
     "tag": "v1.0.7",
-    "tag_commit": "",
+    "tag_commit": "9a4f034358a3b1cf34fbd9f851b28f7a784803cb",
     "source_branch": "main",
     "target_branch": "main",
-    "local_tag_created": false,
-    "remote_tag_pushed": false,
-    "remote_main_pushed": false,
-    "github_release_created": false,
-    "remote_push_performed": false,
+    "local_tag_created": true,
+    "remote_tag_pushed": true,
+    "remote_main_pushed": true,
+    "github_release_created": true,
+    "remote_push_performed": true,
     "release_url": "https://github.com/cm4u7/chalxius/releases/tag/v1.0.7",
-    "published_at": "",
+    "published_at": "2026-08-31T05:48:32Z",
     "truth_effect": "none"
   }
 }
