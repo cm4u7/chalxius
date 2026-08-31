@@ -1,4 +1,20 @@
-# Chalxius V5 traceability through 1.0.9 Working Memory Maintenance
+# Chalxius V5 traceability through 1.0.10 Frozen Context Replay
+
+## 1.0.10 Frozen Context Replay overlay
+
+- Candidate version: `1.0.10`; release name **Frozen Context Replay**.
+- Completed and aborted rounds replay the Blackboard read/write capability
+  frozen in their externally hash-bound task cards. Historical validation
+  requires exact snapshot reads and canonical write-space subsets of that
+  snapshot; it does not reinterpret an old card through a later Research
+  metadata convention.
+- Live cards remain strict: their write capability must equal the current
+  explicit Research request. Snapshot, query, context-selection, task-card,
+  assignment, and round hashes remain independently enforced; missing,
+  non-space, duplicate, or out-of-snapshot write targets still fail closed.
+- This is an upgrade-stable historical-read correction only. It performs no
+  graph migration or backfill and has no Research, Candidate, Gateway, Fact,
+  truth, or admission effect.
 
 ## 1.0.9 Working Memory Maintenance overlay
 

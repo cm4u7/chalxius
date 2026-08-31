@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.9",
-  "release_codename": "Working Memory Maintenance",
-  "release_display_name": "Chalxius 1.0.9 — Working Memory Maintenance",
+  "version": "1.0.10",
+  "release_codename": "Frozen Context Replay",
+  "release_display_name": "Chalxius 1.0.10 — Frozen Context Replay",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

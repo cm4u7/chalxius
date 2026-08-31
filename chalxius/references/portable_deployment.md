@@ -1,5 +1,14 @@
 # Chalxius portable deployment
 
+## 1.0.10 Frozen Context Replay
+
+The `1.0.10` **Frozen Context Replay** candidate preserves strict capability
+checks for live work while making completed and aborted rounds readable across
+later metadata conventions. Historical cards use their externally hash-bound
+Blackboard snapshot and capability bytes: reads must equal the frozen snapshot
+spaces and writes must be a canonical subset of those spaces. No project
+migration, compatibility layer, truth update, or admission update is required.
+
 ## 1.0.9 Working Memory Maintenance
 
 The `1.0.9` **Working Memory Maintenance** candidate keeps all active heads and

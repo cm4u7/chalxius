@@ -303,6 +303,141 @@ class Chalxius044ContextTests(unittest.TestCase):
             lifecycle.validate_task_card(explicit_card, expected_path=explicit_path)
             lifecycle._round_manifest(explicit_round["round_id"])
 
+    def test_historical_default_space_replays_its_frozen_write_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-historical-default-space")
+            lifecycle = store.v5_lifecycle()
+            board = store.blackboard()
+            research = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Replay a frozen implicit default-space capability.",
+                },
+                actor="host",
+            )
+            planned = lifecycle.create_round(
+                workers=1,
+                research_ids=[research["research_id"]],
+            )
+            _card_path, card = self._card(store, planned)
+            space_id = next(
+                node_id
+                for node_id, node in board.current_nodes().items()
+                if node["node_type"] == "space"
+            )
+            query = {
+                "seed_node_ids": [space_id],
+                "direction": "both",
+                "max_hops": 3,
+                "edge_type_allowlist": ["*"],
+                "node_type_allowlist": ["*"],
+                "node_budget": 256,
+                "edge_budget": 512,
+            }
+            with store.v5_mutation_lock(command="historical-default-space-fixture"):
+                snapshot = board.snapshot(query=query, actor="host")
+            blackboard_semantic = {
+                "source": "default_project_space",
+                "query": query,
+                "query_sha256": snapshot["query_sha256"],
+                "origin_bindings": [],
+                "snapshot_id": snapshot["snapshot_id"],
+                "snapshot_sha256": snapshot["snapshot_sha256"],
+                "omission_receipt": snapshot["omission_receipt"],
+                "budget_contract": {
+                    "max_nodes": 256,
+                    "max_edges": 512,
+                    "overflow": (
+                        "fail_before_round_or_explicit_snapshot_omission_receipt"
+                    ),
+                },
+                "truth_effect": "none",
+            }
+            legacy = copy.deepcopy(card)
+            legacy["context_selection"]["blackboard"] = {
+                **blackboard_semantic,
+                "selection_sha256": sha256_json(blackboard_semantic),
+            }
+            legacy["context_selection"]["precedence"] = [
+                "machine_validated_authority",
+                "source_research_dossier",
+                "task_specific_blackboard_snapshot",
+                "project_background_index",
+            ]
+            context_semantic = {
+                key: value
+                for key, value in legacy["context_selection"].items()
+                if key != "context_selection_sha256"
+            }
+            legacy["context_selection"]["context_selection_sha256"] = (
+                sha256_json(context_semantic)
+            )
+            legacy["blackboard_view"] = {
+                "snapshot_id": snapshot["snapshot_id"],
+                "snapshot_sha256": snapshot["snapshot_sha256"],
+            }
+            legacy["mathematical_state"]["blackboard_snapshot_id"] = snapshot[
+                "snapshot_id"
+            ]
+            legacy["mathematical_state"]["blackboard_snapshot_sha256"] = snapshot[
+                "snapshot_sha256"
+            ]
+            legacy["mathematical_state"]["read_space_ids"] = [space_id]
+            legacy["mathematical_state"]["write_space_ids"] = [space_id]
+            legacy_semantic = {
+                key: value
+                for key, value in legacy.items()
+                if key != "task_card_semantic_sha256"
+            }
+            legacy["task_card_semantic_sha256"] = sha256_json(legacy_semantic)
+
+            with self.assertRaisesRegex(ValueError, "space capabilities drifted"):
+                lifecycle.validate_task_card(legacy)
+            lifecycle.validate_task_card(legacy, historical_runtime=True)
+
+            tampered = copy.deepcopy(legacy)
+            tampered["mathematical_state"]["write_space_ids"] = ["bbn-" + "0" * 64]
+            tampered_semantic = {
+                key: value
+                for key, value in tampered.items()
+                if key != "task_card_semantic_sha256"
+            }
+            tampered["task_card_semantic_sha256"] = sha256_json(
+                tampered_semantic
+            )
+            with self.assertRaisesRegex(ValueError, "space capabilities drifted"):
+                lifecycle.validate_task_card(tampered, historical_runtime=True)
+
+            duplicate = copy.deepcopy(legacy)
+            duplicate["mathematical_state"]["write_space_ids"] = [
+                space_id,
+                space_id,
+            ]
+            duplicate_semantic = {
+                key: value
+                for key, value in duplicate.items()
+                if key != "task_card_semantic_sha256"
+            }
+            duplicate["task_card_semantic_sha256"] = sha256_json(
+                duplicate_semantic
+            )
+            with self.assertRaisesRegex(ValueError, "space capabilities drifted"):
+                lifecycle.validate_task_card(duplicate, historical_runtime=True)
+
+            missing_read = copy.deepcopy(legacy)
+            missing_read["mathematical_state"]["read_space_ids"] = []
+            missing_read_semantic = {
+                key: value
+                for key, value in missing_read.items()
+                if key != "task_card_semantic_sha256"
+            }
+            missing_read["task_card_semantic_sha256"] = sha256_json(
+                missing_read_semantic
+            )
+            with self.assertRaisesRegex(ValueError, "space capabilities drifted"):
+                lifecycle.validate_task_card(missing_read, historical_runtime=True)
+
     def test_l1_promoted_query_and_l2_mode_hint_are_exact_and_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"

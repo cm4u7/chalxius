@@ -1,4 +1,4 @@
-Chalxius 1.0.9 — Working Memory Maintenance
+Chalxius 1.0.10 — Frozen Context Replay
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact

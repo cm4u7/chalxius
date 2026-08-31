@@ -17261,14 +17261,28 @@ class V5LifecycleManager:
             for node_id, node in snapshot_nodes.items()
             if node.get("node_type") == "space"
         )
-        expected_write_space_ids = _require_string_list(
-            source_research["metadata"].get("blackboard_write_space_ids", []),
-            "Research Blackboard write spaces",
-        )
+        # Completed and aborted rounds own their externally hash-bound task
+        # cards.  During historical replay, validate the frozen capability as
+        # a canonical subset of the frozen snapshot instead of recomputing it
+        # from a later Research metadata convention.  Live cards remain tied
+        # exactly to their current explicit Research request.
+        if historical_runtime:
+            write_spaces_match = write_space_ids == sorted(set(write_space_ids))
+        else:
+            expected_write_space_ids = _require_string_list(
+                source_research["metadata"].get(
+                    "blackboard_write_space_ids", []
+                ),
+                "Research Blackboard write spaces",
+            )
+            write_spaces_match = write_space_ids == expected_write_space_ids
         if (
             read_space_ids != expected_read_space_ids
-            or write_space_ids != expected_write_space_ids
-            or any(space_id not in snapshot_nodes for space_id in write_space_ids)
+            or not write_spaces_match
+            or any(
+                snapshot_nodes.get(space_id, {}).get("node_type") != "space"
+                for space_id in write_space_ids
+            )
         ):
             raise ValueError("V5 task-card Blackboard space capabilities drifted")
         mode_selection = selection.get("mode")
