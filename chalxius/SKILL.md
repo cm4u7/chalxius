@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.7 — Campaign Attention Continuity
+# Chalxius 1.0.8 — Bounded Campaign Membership
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -51,6 +51,11 @@ without promoting it to any attention role. Exact target/head/context/landmark
 and recent-history state also projects membership, so the same Research can
 carry different roles in different Campaigns without a second membership
 graph. Membership has no automatic-selection or truth effect.
+
+Routine `frontier` output reports the complete Campaign-member count and an
+identity digest but expands at most four member-role examples. The explicit
+`--diagnostic` view retains the complete member and role projection. Preview
+size never changes membership, attention, selection, Research, or truth.
 
 `campaign-target-add`, frontier reconciliation, and explicit
 `plan-round --campaign ... --memory-id ...` validate that each referenced

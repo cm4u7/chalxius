@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.7",
-  "release_codename": "Campaign Attention Continuity",
-  "release_display_name": "Chalxius 1.0.7 — Campaign Attention Continuity",
+  "version": "1.0.8",
+  "release_codename": "Bounded Campaign Membership",
+  "release_display_name": "Chalxius 1.0.8 — Bounded Campaign Membership",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

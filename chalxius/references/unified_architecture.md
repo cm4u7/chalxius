@@ -1,5 +1,11 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.8 bounded Campaign-membership override.** Routine Campaign frontier
+> output carries the exact complete member count and identity digest but
+> expands at most four member-role examples. `--diagnostic` retains the full
+> member and role projection. This is presentation-only work elimination and
+> has no membership, attention, selection, Research, package, or truth effect.
+
 > **1.0.7 Campaign Attention Continuity override.** A target may have several
 > parallel active heads. `plan-round` retires only a head that the current
 > exact selection rigidly replaces; unrelated completed heads and their

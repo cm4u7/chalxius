@@ -1,5 +1,13 @@
 # Chalxius portable deployment
 
+## 1.0.8 Bounded Campaign Membership
+
+The `1.0.8` **Bounded Campaign Membership** candidate preserves all 1.0.7
+Campaign semantics while reducing routine frontier expansion to four
+member-role examples. Exact member count and digest remain visible, and the
+explicit diagnostic view remains complete. Installation migrates no project
+and changes no Research, Campaign attention, package, or truth state.
+
 ## 1.0.7 Campaign Attention Continuity
 
 The `1.0.7` **Campaign Attention Continuity** candidate preserves independent

@@ -1,4 +1,16 @@
-# Chalxius V5 traceability through 1.0.7 Campaign Attention Continuity
+# Chalxius V5 traceability through 1.0.8 Bounded Campaign Membership
+
+## 1.0.8 Bounded Campaign Membership overlay
+
+- Candidate version: `1.0.8`; release name **Bounded Campaign Membership**.
+- Routine Campaign frontier output retains the exact member count and digest
+  while expanding at most four member-role examples. The explicit diagnostic
+  projection still returns the complete member and role collection.
+- The repair removes routine output work only. It changes no Campaign member,
+  active head, context, landmark, selection, Research, package, verifier,
+  Gateway, or Fact state.
+- Focused regression covers bounded routine projection and complete diagnostic
+  reconstruction from the same Campaign bytes.
 
 ## 1.0.7 Campaign Attention Continuity overlay
 

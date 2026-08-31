@@ -3,7 +3,12 @@
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5
-> adaptation; the 1.0.7 override is authoritative for prospective work.
+> adaptation; the 1.0.8 override is authoritative for prospective work.
+
+> **1.0.8 bounded Campaign-membership override.** Main's routine frontier
+> receives the complete Campaign-member count and identity digest plus at most
+> four expanded member-role examples. Full membership forensics require the
+> explicit diagnostic view. The projection never changes attention or truth.
 
 > **1.0.7 Campaign-attention continuity override.** One target may retain
 > several independent active heads. Planning one exact route retires only the

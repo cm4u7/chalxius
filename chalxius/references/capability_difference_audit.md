@@ -1,5 +1,13 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.8 Bounded Campaign Membership difference
+
+Version 1.0.7 retained exact Campaign membership but exposed 64 expanded
+member-role rows in every routine frontier read. Version 1.0.8 keeps the exact
+complete count and identity digest while limiting routine expansion to four
+examples; `--diagnostic` still reconstructs the complete list and roles. This
+is presentation-only work elimination with no graph or authority effect.
+
 ## 1.0.7 Campaign Attention Continuity difference
 
 The earlier handoff repair transferred context through a unique successor but

@@ -157,7 +157,10 @@ V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW = 8
 # deliberately much wider than the routine mathematical-summary preview.
 V5_CAMPAIGN_RECENT_ATTAINED_LIMIT = 64
 V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW = 4
-V5_CAMPAIGN_MEMBERSHIP_PREVIEW = 64
+# Campaign membership is useful as a complete count/digest plus a few role
+# examples on Main's routine decision surface.  The complete member/role list
+# remains available under the explicit diagnostic projection.
+V5_CAMPAIGN_MEMBERSHIP_PREVIEW = 4
 V5_CAMPAIGN_CHECKPOINT_LOSS_DIAGNOSTICS = frozenset(
     {
         "checkpoint_target_list_malformed",

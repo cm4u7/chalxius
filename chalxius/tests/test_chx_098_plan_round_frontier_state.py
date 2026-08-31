@@ -1561,6 +1561,68 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
 
+    def test_routine_membership_preview_is_small_and_diagnostic_is_complete(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        members = [
+            self._research(
+                f"membership-preview-{index}",
+                f"Independent Campaign member {index}",
+            )
+            for index in range(12)
+        ]
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "reference_only",
+                        "research_id": research_id,
+                    }
+                    for research_id in members
+                ],
+            },
+        )
+
+        routine = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )["campaign_membership"]
+        diagnostic = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+            diagnostic=True,
+        )["campaign_membership"]
+
+        self.assertGreater(routine["member_count"], 4)
+        self.assertEqual(len(routine["member_research_ids"]), 4)
+        self.assertEqual(len(routine["members"]), 4)
+        self.assertTrue(routine["members_truncated"])
+        self.assertEqual(
+            routine["member_ids_sha256"], diagnostic["member_ids_sha256"]
+        )
+        self.assertEqual(
+            len(diagnostic["member_research_ids"]),
+            diagnostic["member_count"],
+        )
+        self.assertEqual(len(diagnostic["members"]), diagnostic["member_count"])
+        self.assertFalse(diagnostic["members_truncated"])
+        self.assertTrue(set(members).issubset(diagnostic["member_research_ids"]))
+
     def test_same_research_has_independent_target_local_attention_roles(
         self,
     ) -> None:

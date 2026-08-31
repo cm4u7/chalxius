@@ -1,10 +1,10 @@
-Chalxius 1.0.7 — Campaign Attention Continuity
+Chalxius 1.0.8 — Bounded Campaign Membership
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.7 runtime coordinates Campaign working memory, asynchronous Fact route
+The 1.0.8 runtime coordinates Campaign working memory, asynchronous Fact route
 selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
@@ -17,7 +17,9 @@ a four-slot gate. Sparse landmarks have no count quota and grow with the
 Research graph; the separate recent queue uses 64 only as a high-water guard.
 Routine summaries preview four recent items and eight landmarks, retaining
 exact total counts, identity digests, and full diagnostic access so no preview
-becomes a silent first-N selection. Installation does not rewrite frozen project data.
+becomes a silent first-N selection. Routine Campaign membership likewise keeps
+the exact complete count and digest while expanding only four member-role
+examples; `--diagnostic` remains complete. Installation does not rewrite frozen project data.
 When one `plan-round` handoff uniquely replaces a head, its attached contexts
 follow that successor. Ambiguous multi-successor handoffs remain visibly
 unattached, and a later concrete attachment absorbs an older unattached copy.
