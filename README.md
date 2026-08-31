@@ -14,10 +14,12 @@ certification for long-running Codex projects.**
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
 > Campaign/frontier coordination, supervision, or Fact certification.
-> 
-> **Please Disable Split Procedure and Fact Admission Mannually in v1.0.5**
-> These functionalities currently do not allign with expected performence
-> and may slow down your research with redundant procedures.
+
+> [!CAUTION]
+> **Keep semantic splitting and Fact admission deferred unless explicitly
+> needed.** Routine splitting is disabled by default in v1.0.7. Fact admission
+> remains optional and asynchronous; open-ended Research does not wait for it,
+> and projects may leave it deferred to avoid premature verification work.
 
 Chalxius is a local research runtime for projects that outgrow one chat. It
 keeps sources, Research, computations, objections, dependencies, supervision,
