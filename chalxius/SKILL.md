@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.11 — Monotone Research Continuity
+# Chalxius 1.0.12 — Deliberate Frontier Cadence
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -61,7 +61,7 @@ operations infers mathematical completion or changes Fact authority.
 When Campaign research starts or resumes and the host exposes thread
 automations, Main ensures exactly one project/task heartbeat named **Chalxius
 frontier maintenance**, updating the existing exact match rather than creating
-duplicates. Approximately every 40 minutes it requests one full active
+duplicates. Approximately every 50 minutes it requests one full active
 maintenance pass. The reminder is non-preemptive: Main finishes its current
 bounded action, then performs the pass before freezing another cut; if a
 maintenance pass is already under way, it expands that pass to full scope.

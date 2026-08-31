@@ -1,8 +1,8 @@
 # Chalxius portable deployment
 
-## 1.0.11 Monotone Research Continuity
+## 1.0.12 Deliberate Frontier Cadence
 
-The `1.0.11` **Monotone Research Continuity** candidate composes every sparse
+The `1.0.12` **Deliberate Frontier Cadence** candidate composes every sparse
 Campaign attention update over the latest persisted working-state bytes.
 Advisory goal coverage remains a read projection and cannot silently replace a
 new head, erase a parallel head, or detach context between consecutive writes;
@@ -14,7 +14,7 @@ A later independent source review can renew those bytes only by citing the SHA
 itself. The mechanism does not recurse arbitrary Research relations, parse
 prose, or authorize unused sources.
 
-Main maintains one approximately 40-minute, non-preemptive full-active
+Main maintains one approximately 50-minute, non-preemptive full-active
 Campaign heartbeat. It finishes the current bounded action before maintenance
 and then exact-searches all targets, heads, contexts, complete landmarks,
 recent history, and active rounds, applying warranted nontruth attention

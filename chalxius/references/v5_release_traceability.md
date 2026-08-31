@@ -1,4 +1,16 @@
-# Chalxius V5 traceability through 1.0.11 Monotone Research Continuity
+# Chalxius V5 traceability through 1.0.12 Deliberate Frontier Cadence
+
+## 1.0.12 Deliberate Frontier Cadence overlay
+
+- Candidate version: `1.0.12`; release name **Deliberate Frontier Cadence**.
+- The 1.0.11 monotone Campaign and exact source-review continuity mechanisms
+  are unchanged.
+- Main's non-preemptive full-active working-memory heartbeat is approximately
+  50 minutes. Its all-target search and explicit nontruth maintenance scope,
+  repair/install skip rule, no-worker boundary, and no-truth effect are
+  unchanged.
+- The active project heartbeat uses the same 50-minute interval. No Research,
+  Candidate, verifier, Gateway, Fact, admission, or publication state changes.
 
 ## 1.0.11 Monotone Research Continuity overlay
 

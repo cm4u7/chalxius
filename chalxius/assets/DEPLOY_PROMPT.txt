@@ -1,4 +1,4 @@
-Chalxius 1.0.11 — Monotone Research Continuity
+Chalxius 1.0.12 — Deliberate Frontier Cadence
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
@@ -34,7 +34,7 @@ event log, and `reference_only` assigns no attention role or truth effect.
 
 When Campaign research starts or resumes, Main ensures one exact thread
 heartbeat named `Chalxius frontier maintenance`, updating rather than
-duplicating it. About every 40 minutes it requests a full active maintenance
+duplicating it. About every 50 minutes it requests a full active maintenance
 pass. This is a non-preemptive reminder: finish the current bounded action,
 then maintain before freezing another cut; if maintenance has already started,
 expand it to full scope. Reread every target and active head, all contexts, the

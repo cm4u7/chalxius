@@ -352,7 +352,7 @@ def main() -> int:
         or campaign_surface.get("round_attention_recovery")
         != "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"
         or campaign_surface.get("frontier_maintenance_heartbeat")
-        != "main_ensures_one_exact_project_thread_heartbeat_at_approximately_40_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"
+        != "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"
         or campaign_surface.get("campaign_sparse_update_baseline")
         != "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"
         or campaign_surface.get("source_review_capability_continuity")
@@ -622,7 +622,7 @@ def main() -> int:
             '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"',
             '"active_head_full_list_update": "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"',
             '"round_attention_recovery": "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"',
-            '"frontier_maintenance_heartbeat": "main_ensures_one_exact_project_thread_heartbeat_at_approximately_40_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"',
+            '"frontier_maintenance_heartbeat": "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"',
             '"campaign_sparse_update_baseline": "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"',
             '"source_review_capability_continuity": "each_transmission_uses_one_exact_source_scope_result_provenance_hop_and_only_hash_whitelisted_direct_primary_bytes_a_later_source_review_must_reauthorize_the_sha_without_relation_or_prose_inference"',
             '"frontier_maintenance_repair_phase": "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"',
