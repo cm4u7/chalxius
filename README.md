@@ -3,13 +3,13 @@
 **Persistent Research memory, a reliable working frontier, and sparse Fact
 certification for long-running Codex projects.**
 
-[Download v1.0.5](https://github.com/cm4u7/chalxius/releases/tag/v1.0.5) ·
+[Download v1.0.7](https://github.com/cm4u7/chalxius/releases/tag/v1.0.7) ·
 [Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md) · [License](LICENSE)
 
 > [!IMPORTANT]
 > **Graph Browser and graphical graph generation are temporarily unavailable.**
-> Chalxius 1.0.5 does not present either as a supported release capability.
+> Chalxius 1.0.7 does not present either as a supported release capability.
 > Historical or experimental Reader code and commands may still be present in
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
@@ -80,16 +80,16 @@ state retains the full set.
 
 ## Install
 
-Release assets for v1.0.5 are:
+Release assets for v1.0.7 are:
 
-- `chalxius-1.0.5-split-opt-in-repair.tar.gz`
-- `chalxius-1.0.5-split-opt-in-repair.tar.gz.sha256`
+- `chalxius-1.0.7-campaign-attention-continuity.tar.gz`
+- `chalxius-1.0.7-campaign-attention-continuity.tar.gz.sha256`
 
 Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.5-split-opt-in-repair.tar.gz.sha256
-tar -xzf chalxius-1.0.5-split-opt-in-repair.tar.gz
+shasum -a 256 -c chalxius-1.0.7-campaign-attention-continuity.tar.gz.sha256
+tar -xzf chalxius-1.0.7-campaign-attention-continuity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -117,21 +117,23 @@ PROJECT=/absolute/path/to/project
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v1.0.5 — Split Opt-In Repair
+## v1.0.7 — Campaign Attention Continuity
 
-This release keeps semantic splitting available without making it a routine
-repair reflex:
+This release keeps Campaign working memory stable while Main advances one
+route:
 
-- every new Research or Fact split requires the current explicit
-  `--user-authorized-split` planning choice;
-- `needs_split` remains a diagnosis, not automatic authorization or dispatch;
-- historical split rounds, returns, and replay remain readable;
-- ordinary source/proof supervision, mixed-product diagnosis, and one-to-one
-  COW continue without split authorization;
-- productless repairs with an explicit inactive disposition remain historical
-  evidence instead of occupying the live frontier; and
-- dormant repairs no longer occupy the live frontier, while their historical
-  records remain readable and unchanged.
+- planning a successor retires only the active head it actually replaces;
+- unrelated parallel heads and their attached context remain visible;
+- context and its reason follow a unique replacement, while real branching
+  ambiguity remains explicit;
+- the same Research may serve several Campaigns or targets without cloning or
+  retagging it; and
+- Campaign roles remain nontruth working-memory references, never ownership or
+  admission gates.
+
+The v1.0.5 split opt-in boundary remains in force: routine supervision and
+Fact packaging ignore splitting, while a new low-level split requires explicit
+current authorization.
 
 Installation owns software correctness testing. Publication then checks the
 exact asset identity, checksum, file set, and absence of sensitive local data.

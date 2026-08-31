@@ -1,4 +1,56 @@
-# Chalxius V5 traceability through 1.0.5 Split Opt-In Repair
+# Chalxius V5 traceability through 1.0.7 Campaign Attention Continuity
+
+## 1.0.7 Campaign Attention Continuity overlay
+
+- Candidate version: `1.0.7`; release name **Campaign Attention Continuity**.
+- A target-local `plan-round` retires only the active head rigidly replaced by
+  its selected exact Research route. An unrelated parallel head remains active
+  even when its own current workflow is complete; Main alone may remove it by
+  explicit frontier reconciliation.
+- Exact contexts and their reasons follow a unique replaced head to its sole
+  selected successor. Genuine multi-successor ambiguity remains unattached,
+  and later attachment absorbs only an otherwise identical null-attached copy.
+- Campaign membership is the 1.0.6 many-to-many nontruth overlay. Exact
+  same-project Research may be referenced independently by several Campaigns
+  and targets; creation provenance never gates head, context, or landmark use.
+- Focused regression covers single-head handoff, parallel completed-head
+  preservation with ten attached contexts, multi-successor ambiguity,
+  null-duplicate absorption, cross-target attention, and independent removal.
+- The repair changes no Research bytes, mathematical completion, automatic
+  selection, package, verifier, Gateway, or Fact authority.
+
+## 1.0.6 Campaign Overlay Repair overlay
+
+- Candidate version: `1.0.6`; release name **Campaign Overlay Repair**.
+- Campaign is a Campaign-side, many-to-many nontruth objective and attention
+  overlay on the single Research graph. A Research may be an ordinary member
+  of several Campaigns and carry independent target, head, context, landmark,
+  and recent-history roles in each. Roles and membership have no Research,
+  automatic-selection, package, or truth effect.
+- `Research.metadata.campaign_id` is creation provenance only. Target update,
+  reconciliation, semantic successor projection, and explicit scoped planning
+  validate exact current-project existence without provenance filtering.
+- `reference_only` appends an ordinary-member link to the existing Campaign
+  event log without an attention role. Scoped planning freezes the selected
+  membership link in its selection receipt and Campaign snapshot. No second
+  membership graph or Research rewrite is introduced.
+- Generic Campaign-scoped selection remains bounded to explicit active
+  `research_goal` roots and current active-head successor corridors. It does
+  not dispatch arbitrary ordinary members, context, landmarks, history, or a
+  project-wide scan.
+- The live frontier working state and its dynamic generation are distinct from
+  optional manual checkpoint notes and their local sequence. Old checkpoint
+  numbers do not stale the live frontier or gate planning.
+- After compaction or handoff, Main rereads live frontier, in-flight rounds,
+  historical landmarks, and material old Research, then steps back to review
+  the route. During an active integrated repair or installation, this review
+  resumes when Research resumes. Before the next cut, bounded exact search and
+  one of the four explicit attention dispositions remain advisory Main
+  capability, never a timer, scheduler, relevance inference, or truth path.
+- Exact same-project unbound and other-provenance Research are covered by
+  focused target, context, landmark, head-promotion, explicit-plan, and
+  many-Campaign ordinary-membership regressions. Frozen project Research and
+  historical round bytes are not rewritten.
 
 ## 1.0.5 Split Opt-In Repair overlay
 
@@ -13,9 +65,17 @@
 - The authorization choice is absent from Research, task cards, receipts,
   frontier state, and exact replay argv. Frozen cards, returns, ingestion, and
   commit-last recovery remain readable.
-- `needs_split` is a supervisor/packager recommendation only. Ordinary
-  supervision, one-to-one COW, package alternatives, verifier, Gateway, and
-  Fact authority are unchanged.
+- Routine proof/source supervision and Fact packaging are split-indifferent:
+  they do not inspect, recommend, wait for, block on, or emit `needs_split`.
+  Frozen `needs_split` diagnoses remain readable but are inert in live
+  frontier, readiness, and repair routing.
+- Actual proof/source defects use ordinary one-to-one COW; the replacement may
+  weaken, reorganize, or narrow the same complete Research claim. The low-level
+  split path remains available only through the explicit one-shot user choice.
+- Before each new Research cut and during compaction/handoff recovery, bounded
+  exact search asks Main to dispose every material old Research match as
+  `reference_only`, `attach_context`, `promote_landmark`, or
+  `promote_active_head`. No importance, relevance, or truth is inferred.
 - A productless repair task with an explicit `blocked` disposition remains
   searchable history but leaves the live COW/frontier route; published repair
   outcomes remain visible.

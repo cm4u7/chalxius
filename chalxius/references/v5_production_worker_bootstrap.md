@@ -127,29 +127,27 @@ review bytes only; Gateway alone certifies Research. Candidate Release and
 Certification Decision are procedurally reserved 0.x compatibility, not this
 prospective path.
 
-## Research repair worker and statement splitting
+## Research repair worker and explicit split exception
 
-Statement splitting is an expensive recovery path, not a normal authoring
-strategy. Main should freeze one independently stateable load-bearing claim per
-ordinary production card, and the production worker should keep the returned
-Research node semantically coherent even when its proof has several steps. Do
-not accumulate several theorem strengths, unrelated examples, and open
-obstructions into one top-level claim merely because they were discovered in
-one session.
+Routine repair is one-to-one and split-indifferent. The worker addresses the
+actual frozen proof/source defects and returns one complete successor Research.
+It may weaken, reorganize, or narrow the same top-level claim when that is the
+honest repair. It does not create a split proposal merely because the old node
+contains several mathematical observations.
 
 A new schema-v3 split production card can be created only after Main binds the
 exact Research/specification and supplies the one-shot
 `--user-authorized-split` choice following a current explicit user request.
 That choice is intentionally absent from the immutable Research/card: the
 frozen split card itself is the worker's execution capability, while old cards
-and retry/recovery remain readable. A `needs_split` diagnosis alone never starts
+and retry/recovery remain readable. No supervisor or packager diagnosis starts
 this worker.
 
 When the exact source Research is `kind="repair"` or carries a frozen
 `repair_spec`, this production worker is a **Research repair worker**. If the
 repair objective is statement splitting, do not mechanically divide prose or
-merely shorten the old claim. Follow the frozen repair specification and the
-trigger supervisor's split rationale, and make the returned successor a
+merely shorten the old claim. Follow the frozen user-authorized repair
+specification, and make every returned successor a
 complete Research product with one coherent top-level claim, explicit
 assumptions, domains/types, quantifiers, predecessor dependencies, complete
 proof/evidence, and an exact account of which old material is preserved,
@@ -157,9 +155,9 @@ weakened, assigned to a named sibling surface, left open, or abandoned.
 
 The repair worker does not certify the split and does not author a Fact-package
 interface. Every successor receives a fresh ordinary whole-product supervision
-pass; an author-independent supervisor writes the strong mechanical-path
-interface recommendation or returns `needs_split` again. This is the ordinary
-Research proof/source supervision layer, not a Fact-side split supervisor. The
+pass; an author-independent supervisor writes a ready mechanical-path interface
+or reports an actual proof/source defect as blocked. It never recommends a
+further split. This is the ordinary Research proof/source supervision layer. The
 packager may later
 accept or replace that recommendation in one frozen nontruth package, after
 which the verifier reviews every exact record/interface/edge and Gateway alone

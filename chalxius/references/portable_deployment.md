@@ -1,15 +1,51 @@
 # Chalxius portable deployment
 
+## 1.0.7 Campaign Attention Continuity
+
+The `1.0.7` **Campaign Attention Continuity** candidate preserves independent
+parallel heads when one target-local route is planned. Only a head rigidly
+replaced by the exact selection is retired; its contexts follow a unique
+successor, genuine branch ambiguity remains unattached, and unrelated heads
+stay visible until Main explicitly reconciles them. It retains the 1.0.6
+many-to-many non-gating Campaign overlay and creates no project migration,
+automatic selection, mathematical-completion inference, or truth effect.
+
+## 1.0.6 Campaign Overlay Repair
+
+The `1.0.6` **Campaign Overlay Repair** candidate treats Campaign as a
+many-to-many nontruth overlay, never Research ownership. Any exact same-project
+Research may be an ordinary member of several Campaigns and independently hold
+target, head, context, landmark, or recent-history roles. Immutable
+`metadata.campaign_id` remains creation provenance only. `reference_only`
+appends an ordinary-member event with no attention, automatic-selection,
+package, or truth effect. Explicit scoped planning accepts same-project
+Research from any provenance and freezes the member link; generic Campaign
+selection remains inside explicit goal/head successor corridors rather than
+all members or the project graph.
+
+Dynamic frontier generation belongs to replaceable working state. Optional
+manual checkpoints have only a local sequence and never stale or gate the live
+frontier. After compaction/handoff, Main rereads live frontier, in-flight
+rounds, historical landmarks, and material old Research, steps back to review
+the route, and exact-searches before the next cut. An integrated repair or
+installation delays this Research-recovery pass until Research resumes. These
+are prompt-level capabilities, not timers, schedulers, gates, or truth paths.
+
 ## 1.0.5 Split Opt-In Repair
 
-The `1.0.5` **Split Opt-In Repair** candidate keeps every historical split
-interface readable but stops new schema-v3 split production by default.
-`plan-repair-round` and exact `plan-round` require a current explicit user
-request plus the one-shot `--user-authorized-split` choice. The common
-production boundary also covers direct API planning and refuses generic
-frontier opt-in or silent skipping. The choice is not persisted or replayed.
-Ordinary supervision, one-to-one COW, installation, and all truth boundaries
-are unchanged; deployment creates no project migration or compatibility layer.
+The `1.0.5` **Split Opt-In Repair** candidate keeps historical split bytes and
+the explicitly requested low-level split interface readable, but makes routine
+work split-indifferent. Proof/source supervisors and the Fact packager do not
+inspect, recommend, wait for, block on, or emit `needs_split`; old diagnoses
+are inert in live frontier, readiness, and repair routing. Actual proof/source
+defects use ordinary one-to-one COW and may be repaired by weakening,
+reorganizing, or narrowing the same complete Research claim. Low-level split
+planning still requires a current explicit user request plus the one-shot
+`--user-authorized-split` choice, which is not persisted or replayed. Bounded
+exact search before each Research cut and after compaction/handoff asks Main to
+choose `reference_only`, `attach_context`, `promote_landmark`, or
+`promote_active_head` for a material old Research match, without automatic
+importance, relevance, truth, project migration, or compatibility inference.
 
 ## 1.0.4 Frontier Context Handoff Repair
 

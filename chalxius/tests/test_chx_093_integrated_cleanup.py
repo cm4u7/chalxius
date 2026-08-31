@@ -120,6 +120,20 @@ class IntegratedCleanup093Tests(unittest.TestCase):
                 actor="main",
                 campaign_id=campaign_id,
             )
+            with store.v5_mutation_lock(command="chx-093-goal"):
+                store.campaigns().target_add(
+                    campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research["research_id"],
+                        "label": "Explicit exact planning head",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item: item
+                    == research["research_id"],
+                )
             row = lifecycle.frontier(limit=1, campaign_id=campaign_id)[0]
             expected = [
                 "plan-round",
@@ -155,7 +169,7 @@ class IntegratedCleanup093Tests(unittest.TestCase):
                     project_id=f"chx-093-{expected_source}",
                 )
                 campaign_id = self._campaign(store) if campaign_scoped else None
-                store.v5_lifecycle().add_research(
+                generic = store.v5_lifecycle().add_research(
                     {
                         "claim": f"Generic {expected_source} head.",
                         **(
@@ -166,6 +180,21 @@ class IntegratedCleanup093Tests(unittest.TestCase):
                     },
                     actor="main",
                 )
+                if campaign_id is not None:
+                    with store.v5_mutation_lock(command="chx-093-generic-goal"):
+                        store.campaigns().target_add(
+                            campaign_id,
+                            {
+                                "role": "research_goal",
+                                "subject_kind": "research",
+                                "subject_id": generic["research_id"],
+                                "label": "Generic scoped Campaign route",
+                            },
+                            actor="main",
+                            fact_exists=lambda _fact_id: False,
+                            research_exists=lambda item: item
+                            == generic["research_id"],
+                        )
                 status = store.v5_lifecycle().create_production_round(
                     workers=1,
                     campaign_id=campaign_id,

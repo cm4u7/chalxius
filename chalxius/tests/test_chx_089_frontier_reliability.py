@@ -39,6 +39,27 @@ class FrontierReliability089Tests(unittest.TestCase):
                 fact_exists=lambda _fact_id: False,
             )
 
+    @staticmethod
+    def _research_goal(
+        store: MathGraphStore,
+        campaign_id: str,
+        research_id: str,
+        label: str,
+    ) -> None:
+        with store.v5_mutation_lock(command="chx-089-goal"):
+            store.campaigns().target_add(
+                campaign_id,
+                {
+                    "role": "research_goal",
+                    "subject_kind": "research",
+                    "subject_id": research_id,
+                    "label": label,
+                },
+                actor="main",
+                fact_exists=lambda _fact_id: False,
+                research_exists=lambda item: item == research_id,
+            )
+
     def _duplicate_roots(
         self,
         store: MathGraphStore,
@@ -95,6 +116,12 @@ class FrontierReliability089Tests(unittest.TestCase):
             campaign_id = self._campaign(store, "Exact duplicate closure")
             lifecycle = store.v5_lifecycle()
             first, second = self._duplicate_roots(store, campaign_id)
+            self._research_goal(
+                store, campaign_id, first["research_id"], "First duplicate"
+            )
+            self._research_goal(
+                store, campaign_id, second["research_id"], "Second duplicate"
+            )
 
             completed = {second["research_id"]: "completed_production"}
             with patch.object(
@@ -204,12 +231,18 @@ class FrontierReliability089Tests(unittest.TestCase):
             campaign_id = self._campaign(store, "One command inspection")
             lifecycle = store.v5_lifecycle()
             for index in range(12):
-                lifecycle.add_research(
+                research = lifecycle.add_research(
                     {
                         "claim": f"Independent exact frontier route {index:02d}.",
                         "campaign_id": campaign_id,
                     },
                     actor="main",
+                )
+                self._research_goal(
+                    store,
+                    campaign_id,
+                    research["research_id"],
+                    f"Independent route {index:02d}",
                 )
             expected = lifecycle.frontier_decision_surface(
                 campaign_id=campaign_id,
@@ -333,13 +366,19 @@ class FrontierReliability089Tests(unittest.TestCase):
                 for index in range(100)
             ]
             for index in range(12):
-                lifecycle.add_research(
+                research = lifecycle.add_research(
                     {
                         "claim": f"Bounded independent route {index:02d}.",
                         "campaign_id": campaign_id,
                         "artifacts": bulky_artifacts,
                     },
                     actor=f"main-{index}",
+                )
+                self._research_goal(
+                    store,
+                    campaign_id,
+                    research["research_id"],
+                    f"Bounded route {index:02d}",
                 )
             compact = lifecycle.frontier(
                 campaign_id=campaign_id,

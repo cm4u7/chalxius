@@ -15,7 +15,7 @@ Current admission requires:
    mark as the route entry. The landmark, mark, and rationale have no truth
    effect and do not imply package readiness.
 2. At a natural review window an authorized packager follows the exact Research
-   graph from those entries, accepted grants, and current COW/split state, then
+   graph from those entries, accepted grants, and current COW state, then
    selects a bounded predecessor-closed route. Direct route selection may
    atomically create or reuse packager route marks for selected unmarked
    prerequisites. Ordinary COW branch choice never changes the Campaign active
@@ -26,8 +26,7 @@ Current admission requires:
    dependency edges. An existing `--mark-id` plan is `existing_marks` and is not
    subject to that direct-route anchor rule.
 3. A clean prospective Research supervisor may classify the exact whole node as
-   `ready` and emit its semi-formal interface, or classify it as `needs_split`
-   with no whole-node interface. Every `ready` conclusion exactly equals the
+   `ready` and emit its semi-formal interface. Every `ready` conclusion exactly equals the
    Research `claim`; assumptions, domain/types, quantifiers, limitations, and
    certified Research predecessors are explicit. This proof/source disposition
    owns Research review and is a strong recommendation for the automatic
@@ -36,25 +35,15 @@ Current admission requires:
    `state="mechanical_proposal_ready"`, a `mechanical_package_proposal`, and its
    digest, but does not seal. The packager performs the one seal and may accept
    that recommendation, supply a different complete six-field interface, choose
-   a whole-node route, use ordinary one-to-one COW, or retain a split
-   recommendation. An explicit `needs_split` therefore blocks only the automatic path
-   and reports `fact-package-seal-or-await-user-authorized-research-split`; it is not a veto over
-   the packager's alternative interface or route. If the packager requests an
-   actual split, package work pauses. No split worker is started unless the user
-   explicitly authorizes the current exact Research/specification and Main
-   supplies the one-shot `--user-authorized-split` choice at Research production
-   planning. That choice is not persisted or replayed. Once authorized, the split
-   is performed by a Research repair worker from a precise brief, not by the packager or by mechanically
-   cutting prose. Split successors undergo the ordinary proof/source
-   supervision layer afresh, and those whole-product passes author their
-   interfaces before packaging resumes; there is no Fact-side split supervisor.
-   The same author-independent supervisor identity may be reused. A prospective schema-v3
-   split is one committed worker-chosen batch: the worker declares the actual
-   complete membership, ingestion commits it last, and each scope reviews the
-   exact committed set. Proof plus source normally share one author-independent
-   supervisor session while retaining separate scope reports and returns.
-   Uncommitted staged records cannot enter the
-   Fact frontier or be marked.
+   a whole-node route, use ordinary one-to-one COW, or leave the node blocked for
+   an actual readiness defect. Routine supervisors and packagers do not inspect,
+   recommend, route, wait, or block on statement splitting; historical
+   `needs_split` bytes remain readable but have no live projection effect. A
+   repair may weaken, reorganize, or narrow the same top-level claim while
+   returning one complete successor for fresh proof/source supervision. The
+   dormant low-level schema-v3 split interface remains callable only after a
+   current explicit user request and one-shot `--user-authorized-split`; it is
+   never inferred from routine review or packaging state.
 4. Every certified predecessor is either earlier in the same acyclic component
    or already has an active Research certification grant. Descriptive
    `relation` strings, receipts, source links, and general Research context are
@@ -75,8 +64,7 @@ Current admission requires:
 8. The historical 1.0.0 fast-supervision promise is only a bounded minor lane:
    one-to-one complete-node COW and a same-verifier recheck of the complete
    affected component, without another ordinary supervisor. The verifier cannot
-   author the repair. Split, statement-surface, relation-allocation, or other
-   structural ambiguity returns to a Research repair worker and ordinary
+   author the repair. Structural ambiguity returns to a Research repair worker and ordinary
    proof/source supervision. A fundamental error likewise returns to ordinary
    Research and may abandon the package component. Gateway stays independent.
 9. A COW successor or inactive certified predecessor makes the affected grant

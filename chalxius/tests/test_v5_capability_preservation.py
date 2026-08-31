@@ -59,11 +59,14 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         campaign_scope = lock["v5_campaign_scope_surface"]
         self.assertEqual(
             campaign_scope["contract_revision"],
-            "chalxius-v5-campaign-scope-2",
+            "chalxius-v5-campaign-scope-3",
         )
         self.assertEqual(
-            campaign_scope["legacy_contract_revision"],
-            "chalxius-v5-campaign-scope-1",
+            campaign_scope["legacy_contract_revisions"],
+            [
+                "chalxius-v5-campaign-scope-1",
+                "chalxius-v5-campaign-scope-2",
+            ],
         )
         self.assertEqual(
             campaign_scope["selection"],
@@ -71,7 +74,16 @@ class V5CapabilityPreservationTests(unittest.TestCase):
         )
         self.assertEqual(
             campaign_scope["research_creation"],
-            "atomic_memory_add_campaign_binding",
+            "atomic_memory_add_campaign_provenance_only",
+        )
+        self.assertIn("many_to_many", campaign_scope["membership_model"])
+        self.assertIn(
+            "exact_same_project_research_link",
+            campaign_scope["ordinary_member_semantics"],
+        )
+        self.assertIn(
+            "accept_any_exact_same_project_research",
+            campaign_scope["cross_campaign_selection"],
         )
         self.assertEqual(
             campaign_scope["scheduler"],

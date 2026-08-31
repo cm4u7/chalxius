@@ -9,7 +9,9 @@
 > V5, Campaign frontier use is likewise explicit: never infer it from `ACTIVE`.
 > A Campaign is selected only by exact id. Main may create it explicitly and
 > bind a new Research root atomically with `memory-add --campaign`; no hidden
-> intake compiler or `ACTIVE` inference selects it.
+> intake compiler or `ACTIVE` inference selects it. That immutable
+> `metadata.campaign_id` is creation provenance only; Campaign membership is a
+> separate many-to-many nontruth overlay.
 
 Read this reference before changing campaigns, targets, frontier policy, audit behavior, or
 upgrading a v1-v3 project copy.
@@ -32,8 +34,10 @@ object `payload`; `type` is one of `constraint_added`,
 also exposes these fields in the corresponding `--help` text.
 
 Only admitted fact ids may be proof targets. A `research_goal` is added only
-after Campaign creation and names one exact Research root already bound to that
-Campaign. It is durable nontruth direction: it never enters proof-target
+after Campaign creation and names one exact Research root in the same project.
+That target makes the root a member of this Campaign even if it was created
+unbound or with another Campaign as provenance. It is durable nontruth
+direction: it never enters proof-target
 closure, schedules a round, closes itself, or affects Candidate/Fact state.
 Communication targets may point to a fact, source claim, report, or verification
 bundle but never enter proof-target closure. Archiving is append-only.
@@ -55,34 +59,54 @@ campaign.
 
 ## Explicit V5 Campaign envelope
 
-Main may name an existing Campaign id. A new root is created atomically with
+Main may name an existing Campaign id. A new root may record creation
+provenance atomically with
 `memory-add --campaign CAMPAIGN_ID --input RESEARCH.json`; the command validates
 the Campaign before semantic identity is fixed and revalidates it under the
 write lock before publication. A payload/flag mismatch fails before any
 immutable Research byte is written. The user need not use Campaign vocabulary:
 Main may translate the stated objective into an explicit Campaign choice, but
-the program never fuzzy-matches, consults `ACTIVE` for selection, or silently
-associates untagged Research.
+the program never fuzzy-matches or consults `ACTIVE` for selection. The stored
+creation Campaign is provenance only, not membership, ownership, or a later
+planning predicate.
 
 Use `frontier --campaign CAMPAIGN_ID` or `plan-round --campaign CAMPAIGN_ID`
-only when Main deliberately chooses that durable objective. V5 accepts only
-Research whose immutable metadata has that exact `campaign_id`; untagged and
-other-Campaign entries are excluded, including explicit ids. The scoped set is
-still ordered by the ordinary four-factor frontier, with no score cutoff.
+only when Main deliberately chooses that durable objective. Explicit
+`plan-round --campaign ... --memory-id ...` accepts any exact Research in the
+current project and records an ordinary Campaign member link in the existing
+Campaign event log plus the frozen round receipt. Target, active-head, context,
+landmark, and recent-history roles are Campaign-local member roles. The same
+Research may be an ordinary member or carry different roles in several
+Campaigns, with no Research rewrite or truth effect. Generic scoped selection
+does not scan this membership set: it stays inside the Campaign's explicit
+active `research_goal` roots and current active-head successor corridors, in
+ordinary four-factor order with no score cutoff.
 
 The ordinary Main-facing `frontier` decision surface separates
 `goal_coverage` from the bounded `workflow_queue`. Exact Research workgroup,
 COW, round, return, supervision, repair, and disposition bytes derive what has
 already been covered and the next action for each active `research_goal`.
-Missing or cross-Campaign roots are shown as `orphaned`; they do not disappear
-and do not block unrelated work. When no explicit Campaign filter is supplied,
+Missing same-project roots are shown as `orphaned`; a different creation
+Campaign is valid and remains visible. Orphans do not disappear or block
+unrelated work. When no explicit Campaign filter is supplied,
 the current `ACTIVE` Campaign may be shown as an `active_hint` only. That hint
 does not filter the global queue, select Research, dispatch work, or authorize a
 scoped plan. Main compares the goal view with the queue and chooses explicitly.
 The same read compares every checkpoint active head with exact immutable
 workflow successors. A stale head exposes its productive terminal route and
 clean terminal review evidence separately, while `checkpoint_refresh` advises
-Main to exact-search and write a later checkpoint only after semantic judgment.
+Main to exact-search and reconcile dynamic working state after semantic
+judgment. A manual checkpoint is optional; its local sequence is not the live
+frontier generation and never makes a current working frontier stale. Refresh
+advice is based only on live state and exact semantic-successor mismatch, not
+checkpoint presence or generation arithmetic.
+After context compaction or handoff, Main rereads the live frontier, in-flight
+rounds, historical landmarks, and material old Research, then steps back to
+review the route. An active integrated repair or installation delays this
+Research-recovery pass until Research resumes. Before the next cut, bounded
+exact search assigns each material match `reference_only`, `attach_context`,
+`promote_landmark`, or `promote_active_head`. This is an advisory capability,
+not a timer or gate.
 Historical COW Research is recognized by its exact kind, relation, source,
 product, and supervision-trigger edge even when it predates the optional
 hash-bound repair-spec projection. No checkpoint updates itself.
@@ -101,14 +125,16 @@ relation was omitted; it ignores nonexistent checksum-like tokens and performs
 no fuzzy or mathematical relevance inference. Existing frozen cards are not
 rewritten.
 
-Before writing a scoped round, planning revalidates the Campaign, registered
+Before writing a scoped round, planning revalidates the Campaign, exact
+same-project Research selection, registered
 source claims, and active proof targets. It then freezes one bounded snapshot
-below the round and puts a compact `chalxius-v5-campaign-scope-2` binding in the
+below the round and puts a compact `chalxius-v5-campaign-scope-3` binding in the
 manifest and cards: objective,
 active typed targets, constraints, value definition, stop conditions, and an
 exact ordered event-prefix commitment with its count, terminal event id, and
 digest. It does not copy historical update bodies. Scope 1 remains readable
-only for immutable existing rounds. Later tail events do not mutate a card;
+only for immutable existing rounds, and scope 2 remains readable historical
+compatibility. Later tail events do not mutate a card;
 snapshot damage, frozen-prefix rewrite/reorder/truncation, mixed Campaign ids,
 or a missing Campaign fails closed. The snapshot size cap guards anomalous
 current state and is not a project-age or event-count limit.

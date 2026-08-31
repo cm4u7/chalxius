@@ -71,6 +71,11 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             self.assertEqual(len(result), 1)
             self.assertEqual(result[0]["object_type"], "research")
             self.assertEqual(result[0]["research_id"], research_id)
+            self.assertIs(
+                result[0]["attention_disposition_required_if_material"],
+                True,
+            )
+            self.assertNotIn("main_attention_disposition", result[0])
             self.assertEqual(
                 store.search_graph(
                     "ResearchOnlyNeedle", limit=4, scope="facts"
@@ -87,7 +92,47 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 "ResearchOnlyNeedle",
             )
             self.assertEqual(status, 0, error)
-            self.assertEqual(json.loads(output)[0]["research_id"], research_id)
+            cli_result = json.loads(output)
+            self.assertEqual(cli_result[0]["research_id"], research_id)
+            self.assertIs(
+                cli_result[0]["attention_disposition_required_if_material"],
+                True,
+            )
+            self.assertNotIn("main_attention_disposition", cli_result[0])
+
+            campaign_id = self._campaign(store)
+            surface = store.v5_lifecycle().frontier_decision_surface(
+                campaign_id=campaign_id,
+                limit=1,
+            )
+            self.assertEqual(
+                surface["exact_search_attention_policy"][
+                    "material_match_choices"
+                ],
+                [
+                    "reference_only",
+                    "attach_context",
+                    "promote_landmark",
+                    "promote_active_head",
+                ],
+            )
+            policy = surface["exact_search_attention_policy"]
+            self.assertEqual(
+                policy["recovery_review"],
+                [
+                    "live_frontier",
+                    "in_flight_rounds",
+                    "historical_landmarks_and_material_old_research",
+                    "step_back_route_review",
+                ],
+            )
+            self.assertEqual(
+                policy["active_integrated_repair_or_install"],
+                "defer_research_recovery_review_until_research_resumes",
+            )
+            self.assertNotIn("CHX", policy["instruction"])
+            self.assertNotIn("packager", policy["instruction"])
+            self.assertEqual(policy["selection_effect"], "none")
 
             status, output, error = self._run_cli(
                 "--root",
@@ -320,9 +365,11 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     "selection_effect": "none",
                     "instruction": (
                         "Main should exact-search the listed Research ids and "
-                        "write one new advisory checkpoint when the semantic "
-                        "choice is clear; this hint neither mutates Campaign "
-                        "state nor blocks planning."
+                        "reconcile the dynamic frontier when the semantic choice "
+                        "is clear. A manual Campaign checkpoint is optional and "
+                        "its local sequence is never the live frontier "
+                        "generation; this hint neither mutates Campaign state "
+                        "nor blocks planning."
                     ),
                 },
             )
@@ -432,26 +479,17 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 },
             }
 
-            # Receipt targets are the rigid supervision coverage.  Additional
-            # related Research is legitimate review context, and relation labels
-            # remain descriptive.  Campaign provenance is still derived exactly
-            # for both the plan and its returned review.
-            self.assertEqual(
-                lifecycle._checkpoint_research_campaign_ids(
-                    proof_plan_id, bases
-                ),
-                frozenset({campaign_id}),
-            )
-            self.assertEqual(
-                lifecycle._checkpoint_research_campaign_ids(challenge_id, bases),
-                frozenset({campaign_id}),
+            # Receipt targets are the rigid supervision coverage.  Creation
+            # provenance is not a successor-lineage filter: the exact challenge
+            # remains reachable even if it was created under another Campaign.
+            bases[challenge_id]["metadata"]["campaign_id"] = (
+                "campaign-ffffffffffff"
             )
 
             index = lifecycle._campaign_semantic_successor_index(bases)
             summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=head_id,
-                    campaign_id=campaign_id,
                     bases=bases,
                     index=index,
                 )
@@ -506,7 +544,6 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=head_id,
-                    campaign_id=campaign_id,
                     bases=bases,
                     index=index,
                 )
@@ -967,7 +1004,6 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             summary, terminals, current_routes = (
                 lifecycle._campaign_attained_semantic_successor_summary(
                     attained_research_id=root_id,
-                    campaign_id=campaign_id,
                     bases=bases,
                     index=index,
                 )

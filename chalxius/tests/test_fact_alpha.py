@@ -1376,7 +1376,7 @@ class FactAlphaTests(unittest.TestCase):
                 ]["limitations"],
             )
 
-    def test_supervisor_needs_split_blocks_mechanical_packaging(self) -> None:
+    def test_historical_supervisor_needs_split_is_routine_inert(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -1392,6 +1392,34 @@ class FactAlphaTests(unittest.TestCase):
                 actor="research-author",
             )
             manager = lifecycle.fact_alpha()
+            historical_interfaces = (
+                manager._validate_supervised_interface_artifact(
+                    {
+                        "schema_version": 1,
+                        "contract_revision": (
+                            "chalxius-supervised-statement-interfaces-1"
+                        ),
+                        "entries": [
+                            {
+                                "research_id": research["research_id"],
+                                "research_record_sha256": research[
+                                    "record_sha256"
+                                ],
+                                "disposition": "needs_split",
+                                "rationale": (
+                                    "Frozen pre-repair diagnosis remains readable."
+                                ),
+                                "statement_interface": None,
+                            }
+                        ],
+                        "truth_effect": "none",
+                    }
+                )
+            )
+            self.assertEqual(
+                historical_interfaces[research["research_id"]]["disposition"],
+                "needs_split",
+            )
             mark = manager.mark(
                 research["research_id"],
                 rationale="The node is important but structurally mixed.",
@@ -1444,24 +1472,52 @@ class FactAlphaTests(unittest.TestCase):
             )
 
             self.assertEqual(
-                plan["mechanical_package_state"], "research_split_required"
+                plan["mechanical_package_state"],
+                "interface_preparation_required",
             )
             self.assertEqual(plan["mechanical_package_id"], None)
             self.assertEqual(
                 plan["next_action"],
-                "fact-package-seal-or-await-user-authorized-research-split",
+                "fact-package-seal",
             )
             self.assertEqual(
-                frontier["entries"][0]["state"], "needs_packager_route"
+                plan["interface_preparation_unavailable"],
+                [
+                    {
+                        "research_id": research["research_id"],
+                        "state": "missing_or_legacy",
+                    }
+                ],
+            )
+            self.assertEqual(
+                frontier["entries"][0]["state"], "package_selected"
             )
             self.assertEqual(
                 frontier["entries"][0]["interface_preparation"]["state"],
-                "needs_split",
+                "missing_or_legacy",
             )
-            self.assertIn(
+            self.assertNotIn(
                 "supervisor_recommends_statement_split",
                 frontier["entries"][0]["warnings"],
             )
+            with self.assertRaisesRegex(
+                ValueError, "blocked status is invalid"
+            ):
+                manager.seal_package(
+                    {
+                        "schema_version": 1,
+                        "plan_id": plan["plan_id"],
+                        "packager": "fact-packager-agent",
+                        "components": [],
+                        "blocked_entries": [
+                            {
+                                "research_id": research["research_id"],
+                                "status": "needs_split",
+                                "reason": "Historical diagnosis is not a live route.",
+                            }
+                        ],
+                    }
+                )
             with patch.object(
                 lifecycle,
                 "_candidate_supervision_scope_coverage",
@@ -1585,7 +1641,9 @@ class FactAlphaTests(unittest.TestCase):
                 altered_interface["limitations"],
             )
 
-    def test_main_mark_exposes_complete_committed_split_to_packager(self) -> None:
+    def test_routine_fact_frontier_treats_historical_split_as_cow_topology(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             lifecycle = store.v5_lifecycle()
@@ -1642,14 +1700,11 @@ class FactAlphaTests(unittest.TestCase):
             entry = frontier["entries"][0]
             self.assertEqual(entry["state"], "needs_packager_route")
             self.assertEqual(entry["next_action"], "fact-packager-route")
-            self.assertEqual(entry["exact_split_batch_count"], 1)
-            self.assertEqual(
-                entry["exact_split_batches"][0]["member_research_ids"],
-                sorted(member_ids),
-            )
+            self.assertNotIn("exact_split_batch_count", entry)
+            self.assertNotIn("exact_split_batches", entry)
             self.assertEqual(
                 entry["interface_preparation"]["state"],
-                "deferred_to_split_members",
+                "deferred_to_packager_cow_choice",
             )
             self.assertNotIn("research_cow_route_is_ambiguous", entry["blockers"])
             self.assertEqual(
@@ -1722,13 +1777,16 @@ class FactAlphaTests(unittest.TestCase):
                 side_effect=owner_route_projection,
             ):
                 owner_frontier = manager.frontier()
-            self.assertEqual(len(owner_frontier["entries"]), 1)
-            self.assertEqual(owner_frontier["entries"][0]["mark_count"], 2)
+            self.assertEqual(len(owner_frontier["entries"]), 2)
             self.assertEqual(
-                owner_frontier["entries"][0]["exact_split_batches"][0][
-                    "member_research_ids"
-                ],
-                sorted(member_ids),
+                {item["mark_count"] for item in owner_frontier["entries"]},
+                {1},
+            )
+            self.assertTrue(
+                all(
+                    "exact_split_batches" not in item
+                    for item in owner_frontier["entries"]
+                )
             )
 
     def test_distinct_ambiguous_cow_marks_remain_distinct_packager_routes(

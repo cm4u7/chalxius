@@ -1,14 +1,41 @@
 # V5 capability preservation matrix
 
-The 1.0.5 Split Opt-In Repair preserves all split batch, relation, supervision,
-ingestion, and recovery capabilities while disabling new split production by
-default. Exact `plan-repair-round` or `plan-round --memory-id` requires a
-current explicit user request and the one-shot `--user-authorized-split`
-choice. The same common production check closes direct API and manually added
-repair-node planning; generic frontier selection fails visibly rather than
-silently skipping a split. Authorization is not persisted or replayed. Ordinary
-supervision, one-to-one COW, Fact packaging alternatives, and every truth
-authority remain unchanged.
+The 1.0.7 Campaign Attention Continuity repair makes `plan-round` a precise
+target-local handoff: it retires only the active head rigidly replaced by the
+current exact selection, preserves unrelated parallel heads and their context,
+transfers context through one unique replacement, and leaves real branching
+ambiguity unattached. Main retains explicit removal authority. No completion
+inference, selector, scheduler, package effect, or truth effect is introduced.
+
+The 1.0.6 Campaign Overlay Repair makes Campaign membership explicitly
+many-to-many and Campaign-side. Any exact same-project Research may be an
+ordinary member of several Campaigns and independently carry target, head,
+context, landmark, or recent-history roles. `metadata.campaign_id` is creation
+provenance only. Existing Campaign events derive ordinary membership;
+`reference_only` adds no attention role. Exact scoped planning accepts any
+same-project Research and freezes the member link, while generic scoped
+selection remains confined to explicit goal/head successor corridors rather
+than all members or the whole graph. Dynamic frontier generation is distinct
+from optional manual-checkpoint sequence. After compaction/handoff, Main
+rereads live frontier, in-flight rounds, historical landmarks, and material old
+Research, steps back to review the route, then exact-searches and disposes
+material matches before the next cut. An active integrated repair/install
+delays that review until Research resumes. These are advisory capabilities with
+no Research, package, timer, scheduler, gate, or truth effect.
+
+The 1.0.5 Split Opt-In Repair preserves historical split batch, relation,
+ingestion, recovery, and explicitly requested low-level split capabilities,
+while making routine work split-indifferent. Proof/source supervisors and the
+Fact packager do not inspect, recommend, wait for, block on, or emit
+`needs_split`; frozen diagnoses remain readable but inert in live frontier,
+readiness, and repair routing. Actual proof/source defects use ordinary
+one-to-one COW, which may weaken, reorganize, or narrow the same Research
+claim. Exact low-level split planning still requires a current explicit user
+request and the one-shot `--user-authorized-split` choice, which is not
+persisted or replayed. Before each new Research cut and during compaction or
+handoff recovery, bounded exact search asks Main to dispose material old
+Research matches as `reference_only`, `attach_context`, `promote_landmark`, or
+`promote_active_head`; no importance, relevance, or truth is inferred.
 
 The 1.0.4 Frontier Context Handoff Repair preserves the 1.0.3 coordination
 surface and makes two existing operations compose: exact head-bound context
@@ -503,7 +530,7 @@ them.
 | Pulse collaboration | `pulse-plan`, `pulse-status`, `pulse-barrier`, `pulse-dispatch`, `pulse-void`, `pulse-close`, `pulse-abort`, `pulse-audit` | adapt | CHX-001–003, CHX-005, CHX-014, CHX-015, CHX-017, CHX-018, CHX-022, CHX-023, CHX-027–031, CHX-036, CHX-037, CHX-039, CHX-041, CHX-048, CHX-052 | same-snapshot Wave 1 and snapshot-mediated Wave 2 remain; each contribution ingests independently; no peer destruction |
 | Reasoning profiles and adoption | `mode-init`, `mode-status`, `mode-switch`, `adoption-plan` | adapt | CHX-005, CHX-020, CHX-033, CHX-036, CHX-039, CHX-048, CHX-069 | fast/auto/deep remain exploration budgets; deep increases applicable research depth but validation scope is necessity/changed-surface based, reusing current receipts for unchanged sealed state and failing to full validation on drift or ambiguity; adoption remains advice and neither creates universal certification closure |
 | Process readiness (V4 profile-closure compatibility) | `profile-closure-status`, `profile-closure-record` | adapt; user-approved 2026-07-28 | CHX-014, CHX-023, CHX-029, CHX-036, CHX-039, CHX-048 | retain and strengthen repair suggestions; recording appends guidance to Research only and has no admission authority |
-| Campaigns and active frontier | `campaign-create`, `campaign-activate`, `campaign-status`, `campaign-target-add`, `campaign-target-archive`, `campaign-update`; atomic `memory-add --campaign`; explicit `frontier --campaign`, `plan-round --campaign`; Main `goal_coverage`/`workflow_queue` surface | adapt; 1.0.3 current contract plus frozen earlier repairs | CHX-020, CHX-033, CHX-039, CHX-063, CHX-070, CHX-010–012; 0.9.3-0.9.6 integrated CHX | optional durable multi-round envelope with exact Campaign-bound roots and active heads; sparse landmarks have no count quota and grow with the Research graph; recent attainment is curated by context compaction or natural curation rather than a four-event gate, with 64 as its high-water runaway protection; routine summaries preview four recent items and eight landmarks while retaining exact total counts, identity digests, and full diagnostic access; current COW/split routes, exact plan-round argv, and manual ambiguity remain visible; complete state stays addressable without automatic dispatch, close, fuzzy selection, migration, persistent index, retagging, second scheduler, or truth effect |
+| Campaigns and active frontier | `campaign-create`, `campaign-activate`, `campaign-status`, `campaign-target-add`, `campaign-target-archive`, `campaign-update`; atomic creation provenance via `memory-add --campaign`; explicit `frontier --campaign`, `plan-round --campaign`; Main `goal_coverage`/`workflow_queue`/membership surface | adapt; 1.0.7 current contract plus frozen earlier repairs | CHX-020, CHX-033, CHX-039, CHX-063, CHX-070, CHX-010–012; 0.9.3-0.9.6 integrated CHX; 1.0.6 Campaign overlay repair; 1.0.7 attention continuity | optional durable multi-round many-to-many nontruth overlay with same-project ordinary members and independent target/head/context/landmark/history roles; one planned route retires only its rigidly replaced head while preserving unrelated parallel heads and context; unique handoff carries context and genuine ambiguity remains unattached; creation `campaign_id` is provenance only; explicit planning accepts any exact same-project Research and freezes the member link, while generic selection follows only explicit goal/head corridors; dynamic frontier generation is distinct from optional checkpoint sequence; sparse landmarks have no count quota and grow with the Research graph; recent attainment is curated by context compaction or natural curation rather than a four-event gate, with 64 as its high-water runaway protection; routine summaries preview four recent items and eight landmarks while retaining exact total counts, identity digests, and full diagnostic access; complete state stays addressable without automatic dispatch, close, fuzzy selection, migration, second membership graph, retagging, scheduler, gate, or truth effect |
 | Claims, conventions, and exposition | `claim-add`, `claim-show`, `claim-variant`, `convention-add`, `convention-show`, `export-claim-card`, `export-interpret-card`, `publish-interpret-document`, `lint-expert-document`, `lint-interpret-document` | keep | CHX-006, CHX-007, CHX-009, CHX-010, CHX-016, CHX-019, CHX-024, CHX-034 | exact interfaces, quantifiers, conventions, and lint semantics remain available |
 | Replayable computation | `experiment-start`, `experiment-event`, `experiment-observe`, `experiment-decision`, `experiment-status`, `experiment-resume`, `experiment-finalize` | keep/adapt | CHX-039, CHX-048, CHX-054, CHX-059, CHX-066, CHX-067, CHX-105, CHX-106, CHX-109 | immutable commands/artifacts/checkpoints and independent replay remain; current V5 stages bind formula, domain, representation, approximation budget, output meaning, and independent checks; the optional Experiment root is derived from the canonical frozen assignment and inspected component-wise without following symlinks; exact absence skips only that subaudit, while presence materializes the complete validated task-card view from the existing round binding before any manifest, hard-cap, event, or receipt read; unsafe roots and state fail closed; task-local binding only |
 | Paper Logic, Audit, and continuation | `paper-logic-init`, `paper-logic-stage`, `paper-logic-record-review`, `paper-logic-freeze`, `paper-logic-status`/`--full`, `paper-logic-show`, `paper-logic-query`, `paper-logic-audit`, `paper-logic-link-exploration`, `paper-logic-project-blackboard`, `paper-continuation-plan`, `paper-continuation-status`, `paper-continuation-status-index-rebuild`, `paper-continuation-dispose` | keep/adapt | CHX-033, CHX-038, CHX-043, CHX-058, CHX-061, CHX-069, CHX-072, CHX-075–076, CHX-100, CHX-104; `run-20260730T145847217907Z-eedfc9368ea0/CHX-001–003` | source/reconstruction/audit separation and append-only correction; all-target, bounded-target, or exact changed-surface continuation preserves complete directional closure without score compression; native stage/freeze rechecks successor head/topology/premise order; routine status consumes atomic HEAD/receipt and ingestion commits resumable head-last status transitions; one command-scoped validated Paper/Research projection is shared across aggregate audit without persistent indexing; the canonical immutable disposition collection is validated once per manager inspection before plan-specific and current views are filtered from it; current Candidate release materializes one content-addressed capsule over status generation, Logic/Audit refs, source/writing, closure, dispositions, and interfaces, reused through verifier/Certification/Gateway; stale/ambiguous capsule state emits one observable full-validation fallback; philosophy-only atomicity/clarity remain separate from domain-general Paper adequacy and Fact truth; historical releases preserve old evidence shape |

@@ -313,11 +313,11 @@ def main() -> int:
         or fact_alpha_surface.get("research_split_planning")
         != "new_schema_v3_split_production_disabled_by_default_exact_research_ids_and_current_explicit_user_request_plus_one_shot_user_authorized_split_choice_required_not_persisted_in_research_card_receipt_frontier_or_replay"
         or fact_alpha_surface.get("research_split_supervision")
-        != "split_recommendation_pauses_package_route_only_after_explicit_user_authorization_research_repair_worker_produces_exact_committed_batch_then_ordinary_author_independent_proof_source_supervision_reviews_it_before_packaging_resumes_with_no_independent_fact_side_split_supervisor"
+        != "routine_supervision_and_fact_packaging_are_split_indifferent_historical_needs_split_is_readable_but_inert_actual_source_or_proof_defects_use_one_to_one_cow_explicit_user_authorized_low_level_split_batches_receive_ordinary_whole_product_review_without_fact_side_split_supervisor"
         or fact_alpha_surface.get("minor_repair")
         != "historical_1_0_0_bounded_fast_lane_only_one_to_one_complete_node_research_cow_then_same_verifier_full_component_recheck_without_ordinary_supervisor_or_verifier_authorship"
         or fact_alpha_surface.get("minor_repair_exclusions")
-        != "split_statement_surface_change_relation_allocation_or_other_structural_cow_ambiguity_returns_to_research_repair_worker_and_ordinary_proof_source_supervision"
+        != "historical_1_0_0_bounded_fast_lane_excludes_major_mathematical_error_relation_reallocation_or_other_structural_cow_ambiguity_which_returns_to_research_repair_worker_and_ordinary_proof_source_supervision"
         or fact_alpha_surface.get("direct_research_route_anchor_binding")
         != "plan_freezes_selection_mode_and_exact_main_route_anchor_research_ids_every_packager_sealed_component_contains_one_frozen_anchor_and_every_added_unmarked_node_is_connected_to_it_by_actual_package_dependency_edges"
         or fact_alpha_surface.get("existing_mark_plan_anchor_policy")
@@ -336,7 +336,7 @@ def main() -> int:
         or campaign_surface.get("next_research_cut_exact_search_invariant")
         != "main_runs_one_bounded_exact_research_search_before_every_next_research_cut_freeze_with_or_without_context_compaction"
         or campaign_surface.get("exact_search_result_policy")
-        != "main_attaches_every_material_match_by_exact_research_id_as_active_head_context_or_promotes_it_to_an_active_head_instead_of_leaving_it_only_in_chat_or_temporary_prose"
+        != "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_or_promote_active_head_without_programmatic_importance_relevance_or_truth_inference"
         or campaign_surface.get("context_compaction_additional_duties")
         != "rehydrate_exact_operation_global_reread_and_landmark_curation_with_the_same_exact_match_placement_semantics_as_ordinary_turns_but_broader_search_and_reread_scope_not_the_exact_search_clock"
         or not isinstance(adverse_surface, dict)
@@ -572,14 +572,21 @@ def main() -> int:
             '"batch_seed_revision": "chalxius-v5-candidate-batch-seed-3"',
             '"candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact"',
             '"exact_repair_specification": "optional_main_json_is_normalized_hash_bound_into_repair_research_and_task_card"',
-            '"contract_revision": "chalxius-v5-campaign-scope-2"',
-            '"legacy_contract_revision": "chalxius-v5-campaign-scope-1"',
+            '"contract_revision": "chalxius-v5-campaign-scope-3"',
+            '"chalxius-v5-campaign-scope-1"',
+            '"chalxius-v5-campaign-scope-2"',
             '"frontier_working_state_revision": "chalxius-v5-campaign-frontier-working-state-2"',
             '"selection": "main_selected_research_with_optional_explicit_campaign_scope"',
-            '"research_creation": "atomic_memory_add_campaign_binding"',
-            '"plan_selection_receipt": "selection_source_exact_research_ids_campaign_and_copy_safe_replay_argv_frozen_in_new_round_manifest"',
+            '"research_creation": "atomic_memory_add_campaign_provenance_only"',
+            '"membership_model": "campaign_side_many_to_many_nontruth_overlay_derived_from_existing_campaign_events_targets_and_frontier_roles_without_second_graph"',
+            '"ordinary_member_semantics": "exact_same_project_research_link_independent_of_attention_roles_with_no_automatic_selection_research_truth_or_fact_effect"',
+            '"cross_campaign_selection": "accept_any_exact_same_project_research_and_freeze_campaign_membership_link_before_round_publication"',
+            '"campaign_automatic_selection": "only_from_explicit_active_research_goal_target_and_current_head_successor_corridors_never_from_all_members_context_landmarks_history_or_project_wide_scan"',
+            '"plan_selection_receipt": "selection_source_exact_research_ids_campaign_membership_link_and_copy_safe_replay_argv_frozen_in_new_round_manifest"',
+            '"manual_checkpoint_semantics": "optional_advisory_campaign_note_with_local_sequence_not_the_dynamic_frontier_working_state_generation_and_never_a_staleness_gate"',
+            '"checkpoint_refresh_semantics": "advisory_dynamic_frontier_reconciliation_from_exact_semantic_successor_mismatch_only_never_manual_generation_delta_or_checkpoint_presence"',
             '"scheduler": "v5_main_four_factor_frontier"',
-            '"exact_search_result_policy": "main_attaches_every_material_match_by_exact_research_id_as_active_head_context_or_promotes_it_to_an_active_head_instead_of_leaving_it_only_in_chat_or_temporary_prose"',
+            '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_or_promote_active_head_without_programmatic_importance_relevance_or_truth_inference"',
             '"recent_attainment_exact_queue_high_water_limit": 64',
             '"recent_attainment_routine_preview": 4',
             '"recent_attainment_complete_projection": "exact_ids_count_and_digest_retained_beyond_preview"',

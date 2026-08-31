@@ -1,13 +1,52 @@
 # Chalxius unified Evidence and research architecture
 
-> **1.0.5 Split Opt-In Repair override.** `needs_split` remains a proof/source
-> diagnosis and strong packaging recommendation, not execution authority.
-> Every new schema-v3 split production is stopped by default. Main may plan it
+> **1.0.7 Campaign Attention Continuity override.** A target may have several
+> parallel active heads. `plan-round` retires only a head that the current
+> exact selection rigidly replaces; unrelated completed heads and their
+> contexts remain until Main explicitly reconciles them. A unique replacement
+> inherits exact attached context and reason, while genuine multi-successor
+> ambiguity remains unattached. This changes only Campaign working memory.
+
+> **1.0.6 Campaign Overlay Repair override.** Campaign is a nontruth,
+> many-to-many objective and attention overlay on the single Research graph,
+> never Research ownership or a planning gate. Any exact same-project Research
+> may be an ordinary member of several Campaigns and may independently carry
+> target, active-head, context, landmark, or recent-history roles in each.
+> `Research.metadata.campaign_id` is creation provenance only. Membership is a
+> Campaign-event-derived projection; `reference_only` adds only the ordinary
+> member link, while attention roles remain explicit and have no Research,
+> automatic-selection, package, or truth effect. Target updates, reconciliation,
+> semantic successor projection, and explicit scoped planning validate exact
+> same-project existence without creation-Campaign filtering. A scoped generic
+> frontier still begins only from explicit active research-goal roots and live
+> head-successor corridors, never all members or a project-wide scan. Explicit
+> scoped planning freezes the selected member link and round snapshot.
+>
+> The replaceable frontier working-state generation is the live generation.
+> Manual checkpoint notes are optional historical advice with a separate local
+> sequence, never a stale test or planning prerequisite. Refresh advice derives
+> only from live state plus an exact semantic-successor mismatch, never from a
+> checkpoint-generation delta or checkpoint presence. After compaction or a
+> real handoff, Main rereads live frontier, in-flight rounds, historical
+> landmarks, and material old Research, then steps back to review the route.
+> During an active integrated repair or installation that review is deferred
+> until Research resumes. Before the next cut, bounded exact search gives every
+> material match one of `reference_only`, `attach_context`,
+> `promote_landmark`, or `promote_active_head`. This is advisory Main recovery,
+> not a gate, timer, scheduler, relevance inference, or truth path.
+
+> **1.0.5 Split Opt-In Repair override.** Routine Research and Fact work is
+> completely split-indifferent. Proof/source supervisors and Fact packagers do
+> not inspect, diagnose, recommend, preserve as live advice, route, wait, or
+> block on statement splitting. Historical `needs_split` bytes remain readable
+> but have no live frontier, readiness, packaging, or repair effect. Every new
+> schema-v3 split production remains a dormant low-level exception. Main may plan it
 > only from exact Research ids/specification with the one-shot
 > `--user-authorized-split` choice after a current explicit user request. The
 > choice is checked at the common production-round boundary, is not stored or
 > replayed, and does not affect frozen split history, ordinary supervision,
-> one-to-one COW, packages, verification, Gateway, or Fact authority. Generic
+> one-to-one COW, packages, verification, Gateway, or Fact authority. Ordinary
+> one-to-one COW may weaken or reorganize one claim into one successor. Generic
 > frontier planning reports a selected split rather than silently skipping it.
 > A pending split task explicitly disposed as `blocked` remains readable
 > history but is absent from the live COW successor route; dispositions never
@@ -37,12 +76,13 @@
 > and diagnostic reads rather than silently selecting first N.
 > After compaction or a real handoff, Main rehydrates exact operation, completes
 > visible handoffs, reconciles rigid lineage, curates recent/landmark memory,
-> chooses the next Research cut, considers but never forces a Fact window, and
-> records genuine operational architecture failures as CHX. Neither preview
+> chooses the next Research cut, and considers but never forces a Fact window.
+> Neither preview
 > sizes nor available agent slots are semantic quotas; 64 applies only to the
 > recent-attainment queue, not landmarks. Main performs bounded exact
-> Research search before every next-cut freeze. Every material match is attached
-> by exact Research id as active-head context or promoted to an active head;
+> Research search before every next-cut freeze. Every material match receives
+> one explicit Main disposition: reference-only, attach as exact active-head
+> context, promote to a sparse landmark, or promote to an active head;
 > post-compaction search follows the same placement rule with only broader
 > search/reread scope. Fact landmarks are route entries, not ready packages;
 > `fact-frontier --target`
@@ -55,15 +95,14 @@
 > not acquire that rule. Current supervisors receive fixed non-exhaustive
 > attack guidance: source owns external fidelity/coverage and proof owns
 > mathematical use; both may share one independent host session with separate
-> records. Dynamic adverse learning is prospectively retired. Semantic split
+> records. Dynamic adverse learning is prospectively retired. Explicit semantic split
 > batches carry proposed typed relations which proof supervision reviews and
 > binds to recommended successor interfaces. A clean supervisor disposition is
 > only a strong mechanical-path recommendation: planning returns
 > `mechanical_proposal_ready` with `mechanical_package_proposal` plus digest and
 > never seals. The packager seals once, choosing that proposal or an alternative
-> interface/whole-node route. If it requests a split, packaging pauses for a
-> Research repair worker and the ordinary proof/source supervision layer; no
-> Fact-side split supervisor exists. The verifier fully reviews every exact record,
+> interface/whole-node route. Routine packaging does not inspect or request a
+> split. The verifier fully reviews every exact record,
 > interface, and edge, and Gateway alone certifies. Main semantic choice, Research immutability,
 > ambiguity visibility, and every truth boundary remain unchanged.
 
@@ -76,7 +115,8 @@
 > no-follow, regular-file, hash, conflict, and per-manifest size checks remain
 > fail closed. No workflow or truth authority changes.
 
-> **1.0.1 Fact Alpha Field Repair override.** A new clean supervisor may emit
+> **Historical 1.0.1 Fact Alpha Field Repair (superseded prospectively by the
+> 1.0.5 split-indifferent rule).** A clean supervisor could emit
 > one exact Research-bound whole-node interface or `needs_split` disposition;
 > all-ready Fact plans seal mechanically, while legacy/missing/custom work
 > retains the packager fallback. A legacy packager that chooses split/COW stops
@@ -816,20 +856,23 @@ Main can organize a bounded project queue directly with this frontier. A
 Campaign is therefore not a second scheduler or a per-task gate; it remains an
 optional durable multi-round envelope for an explicit objective, typed targets,
 constraints, value definition, stop conditions, and history. The Campaign
-connection is explicit semantically: Main supplies an exact id and may create a
-bound root atomically with `memory-add --campaign ID`. The resulting
-`frontier --campaign ID` and
-`plan-round --campaign ID` select exact stored `campaign_id` matches and retain
-the ordinary four-factor ordering. A scoped round freezes one bounded nontruth
-Campaign scope-2 snapshot plus compact task-card envelope: active current
+connection is explicit semantically: Main supplies an exact id and may record
+creation provenance atomically with `memory-add --campaign ID`. Existing
+same-project Research can be linked to any number of Campaigns. The resulting
+`frontier --campaign ID` follows only that Campaign's explicit goal/head
+corridors, while explicit `plan-round --campaign ID --memory-id ...` accepts
+any exact same-project Research and records a Campaign member link. Neither
+path filters on creation provenance. A scoped round freezes one bounded
+nontruth Campaign scope-3 snapshot plus compact task-card envelope: active current
 semantics and an exact ordered history-prefix commitment, never copied update
 bodies. Routine status similarly exposes one current view and a fixed recent
 summary tail rather than a paging protocol. Without the flag, selection
 stays global even when a Campaign is active. Campaign never expands Research,
 advances continuously, closes work, rewrites frozen cards, or affects Facts.
 
-An active Campaign may carry `research_goal` targets pointing to exact
-same-Campaign Research roots. They are direction anchors, not workflow items.
+An active Campaign may carry `research_goal` targets pointing to any exact
+same-project Research roots. The target makes each root a Campaign member and
+direction anchor, not a workflow item or Campaign-owned Research node.
 Main's small frontier surface derives each anchor's current COW/workflow route
 and reports goal progress beside the bounded queue. An unscoped view may expose
 the `ACTIVE` Campaign as an `active_hint`, but the queue stays global and no

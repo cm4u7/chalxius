@@ -52,7 +52,11 @@ FACT_ALPHA_MAX_COMPONENTS = 128
 FACT_ALPHA_MAX_FINDINGS = 256
 
 _MARK_STATUSES = {"active", "deferred", "dropped"}
-_BLOCKED_PACKAGING_STATUSES = {"needs_split", "blocked"}
+# Historical packages may contain ``needs_split`` and must remain readable.
+# New packager work is split-indifferent: it may leave a node ordinarily
+# blocked, but it does not classify, route, or wait on statement splitting.
+_LEGACY_BLOCKED_PACKAGING_STATUSES = {"needs_split", "blocked"}
+_PROSPECTIVE_BLOCKED_PACKAGING_STATUSES = {"blocked"}
 _COMPONENT_VERDICTS = {"correct", "minor_repair", "fundamental_error"}
 _RESEARCH_CHECK_VERDICTS = {
     "correct",
@@ -947,7 +951,11 @@ class FactAlphaManager:
                     "supervised statement interface Research binding drifted"
                 )
             disposition = item["disposition"]
-            if disposition not in {"ready", "needs_split"}:
+            # ``needs_split`` remains accepted here solely so frozen 1.0.x
+            # supervision artifacts stay readable.  ``blocked`` reports an
+            # actual proof/source defect without inventing a split route.
+            # Routine projection below uses only ``ready`` interfaces.
+            if disposition not in {"ready", "blocked", "needs_split"}:
                 raise ValueError(
                     "supervised statement-interface disposition is invalid"
                 )
@@ -962,7 +970,7 @@ class FactAlphaManager:
                 )
             elif item["statement_interface"] is not None:
                 raise ValueError(
-                    "needs_split statement-interface disposition must not "
+                    "non-ready statement-interface disposition must not "
                     "supply a whole-node interface"
                 )
             interfaces[research_id] = {
@@ -1195,6 +1203,14 @@ class FactAlphaManager:
                 "rationales": [],
                 "diagnostic_sha256": sha256_json(invalid_bindings),
             }
+        # A historical ``needs_split`` entry is an inert diagnostic, not a live
+        # Fact readiness, frontier, or repair signal.  Only an exact ready
+        # interface participates in routine packaging.  This also means a
+        # later ready interface is not made conflicting by an older split
+        # opinion.
+        candidates = [
+            item for item in candidates if item["disposition"] == "ready"
+        ]
         if not candidates:
             return {
                 "state": "missing_or_legacy",
@@ -1208,7 +1224,6 @@ class FactAlphaManager:
         for candidate in candidates:
             digest = sha256_json(
                 {
-                    "disposition": candidate["disposition"],
                     "statement_interface": candidate["statement_interface"],
                 }
             )
@@ -1232,14 +1247,9 @@ class FactAlphaManager:
                 item["artifact_sha256"],
             ),
         )
-        disposition = selected[0]["disposition"]
         return {
-            "state": disposition,
-            "statement_interface": (
-                selected[0]["statement_interface"]
-                if disposition == "ready"
-                else None
-            ),
+            "state": "ready",
+            "statement_interface": selected[0]["statement_interface"],
             "source_bindings": sources,
             "source_count": len(sources),
             "rationales": sorted(
@@ -1248,7 +1258,7 @@ class FactAlphaManager:
             "diagnostic_sha256": sha256_json(
                 {
                     "sources": sources,
-                    "disposition": disposition,
+                    "disposition": "ready",
                     "rationales": sorted(
                         {item["rationale"] for item in selected}
                     ),
@@ -1295,9 +1305,14 @@ class FactAlphaManager:
             projection = self._supervised_interface_projection(
                 research, item["supervision_coverage"]
             )
-            if projection["state"] != "ready":
+            projection_state = (
+                "missing_or_legacy"
+                if projection["state"] == "needs_split"
+                else projection["state"]
+            )
+            if projection_state != "ready":
                 unavailable.append(
-                    {"research_id": research_id, "state": projection["state"]}
+                    {"research_id": research_id, "state": projection_state}
                 )
                 continue
             prepared[research_id] = {
@@ -1307,14 +1322,7 @@ class FactAlphaManager:
             }
         if unavailable or not prepared:
             return {
-                "state": (
-                    "research_split_required"
-                    if any(
-                        item["state"] == "needs_split"
-                        for item in unavailable
-                    )
-                    else "interface_preparation_required"
-                ),
+                "state": "interface_preparation_required",
                 "package": None,
                 "unavailable": sorted(
                     unavailable, key=lambda item: item["research_id"]
@@ -1776,135 +1784,6 @@ class FactAlphaManager:
             repair_children=repair_children,
         )
         return result.get(research_id)
-
-    def _reachable_committed_split_batches(
-        self,
-        research_id: str,
-        *,
-        bases: dict[str, dict[str, Any]],
-        repair_children: dict[str, tuple[str, ...]],
-        inspection: Any,
-    ) -> list[dict[str, Any]]:
-        """Expose exact committed split members from one remembered route.
-
-        A Main mark or Campaign landmark is an attention entry, not a request
-        to choose one child.  When its rigid COW route reaches a committed
-        split, the narrow Fact-packager role must be able to see the complete
-        batch without Main copying every member into a second memory surface.
-        This projection does not select a member or grant Fact authority.
-        """
-
-        reachable_route_ids = {research_id}
-        route_queue = [research_id]
-        while route_queue:
-            route_id = route_queue.pop(0)
-            for child_id in repair_children.get(route_id, ()):
-                if child_id not in reachable_route_ids:
-                    reachable_route_ids.add(child_id)
-                    route_queue.append(child_id)
-        cow_projection = inspection.frontier_cow_route_projection or {}
-        split_batches: list[dict[str, Any]] = []
-        for repair_id, detail in sorted(
-            cow_projection.get("details", {}).items()
-        ):
-            member_ids = detail.get("split_member_research_ids", [])
-            if (
-                detail.get("state") != "committed_split_members"
-                or not isinstance(member_ids, list)
-            ):
-                continue
-            owner_id = detail.get("split_owner_research_id")
-            if (
-                repair_id not in reachable_route_ids
-                and owner_id not in reachable_route_ids
-            ):
-                continue
-            owner = (
-                bases.get(owner_id) if isinstance(owner_id, str) else None
-            )
-            owner_binding = (
-                owner.get("metadata", {}).get("research_split_owner")
-                if isinstance(owner, dict)
-                else None
-            )
-            normalized_member_ids = sorted(member_ids)
-            split_batches.append(
-                {
-                    "repair_research_id": repair_id,
-                    "split_owner_research_id": owner_id,
-                    "split_batch_id": (
-                        owner_binding.get("batch_id")
-                        if isinstance(owner_binding, dict)
-                        else None
-                    ),
-                    "member_research_ids": normalized_member_ids,
-                    "member_count": len(normalized_member_ids),
-                    "member_ids_sha256": sha256_json(
-                        normalized_member_ids
-                    ),
-                }
-            )
-        return split_batches
-
-    @staticmethod
-    def _exact_committed_split_batch_for_route(
-        research_id: str,
-        *,
-        split_batches: list[dict[str, Any]],
-        repair_children: dict[str, tuple[str, ...]],
-    ) -> dict[str, Any] | None:
-        """Recognize when one committed split is the route's only branch."""
-
-        if len(split_batches) != 1:
-            return None
-        batch = split_batches[0]
-        repair_id = batch["repair_research_id"]
-        owner_id = batch["split_owner_research_id"]
-        member_ids = tuple(batch["member_research_ids"])
-
-        def unique_prefix_reaches(target_id: str) -> bool:
-            current_id = research_id
-            prefix_seen: set[str] = set()
-            while current_id != target_id:
-                if current_id in prefix_seen:
-                    return False
-                prefix_seen.add(current_id)
-                children = repair_children.get(current_id, ())
-                if len(children) != 1:
-                    return False
-                current_id = children[0]
-            return True
-
-        branch_ids = [repair_id]
-        if isinstance(owner_id, str):
-            branch_ids.append(owner_id)
-        branch_id = next(
-            (
-                candidate_id
-                for candidate_id in branch_ids
-                if unique_prefix_reaches(candidate_id)
-            ),
-            None,
-        )
-        if branch_id is None or set(
-            repair_children.get(branch_id, ())
-        ) != set(member_ids):
-            return None
-        # Every member may continue through a unique COW chain, but another
-        # unresolved branch would require Main to choose and must not be
-        # hidden behind the already committed split.
-        for member_id in member_ids:
-            current_id = member_id
-            member_seen: set[str] = set()
-            while repair_children.get(current_id, ()):
-                if current_id in member_seen:
-                    return None
-                member_seen.add(current_id)
-                children = repair_children[current_id]
-                if len(children) != 1:
-                    return None
-                current_id = children[0]
-        return batch
 
     def _candidate_cow_route_projection(
         self,
@@ -2425,7 +2304,7 @@ class FactAlphaManager:
                 raise ValueError(
                     "Fact Candidate blocked Research is outside the frozen plan"
                 )
-            if item["status"] not in _BLOCKED_PACKAGING_STATUSES:
+            if item["status"] not in _LEGACY_BLOCKED_PACKAGING_STATUSES:
                 raise ValueError("Fact Candidate blocked status is invalid")
             _require_text(item["reason"], label="Fact Candidate blocked reason")
         if any(
@@ -2956,23 +2835,6 @@ class FactAlphaManager:
                                 bases=bases,
                             )
                         )
-                        split_batches = (
-                            self._reachable_committed_split_batches(
-                                landmark_id,
-                                bases=bases,
-                                repair_children=repair_children,
-                                inspection=inspection,
-                            )
-                        )
-                        exact_split_batch = (
-                            self._exact_committed_split_batch_for_route(
-                                landmark_id,
-                                split_batches=split_batches,
-                                repair_children=repair_children,
-                            )
-                            if terminal is None
-                            else None
-                        )
                         # A landmark is a sparse route entry, not an already
                         # selected Fact package.  Deep supervision/interface
                         # projection is intentionally deferred until a
@@ -2996,20 +2858,13 @@ class FactAlphaManager:
                                 ][landmark_id],
                                 "current_research_id": terminal,
                                 "route_state": (
-                                    "committed_split_batch"
-                                    if exact_split_batch is not None
-                                    else "needs_packager_cow_choice"
+                                    "needs_packager_cow_choice"
                                     if terminal is None
                                     else "certified"
                                     if terminal in active_grants
                                     else "needs_packager_route"
                                 ),
                                 **route_candidates,
-                                "exact_split_batches": split_batches,
-                                "exact_split_batch_count": len(split_batches),
-                                "exact_split_batches_sha256": sha256_json(
-                                    split_batches
-                                ),
                                 "nearest_certified_predecessor_research_ids": [],
                                 "uncertified_predecessor_research_ids": [],
                                 "predecessor_projection_state": inspection_state,
@@ -3053,12 +2908,10 @@ class FactAlphaManager:
                 str | None,
                 str | None,
                 str | None,
-                str | None,
             ],
             list[dict[str, Any]],
         ] = {}
         route_details: dict[str, dict[str, Any]] = {}
-        split_batches_by_mark: dict[str, list[dict[str, Any]]] = {}
         route_candidates_by_mark: dict[str, dict[str, Any]] = {}
         for mark in active_marks:
             marked_id = mark["research_id"]
@@ -3068,45 +2921,21 @@ class FactAlphaManager:
                 route_staleness=route_staleness,
                 repair_children=repair_children,
             )
-            split_batches = self._reachable_committed_split_batches(
-                marked_id,
-                bases=bases,
-                repair_children=repair_children,
-                inspection=inspection,
-            )
-            exact_split_batch = (
-                self._exact_committed_split_batch_for_route(
-                    marked_id,
-                    split_batches=split_batches,
-                    repair_children=repair_children,
-                )
-                if terminal is None
-                else None
-            )
-            exact_split_key = (
-                sha256_json([exact_split_batch])
-                if exact_split_batch is not None
-                else None
-            )
             # Distinct unresolved COW roots are independent Main attention
             # routes.  They must not collapse merely because both have no
-            # unique terminal.  Exact committed split batches may still share
-            # one package-facing entry; ordinary forks group only repeated
-            # marks of the same root.
+            # unique terminal.  Routine Fact work treats every historical
+            # multi-successor route as ordinary COW topology; it does not
+            # inspect or classify why the branch exists.
             generic_cow_root_key = (
-                marked_id
-                if terminal is None and exact_split_batch is None
-                else None
+                marked_id if terminal is None else None
             )
             key = (
                 terminal,
                 mark["campaign_id"],
                 mark["target_id"],
-                exact_split_key,
                 generic_cow_root_key,
             )
             grouped.setdefault(key, []).append(mark)
-            split_batches_by_mark[mark["mark_id"]] = split_batches
             route_candidates = self._candidate_cow_route_projection(
                 marked_id,
                 repair_children=repair_children,
@@ -3116,7 +2945,6 @@ class FactAlphaManager:
             route_details[mark["mark_id"]] = {
                 "terminal_research_id": terminal,
                 "route_invalidated_by": route_staleness.get(marked_id, []),
-                "exact_split_batches": split_batches,
                 **route_candidates,
             }
 
@@ -3125,16 +2953,10 @@ class FactAlphaManager:
             current_id,
             group_campaign,
             target_id,
-            exact_split_key,
             _generic_cow_root_key,
         ), marks in grouped.items():
             marks.sort(key=lambda item: (item["created_at"], item["mark_id"]))
             latest_mark = marks[-1]
-            exact_split_batches = (
-                split_batches_by_mark[latest_mark["mark_id"]]
-                if exact_split_key is not None
-                else []
-            )
             route_candidates = route_candidates_by_mark[
                 latest_mark["mark_id"]
             ]
@@ -3146,21 +2968,7 @@ class FactAlphaManager:
             research: dict[str, Any] | None = None
             interface_preparation: dict[str, Any] | None = None
             interface_diagnostics: dict[str, Any] | None = None
-            if exact_split_batches:
-                # The route is structurally known to branch as one committed
-                # split batch.  The packager chooses a predecessor-closed
-                # member route; Main does not repeat the mark or pick a child.
-                state = "needs_packager_route"
-                next_action = "fact-packager-route"
-                interface_preparation = {
-                    "state": "deferred_to_split_members",
-                    "packaging_mode": "fact_packager_select_split_members",
-                }
-                interface_diagnostics = {
-                    "source_count": 0,
-                    "diagnostic_sha256": sha256_json(exact_split_batches),
-                }
-            elif current_id is None:
+            if current_id is None:
                 # A Fact mark grants the packager authority to choose which
                 # existing COW branch is worth placing in a nontruth candidate
                 # package.  This does not change Campaign active heads or say
@@ -3305,32 +3113,26 @@ class FactAlphaManager:
                 projection = self._supervised_interface_projection(
                     research, coverage
                 )
+                projection_state = (
+                    "missing_or_legacy"
+                    if projection["state"] == "needs_split"
+                    else projection["state"]
+                )
                 interface_preparation = {
-                    "state": projection["state"],
+                    "state": projection_state,
                     "packaging_mode": (
                         "supervisor_ready_proposal"
-                        if projection["state"] == "ready"
-                        else "supervisor_split_recommendation"
-                        if projection["state"] == "needs_split"
+                        if projection_state == "ready"
                         else "human_interface_fallback"
-                        if projection["state"] == "missing_or_legacy"
+                        if projection_state == "missing_or_legacy"
                         else "main_reconciliation"
-                    ),
-                    **(
-                        {"rationales": projection["rationales"]}
-                        if projection["state"] == "needs_split"
-                        else {}
                     ),
                 }
                 interface_diagnostics = {
                     "source_count": projection["source_count"],
                     "diagnostic_sha256": projection["diagnostic_sha256"],
                 }
-                if projection["state"] == "needs_split":
-                    warnings.append("supervisor_recommends_statement_split")
-                    state = "needs_packager_route"
-                    next_action = "fact-packager-route"
-                elif projection["state"] in {"invalid", "conflicting"}:
+                if projection_state in {"invalid", "conflicting"}:
                     warnings.append(
                         "supervised_statement_interface_requires_reconciliation"
                     )
@@ -3363,11 +3165,6 @@ class FactAlphaManager:
                     for item in coverage
                 ],
                 "interface_preparation": interface_preparation,
-                "exact_split_batches": exact_split_batches,
-                "exact_split_batch_count": len(exact_split_batches),
-                "exact_split_batches_sha256": sha256_json(
-                    exact_split_batches
-                ),
                 **route_candidates,
                 **(
                     {
@@ -3980,8 +3777,6 @@ class FactAlphaManager:
             "next_action": (
                 "fact-verifier-capsule"
                 if package is not None
-                else "fact-package-seal-or-await-user-authorized-research-split"
-                if mechanical["state"] == "research_split_required"
                 else "fact-package-seal"
             ),
         }
@@ -4212,7 +4007,7 @@ class FactAlphaManager:
             if research_id in seen_research or research_id in blocked_seen:
                 raise ValueError("Fact Candidate repeats a blocked Research node")
             blocked_seen.add(research_id)
-            if item["status"] not in _BLOCKED_PACKAGING_STATUSES:
+            if item["status"] not in _PROSPECTIVE_BLOCKED_PACKAGING_STATUSES:
                 raise ValueError("Fact Candidate blocked status is invalid")
             blocked_entries.append(
                 {

@@ -278,7 +278,7 @@
         "conditional": true
       },
       "typed_handoff": {
-        "type_id": "chalxius-v5-campaign-scope-2",
+        "type_id": "chalxius-v5-campaign-scope-3",
         "validator_symbol": "mathgraph.campaigns.CampaignStore.history_summary"
       },
       "consumer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._validate_campaign_scope_binding",

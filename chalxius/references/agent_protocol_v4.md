@@ -3,14 +3,50 @@
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5
-> adaptation; the 1.0.5 override is authoritative for prospective work.
+> adaptation; the 1.0.7 override is authoritative for prospective work.
 
-> **1.0.5 split opt-in override.** `needs_split` is diagnosis and routing
-> advice only. A new schema-v3 split production is disabled until the user
-> explicitly authorizes the current exact Research/specification and Main uses
-> the one-shot `--user-authorized-split` choice. That choice is not stored or
-> replayed. Existing frozen split work remains readable; ordinary supervision
-> and one-to-one COW are unaffected.
+> **1.0.7 Campaign-attention continuity override.** One target may retain
+> several independent active heads. Planning one exact route retires only the
+> head rigidly replaced by that route; an unrelated completed parallel head
+> and its attached contexts remain visible until Main explicitly reconciles
+> them away. Context follows a unique replacement with its reason intact,
+> while real branching ambiguity remains unattached. This is a nontruth
+> working-memory rule, not mathematical closure or automatic selection.
+
+> **1.0.6 Campaign-overlay override.** Campaign membership is a many-to-many
+> nontruth projection on the one Research graph, never ownership. Any exact
+> same-project Research may be an ordinary member or carry independent target,
+> active-head, context, landmark, or recent-history roles in several
+> Campaigns. `metadata.campaign_id` is creation provenance only. Generic scoped
+> selection follows explicit goal/head successor corridors; explicit scoped
+> planning accepts any exact same-project Research and freezes a Campaign-side
+> member link. No Research, automatic-selection, package, or truth effect is
+> introduced.
+>
+> Dynamic frontier generation belongs to replaceable working state; an
+> optional manual checkpoint's local sequence does not stale or gate it. After
+> compaction/handoff, Main rereads live frontier, in-flight rounds, historical
+> landmarks, and material old Research and steps back to review the route. If
+> integrated repair or installation is active, this review resumes when
+> Research resumes. Before the next cut, bounded exact search and one explicit
+> attention disposition remain advisory Main practice, not a timer or gate.
+
+> **1.0.5 split-indifference override.** Routine proof/source supervision and
+> Fact packaging do not inspect, recommend, wait for, block on, or emit
+> `needs_split`. Historical split bytes and diagnoses remain readable but are
+> inert in routine frontier, readiness, and repair routing. An actual
+> source/proof defect returns to ordinary one-to-one COW, which may weaken,
+> reorganize, or narrow the same complete Research claim. The existing
+> low-level schema-v3 split path remains available only after an explicit
+> current user request and Main's one-shot `--user-authorized-split` choice;
+> that choice is not stored or replayed.
+>
+> Before every new Research cut, and again during context-compaction or handoff
+> recovery, Main runs a bounded exact Research search. A materially relevant
+> old match receives one explicit attention disposition: `reference_only`,
+> `attach_context`, `promote_landmark`, or `promote_active_head`. Chalxius does
+> not infer materiality, relevance, importance, or truth, and this attention
+> disposition is not an admission gate.
 
 > **1.0.4 coordination override.** A unique planned active-head successor
 > inherits exact head context; split ambiguity remains unattached. Context
@@ -25,19 +61,18 @@
 > frozen 0.x authority only. New certification starts from exact immutable
 > Research records, a packager-selected predecessor-closed package, one
 > independent Fact verifier decision, and Gateway Research certification.
-> Proof/source `ready` or `needs_split` is only a strong mechanical-path
-> recommendation. Planning returns a proposal and never seals; the packager may
-> seal a different interface or whole-node route. A requested split pauses Fact
-> work for a Research repair worker and the ordinary proof/source supervision
-> layer; no Fact-side split supervisor exists. Only bounded one-to-one
-> complete-node minor COW uses the historical same-verifier fast lane; split or
-> structural ambiguity returns to ordinary Research. The verifier reviews the
+> Proof/source `ready` or `needs_split` described here is frozen 1.0.3 history;
+> the 1.0.5 override above makes historical `needs_split` inert in routine work.
+> Planning returns a proposal and never seals; the packager may seal a different
+> interface or whole-node route. Only bounded one-to-one complete-node minor COW
+> uses the historical same-verifier fast lane; major mathematical or structural
+> ambiguity returns to ordinary Research. The verifier reviews the
 > complete records/interfaces/edges, and Gateway alone certifies. Candidate
 > Release and Candidate-adverse commands are procedurally reserved for an
 > explicitly selected 0.x completion/audit. The runtime does not authenticate
 > pre-1.0 provenance, and this policy adds no provenance or identity gate.
 
-> **Frozen-history boundary.** Except for the 1.0.5, 1.0.4, and 1.0.3 overrides above,
+> **Frozen-history boundary.** Except for the 1.0.7, 1.0.6, 1.0.5, 1.0.4, and 1.0.3 overrides above,
 > the remaining protocol is frozen versioned history. Later occurrences of
 > “current”, “prospective”, Candidate, or adverse describe the named older
 > contract and are not instructions for new 1.0.x Fact work.
@@ -364,11 +399,13 @@ technical Host remains the trusted dispatch adapter and gains no planner or
 background capability.
 
 When Main explicitly plans V5 with `--campaign ID`, the round manifest and each
-new card bind one `chalxius-v5-campaign-scope-2` envelope and its exact frozen
+new card bind one `chalxius-v5-campaign-scope-3` envelope and its exact frozen
 snapshot path/hash. Read its objective, active typed targets, constraints,
 value definition, stop conditions, and ordered history-prefix commitment as
-nontruth planning context. It does not copy event bodies; immutable scope-1
-cards remain readable without rewrite.
+nontruth planning context. It also freezes the selected Campaign-side member
+link without treating Research creation provenance as ownership. It does not
+copy event bodies; immutable scope-1 and scope-2 cards remain readable without
+rewrite.
 It never replaces the source Research dossier, chooses the work mode, closes
 the assignment, grants an undeclared filesystem capability, or changes Fact
 admission. Cards planned without the flag—including older cards that merely

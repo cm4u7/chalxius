@@ -1,10 +1,10 @@
-Chalxius 1.0.5 — Split Opt-In Repair
+Chalxius 1.0.7 — Campaign Attention Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.5 runtime coordinates Campaign working memory, asynchronous Fact route
+The 1.0.7 runtime coordinates Campaign working memory, asynchronous Fact route
 selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
@@ -21,25 +21,34 @@ becomes a silent first-N selection. Installation does not rewrite frozen project
 When one `plan-round` handoff uniquely replaces a head, its attached contexts
 follow that successor. Ambiguous multi-successor handoffs remain visibly
 unattached, and a later concrete attachment absorbs an older unattached copy.
+Other parallel heads remain active even when their own workflow is complete;
+planning one route never silently retires an unrelated attention centre.
+Campaign is a many-to-many nontruth overlay on the one Research graph, never
+node ownership or a planning gate. Any exact same-project Research may be an
+ordinary member of several Campaigns and hold independent target, head,
+context, landmark, or history roles in each. `metadata.campaign_id` is creation
+provenance only. Ordinary membership is derived from the existing Campaign
+event log, and `reference_only` assigns no attention role or truth effect.
 
 After context compaction or a real handoff, Main makes one compact maintenance
-judgment: rehydrate exact Campaign/Target, frontier, round, agent, return, and
-CHX state; finish visible handoffs without duplication; reconcile rigid
-Research COW/split lineage; curate recent attainment and sparse landmarks;
-step back across ancient landmarks and recent attainment to test the current
-route and active heads against the Campaign objective; choose the next Research
-cut after bounded exact search; inspect the Fact frontier; increment the
+judgment: reread the live frontier, in-flight rounds, historical landmarks, and
+material old Research; finish visible handoffs without duplication; reconcile
+rigid Research COW/split lineage; curate recent attainment and sparse
+landmarks; step back across ancient landmarks and recent attainment to test the
+current route and active heads against the Campaign objective; choose the next
+Research cut after bounded exact search; inspect the Fact frontier; increment the
 explicit `Fact window clock: n/4` only for this host-reported compaction; and at
 `4/4` assign one packager window of one or two packages to the first suitable
-available slot unless user-requested Fact deferral is active; and
-record only genuine operational architecture failures as CHX. Four and eight
+available slot unless user-requested Fact deferral is active. If an integrated
+repair or installation is active, delay the Research-recovery review until
+Research resumes; do not discard it. Four and eight
 are only summary previews, 64 protects only recent attainment, sparse landmarks
 have no count quota, and free agent slots are opportunities rather than quotas.
 Independently of compaction, Main performs the bounded exact Research search
 every time it freezes the next Research cut. Compaction or a real handoff adds
 rehydration, global rereading, and landmark curation; it is not the search clock.
-Every material match is placed durably as exact context of an active head or is
-promoted by Main to an active head, never left only in chat or temporary prose.
+Every material match receives exactly one Main disposition: `reference_only`,
+`attach_context`, `promote_landmark`, or `promote_active_head`.
 Post-compaction search uses the same placement rule; only search/reread scope is
 broader. Carry the exact clock value in every context-handoff summary and reset
 it to `0/4` only after a packager window completes. At `4/4`, explicit user
@@ -158,9 +167,11 @@ directory names are diagnostic only. The projection never switches branches,
 mutates a tree, or installs bytes.
 
 Default `mgraph frontier` is Main's compact decision surface. A Campaign
-`research_goal` keeps its exact same-Campaign Research root as immutable
-provenance, while Main's newest nontruth checkpoint supplies current work heads
-and attained boundaries. Completion of those heads does not close the semantic
+`research_goal` names any exact same-project Research root as a Campaign member
+and immutable direction anchor, while the replaceable working state supplies
+current work heads and attained boundaries. A manual checkpoint is optional
+historical advice with a local sequence distinct from the dynamic frontier
+generation. Completion of those heads does not close the semantic
 goal: it requests Main disposition or a new exact head. Only explicit archive
 removes the goal. No note dispatches, schedules, closes, or admits anything,
 and the unscoped workflow queue remains global.
@@ -170,8 +181,8 @@ through their existing provenance, receipt, kind, and exact lineage fields;
 relation strings remain concise Main context rather than a second capability
 vocabulary. A structured repair may use an exact Main synthesis trigger whose
 complete research-source set equals its related ids, so repaired review inputs
-do not remain parallel terminal challenges. Malformed, cross-Campaign,
-backward-time, ambiguous, incomplete-product, and unsupervised repair routes do
+do not remain parallel terminal challenges. Malformed, backward-time,
+ambiguous, incomplete-product, and unsupervised repair routes do
 not become completed work.
 
 `round-status` exposes the attacked source assignment and product ids on each
@@ -228,9 +239,10 @@ Campaign history remains append-only and has no routine length ceiling.
 frontier checkpoint, and a fixed recent event-summary tail; it has no paging
 or cursor mode. Exact older bytes remain in the Campaign ledger for targeted
 forensics. New checkpoints contain routing ids and concise disposition only.
-Campaign-scoped rounds freeze active semantics plus an exact history-prefix
-commitment, so later append is valid but prefix mutation is not. Repairs
-inherit the source Research Campaign in both the new Research and its round;
+Campaign-scoped rounds freeze active semantics, the selected Campaign-side
+member link, and an exact history-prefix commitment, so later append is valid
+but prefix mutation is not. Repair creation may inherit source provenance, but
+neither explicit planning nor successor projection treats it as membership;
 an unbound source never infers `ACTIVE`.
 
 Attained Campaign checkpoints now expose only exact, uncheckpointed terminal
@@ -238,8 +250,10 @@ production/supervision/COW successor routes to Main, with bounded ids plus full
 counts and digests. This view never updates a checkpoint or selects work.
 Checkpoint active heads are compared with the same exact successor graph.
 Stale heads, productive current routes, clean terminal review evidence, and a
-nonblocking refresh recommendation are shown separately; Main alone decides
-whether and how to write the next checkpoint. Ordinary Main `search` and
+nonblocking dynamic-frontier reconciliation recommendation are shown
+separately. It derives only from live state and exact semantic successor
+mismatch, never checkpoint presence or generation arithmetic; a manual
+checkpoint is optional. Ordinary Main `search` and
 `show` navigate exact immutable Research as well as verified Facts.
 An ingested product projects lifecycle action through its exact production
 root, and in-flight supervision remains attached to that stable root. Deep

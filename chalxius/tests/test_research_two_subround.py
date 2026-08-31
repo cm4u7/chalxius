@@ -2598,6 +2598,14 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     "supervisor_scope"
                 ]
                 by_scope[scope] = assignment
+                self.assertIn(
+                    "Routine supervision is split-indifferent",
+                    plan["content"],
+                )
+                self.assertIn(
+                    "Report only actual proof/source defects",
+                    plan["content"],
+                )
             self.assertEqual(
                 group["member_assignment_ids"],
                 [

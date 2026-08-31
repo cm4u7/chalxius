@@ -256,7 +256,7 @@ MUTANTS = (
         new="            if research_exists is None:  # mutant\n",
         test=(
             f"{CAMPAIGN_TEST_MODULE}."
-            "test_cli_research_goal_requires_the_exact_campaign_bound_root"
+            "test_cli_research_goal_is_many_to_many_same_project_link"
         ),
         target="mathgraph/campaigns.py",
     ),
@@ -430,54 +430,6 @@ MUTANTS = (
             "test_authoritative_source_uses_the_same_capability_predicate"
         ),
         target="mathgraph/v5_assurance.py",
-    ),
-    Mutant(
-        name="campaign_frontier_exact_match_bypassed",
-        old=(
-            "        for research_id, record in bases.items():\n"
-            "            if (\n"
-            "                campaign_id is not None\n"
-            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
-            "            ):\n"
-            "                continue\n"
-        ),
-        new=(
-            "        for research_id, record in bases.items():\n"
-            "            if False and (\n"
-            "                campaign_id is not None\n"
-            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
-            "            ):\n"
-            "                continue\n"
-        ),
-        test=(
-            f"{CAMPAIGN_TEST_MODULE}."
-            "test_explicit_frontier_scope_is_exact_and_active_pointer_is_not_implicit"
-        ),
-    ),
-    Mutant(
-        name="explicit_selection_campaign_exact_match_bypassed",
-        old=(
-            "        for research_id in research_ids:\n"
-            "            record = lineage[research_id]\n"
-            "            if (\n"
-            "                campaign_id is not None\n"
-            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
-            "            ):\n"
-            "                continue\n"
-        ),
-        new=(
-            "        for research_id in research_ids:\n"
-            "            record = lineage[research_id]\n"
-            "            if False and (\n"
-            "                campaign_id is not None\n"
-            "                and record[\"metadata\"].get(\"campaign_id\") != campaign_id\n"
-            "            ):\n"
-            "                continue\n"
-        ),
-        test=(
-            f"{CAMPAIGN_TEST_MODULE}."
-            "test_cross_campaign_explicit_selection_fails_before_round_write"
-        ),
     ),
     Mutant(
         name="campaign_active_pointer_becomes_implicit_v5_scope",
@@ -2669,7 +2621,8 @@ def main(argv: list[str] | None = None) -> int:
             "host exact-runtime entrypoint nonmutation, "
             "runtime-scan deduplication, CHX worker runtime rehash, pre-write round "
             "runtime preflight, fail-closed runtime cutover and automatic rollback, "
-            "explicit Campaign exact-match scope and frozen snapshot integrity, "
+            "explicit Campaign many-to-many membership, goal/head corridor "
+            "scope, and frozen snapshot integrity, "
             "public Paper and V5 worker-return interface reachability and diagnostics, "
             "Paper continuation ancestry, revised-writing authority, philosophy "
             "term review, verifier-visible evidence, "
@@ -2680,8 +2633,9 @@ def main(argv: list[str] | None = None) -> int:
             "verification, registry-wide cryptographic-identity, idempotent-"
             "registration, and cached-read authority integrity, project-wide "
             "freshness, Certification aggregate enforcement, Campaign worker-result "
-            "lineage, atomic Campaign-bound Research creation, exact frontier "
-            "selection receipts, and Main-visible attention projection, CHX "
+            "lineage, atomic Campaign-provenance Research creation, exact "
+            "membership-bearing frontier selection receipts, and Main-visible "
+            "attention projection, CHX "
             "revision-5 reconnaissance/tactical/integrated repair coverage and "
             "reusable-registry integrity, close/status parity, public-disclosure "
             "completeness and run namespace, content-addressed Paper-continuation "

@@ -2855,17 +2855,12 @@ def main(argv: list[str] | None = None) -> int:
             campaigns = store.campaigns()
             target_payload = _json_file(args.input)
 
-            def exact_campaign_research_exists(research_id: str) -> bool:
+            def exact_project_research_exists(research_id: str) -> bool:
                 try:
                     record = store.v5_lifecycle()._research_record(research_id)
                 except (KeyError, OSError, ValueError):
                     return False
-                metadata = record.get("metadata")
-                return (
-                    record.get("kind") != "disposition"
-                    and isinstance(metadata, dict)
-                    and metadata.get("campaign_id") == args.campaign_id
-                )
+                return record.get("kind") != "disposition"
 
             target_id = campaigns.target_add(
                 args.campaign_id,
@@ -2874,7 +2869,7 @@ def main(argv: list[str] | None = None) -> int:
                 fact_exists=lambda fact_id: (
                     fact_id in set(store.fact_ids())
                 ),
-                research_exists=exact_campaign_research_exists,
+                research_exists=exact_project_research_exists,
             )
             if campaigns.active() == args.campaign_id:
                 store.sync_active_campaign_targets(

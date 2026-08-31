@@ -401,7 +401,7 @@ class CampaignStore:
             if role == "research_goal":
                 raise ValueError(
                     "campaign research_goal targets must be added after "
-                    "Campaign creation so their exact Campaign-bound Research "
+                    "Campaign creation so their exact same-project Research "
                     "root can be checked"
                 )
             if (
@@ -543,7 +543,7 @@ class CampaignStore:
             if research_exists is None or not research_exists(subject_id):
                 raise ValueError(
                     "campaign research_goal target is not an exact "
-                    "Campaign-bound Research root"
+                    "same-project Research root"
                 )
         elif subject_kind not in COMMUNICATION_SUBJECT_KINDS:
             raise ValueError("campaign communication subject kind is invalid")

@@ -3739,6 +3739,13 @@ class MathGraphStore:
                 result["fact_id"] = object_id
             else:
                 result["research_id"] = object_id
+                # Exact search is both duplicate control and a chance to
+                # recover consequential older Research into Main's durable
+                # working memory.  The program cannot infer mathematical
+                # importance.  Keep each result compact; the frontier exposes
+                # the four existing choices once, while this flag only tells
+                # Main when that policy becomes relevant.
+                result["attention_disposition_required_if_material"] = True
             results.append(result)
             if len(results) >= limit:
                 break

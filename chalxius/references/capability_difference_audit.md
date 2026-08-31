@@ -1,15 +1,52 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.7 Campaign Attention Continuity difference
+
+The earlier handoff repair transferred context through a unique successor but
+still treated every completed parallel head as disposable whenever another
+route was planned. Version 1.0.7 makes the operation target-local and
+relation-local: only a head rigidly replaced by the current explicit selection
+is retired. Unrelated heads and their attached contexts remain visible until
+Main explicitly reconciles them, unique replacements carry exact context and
+reason, and genuine branching ambiguity stays unattached. The 1.0.6
+many-to-many Campaign overlay remains non-gating. No mathematical-completion
+inference, scheduler, compatibility layer, or truth effect is added.
+
+## 1.0.6 Campaign Overlay Repair difference
+
+Earlier Campaign scope treated immutable Research creation provenance as
+exclusive membership and reused it as a planning filter. Version 1.0.6 removes
+that second ownership boundary. Campaign membership is now an existing-event-
+derived, many-to-many nontruth overlay. One same-project Research may be an
+ordinary member of several Campaigns and carry different target, head,
+context, landmark, or history roles in each. `reference_only` records only the
+ordinary member link. Explicit scoped planning accepts any exact same-project
+Research and freezes the link; generic scoped selection remains bounded to the
+Campaign's explicit goal/head successor corridor. No Research is retagged and
+no project-wide member scan becomes an automatic dispatch pool.
+
+The replaceable frontier state retains the live dynamic generation. Optional
+manual checkpoint notes retain only their own local sequence and never stale or
+gate the live frontier. Post-compaction/handoff recovery rereads the live
+frontier, in-flight rounds, historical landmarks, and material old Research,
+steps back to review the route, then exact-searches and disposes material
+matches before the next cut. During active integrated repair or installation,
+that review is deferred until Research resumes. This adds no second graph,
+timer, scheduler, gate, Research effect, package effect, or truth effect.
+
 ## 1.0.5 Split Opt-In Repair difference
 
-Earlier schema-v3 split support treated a supervisor or packager recommendation
-as sufficient input for immediate repair planning, and an existing split repair
-could also enter ordinary production through `plan-round`. Version 1.0.5 keeps
-one split implementation but requires exact Research selection plus a current
-one-shot user opt-in at the common production boundary. The coupled repair
-planner uses the same policy before writing its repair node. Authorization is
-not transported through Research, cards, receipts, or replay. Fact-side
-`needs_split` remains diagnostic/manual and creates no second gate or worker.
+Earlier schema-v3 split support let supervisor and packager diagnosis enter
+routine repair and Fact routing. Version 1.0.5 makes ordinary proof/source
+supervision and Fact packaging split-indifferent: they do not inspect,
+recommend, wait for, block on, or emit `needs_split`, and frozen diagnoses are
+readable but inert in live projections. Actual defects return to one-to-one COW
+of the same complete Research claim. The existing low-level split
+implementation remains available only through exact Research selection and a
+current one-shot user opt-in; authorization is not transported through
+Research, cards, receipts, or replay. Exact search also exposes a single Main
+attention choice among reference-only, context, landmark, and active-head use
+for material old Research matches, without automatic semantic inference.
 
 ## 1.0.4 Frontier Context Handoff Repair difference
 
@@ -1714,13 +1751,15 @@ omit-instead-of-broaden quality rule and all nontruth boundaries.
 - previous-round campaign or novelty events, superseded Paper snapshots, stale
   Audit bases, sibling artifact paths, and unrelated pulse commitments must not
   close current work;
-- explicit Campaign scope must reject untagged or cross-Campaign Research before
-  round writes, preserve unscoped global ordering, and detect frozen-snapshot
-  damage or history truncation without invalidating later legitimate updates;
-- Campaign-bound Research creation must reject payload/flag conflicts, validate
-  before semantic identity, revalidate under the write lock, and preserve exact
-  Campaign lineage through worker-result ingestion; historical advisory bytes
-  must remain inert and have no public command alias;
+- explicit Campaign planning must accept any exact same-project Research,
+  create its Campaign-side member link, preserve unscoped global ordering, and
+  detect frozen-snapshot damage or history truncation without turning creation
+  provenance into a filter;
+- Campaign-provenance Research creation must reject payload/flag conflicts,
+  validate before semantic identity, revalidate under the write lock, and
+  preserve provenance through worker-result ingestion; provenance must remain
+  distinct from many-to-many membership, and historical advisory bytes must
+  remain inert and have no public command alias;
 - the release mutation audit must remain byte-exact under ordinary Python
   invocation and must derive, rather than assert, its pre/post nonmutation result;
 - release validators may run concurrently only in manifest-bound isolated lanes;

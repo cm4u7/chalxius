@@ -413,19 +413,21 @@ class SemanticRecovery0812Tests(unittest.TestCase):
         bases, ids = self._two_hop_chain()
         root, product, trigger, repair = ids[:4]
         negative_variants: list[dict[str, dict[str, object]]] = []
-        for mutate in ("wrong_product", "wrong_source", "campaign", "chronology"):
+        for mutate in ("wrong_product", "wrong_source", "chronology"):
             variant = copy.deepcopy(bases)
             if mutate == "wrong_product":
                 variant[repair]["metadata"]["repair_of_research_id"] = ids[-1]
             elif mutate == "wrong_source":
                 variant[repair]["source"] = f"research:{ids[-1]}"
-            elif mutate == "campaign":
-                variant[repair]["metadata"]["campaign_id"] = "campaign-ffffffffffff"
             else:
                 variant[repair]["created_at"] = "2026-01-01T00:00:02+00:00"
             negative_variants.append(variant)
-        for variant in negative_variants:
-            with self.subTest():
+        for mutate, variant in zip(
+            ("wrong_product", "wrong_source", "chronology"),
+            negative_variants,
+            strict=True,
+        ):
+            with self.subTest(mutate=mutate):
                 self.assertEqual(
                     V5LifecycleManager._frontier_cow_terminal_members(
                         seed_members=[root],
@@ -434,6 +436,19 @@ class SemanticRecovery0812Tests(unittest.TestCase):
                     )[root],
                     root,
                 )
+
+        cross_provenance = copy.deepcopy(bases)
+        cross_provenance[repair]["metadata"]["campaign_id"] = (
+            "campaign-ffffffffffff"
+        )
+        self.assertEqual(
+            V5LifecycleManager._frontier_cow_terminal_members(
+                seed_members=[root],
+                bases=cross_provenance,
+                route_staleness=self._two_hop_staleness(ids),
+            )[root],
+            ids[-1],
+        )
 
         ambiguous = copy.deepcopy(bases)
         other_repair = "b" * 12

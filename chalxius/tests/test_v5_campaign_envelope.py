@@ -86,6 +86,27 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
         ]
 
     @staticmethod
+    def _research_goal(
+        store: MathGraphStore,
+        campaign_id: str,
+        research_id: str,
+        label: str,
+    ) -> str:
+        with store.v5_mutation_lock(command="campaign-goal-fixture"):
+            return store.campaigns().target_add(
+                campaign_id,
+                {
+                    "role": "research_goal",
+                    "subject_kind": "research",
+                    "subject_id": research_id,
+                    "label": label,
+                },
+                actor="main",
+                fact_exists=lambda _fact_id: False,
+                research_exists=lambda item: item == research_id,
+            )
+
+    @staticmethod
     def _goal_coverage_with_actions(
         store: MathGraphStore,
         campaign_id: str,
@@ -354,6 +375,9 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             untagged = self._research(
                 store, "untagged", campaign_id=None, score=0.95
             )
+            self._research_goal(store, campaign_a, a_high, "A high")
+            self._research_goal(store, campaign_a, a_low, "A low")
+            self._research_goal(store, campaign_b, b_high, "B high")
 
             lifecycle = store.v5_lifecycle()
             unscoped = lifecycle.frontier(limit=10)
@@ -712,7 +736,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             self.assertEqual(relevance[first_head], "direct")
             self.assertEqual(relevance[second_head], "direct")
             self.assertNotIn(anchor_id, relevance)
-            self.assertIn(
+            self.assertNotIn(
                 anchor_id,
                 surface["unmapped_campaign_attention"][
                     "visible_research_ids"
@@ -729,7 +753,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             exact_id_entry = {
                 "research_id": anchor_id,
                 "claim": "Historical workgroup representative",
-                "campaign_id": campaign_id,
+                "research_creation_campaign_id": campaign_id,
                 "score": 0.9,
                 "readiness": 1.0,
                 "next_action": "supervision",
@@ -1111,59 +1135,37 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 goal["checkpoint_diagnostic_codes"],
             )
 
-    def test_checkpoint_recognizes_legacy_supervision_campaign_provenance(
+    def test_creation_campaign_provenance_does_not_define_membership(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
-            campaign_id = self._campaign(store, "legacy-supervision")
-            source_id = "1" * 12
-            plan_id = "2" * 12
-            result_id = "3" * 12
-            bases = {
-                source_id: {
-                    "metadata": {"campaign_id": campaign_id},
-                },
-                plan_id: {
-                    "kind": "challenge",
-                    "relation": "challenges",
-                    "related_research_ids": [source_id],
-                    "metadata": {
-                        "research_supervision": {
-                            "source_receipts": [
-                                {"result_research_id": source_id}
-                            ]
-                        }
-                    },
-                },
-                result_id: {
-                    "relation": "responds_to",
-                    "related_research_ids": [plan_id],
-                    "metadata": {
-                        "assignment_provenance": {
-                            "work_mode": "refute",
-                            "adverse_assignment": True,
-                        }
-                    },
-                },
-            }
-
+            created_under = self._campaign(store, "created-under")
+            linked_to = self._campaign(store, "linked-to")
+            research_id = self._research(
+                store,
+                "provenance-only",
+                campaign_id=created_under,
+                score=0.8,
+            )
             lifecycle = store.v5_lifecycle()
             self.assertEqual(
-                lifecycle._checkpoint_research_campaign_ids(
-                    result_id,
-                    bases,
-                ),
-                frozenset({campaign_id}),
+                lifecycle.campaign_membership_projection(created_under)[
+                    "member_research_ids"
+                ],
+                [],
             )
-
-            bases[plan_id]["related_research_ids"] = ["4" * 12]
+            self._research_goal(
+                store,
+                linked_to,
+                research_id,
+                "Reuse the exact old Research",
+            )
             self.assertEqual(
-                lifecycle._checkpoint_research_campaign_ids(
-                    result_id,
-                    bases,
-                ),
-                frozenset(),
+                lifecycle.campaign_membership_projection(linked_to)[
+                    "members"
+                ][0]["roles"],
+                ["member", "target"],
             )
 
     def test_checkpoint_diagnostics_expose_ambiguity_without_writing(self) -> None:
@@ -1302,13 +1304,12 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             self.assertLessEqual(len(diagnostics), 32)
             self.assertTrue(
                 {
-                    "checkpoint_generation_mismatch",
+                    "manual_checkpoint_sequence_mismatch",
                     "checkpoint_supersedes_mismatch",
                     "checkpoint_target_duplicate",
                     "checkpoint_target_missing",
-                    "checkpoint_attained_missing_or_cross_campaign",
+                    "checkpoint_attained_missing",
                     "checkpoint_main_disposition_nontext",
-                    "checkpoint_recovery_root_missing_or_cross_campaign",
                 }.issubset(codes)
             )
             supersedes = next(
@@ -1322,14 +1323,16 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 item["target_id"]: item for item in surface["goal_coverage"]
             }
             first = goals[first_target]
-            self.assertEqual(first["recovery_root_research_id"], first_anchor)
+            self.assertEqual(
+                first["recovery_root_research_id"], cross_campaign_id
+            )
             self.assertEqual(
                 first["recovery_root_source"],
-                "immutable_campaign_anchor_fallback",
+                "explicit_checkpoint_root",
             )
             self.assertEqual(
                 first["invalid_attained_checkpoint_research_ids"],
-                [missing_id, cross_campaign_id],
+                [missing_id],
             )
             self.assertEqual(first["checkpoint_main_disposition"], "")
 
@@ -1463,7 +1466,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             )
             self.assertEqual(scope["campaign_id"], campaign_id)
 
-    def test_cross_campaign_explicit_selection_fails_before_round_write(self) -> None:
+    def test_cross_campaign_explicit_selection_creates_member_links(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "project"
             store = self._store(root)
@@ -1475,20 +1478,46 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             research_b = self._research(
                 store, "b", campaign_id=campaign_b, score=0.8
             )
-            rounds_before = sorted(path.name for path in store.rounds_dir.iterdir())
-
-            with self.assertRaisesRegex(ValueError, f"Campaign {campaign_a}"):
-                store.v5_lifecycle().create_round(
-                    workers=2,
-                    research_ids=[research_a, research_b],
-                    campaign_id=campaign_a,
-                )
-
-            self.assertEqual(
-                sorted(path.name for path in store.rounds_dir.iterdir()),
-                rounds_before,
+            lifecycle = store.v5_lifecycle()
+            research_bytes = {
+                research_id: lifecycle._research_path(research_id).read_bytes()
+                for research_id in (research_a, research_b)
+            }
+            planned = lifecycle.create_production_round(
+                workers=2,
+                research_ids=[research_a, research_b],
+                campaign_id=campaign_a,
             )
-            self.assertEqual(list(store.rounds_dir.rglob("campaign.snapshot.json")), [])
+            self.assertEqual(
+                planned["campaign_scope"]["selection_policy"],
+                "explicit_campaign_overlay_membership",
+            )
+            receipt = planned["selection_receipt"]
+            self.assertEqual(
+                receipt["campaign_membership"]["member_research_ids"],
+                [research_a, research_b],
+            )
+            self.assertEqual(
+                lifecycle.campaign_membership_projection(campaign_a)[
+                    "member_research_ids"
+                ],
+                sorted([research_a, research_b]),
+            )
+            self.assertEqual(
+                lifecycle.campaign_membership_projection(campaign_b)[
+                    "member_research_ids"
+                ],
+                [],
+            )
+            self.assertEqual(
+                research_bytes,
+                {
+                    research_id: lifecycle._research_path(
+                        research_id
+                    ).read_bytes()
+                    for research_id in (research_a, research_b)
+                },
+            )
 
     def test_repair_inherits_exact_source_campaign_into_round_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1580,7 +1609,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 rounds_before,
             )
 
-    def test_unscoped_round_preserves_passive_campaign_association(self) -> None:
+    def test_unscoped_round_does_not_infer_membership_from_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")
             campaign_id = self._campaign(store, "passive")
@@ -1599,9 +1628,15 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(card["campaign_id"], campaign_id)
+            self.assertIsNone(card["campaign_id"])
             self.assertNotIn("campaign_scope", card)
             self.assertNotIn("campaign_scope", planned)
+            self.assertEqual(
+                store.v5_lifecycle().campaign_membership_projection(
+                    campaign_id
+                )["member_research_ids"],
+                [],
+            )
             stdout = StringIO()
             stderr = StringIO()
             with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -1618,7 +1653,10 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                     ]
                 )
             self.assertNotEqual(code, 0)
-            self.assertIn("explicitly scoped frozen Campaign", stderr.getvalue())
+            self.assertIn(
+                "not authorized by the frozen task card",
+                stderr.getvalue(),
+            )
 
     def test_campaign_snapshot_tamper_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1652,6 +1690,12 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 "cli",
                 campaign_id=campaign_id,
                 score=0.8,
+            )
+            self._research_goal(
+                store,
+                campaign_id,
+                research_id,
+                "CLI target corridor",
             )
 
             stdout = StringIO()
@@ -1700,7 +1744,7 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             self.assertEqual(code, 0, stderr.getvalue())
             self.assertEqual(json.loads(stdout.getvalue())["campaign_scope"]["campaign_id"], campaign_id)
 
-    def test_cli_research_goal_requires_the_exact_campaign_bound_root(
+    def test_cli_research_goal_is_many_to_many_same_project_link(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1770,10 +1814,19 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                         "main",
                     ]
                 )
-            self.assertNotEqual(code, 0)
-            self.assertIn(
-                "not an exact Campaign-bound Research root",
-                stderr.getvalue(),
+            self.assertEqual(code, 0, stderr.getvalue())
+            other_target_id = json.loads(stdout.getvalue())["target_id"]
+            self.assertEqual(
+                store.campaigns().status(other_campaign_id)["targets"][
+                    other_target_id
+                ]["subject_id"],
+                research_id,
+            )
+            self.assertEqual(
+                store.v5_lifecycle().campaign_membership_projection(
+                    other_campaign_id
+                )["members"][0]["roles"],
+                ["member", "target"],
             )
 
     def test_campaign_cli_help_and_update_error_expose_exact_input_contract(self) -> None:

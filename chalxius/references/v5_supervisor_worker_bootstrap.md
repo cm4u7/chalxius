@@ -240,28 +240,23 @@ complete attacked Research claim and its explicit load-bearing certified
 Research predecessors. This is optional prospective work, not another
 supervision obligation or a condition for a valid return. It is the strong
 recommendation for an automatic/mechanical package proposal, not final
-Fact-package authority. Omit it rather than guess when the product needs
-statement splitting, has an unresolved defect, or the predecessor surface is
+Fact-package authority. Omit it rather than guess when the product has an
+unresolved defect or the predecessor surface is
 not explicit. Older products and omitted interfaces remain available to a
 later human/agent packager.
 
-Every proof-logic or source-scope review must also decide whether each attacked
-Research product is one coherent statement surface. Record the result in the
-ordinary report as `coherent`, `needs_split`, or `undetermined`, with reasons.
-This is an expensive backstop: ordinary production should already keep one
-independently stateable load-bearing claim per node. When splitting is needed,
-emit `needs_split` in the interface artifact and make its rationale a combined
-repair brief covering the surface allocation and every proof/source defect
-found in the same review. Main should freeze those exact reports and source
-capabilities as a precise option, but `needs_split` does not authorize or start
-the repair. Only after a current explicit user request may Main bind exact
-Research ids/specification and use the one-shot `--user-authorized-split`
-choice to create one repair task for one repair worker; the repaired products
-then receive a fresh whole-product supervision pass. This does not require a
-different supervisor identity: the same author-independent supervisor may be
-reused when it reviews all new bytes and all possible defects, rather than only
-checking the earlier findings. Prior findings are mandatory but
-non-exhaustive attack seeds, never the complete review checklist.
+Routine proof-logic and source-scope review is split-indifferent. Do not inspect
+whether a Research product should be divided, do not recommend or emit
+`needs_split`, and do not turn claim breadth into a second review obligation.
+Report only actual proof/source defects inside the requested scope. A later
+ordinary one-to-one COW may weaken, reorganize, or narrow the same top-level
+claim while returning one complete successor. That successor receives a fresh
+whole-product supervision pass. This does not require a different supervisor
+identity: the same author-independent supervisor may be reused when it reviews
+all new bytes and all possible defects, rather than only checking the earlier
+findings. Prior findings are mandatory but non-exhaustive attack seeds, never
+the complete review checklist. Historical `needs_split` bytes remain readable
+but have no live frontier, readiness, packaging, or repair effect.
 
 The optional file has this exact schema:
 
@@ -288,25 +283,12 @@ The optional file has this exact schema:
 ```
 
 Use `disposition="ready"` only with a complete valid `statement_interface`.
-When the supervisor judges that one Research node mixes materially different
-claim strengths or is not mechanically ready as a whole, use
-`disposition="needs_split"`, give a precise rationale, and set
-`statement_interface` to `null`. That explicit disposition recommends Research
-split/COW and blocks only the automatic mechanical proposal; it is not a Fact
-rejection, a transfer of package authority, or split-execution authorization. The
-`needs_split` rationale is also the repair brief: identify the separable
-successor claim surfaces, their shared assumptions, intended predecessor
-allocation, and which parts of the old product remain open or are abandoned.
-Do not satisfy this requirement by suggesting a mechanical prose cut. The
-source/proof supervisor owns Research review and automatic-interface advice,
-not the final Fact package. A later `fact-packager` may accept the recommendation
-or, in one frozen nontruth package seal, propose an alternative complete
-six-field interface or whole-node route despite `needs_split`; it may instead
-request Research COW/split. An actual split pauses packaging: a Research repair
-worker is planned only after a current explicit user request and exact one-shot
-split authorization, then produces the complete committed batch and this ordinary proof/source
-supervision layer reviews it before packaging resumes. There is no Fact-side
-split supervisor. The independent Fact verifier must then review the
+When an actual defect prevents a ready interface, record that defect in the
+ordinary supervision report and omit the optional artifact. The source/proof
+supervisor owns Research review and automatic-interface advice, not the final
+Fact package. A later `fact-packager` may supply an alternative complete
+six-field interface or whole-node route, or leave the route ordinarily blocked;
+it does not evaluate statement splitting. The independent Fact verifier reviews the
 complete capsule—every exact Research record, selected node/interface, and all
 dependency edges—regardless of who proposed the interface. Gateway alone
 certifies. After an actual split or ordinary Research COW, every new Research
@@ -314,8 +296,8 @@ product receives a fresh ordinary whole-product supervision pass; its interfaces
 are again mechanical-path recommendations, and the same author-independent
 supervisor identity may be reused. The only exception is the historical bounded
 one-to-one complete-node minor-COW lane, which returns the entire affected
-component to the same Fact verifier. Any split or structural ambiguity is
-ineligible for that exception and stays on the ordinary Research route.
+component to the same Fact verifier. Any structural ambiguity is ineligible for
+that exception and stays on the ordinary Research route.
 
 When the frozen attacked receipt is the owner of a committed
 `research_split_batch`, treat the exact committed member set as one whole
@@ -328,7 +310,7 @@ for omitted relations, and decide the complete final relation set. For a
 current proof-logic split review the `fact_statement_interfaces` artifact is
 required, must use contract revision
 `chalxius-supervised-statement-interfaces-2`, and must contain one exact
-`ready` or `needs_split` entry for every committed successor Research id plus
+`ready` interface or `blocked` actual-defect entry for every committed successor Research id plus
 one `split_relation_reviews` entry for every committed batch. A relation review
 binds the batch id and proposed-relation hash, gives the final complete relation
 set and its hash, and explains completeness. The supervisor may confirm,
@@ -337,8 +319,8 @@ final `proof_dependency` relations must equal its
 `certified_predecessor_research_ids`; final `context` relations remain
 navigation only. Never return a partial member set or relation review.
 
-Source scope still decides whether every successor is a coherent statement
-surface, but its relation authority is limited to external-source identity,
+Source scope does not decide whether a successor should be split. Its relation
+authority is limited to external-source identity,
 exact extraction, the source's literal hypotheses/qualifiers/conventions, and
 coverage. It checks member-external
 source/context relations within that boundary and reports omissions; it does
