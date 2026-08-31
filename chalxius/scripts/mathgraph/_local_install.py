@@ -147,6 +147,7 @@ def default_focused_test_runner(root: Path) -> None:
             "test_chx_0811_agent_judgment_integrity.AgentJudgmentIntegrity0811Tests",
             "test_chx_0812_semantic_recovery.SemanticRecovery0812Tests",
             "test_chx_089_frontier_reliability.FrontierReliability089Tests",
+            "test_chx_084_batch_round_status.CHX084BatchRoundStatusTests",
             "test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests",
             "test_chx_090_frontier_active_fix.FrontierActiveFix090Tests",
             "test_chx_093_integrated_cleanup.IntegratedCleanup093Tests",
@@ -170,7 +171,7 @@ def default_focused_test_runner(root: Path) -> None:
             "test_release_validation.ReleaseValidationTests",
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."
-                "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"
+                "test_failure_informed_assurance_removes_same_scope_integration_and_omits_unused_blackboard"
             ),
             (
                 "test_research_two_subround.ResearchTwoSubroundTests."

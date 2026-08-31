@@ -2067,7 +2067,7 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             ]
             self.assertEqual(len(binding["source_receipts"]), 2)
 
-    def test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard(
+    def test_failure_informed_assurance_removes_same_scope_integration_and_omits_unused_blackboard(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2097,17 +2097,15 @@ class ResearchTwoSubroundTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            query = first_card["context_selection"]["blackboard"]["query"]
-            self.assertEqual(
-                (query["max_hops"], query["node_budget"], query["edge_budget"]),
-                (0, 1, 0),
-            )
+            blackboard = first_card["context_selection"]["blackboard"]
+            self.assertEqual(blackboard["source"], "none")
+            self.assertIsNone(blackboard["query"])
+            self.assertIsNone(blackboard["snapshot_id"])
             self.assertEqual(
                 first_card["mathematical_state"]["write_space_ids"], []
             )
             self.assertEqual(
-                first_card["mathematical_state"]["read_space_ids"],
-                query["seed_node_ids"],
+                first_card["mathematical_state"]["read_space_ids"], []
             )
             for assignment in planned["assignments"]:
                 self._ingest_plain_assignment(store, planned, assignment)

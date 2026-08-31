@@ -389,7 +389,7 @@
       ]
     },
     "cap.campaign_frontier": {
-      "summary": "Campaign envelopes, atomic Research binding, exact active heads/context/landmarks, one bounded exact Research search before every next-cut freeze, and judgment-led post-compaction maintenance across handoffs, rigid lineage, mathematical curation, optional Fact windows, and CHX observation. Every material match is attached by exact Research id as active-head context or promoted by Main to an active head, never left only in temporary prose. Compaction adds rehydration/global reread/landmark curation and broader search/reread scope, but uses the same placement rule and is not the search clock. Sparse landmarks have no count quota and grow with the Research graph; routine output previews eight with exact total count/digest and full diagnostic ids. The distinct recent queue uses 64 only as a high-water guard and previews four; slots are not quotas.",
+      "summary": "Campaign envelopes, atomic Research binding, exact active heads/context/landmarks, one bounded exact Research search before every next-cut freeze, and judgment-led maintenance across handoffs and one approximately 50-minute Main heartbeat. A heartbeat skips project reads and mutations while the current task is visibly in integrated repair, validation, installation, publication, or pre-Research-resumption reconciliation, without a project lock or repair state machine. Every material match receives an explicit nontruth attention role. Routine output retains all heads and previews four contexts, recent items, and oldest/newest landmarks with complete counts/digests; all bounded data has a diagnostic or exact drill-down. Ordinary full head lists preserve omissions, while exact add/retire operations change attention without truth effect. The distinct recent queue uses 64 only as a high-water guard; slots are not quotas.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -407,6 +407,7 @@
         "tests/test_chx_093_integrated_cleanup.py",
         "tests/test_chx_094_campaign_history_compaction.py",
         "tests/test_chx_095_terminal_frontier_context.py",
+        "tests/test_chx_084_batch_round_status.py",
         "tests/test_chx_098_plan_round_frontier_state.py"
       ],
       "activation_paths": [
@@ -445,7 +446,7 @@
       ]
     },
     "cap.blackboard": {
-      "summary": "Typed cumulative Blackboard objects, transactions, snapshots, projections and explicit indices; prospective V5 Research defaults to one root node and zero writes until an exact promoted query or write capability is requested.",
+      "summary": "Typed cumulative Blackboard objects, transactions, snapshots, projections and explicit indices; ordinary prospective V5 Research binds no snapshot, while an exact promoted query or write-space capability binds one explicitly and historical frozen snapshots remain readable.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -460,7 +461,8 @@
       ],
       "tests": [
         "tests/test_v4_blackboard_projection_and_opaque.py",
-        "tests/test_v4_bound_worker_queries.py"
+        "tests/test_v4_bound_worker_queries.py",
+        "tests/test_chalxius_044_context.py"
       ],
       "activation_paths": [
         {

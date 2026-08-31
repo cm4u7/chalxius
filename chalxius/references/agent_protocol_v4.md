@@ -3,7 +3,15 @@
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5
-> adaptation; the 1.0.8 override is authoritative for prospective work.
+> adaptation; the 1.0.9 override is authoritative for prospective work.
+
+> **1.0.9 Working Memory Maintenance override.** Main's routine working-memory
+> projection keeps exact complete identities while bounding expansion; head
+> omission is additive rather than destructive, and zero-argument round
+> recovery deeply validates only unresolved candidates. An ordinary new V5
+> round binds no Blackboard snapshot and uses exact null snapshot projections;
+> a promoted query or explicit write-space request binds one bounded snapshot,
+> while historical frozen cards retain exact validation.
 
 > **1.0.8 bounded Campaign-membership override.** Main's routine frontier
 > receives the complete Campaign-member count and identity digest plus at most
@@ -569,12 +577,12 @@ revision, hash, and family id. Pre-0.7.0 revision-2 supervision records without
 that additional nontruth provenance remain readable without backfill and retain
 their original exact supervision validation.
 
-For prospective 0.7.0-or-later planning, the default Blackboard capability freezes only
-one root-space node and grants zero write spaces. Larger reads require a promoted
-query, and writes require an explicit space capability. Historical wide
-snapshots remain valid. Public V5 `pulse-plan` is retired; operations needed to
-inspect or finish already-created Pulse records remain available, and V4 keeps
-its historical contract.
+For prospective current V5 planning, ordinary Research freezes no Blackboard
+snapshot and grants no read or write space. A promoted query or explicit
+write-space capability binds the exact bounded snapshot needed by that round.
+Historical root or wide snapshots remain valid and byte-exact. Public V5
+`pulse-plan` is retired; operations needed to inspect or finish already-created
+Pulse records remain available, and V4 keeps its historical contract.
 
 Candidate preflight derives the exact applicable scopes for every selected
 constructive production result and requires one live completed ingested result

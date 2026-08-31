@@ -2534,18 +2534,26 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "round-status":
-            if bool(args.round_id) == bool(args.all_rounds):
+            if args.round_id and args.all_rounds:
                 raise ValueError(
-                    "round-status requires exactly one ROUND_ID or --all"
+                    "round-status accepts either one ROUND_ID or --all"
                 )
             if store.workflow_evidence_version() == 5:
                 if args.all_rounds:
                     _print_json(store.v5_lifecycle().round_statuses())
-                else:
+                elif args.round_id:
                     _print_json(
                         store.v5_lifecycle().round_status(args.round_id)
                     )
+                else:
+                    _print_json(
+                        store.v5_lifecycle().round_attention_statuses()
+                    )
             else:
+                if not args.round_id and not args.all_rounds:
+                    raise ValueError(
+                        "V1-V4 round-status requires one ROUND_ID or --all"
+                    )
                 if args.all_rounds:
                     round_ids = sorted(
                         path.parent.name

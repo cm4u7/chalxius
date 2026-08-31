@@ -75,21 +75,26 @@ Snapshot identity depends on the deterministic current projection and query, not
 order. `supersedes` and `closes` deactivate their targets from the current node/edge projection;
 `retracts_placement` removes that placement from the current layout. Their immutable objects and
 events remain visible through history. Edges incident to an inactive current endpoint are excluded.
-Every assignment in one round binds the same snapshot id and byte hash.
+Every assignment in a round that explicitly uses Blackboard binds the same
+snapshot id and byte hash.
 
-For prospective V5 Research planned by Chalxius 0.7.0, the implicit query is
-only the project root-space identity: `max_hops=0`, one node, zero edges. The
-implicit write-space list is empty. A larger read requires an exact promoted
-query; mutation requires an explicitly requested space capability. Historical
-cards retain their frozen wider snapshots and write capabilities. This default
-does not delete Blackboard state, Paper mirrors, promotions, snapshots, or
+Prospective ordinary V5 Research has no implicit Blackboard query or snapshot.
+Its card, assignment, manifest, and return contract carry exact `null`
+snapshot bindings, with empty read/write space lists. An exact promoted query
+or an explicitly requested write-space capability creates and binds one
+bounded snapshot for that round. Historical cards retain their frozen root or
+wider snapshots and write capabilities and are validated against those exact
+bytes. This removes the unused per-round default snapshot ceremony without
+deleting Blackboard state, Paper mirrors, promotions, explicit snapshots, or
 Learner mounts.
 
 New public V5 Pulse planning is retired because the production/supervision
 cycle owns prospective Research collaboration. V4 Pulse and operations needed
 to inspect or finish an already-created record remain compatible. They preserve
 their original immutable commitments and receipts and do not become Fact
-authority.
+authority. A historical V5 Pulse operation can create a new compatibility
+commitment only from a round that explicitly bound a Blackboard snapshot; an
+ordinary snapshot-free round is not retrofitted after freeze.
 
 ## Merge and conflicts
 

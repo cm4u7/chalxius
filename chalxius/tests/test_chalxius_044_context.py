@@ -214,6 +214,95 @@ class Chalxius044ContextTests(unittest.TestCase):
             self.assertIn("After context compaction", prompt)
             self.assertIn("project-background-read", prompt)
 
+    def test_ordinary_round_omits_blackboard_and_explicit_write_binds_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "v5-optional-blackboard")
+            lifecycle = store.v5_lifecycle()
+            board = store.blackboard()
+            snapshots_before = sorted(board.snapshots_dir.glob("bbs-*"))
+
+            ordinary = lifecycle.add_research(
+                {"kind": "proof_attempt", "claim": "Prove without Blackboard."},
+                actor="host",
+            )
+            ordinary_round = lifecycle.create_round(
+                workers=1,
+                research_ids=[ordinary["research_id"]],
+            )
+            ordinary_path, ordinary_card = self._card(store, ordinary_round)
+            ordinary_assignment = ordinary_round["assignments"][0]
+            self.assertEqual(sorted(board.snapshots_dir.glob("bbs-*")), snapshots_before)
+            self.assertEqual(
+                ordinary_card["context_selection"]["blackboard"]["source"],
+                "none",
+            )
+            self.assertNotIn(
+                "task_specific_blackboard_snapshot",
+                ordinary_card["context_selection"]["precedence"],
+            )
+            self.assertIsNone(ordinary_card["blackboard_view"]["snapshot_id"])
+            self.assertIsNone(ordinary_card["blackboard_view"]["snapshot_sha256"])
+            self.assertEqual(
+                ordinary_card["mathematical_state"]["read_space_ids"], []
+            )
+            self.assertEqual(
+                ordinary_card["mathematical_state"]["write_space_ids"], []
+            )
+            self.assertIsNone(ordinary_assignment["blackboard_snapshot_id"])
+            self.assertIsNone(ordinary_assignment["blackboard_snapshot_sha256"])
+            lifecycle.validate_task_card(ordinary_card, expected_path=ordinary_path)
+            lifecycle._round_manifest(ordinary_round["round_id"])
+
+            space_id = next(
+                node_id
+                for node_id, node in board.current_nodes().items()
+                if node["node_type"] == "space"
+            )
+            tampered_ordinary = copy.deepcopy(ordinary_card)
+            tampered_ordinary["mathematical_state"]["read_space_ids"] = [space_id]
+            tampered_semantic = {
+                key: value
+                for key, value in tampered_ordinary.items()
+                if key != "task_card_semantic_sha256"
+            }
+            tampered_ordinary["task_card_semantic_sha256"] = sha256_json(
+                tampered_semantic
+            )
+            with self.assertRaisesRegex(ValueError, "space capabilities drifted"):
+                lifecycle.validate_task_card(tampered_ordinary)
+
+            explicit = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Use one explicit Blackboard workspace.",
+                    "blackboard_write_space_ids": [space_id],
+                },
+                actor="host",
+            )
+            explicit_round = lifecycle.create_round(
+                workers=1,
+                research_ids=[explicit["research_id"]],
+            )
+            explicit_path, explicit_card = self._card(store, explicit_round)
+            self.assertEqual(
+                explicit_card["context_selection"]["blackboard"]["source"],
+                "explicit_write_spaces",
+            )
+            self.assertEqual(
+                explicit_card["mathematical_state"]["read_space_ids"], [space_id]
+            )
+            self.assertEqual(
+                explicit_card["mathematical_state"]["write_space_ids"], [space_id]
+            )
+            self.assertIsNotNone(explicit_card["blackboard_view"]["snapshot_id"])
+            self.assertEqual(
+                len(sorted(board.snapshots_dir.glob("bbs-*"))),
+                len(snapshots_before) + 1,
+            )
+            lifecycle.validate_task_card(explicit_card, expected_path=explicit_path)
+            lifecycle._round_manifest(explicit_round["round_id"])
+
     def test_l1_promoted_query_and_l2_mode_hint_are_exact_and_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "v5"

@@ -377,7 +377,7 @@ field specified by `v5_worker_return_contract.md`; current cards never add it.
   "assignment_id": "COPY_FROM_CARD",
   "worker_id": "COPY_FROM_CARD",
   "task_card_sha256": "COPY_FROM_PROMPT_OR_ROUND_STATUS",
-  "blackboard_snapshot_sha256": "COPY_FROM_CARD",
+  "blackboard_snapshot_sha256": null,
   "outcome": "evidence",
   "claim": "One precise bounded supervision conclusion.",
   "content": "The attack result and explicit limitations.",
@@ -410,6 +410,10 @@ field specified by `v5_worker_return_contract.md`; current cards never add it.
   }
 }
 ```
+
+The shown `null` is the ordinary current value. If the frozen card explicitly
+binds Blackboard, replace it with that exact hash string; never synthesize a
+snapshot or hash during supervision.
 
 When the optional interface file is produced, append its path/hash/role object
 to `artifacts`; do not change the required report witness or top-level schema.

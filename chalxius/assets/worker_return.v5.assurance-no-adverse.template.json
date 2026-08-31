@@ -7,7 +7,7 @@
     }
   ],
   "assignment_id": "COPY_FROM_TASK_CARD",
-  "blackboard_snapshot_sha256": "COPY_FROM_TASK_CARD",
+  "blackboard_snapshot_sha256": null,
   "claim": "One precise Research claim.",
   "computation_manifest": null,
   "content": "The bounded argument and its explicit limitations.",

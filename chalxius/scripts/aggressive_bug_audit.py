@@ -380,7 +380,7 @@ MUTANTS = (
         ),
         test=(
             f"{RESEARCH_TWO_SUBROUND_TEST_MODULE}."
-            "test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard"
+            "test_failure_informed_assurance_removes_same_scope_integration_and_omits_unused_blackboard"
         ),
     ),
     Mutant(

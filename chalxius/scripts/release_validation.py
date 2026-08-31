@@ -214,6 +214,7 @@ def _default_lanes(python: str, *, forensic: bool = False) -> tuple[Lane, ...]:
                     "tests.test_architecture_reconnaissance",
                     "tests.test_chx_0812_semantic_recovery",
                     "tests.test_chx_089_frontier_reliability",
+                    "tests.test_chx_084_batch_round_status",
                     "tests.test_chx_098_plan_round_frontier_state",
                     "tests.test_chx_090_frontier_active_fix",
                     "tests.test_v5_campaign_envelope",

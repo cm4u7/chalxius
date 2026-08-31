@@ -35,7 +35,7 @@
       "classification": "normal_flow",
       "lifecycle_decision": "retain_and_integrate",
       "required": true,
-      "summary": "Routine Campaign frontier bounds the complete nested goal projection and carries up to sixteen Main-selected active heads through legacy checkpoint read, current state, plan-round, reconcile, and compact mathematical/action projection. Sparse historical landmarks have no count quota and grow with the Research graph; routine output previews eight with exact total count and identity digest while diagnostic state retains every id and reason.",
+      "summary": "Routine Campaign frontier bounds the complete nested goal projection and carries up to sixteen Main-selected active heads through legacy checkpoint read, current state, plan-round, reconcile, and compact mathematical/action projection. Context, recent attainment, and sparse historical landmarks retain complete counts and identity digests while routine output expands four concrete examples and diagnostic state retains every id, reason, and full record.",
       "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.frontier_decision_surface",
       "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.campaign_goal_coverage",
       "activation_predicate": {
@@ -51,12 +51,40 @@
       "observable_effect": {
         "effect_id": "routine_frontier_bounds_goals_and_deduplicates_head_representation",
         "kind": "routing",
-        "description": "Routine output stops at the requested goal limit and keeps every one of up to sixteen Main-selected heads, each with a decision-useful mathematical claim, scope, current-route Research id, next action, and exact actionable Research/round id. It previews at most eight sparse landmarks while carrying their exact total count and identity digest; diagnostic output retains the complete unbounded landmark id/reason set without repeating forensic route, terminal, evidence, hash, empty-field, or synonymous-state detail."
+        "description": "Routine output stops at the requested goal limit and keeps every one of up to sixteen Main-selected heads, each with a decision-useful mathematical claim, scope, current-route Research id, next action, and exact actionable Research/round id. It previews four context, recent-history, and oldest/newest landmark items while carrying exact total counts and identity digests; diagnostic output retains the complete sets without repeating them on the routine surface."
       },
       "probes": {
         "positive": "tests.test_chx_098_plan_round_frontier_state.PlanRoundFrontierStateTests.test_sixteen_heads_survive_checkpoint_reconcile_and_plan_projection",
         "predicate_false": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_active_goal_hint_does_not_filter_the_global_workflow_queue",
         "tamper": "tests.test_v5_campaign_envelope.V5CampaignEnvelopeTests.test_campaign_snapshot_tamper_fails_closed"
+      }
+    },
+    "feature.active_round_attention_recovery": {
+      "classification": "normal_flow",
+      "lifecycle_decision": "retain_and_integrate",
+      "required": true,
+      "summary": "Zero-argument round status discovers every round identity but deep-validates only unresolved candidates, while exact-id and --all keep authoritative deep validation.",
+      "production_entry_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.round_attention_statuses",
+      "producer_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager._round_manifest_attention_envelope",
+      "activation_predicate": {
+        "predicate_id": "main_requests_round_status_without_exact_round_id",
+        "domain": ["structurally_settled", "active_candidate", "unreadable_candidate"],
+        "conditional": true
+      },
+      "typed_handoff": {
+        "type_id": "chalxius-v5-active-round-attention-recovery-1",
+        "validator_symbol": "mathgraph.v5_lifecycle.V5LifecycleManager.round_attention_statuses"
+      },
+      "consumer_symbol": "mathgraph.cli.main",
+      "observable_effect": {
+        "effect_id": "active_rounds_visible_without_historical_deep_scan",
+        "kind": "routing",
+        "description": "Main receives exact active round ids and bounded assignment states plus explicit unreadable diagnostics; structurally settled history is never claimed fully validated by this view."
+      },
+      "probes": {
+        "positive": "tests.test_chx_084_batch_round_status.CHX084BatchRoundStatusTests.test_round_status_without_id_returns_only_active_attention",
+        "predicate_false": "tests.test_chx_084_batch_round_status.CHX084BatchRoundStatusTests.test_round_status_all_cli_returns_the_authoritative_batch_projection",
+        "tamper": "tests.test_chx_084_batch_round_status.CHX084BatchRoundStatusTests.test_batch_ignores_private_staging_and_reports_malformed_visible_dir"
       }
     },
     "feature.semantic_direct_source_capability_role": {
@@ -810,7 +838,7 @@
         "description": "Only role, artifact, and outcome-applicable supervisors are planned; integration requires distinct primary scopes, and every selected supervisor binds the exact static registry hash and family id."
       },
       "probes": {
-        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard",
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_omits_unused_blackboard",
         "predicate_false": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_interpretive_insight_does_not_receive_a_blanket_proof_supervisor",
         "tamper": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_tamper_fails_closed"
       }
@@ -838,7 +866,7 @@
         "description": "The generated supervision prompt selects one manifest-bound compact bootstrap; ordinary production keeps the full public worker contract, conditional broad protocols fail closed, and exact return, runtime, CHX, Candidate, verifier, Certification, Gateway, and Fact boundaries remain unchanged."
       },
       "probes": {
-        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_defaults_to_minimal_blackboard",
+        "positive": "tests.test_research_two_subround.ResearchTwoSubroundTests.test_failure_informed_assurance_removes_same_scope_integration_and_omits_unused_blackboard",
         "predicate_false": "tests.test_v5_lifecycle.V5LifecycleTests.test_public_v5_worker_return_template_and_diagnostics_are_executable",
         "tamper": "tests.test_runtime_archive.RuntimeArchiveTests.test_original_bound_root_rehashes_every_manifest_entry"
       }

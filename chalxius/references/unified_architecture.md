@@ -1,5 +1,31 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.9 Working Memory Maintenance override.** Routine Campaign projection
+> retains every active head and supervision scope while expanding only four
+> contexts, four recent attainments, and four oldest/newest landmarks; complete
+> counts and digests identify the stored sets and `--diagnostic` remains full.
+> A maintenance run must expand the complete set when a count exceeds its
+> preview. Zero-argument `round-status` discovers every round identity cheaply
+> but deep-validates only unresolved candidates; exact-id and `--all` behavior
+> is unchanged. Ordinary full head lists are additive and preserve omissions;
+> `add_head` and disposition-bearing `retire_active_head` are the prospective
+> attention operations, while exact replacement is confined to malformed-state
+> recovery. Main maintains exactly one approximately 50-minute project/thread
+> heartbeat for all targets and complete sparse-landmark identity, never for
+> Research/Fact dispatch or worker liveness. Pausing it affects future triggers
+> only. A trigger that sees the current task in integrated repair, candidate
+> validation, local installation, publication, or pre-Research-resumption
+> reconciliation exits `DONT_NOTIFY` before any Campaign/Research read or
+> mutation and leaves the heartbeat active for the next phase check. This is
+> current-task Main judgment, not a project lock, sentinel, repair state
+> machine, or agent interruption. Every routine summary of context, history, membership, workflow,
+> supervision, Research, or rounds retains exact ids/count/digest and a direct
+> diagnostic or exact read; preview absence has no selection meaning. All
+> effects are nontruth attention. Ordinary new V5 rounds bind no Blackboard
+> snapshot and carry exact null id/hash projections; only a promoted query or
+> explicit write-space request binds a bounded snapshot. Historical frozen
+> snapshot bytes remain exactly readable without backfill.
+
 > **1.0.8 bounded Campaign-membership override.** Routine Campaign frontier
 > output carries the exact complete member count and identity digest but
 > expands at most four member-role examples. `--diagnostic` retains the full
@@ -38,7 +64,7 @@
 > During an active integrated repair or installation that review is deferred
 > until Research resumes. Before the next cut, bounded exact search gives every
 > material match one of `reference_only`, `attach_context`,
-> `promote_landmark`, or `promote_active_head`. This is advisory Main recovery,
+> `promote_landmark`, `add_head`, or `retire_active_head`. This is advisory Main recovery,
 > not a gate, timer, scheduler, relevance inference, or truth path.
 
 > **1.0.5 Split Opt-In Repair override.** Routine Research and Fact work is
@@ -606,13 +632,13 @@ requires every bounded-edit condition to hold, and fails closed to the ordinary
 path for source defects, Research, truth-state work, persistent learning,
 architecture, publication, or nonlocal editing. It changes startup reads only.
 
-Prospective 0.7.0-or-later cards keep Blackboard as an exact context-capability boundary,
-but the default query contains only one project root-space node (`max_hops=0`,
-one node, zero edges) and grants no write space. A promoted Blackboard query or
-an explicit write-space request is required for larger context or mutation.
-Historical wide snapshots remain byte-exact readable. This removes implicit
-graph traversal and the unused default repair bus without deleting Paper
-projection, promotion, snapshot identity, or Learner mounts.
+Prospective ordinary V5 cards omit Blackboard entirely: the snapshot id/hash
+are exact `null` values and the read/write space lists are empty. A promoted
+Blackboard query or an explicit write-space request creates the exact bounded
+snapshot needed by that round. Historical root or wider snapshots remain
+byte-exact readable. This removes implicit graph traversal and the unused
+default repair bus without deleting Paper projection, promotion, explicit
+snapshot identity, or Learner mounts.
 
 New V5 Pulse planning is retired. It has no consumer in the required two-subround
 cycle. Existing Pulse records keep their status, audit, dispatch, close, void,
@@ -761,16 +787,18 @@ records are fully replayed.
 Every V5 work unit keeps three communication planes distinct:
 
 1. control: bounded prompt, host commands, and exact final hash handoff;
-2. mathematical state: one frozen Blackboard snapshot, the complete source
-   Research dossier, admitted predecessor interfaces, exact related Research
-   context, a task-referenced current V5 authority snapshot, and
+2. mathematical state: an optional explicitly requested frozen Blackboard
+   snapshot, the complete source Research dossier, admitted predecessor
+   interfaces, exact related Research context, a task-referenced current V5
+   authority snapshot, and
    a default-if-present indexed project-background snapshot;
 3. narrative: bounded rationale, summary, intuition, limitations, and open
    boundary.
 
 The immutable task card is the capability boundary. A worker may not infer
 permissions from filesystem visibility. All workers in one planned round share
-the same Blackboard snapshot. `validate-return` reads one bounded snapshot of
+the same explicit Blackboard snapshot or the same exact absence of one.
+`validate-return` reads one bounded snapshot of
 the canonical return and declared artifacts. A transient `ENOENT` or `ESTALE`
 before a safe snapshot is visible may be retried without quarantine. An unsafe
 filesystem object or visible malformed, hash-drifted, schema-invalid, or

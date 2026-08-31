@@ -217,7 +217,7 @@ class FrontierTargetBoundRoundTests(unittest.TestCase):
         )
         self.assertNotEqual(goal["actionable_round_id"], historical["round_id"])
 
-    def test_multihead_round_survives_explicit_main_override(self) -> None:
+    def test_multihead_round_survives_explicit_named_head_retirement(self) -> None:
         second_id = self._research("second")
         current = self._plan(
             [self.root_id, second_id],
@@ -243,7 +243,13 @@ class FrontierTargetBoundRoundTests(unittest.TestCase):
             {
                 "kind": "campaign_frontier_update",
                 "target_id": self.target_id,
-                "active_head_research_ids": [second_id],
+                "attention_updates": [
+                    {
+                        "operation": "retire_active_head",
+                        "research_id": self.root_id,
+                        "disposition": "superseded",
+                    }
+                ],
             },
         )
         overridden = self._goal()

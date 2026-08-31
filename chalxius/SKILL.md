@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.8 — Bounded Campaign Membership
+# Chalxius 1.0.9 — Working Memory Maintenance
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -31,6 +31,64 @@ Research product with valid assignment provenance can be consumed by later
 workflow stages when its derived receipt is absent; missing products,
 stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
 terminal-seal, or final-experiment checks remain blocking at their own owners.
+
+## Working-memory maintenance
+
+Main keeps Campaign frontier as usable mathematical working memory without
+turning it into a scheduler or truth authority. Routine `frontier` shows every
+active head and supervision scope, with four concrete previews each for
+context, recent attainment, and oldest/newest sparse landmarks. Exact counts
+and identity digests describe the complete stored sets; a maintenance pass
+must switch to `--diagnostic` or exact working-state reads whenever a count
+exceeds its preview, so four displayed landmarks are never mistaken for a
+full-history review. The same complete target-local read is available on
+demand during any ordinary round: when hidden history could affect the next
+mathematical cut, Main expands that target's complete landmarks and exact
+Research records without waiting for heartbeat or compaction. This is a
+reading capability, not a mandatory per-round gate.
+
+With no round id, `round-status` is the ordinary recovery view: it cheaply
+discovers all round identities, defers deep validation of structurally settled
+history, and deeply validates only unresolved candidates. Exact-id and
+`--all` retain their single-round and full-forensic meanings. An ordinary full
+`active_head_research_ids` update is additive: omitted current heads are
+preserved and reported. Main uses `add_head` to add one attention centre and
+`retire_active_head` with an explicit nontruth disposition to retire one exact
+head; exact full replacement is reserved for malformed-state recovery.
+Retirement detaches, rather than deletes, the head's contexts. None of these
+operations infers mathematical completion or changes Fact authority.
+
+When Campaign research starts or resumes and the host exposes thread
+automations, Main ensures exactly one project/task heartbeat named **Chalxius
+frontier maintenance**, updating the existing exact match rather than creating
+duplicates. Approximately every 50 minutes it reviews every target, active
+head, attached/unattached context, complete sparse-landmark identity and
+reason, recent attainment, bounded active-round recovery, and material exact
+Research matches. It may apply explicit nontruth attention maintenance,
+including restoring an important old Research as context, landmark, or head,
+but never starts Research workers, Fact packaging, Candidate, verifier,
+Gateway, or Fact work and never selects mathematical truth. A project pause
+suppresses future heartbeat runs only; an agent already running and a frozen
+round continue untouched. If thread automations are unavailable, Main performs
+the same bounded pass at the next visible handoff, reconnect, or user request.
+At trigger entry, a heartbeat that finds the current task visibly inside an
+integrated Chalxius repair, candidate validation, local installation,
+publication, or their pre-Research-resumption reconciliation ends immediately
+with `DONT_NOTIFY`: it performs no Campaign/Research read or mutation, remains
+active, and lets the next trigger reassess the phase after Research resumes.
+This uses the current task context already visible to Main; it creates no
+project lock, sentinel file, repair state machine, or requirement to interrupt
+mathematical agents already running.
+This Campaign-maintenance heartbeat is distinct from worker-liveness polling:
+artifact silence and elapsed time do not authorize worker recovery.
+
+Every bounded routine projection follows one drill-down contract, not only
+landmarks. If context, recent history, membership, target history, workflow
+topology, supervision detail, Research content/evidence, or round history is
+summarized, the routine row retains an exact id or complete count/digest and a
+direct `--diagnostic`, exact Research, exact round, or exact Campaign read.
+Main may use that complete read in any ordinary turn. Absence from a preview is
+never absence from the graph and never a selection or truth signal.
 
 ## Campaign overlay: many-to-many attention, never ownership
 
@@ -82,7 +140,7 @@ has no queued workflow. Exact context attached to a uniquely replaced head
 follows the successor with its reason intact. Genuine one-to-many ambiguity
 remains unattached for Main, and a later attachment absorbs only an otherwise
 identical unattached copy. These are working-memory operations only: Main may
-explicitly remove or reorder heads through frontier reconciliation, and no
+explicitly add or retire one named head through frontier reconciliation, and no
 handoff changes Research, Campaign membership, mathematical completion, or
 Fact authority.
 
@@ -93,7 +151,7 @@ repair or installation is active, this Research-recovery review is delayed
 until Research resumes, not discarded. Before freezing the next Research cut,
 Main performs bounded exact Research search and assigns every material match
 one explicit disposition: `reference_only`, `attach_context`,
-`promote_landmark`, or `promote_active_head`. This is a prompt-level Main
+`promote_landmark`, `add_head`, or `retire_active_head`. This is a prompt-level Main
 capability, not a gate, timer, scheduler, relevance inference, or truth path.
 
 ## Fact Alpha: one Research graph, sparse certification
@@ -321,7 +379,7 @@ a real handoff additionally triggers the rehydrate, global reread, and landmark
 curation pass; it is not the search clock.
 Every exact-search match that may materially affect a current active head gets
 one explicit Main attention disposition: `reference_only`, `attach_context`,
-`promote_landmark`, or `promote_active_head`. The last three reuse the existing
+`promote_landmark`, `add_head`, or `retire_active_head`. These reuse the existing
 Campaign context, landmark, and head update operations. From 1.0.6,
 reference-only writes only the Campaign-side ordinary-member link and assigns
 no attention role. Chalxius never infers importance, relevance, truth, or the
@@ -621,7 +679,7 @@ ordinary Research validates only the exact admitted Fact nodes it consumes,
 and a card-authorized exact `primary` artifact may be used without a returned
 copy while toy checks and bridges remain return-bound.
 
-The 0.8.11 repair keeps orchestration in Main's judgment: planning creates cards; Main launches workers, confirms starts, and recovers only on positive failure evidence. Artifact silence alone is not failure; context compaction, bounded startup reading, and deep reasoning are valid no-artifact intervals. Before interrupting or reassigning, Main checks fresh ordinary host status, messages, tool errors, and round bytes. Recovery requires an explicit disconnect/error or sustained total nonresponse corroborated by more than artifact silence, with no timer, heartbeat, watcher, receipt, recovery state, or gate.
+The 0.8.11 repair keeps orchestration in Main's judgment: planning creates cards; Main launches workers, confirms starts, and recovers only on positive failure evidence. Artifact silence alone is not failure; context compaction, bounded startup reading, and deep reasoning are valid no-artifact intervals. Before interrupting or reassigning, Main checks fresh ordinary host status, messages, tool errors, and round bytes. Recovery requires an explicit disconnect/error or sustained total nonresponse corroborated by more than artifact silence, with no worker-liveness timer, heartbeat, watcher, receipt, recovery state, or gate. The Campaign-maintenance heartbeat above never judges worker liveness.
 A copy-on-write successor is a new complete product. Prior defects and repair obligations are mandatory but non-exhaustive attack seeds. Within the exact authorized product and assigned scope, its supervisor freshly reviews the whole successor and conserved claims for new, inherited, repair-induced, and cross-component defects. PHX constrains ceremony, never mathematical or source scrutiny.
 Main owns cross-round and copy-on-write search, completion projection, duplicate exclusion, and final `DISPATCH`/`NO-DISPATCH`; Scouts may collect bounded evidence only. After mathematical dispatch or receipt, Main checks visible free slots and exact current Research boundaries; when a nonduplicative, logically independent high-value mathematical target exists, keep at least two workers active on useful mathematics. For non-mathematical engineering, delegate only when a bounded independent subtask is expected to shorten the critical path after startup, context-transfer, coordination, and merge costs. This is opportunity use, not filler work or a slot quota.
 Slot use takes priority over reviewer-session reuse. After useful independent mathematical slots are filled, Main may continue with the same independent supervisor for another applicable scope of the same frozen product or for a later copy-on-write successor in the same route. This saves startup and repeated source loading; it creates no persistent supervisor binding, no receipt dependency, and no requirement to wait for that reviewer when another qualified reviewer is available.
@@ -854,8 +912,8 @@ repair caches implicitly.
    completed from the next production, return, supervision, repair, or semantic
    choice. For a named object/class/theorem, first run the exact search above,
    review completed work, disposition every material old match as
-   `reference_only`, `attach_context`, `promote_landmark`, or
-   `promote_active_head`, and choose `related_research_ids`. Production never
+   `reference_only`, `attach_context`, `promote_landmark`, `add_head`, or
+   `retire_active_head`, and choose `related_research_ids`. Production never
    plans refute; exact IDs do not rebuild the global frontier; Main launches and
    confirms every planned worker, then uses genuinely independent current
    boundaries when visible capacity exists.
@@ -889,8 +947,14 @@ repair caches implicitly.
    Research stores its original worker mode. Its successor is a complete new
    product: prior defects are non-exhaustive seeds for fresh whole-successor
    review inside the exact scope, never the limit of that review.
-7. New V5 Pulse planning is retired. The production/supervision cycle is the only prospective Research collaboration path.
-   Existing historical Pulse records retain status, audit, dispatch, close, void, and abort compatibility.
+7. An ordinary new V5 round has no Blackboard snapshot: card, assignment,
+   manifest, and return copy exact `null` snapshot bindings with empty space
+   capabilities. Only an exact promoted query or explicit write-space request
+   freezes a bounded snapshot. Existing frozen rounds retain exact historical
+   snapshot validation without backfill. New V5 Pulse planning is retired. The
+   production/supervision cycle is the only prospective Research collaboration path.
+   Existing historical Pulse records retain status, audit, dispatch,
+   close, void, and abort compatibility.
 8. Fact work is asynchronous. Main marks important Research while ordinary
    research continues and opens a natural review window. The packager selects a
    useful predecessor-closed route and seals one nontruth package; ordinary COW

@@ -307,6 +307,7 @@ def main() -> int:
     validate_public_disclosure_contract(skill_root)
     fact_alpha_surface = inheritance_lock.get("fact_alpha_surface")
     campaign_surface = inheritance_lock.get("v5_campaign_scope_surface")
+    research_cycle_surface = inheritance_lock.get("v5_research_cycle_surface")
     adverse_surface = inheritance_lock.get("adverse_routing_surface")
     if (
         not isinstance(fact_alpha_surface, dict)
@@ -322,21 +323,42 @@ def main() -> int:
         != "plan_freezes_selection_mode_and_exact_main_route_anchor_research_ids_every_packager_sealed_component_contains_one_frozen_anchor_and_every_added_unmarked_node_is_connected_to_it_by_actual_package_dependency_edges"
         or fact_alpha_surface.get("existing_mark_plan_anchor_policy")
         != "selection_mode_existing_marks_with_empty_route_anchor_research_ids_does_not_apply_the_direct_research_route_anchor_rule"
+        or not isinstance(research_cycle_surface, dict)
+        or research_cycle_surface.get("blackboard_default_context")
+        != "absent_with_exact_null_id_hash_and_empty_spaces_unless_promoted_query_or_write_space_capability_is_explicitly_requested"
+        or research_cycle_surface.get("blackboard_historical_snapshot_policy")
+        != "existing_frozen_rounds_keep_exact_id_hash_and_bytes_without_backfill_or_default_snapshot_recreation"
+        or research_cycle_surface.get("blackboard_return_binding")
+        != "copy_exact_card_value_json_null_or_explicit_historical_sha256_string"
         or not isinstance(campaign_surface, dict)
         or campaign_surface.get("recent_attainment_exact_queue_high_water_limit") != 64
         or campaign_surface.get("recent_attainment_routine_preview") != 4
         or campaign_surface.get("recent_attainment_complete_projection")
         != "exact_ids_count_and_digest_retained_beyond_preview"
         or campaign_surface.get("historical_landmark_count_quota") is not None
-        or campaign_surface.get("historical_landmark_routine_preview") != 8
+        or campaign_surface.get("historical_landmark_routine_preview") != 4
         or campaign_surface.get("historical_landmark_complete_projection")
         != "exact_working_state_and_diagnostic_ids_plus_routine_total_count_and_identity_digest"
         or campaign_surface.get("post_compaction_nonquota_boundary")
-        != "four_and_eight_are_routine_previews_64_protects_only_recent_attainment_sparse_landmarks_have_no_count_quota_and_available_agent_slots_are_opportunities_not_semantic_quotas"
+        != "four_is_the_routine_context_recent_and_landmark_preview_64_protects_only_recent_attainment_sparse_landmarks_have_no_count_quota_and_available_agent_slots_are_opportunities_not_semantic_quotas"
         or campaign_surface.get("next_research_cut_exact_search_invariant")
         != "main_runs_one_bounded_exact_research_search_before_every_next_research_cut_freeze_with_or_without_context_compaction"
         or campaign_surface.get("exact_search_result_policy")
-        != "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_or_promote_active_head_without_programmatic_importance_relevance_or_truth_inference"
+        != "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"
+        or campaign_surface.get("active_head_full_list_update")
+        != "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"
+        or campaign_surface.get("active_head_incremental_operations")
+        != "add_head_or_exact_retire_active_head_with_nontruth_disposition_detaching_not_deleting_context"
+        or campaign_surface.get("round_attention_recovery")
+        != "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"
+        or campaign_surface.get("frontier_maintenance_heartbeat")
+        != "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_all_targets_heads_contexts_complete_landmark_identities_recent_history_active_rounds_and_material_exact_search_without_research_or_fact_dispatch"
+        or campaign_surface.get("frontier_maintenance_pause")
+        != "pause_changes_future_heartbeat_triggers_only_and_never_interrupts_agents_or_aborts_rounds"
+        or campaign_surface.get("frontier_maintenance_repair_phase")
+        != "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"
+        or campaign_surface.get("routine_projection_drilldown")
+        != "every_bounded_context_history_membership_workflow_supervision_research_or_round_summary_retains_exact_ids_or_complete_count_digest_plus_direct_diagnostic_or_exact_read_absence_from_preview_has_no_selection_or_truth_meaning"
         or campaign_surface.get("context_compaction_additional_duties")
         != "rehydrate_exact_operation_global_reread_and_landmark_curation_with_the_same_exact_match_placement_semantics_as_ordinary_turns_but_broader_search_and_reread_scope_not_the_exact_search_clock"
         or not isinstance(adverse_surface, dict)
@@ -478,6 +500,8 @@ def main() -> int:
             "New V5 Pulse planning is retired",
             "only prospective Research collaboration path.",
             "records retain status, audit, dispatch, close, void, and abort compatibility.",
+            "An ordinary new V5 round has no Blackboard snapshot",
+            "exact `null` snapshot bindings",
             "Fact work is asynchronous.",
             "Chalxius Learner only when the user explicitly asks",
             "Grill Me Code",
@@ -486,6 +510,8 @@ def main() -> int:
             "sole public host-global path",
             "eligible CHX observation surfaces",
             "explicit publication request includes merging the corresponding reviewed change into `main` by default",
+            "a heartbeat that finds the current task visibly inside an",
+            "it creates no project lock, sentinel file, repair state machine",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -526,7 +552,10 @@ def main() -> int:
             '"candidate_fields_scope": "procedurally_reserved_0x_compatibility_for_explicit_completion_or_audit_without_machine_authenticated_pre_1_0_provenance_or_new_identity_gate"',
             '"assurance_selection_revision": "chalxius-v5-failure-informed-selective-assurance-1"',
             '"failure_family_registry": "fixed_scope_owned_non_exhaustive_current_registry_with_exact_legacy_hash_readability_and_without_agent_scores_dynamic_learning_or_truth_authority"',
+            '"blackboard_default_context": "absent_with_exact_null_id_hash_and_empty_spaces_unless_promoted_query_or_write_space_capability_is_explicitly_requested"',
             '"blackboard_default_write": "none_unless_exact_space_capability_is_explicitly_requested"',
+            '"blackboard_historical_snapshot_policy": "existing_frozen_rounds_keep_exact_id_hash_and_bytes_without_backfill_or_default_snapshot_recreation"',
+            '"blackboard_return_binding": "copy_exact_card_value_json_null_or_explicit_historical_sha256_string"',
             '"route_key": "route.failure_informed_selective_assurance"',
             '"execution_gate": "safe_live_nonaborted_assignment_local_latest_program_math_disposition_then_exact_supervised_source_and_dependencies_with_lock_held_authority_recheck_before_round_write"',
             '"aborted_supervision_downstream_authority": "never_authorizes_current_fact_package_computation_or_historical_candidate_and_reserves_no_coverage"',
@@ -586,12 +615,16 @@ def main() -> int:
             '"manual_checkpoint_semantics": "optional_advisory_campaign_note_with_local_sequence_not_the_dynamic_frontier_working_state_generation_and_never_a_staleness_gate"',
             '"checkpoint_refresh_semantics": "advisory_dynamic_frontier_reconciliation_from_exact_semantic_successor_mismatch_only_never_manual_generation_delta_or_checkpoint_presence"',
             '"scheduler": "v5_main_four_factor_frontier"',
-            '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_or_promote_active_head_without_programmatic_importance_relevance_or_truth_inference"',
+            '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"',
+            '"active_head_full_list_update": "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"',
+            '"round_attention_recovery": "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"',
+            '"frontier_maintenance_heartbeat": "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_all_targets_heads_contexts_complete_landmark_identities_recent_history_active_rounds_and_material_exact_search_without_research_or_fact_dispatch"',
+            '"frontier_maintenance_repair_phase": "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"',
             '"recent_attainment_exact_queue_high_water_limit": 64',
             '"recent_attainment_routine_preview": 4',
             '"recent_attainment_complete_projection": "exact_ids_count_and_digest_retained_beyond_preview"',
             '"historical_landmark_count_quota": null',
-            '"historical_landmark_routine_preview": 8',
+            '"historical_landmark_routine_preview": 4',
             '"historical_landmark_complete_projection": "exact_working_state_and_diagnostic_ids_plus_routine_total_count_and_identity_digest"',
             '"preflight_revision": "chalxius-research-draft-admission-preflight-1"',
             '"stance_authorization_revision": "chalxius-research-draft-major-revision-authorization-1"',
@@ -666,6 +699,8 @@ def main() -> int:
             "Certification and Gateway admission revalidate the same eligible aggregate",
         ),
         "references/v5_worker_return_contract.md": (
+            "For an ordinary current",
+            "Blackboard value is JSON `null`",
             "obligation_dispositions",
             "complete`, `blocked`, or `not_applicable",
             "program_math_alignments",
@@ -774,12 +809,19 @@ def main() -> int:
         ),
         "references/unified_architecture.md": (
             "v5_production_worker_bootstrap.md",
+            "Prospective ordinary V5 cards omit Blackboard entirely",
+            "same explicit Blackboard snapshot or the same exact absence of one",
             "one command-local inspection",
             "canonical three-role contract",
             "later load some 0.4.1-or-later bytes",
             "Back to the Future field-repair boundaries",
             "two phases",
             "fact-graph-append-target",
+        ),
+        "references/blackboard_graph_v4.md": (
+            "Prospective ordinary V5 Research has no implicit Blackboard query or snapshot",
+            "Historical cards retain their frozen root or wider snapshots",
+            "ordinary snapshot-free round is not retrofitted after freeze",
         ),
         "references/chx_runtime_ledger.md": (
             "runs started after the 0.4.1 activation boundary",
@@ -1732,6 +1774,10 @@ def main() -> int:
             "Administrative receipts are optional",
             "formula-to-code",
             "advisory global route memory",
+            "end that heartbeat immediately with `DONT_NOTIFY`",
+            "do not add a lock file, sentinel, repair state machine",
+            "ordinary new V5 round does not freeze a default Blackboard root snapshot",
+            "Historical frozen rounds keep exact byte/hash validation",
         ),
         "references/reasoning_modes.md": (
             "future-only switch",

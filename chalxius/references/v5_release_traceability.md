@@ -1,4 +1,33 @@
-# Chalxius V5 traceability through 1.0.8 Bounded Campaign Membership
+# Chalxius V5 traceability through 1.0.9 Working Memory Maintenance
+
+## 1.0.9 Working Memory Maintenance overlay
+
+- Candidate version: `1.0.9`; release name **Working Memory Maintenance**.
+- Routine Campaign frontier presents four concrete previews each for context,
+  recent attainment, and balanced oldest/newest sparse landmarks while keeping
+  exact complete counts/digests and full target-local diagnostic reads.
+- `round-status` without an id enumerates all round identities cheaply and
+  deeply validates only structurally unresolved candidates. Exact-id and
+  explicit all-round inspection remain authoritative forensic paths.
+- Ordinary active-head updates are additive. Main adds and retires exact heads
+  explicitly; retirement detaches rather than deletes context, and planning
+  preserves unrelated parallel heads while transferring context only through a
+  rigid unique replacement.
+- One approximately 50-minute thread heartbeat maintains Campaign working
+  memory only. It dispatches no Research or Fact work, pauses future triggers
+  without interrupting running agents, and exits before any project read/write
+  while the visible task is repairing, validating, installing, publishing, or
+  reconciling before Research resumes.
+- Ordinary new V5 rounds no longer freeze a default one-node Blackboard
+  snapshot. Card, assignment, manifest, and return carry exact null bindings;
+  promoted queries and explicit write-space requests still bind one bounded
+  snapshot, and immutable historical rounds retain byte-exact validation.
+- One repository authoring command atomically updates the release identity
+  projections and manifest, removing the recurring mixed-version candidate
+  state. Installation tests those exact bytes; publication reuses them and
+  checks identity/file set plus local-sensitive-data absence.
+- All changes are working-memory, capability, performance, and release hygiene.
+  They create no Research, package, verifier, Gateway, Fact, or truth effect.
 
 ## 1.0.8 Bounded Campaign Membership overlay
 

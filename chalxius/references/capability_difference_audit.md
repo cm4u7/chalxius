@@ -1,5 +1,30 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.9 Working Memory Maintenance difference
+
+The previous working-memory surface repeatedly expanded information Main did
+not need, could silently lose omitted heads during full-list updates, and made
+round recovery depend too heavily on a recent-generation view. Version 1.0.9
+keeps exact complete identities while bounding routine expansion, adds explicit
+head add/retire semantics, preserves unrelated heads and unique context
+handoffs, and makes zero-argument round recovery scan all cheap identities but
+deeply validate only unresolved candidates. The optional maintenance heartbeat
+does no research dispatch and skips all project reads/writes during visible
+repair, validation, installation, publication, or pre-resumption
+reconciliation. A single authoring tool updates candidate release identity
+projections atomically.
+
+Ordinary V5 planning also previously froze a one-node root-space Blackboard
+snapshot for every round even when no task read or wrote Blackboard. Version
+1.0.9 represents that absence directly: card, assignment, manifest, and return
+carry exact null snapshot bindings and empty space capabilities. A promoted
+query or explicit write-space request still freezes one bounded shared
+snapshot. Existing immutable rounds continue to validate their exact snapshot
+bytes and are not rewritten, backfilled, or routed through a compatibility
+adapter. Historical V5 Pulse completion remains readable; a new compatibility
+commitment requires an explicitly bound snapshot. This removes ceremony only
+and changes no Research, Fact, admission, or truth authority.
+
 ## 1.0.8 Bounded Campaign Membership difference
 
 Version 1.0.7 retained exact Campaign membership but exposed 64 expanded

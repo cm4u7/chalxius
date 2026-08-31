@@ -154,6 +154,14 @@ class V5PulseStore:
         ):
             raise ValueError("minimum_peer_nodes must be positive")
         assignment = self._assignment(round_id, assignment_id)
+        if (
+            assignment["blackboard_snapshot_id"] is None
+            or assignment["blackboard_snapshot_sha256"] is None
+        ):
+            raise ValueError(
+                "V5 Pulse compatibility requires a round with an explicitly "
+                "bound Blackboard snapshot"
+            )
         semantic = {
             "phase": "wave1",
             "project_id": self.store.project_id(),
@@ -187,6 +195,14 @@ class V5PulseStore:
         peer_research_id = validate_memory_id(peer_node_id)
         self.store.v5_lifecycle()._research_record(peer_research_id)
         assignment = self._assignment(round_id, assignment_id)
+        if (
+            assignment["blackboard_snapshot_id"] is None
+            or assignment["blackboard_snapshot_sha256"] is None
+        ):
+            raise ValueError(
+                "V5 Pulse compatibility requires a round with an explicitly "
+                "bound Blackboard snapshot"
+            )
         card = self.store._read_json(
             self.project_root / assignment["task_card_relpath"]
         )

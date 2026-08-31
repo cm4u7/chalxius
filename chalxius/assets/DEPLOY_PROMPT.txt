@@ -1,10 +1,10 @@
-Chalxius 1.0.8 — Bounded Campaign Membership
+Chalxius 1.0.9 — Working Memory Maintenance
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The 1.0.8 runtime coordinates Campaign working memory, asynchronous Fact route
+The current runtime coordinates Campaign working memory, asynchronous Fact route
 selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
@@ -32,32 +32,46 @@ context, landmark, or history roles in each. `metadata.campaign_id` is creation
 provenance only. Ordinary membership is derived from the existing Campaign
 event log, and `reference_only` assigns no attention role or truth effect.
 
-After context compaction or a real handoff, Main makes one compact maintenance
-judgment: reread the live frontier, in-flight rounds, historical landmarks, and
-material old Research; finish visible handoffs without duplication; reconcile
-rigid Research COW/split lineage; curate recent attainment and sparse
-landmarks; step back across ancient landmarks and recent attainment to test the
-current route and active heads against the Campaign objective; choose the next
-Research cut after bounded exact search; inspect the Fact frontier; increment the
-explicit `Fact window clock: n/4` only for this host-reported compaction; and at
-`4/4` assign one packager window of one or two packages to the first suitable
-available slot unless user-requested Fact deferral is active. If an integrated
-repair or installation is active, delay the Research-recovery review until
-Research resumes; do not discard it. Four and eight
-are only summary previews, 64 protects only recent attainment, sparse landmarks
-have no count quota, and free agent slots are opportunities rather than quotas.
-Independently of compaction, Main performs the bounded exact Research search
-every time it freezes the next Research cut. Compaction or a real handoff adds
-rehydration, global rereading, and landmark curation; it is not the search clock.
-Every material match receives exactly one Main disposition: `reference_only`,
-`attach_context`, `promote_landmark`, or `promote_active_head`.
-Post-compaction search uses the same placement rule; only search/reread scope is
-broader. Carry the exact clock value in every context-handoff summary and reset
-it to `0/4` only after a packager window completes. At `4/4`, explicit user
-deferral prevents dispatch and is preserved as `4/4 deferred` until lifted.
-Elapsed time, ordinary turns, reconnects, and non-compaction handoffs do not
-increment it. This is not a timer, daemon, automatic scheduler, truth gate, or
-slot quota; the packager still chooses the route.
+When Campaign research starts or resumes, Main ensures one exact thread
+heartbeat named `Chalxius frontier maintenance`, updating rather than
+duplicating it. About every 50 minutes it rereads every target and active head,
+all contexts, the complete sparse-landmark identities and reasons, recent
+attainment, bounded active-round recovery, and material old Research. If the
+routine preview count exceeds its four expanded examples, use `--diagnostic`
+or exact working state before declaring the maintenance pass complete. The
+heartbeat may perform explicit nontruth attention maintenance, but never
+dispatches Research or Fact work. A project pause stops future triggers only
+and does not interrupt an agent or abort a round already in progress. When host
+heartbeat support is unavailable, perform the same bounded pass at the next
+visible handoff, reconnect, or user request. This is Campaign working-memory
+maintenance, not worker-liveness monitoring.
+
+At the start of each heartbeat, inspect the current task phase before reading
+the project. If an integrated Chalxius repair, candidate validation, local
+installation, publication, or the pre-Research-resumption reconciliation is
+active, end that heartbeat immediately with `DONT_NOTIFY`, perform no Campaign
+or Research read or mutation, and leave the automation active so the next
+trigger can reassess after Research resumes. Use the task context already
+visible to Main; do not add a lock file, sentinel, repair state machine, or
+agent interruption.
+
+During an ordinary round, Main may likewise expand one target's complete
+landmarks on demand whenever hidden history could affect the next cut; it does
+not wait for heartbeat and this read is not a per-round gate.
+The same rule covers every routine summary: contexts, recent history,
+membership, target history, workflow/supervision detail, exact Research and
+round history all retain count/digest or ids plus a direct diagnostic/exact
+read. Missing from a preview never means missing from the graph.
+
+After context compaction or a real handoff, Main still rehydrates the current
+operation and reviews the route. Before every new Research cut, with or without
+compaction, Main performs bounded exact Research search. Every material match
+receives one explicit disposition: `reference_only`, `attach_context`,
+`promote_landmark`, `add_head`, or `retire_active_head`. The heartbeat and
+compaction pass never increment a Fact clock or start a packager. Fact work
+opens only at a natural Main/user-selected window and remains independently
+deferrable. If an integrated repair or installation is active, delay the
+Research-recovery review until Research resumes; do not discard it.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research
@@ -139,6 +153,12 @@ repair and local installation, reconcile those bytes, and resume the same
 mathematical boundary. Do not turn this into a monitor, timer, scheduler,
 automatic issue trigger, automatic installer, publication action, or truth
 gate.
+
+An ordinary new V5 round does not freeze a default Blackboard root snapshot.
+Its card, assignment, manifest, and return carry exact null snapshot bindings
+and empty read/write space capabilities. Only a promoted Blackboard query or
+an explicit write-space request binds one bounded snapshot. Historical frozen
+rounds keep exact byte/hash validation; do not backfill or recreate snapshots.
 
 Default supervision planning now subtracts exact completed or in-flight scopes
 and returns a nonmutating no-op when every applicable scope is already covered.

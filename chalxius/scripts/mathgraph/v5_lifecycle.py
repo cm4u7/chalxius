@@ -148,15 +148,21 @@ V5_CAMPAIGN_FRONTIER_STATE_REVISION = (
 )
 V5_CAMPAIGN_ACTIVE_HEAD_LIMIT = 16
 V5_CAMPAIGN_HEAD_CONTEXT_LIMIT = 32
+# Routine Main reads need a few concrete mathematical links, not every stored
+# support note.  Complete context remains available in the diagnostic view.
+V5_CAMPAIGN_HEAD_CONTEXT_SUMMARY_PREVIEW = 4
 # Sparse landmarks are durable mathematical memory selected by Main.  They
 # grow with the Research graph and therefore have no semantic count quota.
 # Only the routine reading surface previews a bounded number of them.
-V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW = 8
+V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW = 4
 # Recent attainment is an exact work-memory queue between Main's natural
 # curation windows (notably context compaction).  Its storage capacity is
 # deliberately much wider than the routine mathematical-summary preview.
 V5_CAMPAIGN_RECENT_ATTAINED_LIMIT = 64
 V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW = 4
+# Active-round recovery validates only the small nonterminal candidate set.
+# The complete historical inventory remains available through ``--all``.
+V5_ACTIVE_ROUND_STATUS_PREVIEW = 16
 # Campaign membership is useful as a complete count/digest plus a few role
 # examples on Main's routine decision surface.  The complete member/role list
 # remains available under the explicit diagnostic projection.
@@ -9564,6 +9570,7 @@ class V5LifecycleManager:
         campaign_id: str,
         *,
         limit: int | None = None,
+        routine_projection: bool = False,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> list[dict[str, Any]]:
         """Project nonworkflow Campaign goals onto their exact live routes.
@@ -9576,7 +9583,9 @@ class V5LifecycleManager:
         every time.  This read-only view never edits the target, dispatches
         work, closes a goal, or affects Candidate/Fact state.  ``limit`` bounds
         the complete nested goal projection; callers that need the full
-        forensic view pass ``None``.
+        forensic view pass ``None``.  ``routine_projection`` bounds only
+        expanded mathematical memory; exact ids, counts, and digests still
+        describe the complete stored target state.
         """
 
         if limit is not None and limit < 1:
@@ -9605,6 +9614,15 @@ class V5LifecycleManager:
             goal_targets = goal_targets[:limit]
         if not goal_targets:
             return []
+
+        def balanced_preview(values: list[str], maximum: int) -> list[str]:
+            """Keep ancient and recent landmarks without implying priority."""
+
+            if len(values) <= maximum:
+                return list(values)
+            older = maximum // 2
+            newer = maximum - older
+            return [*values[:older], *values[-newer:]]
 
         checkpoint = self._current_campaign_frontier_state(
             campaign_id,
@@ -9837,6 +9855,35 @@ class V5LifecycleManager:
                         target_id=target_id,
                         research_ids=invalid_context_ids,
                     )
+                projected_historical_ids = (
+                    balanced_preview(
+                        valid_historical_ids,
+                        V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW,
+                    )
+                    if routine_projection
+                    else list(valid_historical_ids)
+                )
+                projected_head_contexts = (
+                    valid_head_contexts[
+                        -V5_CAMPAIGN_HEAD_CONTEXT_SUMMARY_PREVIEW:
+                    ]
+                    if routine_projection
+                    else list(valid_head_contexts)
+                )
+                projected_recent_attained_ids = (
+                    valid_recent_attained_ids[
+                        :V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW
+                    ]
+                    if routine_projection
+                    else list(valid_recent_attained_ids)
+                )
+                head_context_attachment_counts: dict[str, int] = {}
+                for context in valid_head_contexts:
+                    attachment = context.get("attached_head_research_id")
+                    key = attachment if isinstance(attachment, str) else "unattached"
+                    head_context_attachment_counts[key] = (
+                        head_context_attachment_counts.get(key, 0) + 1
+                    )
                 attained_semantic_successors: list[dict[str, Any]] = []
                 terminal_successor_ids: set[str] = set()
                 checkpointed_research_ids = set(active_head_ids).union(
@@ -9965,8 +10012,17 @@ class V5LifecycleManager:
                                     )
                                 ),
                             }
-                            for research_id in valid_historical_ids
+                            for research_id in projected_historical_ids
                         ],
+                        "historical_landmarks_truncated": (
+                            len(projected_historical_ids)
+                            != len(valid_historical_ids)
+                        ),
+                        "historical_landmark_preview_policy": (
+                            "oldest_and_newest_nonselecting"
+                            if routine_projection
+                            else "complete"
+                        ),
                         "head_contexts": [
                             {
                                 **context,
@@ -9977,16 +10033,41 @@ class V5LifecycleManager:
                                     )
                                 ),
                             }
-                            for context in valid_head_contexts
+                            for context in projected_head_contexts
                         ],
+                        "head_context_count": len(valid_head_contexts),
+                        "head_contexts_sha256": sha256_json(
+                            valid_head_contexts
+                        ),
+                        "head_context_attachment_counts": (
+                            head_context_attachment_counts
+                        ),
+                        "head_contexts_truncated": (
+                            len(projected_head_contexts)
+                            != len(valid_head_contexts)
+                        ),
+                        "head_context_preview_policy": (
+                            "persisted_recent_tail_nonselecting"
+                            if routine_projection
+                            else "complete"
+                        ),
                         "recent_attained_research_ids": (
-                            valid_recent_attained_ids
+                            projected_recent_attained_ids
                         ),
                         "recent_attained_count": len(
                             valid_recent_attained_ids
                         ),
                         "recent_attained_ids_sha256": sha256_json(
                             valid_recent_attained_ids
+                        ),
+                        "recent_attained_truncated": (
+                            len(projected_recent_attained_ids)
+                            != len(valid_recent_attained_ids)
+                        ),
+                        "recent_attained_preview_policy": (
+                            "persisted_newest_first_nonselecting"
+                            if routine_projection
+                            else "complete"
                         ),
                         "unpartitioned_attained_research_ids": (
                             []
@@ -9996,18 +10077,14 @@ class V5LifecycleManager:
                                 bases[research_id],
                                 compact=True,
                             )
-                            for research_id in valid_historical_ids[
-                                :V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW
-                            ]
+                            for research_id in projected_historical_ids
                         ],
                         "recent_attained_mathematical_history": [
                             self._campaign_mathematical_memory(
                                 bases[research_id],
                                 compact=True,
                             )
-                            for research_id in valid_recent_attained_ids[
-                                :V5_CAMPAIGN_RECENT_SUMMARY_PREVIEW
-                            ]
+                            for research_id in projected_recent_attained_ids
                         ],
                         # This advisory describes a semantic gap, not a
                         # counter-based maintenance clock.  Four entries are
@@ -11431,8 +11508,14 @@ class V5LifecycleManager:
             return result
 
         row = dict(rows[target_id])
+        before_active_head_ids = list(row["active_head_research_ids"])
+        before_head_contexts = json.loads(
+            json.dumps(row.get("head_contexts", []), ensure_ascii=False)
+        )
         changed = False
         reference_member_ids: list[str] = []
+        attention_warnings: list[dict[str, Any]] = []
+        explicit_retirements: list[dict[str, str]] = []
         fields = {
             "active_head_research_ids": V5_CAMPAIGN_ACTIVE_HEAD_LIMIT,
             "historical_landmark_research_ids": None,
@@ -11442,7 +11525,31 @@ class V5LifecycleManager:
         }
         for field, maximum in fields.items():
             if field in payload:
-                row[field] = research_ids(field, maximum)
+                requested = research_ids(field, maximum)
+                if (
+                    field == "active_head_research_ids"
+                    and not invalid_rebuild
+                    and not target_loss_codes
+                    and not global_loss_codes
+                ):
+                    omitted = [
+                        research_id
+                        for research_id in before_active_head_ids
+                        if research_id not in requested
+                    ]
+                    if omitted:
+                        requested.extend(omitted)
+                        attention_warnings.append(
+                            {
+                                "code": "omitted_active_heads_preserved",
+                                "research_ids": omitted,
+                                "instruction": (
+                                    "Use retire_active_head to retire each exact "
+                                    "head; an ordinary full-list update is additive."
+                                ),
+                            }
+                        )
+                row[field] = requested
                 changed = True
         if "historical_landmark_reasons" in payload:
             reasons = payload["historical_landmark_reasons"]
@@ -11548,7 +11655,7 @@ class V5LifecycleManager:
                     for context in row["head_contexts"]
                     if context.get("research_id") != research_id
                 ]
-            elif operation == "promote_active_head":
+            elif operation in {"promote_active_head", "add_head"}:
                 if set(update) not in (
                     {"operation", "research_id"},
                     {"operation", "research_id", "replace_head_research_id"},
@@ -11557,10 +11664,23 @@ class V5LifecycleManager:
                         "promote_active_head fields are not exact"
                     )
                 replace_id = update.get("replace_head_research_id")
+                if operation == "add_head" and replace_id is not None:
+                    raise ValueError("add_head cannot replace another head")
                 if replace_id is not None:
                     replace_id = validate_memory_id(replace_id)
                     if replace_id not in row["active_head_research_ids"]:
                         raise ValueError("promoted context replacement is not a head")
+                    attention_warnings.append(
+                        {
+                            "code": "named_active_head_replacement",
+                            "research_ids": [replace_id],
+                            "instruction": (
+                                "The removed head was named explicitly; prefer "
+                                "retire_active_head plus add_head for a visible "
+                                "disposition."
+                            ),
+                        }
+                    )
                     row["active_head_research_ids"] = [
                         item
                         for item in row["active_head_research_ids"]
@@ -11593,6 +11713,53 @@ class V5LifecycleManager:
                     for context in row["head_contexts"]
                     if context.get("research_id") != research_id
                 ]
+            elif operation == "retire_active_head":
+                if set(update) != {
+                    "operation",
+                    "research_id",
+                    "disposition",
+                }:
+                    raise ValueError("retire_active_head fields are not exact")
+                disposition = update["disposition"]
+                if disposition not in {
+                    "attained",
+                    "superseded",
+                    "dormant",
+                    "moved_to_context",
+                }:
+                    raise ValueError("retire_active_head disposition is invalid")
+                if research_id not in row["active_head_research_ids"]:
+                    raise ValueError("retired Research is not an active head")
+                row["active_head_research_ids"] = [
+                    item
+                    for item in row["active_head_research_ids"]
+                    if item != research_id
+                ]
+                if (
+                    research_id
+                    not in row["historical_landmark_research_ids"]
+                    and research_id
+                    not in row["recent_attained_research_ids"]
+                ):
+                    row["recent_attained_research_ids"].insert(0, research_id)
+                row["head_contexts"] = [
+                    {
+                        **context,
+                        "attached_head_research_id": (
+                            None
+                            if context.get("attached_head_research_id")
+                            == research_id
+                            else context.get("attached_head_research_id")
+                        ),
+                    }
+                    for context in row["head_contexts"]
+                ]
+                explicit_retirements.append(
+                    {
+                        "research_id": research_id,
+                        "disposition": disposition,
+                    }
+                )
             elif operation == "promote_landmark":
                 if set(update) != {"operation", "research_id", "reason"}:
                     raise ValueError("promote_landmark fields are not exact")
@@ -11738,6 +11905,22 @@ class V5LifecycleManager:
                 },
                 actor="v5-main-campaign-membership",
             )
+        after_active_head_ids = list(row["active_head_research_ids"])
+        added_head_ids = [
+            item
+            for item in after_active_head_ids
+            if item not in before_active_head_ids
+        ]
+        retired_head_ids = [
+            item
+            for item in before_active_head_ids
+            if item not in after_active_head_ids
+        ]
+        detached_context_count = sum(
+            isinstance(context, dict)
+            and context.get("attached_head_research_id") in retired_head_ids
+            for context in before_head_contexts
+        )
         return {
             "campaign_id": campaign_id,
             "state_generation": state["generation"],
@@ -11749,6 +11932,17 @@ class V5LifecycleManager:
                 if invalid_rebuild
                 else "frontier_working_state_only"
             ),
+            "attention_diff": {
+                "before_active_head_research_ids": before_active_head_ids,
+                "after_active_head_research_ids": after_active_head_ids,
+                "added_head_research_ids": added_head_ids,
+                "retired_head_research_ids": retired_head_ids,
+                "retirements": explicit_retirements,
+                "detached_context_count": detached_context_count,
+                "warnings": attention_warnings,
+                "selection_effect": "main_explicit_attention_only",
+                "truth_effect": "none",
+            },
             "truth_effect": "none",
         }
 
@@ -11824,10 +12018,19 @@ class V5LifecycleManager:
             "historical_landmark_ids_sha256",
             "historical_landmark_shown_count",
             "historical_landmarks",
+            "historical_landmarks_truncated",
+            "historical_landmark_preview_policy",
             "head_contexts",
+            "head_context_count",
+            "head_contexts_sha256",
+            "head_context_attachment_counts",
+            "head_contexts_truncated",
+            "head_context_preview_policy",
             "recent_attained_research_ids",
             "recent_attained_count",
             "recent_attained_ids_sha256",
+            "recent_attained_truncated",
+            "recent_attained_preview_policy",
             "historical_mathematical_summary",
             "recent_attained_mathematical_history",
             "history_review_recommended",
@@ -11946,7 +12149,9 @@ class V5LifecycleManager:
                         item.get("mathematical_summary")
                     ),
                 }
-                for item in head_contexts[:V5_CAMPAIGN_HEAD_CONTEXT_LIMIT]
+                for item in head_contexts[
+                    :V5_CAMPAIGN_HEAD_CONTEXT_SUMMARY_PREVIEW
+                ]
                 if isinstance(item, dict)
             ]
         workflow_roots = compact.get("active_head_workflow_roots")
@@ -12034,6 +12239,75 @@ class V5LifecycleManager:
             compact["active_head_actions"] = compact_actions
         return compact
 
+    @staticmethod
+    def _compact_workflow_queue_entry(
+        entry: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Remove duplicated provenance while retaining one exact next action."""
+
+        fields = (
+            "research_id",
+            "claim",
+            "score",
+            "goal_relevance",
+            "goal_target_ids",
+            "action_class",
+            "next_action",
+            "why_now",
+            "plan_round_argv",
+            "actionable_research_id",
+            "actionable_round_id",
+            "actionable_research_ids",
+            "actionable_research_count",
+            "supervision_coverage",
+            "supervision_coverage_count",
+            "supervision_coverage_sha256",
+        )
+        compact = {key: entry[key] for key in fields if key in entry}
+        research_id = compact.get("research_id")
+        actionable_id = compact.get("actionable_research_id")
+        if actionable_id == research_id:
+            compact.pop("actionable_research_id", None)
+        actionable_ids = compact.get("actionable_research_ids")
+        if actionable_ids in ([], [research_id], [actionable_id]):
+            compact.pop("actionable_research_ids", None)
+        for key in (
+            "goal_target_ids",
+            "plan_round_argv",
+            "actionable_round_id",
+        ):
+            if compact.get(key) in (None, [], ""):
+                compact.pop(key, None)
+        if actionable_id != research_id:
+            for key in ("actionable_claim", "actionable_kind"):
+                if entry.get(key) not in (None, ""):
+                    compact[key] = entry[key]
+        if entry.get("workgroup_member_count", 1) > 1:
+            compact["workgroup_member_count"] = entry[
+                "workgroup_member_count"
+            ]
+        basis_research = entry.get("attention_basis_research_ids")
+        if isinstance(basis_research, list) and basis_research not in (
+            [],
+            [research_id],
+            [actionable_id],
+            actionable_ids,
+        ):
+            compact["attention_basis_research_ids"] = basis_research
+        basis_round = entry.get("attention_basis_round_ids")
+        if isinstance(basis_round, list) and basis_round not in (
+            [],
+            [entry.get("actionable_round_id")],
+        ):
+            compact["attention_basis_round_ids"] = basis_round
+        if entry.get("attention_reason") not in (
+            None,
+            "",
+            entry.get("why_now"),
+        ):
+            compact["attention_reason"] = entry["attention_reason"]
+        return compact
+
     def frontier_decision_surface(
         self,
         *,
@@ -12066,6 +12340,7 @@ class V5LifecycleManager:
             self.campaign_goal_coverage(
                 goal_campaign_id,
                 limit=None if diagnostic else limit,
+                routine_projection=not diagnostic,
                 _inspection_context=inspection,
             )
             if goal_campaign_id is not None
@@ -12567,7 +12842,14 @@ class V5LifecycleManager:
                     )
                 ),
             },
-            "workflow_queue": projected,
+            "workflow_queue": (
+                projected
+                if diagnostic
+                else [
+                    self._compact_workflow_queue_entry(item)
+                    for item in projected
+                ]
+            ),
             **(
                 {
                     "campaign_membership": (
@@ -12609,7 +12891,8 @@ class V5LifecycleManager:
                             "reference_only",
                             "attach_context",
                             "promote_landmark",
-                            "promote_active_head",
+                            "add_head",
+                            "retire_active_head",
                         ],
                         "instruction": (
                             "After context compaction or handoff, Main rereads "
@@ -14526,16 +14809,8 @@ class V5LifecycleManager:
     def _snapshot_for_round(
         self,
         selected: list[dict[str, Any]],
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
+    ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
         blackboard = self.store.blackboard()
-        nodes = blackboard.current_nodes()
-        spaces = sorted(
-            node_id
-            for node_id, node in nodes.items()
-            if node.get("node_type") == "space"
-        )
-        if not spaces:
-            raise ValueError("V5 round planning requires one Blackboard space")
         promoted = [
             binding
             for entry in selected
@@ -14551,16 +14826,54 @@ class V5LifecycleManager:
             source = "promoted_blackboard_query"
             origins = [lineage]
         else:
+            explicit_write_spaces = sorted(
+                {
+                    space_id
+                    for entry in selected
+                    for space_id in _require_string_list(
+                        entry["metadata"].get("blackboard_write_space_ids", []),
+                        "research Blackboard write spaces",
+                    )
+                }
+            )
+            if not explicit_write_spaces:
+                semantic = {
+                    "source": "none",
+                    "query": None,
+                    "query_sha256": None,
+                    "origin_bindings": [],
+                    "snapshot_id": None,
+                    "snapshot_sha256": None,
+                    "omission_receipt": None,
+                    "budget_contract": None,
+                    "truth_effect": "none",
+                }
+                return None, {
+                    **semantic,
+                    "selection_sha256": sha256_json(semantic),
+                }
+            if len(explicit_write_spaces) > V5_MAX_CONTEXT_SNAPSHOT_NODES:
+                raise ValueError(
+                    "explicit Blackboard write spaces exceed the V5 context budget"
+                )
+            nodes = blackboard.current_nodes()
+            if any(
+                nodes.get(space_id, {}).get("node_type") != "space"
+                for space_id in explicit_write_spaces
+            ):
+                raise ValueError(
+                    "explicit Blackboard write spaces must name active spaces"
+                )
             query = {
-                "seed_node_ids": [spaces[0]],
+                "seed_node_ids": explicit_write_spaces,
                 "direction": "both",
                 "max_hops": 0,
                 "edge_type_allowlist": ["*"],
                 "node_type_allowlist": ["*"],
-                "node_budget": 1,
+                "node_budget": len(explicit_write_spaces),
                 "edge_budget": 0,
             }
-            source = "default_project_space"
+            source = "explicit_write_spaces"
             origins = []
         snapshot = blackboard.snapshot(
             query=query,
@@ -14706,12 +15019,20 @@ class V5LifecycleManager:
             "blackboard": blackboard_selection,
             "background": background_selection,
             "mode": mode_selection,
-            "precedence": [
-                "machine_validated_authority",
-                "source_research_dossier",
-                "task_specific_blackboard_snapshot",
-                "project_background_index",
-            ],
+            "precedence": (
+                [
+                    "machine_validated_authority",
+                    "source_research_dossier",
+                    "project_background_index",
+                ]
+                if blackboard_selection["source"] == "none"
+                else [
+                    "machine_validated_authority",
+                    "source_research_dossier",
+                    "task_specific_blackboard_snapshot",
+                    "project_background_index",
+                ]
+            ),
             "host_mathematical_output_rule": (
                 "durable_mathematical_findings_must_enter_research_or_worker_return"
             ),
@@ -16718,16 +17039,26 @@ class V5LifecycleManager:
             for key, value in selection.items()
             if key != "context_selection_sha256"
         }
-        if (
-            selection["revision"] != V5_CONTEXT_SELECTION_REVISION
-            or selection["compiler_role"] != "v5_main_planner"
-            or selection["precedence"]
-            != [
+        blackboard_selection = selection.get("blackboard")
+        expected_precedence = (
+            [
+                "machine_validated_authority",
+                "source_research_dossier",
+                "project_background_index",
+            ]
+            if isinstance(blackboard_selection, dict)
+            and blackboard_selection.get("source") == "none"
+            else [
                 "machine_validated_authority",
                 "source_research_dossier",
                 "task_specific_blackboard_snapshot",
                 "project_background_index",
             ]
+        )
+        if (
+            selection["revision"] != V5_CONTEXT_SELECTION_REVISION
+            or selection["compiler_role"] != "v5_main_planner"
+            or selection["precedence"] != expected_precedence
             or selection["host_mathematical_output_rule"]
             != "durable_mathematical_findings_must_enter_research_or_worker_return"
             or selection["truth_effect"] != "none"
@@ -16736,7 +17067,6 @@ class V5LifecycleManager:
             != sha256_json(selection_semantic)
         ):
             raise ValueError("V5 context-selection contract/hash is invalid")
-        blackboard_selection = selection.get("blackboard")
         blackboard_required = {
             "source",
             "query",
@@ -16763,47 +17093,93 @@ class V5LifecycleManager:
             blackboard_semantic
         ):
             raise ValueError("V5 Blackboard context-selection hash mismatch")
-        if (
-            blackboard_selection["snapshot_id"]
-            != card["blackboard_view"]["snapshot_id"]
-            or blackboard_selection["snapshot_sha256"]
-            != card["blackboard_view"]["snapshot_sha256"]
-            or blackboard_selection["truth_effect"] != "none"
-            or blackboard_selection["budget_contract"]
-            != {
-                "max_nodes": V5_MAX_CONTEXT_SNAPSHOT_NODES,
-                "max_edges": V5_MAX_CONTEXT_SNAPSHOT_EDGES,
-                "overflow": (
-                    "fail_before_round_or_explicit_snapshot_omission_receipt"
-                ),
-            }
-        ):
+        if blackboard_selection["truth_effect"] != "none":
             raise ValueError("V5 Blackboard context-selection binding is invalid")
-        query = blackboard_selection.get("query")
-        if not isinstance(query, dict):
-            raise ValueError("V5 Blackboard context-selection query is invalid")
-        self.store.blackboard().validate_query(query)
-        if (
-            blackboard_selection["query_sha256"] != sha256_json(query)
-            or query["node_budget"] > V5_MAX_CONTEXT_SNAPSHOT_NODES
-            or query["edge_budget"] > V5_MAX_CONTEXT_SNAPSHOT_EDGES
-        ):
-            raise ValueError("V5 Blackboard context-selection query/hash is invalid")
-        snapshot_id = blackboard_selection["snapshot_id"]
-        manifest = self.store.blackboard().snapshot_manifest(snapshot_id)
-        manifest_path = (
-            self.store.blackboard().snapshots_dir / snapshot_id / "manifest.json"
-        )
-        if (
-            sha256_bytes(manifest_path.read_bytes())
-            != blackboard_selection["snapshot_sha256"]
-            or manifest["query"] != query
-            or manifest["query_sha256"] != blackboard_selection["query_sha256"]
-            or manifest["omission_receipt"]
-            != blackboard_selection["omission_receipt"]
-        ):
-            raise ValueError("V5 Blackboard context-selection snapshot drifted")
         source = blackboard_selection["source"]
+        snapshot_nodes: dict[str, dict[str, Any]] = {}
+        if source == "none":
+            if blackboard_selection != {
+                "source": "none",
+                "query": None,
+                "query_sha256": None,
+                "origin_bindings": [],
+                "snapshot_id": None,
+                "snapshot_sha256": None,
+                "omission_receipt": None,
+                "budget_contract": None,
+                "truth_effect": "none",
+                "selection_sha256": blackboard_selection["selection_sha256"],
+            }:
+                raise ValueError("V5 absent Blackboard selection is not exact")
+            if card["blackboard_view"] != {
+                "snapshot_id": None,
+                "snapshot_sha256": None,
+            }:
+                raise ValueError("V5 absent Blackboard card binding is invalid")
+            if self._promoted_context_binding(
+                source_research,
+                require_current_origin=False,
+            ) is not None or source_research["metadata"].get(
+                "blackboard_write_space_ids", []
+            ):
+                raise ValueError(
+                    "V5 explicit Blackboard Research lost its snapshot binding"
+                )
+        else:
+            if (
+                not isinstance(blackboard_selection["snapshot_id"], str)
+                or not isinstance(blackboard_selection["snapshot_sha256"], str)
+                or SHA256_RE.fullmatch(blackboard_selection["snapshot_sha256"])
+                is None
+            ):
+                raise ValueError("V5 Blackboard snapshot binding is invalid")
+            if (
+                blackboard_selection["snapshot_id"]
+                != card["blackboard_view"]["snapshot_id"]
+                or blackboard_selection["snapshot_sha256"]
+                != card["blackboard_view"]["snapshot_sha256"]
+                or blackboard_selection["budget_contract"]
+                != {
+                    "max_nodes": V5_MAX_CONTEXT_SNAPSHOT_NODES,
+                    "max_edges": V5_MAX_CONTEXT_SNAPSHOT_EDGES,
+                    "overflow": (
+                        "fail_before_round_or_explicit_snapshot_omission_receipt"
+                    ),
+                }
+            ):
+                raise ValueError("V5 Blackboard context-selection binding is invalid")
+            query = blackboard_selection.get("query")
+            if not isinstance(query, dict):
+                raise ValueError("V5 Blackboard context-selection query is invalid")
+            self.store.blackboard().validate_query(query)
+            if (
+                blackboard_selection["query_sha256"] != sha256_json(query)
+                or query["node_budget"] > V5_MAX_CONTEXT_SNAPSHOT_NODES
+                or query["edge_budget"] > V5_MAX_CONTEXT_SNAPSHOT_EDGES
+            ):
+                raise ValueError(
+                    "V5 Blackboard context-selection query/hash is invalid"
+                )
+            snapshot_id = blackboard_selection["snapshot_id"]
+            manifest = self.store.blackboard().snapshot_manifest(snapshot_id)
+            manifest_path = (
+                self.store.blackboard().snapshots_dir
+                / snapshot_id
+                / "manifest.json"
+            )
+            if (
+                sha256_bytes(manifest_path.read_bytes())
+                != blackboard_selection["snapshot_sha256"]
+                or manifest["query"] != query
+                or manifest["query_sha256"]
+                != blackboard_selection["query_sha256"]
+                or manifest["omission_receipt"]
+                != blackboard_selection["omission_receipt"]
+            ):
+                raise ValueError("V5 Blackboard context-selection snapshot drifted")
+            snapshot_nodes, _ = self.store.blackboard().snapshot_objects(
+                snapshot_id
+            )
         if source == "promoted_blackboard_query":
             promoted = self._promoted_context_binding(
                 source_research,
@@ -16820,6 +17196,29 @@ class V5LifecycleManager:
                 != [expected_lineage]
             ):
                 raise ValueError("V5 promoted context selection drifted")
+        elif source == "explicit_write_spaces":
+            if blackboard_selection["origin_bindings"] != []:
+                raise ValueError(
+                    "V5 explicit-write Blackboard selection has promotion lineage"
+                )
+            seed_ids = blackboard_selection["query"]["seed_node_ids"]
+            if (
+                seed_ids != sorted(set(seed_ids))
+                or not seed_ids
+                or any(
+                    snapshot_nodes.get(node_id, {}).get("node_type") != "space"
+                    for node_id in seed_ids
+                )
+                or blackboard_selection["query"]["direction"] != "both"
+                or blackboard_selection["query"]["max_hops"] != 0
+                or blackboard_selection["query"]["edge_type_allowlist"] != ["*"]
+                or blackboard_selection["query"]["node_type_allowlist"] != ["*"]
+                or blackboard_selection["query"]["node_budget"] != len(seed_ids)
+                or blackboard_selection["query"]["edge_budget"] != 0
+            ):
+                raise ValueError(
+                    "V5 explicit-write Blackboard selection query is invalid"
+                )
         elif source == "default_project_space":
             if blackboard_selection["origin_bindings"] != []:
                 raise ValueError("V5 default context selection has promotion lineage")
@@ -16847,8 +17246,31 @@ class V5LifecycleManager:
                 }
             ):
                 raise ValueError("V5 default context selection query is invalid")
-        else:
+        elif source != "none":
             raise ValueError("V5 Blackboard context-selection source is unsupported")
+        read_space_ids = _require_string_list(
+            card["mathematical_state"].get("read_space_ids"),
+            "V5 task-card Blackboard read spaces",
+        )
+        write_space_ids = _require_string_list(
+            card["mathematical_state"].get("write_space_ids"),
+            "V5 task-card Blackboard write spaces",
+        )
+        expected_read_space_ids = sorted(
+            node_id
+            for node_id, node in snapshot_nodes.items()
+            if node.get("node_type") == "space"
+        )
+        expected_write_space_ids = _require_string_list(
+            source_research["metadata"].get("blackboard_write_space_ids", []),
+            "Research Blackboard write spaces",
+        )
+        if (
+            read_space_ids != expected_read_space_ids
+            or write_space_ids != expected_write_space_ids
+            or any(space_id not in snapshot_nodes for space_id in write_space_ids)
+        ):
+            raise ValueError("V5 task-card Blackboard space capabilities drifted")
         mode_selection = selection.get("mode")
         if not isinstance(mode_selection, dict):
             raise ValueError("V5 mode-selection binding must be an object")
@@ -19950,7 +20372,7 @@ class V5LifecycleManager:
                         validate_computation_design_role_contract(
                             entry["metadata"].get("obligations", [])
                         )
-            snapshot, blackboard_selection = self._snapshot_for_round(selected)
+            _snapshot, blackboard_selection = self._snapshot_for_round(selected)
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             round_id = (
                 f"round-{stamp}-"
@@ -20109,9 +20531,13 @@ class V5LifecycleManager:
                 for work_spec in work_specs
             )
             all_nodes: dict[str, dict[str, Any]] = {}
-            snapshot_nodes, _ = self.store.blackboard().snapshot_objects(
-                snapshot["snapshot_id"]
-            )
+            snapshot_id = blackboard_selection["snapshot_id"]
+            snapshot_sha256 = blackboard_selection["snapshot_sha256"]
+            snapshot_nodes: dict[str, dict[str, Any]] = {}
+            if snapshot_id is not None:
+                snapshot_nodes, _ = self.store.blackboard().snapshot_objects(
+                    snapshot_id
+                )
             if explicit_blackboard_writes:
                 all_nodes = self.store.blackboard().nodes()
             assignments: list[dict[str, Any]] = []
@@ -20367,10 +20793,8 @@ class V5LifecycleManager:
                     },
                     "mathematical_state": {
                         "plane": "mathematical_state",
-                        "blackboard_snapshot_id": snapshot["snapshot_id"],
-                        "blackboard_snapshot_sha256": snapshot[
-                            "snapshot_sha256"
-                        ],
+                        "blackboard_snapshot_id": snapshot_id,
+                        "blackboard_snapshot_sha256": snapshot_sha256,
                         "predecessor_interfaces": predecessor_interfaces,
                         "certified_research_interfaces": (
                             certified_research_interfaces
@@ -20398,8 +20822,8 @@ class V5LifecycleManager:
                         "write_space_ids": write_spaces,
                     },
                     "blackboard_view": {
-                        "snapshot_id": snapshot["snapshot_id"],
-                        "snapshot_sha256": snapshot["snapshot_sha256"],
+                        "snapshot_id": snapshot_id,
+                        "snapshot_sha256": snapshot_sha256,
                     },
                     "narrative_plane": {
                         "plane": "narrative",
@@ -20473,8 +20897,8 @@ class V5LifecycleManager:
                     "return_relpath": return_relpath,
                     "artifact_dir_relpath": artifact_dir_relpath,
                     "work_dir_relpath": work_dir_relpath,
-                    "blackboard_snapshot_id": snapshot["snapshot_id"],
-                    "blackboard_snapshot_sha256": snapshot["snapshot_sha256"],
+                    "blackboard_snapshot_id": snapshot_id,
+                    "blackboard_snapshot_sha256": snapshot_sha256,
                     "host_task_scope_id": host_task_scope_id,
                     "worker_context_id": worker_context_id,
                     "assignment_role": assignment_role,
@@ -20508,8 +20932,8 @@ class V5LifecycleManager:
                 "project_id": self.store.project_id(),
                 "round_id": round_id,
                 "created_at": _utc_now(),
-                "blackboard_snapshot_id": snapshot["snapshot_id"],
-                "blackboard_snapshot_sha256": snapshot["snapshot_sha256"],
+                "blackboard_snapshot_id": snapshot_id,
+                "blackboard_snapshot_sha256": snapshot_sha256,
                 "reasoning_mode_binding": reasoning_binding,
                 "contribution_policy": "independent_ingest_local_quarantine",
                 "assignment_contract_revision": (
@@ -21014,6 +21438,25 @@ class V5LifecycleManager:
                 raise ValueError(
                     "V5 round/task-card Research-cycle projections disagree"
                 )
+            if (
+                card["blackboard_view"].get("snapshot_id")
+                != manifest["blackboard_snapshot_id"]
+                or card["blackboard_view"].get("snapshot_sha256")
+                != manifest["blackboard_snapshot_sha256"]
+            ):
+                raise ValueError(
+                    "V5 round/task-card Blackboard projections disagree"
+                )
+        for assignment in assignments:
+            if (
+                assignment.get("blackboard_snapshot_id")
+                != manifest["blackboard_snapshot_id"]
+                or assignment.get("blackboard_snapshot_sha256")
+                != manifest["blackboard_snapshot_sha256"]
+            ):
+                raise ValueError(
+                    "V5 round/assignment Blackboard projections disagree"
+                )
         if research_cycle is not None and research_cycle["subround"] == "supervision":
             self._validate_supervision_round_selection(
                 research_cycle=research_cycle,
@@ -21027,18 +21470,29 @@ class V5LifecycleManager:
                 ],
                 _inspection_context=inspection,
             )
-        snapshot_path = (
-            self.store.blackboard().snapshots_dir
-            / manifest["blackboard_snapshot_id"]
-            / "manifest.json"
-        )
-        if (
-            snapshot_path.is_symlink()
-            or not snapshot_path.is_file()
-            or sha256_bytes(snapshot_path.read_bytes())
-            != manifest["blackboard_snapshot_sha256"]
-        ):
-            raise ValueError("V5 round Blackboard snapshot bytes/hash mismatch")
+        snapshot_id = manifest["blackboard_snapshot_id"]
+        snapshot_sha256 = manifest["blackboard_snapshot_sha256"]
+        if snapshot_id is None or snapshot_sha256 is None:
+            if snapshot_id is not None or snapshot_sha256 is not None:
+                raise ValueError(
+                    "V5 round Blackboard snapshot id/hash nullability disagrees"
+                )
+        else:
+            if not isinstance(snapshot_id, str) or not isinstance(
+                snapshot_sha256, str
+            ):
+                raise ValueError("V5 round Blackboard snapshot binding is invalid")
+            snapshot_path = (
+                self.store.blackboard().snapshots_dir
+                / snapshot_id
+                / "manifest.json"
+            )
+            if (
+                snapshot_path.is_symlink()
+                or not snapshot_path.is_file()
+                or sha256_bytes(snapshot_path.read_bytes()) != snapshot_sha256
+            ):
+                raise ValueError("V5 round Blackboard snapshot bytes/hash mismatch")
         inspection.round_completed[round_id] = completed
         inspection.round_aborts[round_id] = abort
         result = (round_dir, manifest)
@@ -21805,8 +22259,10 @@ class V5LifecycleManager:
             inspection,
         )
 
-    def round_statuses(self) -> dict[str, Any]:
-        """Validate and project every V5 round in one ephemeral read phase."""
+    def _discover_round_ids(
+        self,
+    ) -> tuple[list[str], int, list[str]]:
+        """Enumerate public round directories without validating their bodies."""
 
         rounds_root = self.store.rounds_dir
         if rounds_root.is_symlink() or not rounds_root.is_dir():
@@ -21820,19 +22276,277 @@ class V5LifecycleManager:
             if re.fullmatch(
                 r"\.round-[^.]+\.staging-[0-9a-f]+", path.name
             ) is not None:
-                # Atomic creation publishes only the final ``round-*`` path.
-                # A private staging directory may survive a crash, but it is
-                # neither a round nor authority to hide all valid statuses.
                 private_staging_count += 1
                 continue
             try:
                 round_ids.append(validate_round_id(path.name))
             except ValueError:
-                # Batch status is an inventory surface.  Preserve strict
-                # validation for direct round access while reporting a
-                # malformed visible directory without discarding every valid
-                # round from Main's view.
                 invalid_visible_names.append(path.name)
+        return round_ids, private_staging_count, invalid_visible_names
+
+    def _round_manifest_attention_envelope(
+        self,
+        round_id: str,
+    ) -> tuple[Path, dict[str, Any]]:
+        """Validate just enough immutable round structure for recovery routing."""
+
+        round_id = validate_round_id(round_id)
+        round_dir = self.store.rounds_dir / round_id
+        path = round_dir / "round.json"
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("round manifest is missing or unsafe")
+        manifest = self.store._read_json(path)
+        if (
+            not isinstance(manifest, dict)
+            or manifest.get("schema_version") != 5
+            or manifest.get("policy_revision") != V5_POLICY_REVISION
+            or manifest.get("project_id") != self.store.project_id()
+            or manifest.get("round_id") != round_id
+        ):
+            raise ValueError("round manifest attention identity is invalid")
+        semantic = {
+            key: value
+            for key, value in manifest.items()
+            if key != "manifest_sha256"
+        }
+        if manifest.get("manifest_sha256") != sha256_json(semantic):
+            raise ValueError("round manifest attention hash mismatch")
+        assignments = manifest.get("assignments")
+        if not isinstance(assignments, list) or not assignments:
+            raise ValueError("round manifest attention assignments are invalid")
+        seen: set[str] = set()
+        for assignment in assignments:
+            if not isinstance(assignment, dict):
+                raise ValueError("round manifest attention assignment is invalid")
+            assignment_id = validate_assignment_id(
+                _require_nonempty_text(
+                    assignment.get("assignment_id"), "attention assignment id"
+                )
+            )
+            if assignment_id in seen:
+                raise ValueError("round manifest attention assignment is duplicated")
+            seen.add(assignment_id)
+            validate_memory_id(
+                _require_nonempty_text(
+                    assignment.get("research_id"), "attention Research id"
+                )
+            )
+            if assignment.get("work_mode") not in WORK_MODES:
+                raise ValueError("round manifest attention work mode is invalid")
+            assignment_semantic = {
+                key: value
+                for key, value in assignment.items()
+                if key != "assignment_sha256"
+            }
+            if assignment.get("assignment_sha256") != sha256_json(
+                assignment_semantic
+            ):
+                raise ValueError("round manifest attention assignment hash mismatch")
+        return round_dir, manifest
+
+    @staticmethod
+    def _assignment_has_structural_product(
+        assignment: dict[str, Any],
+        *,
+        round_id: str,
+        products: dict[tuple[str, str], list[dict[str, Any]]],
+    ) -> bool:
+        """Recognize one product-bound assignment without claiming deep validity."""
+
+        assignment_id = assignment["assignment_id"]
+        matching = []
+        for envelope in products.get((round_id, assignment_id), []):
+            metadata = envelope.get("metadata", {})
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            task_binding = (
+                metadata.get("task_binding")
+                if isinstance(metadata, dict)
+                else None
+            )
+            if not isinstance(provenance, dict) or not isinstance(
+                task_binding, dict
+            ):
+                continue
+            if (
+                provenance.get("task_card_sha256")
+                != assignment.get("task_card_sha256")
+                or provenance.get("worker_id") != assignment.get("worker_id")
+                or provenance.get("work_mode") != assignment.get("work_mode")
+                or task_binding.get("assignment_id") != assignment_id
+                or task_binding.get("round_id") != round_id
+                or task_binding.get("task_card_sha256")
+                != assignment.get("task_card_sha256")
+                or envelope.get("related_research_ids")
+                != [assignment.get("research_id")]
+                or not isinstance(task_binding.get("return_sha256"), str)
+                or SHA256_RE.fullmatch(task_binding["return_sha256"]) is None
+                or metadata.get("worker_outcome") not in V5_RETURN_OUTCOMES
+            ):
+                continue
+            matching.append(envelope)
+        return len(matching) == 1
+
+    def round_attention_statuses(self) -> dict[str, Any]:
+        """Return bounded active-round recovery without deep-validating history."""
+
+        round_ids, private_staging_count, invalid_visible_names = (
+            self._discover_round_ids()
+        )
+        inspection = RoundInspectionContext()
+        products: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        for envelope in self.research_envelopes(
+            _inspection_context=inspection,
+        ):
+            metadata = envelope.get("metadata", {})
+            provenance = (
+                metadata.get("assignment_provenance")
+                if isinstance(metadata, dict)
+                else None
+            )
+            if not isinstance(provenance, dict):
+                continue
+            key = (
+                str(provenance.get("round_id") or ""),
+                str(provenance.get("assignment_id") or ""),
+            )
+            if key[0] and key[1]:
+                products.setdefault(key, []).append(envelope)
+        aborted_ids = {
+            item["round_id"]
+            for item in self.store.reasoning_modes().work_unit_aborts()
+        }
+        active_statuses: list[dict[str, Any]] = []
+        unreadable: list[dict[str, str]] = []
+        structurally_settled = 0
+        deeply_inspected = 0
+        for round_id in round_ids:
+            try:
+                _round_dir, manifest = self._round_manifest_attention_envelope(
+                    round_id
+                )
+                if round_id in aborted_ids or all(
+                    self._assignment_has_structural_product(
+                        assignment,
+                        round_id=round_id,
+                        products=products,
+                    )
+                    for assignment in manifest["assignments"]
+                ):
+                    structurally_settled += 1
+                    continue
+                deeply_inspected += 1
+                status = self._round_status_with_context(round_id, inspection)
+                if status["work_unit_state"] != "active":
+                    structurally_settled += 1
+                    continue
+                assignments = [
+                    {
+                        "assignment_id": item["assignment_id"],
+                        "research_id": item["research_id"],
+                        "work_mode": item["work_mode"],
+                        "state": item["state"],
+                        "research_product_id": item.get("research_product_id"),
+                    }
+                    for item in status["assignments"]
+                ]
+                campaign_scope = status.get("campaign_scope")
+                research_cycle = status.get("research_cycle")
+                active_statuses.append(
+                    {
+                        "round_id": round_id,
+                        "created_at": status.get("created_at"),
+                        "subround": (
+                            research_cycle.get("subround")
+                            if isinstance(research_cycle, dict)
+                            else None
+                        ),
+                        "campaign_id": (
+                            campaign_scope.get("campaign_id")
+                            if isinstance(campaign_scope, dict)
+                            else None
+                        ),
+                        "frontier_target_id": (
+                            campaign_scope.get("frontier_target_id")
+                            if isinstance(campaign_scope, dict)
+                            else None
+                        ),
+                        "assignments": assignments,
+                        "assignment_count": len(assignments),
+                        "awaiting_count": status["awaiting_count"],
+                        "return_present_count": sum(
+                            item["state"] == "return_present"
+                            for item in assignments
+                        ),
+                        "truth_effect": "none",
+                    }
+                )
+            except (KeyError, OSError, ValueError) as exc:
+                unreadable.append(
+                    {
+                        "round_id": round_id,
+                        "reason": _bounded_text(str(exc), 320),
+                    }
+                )
+        active_statuses.sort(key=lambda item: item["round_id"])
+        active_ids = [item["round_id"] for item in active_statuses]
+        shown = active_statuses[-V5_ACTIVE_ROUND_STATUS_PREVIEW:]
+        result: dict[str, Any] = {
+            "schema_version": 1,
+            "workflow_evidence_version": V5_WORKFLOW_EVIDENCE_VERSION,
+            "project_id": self.store.project_id(),
+            "round_count": len(round_ids),
+            "round_ids_sha256": sha256_json(round_ids),
+            "structurally_settled_round_count": structurally_settled,
+            "deeply_inspected_candidate_count": deeply_inspected,
+            "active_round_count": len(active_ids),
+            "active_round_ids": active_ids,
+            "active_round_ids_sha256": sha256_json(active_ids),
+            "active_rounds": shown,
+            "active_rounds_truncated": len(shown) != len(active_statuses),
+            "active_round_preview_policy": "newest_nonselecting",
+            "unreadable_round_count": len(unreadable),
+            "unreadable_rounds": unreadable[:8],
+            "unreadable_round_ids_sha256": sha256_json(
+                [item["round_id"] for item in unreadable]
+            ),
+            "full_terminal_validation_performed": False,
+            "diagnostic_command": "round-status --all",
+            "selection_effect": "none",
+            "truth_effect": "none",
+        }
+        diagnostics: list[dict[str, Any]] = []
+        if private_staging_count:
+            diagnostics.append(
+                {
+                    "code": "private_round_staging_ignored",
+                    "count": private_staging_count,
+                }
+            )
+        if invalid_visible_names:
+            diagnostics.append(
+                {
+                    "code": "invalid_visible_round_directories_ignored",
+                    "count": len(invalid_visible_names),
+                    "entry_names": invalid_visible_names[:8],
+                    "entry_names_sha256": sha256_json(
+                        invalid_visible_names
+                    ),
+                }
+            )
+        if diagnostics:
+            result["discovery_diagnostics"] = diagnostics
+        return result
+
+    def round_statuses(self) -> dict[str, Any]:
+        """Validate and project every V5 round in one ephemeral read phase."""
+
+        round_ids, private_staging_count, invalid_visible_names = (
+            self._discover_round_ids()
+        )
         inspection = RoundInspectionContext()
         round_states = {
             round_id: self.round_status(
@@ -23548,10 +24262,16 @@ class V5LifecycleManager:
                     "round_id": round_id,
                     "assignment_id": assignment_id,
                     "task_card_sha256": assignment["task_card_sha256"],
-                    "blackboard_snapshot_sha256": assignment[
-                        "blackboard_snapshot_sha256"
-                    ],
                     "return_sha256": snapshot.return_sha256,
+                    **(
+                        {
+                            "blackboard_snapshot_sha256": assignment[
+                                "blackboard_snapshot_sha256"
+                            ]
+                        }
+                        if assignment["blackboard_snapshot_sha256"] is not None
+                        else {}
+                    ),
                     **(
                         {"writer_lease_id": assignment["writer_lease_id"]}
                         if terminal_seal is not None

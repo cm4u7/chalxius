@@ -1,5 +1,32 @@
 # Chalxius portable deployment
 
+## 1.0.9 Working Memory Maintenance
+
+The `1.0.9` **Working Memory Maintenance** candidate keeps all active heads and
+supervision scopes visible while replacing repeated routine history expansion
+with four-item previews plus complete counts and identity digests. Maintenance
+expands the complete stored set whenever its count exceeds the preview, and
+diagnostic views remain complete. Zero-argument round recovery deep-validates
+only the unresolved candidate set, while exact and full-forensic status remain
+unchanged. Omitted heads survive ordinary full-list updates until Main retires
+an exact head with a disposition. The Skill asks Main to maintain one
+approximately 50-minute thread heartbeat for Campaign working memory and all
+sparse-landmark identities; it never dispatches Research or Fact work, and a
+pause affects future runs rather than active agents. Installation creates no
+daemon, project migration, mathematical selection, package, or truth effect.
+If the trigger arrives while the current task is visibly performing integrated
+repair, candidate validation, installation, publication, or the final
+pre-Research-resumption reconciliation, it exits `DONT_NOTIFY` before project
+reads or writes and remains active for the next trigger. This phase check uses
+ordinary current-task context and adds no project lock or repair state machine.
+Every bounded routine summary retains exact identity/count/digest and a direct
+diagnostic or exact read; preview absence never means graph absence.
+Ordinary new V5 rounds also bind no Blackboard snapshot: their card,
+assignment, manifest, and return carry exact null snapshot values and empty
+space capabilities. A promoted query or explicit write-space request still
+binds one bounded snapshot, and frozen historical rounds retain their exact
+snapshot validation without backfill.
+
 ## 1.0.8 Bounded Campaign Membership
 
 The `1.0.8` **Bounded Campaign Membership** candidate preserves all 1.0.7
@@ -1029,6 +1056,12 @@ the technical Host role remains the unchanged trusted dispatch adapter. One
 origin-bound promoted Blackboard item may seed its exact bounded query as one
 task. Exact enum mode hints apply only across an equal assurance/adverse
 signature; explicit `--mode` remains the user override.
+
+For current V5 work, the ordinary round has no implicit Blackboard snapshot.
+Card, assignment, manifest, and return use exact null snapshot bindings and
+empty read/write space capabilities. A promoted query or explicit write-space
+request binds one exact bounded snapshot. Historical rounds continue to
+validate their frozen snapshot bytes without backfill.
 
 When an explicitly maintained `PROJECT_BACKGROUND.md` exists, inspect its
 complete index and optionally commit exact chunks into a new card:

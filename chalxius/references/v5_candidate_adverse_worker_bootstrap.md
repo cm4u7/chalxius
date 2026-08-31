@@ -94,7 +94,9 @@ name exists on `PATH`.
 Write one schema-5 return to the exact card path with these fields:
 
 - `schema_version`, `project_id`, `round_id`, `assignment_id`, `worker_id`;
-- `task_card_sha256`, `blackboard_snapshot_sha256`;
+- `task_card_sha256`, and the exact card `blackboard_snapshot_sha256` value
+  (JSON `null` for an ordinary current card, or its exact historical/explicit
+  hash string);
 - `outcome`, `claim`, `content`;
 - `narrative` with exactly `rationale`, `summary`, `intuition`, `limitations`;
 - `artifacts`, normally `[]` unless a card obligation requires one;

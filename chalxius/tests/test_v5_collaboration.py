@@ -92,9 +92,18 @@ class V5CollaborationTests(unittest.TestCase):
             root = Path(temporary) / "v5"
             store = self._store(root)
             lifecycle = store.v5_lifecycle()
+            pulse_space_id = next(
+                node_id
+                for node_id, node in store.blackboard().current_nodes().items()
+                if node["node_type"] == "space"
+            )
             wave1_sources = [
                 lifecycle.add_research(
-                    {"kind": "direction", "claim": f"Explore branch {index}."},
+                    {
+                        "kind": "direction",
+                        "claim": f"Explore branch {index}.",
+                        "blackboard_write_space_ids": [pulse_space_id],
+                    },
                     actor="main",
                 )
                 for index in (1, 2)
@@ -153,6 +162,7 @@ class V5CollaborationTests(unittest.TestCase):
                     "claim": "Adversarially test the stable reduction.",
                     "relation": "challenges",
                     "related_research_ids": [good_receipt["research_id"]],
+                    "blackboard_write_space_ids": [pulse_space_id],
                 },
                 actor="main",
             )

@@ -106,6 +106,39 @@ class CHX084BatchRoundStatusTests(unittest.TestCase):
             self.assertEqual(payload["round_states"], {round_id: "active"})
             self.assertEqual(list(payload["round_states"]), [round_id])
 
+    def test_round_status_without_id_returns_only_active_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            store = self._store(root)
+            with patch.object(
+                V5LifecycleManager,
+                "_validate_bound_runtime_binding",
+                return_value={},
+            ):
+                active = self._plan_round(store, "Recover this active fixture.")
+                aborted = self._plan_round(store, "Ignore this terminal fixture.")
+                self._abort_round(store, str(aborted["round_id"]))
+                stdout = StringIO()
+                stderr = StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    code = cli_main(
+                        [
+                            "--root",
+                            str(root),
+                            "--role",
+                            "main",
+                            "round-status",
+                        ]
+                    )
+
+            self.assertEqual(code, 0, stderr.getvalue())
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["active_round_ids"], [active["round_id"]])
+            self.assertEqual(payload["active_round_count"], 1)
+            self.assertFalse(payload["full_terminal_validation_performed"])
+            self.assertEqual(payload["diagnostic_command"], "round-status --all")
+            self.assertEqual(payload["truth_effect"], "none")
+
     def test_batch_does_not_require_historical_runtime_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             store = self._store(Path(temporary) / "project")

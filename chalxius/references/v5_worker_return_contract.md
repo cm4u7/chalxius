@@ -15,7 +15,9 @@ provenance or identity gate is implied.
 ## Copy the binding
 
 Copy `project_id`, `round_id`, `assignment_id`, `worker_id`, and
-`blackboard_snapshot_sha256` from the card. Copy `task_card_sha256` from the
+`blackboard_snapshot_sha256` from the card exactly. For an ordinary current
+round the Blackboard value is JSON `null`; for a round with an explicitly
+bound Blackboard snapshot it is the exact hash string. Copy `task_card_sha256` from the
 assignment in `round-status` or the generated prompt. The card's
 `return_contract`, `assurance_contract`, and `artifact_capability` determine the
 remaining shape and bounds.
@@ -43,7 +45,7 @@ A current assurance-bound card without `adverse_routing` uses exactly:
   "assignment_id": "COPY_FROM_CARD",
   "worker_id": "COPY_FROM_CARD",
   "task_card_sha256": "COPY_FROM_ROUND_STATUS_OR_PROMPT",
-  "blackboard_snapshot_sha256": "COPY_FROM_CARD",
+  "blackboard_snapshot_sha256": null,
   "outcome": "insight",
   "claim": "One precise claim made by this Research return.",
   "content": "The bounded argument, evidence, counterexample, or blocker.",

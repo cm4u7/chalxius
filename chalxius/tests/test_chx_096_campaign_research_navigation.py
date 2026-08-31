@@ -113,7 +113,8 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     "reference_only",
                     "attach_context",
                     "promote_landmark",
-                    "promote_active_head",
+                    "add_head",
+                    "retire_active_head",
                 ],
             )
             policy = surface["exact_search_attention_policy"]
