@@ -15,6 +15,10 @@ certification for long-running Codex projects.**
 > redesigned. This limitation does not affect Research storage, exact search,
 > Campaign/frontier coordination, supervision, or Fact certification.
 
+> **Please Disable Split Procedure and Fact Admission Mannually in v1.0.5**
+> These functionalities currently do not allign with expected performence
+> and may slow down your research with redundant procedures.
+
 Chalxius is a local research runtime for projects that outgrow one chat. It
 keeps sources, Research, computations, objections, dependencies, supervision,
 failed routes, and admitted Facts in one content-addressed system without
