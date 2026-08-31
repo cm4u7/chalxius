@@ -1,4 +1,4 @@
-Chalxius 1.0.10 — Frozen Context Replay
+Chalxius 1.0.11 — Monotone Research Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
@@ -34,15 +34,19 @@ event log, and `reference_only` assigns no attention role or truth effect.
 
 When Campaign research starts or resumes, Main ensures one exact thread
 heartbeat named `Chalxius frontier maintenance`, updating rather than
-duplicating it. About every 50 minutes it rereads every target and active head,
-all contexts, the complete sparse-landmark identities and reasons, recent
-attainment, bounded active-round recovery, and material old Research. If the
-routine preview count exceeds its four expanded examples, use `--diagnostic`
-or exact working state before declaring the maintenance pass complete. The
-heartbeat may perform explicit nontruth attention maintenance, but never
+duplicating it. About every 40 minutes it requests a full active maintenance
+pass. This is a non-preemptive reminder: finish the current bounded action,
+then maintain before freezing another cut; if maintenance has already started,
+expand it to full scope. Reread every target and active head, all contexts, the
+complete sparse-landmark identities and reasons, recent attainment, bounded
+active-round recovery, and material old Research. If a routine preview count
+exceeds its four expanded examples, use `--diagnostic` or exact working state.
+Exact-search the graph and make every warranted explicit nontruth add, remove,
+migration, attachment, retirement, or reason correction; a read-only pass is
+complete only when exact search supports no change. The heartbeat never
 dispatches Research or Fact work. A project pause stops future triggers only
-and does not interrupt an agent or abort a round already in progress. When host
-heartbeat support is unavailable, perform the same bounded pass at the next
+and does not interrupt an agent or abort a round already in progress. When
+host heartbeat support is unavailable, perform the same pass at the next
 visible handoff, reconnect, or user request. This is Campaign working-memory
 maintenance, not worker-liveness monitoring.
 

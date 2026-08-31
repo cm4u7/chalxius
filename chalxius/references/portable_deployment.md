@@ -1,5 +1,26 @@
 # Chalxius portable deployment
 
+## 1.0.11 Monotone Research Continuity
+
+The `1.0.11` **Monotone Research Continuity** candidate composes every sparse
+Campaign attention update over the latest persisted working-state bytes.
+Advisory goal coverage remains a read projection and cannot silently replace a
+new head, erase a parallel head, or detach context between consecutive writes;
+the exact `plan-round` handoff remains the sole automatic rigid-replacement
+path. A direct source-scope Research input also transmits only the exact
+primary-source bytes named by its own hash-bound `source_uses`, recovered
+through exactly one validated assignment/card provenance hop per transmission.
+A later independent source review can renew those bytes only by citing the SHA
+itself. The mechanism does not recurse arbitrary Research relations, parse
+prose, or authorize unused sources.
+
+Main maintains one approximately 40-minute, non-preemptive full-active
+Campaign heartbeat. It finishes the current bounded action before maintenance
+and then exact-searches all targets, heads, contexts, complete landmarks,
+recent history, and active rounds, applying warranted nontruth attention
+changes before another cut. It dispatches no Research or Fact work and creates
+no truth effect, daemon, project migration, or new procedural gate.
+
 ## 1.0.10 Frozen Context Replay
 
 The `1.0.10` **Frozen Context Replay** candidate preserves strict capability

@@ -639,6 +639,108 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 ),
             )
 
+            literature_continuation = lifecycle.add_research(
+                {
+                    "kind": "literature",
+                    "claim": (
+                        "Use exactly the primary bytes accepted by the prior "
+                        "source-scope review."
+                    ),
+                    "relation": "uses",
+                    "related_research_ids": [
+                        source_review_receipt["research_id"]
+                    ],
+                },
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            source_review_record = lifecycle._research_record(
+                source_review_receipt["research_id"]
+            )
+            original_read_json = store._read_json
+
+            def reject_task_card_reread(path: Path) -> dict:
+                if Path(path) == Path(source_review_assignment["task_card_path"]):
+                    raise AssertionError(
+                        "authorization reread unhashed task-card bytes"
+                    )
+                return original_read_json(path)
+
+            with patch.object(
+                store,
+                "_read_json",
+                side_effect=reject_task_card_reread,
+            ):
+                direct_capabilities = (
+                    lifecycle._exact_source_review_capabilities(
+                        source_review_record
+                    )
+                )
+            self.assertEqual(
+                [item["sha256"] for item in direct_capabilities],
+                [sha256_bytes(source_path.read_bytes())],
+            )
+            used_source_raw = source_path.read_bytes()
+            source_path.write_bytes(b"drifted reviewed primary source")
+            try:
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "source-review primary capability bytes/hash mismatch",
+                ):
+                    lifecycle._exact_source_review_capabilities(
+                        source_review_record
+                    )
+            finally:
+                source_path.write_bytes(used_source_raw)
+
+            # Unused primary bytes on the old review card confer no authority
+            # and therefore cannot become a liveness requirement for this
+            # continuation.  Remove them during planning and restore the test
+            # fixture afterward for the later independent supervision checks.
+            unused_source_files = {
+                store.root / item["artifact_path"]: (
+                    store.root / item["artifact_path"]
+                ).read_bytes()
+                for item in source_artifacts
+            }
+            for path in unused_source_files:
+                path.unlink()
+            try:
+                literature_round = lifecycle.create_production_round(
+                    workers=1,
+                    mode="literature",
+                    research_ids=[literature_continuation["research_id"]],
+                    host_task_scope_id="source-review-capability-continuation",
+                )
+            finally:
+                for path, payload in unused_source_files.items():
+                    path.write_bytes(payload)
+            literature_card = json.loads(
+                Path(
+                    literature_round["assignments"][0]["task_card_path"]
+                ).read_text()
+            )
+            literature_artifacts = literature_card["mathematical_state"][
+                "related_artifacts"
+            ]
+            literature_paths = {item["path"] for item in literature_artifacts}
+            self.assertIn("primary-source.pdf", literature_paths)
+            self.assertIn(
+                review_report["sha256"],
+                {item["sha256"] for item in literature_artifacts},
+            )
+            self.assertIn(
+                sha256_bytes(source_path.read_bytes()),
+                lifecycle._task_primary_source_sha256s(literature_card),
+            )
+            self.assertFalse(
+                {
+                    "hkr-primary.pdf",
+                    "blr-primary.pdf",
+                    "dml-primary.pdf",
+                }.intersection(literature_paths)
+            )
+
             downstream = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",

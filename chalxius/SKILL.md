@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.10 — Frozen Context Replay
+# Chalxius 1.0.11 — Monotone Research Continuity
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -61,16 +61,22 @@ operations infers mathematical completion or changes Fact authority.
 When Campaign research starts or resumes and the host exposes thread
 automations, Main ensures exactly one project/task heartbeat named **Chalxius
 frontier maintenance**, updating the existing exact match rather than creating
-duplicates. Approximately every 50 minutes it reviews every target, active
-head, attached/unattached context, complete sparse-landmark identity and
-reason, recent attainment, bounded active-round recovery, and material exact
-Research matches. It may apply explicit nontruth attention maintenance,
-including restoring an important old Research as context, landmark, or head,
-but never starts Research workers, Fact packaging, Candidate, verifier,
-Gateway, or Fact work and never selects mathematical truth. A project pause
-suppresses future heartbeat runs only; an agent already running and a frozen
-round continue untouched. If thread automations are unavailable, Main performs
-the same bounded pass at the next visible handoff, reconnect, or user request.
+duplicates. Approximately every 40 minutes it requests one full active
+maintenance pass. The reminder is non-preemptive: Main finishes its current
+bounded action, then performs the pass before freezing another cut; if a
+maintenance pass is already under way, it expands that pass to full scope.
+Full scope covers every target, active head, attached/unattached context,
+complete sparse-landmark identity and reason, recent attainment, bounded
+active-round recovery, and material exact Research search. Completion means
+using those searches to make every currently warranted explicit nontruth
+addition, removal, migration, attachment, retirement, or reason correction;
+read-only completion is valid only when exact search shows that no attention
+change is warranted. The heartbeat never starts Research workers, Fact
+packaging, Candidate, verifier, Gateway, or Fact work and never selects
+mathematical truth. A project pause suppresses future heartbeat runs only; an
+agent already running and a frozen round continue untouched. If thread
+automations are unavailable, Main performs the same pass at the next visible
+handoff, reconnect, or user request.
 At trigger entry, a heartbeat that finds the current task visibly inside an
 integrated Chalxius repair, candidate validation, local installation,
 publication, or their pre-Research-resumption reconciliation ends immediately

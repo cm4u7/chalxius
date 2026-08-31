@@ -1,5 +1,16 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.11 Monotone Research Continuity override.** Sparse Campaign mutations
+> compose from the latest persisted working state; advisory semantic coverage
+> is read-only, and only exact selected `plan-round` lineage performs a rigid
+> head handoff. A source-scope Research result carries forward only the exact
+> direct-primary bytes whitelisted by its own `source_uses` and frozen
+> assignment/task-card provenance. Main's approximately 40-minute heartbeat is
+> non-preemptive and full-active: after the current bounded action it searches
+> every target/head/context/landmark/recent/active-round surface and performs
+> all warranted explicit nontruth attention changes before the next cut. None
+> of these paths dispatches Research or Fact work or changes truth authority.
+
 > **1.0.9 Working Memory Maintenance override.** Routine Campaign projection
 > retains every active head and supervision scope while expanding only four
 > contexts, four recent attainments, and four oldest/newest landmarks; complete

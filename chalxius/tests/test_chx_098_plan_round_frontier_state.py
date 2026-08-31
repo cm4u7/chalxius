@@ -1890,7 +1890,9 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             [self.successor_id],
         )
 
-    def test_context_attach_absorbs_exact_structural_head_refresh(self) -> None:
+    def test_sparse_updates_compose_over_latest_persisted_working_state(
+        self,
+    ) -> None:
         lifecycle = self.store.v5_lifecycle()
         lifecycle._replace_campaign_frontier_working_state(
             self.campaign_id,
@@ -1903,15 +1905,13 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 }
             },
         )
+        # Simulate a stale advisory projection that still sees only the old
+        # head.  It may inform Main's read surface, but it must never replace
+        # the persisted write baseline between sparse transactions.
         projected_goal = {
             "target_id": self.target_id,
-            "current_active_head_research_ids": [self.successor_id],
-            "active_head_actions": [
-                {
-                    "research_id": self.root_id,
-                    "actionable_research_id": self.successor_id,
-                }
-            ],
+            "current_active_head_research_ids": [self.root_id],
+            "active_head_actions": [],
             "invalid_head_research_ids": [],
             "invalid_attained_checkpoint_research_ids": [],
         }
@@ -1920,7 +1920,20 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             "campaign_goal_coverage",
             return_value=[projected_goal],
         ):
-            lifecycle.reconcile_campaign_frontier(
+            added = lifecycle.reconcile_campaign_frontier(
+                self.campaign_id,
+                {
+                    "kind": "campaign_frontier_update",
+                    "target_id": self.target_id,
+                    "attention_updates": [
+                        {
+                            "operation": "add_head",
+                            "research_id": self.successor_id,
+                        }
+                    ],
+                },
+            )
+            attached = lifecycle.reconcile_campaign_frontier(
                 self.campaign_id,
                 {
                     "kind": "campaign_frontier_update",
@@ -1934,6 +1947,20 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                                 "Exact search recovered a prior theorem that "
                                 "changes this current cut."
                             ),
+                        }
+                    ],
+                },
+            )
+            retired = lifecycle.reconcile_campaign_frontier(
+                self.campaign_id,
+                {
+                    "kind": "campaign_frontier_update",
+                    "target_id": self.target_id,
+                    "attention_updates": [
+                        {
+                            "operation": "retire_active_head",
+                            "research_id": self.root_id,
+                            "disposition": "superseded",
                         }
                     ],
                 },
@@ -1952,6 +1979,18 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                     ),
                 }
             ],
+        )
+        self.assertEqual(
+            added["attention_diff"]["before_active_head_research_ids"],
+            [self.root_id],
+        )
+        self.assertEqual(
+            attached["attention_diff"]["before_active_head_research_ids"],
+            [self.root_id, self.successor_id],
+        )
+        self.assertEqual(
+            retired["attention_diff"]["before_active_head_research_ids"],
+            [self.root_id, self.successor_id],
         )
 
     def test_plan_round_retargets_context_on_unique_head_handoff(self) -> None:

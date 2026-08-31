@@ -1,4 +1,24 @@
-# Chalxius V5 traceability through 1.0.10 Frozen Context Replay
+# Chalxius V5 traceability through 1.0.11 Monotone Research Continuity
+
+## 1.0.11 Monotone Research Continuity overlay
+
+- Candidate version: `1.0.11`; release name **Monotone Research Continuity**.
+- Sparse Campaign updates use the latest persisted working state as their sole
+  mutation baseline. Advisory goal projection is read-only; exact selected
+  `plan-round` lineage owns rigid head replacement. Consecutive add, attach,
+  and retire transactions therefore compose without losing heads or context.
+- A direct source-scope Research input projects only the frozen primary bytes
+  actually named by that review's `source_uses`, through exactly one validated
+  assignment/task-card provenance hop per transmission. A later independent
+  source review must cite the SHA itself to renew access; no prose, arbitrary
+  relation, sibling review, or unused-card capability grants it.
+- Main's working-memory heartbeat is approximately 40 minutes and
+  non-preemptive. A full active pass searches every target/head/context/
+  landmark/recent/active-round surface and performs warranted explicit
+  nontruth attention maintenance; it dispatches no Research or Fact work.
+- The repair changes no Research bytes, Campaign truth, Candidate, verifier,
+  Gateway, Fact, or admission state. Historical rounds and Campaign events
+  remain immutable.
 
 ## 1.0.10 Frozen Context Replay overlay
 

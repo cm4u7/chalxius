@@ -1953,6 +1953,291 @@ class V5LifecycleManager:
             )
         return result
 
+    def _exact_source_review_capabilities(
+        self,
+        record: dict[str, Any],
+        *,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[dict[str, str]]:
+        """Project primary bytes actually used by one exact source review.
+
+        A source-scope result normally owns only its review report while its
+        frozen task card owns the primary bytes it inspected.  Carrying only
+        ``metadata.artifacts`` therefore strands those bytes when the review
+        becomes a direct Research input to a later production.  Recover them
+        through exactly one rigid provenance hop per transmission and the
+        review's own ``source_uses`` whitelist.  A later independent source
+        review may renew the same bytes only by citing that SHA itself; no
+        unreviewed recursive hop exists.  This is capability transmission,
+        not graph traversal: arbitrary related Research, prose, sibling
+        reviews, and unused card capabilities confer no authority.
+        """
+
+        metadata = record.get("metadata")
+        if not isinstance(metadata, dict):
+            return []
+        source_uses = metadata.get("source_uses", [])
+        if source_uses is None:
+            source_uses = []
+        if not isinstance(source_uses, list) or any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("source_artifact_sha256"), str)
+            or SHA256_RE.fullmatch(item["source_artifact_sha256"]) is None
+            for item in source_uses
+        ):
+            raise ValueError("Research source-use capability binding is invalid")
+        if not source_uses:
+            return []
+        provenance = metadata.get("assignment_provenance")
+        if not isinstance(provenance, dict):
+            return []
+        round_id = provenance.get("round_id")
+        assignment_id = provenance.get("assignment_id")
+        task_card_sha256 = provenance.get("task_card_sha256")
+        if (
+            not isinstance(round_id, str)
+            or not isinstance(assignment_id, str)
+            or not isinstance(task_card_sha256, str)
+        ):
+            return []
+        round_id = validate_round_id(round_id)
+        assignment_id = validate_assignment_id(assignment_id)
+        if SHA256_RE.fullmatch(task_card_sha256) is None:
+            return []
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        round_dir = self.store.rounds_dir / round_id
+        manifest_path = round_dir / "round.json"
+        if not manifest_path.exists() and not manifest_path.is_symlink():
+            return []
+        manifest_raw = self._read_regular_bytes_once(
+            manifest_path,
+            label="source-review round manifest",
+            containment_root=self.store.root,
+        )
+        try:
+            manifest = json.loads(manifest_raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("source-review round manifest JSON is invalid") from exc
+        if not isinstance(manifest, dict):
+            raise ValueError("source-review round manifest is not one object")
+        manifest_semantic = {
+            key: value
+            for key, value in manifest.items()
+            if key != "manifest_sha256"
+        }
+        if (
+            manifest.get("schema_version") != 5
+            or manifest.get("project_id") != self.store.project_id()
+            or manifest.get("round_id") != round_id
+            or manifest.get("manifest_sha256")
+            != sha256_json(manifest_semantic)
+        ):
+            raise ValueError("source-review round manifest drifted")
+        assignments = [
+            item
+            for item in manifest.get("assignments", [])
+            if isinstance(item, dict)
+            if item.get("assignment_id") == assignment_id
+        ]
+        if len(assignments) != 1:
+            return []
+        assignment = assignments[0]
+        assignment_semantic = {
+            key: value
+            for key, value in assignment.items()
+            if key != "assignment_sha256"
+        }
+        if (
+            assignment.get("assignment_sha256")
+            != sha256_json(assignment_semantic)
+            or assignment.get("task_card_sha256") != task_card_sha256
+            or assignment.get("work_mode") != provenance.get("work_mode")
+            or assignment.get("worker_id") != provenance.get("worker_id")
+        ):
+            raise ValueError("source-review task-card provenance drifted")
+        sidecar_path = round_dir / "assignments" / f"{assignment_id}.json"
+        sidecar_raw = self._read_regular_bytes_once(
+            sidecar_path,
+            label="source-review assignment sidecar",
+            containment_root=self.store.root,
+        )
+        try:
+            sidecar = json.loads(sidecar_raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("source-review assignment sidecar is invalid") from exc
+        if sidecar != assignment:
+            raise ValueError("source-review assignment sidecar drifted")
+        task_binding = metadata.get("task_binding")
+        if (
+            not isinstance(task_binding, dict)
+            or task_binding.get("round_id") != round_id
+            or task_binding.get("assignment_id") != assignment_id
+            or task_binding.get("task_card_sha256") != task_card_sha256
+            or not isinstance(task_binding.get("return_sha256"), str)
+            or SHA256_RE.fullmatch(task_binding["return_sha256"]) is None
+        ):
+            raise ValueError("source-review Research provenance drifted")
+        task_card_path = contained_path(
+            self.store.root,
+            assignment["task_card_relpath"],
+            "source-review task card",
+        )
+        raw = self._read_regular_bytes_once(
+            task_card_path,
+            label="source-review task card",
+        )
+        if sha256_bytes(raw) != task_card_sha256:
+            raise ValueError("source-review task-card bytes/hash mismatch")
+        try:
+            card = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("source-review task-card JSON is invalid") from exc
+        if not isinstance(card, dict):
+            raise ValueError("source-review task card is not one object")
+        card_semantic = {
+            key: value
+            for key, value in card.items()
+            if key != "task_card_semantic_sha256"
+        }
+        if (
+            card.get("task_card_semantic_sha256")
+            != sha256_json(card_semantic)
+            or card.get("project_id") != self.store.project_id()
+            or card.get("round_id") != round_id
+            or card.get("assignment_id") != assignment_id
+            or card.get("worker_id") != assignment.get("worker_id")
+            or card.get("research_id") != assignment.get("research_id")
+            or card.get("work_mode") != assignment.get("work_mode")
+            or card.get("research_cycle") != manifest.get("research_cycle")
+        ):
+            raise ValueError("source-review task-card semantic binding drifted")
+        cycle = self._validate_research_cycle_binding(
+            card.get("research_cycle")
+        )
+        if (
+            cycle["subround"] != "supervision"
+            or "source_scope" not in cycle["supervisor_scopes"]
+        ):
+            return []
+        state = card.get("mathematical_state", {})
+        dossier = state.get("source_research_dossier", {})
+        dossier_metadata = (
+            dossier.get("metadata", {}) if isinstance(dossier, dict) else {}
+        )
+        binding = (
+            dossier_metadata.get("research_supervision")
+            if isinstance(dossier_metadata, dict)
+            else None
+        )
+        if not isinstance(binding, dict):
+            return []
+        receipts = binding.get("source_receipts")
+        if (
+            binding.get("supervisor_scope") != "source_scope"
+            or binding.get("source_round_id") != cycle["source_round_id"]
+            or binding.get("source_round_manifest_sha256")
+            != cycle["source_round_manifest_sha256"]
+            or binding.get("source_receipts_sha256")
+            != cycle["source_receipts_sha256"]
+            or binding.get("source_component_id")
+            != cycle.get("source_component_id")
+            or binding.get("source_component_sha256")
+            != cycle.get("source_component_sha256")
+            or binding.get("review_policy")
+            != "attack_exact_production_outputs"
+            or binding.get("repair_policy")
+            != "copy_on_write_next_research_cycle"
+            or binding.get("pulse_policy") != "not_used"
+            or binding.get("truth_effect") != "none"
+            or not isinstance(receipts, list)
+            or not receipts
+            or binding.get("source_receipts_sha256")
+            != sha256_json(receipts)
+        ):
+            raise ValueError("source-review supervision binding drifted")
+        if card.get("research_cycle") != cycle:
+            raise ValueError("source-review cycle binding drifted")
+        if binding["supervisor_scope"] != "source_scope":
+            return []
+
+        used_source_hashes = {
+            item["source_artifact_sha256"]
+            for item in source_uses
+        }
+        available = [
+            *state.get("related_artifacts", []),
+            *state.get("authority_snapshot", {}).get("capabilities", []),
+            *dossier_metadata.get("artifacts", []),
+        ]
+        by_hash: dict[str, list[dict[str, str]]] = {}
+        digest_by_path: dict[str, str] = {}
+        for capability in available:
+            if not isinstance(capability, dict):
+                continue
+            path_text = capability.get("path")
+            digest = capability.get("sha256")
+            role = capability.get("role", capability.get("source_role"))
+            if (
+                not isinstance(path_text, str)
+                or not path_text
+                or not isinstance(digest, str)
+                or SHA256_RE.fullmatch(digest) is None
+                or digest not in used_source_hashes
+                or not _is_direct_source_capability_role(role)
+            ):
+                continue
+            previous_digest = digest_by_path.get(path_text)
+            if previous_digest is not None and previous_digest != digest:
+                raise ValueError(
+                    "source-review capability path has conflicting bytes"
+                )
+            digest_by_path[path_text] = digest
+            by_hash.setdefault(digest, []).append(
+                {
+                    "path": path_text,
+                    "sha256": digest,
+                    "role": str(role),
+                }
+            )
+
+        result: list[dict[str, str]] = []
+        for digest in sorted(used_source_hashes):
+            candidates = sorted(
+                by_hash.get(digest, []),
+                key=lambda item: (item["path"], item["role"]),
+            )
+            if not candidates:
+                raise ValueError(
+                    "source-review used primary capability is unavailable or drifted"
+                )
+            capability = candidates[0]
+            path = self._lexical_contained_path(
+                capability["path"],
+                "source-review primary capability",
+            )
+            self._ordinary_capability_bytes(
+                path,
+                capability["sha256"],
+                label="source-review primary capability",
+                _inspection_context=inspection,
+            )
+            result.append(
+                {
+                    "path": capability["path"],
+                    "sha256": capability["sha256"],
+                    "role": (
+                        f"{record['research_id']}:prior_source_review:"
+                        f"{digest[:12]}:{capability['role']}"
+                    ),
+                    "source_research_id": record["research_id"],
+                }
+            )
+        return result
+
     @staticmethod
     def _literal_research_reference_tokens(
         record: dict[str, Any],
@@ -11030,98 +11315,14 @@ class V5LifecycleManager:
                 row = json.loads(
                     json.dumps(stored[target_id], ensure_ascii=False)
                 )
-                goal = goals.get(target_id, {})
-                projected = goal.get("current_active_head_research_ids")
-                if isinstance(projected, list):
-                    projected_ids = list(
-                        dict.fromkeys(
-                            validate_memory_id(item) for item in projected
-                        )
-                    )
-                else:
-                    projected_ids = []
-                invalid = {
-                    item
-                    for field in (
-                        "invalid_head_research_ids",
-                        "invalid_attained_checkpoint_research_ids",
-                    )
-                    for item in (
-                        goal.get(field)
-                        if isinstance(goal.get(field), list)
-                        else []
-                    )
-                }
-                projected_ids = [
-                    item for item in projected_ids if item not in invalid
-                ]
-                if projected_ids:
-                    old_heads = set(row["active_head_research_ids"])
-                    new_heads = set(projected_ids)
-                    replacement_by_old: dict[str, str] = {}
-                    for action in goal.get("active_head_actions", []):
-                        if not isinstance(action, dict):
-                            continue
-                        old_id = action.get("research_id")
-                        current_id = action.get("actionable_research_id")
-                        if (
-                            isinstance(old_id, str)
-                            and old_id in old_heads
-                            and isinstance(current_id, str)
-                            and current_id in new_heads
-                        ):
-                            replacement_by_old[old_id] = current_id
-                    # The live projection itself may be the only rigid
-                    # replacement evidence available: one old head disappears
-                    # and exactly one new head appears.  In that case there is
-                    # no mathematical choice for Main to repeat, so carry the
-                    # old head's context to the sole projected successor.  A
-                    # one-to-many projection remains genuinely ambiguous and
-                    # is deliberately left unattached below.
-                    removed_heads = old_heads.difference(new_heads)
-                    added_heads = new_heads.difference(old_heads)
-                    if len(added_heads) == 1:
-                        sole_added_head = next(iter(added_heads))
-                        for old_id in removed_heads:
-                            replacement_by_old.setdefault(
-                                old_id,
-                                sole_added_head,
-                            )
-                    row["active_head_research_ids"] = projected_ids
-                    row["historical_landmark_research_ids"] = [
-                        item
-                        for item in row[
-                            "historical_landmark_research_ids"
-                        ]
-                        if item not in new_heads
-                    ]
-                    row["historical_landmark_reasons"] = {
-                        item: reason
-                        for item, reason in row[
-                            "historical_landmark_reasons"
-                        ].items()
-                        if item in row["historical_landmark_research_ids"]
-                    }
-                    row["recent_attained_research_ids"] = [
-                        item
-                        for item in row["recent_attained_research_ids"]
-                        if item not in new_heads
-                    ]
-                    row["head_contexts"] = [
-                        {
-                            **context,
-                            "attached_head_research_id": (
-                                context["attached_head_research_id"]
-                                if context["attached_head_research_id"]
-                                in new_heads
-                                else replacement_by_old.get(
-                                    context["attached_head_research_id"]
-                                )
-                            ),
-                        }
-                        for context in row["head_contexts"]
-                        if context["research_id"] not in new_heads
-                    ]
+                # A persisted frontier row is Main's current working memory
+                # and therefore the sole baseline for a later write.  The
+                # semantic goal projection remains useful read-only advice,
+                # but replaying it here can silently discard a head added by
+                # the immediately preceding sparse transaction or detach its
+                # contexts.  Exact rigid handoff for a selected Research round
+                # belongs to ``_advance_campaign_frontier_for_plan``; ordinary
+                # reconciliation applies only the operations Main supplied.
                 rows[target_id] = row
                 continue
             root_id = validate_memory_id(target["subject_id"])
@@ -20311,6 +20512,12 @@ class V5LifecycleManager:
                     record,
                     _inspection_context=inspection,
                 )
+                typed_artifacts.extend(
+                    self._exact_source_review_capabilities(
+                        record,
+                        _inspection_context=inspection,
+                    )
+                )
                 # Validate the repair-specific path/SHA/role closure before a
                 # staging round directory or any other round byte is created.
                 self._validate_repair_task_capability_closure(
@@ -20705,6 +20912,12 @@ class V5LifecycleManager:
                     )
                     related_artifacts.extend(
                         self._typed_research_artifacts(
+                            related_record,
+                            _inspection_context=inspection,
+                        )
+                    )
+                    related_artifacts.extend(
+                        self._exact_source_review_capabilities(
                             related_record,
                             _inspection_context=inspection,
                         )
