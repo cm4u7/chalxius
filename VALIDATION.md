@@ -71,6 +71,11 @@ publication ceremony.
 
 ## Publication boundary
 
-The annotated `v1.0.9` tag and GitHub release identify the archive above.
-Installation, validation, Campaign coordination, CHX settlement, and
-publication create no Research or Fact authority.
+The annotated `v1.0.9` tag resolves to
+`d58ddc6091257a3ab66e58174a2889964354ce45`. GitHub published the release at
+`2026-08-31T15:05:20Z`:
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.9>. Both uploaded asset
+sizes and GitHub SHA-256 digests match the frozen local archive and sidecar;
+fresh downloads were also byte-identical. Installation, validation, Campaign
+coordination, CHX settlement, and publication create no Research or Fact
+authority.

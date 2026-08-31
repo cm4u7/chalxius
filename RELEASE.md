@@ -75,3 +75,7 @@ python3 -B scripts/self_test.py
 ```
 
 Publication creates no mathematical Fact.
+
+Version 1.0.9 was published on 2026-08-31 at
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.9>. The annotated tag
+resolves to release commit `d58ddc6091257a3ab66e58174a2889964354ce45`.
