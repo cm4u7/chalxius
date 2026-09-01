@@ -1,5 +1,22 @@
 # Chalxius portable deployment
 
+## 1.0.13 Exact Workflow Role Continuity
+
+The `1.0.13` **Exact Workflow Role Continuity** candidate keeps directly
+queried ingested production products and supervision results on their exact
+workflow route. The reader validates assignment provenance, the frozen round,
+the ingested product identity, and—only for supervision results—the exact
+source round and source receipts before projecting the original workflow root.
+Ambiguous or inconsistent bytes remain visible to Main; relation labels and
+mathematical prose confer no lifecycle role or completion effect.
+
+Dual-scope supervision now routes source-capability continuation by the exact
+assignment-owned scope after frozen card and round validation. Proof, program,
+and integration assignments transmit no source capability; a source-scope
+assignment retains the existing strict byte whitelist and one-hop receipt
+checks. No project migration, compatibility layer, truth update, or admission
+update is required.
+
 ## 1.0.12 Deliberate Frontier Cadence
 
 The `1.0.12` **Deliberate Frontier Cadence** candidate composes every sparse

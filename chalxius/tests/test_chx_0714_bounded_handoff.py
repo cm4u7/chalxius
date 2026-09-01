@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from mathgraph.cli import _command_requires_mutation_lock, build_parser
-from mathgraph.contracts import sha256_bytes
+from mathgraph.contracts import sha256_bytes, sha256_json
 from mathgraph.markdown import validate_fact_round_trip
 from mathgraph.model import Fact
 from mathgraph.store import MathGraphStore
@@ -851,6 +851,133 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     "blr-primary.pdf",
                     "dml-primary.pdf",
                 }.intersection(downstream_paths)
+            )
+
+    def test_dual_scope_proof_assignment_does_not_transmit_source_capability(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            source_component_sha256 = "1" * 64
+            source_receipts = [{"receipt": "exact-production-receipt"}]
+            cycle = {
+                "revision": "chalxius-v5-two-subround-research-2",
+                "subround": "supervision",
+                "source_round_id": "round-20260901T000000Z-11111111",
+                "source_round_manifest_sha256": "2" * 64,
+                "source_receipts_sha256": sha256_json(source_receipts),
+                "source_component_id": (
+                    "component-" + source_component_sha256[:16]
+                ),
+                "source_component_sha256": source_component_sha256,
+                "supervisor_scopes": ["proof_logic", "source_scope"],
+                "computation_policy": "core_code_review_before_formal_execution",
+                "repair_policy": "copy_on_write_next_research_cycle",
+                "pulse_policy": "not_used",
+                "truth_effect": "none",
+            }
+            round_id = "round-20260901T000001Z-22222222"
+            assignment_id = "a01-aaaaaaaaaaaa-refute"
+            round_dir = store.rounds_dir / round_id
+            task_cards_dir = round_dir / "task-cards"
+            assignments_dir = round_dir / "assignments"
+            task_cards_dir.mkdir(parents=True)
+            assignments_dir.mkdir()
+            binding = {
+                "revision": "chalxius-v5-research-supervision-2",
+                "supervisor_scope": "proof_logic",
+                "source_round_id": cycle["source_round_id"],
+                "source_round_manifest_sha256": cycle[
+                    "source_round_manifest_sha256"
+                ],
+                "source_receipts": source_receipts,
+                "source_receipts_sha256": cycle["source_receipts_sha256"],
+                "source_component_id": cycle["source_component_id"],
+                "source_component_sha256": cycle["source_component_sha256"],
+                "review_policy": "attack_exact_production_outputs",
+                "repair_policy": "copy_on_write_next_research_cycle",
+                "pulse_policy": "not_used",
+                "truth_effect": "none",
+            }
+            card = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": round_id,
+                "assignment_id": assignment_id,
+                "worker_id": assignment_id,
+                "research_id": "cccccccccccc",
+                "work_mode": "refute",
+                "research_cycle": cycle,
+                "mathematical_state": {
+                    "related_artifacts": [],
+                    "authority_snapshot": {"capabilities": []},
+                    "source_research_dossier": {
+                        "metadata": {
+                            "research_supervision": binding,
+                            "artifacts": [],
+                        }
+                    },
+                },
+            }
+            card["task_card_semantic_sha256"] = sha256_json(card)
+            card_raw = json.dumps(card, sort_keys=True).encode("utf-8")
+            task_card_path = task_cards_dir / f"{assignment_id}.json"
+            task_card_path.write_bytes(card_raw)
+            task_card_sha256 = sha256_bytes(card_raw)
+            assignment = {
+                "assignment_id": assignment_id,
+                "worker_id": assignment_id,
+                "research_id": card["research_id"],
+                "work_mode": "refute",
+                "task_card_relpath": str(task_card_path.relative_to(store.root)),
+                "task_card_sha256": task_card_sha256,
+            }
+            assignment["assignment_sha256"] = sha256_json(assignment)
+            (assignments_dir / f"{assignment_id}.json").write_text(
+                json.dumps(assignment, sort_keys=True),
+                encoding="utf-8",
+            )
+
+            manifest = {
+                "schema_version": 5,
+                "project_id": store.project_id(),
+                "round_id": round_id,
+                "research_cycle": cycle,
+                "assignments": [assignment],
+            }
+            manifest["manifest_sha256"] = sha256_json(manifest)
+            (round_dir / "round.json").write_text(
+                json.dumps(manifest, sort_keys=True),
+                encoding="utf-8",
+            )
+
+            record = {
+                "research_id": "aaaaaaaaaaaa",
+                "metadata": {
+                    # proof_logic owns theorem application and may therefore
+                    # cite source bytes without becoming a source review.
+                    "source_uses": [
+                        {"source_artifact_sha256": "4" * 64}
+                    ],
+                    "assignment_provenance": {
+                        "round_id": round_id,
+                        "assignment_id": assignment_id,
+                        "task_card_sha256": task_card_sha256,
+                        "work_mode": assignment["work_mode"],
+                        "worker_id": assignment["worker_id"],
+                    },
+                    "task_binding": {
+                        "round_id": round_id,
+                        "assignment_id": assignment_id,
+                        "task_card_sha256": task_card_sha256,
+                        "return_sha256": "3" * 64,
+                    },
+                },
+            }
+            self.assertEqual(
+                lifecycle._exact_source_review_capabilities(record),
+                [],
             )
 
     def test_structured_source_evidence_requires_all_declared_primary_bytes(self) -> None:

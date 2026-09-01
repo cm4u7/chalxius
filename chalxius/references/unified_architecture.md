@@ -1,5 +1,15 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.13 Exact Workflow Role Continuity override.** Directly queried
+> ingested worker products and supervision results recover their workflow root
+> only from validated assignment, round-status product, source-round, and
+> source-receipt provenance. Conflicts remain visible to Main; relation names
+> and mathematical prose are not lifecycle evidence. In a dual-scope round,
+> exact assignment-owned `supervisor_scope` determines source-capability
+> transmission: proof, program, and integration assignments transmit none,
+> while genuine source assignments retain the strict source binding. These are
+> read and planning corrections with no truth, admission, or migration effect.
+
 > **1.0.12 Deliberate Frontier Cadence override.** Sparse Campaign mutations
 > compose from the latest persisted working state; advisory semantic coverage
 > is read-only, and only exact selected `plan-round` lineage performs a rigid

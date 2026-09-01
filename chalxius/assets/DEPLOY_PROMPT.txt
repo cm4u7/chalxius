@@ -1,4 +1,4 @@
-Chalxius 1.0.12 — Deliberate Frontier Cadence
+Chalxius 1.0.13 — Exact Workflow Role Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact

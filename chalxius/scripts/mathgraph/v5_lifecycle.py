@@ -2135,10 +2135,18 @@ class V5LifecycleManager:
         )
         if not isinstance(binding, dict):
             return []
+        # A dual-scope supervision round freezes both scopes in the shared
+        # Research-cycle binding, while each exact assignment dossier still
+        # owns only one scope.  Route on that assignment-owned scope before
+        # applying the source-review-only binding checks below.  In particular,
+        # a proof-logic result may legitimately carry ``source_uses`` because it
+        # checked an external theorem application; that does not make it a
+        # source-scope capability transmitter.
+        if binding.get("supervisor_scope") != "source_scope":
+            return []
         receipts = binding.get("source_receipts")
         if (
-            binding.get("supervisor_scope") != "source_scope"
-            or binding.get("source_round_id") != cycle["source_round_id"]
+            binding.get("source_round_id") != cycle["source_round_id"]
             or binding.get("source_round_manifest_sha256")
             != cycle["source_round_manifest_sha256"]
             or binding.get("source_receipts_sha256")
@@ -2161,8 +2169,6 @@ class V5LifecycleManager:
             raise ValueError("source-review supervision binding drifted")
         if card.get("research_cycle") != cycle:
             raise ValueError("source-review cycle binding drifted")
-        if binding["supervisor_scope"] != "source_scope":
-            return []
 
         used_source_hashes = {
             item["source_artifact_sha256"]

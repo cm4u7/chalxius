@@ -1,4 +1,22 @@
-# Chalxius V5 traceability through 1.0.12 Deliberate Frontier Cadence
+# Chalxius V5 traceability through 1.0.13 Exact Workflow Role Continuity
+
+## 1.0.13 Exact Workflow Role Continuity overlay
+
+- Candidate version: `1.0.13`; release name **Exact Workflow Role Continuity**.
+- A directly queried ingested production product or supervision result recovers
+  its workflow root only through its frozen assignment, round-status product,
+  source-round, and source-receipt provenance. It is no longer reopened as
+  fresh production merely because the frontier query starts at the product.
+- Missing, conflicting, or multi-source provenance remains visible as
+  `main_reconciliation`; the projector does not inspect descriptive relation
+  names, infer mathematical equivalence, or declare a result complete.
+- In a dual-scope supervision round, source-capability continuation follows the
+  exact assignment-owned `supervisor_scope`. A proof-logic assignment transmits
+  no source capability even when it cites an external theorem; the genuine
+  source-scope sibling retains all prior strict byte, receipt, card, and
+  one-hop validation.
+- The repair changes no Research bytes, Campaign truth, Candidate, verifier,
+  Gateway, Fact, admission, heartbeat, or publication state.
 
 ## 1.0.12 Deliberate Frontier Cadence overlay
 

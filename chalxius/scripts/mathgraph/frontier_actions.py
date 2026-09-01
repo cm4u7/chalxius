@@ -221,6 +221,237 @@ class _ActionProjector:
     ) -> dict[str, Any]:
         """Derive one exact Research's next lifecycle operation."""
 
+        origin = self._explicit_assignment_product_origin(research_id)
+        if isinstance(origin, dict):
+            return origin
+        if origin is not None:
+            root_id, production_round_id = origin
+            if (
+                preferred_production_round_id is not None
+                and preferred_production_round_id != production_round_id
+            ):
+                return self.action(
+                    "main_reconciliation",
+                    "direct_product_preferred_round_mismatch",
+                    research_ids=[research_id, root_id],
+                    round_ids=[
+                        preferred_production_round_id,
+                        production_round_id,
+                    ],
+                    primary_research_id=research_id,
+                )
+            return self._research_root(
+                root_id,
+                preferred_production_round_id=production_round_id,
+            )
+
+        return self._research_root(
+            research_id,
+            preferred_production_round_id=preferred_production_round_id,
+        )
+
+    def _explicit_assignment_product_origin(
+        self,
+        research_id: str,
+    ) -> tuple[str, str] | dict[str, Any] | None:
+        """Resolve an ingested product to its explicit workflow origin.
+
+        This reader uses assignment provenance and validated round products
+        only.  It does not interpret Research kind, relation, names, or
+        mathematical content, and it has no mutation or completion effect.
+        """
+
+        record = self.bases.get(research_id, {})
+        metadata = record.get("metadata")
+        provenance = (
+            metadata.get("assignment_provenance")
+            if isinstance(metadata, dict)
+            else None
+        )
+        if not isinstance(provenance, dict):
+            return None
+        assignment_id = provenance.get("assignment_id")
+        round_id = provenance.get("round_id")
+        adverse = provenance.get("adverse_assignment")
+        work_mode = provenance.get("work_mode")
+        if (
+            not isinstance(assignment_id, str)
+            or not assignment_id
+            or not isinstance(round_id, str)
+            or not round_id.startswith("round-")
+            or not isinstance(adverse, bool)
+            or not isinstance(work_mode, str)
+            or not work_mode
+        ):
+            return self.action(
+                "main_reconciliation",
+                "assignment_product_provenance_incomplete",
+                research_ids=[research_id],
+                round_ids=[round_id] if isinstance(round_id, str) else [],
+                primary_research_id=research_id,
+            )
+        try:
+            _round_dir, manifest = self.lifecycle._round_manifest(
+                round_id,
+                _inspection_context=self.inspection,
+            )
+            status = self.lifecycle._round_status_with_context(
+                round_id, self.inspection
+            )
+        except (KeyError, OSError, ValueError):
+            return self.action(
+                "main_reconciliation",
+                "assignment_product_provenance_unreadable",
+                research_ids=[research_id],
+                round_ids=[round_id],
+                primary_research_id=research_id,
+            )
+        cycle = manifest.get("research_cycle")
+        subround = cycle.get("subround") if isinstance(cycle, dict) else None
+        manifest_assignment = next(
+            (
+                item
+                for item in manifest.get("assignments", [])
+                if isinstance(item, dict)
+                and item.get("assignment_id") == assignment_id
+            ),
+            None,
+        )
+        status_assignment = next(
+            (
+                item
+                for item in status.get("assignments", [])
+                if isinstance(item, dict)
+                and item.get("assignment_id") == assignment_id
+            ),
+            None,
+        )
+        expected_subround = "supervision" if adverse else "production"
+        expected_mode = work_mode == "refute"
+        byte_bindings = (
+            ("worker_id", "worker_id"),
+            ("task_card_sha256", "task_card_sha256"),
+            ("writer_lease_id", "writer_lease_id"),
+        )
+        bindings_match = (
+            all(
+                provenance.get(provenance_key) is None
+                or provenance.get(provenance_key)
+                == manifest_assignment.get(manifest_key)
+                for provenance_key, manifest_key in byte_bindings
+            )
+            if isinstance(manifest_assignment, dict)
+            else False
+        )
+        if (
+            subround != expected_subround
+            or expected_mode != adverse
+            or not isinstance(manifest_assignment, dict)
+            or not isinstance(status_assignment, dict)
+            or manifest_assignment.get("work_mode") != work_mode
+            or status_assignment.get("state") != "ingested"
+            or status_assignment.get("research_product_id") != research_id
+            or not bindings_match
+        ):
+            return self.action(
+                "main_reconciliation",
+                "assignment_product_provenance_mismatch",
+                research_ids=[research_id],
+                round_ids=[round_id],
+                primary_research_id=research_id,
+            )
+        if subround == "production":
+            root_id = manifest_assignment.get("research_id")
+            if not isinstance(root_id, str) or root_id not in self.bases:
+                return self.action(
+                    "main_reconciliation",
+                    "assignment_product_root_missing",
+                    research_ids=[research_id],
+                    round_ids=[round_id],
+                    primary_research_id=research_id,
+                )
+            return root_id, round_id
+
+        source_round_id = cycle.get("source_round_id")
+        plan_id = manifest_assignment.get("research_id")
+        plan = self.bases.get(plan_id) if isinstance(plan_id, str) else None
+        supervision = (
+            plan.get("metadata", {}).get("research_supervision")
+            if isinstance(plan, dict)
+            else None
+        )
+        receipts = (
+            supervision.get("source_receipts")
+            if isinstance(supervision, dict)
+            else None
+        )
+        target_product_ids = {
+            item.get("result_research_id")
+            for item in receipts or []
+            if isinstance(item, dict)
+            and isinstance(item.get("result_research_id"), str)
+        }
+        source_binding_matches = (
+            isinstance(source_round_id, str)
+            and source_round_id.startswith("round-")
+            and isinstance(supervision, dict)
+            and supervision.get("source_round_id") == source_round_id
+        )
+        if not source_binding_matches:
+            return self.action(
+                "main_reconciliation",
+                "supervision_product_source_round_mismatch",
+                research_ids=[research_id],
+                round_ids=[round_id],
+                primary_research_id=research_id,
+            )
+        try:
+            source_status = self.lifecycle._round_status_with_context(
+                source_round_id, self.inspection
+            )
+        except (KeyError, OSError, ValueError):
+            return self.action(
+                "main_reconciliation",
+                "supervision_product_source_round_unreadable",
+                research_ids=[research_id],
+                round_ids=[round_id, source_round_id],
+                primary_research_id=research_id,
+            )
+        source_assignments = [
+            item
+            for item in source_status.get("assignments", [])
+            if isinstance(item, dict)
+            and item.get("assignment_role") != "paired_adverse"
+            and item.get("state") == "ingested"
+            and item.get("research_product_id") in target_product_ids
+        ]
+        if len(source_assignments) != 1:
+            return self.action(
+                "main_reconciliation",
+                "supervision_product_source_ambiguous",
+                research_ids=[research_id, *sorted(target_product_ids)],
+                round_ids=[round_id, source_round_id],
+                primary_research_id=research_id,
+            )
+        root_id = source_assignments[0].get("research_id")
+        if not isinstance(root_id, str) or root_id not in self.bases:
+            return self.action(
+                "main_reconciliation",
+                "supervision_product_root_missing",
+                research_ids=[research_id, *sorted(target_product_ids)],
+                round_ids=[round_id, source_round_id],
+                primary_research_id=research_id,
+            )
+        return root_id, source_round_id
+
+    def _research_root(
+        self,
+        research_id: str,
+        *,
+        preferred_production_round_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Project a Research already known to be a workflow root."""
+
         explicit_disposition = self.explicit_attention_disposition(
             research_id
         )

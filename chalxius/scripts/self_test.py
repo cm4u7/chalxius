@@ -357,6 +357,10 @@ def main() -> int:
         != "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"
         or campaign_surface.get("source_review_capability_continuity")
         != "each_transmission_uses_one_exact_source_scope_result_provenance_hop_and_only_hash_whitelisted_direct_primary_bytes_a_later_source_review_must_reauthorize_the_sha_without_relation_or_prose_inference"
+        or campaign_surface.get("assignment_product_frontier_projection")
+        != "direct_ingested_production_and_supervision_results_recover_one_exact_workflow_root_through_assignment_round_status_and_source_receipt_provenance_with_mismatch_or_ambiguity_visible_to_main_and_no_relation_name_or_mathematical_completion_inference"
+        or campaign_surface.get("dual_scope_source_capability_routing")
+        != "source_capability_transmission_branches_on_exact_assignment_owned_supervisor_scope_after_frozen_assignment_card_and_round_validation_proof_program_and_integration_assignments_transmit_none_while_source_assignments_retain_strict_source_binding"
         or campaign_surface.get("frontier_maintenance_pause")
         != "pause_changes_future_heartbeat_triggers_only_and_never_interrupts_agents_or_aborts_rounds"
         or campaign_surface.get("frontier_maintenance_repair_phase")
@@ -625,6 +629,8 @@ def main() -> int:
             '"frontier_maintenance_heartbeat": "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"',
             '"campaign_sparse_update_baseline": "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"',
             '"source_review_capability_continuity": "each_transmission_uses_one_exact_source_scope_result_provenance_hop_and_only_hash_whitelisted_direct_primary_bytes_a_later_source_review_must_reauthorize_the_sha_without_relation_or_prose_inference"',
+            '"assignment_product_frontier_projection": "direct_ingested_production_and_supervision_results_recover_one_exact_workflow_root_through_assignment_round_status_and_source_receipt_provenance_with_mismatch_or_ambiguity_visible_to_main_and_no_relation_name_or_mathematical_completion_inference"',
+            '"dual_scope_source_capability_routing": "source_capability_transmission_branches_on_exact_assignment_owned_supervisor_scope_after_frozen_assignment_card_and_round_validation_proof_program_and_integration_assignments_transmit_none_while_source_assignments_retain_strict_source_binding"',
             '"frontier_maintenance_repair_phase": "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"',
             '"recent_attainment_exact_queue_high_water_limit": 64',
             '"recent_attainment_routine_preview": 4',
