@@ -741,6 +741,44 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 }.intersection(literature_paths)
             )
 
+            # A proof task may retain the completed source review as readable
+            # provenance without reopening its primary bytes as a planning
+            # capability.  Only a source-dependent or literature task owns
+            # that source-use boundary.
+            non_source_continuation = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "Use only the reviewed mathematical conclusion.",
+                    "relation": "uses",
+                    "related_research_ids": [
+                        source_review_receipt["research_id"]
+                    ],
+                    "source_dependent": False,
+                },
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            used_source_raw = source_path.read_bytes()
+            source_path.unlink()
+            try:
+                non_source_round = lifecycle.create_production_round(
+                    workers=1,
+                    mode="prove",
+                    research_ids=[non_source_continuation["research_id"]],
+                    host_task_scope_id="non-source-review-provenance",
+                )
+            finally:
+                source_path.write_bytes(used_source_raw)
+            non_source_card = json.loads(
+                Path(
+                    non_source_round["assignments"][0]["task_card_path"]
+                ).read_text()
+            )
+            self.assertNotIn(
+                sha256_bytes(source_path.read_bytes()),
+                lifecycle._task_primary_source_sha256s(non_source_card),
+            )
+
             downstream = lifecycle.add_research(
                 {
                     "kind": "proof_attempt",

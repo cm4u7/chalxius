@@ -3,13 +3,13 @@
 **Persistent Research memory, a reliable working frontier, and sparse Fact
 certification for long-running Codex projects.**
 
-[Download v1.0.9](https://github.com/cm4u7/chalxius/releases/tag/v1.0.9) ·
+[Download v1.0.14](https://github.com/cm4u7/chalxius/releases/tag/v1.0.14) ·
 [Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md) · [License](LICENSE)
 
 > [!IMPORTANT]
 > **Graph Browser and graphical graph generation are temporarily unavailable.**
-> Chalxius 1.0.9 does not present either as a supported release capability.
+> Chalxius 1.0.14 does not present either as a supported release capability.
 > Historical or experimental Reader code and commands may still be present in
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
@@ -86,16 +86,16 @@ state retains the full set.
 
 ## Install
 
-Release assets for v1.0.9 are:
+Release assets for v1.0.14 are:
 
-- `chalxius-1.0.9-working-memory-maintenance.tar.gz`
-- `chalxius-1.0.9-working-memory-maintenance.tar.gz.sha256`
+- `chalxius-1.0.14-durable-campaign-memory.tar.gz`
+- `chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256`
 
 Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.9-working-memory-maintenance.tar.gz.sha256
-tar -xzf chalxius-1.0.9-working-memory-maintenance.tar.gz
+shasum -a 256 -c chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256
+tar -xzf chalxius-1.0.14-durable-campaign-memory.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -123,23 +123,24 @@ PROJECT=/absolute/path/to/project
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v1.0.9 — Working Memory Maintenance
+## v1.0.14 — Durable Campaign Memory
 
-This release makes the frontier a smaller, more reliable working surface for
-large Research histories:
+This release closes four recurring working-memory failures found during a long
+Research run:
 
-- zero-argument `round-status` finds unresolved work without deeply reopening
-  every terminal round; explicit `--all` remains available for forensics;
-- ordinary frontier output bounds nested context, recent-result, landmark, and
-  workflow previews while retaining exact counts, digests, and drill-down;
-- head changes are additive: unspecified parallel heads survive, explicit
-  retirement carries a nontruth disposition, and retired-head context remains
-  available for reattachment;
-- one approximately 50-minute task heartbeat can revisit all targets, complete
-  landmark identities, in-flight work, and exact Research searches without
-  starting Fact packaging or interrupting workers; and
-- ordinary new V5 rounds no longer freeze an unused default Blackboard
-  snapshot. Explicit Blackboard work and historical snapshots remain readable.
+- a Research record may remain an active head while also being preserved as a
+  historical landmark in the same target;
+- an explicit head replacement transfers the old head's attached context to
+  the named successor, and a concrete attachment absorbs obsolete unattached
+  copies;
+- each Campaign has a small replaceable 50-minute maintenance clock, surfaced
+  as a nonblocking advisory at Main command boundaries; and
+- proof or internal production may retain a completed source review as
+  provenance without inheriting that review's primary-source availability as a
+  new planning gate. Exact source checks remain at the source-review boundary.
+
+Campaign membership remains a many-to-many, nontruth overlay. The same exact
+Research can participate in several Campaigns and targets without cloning.
 
 The v1.0.5 split opt-in boundary remains in force: routine supervision and
 Fact packaging ignore splitting, while a new low-level split requires explicit

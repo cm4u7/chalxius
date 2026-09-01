@@ -351,20 +351,20 @@ def main() -> int:
         != "add_head_or_exact_retire_active_head_with_nontruth_disposition_detaching_not_deleting_context"
         or campaign_surface.get("round_attention_recovery")
         != "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"
-        or campaign_surface.get("frontier_maintenance_heartbeat")
-        != "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"
+        or campaign_surface.get("frontier_maintenance_clock")
+        != "one_replaceable_per_active_v5_campaign_default_50_minute_deadline_checked_by_every_main_facing_command_with_nonblocking_due_advisory_completion_reset_and_pause_without_daemon_dispatch_liveness_or_truth_effect"
         or campaign_surface.get("campaign_sparse_update_baseline")
         != "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"
         or campaign_surface.get("source_review_capability_continuity")
-        != "each_transmission_uses_one_exact_source_scope_result_provenance_hop_and_only_hash_whitelisted_direct_primary_bytes_a_later_source_review_must_reauthorize_the_sha_without_relation_or_prose_inference"
+        != "only_current_literature_explicit_source_dependent_or_source_scope_work_replays_one_exact_source_review_provenance_hop_and_hash_whitelisted_primary_bytes_internal_proof_reference_retains_provenance_without_a_source_liveness_gate"
         or campaign_surface.get("assignment_product_frontier_projection")
         != "direct_ingested_production_and_supervision_results_recover_one_exact_workflow_root_through_assignment_round_status_and_source_receipt_provenance_with_mismatch_or_ambiguity_visible_to_main_and_no_relation_name_or_mathematical_completion_inference"
         or campaign_surface.get("dual_scope_source_capability_routing")
         != "source_capability_transmission_branches_on_exact_assignment_owned_supervisor_scope_after_frozen_assignment_card_and_round_validation_proof_program_and_integration_assignments_transmit_none_while_source_assignments_retain_strict_source_binding"
         or campaign_surface.get("frontier_maintenance_pause")
-        != "pause_changes_future_heartbeat_triggers_only_and_never_interrupts_agents_or_aborts_rounds"
+        != "pause_changes_future_internal_advisories_only_and_never_interrupts_agents_or_aborts_rounds"
         or campaign_surface.get("frontier_maintenance_repair_phase")
-        != "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"
+        != "due_advisory_is_nonpreemptive_main_finishes_the_current_bounded_repair_validation_install_publication_or_reconciliation_action_before_full_maintenance_without_lock_sentinel_state_machine_or_agent_interruption"
         or campaign_surface.get("routine_projection_drilldown")
         != "every_bounded_context_history_membership_workflow_supervision_research_or_round_summary_retains_exact_ids_or_complete_count_digest_plus_direct_diagnostic_or_exact_read_absence_from_preview_has_no_selection_or_truth_meaning"
         or campaign_surface.get("context_compaction_additional_duties")
@@ -518,8 +518,8 @@ def main() -> int:
             "sole public host-global path",
             "eligible CHX observation surfaces",
             "explicit publication request includes merging the corresponding reviewed change into `main` by default",
-            "a heartbeat that finds the current task visibly inside an",
-            "it creates no project lock, sentinel file, repair state machine",
+            "Each active V5 Campaign has one small replaceable maintenance clock",
+            "A completed source-scope review remains readable provenance",
         ),
         "agents/openai.yaml": (
             'display_name: "Chalxius"',
@@ -609,7 +609,7 @@ def main() -> int:
             '"batch_seed_revision": "chalxius-v5-candidate-batch-seed-3"',
             '"candidate_fact_atomicity_contract": "exactly_one_semantic_conclusion_atom_per_fact"',
             '"exact_repair_specification": "optional_main_json_is_normalized_hash_bound_into_repair_research_and_task_card"',
-            '"contract_revision": "chalxius-v5-campaign-scope-3"',
+            '"contract_revision": "chalxius-v5-campaign-scope-4"',
             '"chalxius-v5-campaign-scope-1"',
             '"chalxius-v5-campaign-scope-2"',
             '"frontier_working_state_revision": "chalxius-v5-campaign-frontier-working-state-2"',
@@ -626,12 +626,12 @@ def main() -> int:
             '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"',
             '"active_head_full_list_update": "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"',
             '"round_attention_recovery": "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"',
-            '"frontier_maintenance_heartbeat": "main_ensures_one_exact_project_thread_heartbeat_at_approximately_50_minutes_for_nonpreemptive_full_active_all_target_search_and_explicit_nontruth_attention_maintenance_without_research_or_fact_dispatch"',
+            '"frontier_maintenance_clock": "one_replaceable_per_active_v5_campaign_default_50_minute_deadline_checked_by_every_main_facing_command_with_nonblocking_due_advisory_completion_reset_and_pause_without_daemon_dispatch_liveness_or_truth_effect"',
             '"campaign_sparse_update_baseline": "latest_persisted_working_state_is_the_only_write_baseline_advisory_goal_projection_is_read_only_and_exact_plan_handoff_owns_rigid_replacement"',
-            '"source_review_capability_continuity": "each_transmission_uses_one_exact_source_scope_result_provenance_hop_and_only_hash_whitelisted_direct_primary_bytes_a_later_source_review_must_reauthorize_the_sha_without_relation_or_prose_inference"',
+            '"source_review_capability_continuity": "only_current_literature_explicit_source_dependent_or_source_scope_work_replays_one_exact_source_review_provenance_hop_and_hash_whitelisted_primary_bytes_internal_proof_reference_retains_provenance_without_a_source_liveness_gate"',
             '"assignment_product_frontier_projection": "direct_ingested_production_and_supervision_results_recover_one_exact_workflow_root_through_assignment_round_status_and_source_receipt_provenance_with_mismatch_or_ambiguity_visible_to_main_and_no_relation_name_or_mathematical_completion_inference"',
             '"dual_scope_source_capability_routing": "source_capability_transmission_branches_on_exact_assignment_owned_supervisor_scope_after_frozen_assignment_card_and_round_validation_proof_program_and_integration_assignments_transmit_none_while_source_assignments_retain_strict_source_binding"',
-            '"frontier_maintenance_repair_phase": "heartbeat_trigger_exits_dont_notify_before_any_project_read_or_mutation_during_visible_integrated_repair_candidate_validation_installation_publication_or_pre_research_resume_reconciliation_without_lock_sentinel_state_machine_or_agent_interruption"',
+            '"frontier_maintenance_repair_phase": "due_advisory_is_nonpreemptive_main_finishes_the_current_bounded_repair_validation_install_publication_or_reconciliation_action_before_full_maintenance_without_lock_sentinel_state_machine_or_agent_interruption"',
             '"recent_attainment_exact_queue_high_water_limit": 64',
             '"recent_attainment_routine_preview": 4',
             '"recent_attainment_complete_projection": "exact_ids_count_and_digest_retained_beyond_preview"',
@@ -1786,8 +1786,8 @@ def main() -> int:
             "Administrative receipts are optional",
             "formula-to-code",
             "advisory global route memory",
-            "end that heartbeat immediately with `DONT_NOTIFY`",
-            "do not add a lock file, sentinel, repair state machine",
+            "one small replaceable Campaign clock",
+            "An external host heartbeat may remain an optional fallback",
             "ordinary new V5 round does not freeze a default Blackboard root snapshot",
             "Historical frozen rounds keep exact byte/hash validation",
         ),

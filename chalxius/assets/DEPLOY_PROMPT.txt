@@ -1,4 +1,4 @@
-Chalxius 1.0.13 — Exact Workflow Role Continuity
+Chalxius 1.0.14 — Durable Campaign Memory
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
@@ -23,6 +23,9 @@ examples; `--diagnostic` remains complete. Installation does not rewrite frozen 
 When one `plan-round` handoff uniquely replaces a head, its attached contexts
 follow that successor. Ambiguous multi-successor handoffs remain visibly
 unattached, and a later concrete attachment absorbs an older unattached copy.
+An exact named manual head replacement uses the same context transfer. The
+same Research may remain both the active head and a durable landmark inside
+one Target; these are independent nontruth attention roles.
 Other parallel heads remain active even when their own workflow is complete;
 planning one route never silently retires an unrelated attention centre.
 Campaign is a many-to-many nontruth overlay on the one Research graph, never
@@ -32,10 +35,11 @@ context, landmark, or history roles in each. `metadata.campaign_id` is creation
 provenance only. Ordinary membership is derived from the existing Campaign
 event log, and `reference_only` assigns no attention role or truth effect.
 
-When Campaign research starts or resumes, Main ensures one exact thread
-heartbeat named `Chalxius frontier maintenance`, updating rather than
-duplicating it. About every 50 minutes it requests a full active maintenance
-pass. This is a non-preemptive reminder: finish the current bounded action,
+When Campaign research starts or resumes, one small replaceable Campaign clock
+starts with an approximately 50-minute deadline. Every Main-facing `mgraph`
+command reads it and prints a prominent nonblocking advisory after expiry, so
+visibility inside a long-running turn does not depend on an external
+heartbeat. Finish the current bounded action,
 then maintain before freezing another cut; if maintenance has already started,
 expand it to full scope. Reread every target and active head, all contexts, the
 complete sparse-landmark identities and reasons, recent attainment, bounded
@@ -43,21 +47,13 @@ active-round recovery, and material old Research. If a routine preview count
 exceeds its four expanded examples, use `--diagnostic` or exact working state.
 Exact-search the graph and make every warranted explicit nontruth add, remove,
 migration, attachment, retirement, or reason correction; a read-only pass is
-complete only when exact search supports no change. The heartbeat never
-dispatches Research or Fact work. A project pause stops future triggers only
-and does not interrupt an agent or abort a round already in progress. When
-host heartbeat support is unavailable, perform the same pass at the next
-visible handoff, reconnect, or user request. This is Campaign working-memory
-maintenance, not worker-liveness monitoring.
-
-At the start of each heartbeat, inspect the current task phase before reading
-the project. If an integrated Chalxius repair, candidate validation, local
-installation, publication, or the pre-Research-resumption reconciliation is
-active, end that heartbeat immediately with `DONT_NOTIFY`, perform no Campaign
-or Research read or mutation, and leave the automation active so the next
-trigger can reassess after Research resumes. Use the task context already
-visible to Main; do not add a lock file, sentinel, repair state machine, or
-agent interruption.
+complete only when exact search supports no change. Successful completion or
+an explicit reset note moves the deadline. The clock never dispatches Research
+or Fact work. A project pause suppresses future advisories only and does not
+interrupt an agent or abort a round already in progress. This is Campaign
+working-memory maintenance, not worker-liveness monitoring, a daemon,
+scheduler, lock, sentinel, repair state machine, or truth gate. An external
+host heartbeat may remain an optional fallback but is not canonical.
 
 During an ordinary round, Main may likewise expand one target's complete
 landmarks on demand whenever hidden history could affect the next cut; it does
@@ -71,11 +67,17 @@ After context compaction or a real handoff, Main still rehydrates the current
 operation and reviews the route. Before every new Research cut, with or without
 compaction, Main performs bounded exact Research search. Every material match
 receives one explicit disposition: `reference_only`, `attach_context`,
-`promote_landmark`, `add_head`, or `retire_active_head`. The heartbeat and
+`promote_landmark`, `add_head`, or `retire_active_head`. The maintenance pass and
 compaction pass never increment a Fact clock or start a packager. Fact work
 opens only at a natural Main/user-selected window and remains independently
 deferrable. If an integrated repair or installation is active, delay the
 Research-recovery review until Research resumes; do not discard it.
+
+A completed source-scope review remains readable provenance. Its primary bytes
+are replayed as live planning capabilities only when the current task is
+literature, explicitly source-dependent, or itself a source-scope review.
+Internal proof use of the old result does not reopen source availability as a
+planning gate.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research

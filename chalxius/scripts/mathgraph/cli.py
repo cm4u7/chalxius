@@ -80,6 +80,36 @@ def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
 
 
+def _emit_frontier_maintenance_advisory(store: MathGraphStore) -> None:
+    """Keep Main aware of overdue work-memory maintenance without gating."""
+
+    try:
+        campaign_id = store.campaigns().active()
+        if campaign_id is None:
+            return
+        advisory = store.v5_lifecycle().frontier_maintenance_advisory(
+            campaign_id
+        )
+    except (OSError, ValueError) as exc:
+        print(
+            "[Chalxius maintenance clock warning] "
+            f"{exc}; continue the current command and inspect the replaceable "
+            "Campaign clock at the next safe boundary.",
+            file=sys.stderr,
+        )
+        return
+    if advisory is None:
+        return
+    print(
+        "[Chalxius full frontier maintenance due] "
+        f"campaign={advisory['campaign_id']} "
+        f"due_since={advisory['due_since']}. "
+        f"{advisory['instruction']} This is advisory only and has no truth, "
+        "dispatch, or command-blocking effect.",
+        file=sys.stderr,
+    )
+
+
 def _v5_fact_bundle_release(
     store: MathGraphStore,
     payload: dict[str, Any],
@@ -1713,6 +1743,12 @@ def main(argv: list[str] | None = None) -> int:
             host_config_path=args.host_config,
         )
         if (
+            args.role == "main"
+            and store.project_path.exists()
+            and store.workflow_evidence_version() == 5
+        ):
+            _emit_frontier_maintenance_advisory(store)
+        if (
             store.project_path.exists()
             and store.workflow_evidence_version() >= 4
             and _command_requires_mutation_lock(args)
@@ -2821,6 +2857,14 @@ def main(argv: list[str] | None = None) -> int:
             targets = store.sync_active_campaign_targets(
                 campaign_id=args.campaign_id,
             )
+            if store.workflow_evidence_version() == 5:
+                lifecycle = store.v5_lifecycle()
+                if lifecycle.read_frontier_maintenance_clock(
+                    args.campaign_id
+                ) is None:
+                    lifecycle.reset_frontier_maintenance_clock(
+                        args.campaign_id
+                    )
             _print_json(
                 {
                     "campaign_id": args.campaign_id,
@@ -2850,7 +2894,54 @@ def main(argv: list[str] | None = None) -> int:
                     update_payload,
                     actor=args.actor,
                 )
-                _print_json({"event_id": event_id, "status": "recorded"})
+                result: dict[str, Any] = {
+                    "event_id": event_id,
+                    "status": "recorded",
+                }
+                if (
+                    store.workflow_evidence_version() == 5
+                    and update_payload.get("type") == "note"
+                    and isinstance(note_payload, dict)
+                ):
+                    lifecycle = store.v5_lifecycle()
+                    note_kind = note_payload.get("kind")
+                    if note_kind in {
+                        "frontier_full_maintenance_completed",
+                        "frontier_full_maintenance_clock_reset",
+                    }:
+                        completed_at = (
+                            note_payload.get("completed_at")
+                            if note_kind
+                            == "frontier_full_maintenance_completed"
+                            else note_payload.get("last_full_maintenance_at")
+                        )
+                        interval_minutes = note_payload.get(
+                            "interval_minutes", 50
+                        )
+                        result["frontier_maintenance_clock"] = (
+                            lifecycle.reset_frontier_maintenance_clock(
+                                args.campaign_id,
+                                completed_at=completed_at,
+                                interval_minutes=interval_minutes,
+                            )
+                        )
+                    elif note_kind == "frontier_full_maintenance_clock_paused":
+                        result["frontier_maintenance_clock"] = (
+                            lifecycle.pause_frontier_maintenance_clock(
+                                args.campaign_id
+                            )
+                        )
+                    elif note_kind == "frontier_full_maintenance_clock_resumed":
+                        result["frontier_maintenance_clock"] = (
+                            lifecycle.reset_frontier_maintenance_clock(
+                                args.campaign_id,
+                                completed_at=note_payload.get("resumed_at"),
+                                interval_minutes=note_payload.get(
+                                    "interval_minutes", 50
+                                ),
+                            )
+                        )
+                _print_json(result)
         elif args.command == "campaign-status":
             if args.role == "worker":
                 _print_json(args.bound_campaign_status)

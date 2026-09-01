@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from mathgraph.cli import main as cli_main
 from mathgraph.contracts import sha256_json
 from mathgraph.store import MathGraphStore
 
@@ -2357,7 +2361,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             ],
         )
 
-    def test_context_attach_preserves_distinct_unattached_reason(self) -> None:
+    def test_context_attach_supersedes_distinct_unattached_reason(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         lifecycle._replace_campaign_frontier_working_state(
             self.campaign_id,
@@ -2396,22 +2400,15 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
         row = self._state()["targets"][self.target_id]
-        self.assertEqual(len(row["head_contexts"]), 2)
         self.assertEqual(
-            {
-                (
-                    context["attached_head_research_id"],
-                    context["reason"],
-                )
-                for context in row["head_contexts"]
-            },
-            {
-                (
-                    None,
-                    "A different ambiguous branch still needs placement.",
-                ),
-                (self.root_id, "Exact context for the selected head."),
-            },
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.root_id,
+                    "reason": "Exact context for the selected head.",
+                }
+            ],
         )
 
     def test_write_preserves_unattached_context_from_an_ambiguous_branch(
@@ -2778,6 +2775,209 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(
             row["historical_landmark_reasons"][self.landmark_id],
             "Mechanism change that future route selection must remember.",
+        )
+
+    def test_same_target_active_head_can_remain_a_durable_landmark(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "promote_landmark",
+                        "research_id": self.root_id,
+                        "reason": "Current and durable load-bearing mechanism.",
+                    }
+                ],
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "promote_active_head",
+                        "research_id": self.successor_id,
+                        "replace_head_research_id": self.root_id,
+                    },
+                    {
+                        "operation": "promote_landmark",
+                        "research_id": self.successor_id,
+                        "reason": "New current result is also a durable landmark.",
+                    },
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(
+            row["historical_landmark_research_ids"],
+            [self.root_id, self.successor_id],
+        )
+        self.assertEqual(row["recent_attained_research_ids"], [])
+        lifecycle._read_campaign_frontier_working_state(self.campaign_id)
+
+    def test_named_head_replacement_transfers_exact_context(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Exact theorem needed by this route.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        result = lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "promote_active_head",
+                        "research_id": self.successor_id,
+                        "replace_head_research_id": self.root_id,
+                    }
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.successor_id,
+                    "reason": "Exact theorem needed by this route.",
+                }
+            ],
+        )
+        self.assertEqual(
+            result["attention_diff"]["transferred_context_count"], 1
+        )
+        self.assertEqual(result["attention_diff"]["detached_context_count"], 0)
+
+    def test_concrete_context_attachment_absorbs_old_null_copy(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": None,
+                            "reason": "Old ambiguous route rationale.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "attach_context",
+                        "research_id": self.landmark_id,
+                        "attached_head_research_id": self.root_id,
+                        "reason": "Main resolved the exact attachment.",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][self.target_id]["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.root_id,
+                    "reason": "Main resolved the exact attachment.",
+                }
+            ],
+        )
+
+    def test_internal_maintenance_clock_is_nonblocking_and_pausable(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        clock = lifecycle.reset_frontier_maintenance_clock(
+            self.campaign_id,
+            completed_at="2026-09-01T10:00:00Z",
+            interval_minutes=50,
+        )
+        self.assertEqual(clock["next_due_at"], "2026-09-01T10:50:00.000000+00:00")
+        self.assertIsNone(
+            lifecycle.frontier_maintenance_advisory(
+                self.campaign_id,
+                now=datetime(2026, 9, 1, 10, 49, tzinfo=timezone.utc),
+            )
+        )
+        advisory = lifecycle.frontier_maintenance_advisory(
+            self.campaign_id,
+            now=datetime(2026, 9, 1, 10, 50, tzinfo=timezone.utc),
+        )
+        self.assertIsNotNone(advisory)
+        assert advisory is not None
+        self.assertFalse(advisory["blocking"])
+        self.assertEqual(advisory["truth_effect"], "none")
+        lifecycle.pause_frontier_maintenance_clock(self.campaign_id)
+        self.assertIsNone(
+            lifecycle.frontier_maintenance_advisory(
+                self.campaign_id,
+                now=datetime(2026, 9, 1, 11, 0, tzinfo=timezone.utc),
+            )
+        )
+        lifecycle.reset_frontier_maintenance_clock(
+            self.campaign_id,
+            completed_at="2000-01-01T00:00:00Z",
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "campaign-status",
+                    self.campaign_id,
+                ]
+            )
+        self.assertEqual(status, 0, stderr.getvalue())
+        self.assertIn(
+            "[Chalxius full frontier maintenance due]",
+            stderr.getvalue(),
         )
 
     def test_landmark_ids_cannot_silently_receive_a_generic_reason(self) -> None:

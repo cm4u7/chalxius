@@ -1,5 +1,17 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.14 Durable Campaign Memory override.** Campaign remains a many-to-many
+> nontruth overlay, and active-head plus landmark are now independent roles
+> even inside one target. Exact named head replacement transfers attached
+> context to its successor; concrete reattachment absorbs stale null copies.
+> Each active V5 Campaign may hold one replaceable 50-minute maintenance clock;
+> every Main-facing command can emit a nonblocking due advisory, while
+> completion/reset and pause affect only that reminder. There is no daemon,
+> dispatch, liveness judgment, or truth effect. Historical source-review bytes
+> become live capabilities only at a current literature, source-dependent, or
+> source-scope boundary, never merely because an internal proof cites the old
+> review.
+
 > **1.0.13 Exact Workflow Role Continuity override.** Directly queried
 > ingested worker products and supervision results recover their workflow root
 > only from validated assignment, round-status product, source-round, and

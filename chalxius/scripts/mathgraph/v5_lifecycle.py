@@ -8,7 +8,7 @@ import shutil
 import stat
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -146,6 +146,10 @@ V5_CAMPAIGN_FRONTIER_STATE_LEGACY_REVISION = (
 V5_CAMPAIGN_FRONTIER_STATE_REVISION = (
     "chalxius-v5-campaign-frontier-working-state-2"
 )
+V5_FRONTIER_MAINTENANCE_CLOCK_REVISION = (
+    "chalxius-v5-frontier-maintenance-clock-1"
+)
+V5_FRONTIER_MAINTENANCE_DEFAULT_INTERVAL_MINUTES = 50
 V5_CAMPAIGN_ACTIVE_HEAD_LIMIT = 16
 V5_CAMPAIGN_HEAD_CONTEXT_LIMIT = 32
 # Routine Main reads need a few concrete mathematical links, not every stored
@@ -8800,6 +8804,155 @@ class V5LifecycleManager:
             campaign_id
         ) / "frontier-state.json"
 
+    def _frontier_maintenance_clock_path(self, campaign_id: str) -> Path:
+        return self.store.root / "campaigns" / validate_campaign_id(
+            campaign_id
+        ) / "frontier-maintenance-clock.json"
+
+    def read_frontier_maintenance_clock(
+        self,
+        campaign_id: str,
+    ) -> dict[str, Any] | None:
+        """Read the replaceable, nontruth Main-maintenance deadline."""
+
+        campaign_id = validate_campaign_id(campaign_id)
+        path = self._frontier_maintenance_clock_path(campaign_id)
+        if not path.exists():
+            return None
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("frontier maintenance clock is unsafe")
+        value = self.store._read_json(path)
+        expected_fields = {
+            "revision",
+            "campaign_id",
+            "last_full_maintenance_at",
+            "next_due_at",
+            "interval_minutes",
+            "paused",
+            "truth_effect",
+        }
+        if (
+            not isinstance(value, dict)
+            or set(value) != expected_fields
+            or value.get("revision")
+            != V5_FRONTIER_MAINTENANCE_CLOCK_REVISION
+            or value.get("campaign_id") != campaign_id
+            or not isinstance(value.get("interval_minutes"), int)
+            or isinstance(value.get("interval_minutes"), bool)
+            or not 1 <= value["interval_minutes"] <= 24 * 60
+            or not isinstance(value.get("paused"), bool)
+            or value.get("truth_effect") != "none"
+        ):
+            raise ValueError("frontier maintenance clock is invalid")
+        last = _parse_utc_timestamp(
+            value.get("last_full_maintenance_at"),
+            label="last_full_maintenance_at",
+        )
+        due = _parse_utc_timestamp(
+            value.get("next_due_at"),
+            label="next_due_at",
+        )
+        expected_due = last + timedelta(minutes=value["interval_minutes"])
+        if due != expected_due:
+            raise ValueError("frontier maintenance clock deadline drifted")
+        return value
+
+    def reset_frontier_maintenance_clock(
+        self,
+        campaign_id: str,
+        *,
+        completed_at: str | None = None,
+        interval_minutes: int = (
+            V5_FRONTIER_MAINTENANCE_DEFAULT_INTERVAL_MINUTES
+        ),
+    ) -> dict[str, Any]:
+        """Reset Main's advisory deadline without changing graph or truth."""
+
+        campaign_id = validate_campaign_id(campaign_id)
+        if (
+            not isinstance(interval_minutes, int)
+            or isinstance(interval_minutes, bool)
+            or not 1 <= interval_minutes <= 24 * 60
+        ):
+            raise ValueError("frontier maintenance interval is invalid")
+        completed = (
+            datetime.now(timezone.utc)
+            if completed_at is None
+            else _parse_utc_timestamp(
+                completed_at,
+                label="frontier maintenance completion",
+            )
+        )
+        value = {
+            "revision": V5_FRONTIER_MAINTENANCE_CLOCK_REVISION,
+            "campaign_id": campaign_id,
+            "last_full_maintenance_at": completed.isoformat(
+                timespec="microseconds"
+            ),
+            "next_due_at": (
+                completed + timedelta(minutes=interval_minutes)
+            ).isoformat(timespec="microseconds"),
+            "interval_minutes": interval_minutes,
+            "paused": False,
+            "truth_effect": "none",
+        }
+        path = self._frontier_maintenance_clock_path(campaign_id)
+        if path.is_symlink():
+            raise ValueError("frontier maintenance clock is unsafe")
+        self.store._write_json_atomic(path, value)
+        return value
+
+    def pause_frontier_maintenance_clock(
+        self,
+        campaign_id: str,
+    ) -> dict[str, Any] | None:
+        """Pause future reminders without affecting running work."""
+
+        value = self.read_frontier_maintenance_clock(campaign_id)
+        if value is None or value["paused"]:
+            return value
+        value = {**value, "paused": True}
+        self.store._write_json_atomic(
+            self._frontier_maintenance_clock_path(campaign_id),
+            value,
+        )
+        return value
+
+    def frontier_maintenance_advisory(
+        self,
+        campaign_id: str,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any] | None:
+        """Project one nonblocking due advisory at a Main command boundary."""
+
+        value = self.read_frontier_maintenance_clock(campaign_id)
+        if value is None or value["paused"]:
+            return None
+        current = now or datetime.now(timezone.utc)
+        if current.tzinfo is None:
+            raise ValueError("frontier maintenance advisory time needs timezone")
+        current = current.astimezone(timezone.utc)
+        due = _parse_utc_timestamp(
+            value["next_due_at"],
+            label="next_due_at",
+        )
+        if current < due:
+            return None
+        return {
+            "kind": "frontier_full_maintenance_due",
+            "campaign_id": value["campaign_id"],
+            "due_since": value["next_due_at"],
+            "instruction": (
+                "Finish the current bounded action, then perform one full "
+                "all-target frontier/history/landmark search-and-curation pass "
+                "before choosing the next cut. Running agents continue."
+            ),
+            "blocking": False,
+            "dispatch_effect": "none",
+            "truth_effect": "none",
+        }
+
     @staticmethod
     def _normalize_campaign_frontier_target_row(
         *,
@@ -8823,7 +8976,7 @@ class V5LifecycleManager:
         if not isinstance(row, dict) or set(row) != expected_fields:
             raise ValueError("Campaign frontier target state is invalid")
         validate_memory_id(row["recovery_root_research_id"])
-        seen: set[str] = set()
+        research_sets: dict[str, set[str]] = {}
         for field, maximum in (
             ("active_head_research_ids", V5_CAMPAIGN_ACTIVE_HEAD_LIMIT),
             ("historical_landmark_research_ids", None),
@@ -8838,11 +8991,19 @@ class V5LifecycleManager:
             ):
                 raise ValueError("Campaign frontier Research list is invalid")
             normalized = [validate_memory_id(item) for item in ids]
-            if len(normalized) != len(set(normalized)) or seen.intersection(
-                normalized
-            ):
+            if len(normalized) != len(set(normalized)):
                 raise ValueError("Campaign frontier Research ids repeat")
-            seen.update(normalized)
+            research_sets[field] = set(normalized)
+        # Head and landmark are independent nontruth attention roles.  A
+        # load-bearing current result may need both without being copied or
+        # retired first.  Recent attainment is the only mutually exclusive
+        # queue because it denotes work no longer carrying either live role.
+        if research_sets["recent_attained_research_ids"].intersection(
+            research_sets["active_head_research_ids"].union(
+                research_sets["historical_landmark_research_ids"]
+            )
+        ):
+            raise ValueError("Campaign frontier Research ids repeat")
         historical_ids = row["historical_landmark_research_ids"]
         if revision == V5_CAMPAIGN_FRONTIER_STATE_REVISION:
             reasons = row["historical_landmark_reasons"]
@@ -11551,11 +11712,9 @@ class V5LifecycleManager:
                 "a Campaign target has more than "
                 f"{V5_CAMPAIGN_ACTIVE_HEAD_LIMIT} live heads"
             )
-        historical = [
-            item
-            for item in row["historical_landmark_research_ids"]
-            if item not in active
-        ]
+        # A selected current head may also remain a durable landmark.  The two
+        # roles are orthogonal Campaign attention, not lifecycle states.
+        historical = list(row["historical_landmark_research_ids"])
         historical_reasons = {
             item: row["historical_landmark_reasons"][item]
             for item in historical
@@ -11840,9 +11999,6 @@ class V5LifecycleManager:
                                 attached_head_id is not None
                                 and context.get("attached_head_research_id")
                                 is None
-                                and isinstance(context.get("reason"), str)
-                                and context["reason"].strip()
-                                == normalized_reason
                             )
                         )
                     )
@@ -11877,17 +12033,6 @@ class V5LifecycleManager:
                     replace_id = validate_memory_id(replace_id)
                     if replace_id not in row["active_head_research_ids"]:
                         raise ValueError("promoted context replacement is not a head")
-                    attention_warnings.append(
-                        {
-                            "code": "named_active_head_replacement",
-                            "research_ids": [replace_id],
-                            "instruction": (
-                                "The removed head was named explicitly; prefer "
-                                "retire_active_head plus add_head for a visible "
-                                "disposition."
-                            ),
-                        }
-                    )
                     row["active_head_research_ids"] = [
                         item
                         for item in row["active_head_research_ids"]
@@ -11911,8 +12056,9 @@ class V5LifecycleManager:
                     {
                         **context,
                         "attached_head_research_id": (
-                            None
-                            if context.get("attached_head_research_id")
+                            research_id
+                            if replace_id is not None
+                            and context.get("attached_head_research_id")
                             == replace_id
                             else context.get("attached_head_research_id")
                         ),
@@ -11972,8 +12118,7 @@ class V5LifecycleManager:
                     raise ValueError("promote_landmark fields are not exact")
                 reason = update["reason"]
                 if (
-                    research_id in row["active_head_research_ids"]
-                    or not isinstance(reason, str)
+                    not isinstance(reason, str)
                     or not reason.strip()
                     or len(reason) > 2_048
                 ):
@@ -12005,11 +12150,7 @@ class V5LifecycleManager:
         active = set(row["active_head_research_ids"])
         if len(active) > V5_CAMPAIGN_ACTIVE_HEAD_LIMIT:
             raise ValueError("Campaign active-head limit exceeded")
-        historical = [
-            item
-            for item in row["historical_landmark_research_ids"]
-            if item not in active
-        ]
+        historical = list(row["historical_landmark_research_ids"])
         row["historical_landmark_research_ids"] = historical
         row["historical_landmark_reasons"] = {
             item: row["historical_landmark_reasons"][item]
@@ -12123,10 +12264,30 @@ class V5LifecycleManager:
             for item in before_active_head_ids
             if item not in after_active_head_ids
         ]
-        detached_context_count = sum(
-            isinstance(context, dict)
-            and context.get("attached_head_research_id") in retired_head_ids
+        before_retired_contexts = [
+            context
             for context in before_head_contexts
+            if isinstance(context, dict)
+            and context.get("attached_head_research_id") in retired_head_ids
+        ]
+        detached_context_count = sum(
+            any(
+                after.get("research_id") == before.get("research_id")
+                and after.get("reason") == before.get("reason")
+                and after.get("attached_head_research_id") is None
+                for after in row["head_contexts"]
+            )
+            for before in before_retired_contexts
+        )
+        transferred_context_count = sum(
+            any(
+                after.get("research_id") == before.get("research_id")
+                and after.get("reason") == before.get("reason")
+                and after.get("attached_head_research_id")
+                in added_head_ids
+                for after in row["head_contexts"]
+            )
+            for before in before_retired_contexts
         )
         return {
             "campaign_id": campaign_id,
@@ -12146,6 +12307,7 @@ class V5LifecycleManager:
                 "retired_head_research_ids": retired_head_ids,
                 "retirements": explicit_retirements,
                 "detached_context_count": detached_context_count,
+                "transferred_context_count": transferred_context_count,
                 "warnings": attention_warnings,
                 "selection_effect": "main_explicit_attention_only",
                 "truth_effect": "none",
@@ -20513,17 +20675,32 @@ class V5LifecycleManager:
             typed_artifacts_by_research: dict[
                 str, list[dict[str, str]]
             ] = {}
+            source_capability_required_by_research: dict[str, bool] = {}
             for research_id, record in source_records.items():
+                source_capability_required = (
+                    mode == "literature"
+                    or self._research_is_source_dependent(record)
+                    or (
+                        research_cycle is not None
+                        and research_cycle["subround"] == "supervision"
+                        and "source_scope"
+                        in research_cycle["supervisor_scopes"]
+                    )
+                )
+                source_capability_required_by_research[research_id] = (
+                    source_capability_required
+                )
                 typed_artifacts = self._typed_research_artifacts(
                     record,
                     _inspection_context=inspection,
                 )
-                typed_artifacts.extend(
-                    self._exact_source_review_capabilities(
-                        record,
-                        _inspection_context=inspection,
+                if source_capability_required:
+                    typed_artifacts.extend(
+                        self._exact_source_review_capabilities(
+                            record,
+                            _inspection_context=inspection,
+                        )
                     )
-                )
                 # Validate the repair-specific path/SHA/role closure before a
                 # staging round directory or any other round byte is created.
                 self._validate_repair_task_capability_closure(
@@ -20922,12 +21099,15 @@ class V5LifecycleManager:
                             _inspection_context=inspection,
                         )
                     )
-                    related_artifacts.extend(
-                        self._exact_source_review_capabilities(
-                            related_record,
-                            _inspection_context=inspection,
+                    if source_capability_required_by_research[
+                        entry["research_id"]
+                    ]:
+                        related_artifacts.extend(
+                            self._exact_source_review_capabilities(
+                                related_record,
+                                _inspection_context=inspection,
+                            )
                         )
-                    )
                 deduplicated_related_artifacts: dict[
                     tuple[str, str], dict[str, str]
                 ] = {}

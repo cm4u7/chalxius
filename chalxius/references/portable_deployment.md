@@ -1,5 +1,26 @@
 # Chalxius portable deployment
 
+## 1.0.14 Durable Campaign Memory
+
+The `1.0.14` **Durable Campaign Memory** candidate keeps Campaign membership
+many-to-many and removes an accidental target-local role conflict: one exact
+Research may now be both the current active head and a persistent landmark.
+Named head replacement carries exact attached context to the successor, and a
+concrete attachment removes obsolete null copies rather than leaving duplicate
+work memory. No Research or historical Campaign event is rewritten.
+
+An active V5 Campaign can persist one replaceable
+`frontier-maintenance-clock.json`. Main-facing commands read this small file
+and print a nonblocking advisory after its approximately 50-minute deadline.
+Campaign maintenance completion/reset notes move the deadline; pause suppresses
+future notices without interrupting agents or rounds. This is not a daemon,
+scheduler, worker-liveness timer, truth path, or installation service.
+
+Completed source-scope reviews remain readable, but primary-byte capability is
+replayed only for a current literature task, explicitly source-dependent task,
+or source-scope supervision. An internal proof task may cite the review without
+turning historical source availability into a new planning prerequisite.
+
 ## 1.0.13 Exact Workflow Role Continuity
 
 The `1.0.13` **Exact Workflow Role Continuity** candidate keeps directly

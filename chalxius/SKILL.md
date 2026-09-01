@@ -3,7 +3,7 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.13 — Exact Workflow Role Continuity
+# Chalxius 1.0.14 — Durable Campaign Memory
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -32,6 +32,12 @@ workflow stages when its derived receipt is absent; missing products,
 stage/owner/hash drift, and independent verifier, Certification, Gateway, Fact,
 terminal-seal, or final-experiment checks remain blocking at their own owners.
 
+A completed source-scope review remains readable provenance. Its exact primary
+source bytes become live planning capabilities only for a current literature
+task, an explicitly source-dependent Research task, or a current source-scope
+supervision assignment. Merely citing that old review from an internal proof
+task does not recursively reopen its sources as a planning prerequisite.
+
 ## Working-memory maintenance
 
 Main keeps Campaign frontier as usable mathematical working memory without
@@ -58,11 +64,10 @@ head; exact full replacement is reserved for malformed-state recovery.
 Retirement detaches, rather than deletes, the head's contexts. None of these
 operations infers mathematical completion or changes Fact authority.
 
-When Campaign research starts or resumes and the host exposes thread
-automations, Main ensures exactly one project/task heartbeat named **Chalxius
-frontier maintenance**, updating the existing exact match rather than creating
-duplicates. Approximately every 50 minutes it requests one full active
-maintenance pass. The reminder is non-preemptive: Main finishes its current
+Each active V5 Campaign has one small replaceable maintenance clock. Every
+Main-facing `mgraph` command reads it and, after the approximately 50-minute
+deadline, prints one prominent nonblocking advisory. No external heartbeat is
+required for visibility inside a long-running turn. Main finishes its current
 bounded action, then performs the pass before freezing another cut; if a
 maintenance pass is already under way, it expands that pass to full scope.
 Full scope covers every target, active head, attached/unattached context,
@@ -71,22 +76,15 @@ active-round recovery, and material exact Research search. Completion means
 using those searches to make every currently warranted explicit nontruth
 addition, removal, migration, attachment, retirement, or reason correction;
 read-only completion is valid only when exact search shows that no attention
-change is warranted. The heartbeat never starts Research workers, Fact
-packaging, Candidate, verifier, Gateway, or Fact work and never selects
-mathematical truth. A project pause suppresses future heartbeat runs only; an
-agent already running and a frozen round continue untouched. If thread
-automations are unavailable, Main performs the same pass at the next visible
-handoff, reconnect, or user request.
-At trigger entry, a heartbeat that finds the current task visibly inside an
-integrated Chalxius repair, candidate validation, local installation,
-publication, or their pre-Research-resumption reconciliation ends immediately
-with `DONT_NOTIFY`: it performs no Campaign/Research read or mutation, remains
-active, and lets the next trigger reassess the phase after Research resumes.
-This uses the current task context already visible to Main; it creates no
-project lock, sentinel file, repair state machine, or requirement to interrupt
-mathematical agents already running.
-This Campaign-maintenance heartbeat is distinct from worker-liveness polling:
-artifact silence and elapsed time do not authorize worker recovery.
+change is warranted. A successful completion/reset Campaign note atomically
+resets the deadline; a project pause suppresses future advisories only. The
+clock never starts Research workers, Fact packaging, Candidate, verifier,
+Gateway, or Fact work, never interrupts an agent or command, and never selects
+mathematical truth. It is replaceable working-memory state, not a receipt,
+scheduler, daemon, lock, sentinel, state machine, or admission gate. It is also
+distinct from worker-liveness judgment: artifact silence and elapsed time do
+not authorize worker recovery. A host heartbeat may remain as an optional
+fallback reminder, but it is not the canonical clock and is never required.
 
 Every bounded routine projection follows one drill-down contract, not only
 landmarks. If context, recent history, membership, target history, workflow
@@ -108,6 +106,14 @@ verifier, Gateway, or Fact authority. `Research.metadata.campaign_id` records
 creation provenance only. It never proves membership and must not filter,
 reject, or stale a target, head, context, landmark, history item, successor
 route, or explicit plan selection.
+
+Within one target, active-head and landmark roles may overlap: the same current
+load-bearing Research can be both the attention centre and a durable historical
+reference. A named `promote_active_head` replacement atomically carries the old
+head's attached contexts to the exact successor; an explicit concrete context
+attachment absorbs obsolete unattached copies of that Research. Genuine
+unresolved ambiguity may still remain unattached. These operations have no
+truth or dispatch effect.
 
 Ordinary membership is an exact Campaign-side link derived from the existing
 append-only Campaign event log. `reference_only` records that member link

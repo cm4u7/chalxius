@@ -1,4 +1,25 @@
-# Chalxius V5 traceability through 1.0.13 Exact Workflow Role Continuity
+# Chalxius V5 traceability through 1.0.14 Durable Campaign Memory
+
+## 1.0.14 Durable Campaign Memory overlay
+
+- Candidate version: `1.0.14`; release name **Durable Campaign Memory**.
+- Campaign is still a many-to-many nontruth overlay. One Research may belong
+  to several Campaigns, and one target may now retain the same load-bearing
+  Research simultaneously as its active head and durable landmark.
+- Exact named head replacement transfers the replaced head's contexts to the
+  successor. A later concrete attachment absorbs obsolete null copies, while
+  ordinary retirement without a successor still preserves genuine ambiguity
+  as unattached context.
+- Each active V5 Campaign may carry one replaceable 50-minute maintenance
+  clock. Main-facing commands emit a nonblocking due advisory; maintenance
+  completion/reset notes reset it and pause affects only later reminders. No
+  daemon, worker, automatic dispatch, truth effect, or gate is introduced.
+- Historical source-scope reviews transmit primary-byte capability only when
+  the current task is literature, explicitly source-dependent, or itself a
+  source-scope review. Internal proof use retains review provenance without
+  reopening old source bytes as a planning gate.
+- Existing Research, Campaign events, rounds, Candidate, verifier, Gateway,
+  Fact, and admission bytes are not migrated or rewritten.
 
 ## 1.0.13 Exact Workflow Role Continuity overlay
 

@@ -1,81 +1,63 @@
-# Validation — Chalxius v1.0.9 Working Memory Maintenance
+# Validation — Chalxius v1.0.14 Durable Campaign Memory
 
-This report records software, installation, package, CHX-settlement, and
+This report records software, installation, package, real-project canary, and
 publication evidence. It does not certify a mathematical claim.
 
 ## Frozen identity
 
 | Field | Value |
 |---|---|
-| Version | 1.0.9 |
-| Release date | 2026-08-31 |
-| Manifest entries | 270 |
-| Package files, including manifest | 271 |
-| Manifest SHA-256 | `0685603076b1852df69ea2195e95067016c243b10ed88d73b6efd7bb9120e262` |
-| Archive | `chalxius-1.0.9-working-memory-maintenance.tar.gz` |
-| Archive bytes | 2,821,670 |
-| Archive regular-file members | 271 |
-| Archive SHA-256 | `1974d0b44eaa34df547cc9aff9715cd3bd76392b2bd5ca5acc9e28ecbca587d7` |
-| Checksum-file SHA-256 | `446f5b759966d33795b428a5bb9f2142cd77a8edd7cb4140db30818dd6823b6a` |
+| Version | 1.0.14 |
+| Release date | 2026-09-01 |
+| Manifest entries | 271 |
+| Package files, including manifest | 272 |
+| Manifest SHA-256 | `a06ab417befa9d4236ee54f7f84fac99f54fcdeb6d5cfa6599b37ae09073acd4` |
+| Archive | `chalxius-1.0.14-durable-campaign-memory.tar.gz` |
+| Archive bytes | 2,836,880 |
+| Archive regular-file members | 272 |
+| Archive SHA-256 | `61155cacbad7372400eaa0dd5323c2f89960c82fe72018bfe7208ba63edc5e14` |
+| Checksum-file SHA-256 | `0aa72a8fbeea0b72fea7a76d7c24a3531f30f4d7776ff4f45e8c7e7185baa8bc` |
 
 Two independent archive builds were byte-identical. The archive contains only
-the 271 sorted regular package files and no directory, symlink, cache, or
+the 272 sorted regular package files and no directory, symlink, cache, or
 bytecode member.
 
 ## Correctness validation and installation
 
-- focused working-memory, frontier, round, Campaign, Blackboard, release-
-  identity, and adjacent regression lane: 150 passed;
-- two supplementary lanes: 30 passed and 82 passed;
-- installer self-test and focused regressions: PASS;
-- manifest-bound archive, atomic swap, and rollback preparation: PASS;
-- candidate-to-installed identity: exact at all 270 manifest entries; and
+- changed-surface regression lane: 183 passed;
+- two focused Campaign/frontier and lifecycle lanes: 66 passed and 58 passed;
+- complete self-test and installer-focused regressions: PASS;
+- manifest-bound atomic installation and rollback preparation: PASS;
+- candidate-to-installed identity: exact at all 271 manifest entries; and
 - project reads/writes performed by installation: 0/0.
 
-The installed version is `1.0.9` with manifest
-`0685603076b1852df69ea2195e95067016c243b10ed88d73b6efd7bb9120e262`.
+The installed version is `1.0.14` with manifest
+`a06ab417befa9d4236ee54f7f84fac99f54fcdeb6d5cfa6599b37ae09073acd4`.
 The previous runtime remains available through the installer-managed rollback
 archive.
 
-## Behavioral coverage
+## Real-project canary
 
-The focused validation covers:
+The installed runtime read Campaign `campaign-62013035c1ff` at live frontier
+generation 372 with 237 members. Three targets retained an exact Research as
+both active head and historical landmark:
 
-- bounded zero-argument round recovery with explicit full-history diagnostics;
-- compact ordinary frontier projections with exact count/digest bindings and
-  complete drill-down;
-- additive head creation, exact disposition-bearing retirement, preservation
-  of omitted co-heads, and detached-context recovery;
-- Campaign maintenance-heartbeat phase skips and the absence of Fact,
-  liveness, cancellation, or truth authority;
-- ordinary V5 round creation without a default Blackboard snapshot, together
-  with explicit Blackboard binding and historical replay; and
-- deterministic, idempotent release-identity updating that fails before writes
-  on invalid anchors or a dirty candidate tree.
+- `0c33384e6392`;
+- `09a4a95ed69a`; and
+- `1d8a1522c717`.
 
-## CHX integrated repair
-
-After installation, the current global CHX record
-`global-repair-20de5c2069446864a30ef0ce3270361ca435ae8ac12e571deb79dabcf523ef83`
-verified as current. It covers all 266 observed issue identities, reports zero
-uncovered issues and zero lineage/report drift, and has explicit `project_effect`
-and `truth_effect` values of `none`.
+The canary changed no head, context, Research, verification, or Fact state. It
+also reset the Campaign's nonblocking 50-minute maintenance clock through an
+ordinary note update.
 
 ## Publication scan
 
-Publication reuses the already installed bytes. Its gate is limited to archive
-identity, checksum sidecar, intended file set, and absence of credentials,
-private keys, actual local usernames/paths, private runtime identifiers,
-symlinks, caches, and bytecode. No mutation or forensic matrix is repeated as a
-publication ceremony.
+Publication reuses the installed bytes. The candidate and archive were checked
+for exact file-set identity, checksum consistency, symlinks, caches, bytecode,
+private-key headers, common credential-token forms, actual local usernames and
+absolute home paths, and private runtime identifiers. The only path matches
+were documented placeholders (`/Users/<user>` and `/Users/example`); true
+positive sensitive findings were zero.
 
-## Publication boundary
-
-The annotated `v1.0.9` tag resolves to
-`d58ddc6091257a3ab66e58174a2889964354ce45`. GitHub published the release at
-`2026-08-31T15:05:20Z`:
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.9>. Both uploaded asset
-sizes and GitHub SHA-256 digests match the frozen local archive and sidecar;
-fresh downloads were also byte-identical. Installation, validation, Campaign
-coordination, CHX settlement, and publication create no Research or Fact
-authority.
+The optional mutation/forensic matrix is not a publication gate and was not
+repeated. Publication creates no Research or mathematical Fact.
