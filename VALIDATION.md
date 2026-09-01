@@ -61,3 +61,12 @@ positive sensitive findings were zero.
 
 The optional mutation/forensic matrix is not a publication gate and was not
 repeated. Publication creates no Research or mathematical Fact.
+
+## Publication boundary
+
+The annotated `v1.0.14` tag resolves to
+`cfffc3749a8d19099237898ee6a87e634707f465`. GitHub published the release at
+`2026-09-01T10:50:23Z`:
+<https://github.com/cm4u7/chalxius/releases/tag/v1.0.14>. Both uploaded asset
+sizes and GitHub SHA-256 digests match the frozen local archive and sidecar;
+fresh downloads were also byte-identical.
