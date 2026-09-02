@@ -3,7 +3,26 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.15 — Scope-Owned Continuity
+# Chalxius 1.0.16 — Main-Choice Repair Continuity
+
+## 1.0.16 Main-Choice Repair Continuity overlay
+
+An active-head replacement remains a Main mathematical choice. When one exact
+new head replaces one exact old head, Main uses `promote_active_head` with
+`replace_head_research_id`; Chalxius then transfers that old head's attached
+contexts mechanically. `add_head` plus `retire_active_head` remains legal for a
+genuine addition and retirement, leaves the old contexts unattached, and now
+returns a prominent nonblocking warning instead of pretending that those two
+operations expressed replacement.
+
+`plan-repair-round` is safe to retry after a lost or blank acknowledgement.
+The immutable content-addressed Repair Research id, normalized host scope, and
+optional Campaign target identify the exact plan. If a matching non-aborted
+round already exists, the command returns that canonical round and an explicit
+repair-plan receipt instead of creating another round. A changed repair,
+trigger, host scope, or Campaign target remains a distinct Main choice. This
+adds no receipt gate, automatic semantic choice, Research rewrite, dispatch,
+or truth effect.
 
 ## 1.0.15 Scope-Owned Continuity overlay
 

@@ -1,5 +1,15 @@
 # V5 capability preservation matrix
 
+The 1.0.16 Main-Choice Repair Continuity repair keeps semantic replacement in
+Main's explicit `promote_active_head` choice and preserves the existing
+mechanical context transfer. Independent add and retire operations remain
+available without a gate and now identify their nonreplacement, context-
+detaching effect in the returned warning. Exact repair-plan retries reuse the
+same non-aborted round by content-addressed Repair Research, host scope, and
+Campaign target and return a canonical receipt. Aborted rounds do not reserve
+the request. No Research, Campaign truth, package, verifier, Gateway, Fact, or
+admission capability changes.
+
 The 1.0.9 Working Memory Maintenance repair retains exact complete identities
 while bounding routine context/history expansion, preserves omitted heads until
 explicit retirement, and makes zero-argument round recovery deeply validate

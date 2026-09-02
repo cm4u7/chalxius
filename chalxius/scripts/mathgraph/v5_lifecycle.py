@@ -5668,6 +5668,7 @@ class V5LifecycleManager:
             user_authorized_split=user_authorized_split,
             _inspection_context=inspection,
         )
+        planning_reused = bool(planned.get("planning_reused", False))
         return {
             **planned,
             "memory_id": repair["research_id"],
@@ -5682,6 +5683,16 @@ class V5LifecycleManager:
             "repair_input_capability_manifest_sha256": repair["metadata"][
                 "repair_input_capability_manifest"
             ]["manifest_sha256"],
+            "repair_plan_receipt": {
+                "revision": "chalxius-v5-repair-plan-receipt-1",
+                "research_id": repair["research_id"],
+                "round_id": planned["round_id"],
+                "reused_existing_round": planning_reused,
+                "duplicate_exact_round_ids": list(
+                    planned.get("duplicate_exact_round_ids", [])
+                ),
+                "truth_effect": "none",
+            },
         }
 
     @staticmethod
@@ -12346,6 +12357,50 @@ class V5LifecycleManager:
             )
             for before in before_retired_contexts
         )
+        update_operations = [
+            update.get("operation")
+            for update in updates
+            if isinstance(update, dict)
+        ]
+        if (
+            "add_head" in update_operations
+            and "retire_active_head" in update_operations
+            and "promote_active_head" not in update_operations
+        ):
+            attention_warnings.append(
+                {
+                    "code": "add_and_retire_are_not_head_replacement",
+                    "research_ids": sorted(
+                        {
+                            update["research_id"]
+                            for update in updates
+                            if isinstance(update, dict)
+                            and update.get("operation")
+                            in {"add_head", "retire_active_head"}
+                        }
+                    ),
+                    "instruction": (
+                        "Main's add_head plus retire_active_head choice remains "
+                        "legal and does not transfer context. When one exact new "
+                        "head semantically replaces one old head, use "
+                        "promote_active_head with replace_head_research_id."
+                    ),
+                }
+            )
+        if detached_context_count:
+            attention_warnings.append(
+                {
+                    "code": "retired_head_contexts_left_unattached",
+                    "context_count": detached_context_count,
+                    "research_ids": retired_head_ids,
+                    "instruction": (
+                        "The retirement was applied and its context remains "
+                        "unattached for Main review. If this was intended as one "
+                        "exact replacement, reattach explicitly now and use "
+                        "promote_active_head for future replacements."
+                    ),
+                }
+            )
         return {
             "campaign_id": campaign_id,
             "state_generation": state["generation"],
@@ -18735,6 +18790,98 @@ class V5LifecycleManager:
             _inspection_context=_inspection_context,
         )
 
+    def _matching_exact_repair_round_ids(
+        self,
+        *,
+        research_id: str,
+        requested_mode: str,
+        campaign_id: str | None,
+        frontier_target_id: str | None,
+        host_task_scope_id: str,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> list[str]:
+        """Find already-published rounds for one exact repair request.
+
+        Repair Research is content-addressed, so the immutable Research id is
+        already the semantic request identity. The remaining planning
+        coordinates are the host scope and optional Campaign target. Reusing
+        that exact tuple makes a lost acknowledgement safe to retry without
+        adding a second receipt registry or a procedural gate.
+        """
+
+        research_id = validate_memory_id(research_id)
+        if requested_mode != "auto" and requested_mode not in WORK_MODES:
+            raise ValueError("repair retry mode is invalid")
+        if campaign_id is not None:
+            campaign_id = validate_campaign_id(campaign_id)
+        if frontier_target_id is not None:
+            frontier_target_id = validate_campaign_target_id(
+                frontier_target_id
+            )
+        if HOST_TASK_SCOPE_ID_RE.fullmatch(host_task_scope_id) is None:
+            raise ValueError("repair retry host scope is invalid")
+        if not self.store.rounds_dir.exists():
+            return []
+        matches: list[str] = []
+        research_needle = research_id.encode("utf-8")
+        host_scope_needle = host_task_scope_id.encode("utf-8")
+        for round_dir in sorted(self.store.rounds_dir.glob("round-*")):
+            if round_dir.is_symlink() or not round_dir.is_dir():
+                continue
+            if (
+                self.store.reasoning_modes().work_unit_abort(round_dir.name)
+                is not None
+            ):
+                continue
+            manifest_path = round_dir / "round.json"
+            if manifest_path.is_symlink() or not manifest_path.is_file():
+                continue
+            try:
+                raw = manifest_path.read_bytes()
+                if (
+                    research_needle not in raw
+                    or host_scope_needle not in raw
+                ):
+                    continue
+                preview = json.loads(raw)
+            except (OSError, ValueError):
+                continue
+            if not isinstance(preview, dict):
+                continue
+            cycle = preview.get("research_cycle")
+            assignments = preview.get("assignments")
+            receipt = preview.get("selection_receipt")
+            if (
+                not isinstance(cycle, dict)
+                or cycle.get("subround") != "production"
+                or preview.get("host_task_scope_id")
+                != host_task_scope_id
+                or not isinstance(assignments, list)
+                or not isinstance(receipt, dict)
+            ):
+                continue
+            primary_research_ids = [
+                assignment.get("research_id")
+                for assignment in assignments
+                if isinstance(assignment, dict)
+                if assignment.get("assignment_role") != "paired_adverse"
+            ]
+            if primary_research_ids != [research_id]:
+                continue
+            if (
+                receipt.get("requested_mode") != requested_mode
+                or receipt.get("campaign_id") != campaign_id
+                or receipt.get("frontier_target_id")
+                != frontier_target_id
+            ):
+                continue
+            _, manifest = self._round_manifest(
+                round_dir.name,
+                _inspection_context=_inspection_context,
+            )
+            matches.append(manifest["round_id"])
+        return sorted(matches)
+
     @staticmethod
     def _exact_plan_round_argv(
         research_ids: list[str],
@@ -20673,6 +20820,41 @@ class V5LifecycleManager:
                         existing_supervision_round_id,
                         _inspection_context=inspection,
                     )
+            if (
+                research_cycle is not None
+                and research_cycle["subround"] == "production"
+                and len(selected) == 1
+            ):
+                selected_record = self._inspection_research_record(
+                    selected[0]["research_id"],
+                    inspection,
+                )
+                if selected_record.get("kind") == "repair":
+                    exact_repair_round_ids = (
+                        self._matching_exact_repair_round_ids(
+                            research_id=selected_record["research_id"],
+                            requested_mode=mode,
+                            campaign_id=campaign_id,
+                            frontier_target_id=frontier_target_id,
+                            host_task_scope_id=host_task_scope_id,
+                            _inspection_context=inspection,
+                        )
+                    )
+                    if exact_repair_round_ids:
+                        canonical_round_id = exact_repair_round_ids[0]
+                        return {
+                            **self.round_status(
+                                canonical_round_id,
+                                _inspection_context=inspection,
+                            ),
+                            "planning_reused": True,
+                            "planning_reuse_reason": (
+                                "exact_repair_round_already_published"
+                            ),
+                            "duplicate_exact_round_ids": (
+                                exact_repair_round_ids[1:]
+                            ),
+                        }
             try:
                 planned_runtime_binding = validate_runtime_binding(
                     self._runtime_binding()

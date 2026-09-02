@@ -1,4 +1,21 @@
-# Chalxius V5 traceability through 1.0.15 Scope-Owned Continuity
+# Chalxius V5 traceability through 1.0.16 Main-Choice Repair Continuity
+
+## 1.0.16 Main-Choice Repair Continuity overlay
+
+- Candidate version: `1.0.16`; release name **Main-Choice Repair
+  Continuity**.
+- One exact active-head replacement remains explicit Main judgment through
+  `promote_active_head` plus `replace_head_research_id`; the runtime only
+  transfers the selected old head's exact attached contexts.
+- `add_head` plus `retire_active_head` remains legal for nonreplacement work,
+  leaves old contexts unattached, and returns a nonblocking warning rather than
+  inferring a successor or rejecting Main's choice.
+- Repeating the same `plan-repair-round` request reuses its canonical
+  non-aborted round for the same content-addressed Repair Research, host scope,
+  and optional Campaign target. The returned repair-plan receipt exposes reuse
+  and any already-existing duplicate exact rounds.
+- Existing Research, Campaign events, rounds, Candidate, verifier, Gateway,
+  Fact, and admission bytes are not migrated or rewritten.
 
 ## 1.0.15 Scope-Owned Continuity overlay
 

@@ -2966,6 +2966,65 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         self.assertEqual(result["attention_diff"]["detached_context_count"], 0)
 
+    def test_add_then_retire_stays_legal_but_warns_it_is_not_replacement(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Exact theorem needed by the old route.",
+                        }
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        result = lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "add_head",
+                        "research_id": self.successor_id,
+                    },
+                    {
+                        "operation": "retire_active_head",
+                        "research_id": self.root_id,
+                        "disposition": "superseded",
+                    },
+                ],
+            },
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(
+            row["head_contexts"][0]["attached_head_research_id"],
+            None,
+        )
+        self.assertEqual(result["attention_diff"]["detached_context_count"], 1)
+        warning_codes = {
+            item["code"] for item in result["attention_diff"]["warnings"]
+        }
+        self.assertIn(
+            "add_and_retire_are_not_head_replacement",
+            warning_codes,
+        )
+        self.assertIn(
+            "retired_head_contexts_left_unattached",
+            warning_codes,
+        )
+
     def test_concrete_context_attachment_absorbs_old_null_copy(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         lifecycle._replace_campaign_frontier_working_state(

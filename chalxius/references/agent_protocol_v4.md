@@ -1,5 +1,16 @@
 # MathGraph Agent Protocol v4
 
+> **1.0.16 Main-choice repair continuity override.** Semantic head replacement
+> is explicit Main judgment: use `promote_active_head` with the exact old head
+> in `replace_head_research_id`. The runtime then performs only the mechanical
+> context transfer. `add_head` plus `retire_active_head` remains a legal
+> nonreplacement composition and leaves old context unattached, but its result
+> carries a nonblocking misuse warning. An exact retry of
+> `plan-repair-round` reuses the existing non-aborted round for the same
+> content-addressed Repair Research, host scope, and Campaign target and
+> returns the canonical repair-plan receipt. No semantic successor is inferred
+> and no Research, dispatch, package, or truth authority is added.
+
 > **V5 adaptation.** The three-plane capability boundary survives in Chalxius.
 > Historical V4 cards retain their frozen `execution_profile` and
 > `profile_obligations`. The sentences below describe their then-current V5

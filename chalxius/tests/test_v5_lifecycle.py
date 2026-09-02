@@ -1714,6 +1714,76 @@ class V5LifecycleTests(unittest.TestCase):
                 sha256_json(spec),
             )
 
+    def test_exact_repair_plan_retry_reuses_round_and_returns_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "repair-plan-retry")
+            lifecycle = store.v5_lifecycle()
+            source = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "One exact proof defect requires repair.",
+                },
+                actor="proof-worker",
+            )
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                first = lifecycle.create_repair_round(
+                    source["research_id"],
+                    host_task_scope_id="repair-plan-retry",
+                )
+                second = lifecycle.create_repair_round(
+                    source["research_id"],
+                    host_task_scope_id="repair-plan-retry",
+                )
+            self.assertEqual(first["research_id"], second["research_id"])
+            self.assertEqual(first["round_id"], second["round_id"])
+            self.assertFalse(
+                first["repair_plan_receipt"]["reused_existing_round"]
+            )
+            self.assertTrue(
+                second["repair_plan_receipt"]["reused_existing_round"]
+            )
+            self.assertEqual(
+                second["repair_plan_receipt"]["round_id"],
+                first["round_id"],
+            )
+            self.assertEqual(
+                second["repair_plan_receipt"]["duplicate_exact_round_ids"],
+                [],
+            )
+            self.assertEqual(
+                len(list(store.rounds_dir.glob("round-*"))),
+                1,
+            )
+            output = StringIO()
+            with patch.object(
+                V5LifecycleManager,
+                "create_repair_round",
+                return_value=second,
+            ), redirect_stdout(output):
+                self.assertEqual(
+                    cli_main(
+                        [
+                            "--root",
+                            str(root),
+                            "--role",
+                            "main",
+                            "plan-repair-round",
+                            source["research_id"],
+                        ]
+                    ),
+                    0,
+                )
+            acknowledgement = json.loads(output.getvalue())
+            self.assertEqual(
+                acknowledgement["repair_plan_receipt"]["round_id"],
+                first["round_id"],
+            )
+
     def test_schema_v2_repair_input_capabilities_close_exactly_in_task_card(
         self,
     ) -> None:

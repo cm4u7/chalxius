@@ -1,5 +1,21 @@
 # Chalxius portable deployment
 
+## 1.0.16 Main-Choice Repair Continuity
+
+The `1.0.16` **Main-Choice Repair Continuity** candidate uses the existing
+named `promote_active_head` operation as the only expression of one exact
+head replacing another. Main supplies both Research ids; the runtime transfers
+attached contexts mechanically. Independent `add_head` and
+`retire_active_head` operations remain legal and nonblocking, but their result
+warns that retirement leaves former context unattached.
+
+An exact `plan-repair-round` retry now reuses the already-published,
+non-aborted production round for the same content-addressed Repair Research,
+normalized host scope, and optional Campaign target. The command returns the
+canonical round id and repair-plan receipt, so a lost client acknowledgement
+does not create a second round. No semantic successor inference, receipt gate,
+project migration, automatic dispatch, or truth effect is introduced.
+
 ## 1.0.15 Scope-Owned Continuity
 
 The `1.0.15` **Scope-Owned Continuity** candidate makes source authority local

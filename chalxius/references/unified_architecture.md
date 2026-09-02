@@ -1,5 +1,16 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.16 Main-Choice Repair Continuity override.** Campaign head
+> replacement is an explicit Main attention decision expressed by
+> `promote_active_head` with one exact `replace_head_research_id`; the runtime
+> then transfers only that old head's attached contexts. Add plus retire remains
+> a legal nonreplacement composition and leaves former context unattached with
+> a nonblocking warning. Repair Research remains content-addressed. Repeating
+> the same repair plan in the same host scope and optional Campaign target
+> reuses the existing non-aborted round and returns its canonical receipt,
+> rather than creating duplicate work after a lost acknowledgement. Neither
+> mechanism infers mathematics, dispatches work, or changes truth authority.
+
 > **1.0.14 Durable Campaign Memory override.** Campaign remains a many-to-many
 > nontruth overlay, and active-head plus landmark are now independent roles
 > even inside one target. Exact named head replacement transfers attached

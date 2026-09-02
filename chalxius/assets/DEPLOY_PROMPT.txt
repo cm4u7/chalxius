@@ -1,8 +1,17 @@
-Chalxius 1.0.15 — Scope-Owned Continuity
+Chalxius 1.0.16 — Main-Choice Repair Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
+
+The current runtime keeps semantic head replacement in Main's hands. Use one
+`promote_active_head` operation with the exact `replace_head_research_id` when
+one new head replaces one old head; only then does the runtime mechanically
+transfer attached context. A separate add plus retire remains legal and leaves
+old context unattached, with a nonblocking warning. Exact
+`plan-repair-round` retries reuse the same non-aborted round for the same
+content-addressed Repair Research, host scope, and Campaign target, and return
+the canonical repair-plan receipt instead of duplicating work.
 
 The current runtime coordinates Campaign working memory, explicitly requested
 Fact route selection, proof/source supervision, and semantic split lineage. Main still
