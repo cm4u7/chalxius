@@ -1,8 +1,16 @@
-Chalxius 1.0.16 — Main-Choice Repair Continuity
+Chalxius 1.0.17 — Literal Input Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
+
+Before Main freezes work that consumes an exact formula, definition,
+convention, theorem statement, or other literal historical input, open the
+selected artifacts and bind one exact byte object that actually contains it.
+A downstream artifact that only names the symbol, cites a locator, or records
+a derived coefficient is not the input capability. This is explicit Main
+planning at the existing exact-selection boundary; do not add a formula
+registry, prose scan, automatic ancestor expansion, or task-card gate.
 
 The current runtime keeps semantic head replacement in Main's hands. Use one
 `promote_active_head` operation with the exact `replace_head_research_id` when

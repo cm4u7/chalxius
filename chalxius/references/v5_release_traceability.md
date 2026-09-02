@@ -1,4 +1,17 @@
-# Chalxius V5 traceability through 1.0.16 Main-Choice Repair Continuity
+# Chalxius V5 traceability through 1.0.17 Literal Input Continuity
+
+## 1.0.17 Literal Input Continuity overlay
+
+- Candidate version: `1.0.17`; release name **Literal Input Continuity**.
+- Before freezing work that consumes an exact formula, definition, convention,
+  theorem statement, or other literal historical object, Main opens the
+  selected artifacts and binds one exact byte object that contains it.
+- A downstream symbol mention, locator, or derived coefficient is context and
+  does not substitute for the literal input capability.
+- The repair adds no formula registry, prose scanner, automatic ancestor
+  selection, task-card gate, Research mutation, dispatch, or truth effect.
+- Existing 1.0.16 explicit head replacement and idempotent repair planning are
+  inherited unchanged.
 
 ## 1.0.16 Main-Choice Repair Continuity overlay
 

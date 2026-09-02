@@ -1,5 +1,19 @@
 # Chalxius portable deployment
 
+## 1.0.17 Literal Input Continuity
+
+The `1.0.17` **Literal Input Continuity** candidate requires Main, before card
+freeze, to open the selected historical artifacts and bind one exact byte
+object containing every exact formula, definition, convention, theorem
+statement, or other literal object that the new task consumes. A downstream
+artifact that merely names or uses the object is not an input capability.
+
+The change is an operating repair at the existing exact-selection boundary.
+It introduces no formula registry, prose scanner, automatic ancestry search,
+task-card gate, project migration, or truth effect. Missing inputs may still
+produce an honest bounded worker challenge followed by ordinary copy-on-write
+repair.
+
 ## 1.0.16 Main-Choice Repair Continuity
 
 The `1.0.16` **Main-Choice Repair Continuity** candidate uses the existing

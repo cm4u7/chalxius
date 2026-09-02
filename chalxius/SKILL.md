@@ -3,7 +3,25 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.16 — Main-Choice Repair Continuity
+# Chalxius 1.0.17 — Literal Input Continuity
+
+## 1.0.17 Literal Input Continuity overlay
+
+Before freezing a Research card whose requested work consumes one exact
+formula, definition, convention, theorem statement, or other literal object
+from project history, Main opens the selected Research artifacts and confirms
+that at least one exact selected byte object actually contains that input. The
+containing Research and artifact capability are then frozen into the task
+card. A downstream artifact that merely names the symbol, cites a locator, or
+uses a coefficient derived from the object is not a substitute for the
+literal input.
+
+This is a Main planning instruction, not a formula registry, prose scanner,
+automatic ancestor expansion, or task-card gate. Chalxius does not guess which
+historical object the mathematics needs. If Main misses an input, the worker
+may still return an honest bounded challenge and the route may proceed by
+ordinary copy-on-write repair; no Research, dispatch, package, or truth status
+is inferred.
 
 ## 1.0.16 Main-Choice Repair Continuity overlay
 
@@ -968,6 +986,14 @@ repair caches implicitly.
    plans refute; exact IDs do not rebuild the global frontier; Main launches and
    confirms every planned worker, then uses genuinely independent current
    boundaries when visible capacity exists.
+   When the requested work consumes an exact formula, definition, convention,
+   theorem statement, or other literal historical object, Main opens the
+   selected artifacts before freezing the card and binds at least one exact
+   byte object that actually contains it. A downstream artifact that only
+   names the object, cites its locator, or records a derived coefficient is
+   context, not the literal capability. This check is Main judgment at the
+   existing exact-selection boundary; Chalxius does not infer the object from
+   prose or add a planning gate.
    Successive ranks, dimensions, charges, examples, or other discrete cases are
    mechanism probes, not a default progress ladder. Before raising such a
    parameter, Main asks whether the completed cases support a reusable lemma,

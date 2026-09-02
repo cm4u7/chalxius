@@ -1,5 +1,13 @@
 # V5 capability preservation matrix
 
+The 1.0.17 Literal Input Continuity repair makes Main verify, at the existing
+exact-selection boundary, that a selected artifact literally contains any
+exact historical formula, definition, convention, theorem statement, or other
+object consumed by the next card. It does not infer semantics from prose,
+expand ancestors, register formula names, or add a task-card gate. Worker
+challenge, Research, copy-on-write, package, verifier, Gateway, Fact, and
+admission capabilities remain unchanged.
+
 The 1.0.16 Main-Choice Repair Continuity repair keeps semantic replacement in
 Main's explicit `promote_active_head` choice and preserves the existing
 mechanical context transfer. Independent add and retire operations remain

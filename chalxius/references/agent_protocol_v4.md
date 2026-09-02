@@ -1,5 +1,13 @@
 # MathGraph Agent Protocol v4
 
+> **1.0.17 literal-input continuity override.** Before freezing a card that
+> asks a worker to consume an exact historical formula, definition,
+> convention, theorem statement, or other literal object, Main reads the
+> selected artifact and binds the exact containing byte capability. Mere
+> symbol use, a locator, or a downstream derived coefficient does not grant
+> that input. This remains Main's exact selection work; Chalxius adds no
+> semantic scanner, automatic ancestor selection, or planning gate.
+
 > **1.0.16 Main-choice repair continuity override.** Semantic head replacement
 > is explicit Main judgment: use `promote_active_head` with the exact old head
 > in `replace_head_research_id`. The runtime then performs only the mechanical

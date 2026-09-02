@@ -1,5 +1,13 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.17 Literal Input Continuity override.** When an exact historical
+> formula, definition, convention, theorem statement, or other literal object
+> is an input to new Research, Main opens the selected artifacts before card
+> freeze and binds one exact byte object that contains it. A downstream use,
+> symbol mention, locator, or derived coefficient is not the literal input.
+> The runtime does not infer semantic ancestry or scan prose, and no new
+> planner gate, Research effect, or truth effect is introduced.
+
 > **1.0.16 Main-Choice Repair Continuity override.** Campaign head
 > replacement is an explicit Main attention decision expressed by
 > `promote_active_head` with one exact `replace_head_research_id`; the runtime
