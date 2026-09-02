@@ -61,14 +61,17 @@
 > not infer materiality, relevance, importance, or truth, and this attention
 > disposition is not an admission gate.
 
-> **1.0.4 coordination override.** A unique planned active-head successor
+> **1.0.15 Fact-default override.** Fact admission is off by default. Context
+> handoff, compaction, milestones, and maintenance advisories never dispatch a
+> packager or start verification/certification. Only an explicit current user
+> request opens a bounded Fact window; the commands remain directly available
+> without a second runtime gate.
+>
+> **1.0.4 coordination history.** A unique planned active-head successor
 > inherits exact head context; split ambiguity remains unattached. Context
-> handoff always includes Fact-frontier inspection. Main carries `Fact window
-> clock: n/4`, increments it only on an explicit host compaction, resets it
-> after a completed packager window, and dispatches one small window at `4/4`.
-> User deferral preserves `4/4 deferred` until lifted. This is a compact Main
-> recovery instruction, not a timer, daemon, automatic scheduler, or Fact
-> authority.
+> handoff originally carried a compaction-counted Fact-window instruction;
+> 1.0.15 supersedes that dispatch default while retaining the exact context
+> handoff semantics.
 
 > **1.0.3 Fact Alpha override.** The preceding Candidate sentence describes
 > frozen 0.x authority only. New certification starts from exact immutable

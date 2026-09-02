@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.14",
-  "release_codename": "Durable Campaign Memory",
-  "release_display_name": "Chalxius 1.0.14 — Durable Campaign Memory",
+  "version": "1.0.15",
+  "release_codename": "Scope-Owned Continuity",
+  "release_display_name": "Chalxius 1.0.15 — Scope-Owned Continuity",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

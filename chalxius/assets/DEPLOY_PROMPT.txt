@@ -1,11 +1,11 @@
-Chalxius 1.0.14 — Durable Campaign Memory
+Chalxius 1.0.15 — Scope-Owned Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
 
-The current runtime coordinates Campaign working memory, asynchronous Fact route
-selection, proof/source supervision, and semantic split lineage. Main still
+The current runtime coordinates Campaign working memory, explicitly requested
+Fact route selection, proof/source supervision, and semantic split lineage. Main still
 chooses mathematical direction. An authorized packager may select a bounded
 predecessor-closed Research corridor; source and proof retain nonoverlapping
 review ownership and may reuse one independent host session; split relations
@@ -13,8 +13,8 @@ are proposed by the Research repair worker and finalized by ordinary proof
 supervision; there is no Fact-side split supervisor. Dynamic
 adverse-learning routes are retired for new work while frozen history remains
 readable. Recent attainment follows context compaction or natural curation, not
-a four-slot gate. Sparse landmarks have no count quota and grow with the
-Research graph; the separate recent queue uses 64 only as a high-water guard.
+a four-slot gate. Sparse landmarks and head-context storage have no count quota
+and grow with the Research graph; the separate recent queue uses 64 only as a high-water guard.
 Routine summaries preview four recent items and eight landmarks, retaining
 exact total counts, identity digests, and full diagnostic access so no preview
 becomes a silent first-N selection. Routine Campaign membership likewise keeps
@@ -68,24 +68,26 @@ operation and reviews the route. Before every new Research cut, with or without
 compaction, Main performs bounded exact Research search. Every material match
 receives one explicit disposition: `reference_only`, `attach_context`,
 `promote_landmark`, `add_head`, or `retire_active_head`. The maintenance pass and
-compaction pass never increment a Fact clock or start a packager. Fact work
-opens only at a natural Main/user-selected window and remains independently
-deferrable. If an integrated repair or installation is active, delay the
+compaction pass never increment a Fact clock or start a packager. Fact work is
+off by default and opens only after an explicit current user request for a
+bounded window. If an integrated repair or installation is active, delay the
 Research-recovery review until Research resumes; do not discard it.
 
-A completed source-scope review remains readable provenance. Its primary bytes
-are replayed as live planning capabilities only when the current task is
-literature, explicitly source-dependent, or itself a source-scope review.
-Internal proof use of the old result does not reopen source availability as a
-planning gate.
+A completed source-scope review remains readable provenance. Source capability
+belongs to one exact assignment: a current source-scope planner validates its
+own frozen source closure, while proof/program/integration siblings in the same
+round do not inherit it and the source supervisor does not recursively reopen
+unrelated historical reviews. Ordinary literature or explicitly
+source-dependent production may use the direct one-hop fallback only when it
+lacks its own primary-source bytes.
 
 Prospective Fact admission now certifies exact whole Research records instead
 of constructing a second mathematical graph. Main records important Research
 ids with sparse landmarks or `fact-frontier-mark`; `fact-frontier` derives
 current COW/split terminals and certification state live. `--target` requires
 `--campaign`; route-needing landmarks rank before certified history and a
-bounded 256-item display retains complete identity count/digest. At a natural review
-window Main opens the work and a fact-packager chooses the exact bounded route
+bounded 256-item display retains complete identity count/digest. After an
+explicit current user request Main opens one bounded window and a fact-packager chooses the exact route
 with `plan-fact-packaging`. No timer, threshold, scheduler, automatic
 dispatcher, or truth inference is installed.
 A direct-Research plan freezes its `selection_mode` and exact Main route

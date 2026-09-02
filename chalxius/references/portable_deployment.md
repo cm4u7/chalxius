@@ -1,5 +1,21 @@
 # Chalxius portable deployment
 
+## 1.0.15 Scope-Owned Continuity
+
+The `1.0.15` **Scope-Owned Continuity** candidate makes source authority local
+to one exact assignment. A source-scope planner freezes and validates its own
+source closure; proof/program/integration siblings in the same round do not
+inherit it, and current source supervision does not recursively reactivate
+unrelated historical source reviews. Ordinary literature or explicitly
+source-dependent production retains the direct one-hop fallback when it lacks
+its own primary-source bytes.
+
+Campaign head-context storage has no numeric quota. Routine deployment views
+remain bounded and carry complete counts/digests plus an exact diagnostic
+drill-down. Fact admission is disabled by default and begins only after an
+explicit current user request; installation, compaction, Campaign maintenance,
+and Research completion never dispatch Fact work.
+
 ## 1.0.14 Durable Campaign Memory
 
 The `1.0.14` **Durable Campaign Memory** candidate keeps Campaign membership
@@ -152,15 +168,17 @@ importance, relevance, truth, project migration, or compatibility inference.
 
 ## 1.0.4 Frontier Context Handoff Repair
 
-The `1.0.4` **Frontier Context Handoff Repair** candidate keeps the 1.0.3
+Fact admission is disabled by default in 1.0.15. Installation, compaction,
+handoff, and Campaign maintenance never dispatch packaging or certification;
+only an explicit current user request opens a bounded Fact window.
+
+The historical `1.0.4` **Frontier Context Handoff Repair** candidate keeps the 1.0.3
 authority surface and repairs one compact
 Campaign transition. A unique planned successor receives the old head's exact
 contexts; ambiguous successors remain unattached, and later attachment absorbs
-an unattached duplicate. The handoff prompt inspects the Fact frontier but does
-not dispatch on every compaction: Main carries `Fact window clock: n/4`, resets
-it after a completed packager window, and dispatches one small window at `4/4`.
-User deferral preserves `4/4 deferred` until lifted. Installation creates no
-project migration, timer, daemon, automatic scheduler, package, or truth effect.
+an unattached duplicate. Its former compaction-counted Fact-window instruction
+is superseded by 1.0.15. Installation creates no project migration, timer,
+daemon, automatic scheduler, package, or truth effect.
 
 ## 1.0.3 Research Route Coordination Repair
 

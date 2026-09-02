@@ -151,7 +151,6 @@ V5_FRONTIER_MAINTENANCE_CLOCK_REVISION = (
 )
 V5_FRONTIER_MAINTENANCE_DEFAULT_INTERVAL_MINUTES = 50
 V5_CAMPAIGN_ACTIVE_HEAD_LIMIT = 16
-V5_CAMPAIGN_HEAD_CONTEXT_LIMIT = 32
 # Routine Main reads need a few concrete mathematical links, not every stored
 # support note.  Complete context remains available in the diagnostic view.
 V5_CAMPAIGN_HEAD_CONTEXT_SUMMARY_PREVIEW = 4
@@ -3109,6 +3108,75 @@ class V5LifecycleManager:
             for field in ("claim", "content", "rationale", "source")
         )
         return explicit or _LOCAL_SOURCE_PATH_RE.search(source_text) is not None
+
+    def _source_capability_projection_policy(
+        self,
+        record: dict[str, Any],
+        *,
+        mode: str,
+        research_cycle: dict[str, Any] | None,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> tuple[bool, bool]:
+        """Return (current_required, inherit_direct_related_review).
+
+        Source authority belongs to one exact selected assignment. A shared
+        supervision round may contain proof and source assignments, but the
+        presence of ``source_scope`` in that round does not turn every sibling
+        into source work. A current source-scope planner already freezes its
+        exact source closure in its own artifacts; recursively reopening every
+        historical review named as context would make unused old source-use
+        metadata a new liveness gate.
+
+        Ordinary literature and explicitly source-dependent Research may
+        still receive the existing one-hop capability projection from a
+        directly related completed source review when they do not already own
+        a direct primary-source capability.
+        """
+
+        metadata = record.get("metadata", {})
+        binding = metadata.get("research_supervision")
+        supervisor_scope: str | None = None
+        if binding is not None:
+            if (
+                not isinstance(binding, dict)
+                or binding.get("supervisor_scope")
+                not in V5_RESEARCH_SUPERVISOR_SCOPES
+            ):
+                raise ValueError("Research supervisor scope is invalid")
+            # The Research ingestion boundary already validates the complete
+            # supervision receipt. Planning needs only its rigid assignment
+            # scope here; replaying the full receipt would duplicate an
+            # unrelated validator inside source-capability routing.
+            supervisor_scope = binding["supervisor_scope"]
+        if (
+            supervisor_scope is not None
+            and (
+                research_cycle is None
+                or research_cycle.get("subround") != "supervision"
+                or supervisor_scope
+                not in research_cycle.get("supervisor_scopes", [])
+            )
+        ):
+            raise ValueError(
+                "Research supervisor scope is outside the selected cycle"
+            )
+        current_required = (
+            mode == "literature"
+            or self._research_is_source_dependent(record)
+            or supervisor_scope == "source_scope"
+        )
+        artifacts = metadata.get("artifacts", [])
+        owns_direct_source = any(
+            isinstance(item, dict)
+            and _is_direct_source_capability_role(item.get("role"))
+            for item in artifacts
+        )
+        inherit_direct_related_review = (
+            current_required
+            and supervisor_scope != "source_scope"
+            and not owns_direct_source
+        )
+        return current_required, inherit_direct_related_review
 
     @staticmethod
     def _research_artifact_bindings(record: dict[str, Any]) -> list[dict[str, str]]:
@@ -9025,10 +9093,7 @@ class V5LifecycleManager:
             )
         ):
             raise ValueError("Campaign frontier landmark reasons are invalid")
-        if (
-            not isinstance(contexts, list)
-            or len(contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
-        ):
+        if not isinstance(contexts, list):
             raise ValueError("Campaign frontier head contexts are invalid")
         active_ids = set(row["active_head_research_ids"])
         context_keys: set[tuple[str, str | None]] = set()
@@ -11934,10 +11999,7 @@ class V5LifecycleManager:
             changed = True
         if "head_contexts" in payload:
             contexts = payload["head_contexts"]
-            if (
-                not isinstance(contexts, list)
-                or len(contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
-            ):
+            if not isinstance(contexts, list):
                 raise ValueError("head contexts are invalid")
             row["head_contexts"] = json.loads(
                 json.dumps(contexts, ensure_ascii=False)
@@ -11949,10 +12011,7 @@ class V5LifecycleManager:
             )
             changed = True
         updates = payload.get("attention_updates", [])
-        if (
-            not isinstance(updates, list)
-            or len(updates) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT
-        ):
+        if not isinstance(updates, list):
             raise ValueError("Campaign attention updates are invalid")
 
         for update in updates:
@@ -12199,8 +12258,6 @@ class V5LifecycleManager:
                     "reason": reason.strip(),
                 }
             )
-        if len(normalized_contexts) > V5_CAMPAIGN_HEAD_CONTEXT_LIMIT:
-            raise ValueError("Campaign head-context limit exceeded")
         row["head_contexts"] = normalized_contexts
 
         bases = {
@@ -20675,20 +20732,22 @@ class V5LifecycleManager:
             typed_artifacts_by_research: dict[
                 str, list[dict[str, str]]
             ] = {}
-            source_capability_required_by_research: dict[str, bool] = {}
+            source_capability_policy_by_research: dict[
+                str, tuple[bool, bool]
+            ] = {}
             for research_id, record in source_records.items():
-                source_capability_required = (
-                    mode == "literature"
-                    or self._research_is_source_dependent(record)
-                    or (
-                        research_cycle is not None
-                        and research_cycle["subround"] == "supervision"
-                        and "source_scope"
-                        in research_cycle["supervisor_scopes"]
-                    )
+                (
+                    source_capability_required,
+                    inherit_direct_related_review,
+                ) = self._source_capability_projection_policy(
+                    record,
+                    mode=mode,
+                    research_cycle=research_cycle,
+                    _inspection_context=inspection,
                 )
-                source_capability_required_by_research[research_id] = (
-                    source_capability_required
+                source_capability_policy_by_research[research_id] = (
+                    source_capability_required,
+                    inherit_direct_related_review,
                 )
                 typed_artifacts = self._typed_research_artifacts(
                     record,
@@ -21099,9 +21158,9 @@ class V5LifecycleManager:
                             _inspection_context=inspection,
                         )
                     )
-                    if source_capability_required_by_research[
+                    if source_capability_policy_by_research[
                         entry["research_id"]
-                    ]:
+                    ][1]:
                         related_artifacts.extend(
                             self._exact_source_review_capabilities(
                                 related_record,

@@ -1,4 +1,22 @@
-# Chalxius V5 traceability through 1.0.14 Durable Campaign Memory
+# Chalxius V5 traceability through 1.0.15 Scope-Owned Continuity
+
+## 1.0.15 Scope-Owned Continuity overlay
+
+- Candidate version: `1.0.15`; release name **Scope-Owned Continuity**.
+- Source capability is assignment-owned. In one dual-scope round, the exact
+  source-scope assignment consumes its own frozen source closure; proof,
+  program, and integration siblings do not inherit source authority from the
+  round. A current source supervisor does not recursively reopen unrelated old
+  source reviews. Direct one-hop projection remains for ordinary literature or
+  explicitly source-dependent work that lacks direct primary bytes.
+- Campaign head-context storage has no count quota. Main remains responsible
+  for explicit add/remove/reattach/deduplicate decisions. Routine views retain
+  bounded previews plus complete counts/digests and exact diagnostic reads.
+- Fact admission is disabled by default. No compaction counter, Campaign
+  maintenance, Research completion, or installation event starts Fact work;
+  an explicit current user request may open one bounded Fact window.
+- Existing Research, rounds, Campaign events, source bytes, Fact records, and
+  admission authority are not migrated or rewritten.
 
 ## 1.0.14 Durable Campaign Memory overlay
 
@@ -221,10 +239,9 @@
   atomic planning. Several possible successors leave it unattached for Main;
   later concrete attachment absorbs an unattached duplicate.
 - Context compaction still triggers complete operational and mathematical
-  rehydration plus Fact-frontier inspection. Main carries `Fact window clock:
-  n/4`, increments it only on explicit host compaction, resets it after a
-  completed packager window, and dispatches one one-or-two-package window at
-  `4/4`. User deferral preserves `4/4 deferred` until lifted.
+  rehydration. Its historical `Fact window clock: n/4` and automatic `4/4`
+  dispatch rule are superseded by 1.0.15; current Fact work starts only after
+  an explicit user request.
 - The change has no automatic selection, dispatch, timer, scheduler, Research,
   package, verifier, Gateway, or Fact effect.
 

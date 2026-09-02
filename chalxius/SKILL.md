@@ -3,7 +3,31 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.14 — Durable Campaign Memory
+# Chalxius 1.0.15 — Scope-Owned Continuity
+
+## 1.0.15 Scope-Owned Continuity overlay
+
+Source capability belongs to an exact assignment, not to the whole round.
+A dual-scope supervision round may contain both proof and source assignments:
+the source assignment validates its own frozen exact source closure, while its
+proof sibling does not inherit source authority merely by sharing the round.
+A current source supervisor does not recursively reactivate every historical
+source review named by related Research. Ordinary literature or explicitly
+source-dependent production may still use the existing direct one-hop review
+projection when it lacks its own direct primary-source bytes.
+
+Campaign head-context storage has no numeric quota. Main may explicitly add,
+remove, reattach, and deduplicate as much materially useful context as the
+Research graph requires. Routine views remain bounded previews with exact
+counts/digests and diagnostic full reads; bounded rendering is never bounded
+storage and never silently selects the first entries as the complete state.
+
+Fact admission is off by default. No compaction, handoff, milestone,
+maintenance clock, Research completion, or installation event starts a
+packager, verifier, certification, Gateway, or admission route. Existing Fact
+commands and certified history remain directly usable when the current user
+explicitly requests a bounded Fact window; this is an operating default, not a
+new denial gate.
 
 Chalxius is one research runtime. `fast`, `auto`, and `deep` are execution
 profiles; they never change the Fact-admission contract. The historical
@@ -189,10 +213,11 @@ predecessor grants, and derives certified heads. Campaign landmarks and exact
 mark dispositions persist; frontier routes, package states, heads, counts, and
 next actions are live projections. They have no Research or truth effect.
 
-Fact work is intentionally asynchronous. At a Campaign milestone, a meaningful
-backlog, a direction switch, a context handoff, or an explicit user request,
-Main opens a bounded Fact-review window but does not need to enumerate package
-members. An authorized `fact-packager` reads the sparse Campaign landmarks,
+Fact admission is disabled by default. Campaign milestones, backlog, direction
+switches, context handoffs, compaction, and the frontier-maintenance clock do
+not mark, package, verify, certify, or admit Research. Only an explicit current
+user request opens a bounded Fact-review window; Main does not need to
+enumerate package members. An authorized `fact-packager` then reads the sparse Campaign landmarks,
 active Fact marks, accepted grants, exact Research graph, COW projection,
 supervision, and interfaces; it normally selects one or two useful
 predecessor-closed packages, while that size remains advisory rather than a
@@ -347,17 +372,12 @@ heads. These are compact state transitions with no selector, gate, scheduler,
 Research rewrite, package effect, or truth effect.
 
 After context compaction or a real handoff, Main still performs the complete
-rehydration and mathematical-history pass below and inspects the Fact frontier.
-Compaction itself does not dispatch immediately. Main carries one explicit
-`Fact window clock: n/4` in every context-handoff summary, increments it only
-when the host explicitly reports context compaction, and resets it after one
-packager window completes. At `4/4`, Main assigns one bounded packager window
-of one or two packages to the first suitable available slot. A user-requested
-Fact deferral prevents dispatch and is carried as `4/4 deferred` until lifted;
-it does not silently reset. Elapsed time, ordinary turns, reconnects, and real
-handoffs do not increment this clock. The packager still chooses the
-predecessor-closed route. This is a compact Main recovery instruction, not a
-timer, daemon, automatic scheduler, truth gate, or slot quota.
+rehydration and mathematical-history pass below. Fact admission remains off;
+there is no compaction counter or automatic packager window. Main reads the
+Fact frontier only when the user has explicitly enabled Fact work or asks for
+its status. A currently authorized packager still chooses the
+predecessor-closed route, and the authorization has no Research or truth
+effect.
 
 ## 1.0.3 research route coordination repair
 
@@ -967,8 +987,9 @@ repair caches implicitly.
    production/supervision cycle is the only prospective Research collaboration path.
    Existing historical Pulse records retain status, audit, dispatch,
    close, void, and abort compatibility.
-8. Fact work is asynchronous. Main marks important Research while ordinary
-   research continues and opens a natural review window. The packager selects a
+8. Fact work is asynchronous. It is disabled by default. Main may keep sparse
+   Campaign landmarks while ordinary research continues, but opens no Fact
+   window until the user explicitly requests one. The packager then selects a
    useful predecessor-closed route and seals one nontruth package; ordinary COW
    branch selection does not mutate the Campaign active head. A clean supervisor
    `ready` interface is only the strong mechanical recommendation. Actual

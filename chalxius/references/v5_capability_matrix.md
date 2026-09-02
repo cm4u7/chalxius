@@ -46,18 +46,19 @@ handoff recovery, bounded exact search asks Main to dispose material old
 Research matches as `reference_only`, `attach_context`, `promote_landmark`, or
 `promote_active_head`; no importance, relevance, or truth is inferred.
 
-The 1.0.4 Frontier Context Handoff Repair preserves the 1.0.3 coordination
+The 1.0.15 default leaves Fact admission off. Context handoff, compaction, and
+maintenance never dispatch a packager; only an explicit current user request
+opens a bounded Fact window. The Fact commands remain available on demand and
+no second runtime gate is added.
+
+The historical 1.0.4 Frontier Context Handoff Repair preserves the 1.0.3 coordination
 surface and makes two existing operations compose: exact head-bound context
 follows a unique `plan-round` successor, while true multi-successor ambiguity
 remains unattached and concrete reattachment absorbs an unattached duplicate.
-After context handoff, Main inspects the Fact frontier and carries `Fact window
-clock: n/4`. Explicit host compaction alone increments it, a completed packager
-window resets it, and `4/4` dispatches one one-or-two-package window to a
-suitable free slot. User deferral preserves `4/4 deferred` until lifted. This
-adds no daemon, automatic scheduler, selector, package effect, or truth effect.
+Its former compaction-counted Fact-window default is superseded by 1.0.15.
 
 The 1.0.3 Research Route Coordination Repair composes existing Research
-surfaces into a reliable Main working memory and asynchronous Fact route. It
+surfaces into a reliable Main working memory and explicitly opened Fact route. It
 adds Campaign head context and sparse landmarks, packager-owned bounded route
 selection without Campaign-head mutation, rigid unique-COW/split projection, scope-owned fixed supervision
 guidance, prospective adverse-learning retirement, and reviewed split logical

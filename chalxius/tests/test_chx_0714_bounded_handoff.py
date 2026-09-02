@@ -845,10 +845,36 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                     downstream_return_path.read_bytes()
                 ),
             )
+            exact_source_projection = (
+                lifecycle._exact_source_review_capabilities
+            )
+
+            def reject_recursive_historical_review(
+                record: dict,
+                *,
+                _inspection_context=None,
+            ) -> list[dict[str, str]]:
+                if (
+                    record["research_id"]
+                    == source_review_receipt["research_id"]
+                ):
+                    raise AssertionError(
+                        "current source supervisor recursively reopened an "
+                        "old review instead of using its frozen source closure"
+                    )
+                return exact_source_projection(
+                    record,
+                    _inspection_context=_inspection_context,
+                )
+
             with patch.object(
                 lifecycle,
                 "_task_card_skill_version_at_least",
                 return_value=True,
+            ), patch.object(
+                lifecycle,
+                "_exact_source_review_capabilities",
+                side_effect=reject_recursive_historical_review,
             ):
                 downstream_supervision = lifecycle.create_supervision_round(
                     downstream_round["round_id"],
@@ -1016,6 +1042,52 @@ class BoundedHandoff0714Tests(unittest.TestCase):
             self.assertEqual(
                 lifecycle._exact_source_review_capabilities(record),
                 [],
+            )
+            proof_planner = {
+                "claim": "Review the proof only.",
+                "content": "",
+                "rationale": "",
+                "source": "",
+                "metadata": {
+                    "source_dependent": False,
+                    "research_supervision": binding,
+                    "artifacts": [],
+                },
+            }
+            self.assertEqual(
+                lifecycle._source_capability_projection_policy(
+                    proof_planner,
+                    mode="refute",
+                    research_cycle=cycle,
+                ),
+                (False, False),
+            )
+            source_binding = dict(binding)
+            source_binding["supervisor_scope"] = "source_scope"
+            source_planner = {
+                "claim": "Review the frozen source closure.",
+                "content": "",
+                "rationale": "",
+                "source": "",
+                "metadata": {
+                    "source_dependent": True,
+                    "research_supervision": source_binding,
+                    "artifacts": [
+                        {
+                            "path": "primary-source.pdf",
+                            "sha256": "4" * 64,
+                            "role": "primary_source",
+                        }
+                    ],
+                },
+            }
+            self.assertEqual(
+                lifecycle._source_capability_projection_policy(
+                    source_planner,
+                    mode="refute",
+                    research_cycle=cycle,
+                ),
+                (True, False),
             )
 
     def test_structured_source_evidence_requires_all_declared_primary_bytes(self) -> None:

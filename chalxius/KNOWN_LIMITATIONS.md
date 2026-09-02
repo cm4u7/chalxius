@@ -40,12 +40,10 @@ copy. Version 1.0.4 carries context across a unique replacement, leaves true
 multi-successor ambiguity unattached, and absorbs an unattached duplicate when
 Main chooses a concrete head. No mathematical state or authority changes.
 
-The context-handoff maintenance prompt also keeps the asynchronous Fact window
-visible without making every compaction dispatch work. Main carries `Fact
-window clock: n/4`, increments it only on an explicit host compaction, resets it
-after a completed packager window, and dispatches one small window at `4/4`.
-User deferral preserves `4/4 deferred` until lifted. This recovery instruction
-creates no timer, daemon, automatic scheduler, or package/certification effect.
+Fact admission is disabled by default. Context handoff, compaction, Campaign
+milestones, and the maintenance clock do not dispatch a packager or begin any
+verification/certification work. An explicit current user request may open one
+bounded Fact window; no additional runtime gate or scheduler is introduced.
 
 ## 1.0.3 Research Route Coordination Repair
 

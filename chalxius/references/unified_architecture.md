@@ -117,17 +117,17 @@
 > history but is absent from the live COW successor route; dispositions never
 > hide an already-published repair product.
 
-> **1.0.4 Frontier Context Handoff Repair override.** Exact active-head context
+> **1.0.15 Fact-default override.** Fact admission is off by default. Context
+> handoff, compaction, milestones, and maintenance advisories never dispatch a
+> packager or start verification/certification. Only an explicit current user
+> request opens a bounded Fact window, without adding a runtime gate.
+>
+> **1.0.4 Frontier Context Handoff Repair history.** Exact active-head context
 > follows one uniquely selected `plan-round` successor. A genuinely ambiguous
 > multi-successor handoff remains unattached for Main, and later concrete
 > attachment absorbs an unattached duplicate while retaining other legitimate
-> head-specific uses. After compaction or real handoff, Main inspects the Fact
-> frontier and carries `Fact window clock: n/4`. Only an explicit host
-> compaction increments it; one completed packager window resets it. At `4/4`,
-> Main assigns one small window to a suitable free slot, while user deferral
-> preserves `4/4 deferred` until lifted. The packager still chooses the route.
-> No new selector, truth gate, daemon, automatic scheduler, Research effect,
-> package effect, or truth effect is introduced.
+> head-specific uses. Its former compaction-counted Fact-window instruction is
+> superseded by 1.0.15; the exact context-handoff behavior remains.
 
 > **1.0.3 Research Route Coordination Repair override.** Campaign frontier is
 > one replaceable Main working-memory projection: active heads, attached exact

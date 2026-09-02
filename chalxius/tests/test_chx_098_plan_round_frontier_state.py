@@ -101,6 +101,90 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         return json.loads(path.read_text(encoding="utf-8"))
 
+    def test_context_storage_has_no_count_limit_and_routine_view_stays_bounded(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        context_ids = [
+            self._research(
+                f"context-{index:02d}",
+                f"Material historical input {index:02d}",
+            )
+            for index in range(40)
+        ]
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                    "head_contexts": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "attach_context",
+                        "research_id": research_id,
+                        "attached_head_research_id": self.root_id,
+                        "reason": f"Exact material context {index:02d}.",
+                    }
+                    for index, research_id in enumerate(context_ids)
+                ],
+            },
+        )
+        self.assertEqual(
+            len(
+                self._state()["targets"][self.target_id][
+                    "head_contexts"
+                ]
+            ),
+            40,
+        )
+        routine = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=2,
+        )["goal_coverage"][0]
+        self.assertEqual(routine["head_context_count"], 40)
+        self.assertEqual(len(routine["head_contexts"]), 4)
+        self.assertTrue(routine["head_contexts_truncated"])
+        diagnostic = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=2,
+            diagnostic=True,
+        )["goal_coverage"][0]
+        self.assertEqual(len(diagnostic["head_contexts"]), 40)
+        self.assertFalse(diagnostic["head_contexts_truncated"])
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "remove_context",
+                        "research_id": research_id,
+                    }
+                    for research_id in context_ids[:35]
+                ],
+            },
+        )
+        self.assertEqual(
+            len(
+                self._state()["targets"][self.target_id][
+                    "head_contexts"
+                ]
+            ),
+            5,
+        )
+
     def test_plan_round_atomically_selects_target_without_checkpoint_copy(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         with self.store.v5_mutation_lock(command="legacy-frontier-fixture"):
