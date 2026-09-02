@@ -3,7 +3,7 @@
   "package": "chalxius",
   "version": "1.0.17",
   "release_display_name": "Literal Input Continuity",
-  "status": "ready_to_publish",
+  "status": "published",
   "release_date": "2026-09-02",
   "workflow_authority": "V5 Research plus Fact Alpha certification overlay",
   "truth_path": "research_to_exact_multi_research_package_to_independent_verifier_decision_to_research_certification_grant",
@@ -103,16 +103,16 @@
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius.git",
     "tag": "v1.0.17",
-    "tag_commit": "",
+    "tag_commit": "b9118b13419074823967370bdf3b3c74c8574d05",
     "source_branch": "main",
     "target_branch": "main",
-    "local_tag_created": false,
-    "remote_tag_pushed": false,
-    "remote_main_pushed": false,
-    "github_release_created": false,
-    "remote_push_performed": false,
+    "local_tag_created": true,
+    "remote_tag_pushed": true,
+    "remote_main_pushed": true,
+    "github_release_created": true,
+    "remote_push_performed": true,
     "release_url": "https://github.com/cm4u7/chalxius/releases/tag/v1.0.17",
-    "published_at": "",
+    "published_at": "2026-09-02T12:39:25Z",
     "truth_effect": "none"
   }
 }
