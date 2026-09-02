@@ -1,4 +1,4 @@
-# Validation — Chalxius v1.0.14 Durable Campaign Memory
+# Validation — Chalxius v1.0.17 Literal Input Continuity
 
 This report records software, installation, package, real-project canary, and
 publication evidence. It does not certify a mathematical claim.
@@ -7,16 +7,16 @@ publication evidence. It does not certify a mathematical claim.
 
 | Field | Value |
 |---|---|
-| Version | 1.0.14 |
-| Release date | 2026-09-01 |
+| Version | 1.0.17 |
+| Release date | 2026-09-02 |
 | Manifest entries | 271 |
 | Package files, including manifest | 272 |
-| Manifest SHA-256 | `a06ab417befa9d4236ee54f7f84fac99f54fcdeb6d5cfa6599b37ae09073acd4` |
-| Archive | `chalxius-1.0.14-durable-campaign-memory.tar.gz` |
-| Archive bytes | 2,836,880 |
+| Manifest SHA-256 | `d61410710ae9e2932f0d68a51bdbf03a399a465349bcccb68997af345ccd3db9` |
+| Archive | `chalxius-1.0.17-literal-input-continuity.tar.gz` |
+| Archive bytes | 2,843,995 |
 | Archive regular-file members | 272 |
-| Archive SHA-256 | `61155cacbad7372400eaa0dd5323c2f89960c82fe72018bfe7208ba63edc5e14` |
-| Checksum-file SHA-256 | `0aa72a8fbeea0b72fea7a76d7c24a3531f30f4d7776ff4f45e8c7e7185baa8bc` |
+| Archive SHA-256 | `64c190e30d3f097cb93014e1f3b0d53257a23a528e67fd0aab5a35679bc907dd` |
+| Checksum-file SHA-256 | `29a38338c4c8c755a9a64a32eff5ee83cd67a96dad0cf18cf264b930ef60bc4c` |
 
 Two independent archive builds were byte-identical. The archive contains only
 the 272 sorted regular package files and no directory, symlink, cache, or
@@ -24,31 +24,26 @@ bytecode member.
 
 ## Correctness validation and installation
 
-- changed-surface regression lane: 183 passed;
-- two focused Campaign/frontier and lifecycle lanes: 66 passed and 58 passed;
-- complete self-test and installer-focused regressions: PASS;
+- focused Campaign/frontier and lifecycle lane: 83 passed in 6.827 seconds;
+- complete candidate and installed self-tests: PASS;
+- installer-focused regressions and fast installation: PASS;
 - manifest-bound atomic installation and rollback preparation: PASS;
 - candidate-to-installed identity: exact at all 271 manifest entries; and
 - project reads/writes performed by installation: 0/0.
 
-The installed version is `1.0.14` with manifest
-`a06ab417befa9d4236ee54f7f84fac99f54fcdeb6d5cfa6599b37ae09073acd4`.
+The installed version is `1.0.17` with manifest
+`d61410710ae9e2932f0d68a51bdbf03a399a465349bcccb68997af345ccd3db9`.
 The previous runtime remains available through the installer-managed rollback
 archive.
 
 ## Real-project canary
 
-The installed runtime read Campaign `campaign-62013035c1ff` at live frontier
-generation 372 with 237 members. Three targets retained an exact Research as
-both active head and historical landmark:
-
-- `0c33384e6392`;
-- `09a4a95ed69a`; and
-- `1d8a1522c717`.
-
-The canary changed no head, context, Research, verification, or Fact state. It
-also reset the Campaign's nonblocking 50-minute maintenance clock through an
-ordinary note update.
+The installed zero-argument `round-status` read 1,338 rounds, reported zero
+active and zero unreadable rounds, and deeply inspected five unresolved
+candidates. A bounded `frontier --limit 1` retained all four Campaign targets
+while expanding one goal-coverage row. The due maintenance advisory remained
+visible and nonblocking. The canaries started no maintenance, Research, Fact,
+Candidate, verifier, Gateway, or admission work.
 
 ## Publication scan
 
@@ -61,12 +56,3 @@ positive sensitive findings were zero.
 
 The optional mutation/forensic matrix is not a publication gate and was not
 repeated. Publication creates no Research or mathematical Fact.
-
-## Publication boundary
-
-The annotated `v1.0.14` tag resolves to
-`cfffc3749a8d19099237898ee6a87e634707f465`. GitHub published the release at
-`2026-09-01T10:50:23Z`:
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.14>. Both uploaded asset
-sizes and GitHub SHA-256 digests match the frozen local archive and sidecar;
-fresh downloads were also byte-identical.

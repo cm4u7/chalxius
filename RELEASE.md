@@ -1,23 +1,26 @@
-# Chalxius v1.0.14 — Durable Campaign Memory
+# Chalxius v1.0.17 — Literal Input Continuity
 
-Chalxius 1.0.14 makes long-running Campaign memory more durable under head
-replacement, landmark maintenance, source-review reuse, and continuous Main
-turns. These changes affect coordination only; Research and Fact authority are
-unchanged.
+Chalxius 1.0.17 makes long-running Research planning more reliable when one
+round depends on exact historical mathematical bytes. It also includes the
+scope-owned source continuity and explicit repair/head handoff introduced in
+1.0.15 and 1.0.16. These changes affect coordination only; Research and Fact
+authority are unchanged.
 
 ## What changed
 
-- The same Research may be an active head and a historical landmark in one
-  target. Its use in another Campaign remains independent and many-to-many.
-- `promote_active_head` transfers the replaced head's contexts atomically to
-  the explicitly named successor. Concrete attachments absorb obsolete null
-  copies without deleting genuinely distinct reasons.
-- A replaceable per-Campaign maintenance clock records the last full review and
-  the next 50-minute deadline. Main commands surface an overdue, nonblocking
-  advisory; the clock does not dispatch work or interrupt running agents.
-- A completed source review can remain provenance for a proof or internal task
-  without recursively making its old source bytes a new planning capability.
-  New source claims and source-scope supervision retain exact source checks.
+- Before Main freezes work that consumes one exact historical formula,
+  definition, convention, or theorem statement, it opens the selected artifact
+  and binds a byte object that actually contains the input. A symbol mention,
+  locator, or downstream coefficient is not silently promoted to capability.
+- Source authority belongs to the exact source-owned assignment. Proof and
+  integration siblings do not inherit a source gate merely by sharing a round,
+  and unrelated historical source reviews remain provenance rather than live
+  capability.
+- Explicit head replacement transfers the named old head's context without
+  guessing a successor. Repeating the same `plan-repair-round` request returns
+  the canonical existing non-aborted round instead of duplicating work.
+- Campaign context storage has no numeric quota, and Fact admission is off by
+  default until the user explicitly requests a bounded Fact window.
 
 These are coordination changes only. Chalxius does not infer mathematical
 completion, select a research direction, dispatch work, rewrite Research, or
@@ -42,12 +45,12 @@ remain available.
 
 ## Validation
 
-The exact manifest-bound candidate passed 183 changed-surface tests, two
-focused lanes of 66 and 58 tests, complete self-test, installer regressions,
-atomic installation, rollback preparation, and exact candidate-to-installed
-comparison across all 271 manifest entries. A real-project canary read live
-generation 372 and preserved three active-head/landmark overlaps without
-changing heads or contexts.
+The exact manifest-bound candidate passed complete candidate and installed
+self-tests, 83 focused lifecycle/frontier tests, installer regressions, atomic
+installation, rollback preparation, and exact candidate-to-installed
+comparison across all 271 manifest entries. Real-project canaries read 1,338
+rounds and the bounded Campaign frontier without starting maintenance, Fact,
+Candidate, verifier, Gateway, or admission work.
 
 Full evidence and exact hashes are recorded in [VALIDATION.md](VALIDATION.md)
 and `RELEASE.lock.json`.
@@ -56,19 +59,15 @@ and `RELEASE.lock.json`.
 
 Release assets:
 
-- `chalxius-1.0.14-durable-campaign-memory.tar.gz`
-- `chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256`
+- `chalxius-1.0.17-literal-input-continuity.tar.gz`
+- `chalxius-1.0.17-literal-input-continuity.tar.gz.sha256`
 
 ```sh
-shasum -a 256 -c chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256
-tar -xzf chalxius-1.0.14-durable-campaign-memory.tar.gz
+shasum -a 256 -c chalxius-1.0.17-literal-input-continuity.tar.gz.sha256
+tar -xzf chalxius-1.0.17-literal-input-continuity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
 ```
 
 Publication creates no mathematical Fact.
-
-Version 1.0.14 was published on 2026-09-01 at
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.14>. The annotated tag
-resolves to release commit `cfffc3749a8d19099237898ee6a87e634707f465`.

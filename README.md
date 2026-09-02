@@ -3,13 +3,13 @@
 **Persistent Research memory, a reliable working frontier, and sparse Fact
 certification for long-running Codex projects.**
 
-[Download v1.0.14](https://github.com/cm4u7/chalxius/releases/tag/v1.0.14) ·
+[Download v1.0.17](https://github.com/cm4u7/chalxius/releases/tag/v1.0.17) ·
 [Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md) · [License](LICENSE)
 
 > [!IMPORTANT]
 > **Graph Browser and graphical graph generation are temporarily unavailable.**
-> Chalxius 1.0.14 does not present either as a supported release capability.
+> Chalxius 1.0.17 does not present either as a supported release capability.
 > Historical or experimental Reader code and commands may still be present in
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
@@ -86,16 +86,16 @@ state retains the full set.
 
 ## Install
 
-Release assets for v1.0.14 are:
+Release assets for v1.0.17 are:
 
-- `chalxius-1.0.14-durable-campaign-memory.tar.gz`
-- `chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256`
+- `chalxius-1.0.17-literal-input-continuity.tar.gz`
+- `chalxius-1.0.17-literal-input-continuity.tar.gz.sha256`
 
 Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.14-durable-campaign-memory.tar.gz.sha256
-tar -xzf chalxius-1.0.14-durable-campaign-memory.tar.gz
+shasum -a 256 -c chalxius-1.0.17-literal-input-continuity.tar.gz.sha256
+tar -xzf chalxius-1.0.17-literal-input-continuity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
 python3 -B scripts/self_test.py
@@ -123,24 +123,25 @@ PROJECT=/absolute/path/to/project
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
 topology only when Main is investigating a discrepancy.
 
-## v1.0.14 — Durable Campaign Memory
+## v1.0.17 — Literal Input Continuity
 
-This release closes four recurring working-memory failures found during a long
-Research run:
+This release carries the durable Campaign memory of v1.0.14 forward and closes
+three later continuity failures found during live Research:
 
-- a Research record may remain an active head while also being preserved as a
-  historical landmark in the same target;
-- an explicit head replacement transfers the old head's attached context to
-  the named successor, and a concrete attachment absorbs obsolete unattached
-  copies;
-- each Campaign has a small replaceable 50-minute maintenance clock, surfaced
-  as a nonblocking advisory at Main command boundaries; and
-- proof or internal production may retain a completed source review as
-  provenance without inheriting that review's primary-source availability as a
-  new planning gate. Exact source checks remain at the source-review boundary.
+- source capability belongs to the exact source-owned assignment, so proof and
+  other siblings do not inherit a recursive source gate from historical
+  reviews;
+- explicit head replacement remains a Main choice and transfers only the named
+  old head's context, while exact `plan-repair-round` retries reuse the
+  canonical existing round; and
+- work that consumes a literal historical formula, definition, convention, or
+  theorem statement freezes an exact selected artifact that actually contains
+  that input instead of relying on a downstream symbol mention.
 
-Campaign membership remains a many-to-many, nontruth overlay. The same exact
-Research can participate in several Campaigns and targets without cloning.
+Campaign context storage has no numeric quota, Fact admission remains off by
+default, and Campaign membership remains a many-to-many nontruth overlay.
+These are operating and coordination rules, not new truth authority or hidden
+workflow gates.
 
 The v1.0.5 split opt-in boundary remains in force: routine supervision and
 Fact packaging ignore splitting, while a new low-level split requires explicit
