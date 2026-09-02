@@ -1,4 +1,4 @@
-Chalxius 1.0.17 — Literal Input Continuity
+Chalxius 1.0.18 — Direct Source Ownership
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact

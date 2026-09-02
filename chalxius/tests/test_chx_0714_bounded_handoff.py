@@ -917,6 +917,104 @@ class BoundedHandoff0714Tests(unittest.TestCase):
                 }.intersection(downstream_paths)
             )
 
+    def test_direct_related_source_avoids_historical_review_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            store = self._store(Path(temporary) / "project")
+            lifecycle = store.v5_lifecycle()
+            source_path = store.root / "current-primary-source.pdf"
+            source_path.write_bytes(b"current exact primary source")
+            direct_product = lifecycle.add_research(
+                {
+                    "kind": "proof_attempt",
+                    "claim": "The current product freezes the source bytes.",
+                    "artifacts": [
+                        {
+                            "path": str(source_path.relative_to(store.root)),
+                            "sha256": sha256_bytes(source_path.read_bytes()),
+                            "role": "primary_source_current_product",
+                        }
+                    ],
+                },
+                actor="worker",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            historical_review = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "An older source review remains useful context.",
+                    "relation": "reviews",
+                    "related_research_ids": [direct_product["research_id"]],
+                },
+                actor="supervisor",
+            )
+            boundary_path = store.root / "current-boundary.md"
+            boundary_path.write_text(
+                "Use the directly related frozen source product.\n",
+                encoding="utf-8",
+            )
+            continuation = lifecycle.add_research(
+                {
+                    "kind": "literature",
+                    "claim": "Continue from the exact current source closure.",
+                    "relation": "extends",
+                    "related_research_ids": [
+                        historical_review["research_id"],
+                        direct_product["research_id"],
+                    ],
+                    "source_dependent": True,
+                    "artifacts": [
+                        {
+                            "path": str(boundary_path.relative_to(store.root)),
+                            "sha256": sha256_bytes(boundary_path.read_bytes()),
+                            "role": "current_source_activation_boundary",
+                        }
+                    ],
+                },
+                actor="main",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            exact_projection = lifecycle._exact_source_review_capabilities
+
+            def reject_historical_review_replay(
+                record: dict,
+                *,
+                _inspection_context=None,
+            ) -> list[dict[str, str]]:
+                if record["research_id"] == historical_review["research_id"]:
+                    raise AssertionError(
+                        "a directly bound current source was replaced by "
+                        "historical review replay"
+                    )
+                return exact_projection(
+                    record,
+                    _inspection_context=_inspection_context,
+                )
+
+            with patch.object(
+                lifecycle,
+                "_exact_source_review_capabilities",
+                side_effect=reject_historical_review_replay,
+            ):
+                planned = lifecycle.create_production_round(
+                    workers=1,
+                    mode="literature",
+                    research_ids=[continuation["research_id"]],
+                    host_task_scope_id="direct-related-source-closure",
+                )
+            card = json.loads(
+                Path(planned["assignments"][0]["task_card_path"]).read_text()
+            )
+            self.assertIn(
+                sha256_bytes(source_path.read_bytes()),
+                lifecycle._task_primary_source_sha256s(card),
+            )
+            self.assertIn(
+                historical_review["research_id"],
+                card["mathematical_state"]["source_research_dossier"][
+                    "related_research_ids"
+                ],
+            )
+
     def test_dual_scope_proof_assignment_does_not_transmit_source_capability(
         self,
     ) -> None:

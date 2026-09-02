@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.17",
-  "release_codename": "Literal Input Continuity",
-  "release_display_name": "Chalxius 1.0.17 — Literal Input Continuity",
+  "version": "1.0.18",
+  "release_codename": "Direct Source Ownership",
+  "release_display_name": "Chalxius 1.0.18 — Direct Source Ownership",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

@@ -1,4 +1,20 @@
-# Chalxius V5 traceability through 1.0.17 Literal Input Continuity
+# Chalxius V5 traceability through 1.0.18 Direct Source Ownership
+
+## 1.0.18 Direct Source Ownership overlay
+
+- Candidate version: `1.0.18`; release name **Direct Source Ownership**.
+- Literature and explicitly source-dependent planning first uses primary or
+  authoritative bytes carried by the selected Research and directly related
+  Research products.
+- When that exact one-hop closure already has direct source capability,
+  completed historical source reviews remain context and are not recursively
+  replayed as a planning prerequisite.
+- The bounded historical-review fallback remains for current assignments with
+  no direct source bytes.  Main still selects every exact source consumed by
+  the task; no source sufficiency, theorem applicability, truth, dispatch, or
+  admission effect is inferred.
+- Existing 1.0.17 literal-input continuity and all prior Research and truth
+  boundaries are inherited unchanged.
 
 ## 1.0.17 Literal Input Continuity overlay
 

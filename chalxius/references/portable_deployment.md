@@ -1,5 +1,20 @@
 # Chalxius portable deployment
 
+## 1.0.18 Direct Source Ownership
+
+The `1.0.18` **Direct Source Ownership** candidate makes the source capability
+of a current literature or source-dependent assignment come first from its
+selected Research and directly related products.  If that exact one-hop
+closure already contains primary or authoritative bytes, historical source
+reviews remain available as provenance but are not recursively replayed as a
+planning gate.  The old bounded review fallback remains only for assignments
+with no direct source bytes.
+
+The change does not infer that one source is sufficient for the mathematics.
+Main still selects every exact source required by the card under the 1.0.17
+literal-input rule.  No project migration, Research rewrite, dispatch, or
+truth effect is introduced.
+
 ## 1.0.17 Literal Input Continuity
 
 The `1.0.17` **Literal Input Continuity** candidate requires Main, before card

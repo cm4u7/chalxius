@@ -1,5 +1,15 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.18 Direct Source Ownership override.** A current literature or
+> explicitly source-dependent assignment first uses primary or authoritative
+> bytes carried by its selected Research and directly related products.  If
+> this exact one-hop closure already has direct source capability, historical
+> source reviews remain readable provenance but are not recursively reopened
+> as planning prerequisites.  The historical one-hop fallback is used only
+> when the current closure has no direct source bytes.  Main still owns exact
+> source selection; no sufficiency, applicability, ancestry, or truth judgment
+> is inferred.
+
 > **1.0.17 Literal Input Continuity override.** When an exact historical
 > formula, definition, convention, theorem statement, or other literal object
 > is an input to new Research, Main opens the selected artifacts before card

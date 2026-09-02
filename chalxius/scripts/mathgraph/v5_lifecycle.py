@@ -3179,6 +3179,27 @@ class V5LifecycleManager:
         return current_required, inherit_direct_related_review
 
     @staticmethod
+    def _has_direct_source_capability(
+        artifacts: list[dict[str, str]],
+    ) -> bool:
+        """Return whether the exact task closure already owns source bytes.
+
+        Artifact roles are qualified with their source Research id before
+        reaching this boundary.  The shared structural role predicate remains
+        authoritative for both qualified and unqualified spellings.  This
+        check makes a historical source review a one-hop fallback only: a
+        current task that directly binds primary bytes through either its own
+        record or one directly related product does not reopen older review
+        provenance merely because that provenance is also useful context.
+        """
+
+        return any(
+            isinstance(item, dict)
+            and _is_direct_source_capability_role(item.get("role"))
+            for item in artifacts
+        )
+
+    @staticmethod
     def _research_artifact_bindings(record: dict[str, Any]) -> list[dict[str, str]]:
         artifacts = record.get("metadata", {}).get("artifacts", [])
         if not isinstance(artifacts, list):
@@ -21309,6 +21330,7 @@ class V5LifecycleManager:
                 related_artifacts.extend(
                     typed_artifacts_by_research[entry["research_id"]]
                 )
+                related_records: list[dict[str, Any]] = []
                 context_research_ids = sorted(
                     set(entry["related_research_ids"]).union(
                         literal_reference_ids[entry["research_id"]]
@@ -21319,6 +21341,7 @@ class V5LifecycleManager:
                         related_id,
                         inspection,
                     )
+                    related_records.append(related_record)
                     research_context.append(
                         {
                             key: related_record[key]
@@ -21340,9 +21363,25 @@ class V5LifecycleManager:
                             _inspection_context=inspection,
                         )
                     )
-                    if source_capability_policy_by_research[
+                # A current literature/source-dependent assignment first owns
+                # the exact direct capabilities explicitly frozen on its
+                # selected record and directly related products.  Completed
+                # source reviews remain readable Research context, but their
+                # historical source-use closure is reopened only as the
+                # existing one-hop fallback when no direct source bytes are
+                # already available.  This keeps source integrity at the
+                # capability actually consumed by the current assignment
+                # instead of recursively turning unrelated review ancestry
+                # into a new planning gate.
+                if (
+                    source_capability_policy_by_research[
                         entry["research_id"]
-                    ][1]:
+                    ][1]
+                    and not self._has_direct_source_capability(
+                        related_artifacts
+                    )
+                ):
+                    for related_record in related_records:
                         related_artifacts.extend(
                             self._exact_source_review_capabilities(
                                 related_record,

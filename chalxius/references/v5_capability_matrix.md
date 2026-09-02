@@ -1,5 +1,15 @@
 # V5 capability preservation matrix
 
+The 1.0.18 Direct Source Ownership repair gives a current literature or
+source-dependent assignment priority over historical review provenance.  Its
+selected Research and directly related products form the exact one-hop source
+closure; if that closure already carries primary or authoritative bytes, old
+source reviews remain context and cannot become recursive liveness gates.  A
+bounded historical-review fallback remains available only when the current
+closure has no direct source bytes.  Main's exact-source selection duty and all
+Research, supervision, package, verifier, Gateway, Fact, and truth boundaries
+remain unchanged.
+
 The 1.0.17 Literal Input Continuity repair makes Main verify, at the existing
 exact-selection boundary, that a selected artifact literally contains any
 exact historical formula, definition, convention, theorem statement, or other

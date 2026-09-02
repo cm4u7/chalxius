@@ -3,7 +3,23 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.17 — Literal Input Continuity
+# Chalxius 1.0.18 — Direct Source Ownership
+
+## 1.0.18 Direct Source Ownership overlay
+
+For literature and explicitly source-dependent production, the current
+assignment first owns the exact primary or authoritative source bytes carried
+by its selected Research and directly related Research products.  When that
+one-hop closure already contains direct source bytes, completed historical
+source reviews remain readable context but are not recursively replayed as a
+new planning prerequisite.  Only a current assignment with no direct source
+bytes uses the bounded historical source-review fallback.
+
+Main still selects every exact source actually required by the new work under
+the literal-input rule below.  This repair does not infer source sufficiency,
+theorem applicability, mathematical truth, or semantic ancestry; it removes a
+stale historical-capability gate from an assignment that already carries its
+current source capability.
 
 ## 1.0.17 Literal Input Continuity overlay
 

@@ -1,5 +1,13 @@
 # MathGraph Agent Protocol v4
 
+> **1.0.18 direct-source ownership override.** Literature and explicitly
+> source-dependent cards first freeze direct primary or authoritative bytes
+> from the selected Research and directly related products.  Once that
+> one-hop closure carries current source capability, completed historical
+> reviews stay in the dossier as context and are not replayed as a liveness
+> condition.  Main remains responsible for selecting every exact source the
+> work consumes; the runtime does not infer sufficiency or truth.
+
 > **1.0.17 literal-input continuity override.** Before freezing a card that
 > asks a worker to consume an exact historical formula, definition,
 > convention, theorem statement, or other literal object, Main reads the
