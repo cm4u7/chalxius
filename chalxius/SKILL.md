@@ -3,7 +3,24 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.19 — Main Attention Continuity
+# Chalxius 1.0.20 — Explicit Attention Working Memory
+
+## Current Main-controlled planning attention
+
+For a target-bound `plan-round` or `plan-repair-round`, Main freezes the
+nontruth attention disposition in the plan itself. Omission safely means
+`add-head`; Chalxius never derives replacement from relation names, repair
+metadata, actionable projections, or a sole existing head. `replace-head`
+must name one exact old head and one selected new Research. Context handoff is
+independently `none` (default), repeated exact `--move-context`, or
+`--move-all-context` from a named old head. Unmoved context from a replaced
+head becomes explicitly unattached rather than disappearing. Capacity failure
+is visible and leaves state unchanged. Selection receipt v4 freezes this
+choice and an explicit replay argv; v1-v3 receipts remain readable. Exact
+repair-plan retry reuses the mathematical round and may apply a different
+attention disposition without duplicating worker work. `plan-repair-round`
+accepts an explicit Campaign because Research creation provenance is not
+Campaign ownership. These operations affect only Campaign working memory.
 
 ## 1.0.19 Main Attention Continuity overlay
 
@@ -11,11 +28,17 @@ Routine `frontier` is Main's mathematical working-memory surface. It retains
 the exact Campaign objective, every visible target and active head, bounded
 mathematical context, sparse landmarks, recent mathematical history, exact
 counts/digests, supervision state, and the next actionable Research/round.
-Repeated policy prose, checkpoint forensics, successor topology, membership
-examples, and duplicate status axes live under `frontier --diagnostic` rather
-than being copied into every routine turn. A bounded projection always states
-how many targets are visible and whether it is truncated; a target with no
-live head retains its exact recovery root.
+Repeated policy prose, checkpoint forensics, successor topology, bounded
+membership examples, and duplicate status axes live under
+`frontier --diagnostic` rather than being copied into every routine turn. The
+complete ordinary Campaign member table has the separate explicit forensic
+drill-down `frontier --diagnostic --full-members`. Full maintenance uses
+`frontier --campaign CAMPAIGN_ID --maintenance`: it covers every active target,
+active-head identity and mathematical action, every context/landmark identity
+and reason, all recent attained identities, and current round decisions without
+copying hydrated summaries or deep successor tables. A bounded projection
+always states how many targets are visible and whether it is truncated; a
+target with no live head retains its exact recovery root.
 
 When the Campaign maintenance clock is overdue, routine `frontier` and a newly
 created `plan-round` carry one structured `main_attention` object as well as
@@ -220,10 +243,16 @@ and recent-history state also projects membership, so the same Research can
 carry different roles in different Campaigns without a second membership
 graph. Membership has no automatic-selection or truth effect.
 
-Routine `frontier` output reports the complete Campaign-member count and an
-identity digest but expands at most four member-role examples. The explicit
-`--diagnostic` view retains the complete member and role projection. Preview
-size never changes membership, attention, selection, Research, or truth.
+Routine and diagnostic `frontier` output report the complete Campaign-member
+count and identity digest but expand at most four ordinary member-role examples.
+The compact `--maintenance` view expands every target, head, context, landmark
+and in-flight decision datum needed for full maintenance while omitting
+duplicate hydration and deep successor topology. Main applies only attention
+changes supported by the resulting evidence; when nothing warrants a change,
+a reasoned no-op is valid. The diagnostic view remains the forensic topology
+surface, and `--diagnostic --full-members` alone expands the complete ordinary
+member-role table. Preview size never changes membership, attention, selection,
+Research, or truth.
 
 `campaign-target-add`, frontier reconciliation, and explicit
 `plan-round --campaign ... --memory-id ...` validate that each referenced
@@ -462,7 +491,11 @@ and rigid ordinary COW projections in one compact Main working-memory surface.
 Recent attainment follows the current context-compaction or natural-curation
 window; it is not a four-slot gate. Sparse landmarks have no numeric quota:
 Main may retain more as the Research graph grows. The distinct recent-attainment
-queue retains up to 64 entries only as a high-water runaway guard. Routine
+queue is a 64-entry recent cache, not a guard or gate. When it fills, the
+oldest entries roll into ordinary exact-searchable Research history and the
+mutating command reports their exact ids so Main can promote a genuinely
+durable result to a sparse landmark or leave it in history; no promotion is
+automatic. Routine
 mathematical summaries preview four recent items and eight landmarks while
 preserving exact total counts and identity digests; full landmark ids remain
 available from exact working state and diagnostic views.
@@ -476,7 +509,7 @@ and recent attainment to test whether the current route and active heads still
 serve the Campaign objective; choose the next Research cut after bounded exact
 search and duplicate exclusion; and consider but never force a Fact window.
 Four and eight
-are reading previews, 64 protects only the recent-attainment queue, sparse
+are reading previews, 64 bounds only the recent-attainment cache, sparse
 landmarks have no count quota, and available agent slots are opportunities
 rather than a semantic quota.
 The bounded exact Research search is independently mandatory every time Main
@@ -1061,14 +1094,19 @@ repair caches implicitly.
    Research stores its original worker mode. Its successor is a complete new
    product: prior defects are non-exhaustive seeds for fresh whole-successor
    review inside the exact scope, never the limit of that review.
-7. An ordinary new V5 round has no Blackboard snapshot: card, assignment,
-   manifest, and return copy exact `null` snapshot bindings with empty space
-   capabilities. Only an exact promoted query or explicit write-space request
-   freezes a bounded snapshot. Existing frozen rounds retain exact historical
-   snapshot validation without backfill. New V5 Pulse planning is retired. The
-   production/supervision cycle is the only prospective Research collaboration path.
-   Existing historical Pulse records retain status, audit, dispatch,
-   close, void, and abort compatibility.
+7. An ordinary new V5 round has no Blackboard snapshot: its frozen card,
+   assignment, manifest, and return keep exact `null` snapshot bindings with
+   empty space capabilities. Routine `plan-round` and
+   `plan-supervision-round` JSON omit that absent projection and the other
+   audited inactive lifecycle sentinels; exact `round-status`, `--all`, audit,
+   and persistent bytes keep their complete historical shape. Only an exact
+   promoted query or explicit write-space request freezes and foregrounds a
+   bounded snapshot. Existing frozen rounds retain exact historical snapshot
+   validation without backfill. New V5 Pulse planning is retired. The
+   production/supervision cycle is the only prospective Research collaboration
+   path, so routine V5 Main/host help does not advertise Pulse. Existing Pulse
+   records retain exact-id status, audit, dispatch, barrier, close, void, and
+   abort compatibility; V4 keeps its original help and lifecycle contract.
 8. Fact work is asynchronous. It is disabled by default. Main may keep sparse
    Campaign landmarks while ordinary research continues, but opens no Fact
    window until the user explicitly requests one. The packager then selects a

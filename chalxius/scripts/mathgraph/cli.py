@@ -68,6 +68,19 @@ V5_COMPATIBILITY_MUTATION_COMMANDS = {
     "fact-bundle-admit": "fact-admit",
 }
 
+V5_ROUTINE_HELP_HIDDEN_PULSE_COMMANDS = frozenset(
+    {
+        "pulse-plan",
+        "pulse-barrier",
+        "pulse-void",
+        "pulse-abort",
+        "pulse-dispatch",
+        "pulse-close",
+        "pulse-status",
+        "pulse-audit",
+    }
+)
+
 
 def _json_file(path: str) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -78,6 +91,139 @@ def _json_file(path: str) -> dict[str, Any]:
 
 def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def _add_plan_frontier_attention_arguments(
+    parser: argparse.ArgumentParser,
+) -> None:
+    """Expose one shared Main-controlled attention surface on both planners."""
+
+    parser.add_argument(
+        "--frontier-disposition",
+        choices=("add-head", "replace-head"),
+        help=(
+            "nontruth attention effect for the selected Research; omitted "
+            "target-bound plans safely add heads"
+        ),
+    )
+    parser.add_argument(
+        "--replace-head",
+        help="exact old active head; also implies replace-head when unambiguous",
+    )
+    parser.add_argument(
+        "--context-from-head",
+        help="exact old active head from which selected/all context is moved",
+    )
+    handoff = parser.add_mutually_exclusive_group()
+    handoff.add_argument(
+        "--move-context",
+        action="append",
+        dest="move_context_ids",
+        help="exact context Research id to move; repeat for a selected handoff",
+    )
+    handoff.add_argument(
+        "--move-all-context",
+        action="store_true",
+        help="move every context attached to the exact source head",
+    )
+
+
+def _plan_frontier_attention_from_args(args: argparse.Namespace) -> dict[str, Any] | None:
+    """Compile CLI spelling into the small lifecycle attention schema."""
+
+    disposition = getattr(args, "frontier_disposition", None)
+    replace_head = getattr(args, "replace_head", None)
+    from_head = getattr(args, "context_from_head", None)
+    context_ids = getattr(args, "move_context_ids", None) or []
+    move_all = bool(getattr(args, "move_all_context", False))
+    if not any(
+        (disposition, replace_head, from_head, context_ids, move_all)
+    ):
+        return None
+    if disposition is None:
+        disposition = "replace-head" if replace_head is not None else "add-head"
+    return {
+        "disposition": disposition.replace("-", "_"),
+        "replace_head_research_id": replace_head,
+        "context_handoff": {
+            "mode": "all" if move_all else "selected" if context_ids else "none",
+            "from_head_research_id": from_head,
+            "research_ids": list(context_ids),
+        },
+    }
+
+
+def _project_routine_v5_plan_result(payload: Any) -> Any:
+    """Remove only audited inactive fields from routine V5 plan JSON.
+
+    This is deliberately a conditional key/value blacklist, not a generic
+    null-or-empty compactor.  Exact round status, persistent round bytes, and
+    unrelated empty or null values keep their existing meanings.
+    """
+
+    if isinstance(payload, list):
+        return [_project_routine_v5_plan_result(item) for item in payload]
+    if not isinstance(payload, dict):
+        return payload
+
+    omitted: set[str] = set()
+    if payload.get("pulse_policy") == "not_used":
+        omitted.add("pulse_policy")
+    if (
+        {"blackboard_snapshot_id", "blackboard_snapshot_sha256"}
+        <= set(payload)
+        and payload["blackboard_snapshot_id"] is None
+        and payload["blackboard_snapshot_sha256"] is None
+    ):
+        omitted.update(
+            {"blackboard_snapshot_id", "blackboard_snapshot_sha256"}
+        )
+
+    blackboard_view = payload.get("blackboard_view")
+    empty_blackboard_view_keys = {
+        "snapshot_id",
+        "snapshot_sha256",
+        "read_space_ids",
+        "write_space_ids",
+    }
+    if (
+        isinstance(blackboard_view, dict)
+        and {"snapshot_id", "snapshot_sha256"} <= set(blackboard_view)
+        and set(blackboard_view) <= empty_blackboard_view_keys
+        and blackboard_view["snapshot_id"] is None
+        and blackboard_view["snapshot_sha256"] is None
+        and blackboard_view.get("read_space_ids", []) == []
+        and blackboard_view.get("write_space_ids", []) == []
+    ):
+        omitted.add("blackboard_view")
+
+    if (
+        {"abort_id", "work_unit_abort"} <= set(payload)
+        and payload["abort_id"] is None
+        and payload["work_unit_abort"] is None
+        and payload.get("frozen_aborted_count", 0) == 0
+    ):
+        omitted.update(
+            {"abort_id", "work_unit_abort", "frozen_aborted_count"}
+        )
+    if payload.get("independent_adverse_pair") is None and (
+        "independent_adverse_pair" in payload
+    ):
+        omitted.add("independent_adverse_pair")
+    if payload.get("independent_adverse_pairs") == []:
+        omitted.add("independent_adverse_pairs")
+    if payload.get("terminal_source_diagnostics") == []:
+        omitted.add("terminal_source_diagnostics")
+        if payload.get("terminalized_lease_marker") in {None, "valid"}:
+            omitted.add("terminalized_lease_marker")
+    if payload.get("round_closure_required") is False:
+        omitted.add("round_closure_required")
+
+    return {
+        key: _project_routine_v5_plan_result(value)
+        for key, value in payload.items()
+        if key not in omitted
+    }
 
 
 def _emit_frontier_maintenance_advisory(store: MathGraphStore) -> None:
@@ -743,7 +889,46 @@ def _explicit_help_role(argv: list[str]) -> str | None:
     return explicit_role
 
 
-def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
+def _explicit_project_root(argv: list[str]) -> str | None:
+    """Return the last explicit ``--root`` value for help projection only."""
+
+    explicit_root: str | None = None
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token == "--root" and index + 1 < len(argv):
+            explicit_root = argv[index + 1]
+            index += 2
+            continue
+        if token.startswith("--root="):
+            explicit_root = token.partition("=")[2]
+        index += 1
+    return explicit_root
+
+
+def _help_workflow_evidence_version(argv: list[str]) -> int | None:
+    """Read an existing project's version only to shape top-level help."""
+
+    if not any(token in {"-h", "--help"} for token in argv):
+        return None
+    explicit_root = _explicit_project_root(argv)
+    if explicit_root is None:
+        return None
+    try:
+        store = MathGraphStore(Path(explicit_root).expanduser().resolve())
+        if store.project_path.is_symlink() or not store.project_path.is_file():
+            return None
+        return store.workflow_evidence_version()
+    except (OSError, RuntimeError, ValueError):
+        # Help remains available for an absent or malformed project.  The
+        # ordinary command path will report the exact project error.
+        return None
+
+
+def build_parser(
+    help_role: str | None = None,
+    help_workflow_evidence_version: int | None = None,
+) -> argparse.ArgumentParser:
     role_from_environment = os.environ.get("MGRAPH_ROLE")
     projected_role = role_from_environment if help_role is None else help_role
     if projected_role not in KNOWN_ROLES:
@@ -751,6 +936,16 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
     projected_commands = (
         allowed_commands(projected_role) if projected_role is not None else None
     )
+    if (
+        projected_commands is not None
+        and projected_role in {"main", "host"}
+        and isinstance(help_workflow_evidence_version, int)
+        and not isinstance(help_workflow_evidence_version, bool)
+        and help_workflow_evidence_version >= 5
+    ):
+        projected_commands.difference_update(
+            V5_ROUTINE_HELP_HIDDEN_PULSE_COMMANDS
+        )
     parser = argparse.ArgumentParser(
         prog="mgraph",
         description=(
@@ -1000,8 +1195,26 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
         "--diagnostic",
         action="store_true",
         help=(
-            "print the bounded forensic decision surface, including deep "
-            "Campaign successor topology"
+            "print the complete target/head/context/landmark decision "
+            "surface and deep Campaign successor topology; ordinary "
+            "Campaign members remain a bounded preview"
+        ),
+    )
+    p.add_argument(
+        "--full-members",
+        action="store_true",
+        help=(
+            "with --diagnostic, expand the complete Campaign member-role "
+            "table for explicit forensic inspection"
+        ),
+    )
+    p.add_argument(
+        "--maintenance",
+        action="store_true",
+        help=(
+            "print the compact complete all-target maintenance surface; "
+            "keeps every attention identity and reason while omitting "
+            "repeated hydrated summaries and deep successor topology"
         ),
     )
 
@@ -1089,6 +1302,7 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
             "plan; omitted rounds remain auxiliary"
         ),
     )
+    _add_plan_frontier_attention_arguments(p)
     p.add_argument(
         "--host-task-scope-id",
         help=(
@@ -1220,9 +1434,17 @@ def build_parser(help_role: str | None = None) -> argparse.ArgumentParser:
         help="exact bounded repair specification JSON",
     )
     p.add_argument(
+        "--campaign",
+        help=(
+            "explicit V5 Campaign whose target attention this repair plan "
+            "updates; required with --frontier-target"
+        ),
+    )
+    p.add_argument(
         "--frontier-target",
         help="Main-selected Campaign research goal advanced by this repair",
     )
+    _add_plan_frontier_attention_arguments(p)
     p.add_argument(
         "--user-authorized-split",
         action="store_true",
@@ -1756,7 +1978,12 @@ def main(argv: list[str] | None = None) -> int:
         if explicit_help_role is None
         else explicit_help_role
     )
-    args = build_parser(help_role=help_role).parse_args(effective_argv)
+    args = build_parser(
+        help_role=help_role,
+        help_workflow_evidence_version=(
+            _help_workflow_evidence_version(effective_argv)
+        ),
+    ).parse_args(effective_argv)
     potential_bound_worker_query = (
         args.role == "worker"
         and args.command in V4_BOUND_WORKER_QUERY_COMMANDS
@@ -2270,13 +2497,34 @@ def main(argv: list[str] | None = None) -> int:
                 )
         elif args.command == "frontier":
             if store.workflow_evidence_version() == 5:
+                if args.full_members and not args.diagnostic:
+                    raise ValueError(
+                        "--full-members requires --diagnostic frontier"
+                    )
+                if args.maintenance and (
+                    args.diagnostic or args.history or args.full_members
+                ):
+                    raise ValueError(
+                        "--maintenance is a separate compact frontier view; "
+                        "do not combine it with --diagnostic, --history, or "
+                        "--full-members"
+                    )
+                if args.maintenance and args.campaign is None:
+                    raise ValueError(
+                        "--maintenance requires one explicit --campaign; "
+                        "the active Campaign is never inferred as scope"
+                    )
                 if args.all_active or args.no_collapse_repairs:
                     raise ValueError(
                         "V5 frontier uses --history or --diagnostic; V4-only "
                         "repair-collapse switches have no V5 meaning"
                     )
                 lifecycle = store.v5_lifecycle()
-                if args.history:
+                if args.maintenance:
+                    projection = lifecycle.frontier_maintenance_surface(
+                        campaign_id=args.campaign,
+                    )
+                elif args.history:
                     projection = lifecycle.frontier(
                         limit=args.limit,
                         include_history=args.history,
@@ -2287,6 +2535,7 @@ def main(argv: list[str] | None = None) -> int:
                         limit=args.limit,
                         campaign_id=args.campaign,
                         diagnostic=True,
+                        full_members=args.full_members,
                     )
                 else:
                     projection = lifecycle.frontier_decision_surface(
@@ -2301,8 +2550,11 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 )
             else:
-                if args.diagnostic:
-                    raise ValueError("--diagnostic frontier requires a V5 project")
+                if args.diagnostic or args.full_members or args.maintenance:
+                    raise ValueError(
+                        "--diagnostic, --full-members, and --maintenance "
+                        "frontier require a V5 project"
+                    )
                 _print_json(
                     store.frontier(
                         limit=args.limit,
@@ -2487,11 +2739,13 @@ def main(argv: list[str] | None = None) -> int:
                 workflow_evidence_version=store.workflow_evidence_version(),
             )
             _print_json(
-                store.v5_lifecycle().create_supervision_round(
-                    args.source_round_id,
-                    source_component_id=args.source_component_id,
-                    supervisor_scopes=args.supervisor_scopes,
-                    host_task_scope_id=normalized_host_scope,
+                _project_routine_v5_plan_result(
+                    store.v5_lifecycle().create_supervision_round(
+                        args.source_round_id,
+                        source_component_id=args.source_component_id,
+                        supervisor_scopes=args.supervisor_scopes,
+                        host_task_scope_id=normalized_host_scope,
+                    )
                 )
             )
         elif args.command == "plan-candidate-adverse":
@@ -2538,32 +2792,37 @@ def main(argv: list[str] | None = None) -> int:
                 args.host_task_scope_id,
                 workflow_evidence_version=store.workflow_evidence_version(),
             )
+            frontier_attention = _plan_frontier_attention_from_args(args)
             if store.workflow_evidence_version() == 5:
                 _print_json(
-                    _with_frontier_maintenance_attention(
-                        store,
-                        store.v5_lifecycle().create_production_round(
-                            workers=args.workers,
-                            mode=args.mode,
-                            research_ids=args.memory_ids,
+                    _project_routine_v5_plan_result(
+                        _with_frontier_maintenance_attention(
+                            store,
+                            store.v5_lifecycle().create_production_round(
+                                workers=args.workers,
+                                mode=args.mode,
+                                research_ids=args.memory_ids,
+                                campaign_id=args.campaign,
+                                host_task_scope_id=normalized_host_scope,
+                                background_chunk_ids=args.background_chunk_ids,
+                                frontier_target_id=args.frontier_target,
+                                frontier_attention=frontier_attention,
+                                user_authorized_split=args.user_authorized_split,
+                            ),
                             campaign_id=args.campaign,
-                            host_task_scope_id=normalized_host_scope,
-                            background_chunk_ids=args.background_chunk_ids,
-                            frontier_target_id=args.frontier_target,
-                            user_authorized_split=args.user_authorized_split,
-                        ),
-                        campaign_id=args.campaign,
+                        )
                     )
                 )
             else:
                 if (
                     args.campaign
                     or args.frontier_target
+                    or frontier_attention is not None
                     or args.user_authorized_split
                 ):
                     raise ValueError(
                         "explicit plan-round --campaign/--frontier-target/"
-                        "--user-authorized-split is available only for V5; "
+                        "attention/--user-authorized-split is available only for V5; "
                         "V4 keeps its frozen active-Campaign behavior"
                     )
                 if args.background_chunk_ids:
@@ -2799,6 +3058,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 )
         elif args.command == "plan-repair-round":
+            frontier_attention = _plan_frontier_attention_from_args(args)
             if store.workflow_evidence_version() == 5:
                 _print_json(
                     store.v5_lifecycle().create_repair_round(
@@ -2807,15 +3067,22 @@ def main(argv: list[str] | None = None) -> int:
                         repair_spec=(
                             _json_file(args.input) if args.input else None
                         ),
+                        campaign_id=args.campaign,
                         frontier_target_id=args.frontier_target,
+                        frontier_attention=frontier_attention,
                         user_authorized_split=args.user_authorized_split,
                     )
                 )
             else:
-                if args.frontier_target or args.user_authorized_split:
+                if (
+                    args.campaign
+                    or args.frontier_target
+                    or frontier_attention is not None
+                    or args.user_authorized_split
+                ):
                     raise ValueError(
-                        "plan-repair-round --frontier-target and "
-                        "--user-authorized-split require V5"
+                        "plan-repair-round --campaign/--frontier-target/"
+                        "attention/--user-authorized-split require V5"
                     )
                 _print_json(
                     create_repair_round(

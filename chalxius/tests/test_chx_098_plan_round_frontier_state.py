@@ -865,13 +865,232 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             self.store.campaigns().status(self.campaign_id)["history"][
                 "event_count"
             ],
-            events_before,
+            events_before + 1,
         )
         goal = lifecycle.campaign_goal_coverage(self.campaign_id)[0]
         self.assertFalse(goal["history_review_recommended"])
         self.assertEqual(
             goal["historical_landmark_research_ids"], [self.landmark_id]
         )
+
+    def test_campaign_update_replacement_rolls_oldest_recent_at_capacity(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        recent_ids = [
+            self._research(
+                f"recent-update-{index:02d}",
+                f"Persisted recent attainment {index:02d}.",
+            )
+            for index in range(64)
+        ]
+        context = {
+            "research_id": self.landmark_id,
+            "attached_head_research_id": self.root_id,
+            "reason": "Exact context must follow the replacement head.",
+        }
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [context],
+                    "recent_attained_research_ids": recent_ids,
+                }
+            },
+        )
+        old_state = (
+            MathGraphStore(self.root)
+            .v5_lifecycle()
+            ._read_campaign_frontier_working_state(self.campaign_id)
+        )
+        self.assertIsNotNone(old_state)
+        assert old_state is not None
+        self.assertEqual(
+            old_state["revision"],
+            "chalxius-v5-campaign-frontier-working-state-2",
+        )
+        self.assertEqual(
+            old_state["targets"][self.target_id][
+                "recent_attained_research_ids"
+            ],
+            recent_ids,
+        )
+        oldest_path = lifecycle._research_path(recent_ids[-1])
+        oldest_bytes = oldest_path.read_bytes()
+        fact_ids_before = self.store.fact_ids()
+        campaign_event_count_before = self.store.campaigns().status(
+            self.campaign_id
+        )["history"]["event_count"]
+
+        result = lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "promote_active_head",
+                        "research_id": self.successor_id,
+                        "replace_head_research_id": self.root_id,
+                    }
+                ],
+            },
+        )
+
+        state = self._state()
+        row = state["targets"][self.target_id]
+        self.assertEqual(result["truth_effect"], "none")
+        self.assertEqual(
+            state["revision"],
+            "chalxius-v5-campaign-frontier-working-state-2",
+        )
+        self.assertEqual(row["active_head_research_ids"], [self.successor_id])
+        self.assertEqual(
+            row["recent_attained_research_ids"],
+            [self.root_id, *recent_ids[:-1]],
+        )
+        self.assertEqual(
+            result["attention_diff"][
+                "recent_attainment_rolloff_research_ids"
+            ],
+            [recent_ids[-1]],
+        )
+        self.assertIn(
+            "landmark",
+            result["attention_diff"][
+                "recent_attainment_rolloff_instruction"
+            ],
+        )
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    **context,
+                    "attached_head_research_id": self.successor_id,
+                }
+            ],
+        )
+        self.assertEqual(oldest_path.read_bytes(), oldest_bytes)
+        self.assertEqual(
+            lifecycle._research_record(recent_ids[-1])["research_id"],
+            recent_ids[-1],
+        )
+        durable_members = lifecycle.campaign_membership_projection(
+            self.campaign_id,
+            full_members=True,
+        )["member_research_ids"]
+        self.assertIn(recent_ids[-1], durable_members)
+        self.assertEqual(self.store.fact_ids(), fact_ids_before)
+        self.assertEqual(
+            self.store.campaigns().status(self.campaign_id)["history"][
+                "event_count"
+            ],
+            campaign_event_count_before + 1,
+        )
+        self.assertTrue(self.store.audit().current_ok)
+
+    def test_plan_round_advances_and_rolls_oldest_recent_at_capacity(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        next_id = self._research(
+            "capacity-plan-successor",
+            "Main selected the next exact cut from the mature target.",
+            relation="supports",
+            related_research_ids=[self.root_id],
+        )
+        recent_ids = [
+            self._research(
+                f"recent-plan-{index:02d}",
+                f"Persisted plan-round attainment {index:02d}.",
+            )
+            for index in range(64)
+        ]
+        context = {
+            "research_id": self.landmark_id,
+            "attached_head_research_id": self.root_id,
+            "reason": "Exact context must survive the atomic round handoff.",
+        }
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [context],
+                    "recent_attained_research_ids": recent_ids,
+                }
+            },
+        )
+        oldest_path = lifecycle._research_path(recent_ids[-1])
+        oldest_bytes = oldest_path.read_bytes()
+        fact_ids_before = self.store.fact_ids()
+        campaign_event_count_before = self.store.campaigns().status(
+            self.campaign_id
+        )["history"]["event_count"]
+
+        planned = lifecycle.create_production_round(
+            workers=1,
+            research_ids=[next_id],
+            campaign_id=self.campaign_id,
+            frontier_target_id=self.target_id,
+            frontier_attention={
+                "disposition": "replace_head",
+                "replace_head_research_id": self.root_id,
+                "context_handoff": {"mode": "all"},
+            },
+        )
+
+        self.assertTrue(planned["round_id"].startswith("round-"))
+        self.assertEqual(
+            planned["frontier_attention_effect"][
+                "recent_attainment_rolloff_research_ids"
+            ],
+            [recent_ids[-1]],
+        )
+        self.assertIn(
+            "landmark",
+            planned["frontier_attention_effect"][
+                "recent_attainment_rolloff_instruction"
+            ],
+        )
+        row = self._state()["targets"][self.target_id]
+        self.assertEqual(row["active_head_research_ids"], [next_id])
+        self.assertEqual(
+            row["recent_attained_research_ids"],
+            [self.root_id, *recent_ids[:-1]],
+        )
+        self.assertEqual(
+            row["head_contexts"],
+            [
+                {
+                    **context,
+                    "attached_head_research_id": next_id,
+                }
+            ],
+        )
+        self.assertEqual(oldest_path.read_bytes(), oldest_bytes)
+        self.assertEqual(
+            lifecycle._research_record(recent_ids[-1])["research_id"],
+            recent_ids[-1],
+        )
+        durable_members = lifecycle.campaign_membership_projection(
+            self.campaign_id,
+            full_members=True,
+        )["member_research_ids"]
+        self.assertIn(recent_ids[-1], durable_members)
+        self.assertEqual(self.store.fact_ids(), fact_ids_before)
+        self.assertEqual(
+            self.store.campaigns().status(self.campaign_id)["history"][
+                "event_count"
+            ],
+            campaign_event_count_before + 2,
+        )
+        self.assertTrue(self.store.audit().current_ok)
 
     def test_exact_successor_retires_only_its_old_head(self) -> None:
         lifecycle = self.store.v5_lifecycle()
@@ -906,6 +1125,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[self.successor_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
@@ -965,7 +1188,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
             row["active_head_research_ids"],
-            [selected, *completed_heads],
+            [*completed_heads, selected],
         )
         self.assertEqual(row["historical_landmark_research_ids"], [])
         self.assertEqual(row["recent_attained_research_ids"], [])
@@ -1040,6 +1263,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[selected_repair],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
@@ -1095,6 +1322,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[next_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [next_id])
@@ -1183,6 +1414,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[next_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
@@ -1438,6 +1673,33 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             sha256_json(landmarks),
         )
 
+    def test_maintenance_requires_explicit_campaign_scope(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        with self.assertRaisesRegex(ValueError, "invalid campaign id"):
+            lifecycle.frontier_maintenance_surface(
+                campaign_id=None  # type: ignore[arg-type]
+            )
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            result = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--maintenance",
+                ]
+            )
+        self.assertEqual(result, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn(
+            "requires one explicit --campaign",
+            stderr.getvalue(),
+        )
+
     def test_routine_history_previews_keep_complete_diagnostic_drilldown(
         self,
     ) -> None:
@@ -1486,6 +1748,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             limit=1,
             diagnostic=True,
         )["goal_coverage"][0]
+        maintenance_surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+        )
+        maintenance = maintenance_surface["targets"][0]
 
         self.assertEqual(len(routine["head_contexts"]), 4)
         self.assertEqual(len(routine["historical_landmarks"]), 4)
@@ -1510,6 +1776,165 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(
             routine["recent_attained_ids_sha256"],
             diagnostic["recent_attained_ids_sha256"],
+        )
+        self.assertTrue(maintenance_surface["target_projection_complete"])
+        self.assertEqual(maintenance_surface["goal_target_count"], 1)
+        self.assertEqual(
+            maintenance["active_head_research_ids"], [self.root_id]
+        )
+        self.assertEqual(
+            [item["research_id"] for item in maintenance["head_contexts"]],
+            contexts,
+        )
+        self.assertEqual(
+            [
+                item["attached_head_research_id"]
+                for item in maintenance["head_contexts"]
+            ],
+            [self.root_id] * len(contexts),
+        )
+        self.assertTrue(
+            all(
+                item["reason"] == f"Use context {index} for this head."
+                and "mathematical_summary" not in item
+                for index, item in enumerate(maintenance["head_contexts"])
+            )
+        )
+        self.assertEqual(
+            [
+                item["research_id"]
+                for item in maintenance["historical_landmarks"]
+            ],
+            landmarks,
+        )
+        self.assertTrue(
+            all(
+                item["reason"] == f"Retain landmark {index}."
+                and "mathematical_summary" not in item
+                for index, item in enumerate(
+                    maintenance["historical_landmarks"]
+                )
+            )
+        )
+        self.assertEqual(
+            maintenance["recent_attained_research_ids"], recent
+        )
+        self.assertEqual(
+            [
+                item["research_id"]
+                for item in maintenance["recent_attained_summaries"]
+            ],
+            [*recent[:2], *recent[-2:]],
+        )
+        self.assertNotIn("attained_semantic_successors", maintenance)
+        self.assertNotIn("historical_mathematical_summary", maintenance)
+        self.assertTrue(
+            maintenance_surface["maintenance_contract"][
+                "reasoned_no_op_valid"
+            ]
+        )
+        self.assertEqual(
+            maintenance_surface["forensic_commands"]["full_diagnostic"],
+            f"frontier --campaign {self.campaign_id} --diagnostic",
+        )
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--maintenance",
+                ]
+            )
+        self.assertEqual(status, 0, stderr.getvalue())
+        cli_surface = json.loads(stdout.getvalue())
+        self.assertEqual(
+            cli_surface["view"], "complete_attention_compact_topology"
+        )
+        self.assertEqual(len(cli_surface["targets"]), 1)
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--maintenance",
+                    "--diagnostic",
+                ]
+            )
+        self.assertNotEqual(status, 0)
+        self.assertIn(
+            "--maintenance is a separate compact frontier view",
+            stderr.getvalue(),
+        )
+
+    def test_maintenance_surface_always_covers_every_active_target(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        second_root = self._research(
+            "maintenance-second-root",
+            "A second independent active mathematical route.",
+        )
+        with self.store.v5_mutation_lock(command="maintenance-target-fixture"):
+            second_target_id = self.store.campaigns().target_add(
+                self.campaign_id,
+                {
+                    "role": "research_goal",
+                    "subject_kind": "research",
+                    "subject_id": second_root,
+                    "label": "Second maintenance target",
+                },
+                actor="main",
+                fact_exists=lambda _fact_id: False,
+                research_exists=lambda item: item == second_root,
+            )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "historical_landmark_reasons": {},
+                    "recent_attained_research_ids": [],
+                    "head_contexts": [],
+                },
+                second_target_id: {
+                    "recovery_root_research_id": second_root,
+                    "active_head_research_ids": [second_root],
+                    "historical_landmark_research_ids": [],
+                    "historical_landmark_reasons": {},
+                    "recent_attained_research_ids": [],
+                    "head_contexts": [],
+                },
+            },
+        )
+
+        surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+        )
+
+        self.assertEqual(surface["goal_target_count"], 2)
+        self.assertTrue(surface["target_projection_complete"])
+        self.assertEqual(
+            {item["target_id"] for item in surface["targets"]},
+            {self.target_id, second_target_id},
+        )
+        self.assertTrue(
+            all(item["active_heads"] for item in surface["targets"])
         )
 
     def test_working_state_never_requests_a_legacy_checkpoint_copy(self) -> None:
@@ -1755,6 +2180,36 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
 
+        event_count_after_first_attention = self.store.campaigns().status(
+            self.campaign_id
+        )["history"]["event_count"]
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "remove_context",
+                        "research_id": other_head,
+                    }
+                ],
+            },
+        )
+        after_remove_roles = {
+            item["research_id"]: item["roles"]
+            for item in lifecycle.campaign_membership_projection(
+                self.campaign_id,
+                full_members=True,
+            )["members"]
+        }
+        self.assertEqual(after_remove_roles[other_head], ["member"])
+        self.assertEqual(
+            self.store.campaigns().status(self.campaign_id)["history"]
+            ["event_count"],
+            event_count_after_first_attention,
+        )
+
         lifecycle.reconcile_campaign_frontier(
             self.campaign_id,
             {
@@ -1823,7 +2278,60 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             },
         )
 
-    def test_routine_membership_preview_is_small_and_diagnostic_is_complete(
+    def test_absent_role_removal_does_not_create_campaign_membership(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        unrelated_id = lifecycle.add_research(
+            {
+                "kind": "direction",
+                "claim": "Unrelated Research",
+                "content": "Never associated with this Campaign.",
+                "rationale": "Negative attention-membership control.",
+            },
+            actor="main",
+        )["research_id"]
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "historical_landmark_reasons": {},
+                    "recent_attained_research_ids": [],
+                    "head_contexts": [],
+                }
+            },
+        )
+        events_before = self.store.campaigns().status(self.campaign_id)[
+            "history"
+        ]["event_count"]
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "remove_context",
+                        "research_id": unrelated_id,
+                    }
+                ],
+            },
+        )
+        members = lifecycle.campaign_membership_projection(
+            self.campaign_id,
+            full_members=True,
+        )["member_research_ids"]
+        self.assertNotIn(unrelated_id, members)
+        self.assertEqual(
+            self.store.campaigns().status(self.campaign_id)["history"]
+            ["event_count"],
+            events_before,
+        )
+
+    def test_membership_is_bounded_until_explicit_forensic_drilldown(
         self,
     ) -> None:
         lifecycle = self.store.v5_lifecycle()
@@ -1869,6 +2377,12 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             limit=1,
             diagnostic=True,
         )["campaign_membership"]
+        forensic = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+            diagnostic=True,
+            full_members=True,
+        )["campaign_membership"]
 
         self.assertGreater(routine["member_count"], 4)
         self.assertNotIn("member_research_ids", routine)
@@ -1876,15 +2390,83 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertNotIn("members_truncated", routine)
         self.assertEqual(routine["diagnostic_command"], "frontier --diagnostic")
         self.assertEqual(
-            routine["member_ids_sha256"], diagnostic["member_ids_sha256"]
+            routine["full_members_command"],
+            f"frontier --campaign {self.campaign_id} --diagnostic "
+            "--full-members",
         )
         self.assertEqual(
-            len(diagnostic["member_research_ids"]),
-            diagnostic["member_count"],
+            routine["member_ids_sha256"], diagnostic["member_ids_sha256"]
         )
-        self.assertEqual(len(diagnostic["members"]), diagnostic["member_count"])
-        self.assertFalse(diagnostic["members_truncated"])
-        self.assertTrue(set(members).issubset(diagnostic["member_research_ids"]))
+        self.assertEqual(len(diagnostic["member_research_ids"]), 4)
+        self.assertEqual(len(diagnostic["members"]), 4)
+        self.assertTrue(diagnostic["members_truncated"])
+        self.assertEqual(
+            diagnostic["full_members_command"],
+            f"frontier --campaign {self.campaign_id} --diagnostic "
+            "--full-members",
+        )
+        self.assertEqual(
+            routine["member_ids_sha256"], forensic["member_ids_sha256"]
+        )
+        self.assertEqual(
+            len(forensic["member_research_ids"]),
+            forensic["member_count"],
+        )
+        self.assertEqual(len(forensic["members"]), forensic["member_count"])
+        self.assertFalse(forensic["members_truncated"])
+        self.assertTrue(set(members).issubset(forensic["member_research_ids"]))
+        with self.assertRaisesRegex(
+            ValueError,
+            "full Campaign members require the diagnostic frontier",
+        ):
+            lifecycle.frontier_decision_surface(
+                campaign_id=self.campaign_id,
+                limit=1,
+                full_members=True,
+            )
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--limit",
+                    "1",
+                    "--diagnostic",
+                    "--full-members",
+                ]
+            )
+        self.assertEqual(status, 0, stderr.getvalue())
+        cli_membership = json.loads(stdout.getvalue())["campaign_membership"]
+        self.assertEqual(
+            len(cli_membership["members"]),
+            cli_membership["member_count"],
+        )
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--full-members",
+                ]
+            )
+        self.assertNotEqual(status, 0)
+        self.assertIn("--full-members requires --diagnostic", stderr.getvalue())
 
     def test_same_research_has_independent_target_local_attention_roles(
         self,
@@ -2150,6 +2732,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[next_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                    "context_handoff": {"mode": "all"},
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [next_id])
@@ -2213,6 +2800,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[next_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                    "context_handoff": {"mode": "all"},
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [next_id])
@@ -2304,6 +2896,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[s1_successor],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
@@ -2342,11 +2938,16 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 }
             },
         )
-        lifecycle.create_production_round(
+        planned = lifecycle.create_production_round(
             workers=1,
             research_ids=[next_id],
             campaign_id=self.campaign_id,
             frontier_target_id=self.target_id,
+            frontier_attention={
+                "disposition": "replace_head",
+                "replace_head_research_id": self.root_id,
+                "context_handoff": {"mode": "all"},
+            },
         )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [next_id])
@@ -2360,8 +2961,22 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 }
             ],
         )
+        self.assertEqual(
+            planned["frontier_attention_effect"][
+                "before_active_head_research_ids"
+            ],
+            [self.root_id],
+        )
+        self.assertEqual(
+            planned["selection_receipt"]["revision"],
+            "chalxius-v5-plan-round-selection-4",
+        )
+        self.assertIn(
+            "--frontier-disposition",
+            planned["selection_receipt"]["exact_replay_argv"],
+        )
 
-    def test_plan_round_leaves_context_unattached_on_ambiguous_handoff(self) -> None:
+    def test_multi_selection_adds_heads_without_guessing_context_handoff(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         successors = [
             self._research(
@@ -2414,9 +3029,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 selected_research_ids=successors,
             )
         row = self._state()["targets"][self.target_id]
-        self.assertEqual(row["active_head_research_ids"], successors)
         self.assertEqual(
-            row["head_contexts"][0]["attached_head_research_id"], None
+            row["active_head_research_ids"], [self.root_id, *successors]
+        )
+        self.assertEqual(
+            row["head_contexts"][0]["attached_head_research_id"], self.root_id
         )
 
     def test_context_attach_to_head_absorbs_unattached_duplicate(self) -> None:
@@ -2610,11 +3227,17 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             "campaign_goal_coverage",
             return_value=[projected_goal],
         ):
-            lifecycle._advance_campaign_frontier_for_plan(
-                campaign_id=self.campaign_id,
-                frontier_target_id=self.target_id,
-                selected_research_ids=[merged_head],
-            )
+            for replaced_head in (self.root_id, second_head):
+                lifecycle._advance_campaign_frontier_for_plan(
+                    campaign_id=self.campaign_id,
+                    frontier_target_id=self.target_id,
+                    selected_research_ids=[merged_head],
+                    frontier_attention={
+                        "disposition": "replace_head",
+                        "replace_head_research_id": replaced_head,
+                        "context_handoff": {"mode": "all"},
+                    },
+                )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [merged_head])
         self.assertEqual(
@@ -2692,6 +3315,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[self.successor_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                    "context_handoff": {"mode": "all"},
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [self.successor_id])
@@ -2702,7 +3330,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )
         lifecycle._read_campaign_frontier_working_state(self.campaign_id)
 
-    def test_two_old_heads_can_retarget_same_context_to_two_new_heads(self) -> None:
+    def test_multi_head_plan_does_not_guess_pairwise_replacements(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         second_head = self._research(
             "parallel-old-head", "A logically independent old branch."
@@ -2768,14 +3396,15 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(
-            row["active_head_research_ids"], [first_new, second_new]
+            row["active_head_research_ids"],
+            [self.root_id, second_head, first_new, second_new],
         )
         self.assertEqual(
             {
                 context["attached_head_research_id"]
                 for context in row["head_contexts"]
             },
-            {first_new, second_new},
+            {self.root_id, second_head},
         )
         lifecycle._read_campaign_frontier_working_state(self.campaign_id)
 
@@ -2837,6 +3466,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 campaign_id=self.campaign_id,
                 frontier_target_id=self.target_id,
                 selected_research_ids=[repair_id],
+                frontier_attention={
+                    "disposition": "replace_head",
+                    "replace_head_research_id": self.root_id,
+                    "context_handoff": {"mode": "all"},
+                },
             )
         row = self._state()["targets"][self.target_id]
         self.assertEqual(row["active_head_research_ids"], [repair_id])
@@ -3114,6 +3748,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         assert advisory is not None
         self.assertFalse(advisory["blocking"])
         self.assertEqual(advisory["truth_effect"], "none")
+        self.assertEqual(
+            advisory["maintenance_command"],
+            f"frontier --campaign {self.campaign_id} --maintenance",
+        )
+        self.assertTrue(advisory["reasoned_no_op_valid"])
         lifecycle.pause_frontier_maintenance_clock(self.campaign_id)
         self.assertIsNone(
             lifecycle.frontier_maintenance_advisory(

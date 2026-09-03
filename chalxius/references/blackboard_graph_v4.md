@@ -79,22 +79,24 @@ Every assignment in a round that explicitly uses Blackboard binds the same
 snapshot id and byte hash.
 
 Prospective ordinary V5 Research has no implicit Blackboard query or snapshot.
-Its card, assignment, manifest, and return contract carry exact `null`
-snapshot bindings, with empty read/write space lists. An exact promoted query
-or an explicitly requested write-space capability creates and binds one
-bounded snapshot for that round. Historical cards retain their frozen root or
-wider snapshots and write capabilities and are validated against those exact
-bytes. This removes the unused per-round default snapshot ceremony without
-deleting Blackboard state, Paper mirrors, promotions, explicit snapshots, or
-Learner mounts.
+Its persistent card, assignment, manifest, and return contract carry exact
+`null` snapshot bindings, with empty read/write space lists. Routine V5
+planning JSON omits that absent projection, while exact round status and frozen
+bytes retain the full shape. An exact promoted query or an explicitly requested
+write-space capability creates, binds, and foregrounds one bounded snapshot for
+that round. Historical cards retain their frozen root or wider snapshots and
+write capabilities and are validated against those exact bytes. This removes
+the unused per-round default snapshot ceremony without deleting Blackboard
+state, Paper mirrors, promotions, explicit snapshots, or Learner mounts.
 
 New public V5 Pulse planning is retired because the production/supervision
 cycle owns prospective Research collaboration. V4 Pulse and operations needed
 to inspect or finish an already-created record remain compatible. They preserve
 their original immutable commitments and receipts and do not become Fact
-authority. A historical V5 Pulse operation can create a new compatibility
-commitment only from a round that explicitly bound a Blackboard snapshot; an
-ordinary snapshot-free round is not retrofitted after freeze.
+authority. Routine V5 Main/host help does not advertise this family. A
+historical V5 Pulse operation can create a new compatibility commitment only
+from a round that explicitly bound a Blackboard snapshot; an ordinary
+snapshot-free round is not retrofitted after freeze.
 
 ## Merge and conflicts
 

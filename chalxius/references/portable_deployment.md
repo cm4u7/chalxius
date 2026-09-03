@@ -1,5 +1,27 @@
 # Chalxius portable deployment
 
+## 1.0.20 Explicit Attention Working Memory
+
+The `1.0.20` **Explicit Attention Working Memory** candidate makes Campaign
+attention an explicit, compact working-memory operation. Target-bound planning
+adds a selected Research head unless Main names an exact head replacement and
+an explicit context-handoff policy. It never guesses replacement from relation
+names, silently removes co-frontier heads, or changes Research or Fact truth.
+
+Attention roles also preserve durable ordinary Campaign membership. Retiring a
+head or detaching context changes only the current attention view; it does not
+erase the Research from Campaign history. The recent-attainment bound is a
+nonblocking cache whose exact rolled-out ids are returned to Main for optional
+landmark judgment.
+
+`frontier --maintenance --campaign ID` exposes every target and the complete
+head, context, landmark, recent-attainment, and queue identity surface while
+omitting the repeated full member table. Forensic membership remains available
+with `--diagnostic --full-members`. Routine current V5 views omit inactive
+legacy Pulse and absent Blackboard fields, while exact historical records stay
+readable. None of these projections dispatches work, blocks research, migrates
+project data, or changes Fact authority.
+
 ## 1.0.19 Main Attention Continuity
 
 The `1.0.19` **Main Attention Continuity** candidate keeps routine Campaign

@@ -116,12 +116,24 @@ PROJECT=/absolute/path/to/project
 
 "$MGRAPH" --root "$PROJECT" --role main status
 "$MGRAPH" --root "$PROJECT" --role main frontier --limit 8
+"$MGRAPH" --root "$PROJECT" --role main frontier --campaign CAMPAIGN_ID \
+  --maintenance
 "$MGRAPH" --root "$PROJECT" --role main frontier --limit 8 --diagnostic
+"$MGRAPH" --root "$PROJECT" --role main frontier --campaign CAMPAIGN_ID \
+  --diagnostic --full-members
 "$MGRAPH" --root "$PROJECT" --role main search "exact topic" --scope research
 ```
 
 The default frontier is the bounded decision surface. `--diagnostic` adds deep
-topology only when Main is investigating a discrepancy.
+topology plus the complete target/head/context/landmark decision surface when
+Main is investigating a discrepancy, while ordinary Campaign membership stays
+at count, digest, and a small role preview. `--diagnostic --full-members` is the
+explicit forensic read of the complete Campaign member-role table.
+`--maintenance` is the compact complete working-memory view: it covers every
+active target, head, context and landmark identity and reason, plus current
+round decisions, but omits repeated hydrated summaries and deep successor
+tables. Maintenance changes attention only when the evidence warrants it; a
+reasoned no-op is a valid outcome.
 
 ## v1.0.17 — Literal Input Continuity
 

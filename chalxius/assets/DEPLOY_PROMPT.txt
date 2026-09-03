@@ -1,4 +1,4 @@
-Chalxius 1.0.19 — Main Attention Continuity
+Chalxius 1.0.20 — Explicit Attention Working Memory
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact

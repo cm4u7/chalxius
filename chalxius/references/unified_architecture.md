@@ -1,5 +1,17 @@
 # Chalxius unified Evidence and research architecture
 
+> **Current planning-attention contract.** Target-bound `plan-round` and
+> `plan-repair-round` share one explicit Main-controlled disposition. The safe
+> default adds the selected Research as a head. Replacement names exactly one
+> old head and one new Research; no relation, repair provenance, lifecycle
+> projection, or sole-head heuristic chooses it. Context moves are separately
+> `none`, `selected`, or `all`; unmoved context on a replaced head becomes
+> unattached. Selection receipt v4 freezes the normalized choice and explicit
+> replay argv, while v1-v3 remain byte-compatible. Exact repair retry reuses
+> the existing mathematical round and applies only the requested Campaign
+> attention. Capacity failure is visible and atomic. This has no Research,
+> Fact, admission, dispatch, or truth effect.
+
 > **1.0.19 Main Attention Continuity override.** Routine Campaign frontier is
 > the compact mathematical working-memory surface: objectives, visible target
 > coverage, heads, contexts, landmarks, recent mathematical history, exact
@@ -177,7 +189,10 @@
 > lineage. Recent attainment uses a context-compaction or natural-curation
 > window, not a hard four-entry clock. Sparse landmarks have no numeric quota
 > and grow with the Research graph under Main's judgment. The distinct recent
-> queue's 64-entry limit is only high-water runaway protection. Routine views
+> queue is a 64-entry nonblocking cache. Overflow rolls the oldest exact ids
+> into ordinary searchable Research history and reports those ids to Main for
+> an optional landmark judgment; it never blocks the attention update or
+> promotes a landmark automatically. Routine views
 > preview four recent items and eight landmarks, retain exact total counts and
 > identity digests, and leave full landmark ids available through exact state
 > and diagnostic reads rather than silently selecting first N.
@@ -185,8 +200,8 @@
 > visible handoffs, reconciles rigid lineage, curates recent/landmark memory,
 > chooses the next Research cut, and considers but never forces a Fact window.
 > Neither preview
-> sizes nor available agent slots are semantic quotas; 64 applies only to the
-> recent-attainment queue, not landmarks. Main performs bounded exact
+> sizes nor available agent slots are semantic quotas; 64 bounds only the
+> recent-attainment cache, not landmarks. Main performs bounded exact
 > Research search before every next-cut freeze. Every material match receives
 > one explicit Main disposition: reference-only, attach as exact active-head
 > context, promote to a sparse landmark, or promote to an active head;
@@ -707,13 +722,15 @@ requires every bounded-edit condition to hold, and fails closed to the ordinary
 path for source defects, Research, truth-state work, persistent learning,
 architecture, publication, or nonlocal editing. It changes startup reads only.
 
-Prospective ordinary V5 cards omit Blackboard entirely: the snapshot id/hash
-are exact `null` values and the read/write space lists are empty. A promoted
-Blackboard query or an explicit write-space request creates the exact bounded
-snapshot needed by that round. Historical root or wider snapshots remain
-byte-exact readable. This removes implicit graph traversal and the unused
-default repair bus without deleting Paper projection, promotion, explicit
-snapshot identity, or Learner mounts.
+Prospective ordinary V5 frozen cards, assignments, manifests, and returns
+encode Blackboard absence with exact `null` snapshot id/hash values and empty
+read/write space lists. Routine `plan-round` and `plan-supervision-round` CLI
+JSON omit that absent projection; exact round status and persistent bytes keep
+the complete schema. A promoted Blackboard query or an explicit write-space
+request creates and foregrounds the exact bounded snapshot needed by that
+round. Historical root or wider snapshots remain byte-exact readable. This
+removes routine projection noise and implicit graph traversal without deleting
+Paper projection, promotion, explicit snapshot identity, or Learner mounts.
 
 New V5 Pulse planning is retired. It has no consumer in the required two-subround
 cycle. Existing Pulse records keep their status, audit, dispatch, close, void,
@@ -1073,9 +1090,11 @@ prospective `neutral_review_submission_revision` sealed into new Candidate
 Releases; historical V5 releases without that marker retain their exact direct
 return capability. V4 capsule behavior is unchanged.
 
-## Pulse collaboration
+## Frozen V4 and existing-record Pulse collaboration
 
-Pulse remains an optional two-wave coordination layer:
+Pulse remains an optional two-wave coordination layer only for V4 and for
+operating an already-created compatible record. It is not a prospective V5
+planning surface and is omitted from routine V5 Main/host help:
 
 - Wave 1 commits independent assignments to one snapshot.
 - Each valid contribution is ingested separately into Research.

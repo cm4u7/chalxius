@@ -36,9 +36,12 @@
 > projection keeps exact complete identities while bounding expansion; head
 > omission is additive rather than destructive, and zero-argument round
 > recovery deeply validates only unresolved candidates. An ordinary new V5
-> round binds no Blackboard snapshot and uses exact null snapshot projections;
-> a promoted query or explicit write-space request binds one bounded snapshot,
-> while historical frozen cards retain exact validation.
+> round binds no Blackboard snapshot and persists exact null snapshot fields;
+> routine planning JSON omits those absent fields while exact round status
+> retains them. A promoted query or explicit write-space request binds and
+> foregrounds one bounded snapshot, while historical frozen cards retain exact
+> validation. The Pulse instructions later in this file are frozen V4 and
+> existing-record history, not prospective V5 planning or routine help.
 
 > **1.0.8 bounded Campaign-membership override.** Main's routine frontier
 > receives the complete Campaign-member count and identity digest plus at most

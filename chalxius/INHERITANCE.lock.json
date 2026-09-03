@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.19",
-  "release_codename": "Main Attention Continuity",
-  "release_display_name": "Chalxius 1.0.19 — Main Attention Continuity",
+  "version": "1.0.20",
+  "release_codename": "Explicit Attention Working Memory",
+  "release_display_name": "Chalxius 1.0.20 — Explicit Attention Working Memory",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

@@ -236,7 +236,7 @@
       ]
     },
     "cap.research_execution": {
-      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution including commit-last semantic research_split batches, static scope-owned second-subround assurance, and compact production/supervisor projections. New split production is disabled by default and requires exact Research selection plus a current one-shot user opt-in at the common production boundary; the choice is not persisted or replayed. A split recommendation from Fact work may return to the same ordinary Research repair and proof/source supervision layer only after that opt-in, never to a new Fact-side supervisor. Supervisor interfaces are strong mechanical recommendations only; package, verifier, and Gateway authority remain separate.",
+      "summary": "Round planning, frozen task cards, worker returns, ingestion, bounded repair execution including commit-last semantic research_split batches, static scope-owned second-subround assurance, compact production/supervisor projections, and one explicit Main-controlled target attention disposition shared by production and repair planning. Target-bound planning defaults to add-head; named replacement and none/selected/all context handoff are frozen in selection receipt v4, exact repair retry reuses worker work, and explicit repair Campaign scope is independent of Research creation provenance. These attention operations are nontruth only. New split production is disabled by default and requires exact Research selection plus a current one-shot user opt-in at the common production boundary; the choice is not persisted or replayed. A split recommendation from Fact work may return to the same ordinary Research repair and proof/source supervision layer only after that opt-in, never to a new Fact-side supervisor. Supervisor interfaces are strong mechanical recommendations only; package, verifier, and Gateway authority remain separate.",
       "status": "active",
       "stateful": true,
       "state_roots": [
@@ -268,12 +268,17 @@
         "tests/test_v4_preflight_return.py",
         "tests/test_v4_protocol.py",
         "tests/test_chx_095_terminal_frontier_context.py",
+        "tests/test_chx_002_plan_attention.py",
         "tests/test_fact_alpha.py"
       ],
       "activation_paths": [
         {
           "kind": "cli",
           "command": "mgraph:plan-round"
+        },
+        {
+          "kind": "cli",
+          "command": "mgraph:plan-repair-round"
         },
         {
           "kind": "cli",
@@ -389,7 +394,7 @@
       ]
     },
     "cap.campaign_frontier": {
-      "summary": "Campaign envelopes, many-to-many Research membership, exact active heads/context/landmarks, one bounded exact Research search before every next-cut freeze, and judgment-led maintenance at handoffs plus a replaceable approximately 50-minute internal Main clock. The same Research may be both head and landmark inside one target. Named head replacement carries exact context to its successor, and concrete attachment absorbs obsolete null copies. Every Main-facing command can emit a nonblocking due advisory; there is no daemon, dispatch, liveness judgment, or truth effect. The persisted working state is the only sparse-update write baseline; advisory goal projection stays read-only and exact plan handoff owns rigid replacement. Every material match receives an explicit nontruth attention role, and maintenance applies warranted adds, removals, migrations, attachments, retirements, or reason corrections rather than stopping at inspection. Head-context storage has no numeric quota; routine output retains all heads and previews four contexts, recent items, and oldest/newest landmarks with complete counts/digests, and all bounded data has a diagnostic or exact drill-down. Ordinary full head lists preserve omissions, while exact add/retire operations change attention without truth effect. The distinct recent queue uses 64 only as a high-water guard; slots are not quotas.",
+      "summary": "Campaign envelopes, many-to-many Research membership, exact active heads/context/landmarks, one bounded exact Research search before every next-cut freeze, and judgment-led maintenance at handoffs plus a replaceable approximately 50-minute internal Main clock. The same Research may be both head and landmark inside one target. Named head replacement carries exact context to its successor, and concrete attachment absorbs obsolete null copies. Every Main-facing command can emit a nonblocking due advisory; there is no daemon, dispatch, liveness judgment, or truth effect. The persisted working state is the only sparse-update write baseline; advisory goal projection stays read-only and exact plan handoff owns rigid replacement. Every material match receives an explicit nontruth attention role, and maintenance applies warranted adds, removals, migrations, attachments, retirements, or reason corrections rather than stopping at inspection. Head-context storage has no numeric quota; routine output retains all heads and previews four contexts, recent items, and oldest/newest landmarks with complete counts/digests. The compact --maintenance surface expands every target and every head/context/landmark identity and reason plus current round decisions without repeated hydration or deep successor topology; a reasoned no-op is valid. Diagnostic remains the forensic topology surface while ordinary Campaign membership stays at count, digest, and a four-role preview; --diagnostic --full-members is the explicit complete member-table drill-down. Ordinary full head lists preserve omissions, while exact add/retire operations change attention without truth effect. The distinct recent queue uses 64 only as a high-water guard; slots are not quotas.",
       "status": "active",
       "stateful": true,
       "state_roots": [

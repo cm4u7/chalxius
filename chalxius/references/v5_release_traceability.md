@@ -1,4 +1,23 @@
-# Chalxius V5 traceability through 1.0.19 Main Attention Continuity
+# Chalxius V5 traceability through 1.0.20 Explicit Attention Working Memory
+
+## 1.0.20 Explicit Attention Working Memory overlay
+
+- Candidate version: `1.0.20`; release name **Explicit Attention Working Memory**.
+- Target-bound `plan-round` records one explicit attention operation: additive
+  head selection by default, or an exact named replacement with an explicit
+  context-handoff policy. It does not infer lifecycle from relation labels,
+  silently retire omitted heads, or alter Research/Fact authority.
+- Campaign attention roles create durable ordinary many-to-many membership.
+  Removing a role removes only that role; exact Research history stays
+  reachable, while a no-op removal cannot invent membership.
+- `frontier --maintenance --campaign ID` supplies the complete mathematical
+  working-memory surface without repeating the full Campaign member table.
+  Full membership remains available through `--diagnostic --full-members`.
+- The bounded recent-attainment queue is a nonblocking cache. Overflow returns
+  exact rolled-out Research ids to Main and preserves durable Campaign
+  membership; Main alone decides whether any item deserves landmark status.
+- Routine current V5 surfaces omit inactive legacy Pulse and absent Blackboard
+  fields. Exact historical operations and forensic views remain readable.
 
 ## 1.0.19 Main Attention Continuity overlay
 
