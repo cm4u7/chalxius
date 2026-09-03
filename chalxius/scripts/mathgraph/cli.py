@@ -110,6 +110,49 @@ def _emit_frontier_maintenance_advisory(store: MathGraphStore) -> None:
     )
 
 
+def _with_frontier_maintenance_attention(
+    store: MathGraphStore,
+    payload: Any,
+    *,
+    campaign_id: str | None = None,
+) -> Any:
+    """Attach overdue Main attention to frontier/planning JSON without gating.
+
+    The stderr reminder remains useful to a human, but a long agent turn can
+    lose it among command output.  The structured copy stays on the two places
+    where Main chooses or freezes the next Research cut.  A malformed clock is
+    still only a warning and never makes the underlying command fail.
+    """
+
+    if not isinstance(payload, dict):
+        return payload
+    try:
+        selected_campaign_id = campaign_id or store.campaigns().active()
+        if selected_campaign_id is None:
+            return payload
+        advisory = store.v5_lifecycle().frontier_maintenance_advisory(
+            selected_campaign_id
+        )
+    except (OSError, ValueError):
+        return payload
+    if advisory is None:
+        return payload
+    return {
+        **payload,
+        "main_attention": {
+            "state": "frontier_maintenance_overdue",
+            "frontier_maintenance": advisory,
+            "cleared_by": [
+                "frontier_full_maintenance_completed",
+                "explicit_user_postponement",
+            ],
+            "running_agents": "continue",
+            "command_blocking_effect": "none",
+            "truth_effect": "none",
+        },
+    }
+
+
 def _v5_fact_bundle_release(
     store: MathGraphStore,
     payload: dict[str, Any],
@@ -2250,7 +2293,13 @@ def main(argv: list[str] | None = None) -> int:
                         limit=args.limit,
                         campaign_id=args.campaign,
                     )
-                _print_json(projection)
+                _print_json(
+                    _with_frontier_maintenance_attention(
+                        store,
+                        projection,
+                        campaign_id=args.campaign,
+                    )
+                )
             else:
                 if args.diagnostic:
                     raise ValueError("--diagnostic frontier requires a V5 project")
@@ -2491,15 +2540,19 @@ def main(argv: list[str] | None = None) -> int:
             )
             if store.workflow_evidence_version() == 5:
                 _print_json(
-                    store.v5_lifecycle().create_production_round(
-                        workers=args.workers,
-                        mode=args.mode,
-                        research_ids=args.memory_ids,
+                    _with_frontier_maintenance_attention(
+                        store,
+                        store.v5_lifecycle().create_production_round(
+                            workers=args.workers,
+                            mode=args.mode,
+                            research_ids=args.memory_ids,
+                            campaign_id=args.campaign,
+                            host_task_scope_id=normalized_host_scope,
+                            background_chunk_ids=args.background_chunk_ids,
+                            frontier_target_id=args.frontier_target,
+                            user_authorized_split=args.user_authorized_split,
+                        ),
                         campaign_id=args.campaign,
-                        host_task_scope_id=normalized_host_scope,
-                        background_chunk_ids=args.background_chunk_ids,
-                        frontier_target_id=args.frontier_target,
-                        user_authorized_split=args.user_authorized_split,
                     )
                 )
             else:

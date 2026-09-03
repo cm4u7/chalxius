@@ -1,5 +1,18 @@
 # Chalxius unified Evidence and research architecture
 
+> **1.0.19 Main Attention Continuity override.** Routine Campaign frontier is
+> the compact mathematical working-memory surface: objectives, visible target
+> coverage, heads, contexts, landmarks, recent mathematical history, exact
+> counts/digests, scope state and next actions remain visible. Repeated policy,
+> checkpoint, membership-example and successor-forensic projections move to
+> `frontier --diagnostic`. Routine output explicitly reports target projection
+> completeness and preserves a no-head target's recovery root. An overdue
+> maintenance clock is also embedded as nonblocking structured
+> `main_attention` on `frontier` and successful `plan-round` output. A selected
+> head whose exact current round was aborted is shown as requiring Main
+> disposition; neither signal changes graph truth, dispatches work, nor chooses
+> a mathematical successor.
+
 > **1.0.18 Direct Source Ownership override.** A current literature or
 > explicitly source-dependent assignment first uses primary or authoritative
 > bytes carried by its selected Research and directly related products.  If

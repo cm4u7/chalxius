@@ -104,6 +104,7 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             surface = store.v5_lifecycle().frontier_decision_surface(
                 campaign_id=campaign_id,
                 limit=1,
+                diagnostic=True,
             )
             self.assertEqual(
                 surface["exact_search_attention_policy"][
@@ -310,11 +311,13 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             goal = surface["goal_coverage"][0]
             diagnostic_goal = diagnostic_surface["goal_coverage"][0]
             self.assertEqual(goal["active_head_research_ids"], [head_id])
+            self.assertNotIn("stale_active_head_research_ids", goal)
+            self.assertNotIn("current_active_head_research_ids", goal)
             self.assertEqual(
-                goal["stale_active_head_research_ids"], [head_id]
+                diagnostic_goal["stale_active_head_research_ids"], [head_id]
             )
             self.assertEqual(
-                goal["current_active_head_research_ids"], []
+                diagnostic_goal["current_active_head_research_ids"], []
             )
             self.assertEqual(
                 goal["active_head_actions"][0]["checkpoint_head_state"],
@@ -350,13 +353,14 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 "active_head_semantic_successors", diagnostic_goal
             )
             self.assertIn("attained_semantic_successors", diagnostic_goal)
-            self.assertTrue(goal["checkpoint_refresh_recommended"])
+            self.assertNotIn("checkpoint_refresh_recommended", goal)
             self.assertIn(
                 "active_head_has_newer_terminal_successor",
-                goal["checkpoint_refresh_reasons"],
+                diagnostic_goal["checkpoint_refresh_reasons"],
             )
+            self.assertNotIn("checkpoint_refresh", surface)
             self.assertEqual(
-                surface["checkpoint_refresh"],
+                diagnostic_surface["checkpoint_refresh"],
                 {
                     "recommended": True,
                     "reason_codes": [
@@ -686,16 +690,24 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     campaign_id=campaign_id,
                     _inspection_context=inspection,
                 )
+                diagnostic_surface = lifecycle.frontier_decision_surface(
+                    campaign_id=campaign_id,
+                    diagnostic=True,
+                    _inspection_context=inspection,
+                )
 
             goal = surface["goal_coverage"][0]
-            self.assertEqual(goal["stale_active_head_research_ids"], [])
+            diagnostic_goal = diagnostic_surface["goal_coverage"][0]
+            self.assertNotIn("stale_active_head_research_ids", goal)
             self.assertEqual(
-                goal["current_active_head_research_ids"], [root_id]
+                diagnostic_goal["current_active_head_research_ids"], [root_id]
             )
             self.assertEqual(
-                goal["uncheckpointed_terminal_successor_count"], 0
+                diagnostic_goal["uncheckpointed_terminal_successor_count"], 0
             )
-            self.assertFalse(goal["checkpoint_refresh_recommended"])
+            self.assertFalse(
+                diagnostic_goal["checkpoint_refresh_recommended"]
+            )
             self.assertEqual(
                 goal["active_head_actions"][0]["checkpoint_head_state"],
                 "current_with_in_flight_supervision",
@@ -704,7 +716,10 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 "current_terminal_research_ids",
                 goal["active_head_actions"][0],
             )
-            self.assertFalse(surface["checkpoint_refresh"]["recommended"])
+            self.assertNotIn("checkpoint_refresh", surface)
+            self.assertFalse(
+                diagnostic_surface["checkpoint_refresh"]["recommended"]
+            )
 
     def test_product_checkpoint_head_uses_bound_production_root_action(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -849,23 +864,14 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             goal = surface["goal_coverage"][0]
             self.assertEqual(goal["next_action"], "await_return")
             self.assertEqual(goal["why_now"], "supervision_round_in_flight")
-            self.assertEqual(
-                goal["active_head_workflow_roots"],
-                [
-                    {
-                        "active_head_research_id": product_id,
-                        "workflow_root_research_id": root_id,
-                        "selection_effect": "none",
-                    }
-                ],
-            )
+            self.assertNotIn("active_head_workflow_roots", goal)
             self.assertEqual(
                 goal["active_head_actions"][0][
                     "workflow_root_research_id"
                 ],
                 root_id,
             )
-            self.assertFalse(goal["checkpoint_refresh_recommended"])
+            self.assertNotIn("checkpoint_refresh_recommended", goal)
 
     def test_exact_legacy_repair_task_connects_later_cow_cycles(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

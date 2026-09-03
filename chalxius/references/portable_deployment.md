@@ -1,5 +1,22 @@
 # Chalxius portable deployment
 
+## 1.0.19 Main Attention Continuity
+
+The `1.0.19` **Main Attention Continuity** candidate keeps routine Campaign
+frontier focused on mathematical working memory. It preserves exact target
+coverage, active heads, context and landmark previews with complete
+counts/digests, recent mathematical history, scope state and next actions;
+repeated policy, checkpoint, membership-example and successor-forensic fields
+remain available through `frontier --diagnostic`. A bounded view explicitly
+states whether every target is visible, and a no-head target retains its exact
+recovery root.
+
+An overdue maintenance reminder is carried as structured, nonblocking
+`main_attention` on routine frontier and successful production planning. An
+exact current head whose only round was explicitly aborted is exposed for Main
+disposition. Neither projection blocks commands, selects a successor,
+dispatches work, migrates project data, or changes Research or Fact authority.
+
 ## 1.0.18 Direct Source Ownership
 
 The `1.0.18` **Direct Source Ownership** candidate makes the source capability

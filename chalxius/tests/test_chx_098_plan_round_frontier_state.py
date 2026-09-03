@@ -248,7 +248,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             campaign_id=self.campaign_id,
             limit=2,
         )["goal_coverage"][0]
-        self.assertEqual(goal["frontier_source"], "working_state")
+        self.assertNotIn("frontier_source", goal)
         self.assertEqual(goal["coverage_status"], "in_flight")
         self.assertEqual(goal["next_action"], "await_return")
         self.assertEqual(goal["actionable_round_id"], planned["round_id"])
@@ -1550,16 +1550,32 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             campaign_id=self.campaign_id,
             limit=2,
         )
-        goal = surface["goal_coverage"][0]
-        self.assertEqual(goal["frontier_source"], "working_state")
-        self.assertEqual(
-            goal["frontier_generation_kind"], "dynamic_working_state"
+        diagnostic_surface = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=2,
+            diagnostic=True,
         )
-        self.assertEqual(goal["latest_manual_checkpoint_generation"], 37)
+        goal = surface["goal_coverage"][0]
+        diagnostic_goal = diagnostic_surface["goal_coverage"][0]
+        self.assertNotIn("frontier_source", goal)
+        self.assertNotIn("latest_manual_checkpoint_generation", goal)
+        self.assertNotIn("frontier_version_axes", surface)
+        self.assertNotIn("checkpoint_refresh", surface)
+        self.assertNotIn("main_selection_policy", surface)
+        self.assertEqual(diagnostic_goal["frontier_source"], "working_state")
         self.assertEqual(
-            surface["frontier_version_axes"],
+            diagnostic_goal["frontier_generation_kind"],
+            "dynamic_working_state",
+        )
+        self.assertEqual(
+            diagnostic_goal["latest_manual_checkpoint_generation"], 37
+        )
+        self.assertEqual(
+            diagnostic_surface["frontier_version_axes"],
             {
-                "live_frontier_generation": goal["frontier_generation"],
+                "live_frontier_generation": diagnostic_goal[
+                    "frontier_generation"
+                ],
                 "latest_manual_checkpoint_generation": 37,
                 "manual_checkpoint": "optional_advisory_local_sequence",
                 "generation_comparison_effect": "none",
@@ -1569,14 +1585,18 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 "selection_effect": "none",
             },
         )
-        self.assertFalse(goal["checkpoint_refresh_recommended"])
-        self.assertEqual(goal["checkpoint_refresh_reasons"], [])
-        self.assertFalse(surface["checkpoint_refresh"]["recommended"])
+        self.assertFalse(diagnostic_goal["checkpoint_refresh_recommended"])
+        self.assertEqual(diagnostic_goal["checkpoint_refresh_reasons"], [])
+        self.assertFalse(
+            diagnostic_surface["checkpoint_refresh"]["recommended"]
+        )
         self.assertNotIn(
             "write one new advisory checkpoint",
-            surface["checkpoint_refresh"]["instruction"],
+            diagnostic_surface["checkpoint_refresh"]["instruction"],
         )
-        self.assertNotIn("checkpoint", surface["main_selection_policy"])
+        self.assertNotIn(
+            "checkpoint", diagnostic_surface["main_selection_policy"]
+        )
 
     def test_exact_search_context_can_attach_then_promote_atomically(self) -> None:
         lifecycle = self.store.v5_lifecycle()
@@ -1851,9 +1871,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         )["campaign_membership"]
 
         self.assertGreater(routine["member_count"], 4)
-        self.assertEqual(len(routine["member_research_ids"]), 4)
-        self.assertEqual(len(routine["members"]), 4)
-        self.assertTrue(routine["members_truncated"])
+        self.assertNotIn("member_research_ids", routine)
+        self.assertNotIn("members", routine)
+        self.assertNotIn("members_truncated", routine)
+        self.assertEqual(routine["diagnostic_command"], "frontier --diagnostic")
         self.assertEqual(
             routine["member_ids_sha256"], diagnostic["member_ids_sha256"]
         )
@@ -3121,6 +3142,113 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertIn(
             "[Chalxius full frontier maintenance due]",
             stderr.getvalue(),
+        )
+
+    def test_overdue_maintenance_is_structured_on_frontier_and_plan(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle.reset_frontier_maintenance_clock(
+            self.campaign_id,
+            completed_at="2000-01-01T00:00:00Z",
+        )
+        frontier_stdout = StringIO()
+        frontier_stderr = StringIO()
+        with redirect_stdout(frontier_stdout), redirect_stderr(frontier_stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--limit",
+                    "2",
+                ]
+            )
+        self.assertEqual(status, 0, frontier_stderr.getvalue())
+        frontier = json.loads(frontier_stdout.getvalue())
+        self.assertEqual(
+            frontier["main_attention"]["state"],
+            "frontier_maintenance_overdue",
+        )
+        self.assertFalse(
+            frontier["main_attention"]["frontier_maintenance"]["blocking"]
+        )
+
+        plan_stdout = StringIO()
+        plan_stderr = StringIO()
+        with redirect_stdout(plan_stdout), redirect_stderr(plan_stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "plan-round",
+                    "--workers",
+                    "1",
+                    "--memory-id",
+                    self.root_id,
+                    "--campaign",
+                    self.campaign_id,
+                    "--frontier-target",
+                    self.target_id,
+                    "--host-task-scope-id",
+                    "hosttask-maintenance-attention",
+                ]
+            )
+        self.assertEqual(status, 0, plan_stderr.getvalue())
+        planned = json.loads(plan_stdout.getvalue())
+        self.assertIn("round_id", planned)
+        self.assertEqual(
+            planned["main_attention"]["state"],
+            "frontier_maintenance_overdue",
+        )
+        self.assertEqual(
+            planned["main_attention"]["command_blocking_effect"], "none"
+        )
+
+    def test_aborted_selected_head_round_requires_main_disposition(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [self.root_id],
+                    "historical_landmark_research_ids": [],
+                    "recent_attained_research_ids": [],
+                    "head_contexts": [],
+                }
+            },
+        )
+        planned = lifecycle.create_production_round(
+            workers=1,
+            research_ids=[self.root_id],
+            campaign_id=self.campaign_id,
+            frontier_target_id=self.target_id,
+            host_task_scope_id="hosttask-aborted-head-disposition",
+        )
+        with self.store.v5_mutation_lock(command="work-unit-abort"):
+            self.store.reasoning_modes().abort_work_unit(
+                round_id=planned["round_id"],
+                actor="main",
+                reason="Exercise explicit stopped-route disposition.",
+            )
+        goal = lifecycle.frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=2,
+        )["goal_coverage"][0]
+        self.assertEqual(goal["coverage_status"], "needs_main_choice")
+        self.assertEqual(goal["next_action"], "main_reconciliation")
+        self.assertEqual(
+            goal["why_now"], "aborted_head_needs_main_disposition"
+        )
+        self.assertEqual(goal["actionable_round_id"], planned["round_id"])
+        self.assertEqual(
+            goal["active_head_actions"][0]["why_now"],
+            "aborted_head_needs_main_disposition",
         )
 
     def test_landmark_ids_cannot_silently_receive_a_generic_reason(self) -> None:

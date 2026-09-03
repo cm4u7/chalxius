@@ -496,6 +496,7 @@ class _ActionProjector:
         product_rounds: dict[str, str] = {}
         awaiting: set[str] = set()
         returns: set[str] = set()
+        aborted: set[str] = set()
         unsafe: set[str] = set()
         for round_id in production_rounds:
             try:
@@ -524,7 +525,9 @@ class _ActionProjector:
                     returns.add(round_id)
                 elif state == "awaiting_return":
                     awaiting.add(round_id)
-                elif state != "frozen_aborted":
+                elif state == "frozen_aborted":
+                    aborted.add(round_id)
+                else:
                     unsafe.add(round_id)
             if not matched:
                 unsafe.add(round_id)
@@ -533,7 +536,13 @@ class _ActionProjector:
             product_rounds,
             key=lambda item: (self.bases[item]["created_at"], item),
         )
-        all_rounds = [*production_rounds, *returns, *awaiting, *unsafe]
+        all_rounds = [
+            *production_rounds,
+            *returns,
+            *awaiting,
+            *aborted,
+            *unsafe,
+        ]
         if len(products) > 1:
             return self.action(
                 "main_reconciliation",
@@ -565,6 +574,14 @@ class _ActionProjector:
                     "production_round_unreadable_or_quarantined",
                     research_ids=[research_id],
                     round_ids=list(unsafe),
+                    primary_research_id=research_id,
+                )
+            if aborted:
+                return self.action(
+                    "main_reconciliation",
+                    "aborted_head_needs_main_disposition",
+                    research_ids=[research_id],
+                    round_ids=list(aborted),
                     primary_research_id=research_id,
                 )
             return self.action(

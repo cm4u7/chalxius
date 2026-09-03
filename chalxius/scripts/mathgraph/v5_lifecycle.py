@@ -12515,24 +12515,19 @@ class V5LifecycleManager:
             "label",
             "root_research_id",
             "root_claim",
-            "historical_landmark_research_ids",
             "historical_landmark_count",
             "historical_landmark_ids_sha256",
-            "historical_landmark_shown_count",
             "historical_landmarks",
             "historical_landmarks_truncated",
-            "historical_landmark_preview_policy",
             "head_contexts",
             "head_context_count",
             "head_contexts_sha256",
             "head_context_attachment_counts",
             "head_contexts_truncated",
-            "head_context_preview_policy",
             "recent_attained_research_ids",
             "recent_attained_count",
             "recent_attained_ids_sha256",
             "recent_attained_truncated",
-            "recent_attained_preview_policy",
             "historical_mathematical_summary",
             "recent_attained_mathematical_history",
             "history_review_recommended",
@@ -12547,38 +12542,12 @@ class V5LifecycleManager:
             "actionable_research_id",
             "actionable_round_id",
             "actionable_research_ids",
-            "next_attention",
-            "disposition",
-            "attention_basis_research_ids",
-            "attention_basis_round_ids",
-            "attention_reason",
             "supervision_coverage",
             "supervision_coverage_count",
             "plan_round_argv",
             "active_head_research_ids",
-            "active_head_workflow_roots",
-            "current_active_head_research_ids",
             "current_active_head_count",
             "current_active_head_ids_sha256",
-            "stale_active_head_research_ids",
-            "attained_checkpoint_research_ids",
-            "frontier_generation",
-            "frontier_generation_kind",
-            "latest_manual_checkpoint_generation",
-            "latest_manual_checkpoint_event_id",
-            "frontier_source",
-            "frontier_checkpoint_event_id",
-            "checkpoint_main_disposition",
-            "checkpoint_refresh_recommended",
-            "checkpoint_refresh_reasons",
-            "checkpoint_diagnostic_codes",
-            "checkpoint_malformed",
-            "invalid_head_research_ids",
-            "invalid_attained_checkpoint_research_ids",
-            "terminal_successor_selection_effect",
-            "uncheckpointed_terminal_successor_count",
-            "uncheckpointed_terminal_successor_ids_sha256",
-            "uncheckpointed_terminal_successor_research_ids",
         )
         compact = {
             key: entry[key] for key in routine_fields if key in entry
@@ -12656,23 +12625,6 @@ class V5LifecycleManager:
                 ]
                 if isinstance(item, dict)
             ]
-        workflow_roots = compact.get("active_head_workflow_roots")
-        if isinstance(workflow_roots, list):
-            nontrivial_roots = [
-                item
-                for item in workflow_roots
-                if isinstance(item, dict)
-                and item.get("active_head_research_id")
-                != item.get("workflow_root_research_id")
-            ]
-            if nontrivial_roots:
-                compact["active_head_workflow_roots"] = nontrivial_roots
-            else:
-                compact.pop("active_head_workflow_roots", None)
-        # These exact ids are already partitioned into the curated historical
-        # and recent lists above.  Repeating their concatenation adds no Main
-        # decision information.
-        compact.pop("attained_checkpoint_research_ids", None)
         if "supervision_coverage" in compact:
             compact["supervision_coverage"] = compact_supervision_coverage(
                 compact["supervision_coverage"]
@@ -12739,18 +12691,40 @@ class V5LifecycleManager:
                         compact_action.pop(key, None)
                 compact_actions.append(compact_action)
             compact["active_head_actions"] = compact_actions
+            # Per-head scope state is the actionable representation.  The
+            # target-level copy contains the same bytes for one-head targets.
+            if compact_actions:
+                compact.pop("supervision_coverage", None)
+                compact.pop("supervision_coverage_count", None)
+        if compact.get("history_review_recommended") is not True:
+            compact.pop("history_review_recommended", None)
+            compact.pop("history_review_reasons", None)
+        actionable_ids = compact.get("actionable_research_ids")
+        actionable_id = compact.get("actionable_research_id")
+        if actionable_ids in ([], [actionable_id]):
+            compact.pop("actionable_research_ids", None)
+        if compact.get("plan_round_argv") in (None, []):
+            compact.pop("plan_round_argv", None)
+        if len(compact.get("active_head_research_ids", [])) < 2:
+            compact.pop("head_context_attachment_counts", None)
+        if compact.get("active_head_research_ids"):
+            # Recovery provenance matters when Main must select a new head.  A
+            # live head already carries the exact route identity, so repeating
+            # the fallback root adds no decision information.
+            compact.pop("recovery_root_research_id", None)
+            compact.pop("recovery_root_source", None)
         return compact
 
     @staticmethod
     def _compact_workflow_queue_entry(
         entry: dict[str, Any],
+        *,
+        include_claim: bool = True,
     ) -> dict[str, Any]:
         """Remove duplicated provenance while retaining one exact next action."""
 
         fields = (
             "research_id",
-            "claim",
-            "score",
             "goal_relevance",
             "goal_target_ids",
             "action_class",
@@ -12762,10 +12736,10 @@ class V5LifecycleManager:
             "actionable_research_ids",
             "actionable_research_count",
             "supervision_coverage",
-            "supervision_coverage_count",
-            "supervision_coverage_sha256",
         )
         compact = {key: entry[key] for key in fields if key in entry}
+        if include_claim and isinstance(entry.get("claim"), str):
+            compact["claim"] = entry["claim"]
         research_id = compact.get("research_id")
         actionable_id = compact.get("actionable_research_id")
         if actionable_id == research_id:
@@ -13230,7 +13204,7 @@ class V5LifecycleManager:
             if unmapped_campaign_attention is not None
             else "the bounded workflow_queue as operational follow-up"
         )
-        return {
+        surface = {
             "campaign_id": campaign_id,
             "goal_campaign_id": goal_campaign_id,
             "goal_context_source": goal_context_source,
@@ -13348,7 +13322,13 @@ class V5LifecycleManager:
                 projected
                 if diagnostic
                 else [
-                    self._compact_workflow_queue_entry(item)
+                    self._compact_workflow_queue_entry(
+                        item,
+                        include_claim=(
+                            goal_campaign_id is None
+                            or goal_coverage_truncated
+                        ),
+                    )
                     for item in projected
                 ]
             ),
@@ -13438,6 +13418,60 @@ class V5LifecycleManager:
                 )
             ),
         }
+        if diagnostic:
+            return surface
+
+        # Routine frontier is mathematical working memory, not a serialized
+        # copy of its static policy and forensic provenance.  Keep one exact
+        # drill-down identity for every stored set, but leave checkpoint axes,
+        # policy prose, membership examples and successor topology to the
+        # existing diagnostic path.
+        routine = {
+            "campaign_id": surface["campaign_id"],
+            "objective": surface["objective"],
+            "goal_target_count": surface["goal_target_count"],
+            "goal_target_ids_sha256": surface.get(
+                "goal_target_ids_sha256", sha256_json([])
+            ),
+            "goal_progress": surface["goal_progress"],
+            "goal_coverage": surface["goal_coverage"],
+            "workflow_queue": surface["workflow_queue"],
+            "diagnostic_command": "frontier --diagnostic",
+        }
+        for key in (
+            "goal_coverage_count",
+            "goal_coverage_target_ids",
+            "goal_coverage_target_ids_sha256",
+            "goal_coverage_truncated",
+        ):
+            if key in surface:
+                routine[key] = surface[key]
+        if surface.get("goal_context_source") != "explicit_campaign":
+            routine["goal_campaign_id"] = surface.get("goal_campaign_id")
+            routine["goal_context_source"] = surface.get(
+                "goal_context_source"
+            )
+            routine["campaign_selection_effect"] = surface.get(
+                "campaign_selection_effect"
+            )
+        axes = surface.get("frontier_version_axes")
+        if isinstance(axes, dict) and isinstance(
+            axes.get("live_frontier_generation"), int
+        ):
+            routine["frontier_generation"] = axes[
+                "live_frontier_generation"
+            ]
+        membership = surface.get("campaign_membership")
+        if isinstance(membership, dict):
+            routine["campaign_membership"] = {
+                "member_count": membership.get("member_count"),
+                "member_ids_sha256": membership.get("member_ids_sha256"),
+                "diagnostic_command": "frontier --diagnostic",
+            }
+        unmapped = surface.get("unmapped_campaign_attention")
+        if isinstance(unmapped, dict) and unmapped.get("visible_count", 0):
+            routine["unmapped_campaign_attention"] = unmapped
+        return routine
 
     @staticmethod
     def _compact_frontier_entry(projection: dict[str, Any]) -> dict[str, Any]:

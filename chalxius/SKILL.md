@@ -3,7 +3,28 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.18 — Direct Source Ownership
+# Chalxius 1.0.19 — Main Attention Continuity
+
+## 1.0.19 Main Attention Continuity overlay
+
+Routine `frontier` is Main's mathematical working-memory surface. It retains
+the exact Campaign objective, every visible target and active head, bounded
+mathematical context, sparse landmarks, recent mathematical history, exact
+counts/digests, supervision state, and the next actionable Research/round.
+Repeated policy prose, checkpoint forensics, successor topology, membership
+examples, and duplicate status axes live under `frontier --diagnostic` rather
+than being copied into every routine turn. A bounded projection always states
+how many targets are visible and whether it is truncated; a target with no
+live head retains its exact recovery root.
+
+When the Campaign maintenance clock is overdue, routine `frontier` and a newly
+created `plan-round` carry one structured `main_attention` object as well as
+the human-readable advisory. It is cleared by completed full maintenance or
+an explicit user postponement, and it never blocks a command, dispatches work,
+or changes Research or Fact authority. If the selected head's exact current
+round was explicitly aborted and no later product or live round supersedes it,
+frontier reports `aborted_head_needs_main_disposition` with the exact ids;
+Main decides whether to retain, replace, or resume the route.
 
 ## 1.0.18 Direct Source Ownership overlay
 

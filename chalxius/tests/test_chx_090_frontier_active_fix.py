@@ -315,10 +315,7 @@ class FrontierActiveFix090Tests(unittest.TestCase):
                     ],
                 }
             )
-            self.assertEqual(
-                compact_goal["supervision_coverage"][1]["scope"],
-                "source_scope",
-            )
+            self.assertNotIn("supervision_coverage", compact_goal)
             self.assertEqual(
                 compact_goal["active_head_actions"][0][
                     "supervision_coverage"

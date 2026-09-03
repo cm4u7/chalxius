@@ -1,4 +1,23 @@
-# Chalxius V5 traceability through 1.0.18 Direct Source Ownership
+# Chalxius V5 traceability through 1.0.19 Main Attention Continuity
+
+## 1.0.19 Main Attention Continuity overlay
+
+- Candidate version: `1.0.19`; release name **Main Attention Continuity**.
+- Routine Campaign frontier preserves mathematical working memory and exact
+  drill-down identities while moving repeated policy, checkpoint forensics,
+  membership examples and duplicate state axes to `--diagnostic`.
+- The real 4-target Campaign canary fell from 57,906 to 41,354 UTF-8 bytes
+  while retaining all stored context/landmark counts, recent mathematical
+  history, active-head actions, and explicit 4-of-4 projection completeness.
+- An overdue Campaign maintenance clock now appears as structured nonblocking
+  `main_attention` on routine frontier and successful production planning, so
+  Main does not depend on a transient stderr reminder.
+- A selected head whose only exact current production round was explicitly
+  aborted now projects `aborted_head_needs_main_disposition` with exact
+  Research/round ids instead of silently looking like an untouched production
+  root. Main still chooses retain, replace, or resume.
+- These projections have no Research, dispatch, supervision, Candidate,
+  Gateway, Fact, or mathematical-truth effect.
 
 ## 1.0.18 Direct Source Ownership overlay
 

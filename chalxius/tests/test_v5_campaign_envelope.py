@@ -439,41 +439,35 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
             )
             self.assertEqual(surface["goal_target_count"], 1)
             self.assertEqual(surface["goal_progress"]["research_open"], 1)
+            goal = surface["goal_coverage"][0]
+            self.assertEqual(goal["target_id"], target_id)
+            self.assertEqual(goal["root_research_id"], research_id)
+            self.assertEqual(goal["root_claim"], "Investigate branch goal-anchor.")
+            self.assertEqual(goal["coverage_status"], "research_open")
+            self.assertEqual(goal["action_class"], "research_development")
+            self.assertEqual(goal["next_action"], "production")
             self.assertEqual(
-                surface["goal_coverage"][0],
-                {
-                    "target_id": target_id,
-                    "label": "Resolve the exact goal-anchor branch",
-                    "root_research_id": research_id,
-                    "root_claim": "Investigate branch goal-anchor.",
-                    "coverage_status": "research_open",
-                    "work_completion_status": "pending",
-                    "action_class": "research_development",
-                    "next_action": "production",
-                    "why_now": "no_ingested_production_product",
-                    "actionable_research_id": research_id,
-                    "actionable_round_id": None,
-                    "actionable_research_ids": [research_id],
-                    "next_attention": "production",
-                    "disposition": "active",
-                    "attention_basis_research_ids": [research_id],
-                    "attention_basis_round_ids": [],
-                    "attention_reason": "no_ingested_production_product",
-                    "plan_round_argv": [
-                        "plan-round",
-                        "--workers",
-                        "1",
-                        "--mode",
-                        "auto",
-                        "--campaign",
-                        campaign_id,
-                        "--frontier-target",
-                        target_id,
-                        "--memory-id",
-                        research_id,
-                    ],
-                },
+                goal["why_now"], "no_ingested_production_product"
             )
+            self.assertEqual(goal["actionable_research_id"], research_id)
+            self.assertEqual(
+                goal["plan_round_argv"],
+                [
+                    "plan-round",
+                    "--workers",
+                    "1",
+                    "--mode",
+                    "auto",
+                    "--campaign",
+                    campaign_id,
+                    "--frontier-target",
+                    target_id,
+                    "--memory-id",
+                    research_id,
+                ],
+            )
+            self.assertNotIn("next_attention", goal)
+            self.assertNotIn("attention_basis_research_ids", goal)
             self.assertEqual(
                 surface["workflow_queue"][0]["goal_relevance"], "direct"
             )
