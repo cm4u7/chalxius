@@ -1,5 +1,23 @@
 # Chalxius portable deployment
 
+## 1.0.22 Bounded Frontier Continuity
+
+The `1.0.22` **Bounded Frontier Continuity** candidate gives routine frontier
+one final 32 KiB pretty-JSON budget, including maintenance attention. It keeps
+the exact projected target, head, workflow and queue identities, goal-local
+actionable Research/round, no-head recovery root, complete-set count/digest
+markers and a bounded UTF-8 mathematical cue. The advertised diagnostic
+command reconstructs the same explicit-Campaign or global workflow scope;
+explicit maintenance queue expansion remains complete.
+
+Main may move one exact context placement with `reattach_context`; unrelated
+parallel placements remain intact. Repair source and trigger artifacts may
+carry different bytes under the same local role: only actual collisions are
+qualified by exact origin, with deterministic secondary resolution if that
+generated spelling is already occupied. Non-colliding repair identities and
+all byte/provenance checks remain unchanged. These mechanisms are nontruth
+coordination and introduce no dispatch or admission gate.
+
 ## 1.0.21 Landmark-Centered Situation Awareness
 
 The `1.0.21` **Landmark-Centered Situation Awareness** candidate replaces one

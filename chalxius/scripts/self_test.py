@@ -344,7 +344,7 @@ def main() -> int:
         or campaign_surface.get("next_research_cut_exact_search_invariant")
         != "main_runs_one_bounded_exact_research_search_before_every_next_research_cut_freeze_with_or_without_context_compaction"
         or campaign_surface.get("exact_search_result_policy")
-        != "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"
+        != "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_reattach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"
         or campaign_surface.get("active_head_full_list_update")
         != "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"
         or campaign_surface.get("active_head_incremental_operations")
@@ -623,7 +623,7 @@ def main() -> int:
             '"manual_checkpoint_semantics": "optional_advisory_campaign_note_with_local_sequence_not_the_dynamic_frontier_working_state_generation_and_never_a_staleness_gate"',
             '"checkpoint_refresh_semantics": "advisory_dynamic_frontier_reconciliation_from_exact_semantic_successor_mismatch_only_never_manual_generation_delta_or_checkpoint_presence"',
             '"scheduler": "v5_main_four_factor_frontier"',
-            '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"',
+            '"exact_search_result_policy": "main_explicitly_disposes_every_material_exact_research_match_as_reference_only_attach_context_reattach_context_promote_landmark_add_head_or_retire_active_head_without_programmatic_importance_relevance_or_truth_inference"',
             '"active_head_full_list_update": "ordinary_full_list_is_additive_and_preserves_omitted_heads_exact_replacement_is_reserved_for_invalid_state_rebuild"',
             '"round_attention_recovery": "zero_argument_status_discovers_all_round_identities_and_deep_validates_only_unresolved_candidates_exact_id_and_all_remain_authoritative"',
             '"frontier_maintenance_clock": "one_replaceable_per_active_v5_campaign_default_50_minute_deadline_checked_by_every_main_facing_command_with_nonblocking_due_advisory_completion_reset_and_pause_without_daemon_dispatch_liveness_or_truth_effect"',

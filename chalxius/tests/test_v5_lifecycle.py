@@ -1904,6 +1904,237 @@ class V5LifecycleTests(unittest.TestCase):
                 before_round_entries,
             )
 
+    def test_repair_namespaces_same_local_artifact_role_for_source_and_trigger(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "repair-role-namespace")
+            lifecycle = store.v5_lifecycle()
+            report_dir = root / "reports"
+            report_dir.mkdir(parents=True, exist_ok=True)
+
+            def supervised_record(label: str, kind: str) -> dict[str, object]:
+                report_path = report_dir / f"{label}.md"
+                report_path.write_text(
+                    f"Independent {label} supervision report.\n",
+                    encoding="utf-8",
+                )
+                return lifecycle.add_research(
+                    {
+                        "kind": kind,
+                        "claim": f"The {label} supervision result is exact.",
+                        "artifacts": [
+                            {
+                                "path": report_path.relative_to(root).as_posix(),
+                                "sha256": sha256_bytes(report_path.read_bytes()),
+                                "role": "research_supervision_report",
+                            }
+                        ],
+                    },
+                    actor=f"{label}-supervisor",
+                    assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+                )
+
+            source = supervised_record("source", "insight")
+            trigger = supervised_record("trigger", "challenge")
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    str(source["research_id"]),
+                    trigger_research_id=str(trigger["research_id"]),
+                    host_task_scope_id="repair-role-namespace",
+                )
+
+            repair = lifecycle._research_record(planned["research_id"])
+            capabilities = repair["metadata"][
+                "repair_input_capability_manifest"
+            ]["input_capabilities"]
+            expected_roles = {
+                (
+                    f"source:{source['research_id']}:artifact:"
+                    "research_supervision_report"
+                ),
+                (
+                    f"trigger:{trigger['research_id']}:artifact:"
+                    "research_supervision_report"
+                ),
+            }
+            self.assertEqual(
+                {item["role"] for item in capabilities},
+                expected_roles,
+            )
+            self.assertEqual(len(capabilities), 2)
+            self.assertEqual(
+                repair["metadata"]["trigger_research_id"],
+                trigger["research_id"],
+            )
+            card = json.loads(
+                Path(str(planned["assignments"][0]["task_card_path"]))
+                .read_text(encoding="utf-8")
+            )
+            lifecycle.validate_task_card(card)
+            repair_artifacts = [
+                item
+                for item in card["mathematical_state"]["related_artifacts"]
+                if item["source_research_id"] == repair["research_id"]
+            ]
+            self.assertEqual(len(repair_artifacts), 2)
+            self.assertEqual(
+                {
+                    item["role"].removeprefix(
+                        f"{repair['research_id']}:"
+                    )
+                    for item in repair_artifacts
+                },
+                expected_roles,
+            )
+
+    def test_repair_collision_qualification_bounds_long_local_roles(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "repair-long-role-namespace")
+            lifecycle = store.v5_lifecycle()
+            report_dir = root / "reports"
+            report_dir.mkdir(parents=True, exist_ok=True)
+            local_role = "r" * 1_000
+            records: list[dict[str, object]] = []
+            for label, kind in (("source", "insight"), ("trigger", "challenge")):
+                report_path = report_dir / f"{label}.md"
+                report_path.write_text(
+                    f"Distinct {label} bytes.\n",
+                    encoding="utf-8",
+                )
+                records.append(
+                    lifecycle.add_research(
+                        {
+                            "kind": kind,
+                            "claim": f"The {label} result is exact.",
+                            "artifacts": [
+                                {
+                                    "path": report_path.relative_to(root).as_posix(),
+                                    "sha256": sha256_bytes(
+                                        report_path.read_bytes()
+                                    ),
+                                    "role": local_role,
+                                }
+                            ],
+                        },
+                        actor=f"{label}-supervisor",
+                        assurance_contract_revision=(
+                            V5_ASSURANCE_CONTRACT_REVISION
+                        ),
+                    )
+                )
+            source, trigger = records
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    str(source["research_id"]),
+                    trigger_research_id=str(trigger["research_id"]),
+                    host_task_scope_id="repair-long-role-namespace",
+                )
+            repair = lifecycle._research_record(planned["research_id"])
+            roles = [
+                item["role"]
+                for item in repair["metadata"][
+                    "repair_input_capability_manifest"
+                ]["input_capabilities"]
+            ]
+            self.assertEqual(len(roles), 2)
+            self.assertEqual(len(set(roles)), 2)
+            self.assertTrue(all(len(role) <= 1_024 for role in roles))
+            self.assertTrue(
+                all(":artifact:role-sha256:" in role for role in roles)
+            )
+
+    def test_repair_generated_role_cannot_be_captured_by_a_local_role(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v5"
+            store = self._store(root, "repair-generated-role-capture")
+            lifecycle = store.v5_lifecycle()
+            report_dir = root / "reports"
+            report_dir.mkdir(parents=True, exist_ok=True)
+
+            trigger_path = report_dir / "trigger-shared.md"
+            trigger_path.write_text("Trigger shared bytes.\n", encoding="utf-8")
+            trigger = lifecycle.add_research(
+                {
+                    "kind": "challenge",
+                    "claim": "The trigger carries one shared role.",
+                    "artifacts": [
+                        {
+                            "path": trigger_path.relative_to(root).as_posix(),
+                            "sha256": sha256_bytes(trigger_path.read_bytes()),
+                            "role": "shared",
+                        }
+                    ],
+                },
+                actor="trigger-supervisor",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            captured_role = (
+                f"trigger:{trigger['research_id']}:artifact:shared"
+            )
+            source_artifacts = []
+            for index, role in enumerate(("shared", captured_role)):
+                path = report_dir / f"source-{index}.md"
+                path.write_text(
+                    f"Distinct source bytes {index}.\n", encoding="utf-8"
+                )
+                source_artifacts.append(
+                    {
+                        "path": path.relative_to(root).as_posix(),
+                        "sha256": sha256_bytes(path.read_bytes()),
+                        "role": role,
+                    }
+                )
+            source = lifecycle.add_research(
+                {
+                    "kind": "insight",
+                    "claim": "The source carries a colliding role spelling.",
+                    "artifacts": source_artifacts,
+                },
+                actor="source-supervisor",
+                assurance_contract_revision=V5_ASSURANCE_CONTRACT_REVISION,
+            )
+            with patch.object(
+                lifecycle,
+                "_validate_bound_runtime_binding",
+                side_effect=lambda value, **_: value,
+            ):
+                planned = lifecycle.create_repair_round(
+                    str(source["research_id"]),
+                    trigger_research_id=str(trigger["research_id"]),
+                    host_task_scope_id="repair-generated-role-capture",
+                )
+            repair = lifecycle._research_record(planned["research_id"])
+            capabilities = repair["metadata"][
+                "repair_input_capability_manifest"
+            ]["input_capabilities"]
+            self.assertEqual(len(capabilities), 3)
+            roles = [item["role"] for item in capabilities]
+            self.assertEqual(len(set(roles)), 3)
+            self.assertTrue(
+                any(":artifact:binding-sha256:" in role for role in roles)
+            )
+            lifecycle.validate_task_card(
+                json.loads(
+                    Path(str(planned["assignments"][0]["task_card_path"]))
+                    .read_text(encoding="utf-8")
+                )
+            )
+
     def test_schema_v3_split_repair_commits_worker_chosen_members_atomically(
         self,
     ) -> None:

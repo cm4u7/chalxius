@@ -3,7 +3,32 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.21 — Landmark-Centered Situation Awareness
+# Chalxius 1.0.22 — Bounded Frontier Continuity
+
+## 1.0.22 bounded frontier and exact repair continuity
+
+Routine `frontier` has a final 32 KiB serialized-output budget in addition to
+its item limit. It removes duplicated operational prose before identities,
+keeps every projected target and workflow item, and retains exact
+count/digest/truncation markers plus a bounded mathematical cue when an
+extreme Campaign requires the identity-index fallback. Its diagnostic command
+reconstructs the same explicit-Campaign or global workflow scope. Explicit maintenance queue expansion returns
+the complete current queue; routine reads remain bounded. These are read
+projections only and have no dispatch, Research, supervision, or truth effect.
+
+Context multiplicity across genuinely parallel heads remains legal. When Main
+has decided that one exact placement should move, use `reattach_context` with
+the context Research id, exact old head (or `null`), exact new active head, and
+reason. The operation moves only that placement and preserves every other
+legitimate placement; it does not infer a successor or rewrite Research.
+
+Repair source and trigger Research may carry different artifact bytes under
+the same local role. `plan-repair-round` now qualifies only the colliding
+direct roles by function and Research identity, while non-colliding roles keep
+their established spelling and content-addressed retry identity. Long
+qualified roles use a deterministic digest suffix. Existing byte, provenance,
+closure, and uniqueness validation remains in force; no new repair gate is
+added.
 
 ## 1.0.21 landmark-centered full maintenance
 

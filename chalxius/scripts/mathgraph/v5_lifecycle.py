@@ -204,9 +204,18 @@ V5_CAMPAIGN_CHECKPOINT_GLOBAL_LOSS_DIAGNOSTICS = frozenset(
         "checkpoint_target_id_malformed",
     }
 )
-V5_ROUTINE_FRONTIER_HEAD_CLAIM_LIMIT = 300
-V5_ROUTINE_FRONTIER_ROOT_CLAIM_LIMIT = 400
-V5_ROUTINE_FRONTIER_HISTORY_CLAIM_LIMIT = 320
+V5_ROUTINE_FRONTIER_HEAD_CLAIM_LIMIT = 140
+V5_ROUTINE_FRONTIER_ROOT_CLAIM_LIMIT = 180
+V5_ROUTINE_FRONTIER_HISTORY_CLAIM_LIMIT = 140
+# A routine frontier is injected into Main's working context, unlike the
+# explicit diagnostic and maintenance drill-downs.  Bound both the number of
+# operational rows and the serialized decision surface so a large Campaign
+# cannot hide a middle target behind tool-output truncation.
+V5_ROUTINE_FRONTIER_ITEM_LIMIT = 16
+V5_ROUTINE_FRONTIER_BYTE_BUDGET = 32 * 1024
+V5_ROUTINE_FRONTIER_LANDMARK_PREVIEW = 1
+V5_ROUTINE_FRONTIER_CONTEXT_PREVIEW = 1
+V5_ROUTINE_FRONTIER_REASON_LIMIT = 100
 V5_TERMINAL_SEAL_REVISION = "chalxius-v5-terminal-worker-seal-2"
 # Finder may materialize these two host-owned decoration files when a terminal
 # bundle is browsed.  They are outside the sealed authority: the only
@@ -2612,17 +2621,15 @@ class V5LifecycleManager:
         _inspection_context: RoundInspectionContext,
     ) -> dict[str, Any]:
         capabilities: list[dict[str, str]] = list(explicit_capabilities)
+        direct_capabilities: list[
+            tuple[dict[str, str], str, str]
+        ] = []
         for origin, record in (
             ("source", source),
             ("trigger", trigger),
         ):
             if record is None:
                 continue
-            # Preserve the source record's declared artifact role in the
-            # repair capability closure.  The role is part of the frozen
-            # source contract; prefixing it with an actor/research id here
-            # changes an otherwise byte-identical repair artifact projection
-            # and breaks compatibility with existing source-bound repairs.
             for item in record.get("metadata", {}).get("artifacts", []):
                 if (
                     not isinstance(item, dict)
@@ -2638,12 +2645,16 @@ class V5LifecycleManager:
                     label="repair source artifact",
                     _inspection_context=_inspection_context,
                 )
-                capabilities.append(
-                    {
-                        "path": item["path"],
-                        "sha256": item["sha256"],
-                        "role": item["role"],
-                    }
+                direct_capabilities.append(
+                    (
+                        {
+                            "path": item["path"],
+                            "sha256": item["sha256"],
+                            "role": item["role"],
+                        },
+                        origin,
+                        record["research_id"],
+                    )
                 )
             capabilities.extend(
                 self._repair_capabilities_from_assignment_provenance(
@@ -2652,6 +2663,75 @@ class V5LifecycleManager:
                     _inspection_context=_inspection_context,
                 )
             )
+
+        # Direct artifact roles are local names owned by their Research
+        # records.  Preserve the historical unqualified spelling whenever it
+        # is already unambiguous, so an exact retry across an upgrade keeps the
+        # same content-addressed Repair Research identity.  Only a role bucket
+        # that actually denotes different byte bindings is lifted into the
+        # owning source/trigger namespace.  This is a collision repair, not a
+        # new prerequisite or a compatibility branch.
+        bindings_by_local_role: dict[str, set[tuple[str, str]]] = {}
+        for item in capabilities:
+            bindings_by_local_role.setdefault(item["role"], set()).add(
+                (item["path"], item["sha256"])
+            )
+        for item, _origin, _research_id in direct_capabilities:
+            bindings_by_local_role.setdefault(item["role"], set()).add(
+                (item["path"], item["sha256"])
+            )
+        conflicting_local_roles = {
+            role
+            for role, bindings in bindings_by_local_role.items()
+            if len(bindings) > 1
+        }
+        used_bindings_by_role = {
+            role: set(bindings)
+            for role, bindings in bindings_by_local_role.items()
+        }
+        for item, origin, research_id in direct_capabilities:
+            role = item["role"]
+            if role in conflicting_local_roles:
+                prefix = f"{origin}:{research_id}:artifact:"
+                qualified = prefix + role
+                if len(qualified) > 1_024:
+                    qualified = (
+                        prefix
+                        + "role-sha256:"
+                        + sha256_bytes(role.encode("utf-8"))
+                    )
+                binding = (item["path"], item["sha256"])
+                occupied = used_bindings_by_role.get(qualified, set())
+                if occupied.difference({binding}):
+                    # A valid local role may itself equal the generated
+                    # source/trigger-qualified spelling.  Resolve that finite
+                    # namespace capture from the complete known role set;
+                    # never reserve user vocabulary or weaken byte identity.
+                    counter = 0
+                    while True:
+                        qualified = (
+                            prefix
+                            + "binding-sha256:"
+                            + sha256_json(
+                                {
+                                    "local_role": role,
+                                    "path": item["path"],
+                                    "sha256": item["sha256"],
+                                    "counter": counter,
+                                }
+                            )
+                        )
+                        occupied = used_bindings_by_role.get(
+                            qualified, set()
+                        )
+                        if not occupied.difference({binding}):
+                            break
+                        counter += 1
+                item = {**item, "role": qualified}
+                used_bindings_by_role.setdefault(qualified, set()).add(
+                    binding
+                )
+            capabilities.append(item)
         normalized = self._normalize_repair_input_capabilities(capabilities)
         self._validate_repair_input_capability_files(
             normalized,
@@ -12195,6 +12275,7 @@ class V5LifecycleManager:
 
         attention_warnings: list[dict[str, Any]] = []
         explicit_retirements: list[dict[str, str]] = []
+        explicit_context_reattachments: list[dict[str, Any]] = []
         fields = {
             "active_head_research_ids": V5_CAMPAIGN_ACTIVE_HEAD_LIMIT,
             "historical_landmark_research_ids": None,
@@ -12316,6 +12397,80 @@ class V5LifecycleManager:
                         "research_id": research_id,
                         "attached_head_research_id": attached_head_id,
                         "reason": normalized_reason,
+                    }
+                )
+                retain_attention_member(research_id)
+            elif operation == "reattach_context":
+                if set(update) != {
+                    "operation",
+                    "research_id",
+                    "from_head_research_id",
+                    "attached_head_research_id",
+                    "reason",
+                }:
+                    raise ValueError("reattach_context fields are not exact")
+                from_head_id = update["from_head_research_id"]
+                if from_head_id is not None:
+                    from_head_id = validate_memory_id(from_head_id)
+                attached_head_id = validate_memory_id(
+                    update["attached_head_research_id"]
+                )
+                if attached_head_id not in row["active_head_research_ids"]:
+                    raise ValueError(
+                        "context reattachment destination is not an active head"
+                    )
+                if from_head_id == attached_head_id:
+                    raise ValueError(
+                        "context reattachment source and destination must differ"
+                    )
+                reason = update["reason"]
+                if (
+                    research_id in row["active_head_research_ids"]
+                    or not isinstance(reason, str)
+                    or not reason.strip()
+                    or len(reason) > 2_048
+                ):
+                    raise ValueError("Campaign head context is invalid")
+                source_matches = [
+                    context
+                    for context in row["head_contexts"]
+                    if context.get("research_id") == research_id
+                    and context.get("attached_head_research_id")
+                    == from_head_id
+                ]
+                destination_matches = [
+                    context
+                    for context in row["head_contexts"]
+                    if context.get("research_id") == research_id
+                    and context.get("attached_head_research_id")
+                    == attached_head_id
+                ]
+                if not source_matches and not destination_matches:
+                    raise ValueError(
+                        "context reattachment source placement does not exist"
+                    )
+                normalized_reason = reason.strip()
+                row["head_contexts"] = [
+                    context
+                    for context in row["head_contexts"]
+                    if not (
+                        context.get("research_id") == research_id
+                        and context.get("attached_head_research_id")
+                        in {from_head_id, attached_head_id}
+                    )
+                ]
+                row["head_contexts"].append(
+                    {
+                        "research_id": research_id,
+                        "attached_head_research_id": attached_head_id,
+                        "reason": normalized_reason,
+                    }
+                )
+                explicit_context_reattachments.append(
+                    {
+                        "research_id": research_id,
+                        "from_head_research_id": from_head_id,
+                        "to_head_research_id": attached_head_id,
                     }
                 )
                 retain_attention_member(research_id)
@@ -12704,6 +12859,7 @@ class V5LifecycleManager:
                 "added_head_research_ids": added_head_ids,
                 "retired_head_research_ids": retired_head_ids,
                 "retirements": explicit_retirements,
+                "context_reattachments": explicit_context_reattachments,
                 "detached_context_count": detached_context_count,
                 "transferred_context_count": transferred_context_count,
                 "recent_attainment_rolloff_research_ids": (
@@ -12723,6 +12879,49 @@ class V5LifecycleManager:
             },
             "truth_effect": "none",
         }
+
+    @staticmethod
+    def _compact_routine_supervision_coverage(value: Any) -> Any:
+        """Keep only the scope state and exact exceptional identities."""
+
+        if not isinstance(value, list):
+            return value
+        items = [item for item in value if isinstance(item, dict)]
+        production_round_ids = {
+            item.get("production_round_id")
+            for item in items
+            if isinstance(item.get("production_round_id"), str)
+        }
+        component_ids = {
+            item.get("source_component_id")
+            for item in items
+            if isinstance(item.get("source_component_id"), str)
+        }
+        result: list[dict[str, Any]] = []
+        for item in items:
+            compact_item = {
+                key: item[key]
+                for key in ("scope", "state")
+                if key in item
+            }
+            if len(production_round_ids) > 1:
+                compact_item["production_round_id"] = item.get(
+                    "production_round_id"
+                )
+            if len(component_ids) > 1:
+                compact_item["source_component_id"] = item.get(
+                    "source_component_id"
+                )
+            for key in (
+                "result_research_ids",
+                "pending_round_ids",
+                "unsafe_round_ids",
+            ):
+                values = item.get(key)
+                if isinstance(values, list) and values:
+                    compact_item[key] = values
+            result.append(compact_item)
+        return result
 
     @staticmethod
     def _compact_goal_coverage_entry(
@@ -12746,46 +12945,6 @@ class V5LifecycleManager:
                 summary["claim"] = claim
             return summary
 
-        def compact_supervision_coverage(value: Any) -> Any:
-            if not isinstance(value, list):
-                return value
-            items = [item for item in value if isinstance(item, dict)]
-            production_round_ids = {
-                item.get("production_round_id")
-                for item in items
-                if isinstance(item.get("production_round_id"), str)
-            }
-            component_ids = {
-                item.get("source_component_id")
-                for item in items
-                if isinstance(item.get("source_component_id"), str)
-            }
-            result: list[dict[str, Any]] = []
-            for item in items:
-                compact_item = {
-                    key: item[key]
-                    for key in ("scope", "state")
-                    if key in item
-                }
-                if len(production_round_ids) > 1:
-                    compact_item["production_round_id"] = item.get(
-                        "production_round_id"
-                    )
-                if len(component_ids) > 1:
-                    compact_item["source_component_id"] = item.get(
-                        "source_component_id"
-                    )
-                for key in (
-                    "result_research_ids",
-                    "pending_round_ids",
-                    "unsafe_round_ids",
-                ):
-                    values = item.get(key)
-                    if isinstance(values, list) and values:
-                        compact_item[key] = values
-                result.append(compact_item)
-            return result
-
         routine_fields = (
             "target_id",
             "label",
@@ -12805,7 +12964,6 @@ class V5LifecycleManager:
             "recent_attained_ids_sha256",
             "recent_attained_truncated",
             "historical_mathematical_summary",
-            "recent_attained_mathematical_history",
             "history_review_recommended",
             "history_review_reasons",
             "recovery_root_research_id",
@@ -12818,9 +12976,6 @@ class V5LifecycleManager:
             "actionable_research_id",
             "actionable_round_id",
             "actionable_research_ids",
-            "supervision_coverage",
-            "supervision_coverage_count",
-            "plan_round_argv",
             "active_head_research_ids",
             "current_active_head_count",
             "current_active_head_ids_sha256",
@@ -12865,20 +13020,20 @@ class V5LifecycleManager:
             landmark_preview = [
                 {
                     "research_id": item.get("research_id"),
-                    "reason": _bounded_text(item.get("reason"), 320),
+                    "reason": _bounded_text(
+                        item.get("reason"),
+                        V5_ROUTINE_FRONTIER_REASON_LIMIT,
+                    ),
                     "mathematical_summary": compact_mathematical_summary(
                         item.get("mathematical_summary")
                     ),
                 }
                 for item in historical_landmarks[
-                    :V5_CAMPAIGN_LANDMARK_SUMMARY_PREVIEW
+                    :V5_ROUTINE_FRONTIER_LANDMARK_PREVIEW
                 ]
                 if isinstance(item, dict)
             ]
             compact["historical_landmarks"] = landmark_preview
-            compact["historical_landmark_research_ids"] = [
-                item["research_id"] for item in landmark_preview
-            ]
             compact["historical_landmark_shown_count"] = len(
                 landmark_preview
             )
@@ -12891,59 +13046,42 @@ class V5LifecycleManager:
                     "attached_head_research_id": item.get(
                         "attached_head_research_id"
                     ),
-                    "reason": _bounded_text(item.get("reason"), 320),
+                    "reason": _bounded_text(
+                        item.get("reason"),
+                        V5_ROUTINE_FRONTIER_REASON_LIMIT,
+                    ),
                     "mathematical_summary": compact_mathematical_summary(
                         item.get("mathematical_summary")
                     ),
                 }
                 for item in head_contexts[
-                    :V5_CAMPAIGN_HEAD_CONTEXT_SUMMARY_PREVIEW
+                    :V5_ROUTINE_FRONTIER_CONTEXT_PREVIEW
                 ]
                 if isinstance(item, dict)
             ]
-        if "supervision_coverage" in compact:
-            compact["supervision_coverage"] = compact_supervision_coverage(
-                compact["supervision_coverage"]
-            )
         raw_head_actions = entry.get("active_head_actions")
         if isinstance(raw_head_actions, list):
-            compact_actions: list[dict[str, Any]] = []
+            head_summaries: list[dict[str, Any]] = []
             for action in raw_head_actions:
                 if not isinstance(action, dict):
                     continue
+                research_id = action.get("research_id")
                 compact_action = {
-                    key: action[key]
-                    for key in (
-                        "research_id",
-                        "workflow_root_research_id",
-                        "checkpoint_head_state",
-                        "next_action",
-                        "why_now",
-                        "actionable_research_id",
-                        "actionable_round_id",
-                        "current_route_research_ids",
-                        "supervision_coverage",
-                        "plan_round_argv",
-                    )
-                    if key in action
+                    "research_id": research_id,
+                    "workflow_research_id": action.get(
+                        "workflow_root_research_id", research_id
+                    ),
                 }
+                if "checkpoint_head_state" in action:
+                    compact_action["checkpoint_head_state"] = action[
+                        "checkpoint_head_state"
+                    ]
                 if "mathematical_summary" in action:
                     compact_action["mathematical_summary"] = (
                         compact_mathematical_summary(
                             action["mathematical_summary"]
                         )
                     )
-                if "supervision_coverage" in compact_action:
-                    compact_action["supervision_coverage"] = (
-                        compact_supervision_coverage(
-                            compact_action["supervision_coverage"]
-                        )
-                    )
-                if (
-                    compact_action.get("workflow_root_research_id")
-                    == compact_action.get("research_id")
-                ):
-                    compact_action.pop("workflow_root_research_id", None)
                 mathematical_summary = compact_action.get(
                     "mathematical_summary"
                 )
@@ -12953,25 +13091,8 @@ class V5LifecycleManager:
                     == compact_action.get("research_id")
                 ):
                     mathematical_summary.pop("research_id", None)
-                if (
-                    compact_action.get("actionable_research_id")
-                    == compact_action.get("research_id")
-                ):
-                    compact_action.pop("actionable_research_id", None)
-                for key in (
-                    "actionable_round_id",
-                    "current_route_research_ids",
-                    "plan_round_argv",
-                ):
-                    if compact_action.get(key) in (None, []):
-                        compact_action.pop(key, None)
-                compact_actions.append(compact_action)
-            compact["active_head_actions"] = compact_actions
-            # Per-head scope state is the actionable representation.  The
-            # target-level copy contains the same bytes for one-head targets.
-            if compact_actions:
-                compact.pop("supervision_coverage", None)
-                compact.pop("supervision_coverage_count", None)
+                head_summaries.append(compact_action)
+            compact["active_head_summaries"] = head_summaries
         if compact.get("history_review_recommended") is not True:
             compact.pop("history_review_recommended", None)
             compact.pop("history_review_reasons", None)
@@ -12979,8 +13100,6 @@ class V5LifecycleManager:
         actionable_id = compact.get("actionable_research_id")
         if actionable_ids in ([], [actionable_id]):
             compact.pop("actionable_research_ids", None)
-        if compact.get("plan_round_argv") in (None, []):
-            compact.pop("plan_round_argv", None)
         if len(compact.get("active_head_research_ids", [])) < 2:
             compact.pop("head_context_attachment_counts", None)
         if compact.get("active_head_research_ids"):
@@ -13012,10 +13131,25 @@ class V5LifecycleManager:
             "actionable_research_ids",
             "actionable_research_count",
             "supervision_coverage",
+            "supervision_coverage_count",
+            "supervision_coverage_sha256",
         )
         compact = {key: entry[key] for key in fields if key in entry}
         if include_claim and isinstance(entry.get("claim"), str):
-            compact["claim"] = entry["claim"]
+            compact["claim"] = _bounded_text(entry["claim"], 220)
+        if isinstance(compact.get("why_now"), str):
+            compact["why_now"] = _bounded_text(
+                compact["why_now"],
+                V5_ROUTINE_FRONTIER_REASON_LIMIT,
+            )
+        if "supervision_coverage" in compact:
+            compact["supervision_coverage"] = (
+                V5LifecycleManager._compact_routine_supervision_coverage(
+                    compact["supervision_coverage"]
+                )
+            )
+            compact.pop("supervision_coverage_count", None)
+            compact.pop("supervision_coverage_sha256", None)
         research_id = compact.get("research_id")
         actionable_id = compact.get("actionable_research_id")
         if actionable_id == research_id:
@@ -13033,11 +13167,17 @@ class V5LifecycleManager:
         if actionable_id != research_id:
             for key in ("actionable_claim", "actionable_kind"):
                 if entry.get(key) not in (None, ""):
-                    compact[key] = entry[key]
+                    compact[key] = (
+                        _bounded_text(entry[key], 120)
+                        if key == "actionable_claim"
+                        else entry[key]
+                    )
         if entry.get("workgroup_member_count", 1) > 1:
             compact["workgroup_member_count"] = entry[
                 "workgroup_member_count"
             ]
+        if compact.get("actionable_research_count") in (None, 0, 1):
+            compact.pop("actionable_research_count", None)
         basis_research = entry.get("attention_basis_research_ids")
         if isinstance(basis_research, list) and basis_research not in (
             [],
@@ -13045,20 +13185,440 @@ class V5LifecycleManager:
             [actionable_id],
             actionable_ids,
         ):
-            compact["attention_basis_research_ids"] = basis_research
+            compact["attention_basis_research_ids"] = basis_research[:2]
+            if len(basis_research) > 2:
+                compact["attention_basis_research_count"] = len(
+                    basis_research
+                )
+                compact["attention_basis_research_ids_sha256"] = sha256_json(
+                    basis_research
+                )
+                compact["attention_basis_research_ids_truncated"] = True
         basis_round = entry.get("attention_basis_round_ids")
         if isinstance(basis_round, list) and basis_round not in (
             [],
             [entry.get("actionable_round_id")],
         ):
-            compact["attention_basis_round_ids"] = basis_round
+            compact["attention_basis_round_ids"] = basis_round[:2]
+            if len(basis_round) > 2:
+                compact["attention_basis_round_count"] = len(basis_round)
+                compact["attention_basis_round_ids_sha256"] = sha256_json(
+                    basis_round
+                )
+                compact["attention_basis_round_ids_truncated"] = True
         if entry.get("attention_reason") not in (
             None,
             "",
             entry.get("why_now"),
         ):
-            compact["attention_reason"] = entry["attention_reason"]
+            compact["attention_reason"] = _bounded_text(
+                entry["attention_reason"],
+                V5_ROUTINE_FRONTIER_REASON_LIMIT,
+            )
         return compact
+
+    @staticmethod
+    def _routine_frontier_serialized_bytes(value: dict[str, Any]) -> int:
+        return 1 + len(
+            json.dumps(
+                value,
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            ).encode("utf-8")
+        )
+
+    @classmethod
+    def _bound_routine_frontier_surface(
+        cls,
+        routine: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Fit routine working memory without dropping target identities.
+
+        Rich forensic bytes stay available through the existing diagnostic and
+        target-scoped maintenance surfaces.  The fallback removes previews
+        before identities or actionable routing, and it never changes graph,
+        Campaign, supervision, or truth state.
+        """
+
+        diagnostic_command = routine.get(
+            "diagnostic_command", "frontier --diagnostic"
+        )
+        existing_projection = routine.get("routine_projection")
+        if (
+            isinstance(existing_projection, dict)
+            and existing_projection.get("revision")
+            == "chalxius-v5-routine-frontier-budget-1"
+        ):
+            projection = existing_projection
+            projection.setdefault(
+                "byte_budget", V5_ROUTINE_FRONTIER_BYTE_BUDGET
+            )
+            projection["diagnostic_command"] = diagnostic_command
+        else:
+            projection = {
+                "revision": "chalxius-v5-routine-frontier-budget-1",
+                "byte_budget": V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+                "detail": "mathematical_cues_and_actions",
+                "diagnostic_command": diagnostic_command,
+            }
+
+        detail_order = {
+            "mathematical_cues_and_actions": 0,
+            "identity_and_action": 1,
+            "bounded_identity_and_action": 2,
+            "identity_index": 3,
+        }
+
+        def advance_detail(detail: str) -> None:
+            current = projection.get("detail")
+            if detail_order.get(detail, 0) > detail_order.get(current, -1):
+                projection["detail"] = detail
+
+        def bounded_utf8_text(value: Any, maximum_bytes: int) -> str:
+            if not isinstance(value, str):
+                return ""
+            raw = value.encode("utf-8")
+            if len(raw) <= maximum_bytes:
+                return value
+            suffix = b"..."
+            prefix = raw[: max(0, maximum_bytes - len(suffix))]
+            return prefix.decode("utf-8", errors="ignore") + suffix.decode()
+
+        def tighten_identity_index() -> None:
+            """Make an existing identity index terminal and byte-bounded."""
+
+            projection["detail"] = "identity_index"
+            projection["hard_bound_applied"] = True
+            attention = routine.get("main_attention")
+            if isinstance(attention, dict):
+                maintenance = attention.get("frontier_maintenance")
+                maintenance = (
+                    maintenance if isinstance(maintenance, dict) else {}
+                )
+                routine["main_attention"] = {
+                    "state": attention.get("state"),
+                    "campaign_id": maintenance.get("campaign_id"),
+                    "due_since": maintenance.get("due_since"),
+                    "command_blocking_effect": "none",
+                    "truth_effect": "none",
+                }
+            if (
+                cls._routine_frontier_serialized_bytes(routine)
+                <= V5_ROUTINE_FRONTIER_BYTE_BUDGET
+            ):
+                projection["budget_exceeded"] = False
+                return
+
+            for goal in routine.get("goal_coverage", []):
+                if not isinstance(goal, dict):
+                    continue
+                if isinstance(goal.get("active_head_research_ids"), list):
+                    goal.pop("current_active_head_count", None)
+                    goal.pop("current_active_head_ids_sha256", None)
+                goal.pop("work_completion_status", None)
+                cue = goal.get("mathematical_cue")
+                if isinstance(cue, dict) and isinstance(cue.get("claim"), str):
+                    cue["claim"] = bounded_utf8_text(cue["claim"], 80)
+            for item in routine.get("workflow_queue", []):
+                if not isinstance(item, dict):
+                    continue
+                preview = item.get("goal_target_ids_preview")
+                if isinstance(preview, list) and len(preview) > 2:
+                    item["goal_target_ids_preview"] = [
+                        preview[0],
+                        preview[-1],
+                    ]
+            projection["budget_exceeded"] = (
+                cls._routine_frontier_serialized_bytes(routine)
+                > V5_ROUTINE_FRONTIER_BYTE_BUDGET
+            )
+
+        routine["routine_projection"] = projection
+        if (
+            cls._routine_frontier_serialized_bytes(routine)
+            <= V5_ROUTINE_FRONTIER_BYTE_BUDGET
+        ):
+            return routine
+        if projection.get("detail") == "identity_index":
+            tighten_identity_index()
+            return routine
+
+        for goal in routine.get("goal_coverage", []):
+            if not isinstance(goal, dict):
+                continue
+            removed = False
+            for key in (
+                "historical_landmarks",
+                "historical_landmark_research_ids",
+                "historical_landmark_shown_count",
+                "head_contexts",
+                "recent_attained_mathematical_history",
+            ):
+                if key in goal:
+                    goal.pop(key, None)
+                    removed = True
+            if removed:
+                goal["mathematical_previews_omitted_for_budget"] = True
+        for item in routine.get("workflow_queue", []):
+            if not isinstance(item, dict):
+                continue
+            item.pop("attention_basis_research_ids", None)
+            item.pop("attention_basis_round_ids", None)
+            item.pop("attention_reason", None)
+        advance_detail("identity_and_action")
+        if (
+            cls._routine_frontier_serialized_bytes(routine)
+            <= V5_ROUTINE_FRONTIER_BYTE_BUDGET
+        ):
+            return routine
+
+        for goal in routine.get("goal_coverage", []):
+            if not isinstance(goal, dict):
+                continue
+            if goal.get("active_head_research_ids"):
+                goal.pop("root_claim", None)
+            elif isinstance(goal.get("root_claim"), str):
+                goal["root_claim"] = _bounded_text(
+                    goal["root_claim"],
+                    V5_ROUTINE_FRONTIER_ROOT_CLAIM_LIMIT,
+                )
+            goal.pop("recent_attained_research_ids", None)
+            summaries = goal.get("active_head_summaries")
+            if isinstance(summaries, list):
+                goal["active_head_summaries"] = [
+                    {
+                        key: summary[key]
+                        for key in (
+                            "research_id",
+                            "workflow_research_id",
+                            "checkpoint_head_state",
+                        )
+                        if isinstance(summary, dict) and key in summary
+                    }
+                    | (
+                        {
+                            "mathematical_summary": {
+                                key: (
+                                    _bounded_text(value, 120)
+                                    if key == "claim"
+                                    else value
+                                )
+                                for key, value in summary[
+                                    "mathematical_summary"
+                                ].items()
+                                if key in {"kind", "relation", "claim"}
+                            }
+                        }
+                        if index == 0
+                        and isinstance(summary, dict)
+                        and isinstance(
+                            summary.get("mathematical_summary"), dict
+                        )
+                        else {}
+                    )
+                    for index, summary in enumerate(summaries)
+                ]
+        for item in routine.get("workflow_queue", []):
+            if not isinstance(item, dict):
+                continue
+            item.pop("claim", None)
+            item.pop("actionable_claim", None)
+            item.pop("why_now", None)
+            item.pop("supervision_coverage", None)
+        advance_detail("bounded_identity_and_action")
+        if (
+            cls._routine_frontier_serialized_bytes(routine)
+            <= V5_ROUTINE_FRONTIER_BYTE_BUDGET
+        ):
+            return routine
+
+        # A pathological number of Campaign targets can itself exceed the
+        # context budget even after all prose is gone.  In that case retain a
+        # complete digest/count plus a visible edge preview, and keep every
+        # currently projected target and workflow identity in a small index.
+        # The explicit diagnostic command remains the lossless read surface.
+        all_target_ids = routine.get("goal_target_ids", [])
+        if not isinstance(all_target_ids, list):
+            all_target_ids = []
+
+        def compact_identity_list(
+            values: Any,
+            *,
+            maximum: int = 8,
+        ) -> dict[str, Any]:
+            identities = (
+                [item for item in values if isinstance(item, str)]
+                if isinstance(values, list)
+                else []
+            )
+            if len(identities) <= maximum:
+                return {"ids": identities}
+            half = maximum // 2
+            return {
+                "ids_preview": [*identities[:half], *identities[-half:]],
+                "count": len(identities),
+                "ids_sha256": sha256_json(identities),
+                "truncated": True,
+            }
+
+        compact_goals: list[dict[str, Any]] = []
+        for goal in routine.get("goal_coverage", []):
+            if not isinstance(goal, dict):
+                continue
+            active_ids = compact_identity_list(
+                goal.get("active_head_research_ids", []),
+                maximum=V5_CAMPAIGN_ACTIVE_HEAD_LIMIT,
+            )
+            head_summaries = [
+                item
+                for item in goal.get("active_head_summaries", [])
+                if isinstance(item, dict)
+            ]
+            workflow_ids = [
+                item.get("workflow_research_id", item.get("research_id"))
+                for item in head_summaries
+                if isinstance(
+                    item.get("workflow_research_id", item.get("research_id")),
+                    str,
+                )
+            ]
+            mathematical_cue = next(
+                (
+                    {
+                        "research_id": item.get("research_id"),
+                        "kind": summary.get("kind"),
+                        "claim": _bounded_text(summary.get("claim"), 120),
+                    }
+                    for item in head_summaries
+                    for summary in [item.get("mathematical_summary")]
+                    if isinstance(summary, dict)
+                ),
+                None,
+            )
+            if mathematical_cue is None and isinstance(
+                goal.get("root_claim"), str
+            ):
+                mathematical_cue = {
+                    "research_id": goal.get(
+                        "recovery_root_research_id",
+                        goal.get("root_research_id"),
+                    ),
+                    "kind": "recovery_root",
+                    "claim": _bounded_text(goal["root_claim"], 120),
+                }
+            compact_goals.append(
+                {
+                    key: goal[key]
+                    for key in (
+                        "target_id",
+                        "coverage_status",
+                        "work_completion_status",
+                        "next_action",
+                        "actionable_research_id",
+                        "actionable_round_id",
+                        "root_research_id",
+                        "recovery_root_research_id",
+                        "recovery_root_source",
+                        "current_active_head_count",
+                        "current_active_head_ids_sha256",
+                    )
+                    if key in goal and goal[key] not in (None, "", [])
+                }
+                | {
+                    (
+                        "active_head_research_ids"
+                        if key == "ids"
+                        else "active_head_research_" + key
+                    ): value
+                    for key, value in active_ids.items()
+                    if value not in (None, "", [])
+                }
+                | (
+                    {"active_head_workflow_research_ids": workflow_ids}
+                    if workflow_ids
+                    else {}
+                )
+                | (
+                    {"mathematical_cue": mathematical_cue}
+                    if mathematical_cue is not None
+                    else {}
+                )
+            )
+
+        compact_queue: list[dict[str, Any]] = []
+        for item in routine.get("workflow_queue", []):
+            if not isinstance(item, dict):
+                continue
+            target_ids = compact_identity_list(item.get("goal_target_ids", []))
+            queue_item = {
+                key: item[key]
+                for key in (
+                    "research_id",
+                    "next_action",
+                    "actionable_research_id",
+                    "actionable_round_id",
+                )
+                if key in item and item[key] not in (None, "", [])
+            }
+            queue_item.update(
+                {
+                    (
+                        "goal_target_ids"
+                        if key == "ids"
+                        else "goal_target_ids_preview"
+                        if key == "ids_preview"
+                        else "goal_target_ids_sha256"
+                        if key == "ids_sha256"
+                        else "goal_target_id_count"
+                        if key == "count"
+                        else "goal_target_ids_truncated"
+                    ): value
+                    for key, value in target_ids.items()
+                    if value not in (None, "", [])
+                }
+            )
+            compact_queue.append(queue_item)
+
+        target_identity = compact_identity_list(all_target_ids)
+        advance_detail("identity_index")
+        projection["hard_bound_applied"] = True
+        minimal = {
+            key: routine[key]
+            for key in (
+                "campaign_id",
+                "goal_target_count",
+                "goal_progress",
+                "frontier_generation",
+                "diagnostic_command",
+                "routine_item_limit",
+                "main_attention",
+            )
+            if key in routine
+        }
+        minimal.update(
+            {
+                (
+                    "goal_target_ids"
+                    if key == "ids"
+                    else "goal_target_ids_preview"
+                    if key == "ids_preview"
+                    else "goal_target_ids_sha256"
+                    if key == "ids_sha256"
+                    else "goal_target_count"
+                    if key == "count"
+                    else "goal_target_ids_truncated"
+                ): value
+                for key, value in target_identity.items()
+            }
+        )
+        minimal["goal_coverage"] = compact_goals
+        minimal["workflow_queue"] = compact_queue
+        minimal["routine_projection"] = projection
+        routine.clear()
+        routine.update(minimal)
+        tighten_identity_index()
+        return routine
 
     def frontier_decision_surface(
         self,
@@ -13082,6 +13642,11 @@ class V5LifecycleManager:
             raise ValueError(
                 "full Campaign members require the diagnostic frontier"
             )
+        effective_limit = (
+            limit
+            if diagnostic
+            else min(limit, V5_ROUTINE_FRONTIER_ITEM_LIMIT)
+        )
         inspection = self._bind_inspection_context(
             _inspection_context,
             create=True,
@@ -13096,7 +13661,7 @@ class V5LifecycleManager:
         goal_coverage = (
             self.campaign_goal_coverage(
                 goal_campaign_id,
-                limit=None if diagnostic else limit,
+                limit=None if diagnostic else effective_limit,
                 routine_projection=not diagnostic,
                 _inspection_context=inspection,
             )
@@ -13126,7 +13691,7 @@ class V5LifecycleManager:
         )
         goal_coverage_truncated = not goal_projection_complete
         entries = self.frontier(
-            limit=limit,
+            limit=effective_limit,
             campaign_id=campaign_id,
             _inspection_context=inspection,
         )
@@ -13275,16 +13840,16 @@ class V5LifecycleManager:
                     "disposition": entry.get(
                         "disposition", derived_disposition
                     ),
-                    "attention_basis_research_ids": entry.get(
+                    "attention_basis_research_ids": list(entry.get(
                         "attention_basis_research_ids",
                         entry.get("actionable_research_ids", []),
-                    )[:4],
-                    "attention_basis_round_ids": entry.get(
+                    )),
+                    "attention_basis_round_ids": list(entry.get(
                         "attention_basis_round_ids",
                         [entry["actionable_round_id"]]
                         if isinstance(entry.get("actionable_round_id"), str)
                         else [],
-                    )[:4],
+                    )),
                     "attention_reason": entry.get(
                         "attention_reason", entry["pending_reason"]
                     ),
@@ -13653,6 +14218,7 @@ class V5LifecycleManager:
                         "material_match_choices": [
                             "reference_only",
                             "attach_context",
+                            "reattach_context",
                             "promote_landmark",
                             "add_head",
                             "retire_active_head",
@@ -13707,17 +14273,26 @@ class V5LifecycleManager:
         # drill-down identity for every stored set, but leave checkpoint axes,
         # policy prose, membership examples and successor topology to the
         # existing diagnostic path.
+        diagnostic_command = (
+            f"frontier --campaign {campaign_id} --diagnostic"
+            if isinstance(campaign_id, str)
+            else "frontier --diagnostic"
+        )
         routine = {
             "campaign_id": surface["campaign_id"],
             "objective": surface["objective"],
             "goal_target_count": surface["goal_target_count"],
-            "goal_target_ids_sha256": surface.get(
-                "goal_target_ids_sha256", sha256_json([])
-            ),
+            "goal_target_ids": all_goal_target_ids,
+            "goal_target_status": "active_research_goals",
             "goal_progress": surface["goal_progress"],
             "goal_coverage": surface["goal_coverage"],
             "workflow_queue": surface["workflow_queue"],
-            "diagnostic_command": "frontier --diagnostic",
+            "diagnostic_command": diagnostic_command,
+            "routine_item_limit": {
+                "requested": limit,
+                "effective": effective_limit,
+                "capped": effective_limit != limit,
+            },
         }
         for key in (
             "goal_coverage_count",
@@ -13744,10 +14319,15 @@ class V5LifecycleManager:
             ]
         membership = surface.get("campaign_membership")
         if isinstance(membership, dict):
+            membership_diagnostic_command = (
+                f"frontier --campaign {goal_campaign_id} --diagnostic"
+                if isinstance(goal_campaign_id, str)
+                else diagnostic_command
+            )
             routine["campaign_membership"] = {
                 "member_count": membership.get("member_count"),
                 "member_ids_sha256": membership.get("member_ids_sha256"),
-                "diagnostic_command": "frontier --diagnostic",
+                "diagnostic_command": membership_diagnostic_command,
                 "full_members_command": membership.get(
                     "full_members_command"
                 ),
@@ -13755,7 +14335,7 @@ class V5LifecycleManager:
         unmapped = surface.get("unmapped_campaign_attention")
         if isinstance(unmapped, dict) and unmapped.get("visible_count", 0):
             routine["unmapped_campaign_attention"] = unmapped
-        return routine
+        return self._bound_routine_frontier_surface(routine)
 
     def frontier_maintenance_surface(
         self,
@@ -13784,7 +14364,16 @@ class V5LifecycleManager:
             create=True,
         )
         assert inspection is not None
+        diagnostic_limit = max(
+            12,
+            len(
+                self.research_envelopes(
+                    _inspection_context=inspection,
+                )
+            ),
+        )
         diagnostic = self.frontier_decision_surface(
+            limit=diagnostic_limit,
             campaign_id=campaign_id,
             diagnostic=True,
             full_members=False,
@@ -14470,10 +15059,10 @@ class V5LifecycleManager:
             "disposition": projection["disposition"],
             "attention_basis_research_ids": projection[
                 "attention_basis_research_ids"
-            ][:8],
+            ],
             "attention_basis_round_ids": projection[
                 "attention_basis_round_ids"
-            ][:8],
+            ],
             "attention_reason": projection["attention_reason"],
             "plan_round_argv": projection["plan_round_argv"],
             "actionable_research_id": projection[

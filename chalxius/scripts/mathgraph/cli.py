@@ -2576,13 +2576,20 @@ def main(argv: list[str] | None = None) -> int:
                         limit=args.limit,
                         campaign_id=args.campaign,
                     )
-                _print_json(
-                    _with_frontier_maintenance_attention(
-                        store,
-                        projection,
-                        campaign_id=args.campaign,
-                    )
+                projection = _with_frontier_maintenance_attention(
+                    store,
+                    projection,
+                    campaign_id=args.campaign,
                 )
+                if not (
+                    args.maintenance
+                    or args.history
+                    or args.diagnostic
+                ):
+                    projection = lifecycle._bound_routine_frontier_surface(
+                        projection
+                    )
+                _print_json(projection)
             else:
                 if args.diagnostic or args.full_members or args.maintenance:
                     raise ValueError(

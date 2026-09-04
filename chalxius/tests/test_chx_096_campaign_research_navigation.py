@@ -111,11 +111,12 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                     "material_match_choices"
                 ],
                 [
-                    "reference_only",
-                    "attach_context",
-                    "promote_landmark",
-                    "add_head",
-                    "retire_active_head",
+                "reference_only",
+                "attach_context",
+                "reattach_context",
+                "promote_landmark",
+                "add_head",
+                "retire_active_head",
                 ],
             )
             policy = surface["exact_search_attention_policy"]
@@ -320,20 +321,20 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 diagnostic_goal["current_active_head_research_ids"], []
             )
             self.assertEqual(
-                goal["active_head_actions"][0]["checkpoint_head_state"],
+                goal["active_head_summaries"][0]["checkpoint_head_state"],
                 "stale_exact_successor_available",
             )
             self.assertNotIn(
                 "current_terminal_research_ids",
-                goal["active_head_actions"][0],
+                goal["active_head_summaries"][0],
             )
             self.assertNotIn(
                 "current_route_research_ids",
-                goal["active_head_actions"][0],
+                goal["active_head_summaries"][0],
             )
             self.assertNotIn(
                 "terminal_evidence_research_ids",
-                goal["active_head_actions"][0],
+                goal["active_head_summaries"][0],
             )
             self.assertEqual(
                 diagnostic_goal["active_head_actions"][0][
@@ -709,12 +710,12 @@ class CampaignResearchNavigationTests(unittest.TestCase):
                 diagnostic_goal["checkpoint_refresh_recommended"]
             )
             self.assertEqual(
-                goal["active_head_actions"][0]["checkpoint_head_state"],
+                goal["active_head_summaries"][0]["checkpoint_head_state"],
                 "current_with_in_flight_supervision",
             )
             self.assertNotIn(
                 "current_terminal_research_ids",
-                goal["active_head_actions"][0],
+                goal["active_head_summaries"][0],
             )
             self.assertNotIn("checkpoint_refresh", surface)
             self.assertFalse(
@@ -866,8 +867,8 @@ class CampaignResearchNavigationTests(unittest.TestCase):
             self.assertEqual(goal["why_now"], "supervision_round_in_flight")
             self.assertNotIn("active_head_workflow_roots", goal)
             self.assertEqual(
-                goal["active_head_actions"][0][
-                    "workflow_root_research_id"
+                goal["active_head_summaries"][0][
+                    "workflow_research_id"
                 ],
                 root_id,
             )

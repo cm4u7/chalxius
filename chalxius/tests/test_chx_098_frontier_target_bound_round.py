@@ -225,17 +225,19 @@ class FrontierTargetBoundRoundTests(unittest.TestCase):
             host_scope="multihead-production",
         )
 
-        goal = self._goal()
+        surface = self.store.v5_lifecycle().frontier_decision_surface(
+            campaign_id=self.campaign_id,
+            limit=1,
+        )
+        goal = surface["goal_coverage"][0]
         self.assertEqual(
             goal["active_head_research_ids"], [self.root_id, second_id]
         )
-        self.assertEqual(len(goal["active_head_actions"]), 2)
+        self.assertEqual(len(goal["active_head_summaries"]), 2)
+        self.assertIsNone(goal["actionable_round_id"])
         self.assertEqual(
-            {
-                action["actionable_round_id"]
-                for action in goal["active_head_actions"]
-            },
-            {current["round_id"]},
+            surface["workflow_queue"][0]["actionable_round_id"],
+            current["round_id"],
         )
 
         self.store.v5_lifecycle().reconcile_campaign_frontier(
@@ -254,7 +256,7 @@ class FrontierTargetBoundRoundTests(unittest.TestCase):
         )
         overridden = self._goal()
         self.assertEqual(overridden["active_head_research_ids"], [second_id])
-        self.assertEqual(len(overridden["active_head_actions"]), 1)
+        self.assertEqual(len(overridden["active_head_summaries"]), 1)
         self.assertEqual(overridden["coverage_status"], "in_flight")
         self.assertEqual(
             overridden["actionable_round_id"], current["round_id"]

@@ -450,8 +450,9 @@ class V5CampaignEnvelopeTests(unittest.TestCase):
                 goal["why_now"], "no_ingested_production_product"
             )
             self.assertEqual(goal["actionable_research_id"], research_id)
+            self.assertNotIn("plan_round_argv", goal)
             self.assertEqual(
-                goal["plan_round_argv"],
+                surface["workflow_queue"][0]["plan_round_argv"],
                 [
                     "plan-round",
                     "--workers",

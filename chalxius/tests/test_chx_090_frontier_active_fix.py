@@ -316,11 +316,10 @@ class FrontierActiveFix090Tests(unittest.TestCase):
                 }
             )
             self.assertNotIn("supervision_coverage", compact_goal)
+            self.assertNotIn("active_head_actions", compact_goal)
             self.assertEqual(
-                compact_goal["active_head_actions"][0][
-                    "supervision_coverage"
-                ][1]["state"],
-                "missing",
+                compact_goal["active_head_summaries"][0]["research_id"],
+                root_id,
             )
 
     def test_scope_state_routing_distinguishes_non_lineage_states(self) -> None:

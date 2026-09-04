@@ -1,4 +1,27 @@
-# Chalxius V5 traceability through 1.0.21 Landmark-Centered Situation Awareness
+# Chalxius V5 traceability through 1.0.22 Bounded Frontier Continuity
+
+## 1.0.22 Bounded Frontier Continuity overlay
+
+- Candidate version: `1.0.22`; release name **Bounded Frontier Continuity**.
+- Routine frontier is bounded by the final pretty-JSON byte size, including
+  `main_attention`. Its staged fallback preserves projected target and queue
+  identities, complete-set counts/digests, workflow roots, and at least one
+  bounded mathematical cue per visible target before omitting prose.
+- Every routine forensic recovery command reconstructs the same explicit
+  Campaign or global workflow scope;
+  explicit maintenance queue expansion returns the complete current queue
+  rather than the routine default preview.
+- `reattach_context` moves one exact `(Research, old head)` placement to one
+  exact active head while preserving legitimate placements on other heads.
+  Destination choice remains Main-owned and has no mathematical truth effect.
+- Repair input roles are qualified only when source and trigger bind the same
+  local role to different bytes. Non-colliding repair identity remains stable;
+  long qualified roles use deterministic SHA-256 shortening while path,
+  digest, origin, closure, and uniqueness validation remain exact.
+- Focused frontier, Campaign, repair, lifecycle, candidate-identity, and local
+  install regression suites pass 172 tests; the live four-target Campaign
+  routine canary is 31,697 pretty-JSON
+  bytes with all 14 current workflow identities visible.
 
 ## 1.0.21 Landmark-Centered Situation Awareness overlay
 

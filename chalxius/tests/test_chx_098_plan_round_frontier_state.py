@@ -12,6 +12,7 @@ from unittest.mock import patch
 from mathgraph.cli import main as cli_main
 from mathgraph.contracts import sha256_json
 from mathgraph.store import MathGraphStore
+from mathgraph.v5_lifecycle import V5_ROUTINE_FRONTIER_BYTE_BUDGET
 
 
 class PlanRoundFrontierStateTests(unittest.TestCase):
@@ -153,7 +154,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             limit=2,
         )["goal_coverage"][0]
         self.assertEqual(routine["head_context_count"], 40)
-        self.assertEqual(len(routine["head_contexts"]), 4)
+        self.assertEqual(len(routine["head_contexts"]), 1)
         self.assertTrue(routine["head_contexts_truncated"])
         diagnostic = lifecycle.frontier_decision_surface(
             campaign_id=self.campaign_id,
@@ -244,10 +245,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         receipt = planned["selection_receipt"]
         self.assertEqual(receipt["frontier_target_id"], self.target_id)
         self.assertIn("--frontier-target", receipt["exact_replay_argv"])
-        goal = lifecycle.frontier_decision_surface(
+        surface = lifecycle.frontier_decision_surface(
             campaign_id=self.campaign_id,
             limit=2,
-        )["goal_coverage"][0]
+        )
+        goal = surface["goal_coverage"][0]
         self.assertNotIn("frontier_source", goal)
         self.assertEqual(goal["coverage_status"], "in_flight")
         self.assertEqual(goal["next_action"], "await_return")
@@ -371,7 +373,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             limit=1,
         )["goal_coverage"][0]
         self.assertEqual(legacy_goal["active_head_research_ids"], heads)
-        self.assertEqual(len(legacy_goal["active_head_actions"]), 16)
+        self.assertEqual(len(legacy_goal["active_head_summaries"]), 16)
 
         lifecycle.reconcile_campaign_frontier(
             self.campaign_id,
@@ -402,7 +404,7 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             limit=1,
         )["goal_coverage"][0]
         self.assertEqual(current_goal["active_head_research_ids"], heads)
-        self.assertEqual(len(current_goal["active_head_actions"]), 16)
+        self.assertEqual(len(current_goal["active_head_summaries"]), 16)
 
         seventeenth = self._research(
             "head-16", "Seventeenth independent mathematical branch"
@@ -1583,44 +1585,37 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         }
         compact = lifecycle._compact_goal_coverage_entry(entry)
         encoded = json.dumps(compact, sort_keys=True).encode()
-        self.assertLess(len(encoded), 15_000)
-        self.assertEqual(len(compact["active_head_actions"]), 16)
+        self.assertLess(len(encoded), 8_000)
+        self.assertNotIn("active_head_actions", compact)
+        self.assertEqual(len(compact["active_head_summaries"]), 16)
         self.assertEqual(len(compact["historical_mathematical_summary"]), 2)
-        self.assertEqual(
-            len(compact["recent_attained_mathematical_history"]), 2
-        )
+        self.assertNotIn("recent_attained_mathematical_history", compact)
         self.assertIn(
-            "claim", compact["active_head_actions"][0]["mathematical_summary"]
+            "claim", compact["active_head_summaries"][0]["mathematical_summary"]
         )
         self.assertNotIn(
             "content",
-            compact["active_head_actions"][0]["mathematical_summary"],
+            compact["active_head_summaries"][0]["mathematical_summary"],
         )
         self.assertNotIn(
             "current_route_mathematical_summaries",
-            compact["active_head_actions"][0],
+            compact["active_head_summaries"][0],
         )
         self.assertNotIn(
             "current_terminal_research_ids",
-            compact["active_head_actions"][0],
+            compact["active_head_summaries"][0],
         )
         self.assertNotIn(
             "terminal_evidence_research_ids",
-            compact["active_head_actions"][0],
+            compact["active_head_summaries"][0],
         )
         self.assertNotIn(
             "supervision_coverage_sha256",
-            compact["active_head_actions"][0],
+            compact["active_head_summaries"][0],
         )
-        self.assertEqual(
-            compact["active_head_actions"][0]["supervision_coverage"],
-            [
-                {
-                    "scope": "proof_logic",
-                    "state": "completed",
-                    "result_research_ids": ["00000000000a"],
-                }
-            ],
+        self.assertNotIn(
+            "supervision_coverage",
+            compact["active_head_summaries"][0],
         )
         self.assertNotIn("active_head_semantic_successors", compact)
         self.assertNotIn("production_product_research_ids", compact)
@@ -1658,12 +1653,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             campaign_id=self.campaign_id,
             limit=1,
         )["goal_coverage"][0]
-        expected_preview = [*landmarks[:2], *landmarks[-2:]]
         self.assertEqual(
-            routine["historical_landmark_research_ids"], expected_preview
+            routine["historical_landmarks"][0]["research_id"], landmarks[0]
         )
-        self.assertEqual(len(routine["historical_landmarks"]), 4)
-        self.assertEqual(routine["historical_landmark_shown_count"], 4)
+        self.assertEqual(len(routine["historical_landmarks"]), 1)
+        self.assertEqual(routine["historical_landmark_shown_count"], 1)
         self.assertTrue(routine["historical_landmarks_truncated"])
         self.assertEqual(
             routine["historical_landmark_count"], len(landmarks)
@@ -1763,8 +1757,8 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             expand_sections=("landmarks",),
         )["targets"][0]
 
-        self.assertEqual(len(routine["head_contexts"]), 4)
-        self.assertEqual(len(routine["historical_landmarks"]), 4)
+        self.assertEqual(len(routine["head_contexts"]), 1)
+        self.assertEqual(len(routine["historical_landmarks"]), 1)
         self.assertEqual(len(routine["recent_attained_research_ids"]), 4)
         self.assertTrue(routine["head_contexts_truncated"])
         self.assertTrue(routine["historical_landmarks_truncated"])
@@ -2218,10 +2212,11 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 }
             ],
         )
-        goal = lifecycle.frontier_decision_surface(
+        surface = lifecycle.frontier_decision_surface(
             campaign_id=self.campaign_id,
             limit=2,
-        )["goal_coverage"][0]
+        )
+        goal = surface["goal_coverage"][0]
         self.assertEqual(
             goal["head_contexts"][0]["mathematical_summary"]["claim"],
             "Claim successor",
@@ -2544,7 +2539,10 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertNotIn("member_research_ids", routine)
         self.assertNotIn("members", routine)
         self.assertNotIn("members_truncated", routine)
-        self.assertEqual(routine["diagnostic_command"], "frontier --diagnostic")
+        self.assertEqual(
+            routine["diagnostic_command"],
+            f"frontier --campaign {self.campaign_id} --diagnostic",
+        )
         self.assertEqual(
             routine["full_members_command"],
             f"frontier --campaign {self.campaign_id} --diagnostic "
@@ -3882,6 +3880,629 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             ],
         )
 
+    def test_context_reattachment_moves_only_the_named_head_placement(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [
+                        self.root_id,
+                        self.successor_id,
+                    ],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "attach_context",
+                        "research_id": self.landmark_id,
+                        "attached_head_research_id": self.root_id,
+                        "reason": "Earlier explicit route placement.",
+                    }
+                ],
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "reattach_context",
+                        "research_id": self.landmark_id,
+                        "from_head_research_id": self.root_id,
+                        "attached_head_research_id": self.successor_id,
+                        "reason": "Latest explicit route placement.",
+                    }
+                ],
+            },
+        )
+        lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "retire_active_head",
+                        "research_id": self.root_id,
+                        "disposition": "superseded",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            self._state()["targets"][self.target_id]["head_contexts"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "attached_head_research_id": self.successor_id,
+                    "reason": "Latest explicit route placement.",
+                }
+            ],
+        )
+
+    def test_context_reattachment_preserves_other_legitimate_head_placements(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        third_head = self._research(
+            "third-head",
+            "A third exact branch remains independently active.",
+        )
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets={
+                self.target_id: {
+                    "recovery_root_research_id": self.root_id,
+                    "active_head_research_ids": [
+                        self.root_id,
+                        self.successor_id,
+                        third_head,
+                    ],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": self.root_id,
+                            "reason": "Placement selected for the old route.",
+                        },
+                        {
+                            "research_id": self.landmark_id,
+                            "attached_head_research_id": third_head,
+                            "reason": "Independent placement for the third route.",
+                        },
+                    ],
+                    "recent_attained_research_ids": [],
+                }
+            },
+        )
+        result = lifecycle.reconcile_campaign_frontier(
+            self.campaign_id,
+            {
+                "kind": "campaign_frontier_update",
+                "target_id": self.target_id,
+                "attention_updates": [
+                    {
+                        "operation": "reattach_context",
+                        "research_id": self.landmark_id,
+                        "from_head_research_id": self.root_id,
+                        "attached_head_research_id": self.successor_id,
+                        "reason": "Replacement route placement.",
+                    }
+                ],
+            },
+        )
+        contexts = self._state()["targets"][self.target_id]["head_contexts"]
+        self.assertEqual(
+            {
+                context["attached_head_research_id"]
+                for context in contexts
+            },
+            {self.successor_id, third_head},
+        )
+        self.assertEqual(
+            result["attention_diff"]["context_reattachments"],
+            [
+                {
+                    "research_id": self.landmark_id,
+                    "from_head_research_id": self.root_id,
+                    "to_head_research_id": self.successor_id,
+                }
+            ],
+        )
+
+    def test_routine_frontier_budget_keeps_all_target_and_queue_identities(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        target_ids = [f"camtarget-{index:016x}" for index in range(16)]
+        queue_ids = [f"{index + 100:012x}" for index in range(16)]
+        routine = {
+            "goal_target_ids": target_ids,
+            "goal_target_status": "active_research_goals",
+            "goal_coverage": [
+                {
+                    "target_id": target_id,
+                    "coverage_status": "in_flight",
+                    "historical_landmark_count": 20,
+                    "historical_landmark_ids_sha256": "a" * 64,
+                    "historical_landmarks": [
+                        {
+                            "research_id": f"{index + 300:012x}",
+                            "reason": "R" * 400,
+                            "mathematical_summary": {
+                                "claim": "L" * 800,
+                            },
+                        }
+                    ],
+                    "head_context_count": 20,
+                    "head_contexts_sha256": "b" * 64,
+                    "head_contexts": [
+                        {
+                            "research_id": f"{index + 500:012x}",
+                            "attached_head_research_id": queue_ids[index],
+                            "reason": "C" * 400,
+                            "mathematical_summary": {
+                                "claim": "M" * 800,
+                            },
+                        }
+                    ],
+                    "active_head_research_ids": [queue_ids[index]],
+                    "active_head_summaries": [
+                        {
+                            "research_id": queue_ids[index],
+                            "workflow_research_id": queue_ids[index],
+                            "mathematical_summary": {
+                                "claim": "H" * 800,
+                            },
+                        }
+                    ],
+                }
+                for index, target_id in enumerate(target_ids)
+            ],
+            "workflow_queue": [
+                {
+                    "research_id": research_id,
+                    "goal_target_ids": [target_ids[index]],
+                    "next_action": "supervision",
+                    "why_now": "W" * 800,
+                    "actionable_claim": "A" * 800,
+                    "supervision_coverage": [
+                        {
+                            "scope": "proof_logic",
+                            "state": "pending",
+                        }
+                    ],
+                }
+                for index, research_id in enumerate(queue_ids)
+            ],
+        }
+        bounded = lifecycle._bound_routine_frontier_surface(routine)
+        self.assertLessEqual(
+            lifecycle._routine_frontier_serialized_bytes(bounded),
+            V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+        )
+        self.assertEqual(bounded["goal_target_ids"], target_ids)
+        self.assertEqual(
+            [item["research_id"] for item in bounded["workflow_queue"]],
+            queue_ids,
+        )
+
+    def test_routine_hard_bound_keeps_projected_head_workflow_and_math_cues(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        all_target_ids = [
+            f"camtarget-{index:016x}" for index in range(1_200)
+        ]
+        projected_target_ids = all_target_ids[:16]
+        queue_ids = [f"{index + 10_000:012x}" for index in range(16)]
+        goal_coverage = []
+        expected_workflow_ids: dict[str, list[str]] = {}
+        for target_index, target_id in enumerate(projected_target_ids):
+            head_ids = [
+                f"{20_000 + target_index * 16 + index:012x}"
+                for index in range(16)
+            ]
+            workflow_ids = [
+                f"{30_000 + target_index * 16 + index:012x}"
+                for index in range(16)
+            ]
+            expected_workflow_ids[target_id] = workflow_ids
+            goal_coverage.append(
+                {
+                    "target_id": target_id,
+                    "coverage_status": "in_flight",
+                    "next_action": "advance_active_heads",
+                    "active_head_research_ids": head_ids,
+                    "current_active_head_count": len(head_ids),
+                    "current_active_head_ids_sha256": sha256_json(head_ids),
+                    "active_head_summaries": [
+                        {
+                            "research_id": head_id,
+                            "workflow_research_id": workflow_id,
+                            "mathematical_summary": {
+                                "kind": "insight",
+                                "claim": (
+                                    f"Mathematical cue for target {target_index} "
+                                    + "M" * 500
+                                ),
+                            },
+                        }
+                        for head_id, workflow_id in zip(
+                            head_ids,
+                            workflow_ids,
+                            strict=True,
+                        )
+                    ],
+                }
+            )
+        routine = {
+            "campaign_id": self.campaign_id,
+            "goal_target_count": len(all_target_ids),
+            "goal_target_ids": all_target_ids,
+            "goal_coverage": goal_coverage,
+            "workflow_queue": [
+                {
+                    "research_id": research_id,
+                    "goal_target_ids": [projected_target_ids[index]],
+                    "next_action": "await_return",
+                    "actionable_round_id": (
+                        f"round-20260905T0000{index:02d}Z-00000000"
+                    ),
+                }
+                for index, research_id in enumerate(queue_ids)
+            ],
+            "diagnostic_command": (
+                f"frontier --campaign {self.campaign_id} --diagnostic"
+            ),
+            "main_attention": {
+                "state": "frontier_maintenance_overdue",
+                "frontier_maintenance": {
+                    "campaign_id": self.campaign_id,
+                    "instruction": "A" * 50_000,
+                },
+            },
+        }
+        bounded = lifecycle._bound_routine_frontier_surface(routine)
+        self.assertLessEqual(
+            lifecycle._routine_frontier_serialized_bytes(bounded),
+            V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+        )
+        self.assertEqual(
+            bounded["routine_projection"]["detail"], "identity_index"
+        )
+        self.assertTrue(bounded["goal_target_ids_truncated"])
+        self.assertEqual(bounded["goal_target_count"], len(all_target_ids))
+        self.assertEqual(
+            [item["target_id"] for item in bounded["goal_coverage"]],
+            projected_target_ids,
+        )
+        self.assertEqual(
+            [item["research_id"] for item in bounded["workflow_queue"]],
+            queue_ids,
+        )
+        for goal in bounded["goal_coverage"]:
+            self.assertEqual(
+                goal["active_head_workflow_research_ids"],
+                expected_workflow_ids[goal["target_id"]],
+            )
+            self.assertIn("Mathematical cue", goal["mathematical_cue"]["claim"])
+
+    def test_routine_queue_attention_basis_summarizes_the_complete_set(
+        self,
+    ) -> None:
+        research_ids = [f"{index + 1:012x}" for index in range(10)]
+        round_ids = [
+            f"round-20260905T0100{index:02d}Z-00000000"
+            for index in range(10)
+        ]
+        compact = self.store.v5_lifecycle()._compact_workflow_queue_entry(
+            {
+                "research_id": research_ids[0],
+                "next_action": "main_reconciliation",
+                "attention_basis_research_ids": research_ids,
+                "attention_basis_round_ids": round_ids,
+            }
+        )
+        self.assertEqual(
+            compact["attention_basis_research_ids"], research_ids[:2]
+        )
+        self.assertEqual(compact["attention_basis_research_count"], 10)
+        self.assertEqual(
+            compact["attention_basis_research_ids_sha256"],
+            sha256_json(research_ids),
+        )
+        self.assertTrue(compact["attention_basis_research_ids_truncated"])
+        self.assertEqual(compact["attention_basis_round_ids"], round_ids[:2])
+        self.assertEqual(compact["attention_basis_round_count"], 10)
+        self.assertEqual(
+            compact["attention_basis_round_ids_sha256"],
+            sha256_json(round_ids),
+        )
+        self.assertTrue(compact["attention_basis_round_ids_truncated"])
+
+    def test_active_hint_keeps_global_diagnostic_recovery_scope(self) -> None:
+        routine = self.store.v5_lifecycle().frontier_decision_surface(limit=1)
+        self.assertEqual(routine["goal_context_source"], "active_hint")
+        self.assertEqual(routine["diagnostic_command"], "frontier --diagnostic")
+        self.assertEqual(
+            routine["campaign_membership"]["diagnostic_command"],
+            f"frontier --campaign {self.campaign_id} --diagnostic",
+        )
+
+    def test_routine_hard_bound_keeps_no_head_recovery_identity_and_cue(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        target_ids = [f"camtarget-{index:016x}" for index in range(1_200)]
+        routine = {
+            "campaign_id": self.campaign_id,
+            "goal_target_count": len(target_ids),
+            "goal_target_ids": target_ids,
+            "goal_coverage": [
+                {
+                    "target_id": target_ids[0],
+                    "coverage_status": "needs_main_choice",
+                    "next_action": "start_recovery_root",
+                    "root_research_id": self.root_id,
+                    "root_claim": "Recover this exact mathematical route. "
+                    + "R" * 1_000,
+                    "recovery_root_research_id": self.root_id,
+                    "recovery_root_source": "target_subject",
+                    "active_head_research_ids": [],
+                }
+            ],
+            "workflow_queue": [],
+            "diagnostic_command": (
+                f"frontier --campaign {self.campaign_id} --diagnostic"
+            ),
+            "main_attention": {
+                "state": "frontier_maintenance_overdue",
+                "frontier_maintenance": {"instruction": "A" * 50_000},
+            },
+        }
+        bounded = lifecycle._bound_routine_frontier_surface(routine)
+        self.assertLessEqual(
+            lifecycle._routine_frontier_serialized_bytes(bounded),
+            V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+        )
+        self.assertEqual(
+            bounded["routine_projection"]["detail"], "identity_index"
+        )
+        goal = bounded["goal_coverage"][0]
+        self.assertEqual(goal["recovery_root_research_id"], self.root_id)
+        self.assertEqual(goal["recovery_root_source"], "target_subject")
+        self.assertEqual(goal["mathematical_cue"]["research_id"], self.root_id)
+        self.assertIn("Recover this exact", goal["mathematical_cue"]["claim"])
+
+    def test_routine_second_budget_pass_preserves_compaction_metadata(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        target_ids = [f"camtarget-{index:016x}" for index in range(1_200)]
+        routine = {
+            "campaign_id": self.campaign_id,
+            "goal_target_count": len(target_ids),
+            "goal_target_ids": target_ids,
+            "goal_coverage": [
+                {
+                    "target_id": target_ids[index],
+                    "active_head_research_ids": [f"{index + 100:012x}"],
+                    "active_head_summaries": [
+                        {
+                            "research_id": f"{index + 100:012x}",
+                            "workflow_research_id": f"{index + 200:012x}",
+                            "mathematical_summary": {
+                                "claim": "M" * 1_000,
+                            },
+                        }
+                    ],
+                }
+                for index in range(16)
+            ],
+            "workflow_queue": [
+                {
+                    "research_id": f"{index + 300:012x}",
+                    "goal_target_ids": [target_ids[index]],
+                    "next_action": "await_return",
+                }
+                for index in range(16)
+            ],
+            "diagnostic_command": (
+                f"frontier --campaign {self.campaign_id} --diagnostic"
+            ),
+        }
+        first = lifecycle._bound_routine_frontier_surface(routine)
+        self.assertEqual(
+            first["routine_projection"]["detail"], "identity_index"
+        )
+        self.assertTrue(
+            first["routine_projection"]["hard_bound_applied"]
+        )
+        first["main_attention"] = {
+            "state": "frontier_maintenance_overdue",
+            "frontier_maintenance": {"instruction": "Short advisory."},
+        }
+        second = lifecycle._bound_routine_frontier_surface(first)
+        self.assertEqual(
+            second["routine_projection"]["detail"], "identity_index"
+        )
+        self.assertTrue(
+            second["routine_projection"]["hard_bound_applied"]
+        )
+        self.assertLessEqual(
+            lifecycle._routine_frontier_serialized_bytes(second),
+            V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+        )
+
+    def test_routine_maximum_fanout_is_bounded_in_one_idempotent_pass(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        all_target_ids = [
+            f"camtarget-{index:016x}" for index in range(1_200)
+        ]
+        projected_target_ids = all_target_ids[:16]
+        expected_workflow_ids: dict[str, list[str]] = {}
+        goals = []
+        for target_index, target_id in enumerate(projected_target_ids):
+            head_ids = [
+                f"{100_000 + target_index * 16 + index:012x}"
+                for index in range(16)
+            ]
+            workflow_ids = [
+                f"{200_000 + target_index * 16 + index:012x}"
+                for index in range(16)
+            ]
+            expected_workflow_ids[target_id] = workflow_ids
+            goals.append(
+                {
+                    "target_id": target_id,
+                    "coverage_status": "in_flight",
+                    "work_completion_status": "pending",
+                    "next_action": "await_return",
+                    "actionable_research_id": workflow_ids[0],
+                    "actionable_round_id": (
+                        f"round-20260905T0200{target_index:02d}Z-00000000"
+                    ),
+                    "active_head_research_ids": head_ids,
+                    "current_active_head_count": 16,
+                    "current_active_head_ids_sha256": sha256_json(head_ids),
+                    "active_head_summaries": [
+                        {
+                            "research_id": head_id,
+                            "workflow_research_id": workflow_id,
+                            "mathematical_summary": {
+                                "kind": "insight",
+                                "claim": "可迁移数学提示" + "🧭" * 500,
+                            },
+                        }
+                        for head_id, workflow_id in zip(
+                            head_ids, workflow_ids, strict=True
+                        )
+                    ],
+                }
+            )
+        routine = {
+            "campaign_id": self.campaign_id,
+            "goal_target_count": len(all_target_ids),
+            "goal_target_ids": all_target_ids,
+            "goal_coverage": goals,
+            "workflow_queue": [
+                {
+                    "research_id": f"{300_000 + index:012x}",
+                    "goal_target_ids": projected_target_ids,
+                    "next_action": "await_return",
+                    "actionable_research_id": f"{400_000 + index:012x}",
+                    "actionable_round_id": (
+                        f"round-20260905T0300{index:02d}Z-00000000"
+                    ),
+                }
+                for index in range(16)
+            ],
+            "diagnostic_command": (
+                f"frontier --campaign {self.campaign_id} --diagnostic"
+            ),
+            "main_attention": {
+                "state": "frontier_maintenance_overdue",
+                "frontier_maintenance": {"instruction": "A" * 50_000},
+            },
+        }
+        first = lifecycle._bound_routine_frontier_surface(routine)
+        self.assertLessEqual(
+            lifecycle._routine_frontier_serialized_bytes(first),
+            V5_ROUTINE_FRONTIER_BYTE_BUDGET,
+        )
+        self.assertEqual(
+            first["routine_projection"]["detail"], "identity_index"
+        )
+        self.assertFalse(first["routine_projection"]["budget_exceeded"])
+        for goal in first["goal_coverage"]:
+            self.assertEqual(
+                goal["active_head_workflow_research_ids"],
+                expected_workflow_ids[goal["target_id"]],
+            )
+            self.assertIn("mathematical_cue", goal)
+            target_index = projected_target_ids.index(goal["target_id"])
+            self.assertEqual(
+                goal["actionable_research_id"],
+                expected_workflow_ids[goal["target_id"]][0],
+            )
+            self.assertEqual(
+                goal["actionable_round_id"],
+                f"round-20260905T0200{target_index:02d}Z-00000000",
+            )
+        first_bytes = json.dumps(first, sort_keys=True)
+        second = lifecycle._bound_routine_frontier_surface(first)
+        self.assertEqual(json.dumps(second, sort_keys=True), first_bytes)
+
+    def test_maintenance_queue_expansion_is_not_limited_to_twelve(self) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        target_rows = {
+            self.target_id: {
+                "recovery_root_research_id": self.root_id,
+                "active_head_research_ids": [self.root_id],
+                "historical_landmark_research_ids": [],
+                "head_contexts": [],
+                "recent_attained_research_ids": [],
+            }
+        }
+        additional_research = [
+            self._research(
+                f"maintenance-queue-{index}",
+                f"Distinct maintenance workflow {index}.",
+            )
+            for index in range(19)
+        ]
+        with self.store.v5_mutation_lock(command="maintenance-full-queue-fixture"):
+            for index, research_id in enumerate(additional_research):
+                target_id = self.store.campaigns().target_add(
+                    self.campaign_id,
+                    {
+                        "role": "research_goal",
+                        "subject_kind": "research",
+                        "subject_id": research_id,
+                        "label": f"Maintenance queue target {index}",
+                    },
+                    actor="main",
+                    fact_exists=lambda _fact_id: False,
+                    research_exists=lambda item, expected=research_id: (
+                        item == expected
+                    ),
+                )
+                target_rows[target_id] = {
+                    "recovery_root_research_id": research_id,
+                    "active_head_research_ids": [research_id],
+                    "historical_landmark_research_ids": [],
+                    "head_contexts": [],
+                    "recent_attained_research_ids": [],
+                }
+        lifecycle._replace_campaign_frontier_working_state(
+            self.campaign_id,
+            targets=target_rows,
+        )
+        surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+            expand_sections=("queue",),
+        )
+        self.assertEqual(surface["workflow_queue"]["count"], 20)
+        self.assertEqual(len(surface["workflow_queue"]["items"]), 20)
+
     def test_internal_maintenance_clock_is_nonblocking_and_pausable(self) -> None:
         lifecycle = self.store.v5_lifecycle()
         clock = lifecycle.reset_frontier_maintenance_clock(
@@ -4031,19 +4652,26 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 actor="main",
                 reason="Exercise explicit stopped-route disposition.",
             )
-        goal = lifecycle.frontier_decision_surface(
+        surface = lifecycle.frontier_decision_surface(
             campaign_id=self.campaign_id,
             limit=2,
-        )["goal_coverage"][0]
+        )
+        goal = surface["goal_coverage"][0]
         self.assertEqual(goal["coverage_status"], "needs_main_choice")
         self.assertEqual(goal["next_action"], "main_reconciliation")
         self.assertEqual(
             goal["why_now"], "aborted_head_needs_main_disposition"
         )
         self.assertEqual(goal["actionable_round_id"], planned["round_id"])
+        self.assertEqual(len(goal["active_head_summaries"]), 1)
+        queue = surface["workflow_queue"]
+        self.assertEqual(len(queue), 1)
         self.assertEqual(
-            goal["active_head_actions"][0]["why_now"],
+            queue[0]["why_now"],
             "aborted_head_needs_main_disposition",
+        )
+        self.assertEqual(
+            queue[0]["actionable_round_id"], planned["round_id"]
         )
 
     def test_landmark_ids_cannot_silently_receive_a_generic_reason(self) -> None:
