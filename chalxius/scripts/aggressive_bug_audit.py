@@ -231,14 +231,14 @@ MUTANTS = (
         name="frontier_active_hint_becomes_exact_filter",
         old=(
             "        entries = self.frontier(\n"
-            "            limit=limit,\n"
+            "            limit=effective_limit,\n"
             "            campaign_id=campaign_id,\n"
             "            _inspection_context=inspection,\n"
             "        )\n"
         ),
         new=(
             "        entries = self.frontier(\n"
-            "            limit=limit,\n"
+            "            limit=effective_limit,\n"
             "            campaign_id=goal_campaign_id,  # mutant\n"
             "            _inspection_context=inspection,\n"
             "        )\n"
