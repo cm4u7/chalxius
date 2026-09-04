@@ -1,4 +1,4 @@
-Chalxius 1.0.20 — Explicit Attention Working Memory
+Chalxius 1.0.21 — Landmark-Centered Situation Awareness
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
@@ -12,6 +12,17 @@ maintenance appears as structured, nonblocking `main_attention` on frontier
 and successful production planning. An exact aborted current head is likewise
 shown for Main disposition rather than being mistaken for untouched work.
 Neither advisory dispatches work or changes graph truth.
+
+Full frontier maintenance uses a two-stage situation-awareness read. First,
+`frontier --campaign ID --maintenance` returns every target and mathematical
+active head together with exact context, landmark, recent and queue counts and
+digests. Then Main reads each target with `--maintenance-target TARGET_ID`;
+that target-local view expands all durable landmark reasons and all exact
+head-context attachment identities without mixing several targets into one
+oversized response. Expand `context-reasons` only around a contemplated
+attachment decision. This changes transport and attention economy only: Main
+still exact-searches and performs every warranted head/landmark/context
+change, and a reasoned no-op is valid only when nothing should change.
 
 Before Main freezes work that consumes an exact formula, definition,
 convention, theorem statement, or other literal historical input, open the

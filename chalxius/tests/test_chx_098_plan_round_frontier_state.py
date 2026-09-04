@@ -1752,6 +1752,16 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             campaign_id=self.campaign_id,
         )
         maintenance = maintenance_surface["targets"][0]
+        expanded_surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+            target_ids=(self.target_id,),
+            expand_sections=("context-reasons", "recent", "queue"),
+        )
+        expanded = expanded_surface["targets"][0]
+        all_landmarks = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+            expand_sections=("landmarks",),
+        )["targets"][0]
 
         self.assertEqual(len(routine["head_contexts"]), 4)
         self.assertEqual(len(routine["historical_landmarks"]), 4)
@@ -1778,32 +1788,34 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
             diagnostic["recent_attained_ids_sha256"],
         )
         self.assertTrue(maintenance_surface["target_projection_complete"])
+        self.assertTrue(maintenance_surface["all_target_projection"])
         self.assertEqual(maintenance_surface["goal_target_count"], 1)
         self.assertEqual(
-            maintenance["active_head_research_ids"], [self.root_id]
+            [item["research_id"] for item in maintenance["active_heads"]],
+            [self.root_id],
+        )
+        self.assertNotIn("groups", maintenance["head_context_topology"])
+        self.assertNotIn("items", maintenance["head_context_topology"])
+        self.assertEqual(
+            maintenance["head_context_topology"]["identity_expansion"],
+            "target_drill_down",
         )
         self.assertEqual(
-            [item["research_id"] for item in maintenance["head_contexts"]],
-            contexts,
+            maintenance["head_context_topology"]["reason_expansion"],
+            "on_demand",
         )
+        self.assertNotIn("items", maintenance["historical_landmarks"])
         self.assertEqual(
             [
-                item["attached_head_research_id"]
-                for item in maintenance["head_contexts"]
+                item["research_id"]
+                for item in expanded["historical_landmarks"]["items"]
             ],
-            [self.root_id] * len(contexts),
-        )
-        self.assertTrue(
-            all(
-                item["reason"] == f"Use context {index} for this head."
-                and "mathematical_summary" not in item
-                for index, item in enumerate(maintenance["head_contexts"])
-            )
+            landmarks,
         )
         self.assertEqual(
             [
                 item["research_id"]
-                for item in maintenance["historical_landmarks"]
+                for item in all_landmarks["historical_landmarks"]["items"]
             ],
             landmarks,
         )
@@ -1812,19 +1824,46 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
                 item["reason"] == f"Retain landmark {index}."
                 and "mathematical_summary" not in item
                 for index, item in enumerate(
-                    maintenance["historical_landmarks"]
+                    expanded["historical_landmarks"]["items"]
                 )
             )
         )
         self.assertEqual(
-            maintenance["recent_attained_research_ids"], recent
+            expanded["head_context_topology"]["groups"][0][
+                "research_ids"
+            ],
+            contexts,
         )
+        self.assertEqual(
+            expanded["head_context_topology"]["groups"][0][
+                "attached_head_research_id"
+            ],
+            self.root_id,
+        )
+        self.assertNotIn("research_ids", maintenance["recent_attained"])
         self.assertEqual(
             [
                 item["research_id"]
-                for item in maintenance["recent_attained_summaries"]
+                for item in maintenance["recent_attained"]["summaries"]
             ],
             [*recent[:2], *recent[-2:]],
+        )
+        self.assertEqual(
+            expanded["recent_attained"]["research_ids"], recent
+        )
+        self.assertTrue(
+            all(
+                item["reason"] == f"Use context {index} for this head."
+                and "mathematical_summary" not in item
+                for index, item in enumerate(
+                    expanded["head_context_topology"]["items"]
+                )
+            )
+        )
+        self.assertFalse(expanded_surface["all_target_projection"])
+        self.assertEqual(
+            expanded_surface["selection"]["target_ids"],
+            [self.target_id],
         )
         self.assertNotIn("attained_semantic_successors", maintenance)
         self.assertNotIn("historical_mathematical_summary", maintenance)
@@ -1856,9 +1895,47 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertEqual(status, 0, stderr.getvalue())
         cli_surface = json.loads(stdout.getvalue())
         self.assertEqual(
-            cli_surface["view"], "complete_attention_compact_topology"
+            cli_surface["view"], "landmark_centered_situation_awareness"
         )
         self.assertEqual(len(cli_surface["targets"]), 1)
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = cli_main(
+                [
+                    "--root",
+                    str(self.root),
+                    "--role",
+                    "main",
+                    "frontier",
+                    "--campaign",
+                    self.campaign_id,
+                    "--maintenance",
+                    "--maintenance-target",
+                    self.target_id,
+                    "--maintenance-expand",
+                    "context-reasons",
+                    "--maintenance-expand",
+                    "recent",
+                ]
+            )
+        self.assertEqual(status, 0, stderr.getvalue())
+        cli_expanded = json.loads(stdout.getvalue())
+        self.assertEqual(
+            cli_expanded["targets"][0]["recent_attained"][
+                "research_ids"
+            ],
+            recent,
+        )
+        self.assertEqual(
+            len(
+                cli_expanded["targets"][0]["head_context_topology"][
+                    "items"
+                ]
+            ),
+            len(contexts),
+        )
 
         stdout = StringIO()
         stderr = StringIO()
@@ -1880,6 +1957,85 @@ class PlanRoundFrontierStateTests(unittest.TestCase):
         self.assertIn(
             "--maintenance is a separate compact frontier view",
             stderr.getvalue(),
+        )
+
+    def test_maintenance_index_size_ignores_local_reason_length(
+        self,
+    ) -> None:
+        lifecycle = self.store.v5_lifecycle()
+        contexts = [
+            self._research(f"bounded-context-{index}", f"Context {index}")
+            for index in range(12)
+        ]
+        landmarks = [
+            self._research(
+                f"bounded-landmark-{index}", f"Landmark {index}"
+            )
+            for index in range(3)
+        ]
+
+        def write_state(context_reason: str, landmark_reason: str) -> None:
+            lifecycle._replace_campaign_frontier_working_state(
+                self.campaign_id,
+                targets={
+                    self.target_id: {
+                        "recovery_root_research_id": self.root_id,
+                        "active_head_research_ids": [self.root_id],
+                        "historical_landmark_research_ids": landmarks,
+                        "historical_landmark_reasons": {
+                            research_id: landmark_reason
+                            for research_id in landmarks
+                        },
+                        "recent_attained_research_ids": [],
+                        "head_contexts": [
+                            {
+                                "research_id": research_id,
+                                "attached_head_research_id": self.root_id,
+                                "reason": context_reason,
+                            }
+                            for research_id in contexts
+                        ],
+                    }
+                },
+            )
+
+        write_state("short local reason", "short durable reason")
+        short_surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+        )
+        write_state("x" * 2000, "y" * 2000)
+        long_surface = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+        )
+        expanded = lifecycle.frontier_maintenance_surface(
+            campaign_id=self.campaign_id,
+            target_ids=(self.target_id,),
+            expand_sections=("context-reasons",),
+        )
+
+        self.assertEqual(
+            short_surface["targets"][0]["head_context_topology"]["count"],
+            long_surface["targets"][0]["head_context_topology"]["count"],
+        )
+        self.assertLess(
+            abs(
+                len(json.dumps(short_surface))
+                - len(json.dumps(long_surface))
+            ),
+            256,
+        )
+        self.assertGreater(
+            len(json.dumps(expanded)) - len(json.dumps(long_surface)),
+            20000,
+        )
+        self.assertEqual(
+            [
+                item["reason"]
+                for item in expanded["targets"][0][
+                    "historical_landmarks"
+                ]["items"]
+            ],
+            ["y" * 2000 for _ in range(3)],
         )
 
     def test_maintenance_surface_always_covers_every_active_target(self) -> None:

@@ -1,4 +1,26 @@
-# Chalxius V5 traceability through 1.0.20 Explicit Attention Working Memory
+# Chalxius V5 traceability through 1.0.21 Landmark-Centered Situation Awareness
+
+## 1.0.21 Landmark-Centered Situation Awareness overlay
+
+- Candidate version: `1.0.21`; release name **Landmark-Centered Situation
+  Awareness**.
+- The all-target maintenance response is now a bounded routing index containing
+  every target, every mathematical active head, and exact inventory
+  counts/digests instead of serializing every context and landmark reason into
+  one response.
+- A single `--maintenance-target TARGET_ID` drill-down expands all durable
+  landmark reasons and all exact head-context attachment identities for that
+  target. Context reasons, recent identities and the full workflow queue remain
+  explicit selective expansions.
+- The real four-target canary retains exactly 377 context attachments, 164
+  landmark identities/reasons and 6 active heads. Its all-target minified index
+  is 21,273 bytes; target-local minified views range from 9,305 to 35,829 bytes,
+  replacing the prior 195,646-byte indivisible response.
+- Full-maintenance duties are unchanged: Main still exact-searches and performs
+  every warranted head, landmark and exact context-attachment update. A
+  reasoned no-op remains permitted only when the evidence warrants no change.
+- The projection has no automatic mutation, dispatch, Research, Gateway, Fact,
+  or mathematical-truth effect.
 
 ## 1.0.20 Explicit Attention Working Memory overlay
 

@@ -3,9 +3,38 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.20 — Explicit Attention Working Memory
+# Chalxius 1.0.21 — Landmark-Centered Situation Awareness
 
-## Current Main-controlled planning attention
+## 1.0.21 landmark-centered full maintenance
+
+`frontier --campaign CAMPAIGN_ID --maintenance` is Main's all-target routing
+index for full maintenance. One underlying diagnostic reconstruction still
+scans the complete Campaign, but this first response expands the mathematical
+active heads while representing each target's landmarks, local context and
+recent attainment by exact counts and digests. It therefore cannot silently
+lose a target, yet it does not force several targets' long prose through one
+bounded tool response.
+
+For a full maintenance pass, Main then runs one
+`--maintenance-target TARGET_ID` drill-down for every target. A single-target
+drill-down expands every durable landmark reason and every exact
+head-to-Research context attachment identity for that target. Use repeated
+`--maintenance-expand context-reasons|landmarks|recent|queue|all` when the
+corresponding additional evidence is needed; context prose should normally be
+expanded only around a contemplated attachment decision. The explicit
+diagnostic and full-member commands remain available for forensic reading.
+These selectors only change the read projection; they do not mutate attention
+or truth.
+
+The maintenance responsibility is unchanged. Full maintenance must rebuild
+Main's global mathematical understanding, exact-search material old Research,
+and apply every currently warranted head promotion/retirement, landmark
+change, and exact context reattachment. A reasoned no-op is valid only when the
+evidence warrants no attention change. Routine maintenance may make the same
+local attention changes after exact search or route planning. No timer,
+selector, or projection automatically makes those mathematical choices.
+
+## 1.0.20 Main-controlled planning attention
 
 For a target-bound `plan-round` or `plan-repair-round`, Main freezes the
 nontruth attention disposition in the plan itself. Omission safely means
@@ -32,13 +61,11 @@ Repeated policy prose, checkpoint forensics, successor topology, bounded
 membership examples, and duplicate status axes live under
 `frontier --diagnostic` rather than being copied into every routine turn. The
 complete ordinary Campaign member table has the separate explicit forensic
-drill-down `frontier --diagnostic --full-members`. Full maintenance uses
-`frontier --campaign CAMPAIGN_ID --maintenance`: it covers every active target,
-active-head identity and mathematical action, every context/landmark identity
-and reason, all recent attained identities, and current round decisions without
-copying hydrated summaries or deep successor tables. A bounded projection
-always states how many targets are visible and whether it is truncated; a
-target with no live head retains its exact recovery root.
+drill-down `frontier --diagnostic --full-members`. The 1.0.21 maintenance
+overlay above supersedes the earlier indivisible serialization of all context
+reasons and recent identities. A bounded projection always states how many
+targets are visible and whether it is truncated; a target with no live head
+retains its exact recovery root.
 
 When the Campaign maintenance clock is overdue, routine `frontier` and a newly
 created `plan-round` carry one structured `main_attention` object as well as

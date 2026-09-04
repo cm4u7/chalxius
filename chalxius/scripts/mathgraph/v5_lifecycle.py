@@ -13761,15 +13761,21 @@ class V5LifecycleManager:
         self,
         *,
         campaign_id: str,
+        target_ids: tuple[str, ...] | None = None,
+        expand_sections: tuple[str, ...] | None = None,
         _inspection_context: RoundInspectionContext | None = None,
     ) -> dict[str, Any]:
-        """Return complete Campaign working memory without forensic topology.
+        """Return Main's landmark-centred Campaign situation-awareness view.
 
         Full diagnostic reconstruction remains the source of this projection,
-        so the maintenance view cannot silently drop an active target or
-        stored identity.  It removes hydrated duplicates and successor tables,
-        not mathematical attention state.  The projection is read-only and
-        makes no maintenance decision for Main.
+        so the maintenance view cannot silently drop an active target.  The
+        all-target default is a routing index: it keeps exact counts and
+        digests plus the mathematical active heads, without serializing every
+        durable reason or local identity into one response.  Selecting one
+        target expands every landmark and the complete context-attachment
+        topology for that target.  Context prose and recent-attainment
+        identities remain explicit drill-downs.  The projection is read-only
+        and makes no maintenance decision for Main.
         """
 
         campaign_id = validate_campaign_id(campaign_id)
@@ -13785,6 +13791,68 @@ class V5LifecycleManager:
             _inspection_context=inspection,
         )
         selected_campaign_id = diagnostic.get("goal_campaign_id")
+        requested_target_ids = tuple(
+            dict.fromkeys(
+                validate_campaign_target_id(item)
+                for item in (target_ids or ())
+            )
+        )
+        requested_expansions = set(expand_sections or ())
+        allowed_expansions = {
+            "all",
+            "context-reasons",
+            "landmarks",
+            "recent",
+            "queue",
+        }
+        unknown_expansions = sorted(
+            requested_expansions - allowed_expansions
+        )
+        if unknown_expansions:
+            raise ValueError(
+                "unknown maintenance expansion(s): "
+                + ", ".join(unknown_expansions)
+            )
+        expand_all = "all" in requested_expansions
+        target_detail = len(requested_target_ids) == 1
+        expand_context_reasons = (
+            expand_all or "context-reasons" in requested_expansions
+        )
+        expand_context_topology = target_detail or expand_context_reasons
+        expand_landmarks = (
+            target_detail
+            or expand_all
+            or "landmarks" in requested_expansions
+        )
+        expand_recent = expand_all or "recent" in requested_expansions
+        expand_queue = expand_all or "queue" in requested_expansions
+
+        diagnostic_goals = [
+            goal
+            for goal in diagnostic.get("goal_coverage", [])
+            if isinstance(goal, dict)
+            and isinstance(goal.get("target_id"), str)
+        ]
+        available_target_ids = {
+            goal["target_id"] for goal in diagnostic_goals
+        }
+        missing_target_ids = [
+            target_id
+            for target_id in requested_target_ids
+            if target_id not in available_target_ids
+        ]
+        if missing_target_ids:
+            raise ValueError(
+                "maintenance target is not active in Campaign: "
+                + ", ".join(missing_target_ids)
+            )
+        selected_target_id_set = set(requested_target_ids)
+        selected_goals = [
+            goal
+            for goal in diagnostic_goals
+            if not selected_target_id_set
+            or goal["target_id"] in selected_target_id_set
+        ]
 
         def bounded_text(value: Any, maximum: int) -> str | None:
             if not isinstance(value, str):
@@ -13808,9 +13876,7 @@ class V5LifecycleManager:
             }
 
         target_rows: list[dict[str, Any]] = []
-        for goal in diagnostic.get("goal_coverage", []):
-            if not isinstance(goal, dict):
-                continue
+        for goal in selected_goals:
             active_ids = [
                 item
                 for item in goal.get("active_head_research_ids", [])
@@ -13881,7 +13947,52 @@ class V5LifecycleManager:
                 }
                 for item in goal.get("head_contexts", [])
                 if isinstance(item, dict)
+                and isinstance(item.get("research_id"), str)
             ]
+            context_ids_by_head: dict[str | None, list[str]] = {}
+            for item in contexts:
+                attached_head = item.get("attached_head_research_id")
+                if not isinstance(attached_head, str):
+                    attached_head = None
+                context_ids_by_head.setdefault(attached_head, []).append(
+                    item["research_id"]
+                )
+            context_groups = [
+                {
+                    "attached_head_research_id": attached_head,
+                    "count": len(research_ids),
+                    "ids_sha256": sha256_json(research_ids),
+                    "research_ids": research_ids,
+                }
+                for attached_head, research_ids in context_ids_by_head.items()
+            ]
+            context_identity_records = [
+                {
+                    "research_id": item["research_id"],
+                    "attached_head_research_id": item.get(
+                        "attached_head_research_id"
+                    ),
+                }
+                for item in contexts
+            ]
+            context_topology = {
+                "count": goal.get("head_context_count", len(contexts)),
+                "topology_sha256": sha256_json(context_identity_records),
+                "records_sha256": goal.get("head_contexts_sha256"),
+                "attachment_counts": goal.get(
+                    "head_context_attachment_counts", {}
+                ),
+                "reason_expansion": (
+                    "full" if expand_context_reasons else "on_demand"
+                ),
+                "identity_expansion": (
+                    "full" if expand_context_topology else "target_drill_down"
+                ),
+            }
+            if expand_context_topology:
+                context_topology["groups"] = context_groups
+            if expand_context_reasons:
+                context_topology["items"] = contexts
             landmark_by_id = {
                 item["research_id"]: item
                 for item in goal.get("historical_landmarks", [])
@@ -13904,6 +14015,30 @@ class V5LifecycleManager:
                 }
                 for research_id in landmark_ids
             ]
+            landmark_history = {
+                "count": goal.get(
+                    "historical_landmark_count", len(landmarks)
+                ),
+                "ids_sha256": goal.get(
+                    "historical_landmark_ids_sha256"
+                ),
+                "reasons_sha256": sha256_json(
+                    [
+                        {
+                            "research_id": item["research_id"],
+                            "reason": item.get("reason"),
+                        }
+                        for item in landmarks
+                    ]
+                ),
+                "reading_policy": (
+                    "all_landmarks_full"
+                    if expand_landmarks
+                    else "target_drill_down"
+                ),
+            }
+            if expand_landmarks:
+                landmark_history["items"] = landmarks
             recent_ids = [
                 item
                 for item in goal.get("recent_attained_research_ids", [])
@@ -13938,14 +14073,17 @@ class V5LifecycleManager:
                 }
                 for research_id in recent_preview_ids
             ]
-            scopes = [
-                compact
-                for compact in (
-                    compact_scope(item)
-                    for item in goal.get("supervision_coverage", [])
-                )
-                if compact
-            ]
+            recent_attained = {
+                "count": goal.get("recent_attained_count", len(recent_ids)),
+                "ids_sha256": goal.get("recent_attained_ids_sha256"),
+                "summary_policy": "first_two_last_two",
+                "summaries": recent_summaries,
+                "identity_expansion": (
+                    "full" if expand_recent else "on_demand"
+                ),
+            }
+            if expand_recent:
+                recent_attained["research_ids"] = recent_ids
             anomaly_fields = (
                 "invalid_head_research_ids",
                 "invalid_attained_checkpoint_research_ids",
@@ -13970,76 +14108,38 @@ class V5LifecycleManager:
                 "label": goal.get("label"),
                 "root_research_id": goal.get("root_research_id"),
                 "root_claim": bounded_text(goal.get("root_claim"), 420),
-                "recovery_root_research_id": goal.get(
-                    "recovery_root_research_id"
-                ),
                 "frontier_generation": goal.get("frontier_generation"),
                 "coverage_status": goal.get("coverage_status"),
                 "work_completion_status": goal.get(
                     "work_completion_status"
                 ),
-                "next_action": goal.get("next_action"),
-                "why_now": goal.get("why_now"),
-                "actionable_research_id": goal.get(
-                    "actionable_research_id"
-                ),
-                "actionable_research_ids": goal.get(
-                    "actionable_research_ids", []
-                ),
-                "actionable_round_id": goal.get("actionable_round_id"),
                 "active_head_count": len(active_ids),
-                "active_head_research_ids": active_ids,
                 "active_head_ids_sha256": sha256_json(active_ids),
-                "current_active_head_research_ids": goal.get(
-                    "current_active_head_research_ids", []
-                ),
                 "active_heads": active_heads,
-                "head_context_count": goal.get(
-                    "head_context_count", len(contexts)
-                ),
-                "head_contexts_sha256": goal.get("head_contexts_sha256"),
-                "head_context_attachment_counts": goal.get(
-                    "head_context_attachment_counts", {}
-                ),
-                "head_contexts": contexts,
-                "historical_landmark_count": goal.get(
-                    "historical_landmark_count", len(landmarks)
-                ),
-                "historical_landmark_ids_sha256": goal.get(
-                    "historical_landmark_ids_sha256"
-                ),
-                "historical_landmarks": landmarks,
-                "recent_attained_count": goal.get(
-                    "recent_attained_count", len(recent_ids)
-                ),
-                "recent_attained_ids_sha256": goal.get(
-                    "recent_attained_ids_sha256"
-                ),
-                "recent_attained_research_ids": recent_ids,
-                "recent_attained_summaries": recent_summaries,
-                "recent_attained_summary_policy": "first_two_last_two",
-                "supervision_coverage_count": goal.get(
-                    "supervision_coverage_count", len(scopes)
-                ),
-                "supervision_coverage_sha256": goal.get(
-                    "supervision_coverage_sha256"
-                ),
-                "supervision_coverage": scopes,
-                "attained_successor_root_count": goal.get(
-                    "attained_successor_root_count", 0
-                ),
-                "attained_successor_root_ids_sha256": goal.get(
-                    "attained_successor_root_ids_sha256", sha256_json([])
-                ),
-                "uncheckpointed_terminal_successor_count": goal.get(
-                    "uncheckpointed_terminal_successor_count", 0
-                ),
-                "uncheckpointed_terminal_successor_ids_sha256": goal.get(
-                    "uncheckpointed_terminal_successor_ids_sha256",
-                    sha256_json([]),
-                ),
+                "head_context_topology": context_topology,
+                "historical_landmarks": landmark_history,
+                "recent_attained": recent_attained,
                 "anomalies": anomalies,
             }
+            if not active_ids:
+                target_row.update(
+                    {
+                        "recovery_root_research_id": goal.get(
+                            "recovery_root_research_id"
+                        ),
+                        "next_action": goal.get("next_action"),
+                        "why_now": goal.get("why_now"),
+                        "actionable_research_id": goal.get(
+                            "actionable_research_id"
+                        ),
+                        "actionable_research_ids": goal.get(
+                            "actionable_research_ids", []
+                        ),
+                        "actionable_round_id": goal.get(
+                            "actionable_round_id"
+                        ),
+                    }
+                )
             target_rows.append(
                 {
                     key: value
@@ -14052,10 +14152,19 @@ class V5LifecycleManager:
         for item in diagnostic.get("workflow_queue", []):
             if not isinstance(item, dict):
                 continue
+            item_target_ids = [
+                target_id
+                for target_id in item.get("goal_target_ids", [])
+                if isinstance(target_id, str)
+            ]
+            if selected_target_id_set and not (
+                selected_target_id_set & set(item_target_ids)
+            ):
+                continue
             queue_row = {
                 "research_id": item.get("research_id"),
                 "claim": bounded_text(item.get("claim"), 360),
-                "goal_target_ids": item.get("goal_target_ids", []),
+                "goal_target_ids": item_target_ids,
                 "next_action": item.get("next_action"),
                 "why_now": item.get("why_now"),
                 "actionable_research_id": item.get(
@@ -14082,11 +14191,61 @@ class V5LifecycleManager:
                 }
             )
 
+        active_head_locations = {
+            (target["target_id"], head["research_id"])
+            for target in target_rows
+            for head in target.get("active_heads", [])
+            if isinstance(target.get("target_id"), str)
+            and isinstance(head, dict)
+            and isinstance(head.get("research_id"), str)
+        }
+
+        def queue_row_is_represented(item: dict[str, Any]) -> bool:
+            research_id = item.get("research_id")
+            target_ids_for_item = item.get("goal_target_ids", [])
+            return (
+                isinstance(research_id, str)
+                and bool(target_ids_for_item)
+                and all(
+                    (target_id, research_id) in active_head_locations
+                    for target_id in target_ids_for_item
+                )
+            )
+
+        unrepresented_queue_rows = [
+            item for item in queue_rows if not queue_row_is_represented(item)
+        ]
+        queue_signatures = [
+            {
+                "research_id": item.get("research_id"),
+                "goal_target_ids": item.get("goal_target_ids", []),
+                "next_action": item.get("next_action"),
+                "actionable_research_id": item.get(
+                    "actionable_research_id"
+                ),
+                "actionable_round_id": item.get("actionable_round_id"),
+            }
+            for item in queue_rows
+        ]
+        queue_projection = {
+            "count": len(queue_rows),
+            "action_signatures_sha256": sha256_json(queue_signatures),
+            "represented_by_active_heads_count": (
+                len(queue_rows) - len(unrepresented_queue_rows)
+            ),
+            "display_policy": (
+                "full" if expand_queue else "unrepresented_only"
+            ),
+            "items": (
+                queue_rows if expand_queue else unrepresented_queue_rows
+            ),
+        }
+
         membership = diagnostic.get("campaign_membership")
         membership = membership if isinstance(membership, dict) else {}
-        return {
-            "revision": "chalxius-v5-frontier-maintenance-surface-1",
-            "view": "complete_attention_compact_topology",
+        result = {
+            "revision": "chalxius-v5-frontier-maintenance-surface-2",
+            "view": "landmark_centered_situation_awareness",
             "campaign_id": selected_campaign_id,
             "objective": diagnostic.get("objective"),
             "goal_target_count": diagnostic.get("goal_target_count", 0),
@@ -14096,18 +14255,22 @@ class V5LifecycleManager:
             "goal_progress": diagnostic.get("goal_progress", {}),
             "targets": target_rows,
             "target_projection_complete": (
-                len(target_rows) == diagnostic.get("goal_target_count", 0)
+                len(target_rows) == len(selected_goals)
                 and diagnostic.get("goal_coverage_truncated") is False
             ),
-            "workflow_queue": queue_rows,
+            "all_target_projection": (
+                not requested_target_ids
+                and len(target_rows)
+                == diagnostic.get("goal_target_count", 0)
+                and diagnostic.get("goal_coverage_truncated") is False
+            ),
+            "selected_target_count": len(target_rows),
+            "workflow_queue": queue_projection,
             "campaign_membership": {
                 key: membership[key]
                 for key in (
                     "member_count",
                     "member_ids_sha256",
-                    "member_research_ids",
-                    "members_truncated",
-                    "members",
                     "full_members_command",
                 )
                 if key in membership
@@ -14125,19 +14288,75 @@ class V5LifecycleManager:
                 "full_campaign_members": membership.get(
                     "full_members_command"
                 ),
+                "target_detail_template": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-target TARGET_ID"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
+                "all_landmarks": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-expand landmarks"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
+                "full_context_reasons": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-expand context-reasons"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
+                "full_recent_attained": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-expand recent"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
+                "full_workflow_queue": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-expand queue"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
+                "full_maintenance_evidence": (
+                    f"frontier --campaign {selected_campaign_id} "
+                    "--maintenance --maintenance-expand all"
+                    if isinstance(selected_campaign_id, str)
+                    else None
+                ),
             },
             "maintenance_contract": {
                 "review": (
                     "Reconstruct the Campaign state, exact-search material "
-                    "old Research, and make only evidence-supported attention "
-                    "changes."
+                    "old Research, and make every currently warranted "
+                    "frontier, landmark, and exact context-attachment change."
                 ),
+                "default_attention_read": (
+                    "First read the all-target routing index.  During full "
+                    "maintenance, select every target in turn so every "
+                    "durable landmark and every context attachment identity "
+                    "is read without cross-target truncation; expand local "
+                    "context prose only where a mathematical decision "
+                    "requires it."
+                ),
+                "curation_duties": [
+                    "promote or retire active heads when warranted",
+                    "add or remove durable landmarks when warranted",
+                    "reattach or detach context by exact Research identity",
+                    "exact-search material old Research before route choice",
+                ],
                 "reasoned_no_op_valid": True,
                 "automatic_mutation_effect": "none",
                 "dispatch_effect": "none",
                 "truth_effect": "none",
             },
         }
+        if requested_target_ids or requested_expansions:
+            result["selection"] = {
+                "target_ids": list(requested_target_ids),
+                "expansions": sorted(requested_expansions),
+            }
+        return result
 
     @staticmethod
     def _compact_frontier_entry(projection: dict[str, Any]) -> dict[str, Any]:

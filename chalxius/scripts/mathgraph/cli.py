@@ -1212,9 +1212,34 @@ def build_parser(
         "--maintenance",
         action="store_true",
         help=(
-            "print the compact complete all-target maintenance surface; "
-            "keeps every attention identity and reason while omitting "
-            "repeated hydrated summaries and deep successor topology"
+            "print the all-target landmark-centred maintenance surface; "
+            "keeps complete context attachment topology while expanding "
+            "local prose only on demand"
+        ),
+    )
+    p.add_argument(
+        "--maintenance-target",
+        action="append",
+        default=[],
+        help=(
+            "select one Campaign target for maintenance drill-down; repeat "
+            "as needed"
+        ),
+    )
+    p.add_argument(
+        "--maintenance-expand",
+        action="append",
+        default=[],
+        choices=(
+            "context-reasons",
+            "landmarks",
+            "recent",
+            "queue",
+            "all",
+        ),
+        help=(
+            "explicitly expand local context reasons, landmarks, recent "
+            "identities, the full workflow queue, or all sections"
         ),
     )
 
@@ -2496,6 +2521,13 @@ def main(argv: list[str] | None = None) -> int:
                     {"memory_id": args.entry_id, "status": args.status}
                 )
         elif args.command == "frontier":
+            if (
+                args.maintenance_target or args.maintenance_expand
+            ) and not args.maintenance:
+                raise ValueError(
+                    "--maintenance-target and --maintenance-expand "
+                    "require --maintenance"
+                )
             if store.workflow_evidence_version() == 5:
                 if args.full_members and not args.diagnostic:
                     raise ValueError(
@@ -2523,6 +2555,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.maintenance:
                     projection = lifecycle.frontier_maintenance_surface(
                         campaign_id=args.campaign,
+                        target_ids=tuple(args.maintenance_target),
+                        expand_sections=tuple(args.maintenance_expand),
                     )
                 elif args.history:
                     projection = lifecycle.frontier(

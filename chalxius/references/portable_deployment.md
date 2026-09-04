@@ -1,5 +1,24 @@
 # Chalxius portable deployment
 
+## 1.0.21 Landmark-Centered Situation Awareness
+
+The `1.0.21` **Landmark-Centered Situation Awareness** candidate replaces one
+oversized full-maintenance response with a lossless two-stage read. The first
+`frontier --campaign ID --maintenance` call is an all-target routing index: it
+contains every target and mathematical active head, while context, landmark,
+recent-attainment and queue inventories retain exact counts and digests. Main
+then reads each target separately with `--maintenance-target TARGET_ID`, which
+expands every durable landmark reason and every exact head-context attachment
+identity for that target. Local context prose remains an explicit
+`--maintenance-expand context-reasons` drill-down for contemplated attachment
+decisions.
+
+This is not a weaker maintenance contract. Main still exact-searches material
+old Research and makes every warranted active-head, landmark and exact context
+attachment change. A no-op is valid only when the evidence warrants no working-
+memory change. The projection performs no automatic mutation, dispatch,
+Research rewrite, or Fact/truth decision.
+
 ## 1.0.20 Explicit Attention Working Memory
 
 The `1.0.20` **Explicit Attention Working Memory** candidate makes Campaign
