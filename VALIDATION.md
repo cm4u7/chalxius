@@ -1,67 +1,68 @@
-# Validation — Chalxius v1.0.17 Literal Input Continuity
+# Validation — Chalxius v1.0.23 Research Selection Continuity
 
-This report records software, installation, package, real-project canary, and
-publication evidence. It does not certify a mathematical claim.
+This report records software and distribution checks, not mathematical
+certification.
 
-## Frozen identity
+## Frozen payload
 
 | Field | Value |
-|---|---|
-| Version | 1.0.17 |
-| Release date | 2026-09-02 |
-| Manifest entries | 271 |
-| Package files, including manifest | 272 |
-| Manifest SHA-256 | `d61410710ae9e2932f0d68a51bdbf03a399a465349bcccb68997af345ccd3db9` |
-| Archive | `chalxius-1.0.17-literal-input-continuity.tar.gz` |
-| Archive bytes | 2,843,995 |
-| Archive regular-file members | 272 |
-| Archive SHA-256 | `64c190e30d3f097cb93014e1f3b0d53257a23a528e67fd0aab5a35679bc907dd` |
-| Checksum-file SHA-256 | `29a38338c4c8c755a9a64a32eff5ee83cd67a96dad0cf18cf264b930ef60bc4c` |
+| --- | --- |
+| Version | 1.0.23 |
+| Release date | 2026-09-05 |
+| Manifest entries | 274 |
+| Package files, including manifest | 275 |
+| Manifest SHA-256 | `78b474b4c28c92f17b98f95829303a2a13e930ed6a17c96a2c8ba550d04deae3` |
+| Archive | `chalxius-1.0.23-research-selection-continuity.tar.gz` |
+| Archive bytes | 2887849 |
+| Archive SHA-256 | `eae7f71af089c0b5c8e72e0282203292eebcbaa1d089e40eea34d0833d1c77ab` |
+| Checksum-file SHA-256 | `91d98d38ae86cfc93935a99f2d5e85f289ec6b87d7a1c4cd664df78e5808ce93` |
 
-Two independent archive builds were byte-identical. The archive contains only
-the 272 sorted regular package files and no directory, symlink, cache, or
-bytecode member.
+The deterministic double build was byte-identical. Candidate, installation and
+archive match at every file, including the manifest. The archive has only
+regular files and no symlink, directory, cache or bytecode member.
 
-## Correctness validation and installation
+## Installation-owned verification
 
-- focused Campaign/frontier and lifecycle lane: 83 passed in 6.827 seconds;
-- complete candidate and installed self-tests: PASS;
-- installer-focused regressions and fast installation: PASS;
-- manifest-bound atomic installation and rollback preparation: PASS;
-- candidate-to-installed identity: exact at all 271 manifest entries; and
-- project reads/writes performed by installation: 0/0.
+- Exact selection and adjacent round-recovery lane: 84 tests, 5.100 seconds.
+- Main's selection, proof-input, lifecycle, Campaign, installer and identity
+  lane: 83 tests, 6.510 seconds.
+- Final installer/identity lane: 13 tests, 1.257 seconds, including a complete
+  copied candidate bumped to a different version without rewriting historical
+  release prose.
+- Candidate and installed self-tests: passed.
+- Atomic installation and rollback preparation: passed.
+- Project reads/writes by the installer: 0/0.
 
-The installed version is `1.0.17` with manifest
-`d61410710ae9e2932f0d68a51bdbf03a399a465349bcccb68997af345ccd3db9`.
-The previous runtime remains available through the installer-managed rollback
-archive.
+The test lanes overlap; their counts are not a count of unique tests. The
+first installation attempt exposed a redundant version-prose check and stopped
+before replacing the old runtime. That check was repaired and tested before the
+successful final installation. No functional, manifest or formal-identity
+check was bypassed.
 
-## Real-project canary
+## Installed real-project canaries
 
-The installed zero-argument `round-status` read 1,338 rounds, reported zero
-active and zero unreadable rounds, and deeply inspected five unresolved
-candidates. A bounded `frontier --limit 1` retained all four Campaign targets
-while expanding one goal-coverage row. The due maintenance advisory remained
-visible and nonblocking. The canaries started no maintenance, Research, Fact,
-Candidate, verifier, Gateway, or admission work.
+Exact selected-work history returned the expected previously ingested product
+and later aborted duplicate, with no unreadable entries: 1309
+output bytes in 5.466 seconds. Earlier isolated measurements
+ranged from 2.207 to 3.389 seconds.
 
-## Publication scan
+The Campaign frontier returned all four targets in 28816 bytes,
+below its 32 KiB budget, in 5.675 seconds. No new mathematical
+work, Fact work or maintenance completion was triggered. Timing is observed
+evidence, not a constant-time guarantee.
 
-Publication reuses the installed bytes. The candidate and archive were checked
-for exact file-set identity, checksum consistency, symlinks, caches, bytecode,
-private-key headers, common credential-token forms, actual local usernames and
-absolute home paths, and private runtime identifiers. The only path matches
-were documented placeholders (`/Users/<user>` and `/Users/example`); true
-positive sensitive findings were zero.
+## Distribution boundary
 
-The optional mutation/forensic matrix is not a publication gate and was not
-repeated. Publication creates no Research or mathematical Fact.
+The final source/package scan covered 325 files and the
+byte-identical archive. No current local-home, private-project, credential or
+private-key matches remained. An already-public historical project label was
+removed from the new payload; existing Git history was not rewritten.
 
-## Publication boundary
+Publication reuses installed bytes and checks archive identity, checksum,
+file set and sensitive information. The optional mutation/forensic matrix
+was not rerun merely to authorize publication.
 
-The annotated `v1.0.17` tag resolves to
-`b9118b13419074823967370bdf3b3c74c8574d05`. GitHub published the release at
-`2026-09-02T12:39:25Z`:
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.17>. Both uploaded asset
-sizes and GitHub SHA-256 digests match the frozen local archive and sidecar;
-fresh downloads were also byte-identical.
+The tagged payload is identified by
+[v1.0.23](https://github.com/cm4u7/chalxius/releases/tag/v1.0.23).
+GitHub's release asset metadata and accompanying checksum provide the public
+distribution identity; no source commit hash is embedded into its own commit.

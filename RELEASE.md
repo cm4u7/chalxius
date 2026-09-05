@@ -1,77 +1,73 @@
-# Chalxius v1.0.17 — Literal Input Continuity
+# Chalxius v1.0.23 — Research Selection Continuity
 
-Chalxius 1.0.17 makes long-running Research planning more reliable when one
-round depends on exact historical mathematical bytes. It also includes the
-scope-owned source continuity and explicit repair/head handoff introduced in
-1.0.15 and 1.0.16. These changes affect coordination only; Research and Fact
-authority are unchanged.
+Chalxius helps Main choose the next research step with the work already done
+in view. This release adds exact prior-work reminders and clearer agent
+instructions, and includes the frontier improvements since v1.0.17.
 
-## What changed
+## New in this release
 
-- Before Main freezes work that consumes one exact historical formula,
-  definition, convention, or theorem statement, it opens the selected artifact
-  and binds a byte object that actually contains the input. A symbol mention,
-  locator, or downstream coefficient is not silently promoted to capability.
-- Source authority belongs to the exact source-owned assignment. Proof and
-  integration siblings do not inherit a source gate merely by sharing a round,
-  and unrelated historical source reviews remain provenance rather than live
-  capability.
-- Explicit head replacement transfers the named old head's context without
-  guessing a successor. Repeating the same `plan-repair-round` request returns
-  the canonical existing non-aborted round instead of duplicating work.
-- Campaign context storage has no numeric quota, and Fact admission is off by
-  default until the user explicitly requests a bounded Fact window.
+- Production planning shows earlier completed or in-flight assignments for the
+  exact selected Research ID. The reminder is nonblocking: intentional reruns
+  remain legal. `round-status --research-id ID` expands complete exact history.
+- Main reads relevant context, searches known obstructions as well as desired
+  results, and checks whether existing local results satisfy the actual next
+  input. It does not infer novelty from a new ID, require a DAG, or declare
+  automatic theorem assembly.
+- Agent selection is difficulty-based: **Astra max** for difficult or
+  error-prone work; **Sol max** for clear, bounded work. Explicit user choices
+  take precedence. One author-independent supervisor can cover both applicable
+  source/proof scopes and later COW.
+- A nested metadata object in the flat Research creation envelope now produces
+  a warning without being rejected or rewritten.
+- Supervisor instructions explicitly permit the exact attacked production
+  card's direct typed input capabilities. Real missing or hash-drifted bytes
+  remain errors; sibling cards and arbitrary ancestors grant no authority.
+- Installation identity uses the four formally maintained projections.
+  Historical explanatory documents no longer have to repeat an exact current
+  version sentence to pass self-test.
 
-These are coordination changes only. Chalxius does not infer mathematical
-completion, select a research direction, dispatch work, rewrite Research, or
-change package, verifier, Gateway, or Fact authority.
+## Included frontier improvements
 
-## Preserved boundaries
+Routine frontier output has a final 32 KiB JSON budget. Exact identities,
+counts, digests and drill-down commands survive prose reduction. Full
+maintenance reads an all-target index followed by each target's full landmark
+reasons; context reasons are expanded around decisions.
 
-- The v1.0.5 split opt-in rule remains active: routine supervision and Fact
-  packaging ignore splitting, while a new low-level split requires explicit
-  current authorization.
-- Campaign and frontier remain nontruth working memory.
-- Installation remains the software-correctness boundary; publication reuses
-  the exact installed bytes and checks only archive identity, checksum, file
-  set, and absence of sensitive local data.
+Planning preserves explicit Main choices. Named head replacement and precise
+single-placement context reattachment do not erase unrelated parallel work.
+Repair source and trigger artifacts with the same local role are disambiguated
+by their actual origin only when their bytes collide. Direct primary-source
+inputs avoid reactivating irrelevant historical source checks.
 
-## Graph Browser status
+## Defaults and boundaries
 
-Graph Browser and graphical graph generation remain temporarily unavailable
-as supported release capabilities. Textual Research, exact search, Campaign,
-frontier, supervision, COW, Fact packaging, verification, and certification
-remain available.
+Semantic splitting and Fact admission remain off by default. Routine
+supervisors and packagers do not assess or recommend splitting. Campaigns are
+many-to-many working-memory overlays, not node ownership or truth gates.
 
-## Validation
+Graph Browser and graphical graph generation remain temporarily unavailable.
+Textual Research, search, frontier, supervision and explicitly requested Fact
+certification remain available.
 
-The exact manifest-bound candidate passed complete candidate and installed
-self-tests, 83 focused lifecycle/frontier tests, installer regressions, atomic
-installation, rollback preparation, and exact candidate-to-installed
-comparison across all 271 manifest entries. Real-project canaries read 1,338
-rounds and the bounded Campaign frontier without starting maintenance, Fact,
-Candidate, verifier, Gateway, or admission work.
+## Validation and distribution
 
-Full evidence and exact hashes are recorded in [VALIDATION.md](VALIDATION.md)
-and `RELEASE.lock.json`.
+The candidate passed bounded regression lanes, candidate and installed
+self-tests, and real-project exact-history/frontier canaries. The release
+archive contains the exact installed bytes. Identity, file-set, checksum and
+sensitive-data checks passed; publication does not repeat the installation
+test matrix. See [validation evidence](https://github.com/cm4u7/chalxius/blob/v1.0.23/VALIDATION.md).
 
-## Distribution
+Assets:
 
-Release assets:
-
-- `chalxius-1.0.17-literal-input-continuity.tar.gz`
-- `chalxius-1.0.17-literal-input-continuity.tar.gz.sha256`
+- `chalxius-1.0.23-research-selection-continuity.tar.gz`
+- `chalxius-1.0.23-research-selection-continuity.tar.gz.sha256`
 
 ```sh
-shasum -a 256 -c chalxius-1.0.17-literal-input-continuity.tar.gz.sha256
-tar -xzf chalxius-1.0.17-literal-input-continuity.tar.gz
+shasum -a 256 -c chalxius-1.0.23-research-selection-continuity.tar.gz.sha256
+tar -xzf chalxius-1.0.23-research-selection-continuity.tar.gz
 cd chalxius
-shasum -a 256 -c MANIFEST.sha256
-python3 -B scripts/self_test.py
+python3 -B scripts/local_install.py
 ```
 
-Publication creates no mathematical Fact.
-
-Version 1.0.17 was published on 2026-09-02 at
-<https://github.com/cm4u7/chalxius/releases/tag/v1.0.17>. The annotated tag
-resolves to release commit `b9118b13419074823967370bdf3b3c74c8574d05`.
+[Release page](https://github.com/cm4u7/chalxius/releases/tag/v1.0.23).
+Software validation does not certify a mathematical claim.

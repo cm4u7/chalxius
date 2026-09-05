@@ -1,5 +1,22 @@
 # Pre-Chalxius capability difference audit
 
+## 1.0.23 Research Selection Continuity difference
+
+An exact selected Research could already have completed or in-flight work
+without that history appearing in the planning response. Production planning
+now returns nonblocking exact task history when present, with bounded status
+expansion and `round-status --research-id ID` for complete exact history.
+Intentional reruns remain legal. Main still owns semantic deduplication,
+obstruction search and consumer-specific assembly; no graph-equivalence
+heuristic or second selection gate is added.
+
+The flat `memory-add` creation interface now warns when a nested metadata
+object would hide operational fields one level too deep, preserving the
+submitted bytes. Supervisor instructions distinguish an authorized exact
+production-card direct-input entry from a genuinely missing capability.
+Current Main entry points also state difficulty-based Astra max / Sol max
+dispatch, and deployment prose no longer recommends routine semantic splits.
+
 ## 1.0.9 Working Memory Maintenance difference
 
 The previous working-memory surface repeatedly expanded information Main did

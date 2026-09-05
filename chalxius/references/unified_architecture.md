@@ -867,9 +867,13 @@ dedicated Candidate-adverse compact bootstrap. Main then launches and confirms
 the actual adverse worker. Candidate disposition, the fresh verifier,
 Gateway-owned Certification, and Gateway admission remain unchanged.
 
-Current supervision cards additionally freeze one content-addressed projection
-of each attacked production card's active Fact premises, exact task-card bytes,
-and input/source capabilities. This is capability closure for the review, not a
+Current supervision cards freeze the attacked production card's exact
+path/hash and active Fact premises. The production card is itself an authorized
+entry to its direct typed path/hash inputs. Proof/program/integration cards do
+not flatten that baseline input list; source-scope cards additionally project
+their own applicable source closure. Absence of a flattened copy is not absence
+of authority. Sibling supervisor cards, arbitrary Research ancestry and prose
+paths grant no additional capability. This is a review input boundary, not a
 new authority snapshot or truth state. Unselected Research ancestry remains a
 hash-checked structural connectivity input; only selected authority-bearing
 records are fully replayed.

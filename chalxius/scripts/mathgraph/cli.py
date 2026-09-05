@@ -93,6 +93,30 @@ def _print_json(payload: Any) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
 
 
+def _research_input_shape_advisories(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Explain the append API's flat shape without rewriting user input."""
+
+    nested = payload.get("metadata")
+    if not isinstance(nested, dict) or not nested:
+        return []
+    keys = sorted(nested)
+    return [
+        {
+            "code": "nested_research_metadata",
+            "message": (
+                "memory-add stores extension fields under record.metadata. This nested "
+                "metadata object is preserved at record.metadata.metadata; it does not "
+                "supply task-card directives. Put operational fields such as obligations, "
+                "stop_conditions, work_mode and artifacts at the input's top level. "
+                "The submitted input was not rewritten."
+            ),
+            "nested_key_count": len(keys),
+            "nested_keys": keys[:16],
+            "nested_keys_sha256": sha256_json(keys),
+        }
+    ]
+
+
 def _add_plan_frontier_attention_arguments(
     parser: argparse.ArgumentParser,
 ) -> None:
@@ -1398,6 +1422,10 @@ def build_parser(
     p = sub.add_parser("round-status")
     p.add_argument("round_id", nargs="?")
     p.add_argument(
+        "--research-id",
+        help="read all exact assignment history for one V5 Research identity",
+    )
+    p.add_argument(
         "--all",
         action="store_true",
         dest="all_rounds",
@@ -2452,8 +2480,10 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "memory-add":
             if store.workflow_evidence_version() == 5:
+                payload = _json_file(args.input)
+                advisories = _research_input_shape_advisories(payload)
                 record = store.v5_lifecycle().add_research(
-                    _json_file(args.input),
+                    payload,
                     actor=args.actor,
                     campaign_id=args.campaign,
                     reuse_unbound_main_semantics=args.role == "main",
@@ -2469,6 +2499,7 @@ def main(argv: list[str] | None = None) -> int:
                         "research_id": record["research_id"],
                         "status": record["status"],
                         "campaign_id": record["metadata"].get("campaign_id"),
+                        **({"advisories": advisories} if advisories else {}),
                     }
                 )
             else:
@@ -2923,12 +2954,18 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "round-status":
-            if args.round_id and args.all_rounds:
+            if sum(bool(value) for value in (args.round_id, args.all_rounds, args.research_id)) > 1:
                 raise ValueError(
-                    "round-status accepts either one ROUND_ID or --all"
+                    "round-status accepts one ROUND_ID, --all, or --research-id"
                 )
             if store.workflow_evidence_version() == 5:
-                if args.all_rounds:
+                if args.research_id:
+                    _print_json(
+                        store.v5_lifecycle().selected_work_history(
+                            [args.research_id], full=True,
+                        )
+                    )
+                elif args.all_rounds:
                     _print_json(store.v5_lifecycle().round_statuses())
                 elif args.round_id:
                     _print_json(
@@ -2939,6 +2976,8 @@ def main(argv: list[str] | None = None) -> int:
                         store.v5_lifecycle().round_attention_statuses()
                     )
             else:
+                if args.research_id:
+                    raise ValueError("round-status --research-id requires a V5 project")
                 if not args.round_id and not args.all_rounds:
                     raise ValueError(
                         "V1-V4 round-status requires one ROUND_ID or --all"

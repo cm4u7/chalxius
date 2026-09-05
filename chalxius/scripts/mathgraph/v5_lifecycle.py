@@ -20037,7 +20037,14 @@ class V5LifecycleManager:
                     "Freshly review the whole exact successor and every conserved claim "
                     "inside this assigned scope, including new, inherited, repair-induced, "
                     "and cross-component defects. PHX constrains architecture, never "
-                    "adversarial scrutiny. Admitted Fact dependencies are "
+                    "adversarial scrutiny. The exact attacked production task card is "
+                    "itself a frozen read capability: verify its path/hash, then read "
+                    "its DIRECT typed path/SHA-256 inputs as needed for this review. "
+                    "A compact proof card need not flatten or duplicate those inputs. "
+                    "This does not authorize a sibling task card, arbitrary ancestor "
+                    "recursion, or paths mentioned only in prose. Missing or hash-drifted "
+                    "required bytes remain explicit capability blockers. "
+                    "Admitted Fact dependencies are "
                     "frozen premises, not default attack targets. If exact new evidence "
                     "contradicts one, report that conflict separately for an "
                     "authority-governed reopening; do not casually re-refute the Fact. "
@@ -20307,7 +20314,12 @@ class V5LifecycleManager:
                 "production accepts only constructive work"
             )
 
-        return self.create_round(
+        inspection = self._bind_inspection_context(
+            _inspection_context,
+            create=True,
+        )
+        assert inspection is not None
+        status = self.create_round(
             workers=workers,
             mode=mode,
             research_ids=research_ids,
@@ -20318,8 +20330,20 @@ class V5LifecycleManager:
             frontier_attention=frontier_attention,
             user_authorized_split=user_authorized_split,
             research_cycle=self.production_research_cycle_binding(),
-            _inspection_context=_inspection_context,
+            _inspection_context=inspection,
         )
+        # Read-only advice belongs to this returned planning view, never to the
+        # frozen request/card or a second selection gate. Main may deliberately
+        # rerun an exact Research identity; existing work should be visible
+        # before a host worker is dispatched on the new round.
+        history = self.selected_work_history(
+            [item["research_id"] for item in status["assignments"]],
+            exclude_round_id=status["round_id"],
+            _inspection_context=inspection,
+        )
+        if history["matching_assignment_count"] or history["unreadable_round_count"]:
+            status = {**status, "selected_work_history": history}
+        return status
 
     def _matching_exact_repair_round_ids(
         self,
@@ -24567,6 +24591,137 @@ class V5LifecycleManager:
             round_id,
             inspection,
         )
+
+    def selected_work_history(
+        self,
+        research_ids: list[str],
+        *,
+        exclude_round_id: str | None = None,
+        full: bool = False,
+        _inspection_context: RoundInspectionContext | None = None,
+    ) -> dict[str, Any]:
+        """Expose exact prior assignments without choosing or preventing work.
+
+        Discovery reads small round manifests and compares assignment Research
+        identities only. Deep status validation is limited to the displayed
+        exact matches, reusing the owning command's inspection. The explicit
+        round-status selector expands the complete matching set on demand.
+        Missing historical bytes are advice to inspect, not a reason to fail a
+        successfully published new round or to claim that no prior work exists.
+        """
+
+        selected_ids = sorted({validate_memory_id(item) for item in research_ids})
+        if exclude_round_id is not None:
+            exclude_round_id = validate_round_id(exclude_round_id)
+        inspection = self._bind_inspection_context(_inspection_context, create=True)
+        assert inspection is not None
+        matches: dict[str, list[tuple[str, str]]] = {
+            research_id: [] for research_id in selected_ids
+        }
+        unreadable: list[dict[str, str]] = []
+        needles = [research_id.encode("utf-8") for research_id in selected_ids]
+        try:
+            round_ids, _private_count, invalid_names = self._discover_round_ids()
+            unreadable.extend(
+                {"round_id": name, "reason": "invalid visible round identity"}
+                for name in invalid_names
+            )
+        except (OSError, ValueError) as exc:
+            round_ids = []
+            unreadable.append({"round_id": "", "reason": _bounded_text(str(exc), 240)})
+        for round_id in round_ids if selected_ids else []:
+            if round_id == exclude_round_id:
+                continue
+            try:
+                manifest_path = self.store.rounds_dir / round_id / "round.json"
+                if manifest_path.is_symlink() or not manifest_path.is_file():
+                    raise ValueError("round manifest is missing or unsafe")
+                raw = manifest_path.read_bytes()
+                if not any(needle in raw for needle in needles):
+                    continue
+                preview = json.loads(raw)
+                if not isinstance(preview, dict):
+                    raise ValueError("round manifest must be an object")
+                assignments = preview.get("assignments")
+                if not isinstance(assignments, list):
+                    raise ValueError("round manifest lacks assignments")
+                exact = [
+                    item for item in assignments
+                    if isinstance(item, dict)
+                    and item.get("research_id") in matches
+                    and item.get("assignment_role") != "paired_adverse"
+                ]
+                if not exact:
+                    continue
+                # The raw scan is only a cheap prefilter. Hash-bound identity
+                # is established before any match is exposed to Main.
+                _, manifest = self._round_manifest_attention_envelope(round_id)
+                for item in manifest["assignments"]:
+                    if (
+                        item["research_id"] in matches
+                        and item.get("assignment_role") != "paired_adverse"
+                    ):
+                        matches[item["research_id"]].append(
+                            (round_id, item["assignment_id"])
+                        )
+            except (KeyError, TypeError, OSError, ValueError) as exc:
+                unreadable.append(
+                    {"round_id": round_id, "reason": _bounded_text(str(exc), 240)}
+                )
+        entries: list[dict[str, Any]] = []
+        for research_id, identities in matches.items():
+            identities.sort()
+            shown = identities if full else identities[-4:]
+            history: list[dict[str, Any]] = []
+            for round_id, assignment_id in shown:
+                item: dict[str, Any] = {
+                    "round_id": round_id,
+                    "assignment_id": assignment_id,
+                }
+                try:
+                    status = self._round_status_with_context(round_id, inspection)
+                    assignment = next(
+                        candidate for candidate in status["assignments"]
+                        if candidate["assignment_id"] == assignment_id
+                    )
+                    item.update(
+                        {
+                            "work_mode": assignment["work_mode"],
+                            "state": assignment["state"],
+                            "research_product_id": assignment.get("research_product_id"),
+                        }
+                    )
+                except (KeyError, TypeError, OSError, ValueError, StopIteration) as exc:
+                    item.update({"state": "unreadable", "reason": _bounded_text(str(exc), 240)})
+                    unreadable.append({"round_id": round_id, "reason": item["reason"]})
+                history.append(item)
+            entries.append(
+                {
+                    "research_id": research_id,
+                    "matching_assignment_count": len(identities),
+                    "assignment_identities_sha256": sha256_json(identities),
+                    "history": history,
+                    "history_truncated": len(shown) != len(identities),
+                    "diagnostic_argv": ["round-status", "--research-id", research_id],
+                }
+            )
+        # One failed round may be shared by several selected Research IDs.
+        # Keep each assignment's failure visible, but count round identities once.
+        unreadable = list({item["round_id"]: item for item in unreadable}.values())
+        return {
+            "matching_assignment_count": sum(len(items) for items in matches.values()),
+            "entries": entries,
+            "unreadable_round_count": len(unreadable),
+            "unreadable_rounds": unreadable if full else unreadable[:4],
+            "unreadable_rounds_sha256": sha256_json(unreadable),
+            "preview_policy": "all_exact_matches" if full else "newest_four_per_research",
+            "advisory": (
+                "Review existing exact work before dispatch. Explicit reruns remain allowed; "
+                "absence from this identity-only history is not semantic novelty."
+            ),
+            "selection_effect": "none",
+            "truth_effect": "none",
+        }
 
     def _discover_round_ids(
         self,

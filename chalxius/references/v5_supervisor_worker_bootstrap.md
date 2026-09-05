@@ -131,13 +131,22 @@ evidence contradicts one, state the conflict separately for Main to route to an
 authority-governed reopening; do not rewrite or silently invalidate the Fact.
 
 For current cards, `supervised_production_authority` in the source Research
-dossier is the content-addressed projection of each attacked production task
-card. The supervisor's ordinary Fact dependencies and related-artifact
-allowlist include the projection's active premises, production task card, and
-exact input/source capabilities. Use those bytes for premise and source replay;
-do not treat the supervisor Research's own narrower authority snapshot as a
-description of the attacked production route. A missing or hash-drifted closure
-is a capability blocker, not permission to reconstruct it from prose.
+dossier names each attacked production task card by exact path and SHA-256.
+That card is an authorized input entry point, not merely an artifact to look
+at. Read and verify it, then follow its **direct typed path/hash input
+capabilities** as needed to check the attacked proof. Proof, program and
+integration cards deliberately do not flatten those baseline inputs into their
+own artifact lists; absence from the flattened list is not missing authority.
+Active Fact premises retain their frozen premise status. Source-scope cards
+also project their own exact source closure for external extraction review.
+
+This does not authorize a sibling supervisor's card, arbitrary ancestor
+traversal, paths mentioned only in prose, or a fresh external-source search.
+Do not treat the supervisor Research's narrower authority snapshot as the
+complete production input list, and do not copy all old inputs just to make
+the lists look alike. An actually missing, unsafe or hash-drifted required
+file remains a capability blocker. Name the precise failed path and digest;
+do not manufacture a blocker solely from intentionally unflattened inputs.
 
 Scope ownership is exact and non-overlapping:
 

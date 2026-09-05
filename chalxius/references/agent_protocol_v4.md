@@ -1,5 +1,19 @@
 # MathGraph Agent Protocol v4
 
+> **1.0.23 selection and dispatch override.** Current Main behavior is defined
+> by `SKILL.md` under research selection continuity and Main-owned agent
+> dispatch. Before dispatch, join exact task/round history with the relevant
+> mathematical context and obstruction search. Reuse/assembly is checked at
+> the consumer's actual hypotheses, not inferred from a shared title. Use
+> Astra max for difficult or error-prone work and Sol max for bounded work
+> with a clear local criterion, unless the user overrides that choice. These
+> are Main instructions, not new schema requirements or workflow gates.
+>
+> A supervisor may open the exact attacked production card named in
+> `supervised_production_authority` and follow its direct typed path/hash
+> input capabilities. Proof cards need not flatten those inputs. This does
+> not authorize sibling-card permissions, arbitrary ancestry, or prose paths.
+
 > **1.0.18 direct-source ownership override.** Literature and explicitly
 > source-dependent cards first freeze direct primary or authoritative bytes
 > from the selected Research and directly related products.  Once that

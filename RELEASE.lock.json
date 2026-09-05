@@ -1,10 +1,10 @@
 {
   "schema_version": 27,
   "package": "chalxius",
-  "version": "1.0.17",
-  "release_display_name": "Literal Input Continuity",
-  "status": "published",
-  "release_date": "2026-09-02",
+  "version": "1.0.23",
+  "release_display_name": "Research Selection Continuity",
+  "status": "validated_release_payload",
+  "release_date": "2026-09-05",
   "workflow_authority": "V5 Research plus Fact Alpha certification overlay",
   "truth_path": "research_to_exact_multi_research_package_to_independent_verifier_decision_to_research_certification_grant",
   "legacy_truth_path": "0.x Candidate Certification Gateway and Fact authority remains read_only_unmapped",
@@ -25,7 +25,7 @@
     "truth_effect": "none"
   },
   "working_memory_policy": {
-    "ordinary_frontier": "bounded_mathematical_projection_with_exact_counts_digests_and_drill_down",
+    "ordinary_frontier": "final_32KiB_pretty_JSON_budget_with_exact_counts_digests_and_drilldown",
     "zero_argument_round_status": "cheap_all_identity_scan_with_deep_unresolved_candidate_validation",
     "full_round_forensics": "explicit_all_only",
     "maintenance_clock": "per_campaign_internal_50_minute_nonblocking_deadline",
@@ -33,7 +33,8 @@
     "repair_install_publication_skip": true,
     "fact_packager_effect": "none",
     "worker_liveness_or_cancellation_effect": "none",
-    "truth_effect": "none"
+    "truth_effect": "none",
+    "full_maintenance": "all_target_index_then_target_local_all_landmark_reasons_and_attachment_identities"
   },
   "source_review_policy": {
     "capability_owner": "exact_source_assignment",
@@ -47,7 +48,9 @@
     "symbol_mentions_and_locators": "context_not_capability",
     "repair_plan_retry": "reuse_exact_earliest_non_aborted_round",
     "semantic_selection_owner": "main",
-    "truth_effect": "none"
+    "truth_effect": "none",
+    "exact_selected_work": "nonblocking_response_only_history_with_exact_full_drilldown",
+    "semantic_deduplication": "main_owned_context_obstruction_and_consumer_input_search"
   },
   "blackboard_policy": {
     "ordinary_new_v5_round_snapshot": "absent",
@@ -76,43 +79,66 @@
     }
   },
   "public_distribution": {
-    "archive_name": "chalxius-1.0.17-literal-input-continuity.tar.gz",
-    "archive_bytes": 2843995,
-    "archive_sha256": "64c190e30d3f097cb93014e1f3b0d53257a23a528e67fd0aab5a35679bc907dd",
-    "archive_checksum_file_sha256": "29a38338c4c8c755a9a64a32eff5ee83cd67a96dad0cf18cf264b930ef60bc4c",
-    "archive_regular_file_members": 272,
+    "archive_name": "chalxius-1.0.23-research-selection-continuity.tar.gz",
+    "archive_bytes": 2887849,
+    "archive_sha256": "eae7f71af089c0b5c8e72e0282203292eebcbaa1d089e40eea34d0833d1c77ab",
+    "archive_checksum_file_sha256": "91d98d38ae86cfc93935a99f2d5e85f289ec6b87d7a1c4cd664df78e5808ce93",
+    "archive_regular_file_members": 275,
     "archive_directory_members": 0,
-    "manifest_entry_count": 271,
-    "package_file_count": 272,
-    "manifest_sha256": "d61410710ae9e2932f0d68a51bdbf03a399a465349bcccb68997af345ccd3db9",
+    "manifest_entry_count": 274,
+    "package_file_count": 275,
+    "manifest_sha256": "78b474b4c28c92f17b98f95829303a2a13e930ed6a17c96a2c8ba550d04deae3",
     "deterministic_double_build": "pass",
-    "candidate_to_installed": "271/271 manifest entries exact",
+    "candidate_to_installed": "274/274 entries and manifest exact",
     "cache_and_bytecode_absent": true
   },
   "validation": {
     "correctness_owner": "installation",
-    "changed_surface_tests": "installation-owned focused coverage",
-    "focused_tests": "83 pass",
+    "regression_lanes": [
+      {
+        "tests": 84,
+        "seconds": 5.1
+      },
+      {
+        "tests": 83,
+        "seconds": 6.51
+      },
+      {
+        "tests": 13,
+        "seconds": 1.257
+      }
+    ],
+    "lane_counts_overlap": true,
     "installer_self_test": "pass",
     "candidate_to_installed": "exact",
-    "real_project_round_status_and_frontier_canary": "pass",
-    "publication_gate": "asset identity, checksum, file set, and sensitive information only",
-    "mutation_and_forensic_matrices": "optional diagnostics; not publication gates",
-    "sensitive_information_scan": "pass with 0 true positives"
+    "real_project_canary": "pass",
+    "publication_checks": "identity, checksum, file set and sensitive information",
+    "sensitive_information_scan": "0 current payload findings",
+    "mutation_and_forensic_matrices": "optional diagnostics, not publication gates"
   },
   "publication": {
     "repository": "https://github.com/cm4u7/chalxius.git",
-    "tag": "v1.0.17",
-    "tag_commit": "b9118b13419074823967370bdf3b3c74c8574d05",
+    "tag": "v1.0.23",
     "source_branch": "main",
     "target_branch": "main",
-    "local_tag_created": true,
-    "remote_tag_pushed": true,
-    "remote_main_pushed": true,
-    "github_release_created": true,
-    "remote_push_performed": true,
-    "release_url": "https://github.com/cm4u7/chalxius/releases/tag/v1.0.17",
-    "published_at": "2026-09-02T12:39:25Z",
+    "release_url": "https://github.com/cm4u7/chalxius/releases/tag/v1.0.23",
+    "status_authority": "GitHub release and asset metadata",
     "truth_effect": "none"
+  },
+  "agent_dispatch_policy": {
+    "selection_owner": "main",
+    "difficult_or_error_prone": {
+      "model": "gpt-6-astra",
+      "reasoning_effort": "max"
+    },
+    "bounded_lower_difficulty": {
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "max"
+    },
+    "user_override": true,
+    "role_does_not_determine_model": true,
+    "same_independent_supervisor_for_applicable_dual_scopes": true,
+    "session_reuse": "useful_retained_context_without_idle_slot_reservation",
+    "automatic_dispatch_effect": "none"
   }
 }

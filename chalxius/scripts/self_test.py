@@ -295,14 +295,8 @@ def main() -> int:
             "name must describe one current Chalxius release"
         )
     current_release_heading = f"# {release_display_name}"
-    current_traceability_marker = (
-        f"Candidate version: `{current_skill_version}`; release name "
-        f"**{release_codename}**."
-    )
-    current_portable_deployment_markers = (
-        f"`{current_skill_version}`",
-        f"**{release_codename}**",
-    )
+    # Release identity belongs to the four atomically authored projections.
+    # Historical explanatory prose is not an additional version identity.
     validate_release_audit_revision_bindings(skill_root)
     validate_public_disclosure_contract(skill_root)
     fact_alpha_surface = inheritance_lock.get("fact_alpha_surface")
@@ -776,7 +770,6 @@ def main() -> int:
             "`$chalxius`, not through standalone `$grill-me`",
         ),
         "references/v5_release_traceability.md": (
-            current_traceability_marker,
             "0.8.2 explicit-route-boundaries release overlay",
             "scripts/local_install.py",
             "0.8.0 mathgraph-first release overlay",
@@ -889,7 +882,6 @@ def main() -> int:
             "Do not backfill attack cases",
         ),
         "references/portable_deployment.md": (
-            *current_portable_deployment_markers,
             "0.8.2 Explicit Route Boundaries",
             "scripts/local_install.py",
             "0.8.0",

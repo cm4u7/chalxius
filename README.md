@@ -3,13 +3,13 @@
 **Persistent Research memory, a reliable working frontier, and sparse Fact
 certification for long-running Codex projects.**
 
-[Download v1.0.17](https://github.com/cm4u7/chalxius/releases/tag/v1.0.17) ·
+[Download v1.0.23](https://github.com/cm4u7/chalxius/releases/tag/v1.0.23) ·
 [Release notes](RELEASE.md) · [Architecture](ARCHITECTURE.md) ·
 [Validation](VALIDATION.md) · [License](LICENSE)
 
 > [!IMPORTANT]
 > **Graph Browser and graphical graph generation are temporarily unavailable.**
-> Chalxius 1.0.17 does not present either as a supported release capability.
+> Neither is a supported capability in this release.
 > Historical or experimental Reader code and commands may still be present in
 > the repository, but users should not depend on them until the browser is
 > redesigned. This limitation does not affect Research storage, exact search,
@@ -74,9 +74,11 @@ Research quality or Fact-certification standard.
 Main's ordinary loop is short:
 
 1. read the objective, active Campaign goals, frontier, and in-flight rounds;
-2. search existing Research before choosing a named cut;
+2. read relevant head context and search existing results and obstructions
+   before choosing a named cut;
 3. attach useful older results as context or promote them to an active head;
-4. plan production or independent supervision;
+4. plan production or independent supervision, inspect exact prior work, and
+   launch an appropriate independent agent;
 5. ingest the result and read the newly exposed boundary.
 
 After a context handoff, Main also revisits recent attainments and historical
@@ -84,21 +86,35 @@ landmarks before choosing the next cut. Landmarks are sparse, persistent, and
 not subject to a numeric quota; routine views show bounded previews while exact
 state retains the full set.
 
+## Agent dispatch
+
+Main chooses by difficulty and error risk, not by role name:
+
+| Work | Default |
+| --- | --- |
+| New mechanism proofs, delicate source interpretation, result assembly, subtle whole-product review, shared-runtime repair | Astra max |
+| Bounded source-location checks, straightforward calculations, mechanical edits, focused regressions | Sol max |
+
+Explicit user choices override these defaults. A useful Astra session may be
+reused, but useful independent work takes priority over holding an idle slot.
+One author-independent supervisor normally handles both applicable source and
+proof scopes of a product and can review its later COW. It never reviews its
+own production.
+
 ## Install
 
-Release assets for v1.0.17 are:
+Release assets for v1.0.23 are:
 
-- `chalxius-1.0.17-literal-input-continuity.tar.gz`
-- `chalxius-1.0.17-literal-input-continuity.tar.gz.sha256`
+- `chalxius-1.0.23-research-selection-continuity.tar.gz`
+- `chalxius-1.0.23-research-selection-continuity.tar.gz.sha256`
 
 Verify and install:
 
 ```sh
-shasum -a 256 -c chalxius-1.0.17-literal-input-continuity.tar.gz.sha256
-tar -xzf chalxius-1.0.17-literal-input-continuity.tar.gz
+shasum -a 256 -c chalxius-1.0.23-research-selection-continuity.tar.gz.sha256
+tar -xzf chalxius-1.0.23-research-selection-continuity.tar.gz
 cd chalxius
 shasum -a 256 -c MANIFEST.sha256
-python3 -B scripts/self_test.py
 python3 -B scripts/local_install.py
 ```
 
@@ -124,31 +140,36 @@ PROJECT=/absolute/path/to/project
 "$MGRAPH" --root "$PROJECT" --role main search "exact topic" --scope research
 ```
 
-The default frontier is the bounded decision surface. `--diagnostic` adds deep
-topology plus the complete target/head/context/landmark decision surface when
-Main is investigating a discrepancy, while ordinary Campaign membership stays
-at count, digest, and a small role preview. `--diagnostic --full-members` is the
-explicit forensic read of the complete Campaign member-role table.
-`--maintenance` is the compact complete working-memory view: it covers every
-active target, head, context and landmark identity and reason, plus current
-round decisions, but omits repeated hydrated summaries and deep successor
-tables. Maintenance changes attention only when the evidence warrants it; a
-reasoned no-op is a valid outcome.
+The ordinary frontier has a final 32 KiB JSON budget. Exact identities,
+counts, digests and drill-down commands remain visible when long prose is
+omitted. `--diagnostic --full-members` is the explicit forensic read, not the
+ordinary working view.
 
-## v1.0.17 — Literal Input Continuity
+Full maintenance is a two-stage read: `--maintenance` gives the all-target
+routing index; `--maintenance-target TARGET_ID` expands one target's complete
+landmark reasons and head-context attachment identities. Context reasons are
+expanded around decisions with `--maintenance-expand context-reasons`.
+Main searches, compares branches and makes warranted head, landmark and
+context changes; a reasoned no-op is valid. Nothing is automatically promoted.
 
-This release carries the durable Campaign memory of v1.0.14 forward and closes
-three later continuity failures found during live Research:
+Exact task history is available with `round-status --research-id RESEARCH_ID`.
+The same history appears as a bounded advisory when production planning finds
+existing work. Deliberate reruns remain legal; a different ID is not proof of
+mathematical novelty.
 
-- source capability belongs to the exact source-owned assignment, so proof and
-  other siblings do not inherit a recursive source gate from historical
-  reviews;
-- explicit head replacement remains a Main choice and transfers only the named
-  old head's context, while exact `plan-repair-round` retries reuse the
-  canonical existing round; and
-- work that consumes a literal historical formula, definition, convention, or
-  theorem statement freezes an exact selected artifact that actually contains
-  that input instead of relying on a downstream symbol mention.
+## v1.0.23 — Research Selection Continuity
+
+This release joins exact task history with Main's mathematical selection
+practice. It adds prior-work reminders, makes the flat Research creation
+envelope clearer, documents the direct production-card input entry for
+supervisors, and defines difficulty-based agent dispatch. Main is prompted to
+check existing obstructions and whether local results can supply a live
+target's missing input, without forcing a DAG or automatic theorem assembly.
+
+It also includes the improvements since the last public release: bounded
+frontier output, landmark-centered full maintenance, explicit planning-time
+head disposition, precise context reattachment, direct-source ownership and
+collision-safe repair input roles. See [release notes](RELEASE.md).
 
 Campaign context storage has no numeric quota, Fact admission remains off by
 default, and Campaign membership remains a many-to-many nontruth overlay.

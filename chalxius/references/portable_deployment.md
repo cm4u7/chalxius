@@ -1,5 +1,15 @@
 # Chalxius portable deployment
 
+## Current installation identity
+
+Read the current version from `VERSION`, with its matching
+`INHERITANCE.lock.json`, `SKILL.md` heading and `assets/DEPLOY_PROMPT.txt` first
+line. The repository's release authoring tool updates these four projections
+and the manifest together. Historical release sections below remain readable
+explanations, not additional version identities or requirements to repeat a
+particular current-version sentence before installation. The current skill
+entry and repository release notes describe newly added behavior.
+
 ## 1.0.22 Bounded Frontier Continuity
 
 The `1.0.22` **Bounded Frontier Continuity** candidate gives routine frontier

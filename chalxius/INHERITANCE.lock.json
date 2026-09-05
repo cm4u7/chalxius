@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "skill_name": "chalxius",
-  "version": "1.0.22",
-  "release_codename": "Bounded Frontier Continuity",
-  "release_display_name": "Chalxius 1.0.22 — Bounded Frontier Continuity",
+  "version": "1.0.23",
+  "release_codename": "Research Selection Continuity",
+  "release_display_name": "Chalxius 1.0.23 — Research Selection Continuity",
   "public_display_name": "Chalxius",
   "legacy_public_alias": "operate-mathgraph-unified",
   "artifact_writer_engine_id": "operate-mathgraph-unified",

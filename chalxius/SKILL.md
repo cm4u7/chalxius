@@ -3,7 +3,34 @@ name: chalxius
 description: Operate Chalxius for source-bound mathematical and philosophical research, Paper and Evidence graphs, two-subround Research, verifier-gated Fact admission, computation, architecture repair, Reader export, and explicitly requested academic teaching through Chalxius Learner.
 ---
 
-# Chalxius 1.0.22 — Bounded Frontier Continuity
+# Chalxius 1.0.23 — Research Selection Continuity
+
+## 1.0.23 research selection continuity
+
+Main's selection joins mathematical history with operational history. Search
+results alone do not show whether an exact task already has a round or product;
+inspect the selected-work advisory before dispatch, and distinguish an intended
+rerun from accidental repetition. The advisory does not forbid reruns or infer
+equivalence between different Research ids.
+
+Before freezing a cut, read its relevant attached context and search both the
+wanted input and known obstructions, including alternative names and decisive
+operations, domains, quantifiers, coefficients and normalizations. Inspect the
+latest applicable production/COW/review, not just a matching title. When
+authoring the selected Research, use its existing content/rationale fields to
+explain what the consumer needs, which exact
+results are available, what constraints survive, and which comparison still
+requires work. These are reasoning prompts, not mandatory schema fields.
+Carry selected inputs and their consumer-specific reasons into the task brief;
+mere context relevance does not create a proof dependency. Give material
+matches an explicit disposition: use context, landmark or head operations
+when warranted, and `reference_only` when durable attention is unnecessary.
+
+Full maintenance also asks whether existing results from different branches
+can supply a live target's missing input, or whether an old obstruction changes
+the route. Start with actual consumer needs, not an all-pairs landmark audit;
+no assembly discovery or graph mutation is compulsory. Preserve full landmark
+reason reads and every warranted head, landmark and precise context update.
 
 ## 1.0.22 bounded frontier and exact repair continuity
 
@@ -1092,16 +1119,41 @@ repair caches implicitly.
 
 ## V5 Research cycle
 
+### Main-owned agent dispatch
+
+Unless the user specifies otherwise, use **Astra max** (`gpt-6-astra`, reasoning
+effort `max`) for difficult or error-prone work: new mechanism proofs, delicate
+source interpretation, cross-result assembly, whole-product review with subtle
+premises, or shared lifecycle/authority repair. Use **Sol max**
+(`gpt-5.6-sol`, `max`) for lower-difficulty bounded work with a clear local
+criterion, such as source-location checks, straightforward calculations,
+mechanical implementation, or focused regressions. Role names alone do not
+choose the model: production, supervision and code work can belong to either
+class. Main makes this judgment; there is no scoring rule or model-validity gate.
+
+Reuse an available Astra session for related difficult work when its retained
+context saves startup cost, but do not keep a slot idle merely to retain the
+model. Useful independent slot utilization and author/reviewer independence
+take priority. One author-independent supervisor normally handles both
+applicable source/proof scopes of one product in the same session, and may
+review its later COW; it must never review a product it authored. Confirm the
+actual host start and make any unavailable-model substitution visible rather
+than silently changing the user's model choice.
+
+### Production and independent supervision
+
 1. Add cumulative Research with exact dependencies, sources, and artifact
    path/SHA/role capabilities. Finished external work enters Evidence, not Fact.
-2. For a research draft, freeze the artifact, reconstruct the complete
-   load-bearing target DAG, preserve its domain and quantifiers, and expose any
+2. For a research draft, freeze the artifact, identify the actual load-bearing
+   dependencies without requiring Research to form a DAG, preserve its domain
+   and quantifiers, and expose any
    weaker theorem as a typed gap rather than a solution to the original target.
 3. Main reads the goal-aware frontier and actively names load-bearing Research
    IDs. When a Campaign has durable subgoals, bind each to one exact
    `research_goal` root and use its derived coverage to distinguish work already
    completed from the next production, return, supervision, repair, or semantic
-   choice. For a named object/class/theorem, first run the exact search above,
+   choice. For a named object/class/theorem, first apply the selection and
+   assembly guidance above, including the relevant head context, and search,
    review completed work, disposition every material old match as
    `reference_only`, `attach_context`, `promote_landmark`, `add_head`, or
    `retire_active_head`, and choose `related_research_ids`. Production never

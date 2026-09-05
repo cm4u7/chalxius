@@ -1,8 +1,37 @@
-Chalxius 1.0.22 — Bounded Frontier Continuity
+Chalxius 1.0.23 — Research Selection Continuity
 
 This is a deployment and runtime-handoff guide. It is not mathematical
 evidence and has no Research, package, verifier, Gateway, or Fact
 authority.
+
+Main chooses agent difficulty, not a model by role name: Astra max
+(`gpt-6-astra`, `max`) for difficult or error-prone proofs, source interpretation,
+assembly, review or shared-runtime repair; Sol max (`gpt-5.6-sol`, `max`) for
+bounded lower-difficulty work with a clear local criterion. Follow explicit
+user overrides. Reuse a useful Astra session when it saves context loading,
+but prioritize independent useful slot utilization. One author-independent
+supervisor normally handles both applicable source/proof scopes and may
+continue on later COW. Confirm actual agent start; report unavailable-model
+substitutions rather than silently changing the choice.
+
+Before dispatch, inspect exact selected-work history as well as mathematical
+history. An existing round/product is a nonblocking reminder, not a ban on an
+intentional rerun. Before freezing a cut, read relevant attached context and
+search both the desired input and known obstructions under their actual
+operations, domains, quantifiers, coefficients and normalizations. Use existing
+content/rationale to connect the consumer's need, available exact results,
+surviving constraints and genuinely missing comparison. Retain useful matches
+as context, landmarks or heads when warranted, or record `reference_only`
+without raising attention. Full maintenance also looks for such
+cross-branch assembly opportunities; it does not perform an all-pairs audit,
+require a discovery, or replace Main's mathematical judgment.
+
+For supervision, the attacked production card named by path/hash in
+`supervised_production_authority` is an authorized input entry point. Follow
+that card's direct typed path/hash capabilities as needed; proof cards do not
+have to flatten them. Do not substitute sibling-card permissions, arbitrary
+ancestor traversal, or untyped prose paths. Actual missing, unsafe or
+hash-drifted bytes remain errors and must be named precisely.
 
 Routine Campaign frontier is the compact mathematical working-memory view.
 It retains exact target completeness, heads, mathematical contexts, sparse
@@ -144,19 +173,19 @@ anchors. Every sealed component must contain an anchor, and any added unmarked
 node must connect to it through actual package dependency edges. Existing
 `--mark-id` plans remain `existing_marks` and do not gain this anchor rule.
 
-For prospective clean Research, a supervisor may already emit the exact
-semi-formal interface or an explicit `needs_split` disposition. This is a
-strong automatic-path recommendation only. An all-ready plan returns
+For prospective clean Research, a supervisor may emit the exact semi-formal
+ready interface. Routine supervisors and packagers do not assess, recommend,
+emit, or wait for splitting; historical `needs_split` records are inert for
+ordinary routing. Actual proof/source defects return to ordinary one-to-one
+COW and whole-product review. An all-ready plan returns
 `mechanical_proposal_ready` with a `mechanical_package_proposal` and digest; it
 does not seal. The packager performs one seal and may accept that proposal,
-supply an alternative six-field interface, choose the whole node, select
-ordinary one-to-one COW, or retain a split recommendation without changing the
-Campaign active head. A split recommendation pauses that route. No worker is
-started until the user explicitly authorizes the current exact Research/spec
-and Main supplies the one-shot `--user-authorized-split` choice. Once
-authorized, a Research repair worker produces the
-complete batch and the ordinary proof/source supervisors review it; only then
-may packaging resume. The interface conclusion must equal the
+supply an alternative six-field interface, choose the whole node, or select
+ordinary one-to-one COW without changing the Campaign active head. The
+separate low-level split facility remains available only after the user
+explicitly authorizes the current exact Research/spec and Main supplies the
+one-shot `--user-authorized-split` choice. That opt-in does not make split
+assessment part of routine review or packaging. The interface conclusion must equal the
 existing top-level Research claim; assumptions, domain/types, quantifiers,
 explicit certified predecessor Research ids, and limitations make the claim
 callable without rewriting the proof. One independent verifier then

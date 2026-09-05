@@ -5,6 +5,18 @@ Research production worker. It replaces broad protocol preloading with one
 card-selected path. It changes no validator, authority boundary, return schema,
 computation gate, or Fact-admission rule.
 
+## Reuse and composition within the frozen task
+
+Read the source Research's content/rationale and selected context before
+rederiving a named construction. An input may provide a reusable theorem, a
+counterexample, or a no-go with exact hypotheses. When composing existing
+results, check the actual consumed structure and conventions, not just equal
+object names. Preserve the distinction between a conditional criterion and a
+realized instance. If a frozen obstruction already rules out the requested
+case, report it and the genuinely changed hypothesis needed to proceed; do
+not repeat the calculation. Stay within the exact task capabilities and ask
+Main for a material missing input rather than searching the whole graph.
+
 ## Applicability gate
 
 Use this compact path only when all of the following are literal task-card

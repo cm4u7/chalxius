@@ -1,4 +1,22 @@
-# Chalxius V5 traceability through 1.0.22 Bounded Frontier Continuity
+# Chalxius V5 traceability through 1.0.23 Research Selection Continuity
+
+## 1.0.23 Research Selection Continuity overlay
+
+- Production planning exposes exact selected-work history as response-only
+  advice. Intentional reruns and existing frozen identities remain valid.
+  Complete exact assignment history is available through
+  `round-status --research-id ID`; normal expansion is bounded.
+- `memory-add` warns about nested metadata in a flat creation envelope without
+  rewriting the payload or rejecting otherwise legal Research.
+- A supervisor's frozen production-card capability includes its direct typed
+  path/hash inputs; compact proof cards need not duplicate them. Arbitrary
+  ancestor/sibling permissions are not granted and real byte checks remain.
+- Main's ordinary entry points explain difficulty-based Astra max / Sol max
+  dispatch, exact obstruction search and consumer-specific local-result
+  assembly. These are reasoning instructions, not required schema fields,
+  automatic dispatch, a forced DAG or a mathematical completion classifier.
+- Deployment prose preserves the current split-indifferent default. Evidence
+  for this release is recorded in the repository's current validation report.
 
 ## 1.0.22 Bounded Frontier Continuity overlay
 
@@ -2724,7 +2742,7 @@ frozen work:
 - Skill Creator validation: `Skill is valid!`;
 - release-only aggressive audit: `8/8` mutants killed with
   `candidate_unchanged=true`;
-- Reader revision 16 projected the real `GAP-PROTO-0721-V5` snapshot to `109`
+- Reader revision 16 projected a real research-project snapshot to `109`
   nodes and `293` edges with maximum generated title length `31`, no title over
   the `64`-character protocol bound, and no TeX environment in a title;
 - browser QA of those exact output bytes rendered `42` readable and `80`

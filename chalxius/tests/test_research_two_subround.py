@@ -2001,6 +2001,22 @@ class ResearchTwoSubroundTests(unittest.TestCase):
             self.assertNotIn("scope-independent-baseline.md", paths)
             self.assertIn(assignment["task_card_relpath"], paths)
             self.assertTrue(any(path.endswith("worker-report.md") for path in paths))
+            production_capability = next(
+                item for item in card["mathematical_state"]["related_artifacts"]
+                if item["path"] == assignment["task_card_relpath"]
+            )
+            production_bytes = (store.root / production_capability["path"]).read_bytes()
+            self.assertEqual(sha256_bytes(production_bytes), production_capability["sha256"])
+            direct_input = next(
+                item for item in json.loads(production_bytes)["mathematical_state"]["related_artifacts"]
+                if item["path"] == "scope-independent-baseline.md"
+            )
+            self.assertEqual(sha256_bytes(baseline.read_bytes()), direct_input["sha256"])
+            prompt = Path(supervision["assignments"][0]["prompt_path"]).read_text(encoding="utf-8")
+            self.assertIn("DIRECT typed path/SHA-256 inputs", prompt)
+            self.assertIn("need not flatten or duplicate", prompt)
+            self.assertIn("Missing or hash-drifted", prompt)
+            self.assertIn("arbitrary ancestor", prompt)
 
     def test_related_component_waits_and_integration_sees_complete_component(
         self,

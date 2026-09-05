@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -137,6 +138,28 @@ class ReleaseMetadataUpdateTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("cache directory", result.stderr)
             self.assertEqual(before, {path: path.read_bytes() for path in tracked})
+
+    def test_version_bump_does_not_require_rewriting_historical_release_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            skill = Path(temporary) / "chalxius"
+            shutil.copytree(REPOSITORY_ROOT / "chalxius", skill)
+            histories = [
+                skill / "references" / "portable_deployment.md",
+                skill / "references" / "v5_release_traceability.md",
+            ]
+            before = {path: path.read_bytes() for path in histories}
+            authored = subprocess.run(
+                ["python3", "-B", str(UPDATER), "--skill-root", str(skill),
+                 "--version", "9.9.99", "--codename", "Identity Fixture"],
+                capture_output=True, text=True, check=False, timeout=30,
+            )
+            self.assertEqual(authored.returncode, 0, authored.stderr)
+            self.assertEqual(before, {path: path.read_bytes() for path in histories})
+            checked = subprocess.run(
+                ["python3", "-B", str(skill / "scripts" / "self_test.py")],
+                capture_output=True, text=True, check=False, timeout=60,
+            )
+            self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
 
 if __name__ == "__main__":
